@@ -1,0 +1,143 @@
+{
+  "artifacts": {
+    "circuit.npz": {
+      "bytes": 1307953,
+      "sha256": "d2fb9bee3d591dc5af2be3a8eda0aba2a3c9f3b62b6c23d0a24cbdb4a72e3567"
+    },
+    "neurons.json": {
+      "bytes": 4525162,
+      "sha256": "58c1560c3153d849eacdad5c60d6779bf7c1f2de5c4da6cc1274093451b83b70"
+    }
+  },
+  "counts": {
+    "edges": 564810,
+    "effective_transmitters": {
+      "acetylcholine": 5923,
+      "acetylcholine+gaba": 2,
+      "acetylcholine+glutamate": 16,
+      "dopamine": 278,
+      "dopamine+nitric oxide": 66,
+      "dopamine+serotonin": 4,
+      "dopamine+tyramine": 2,
+      "gaba": 258,
+      "gaba+dopamine": 2,
+      "glutamate": 198,
+      "glutamate+octopamine": 2,
+      "glutamate+tyramine": 7,
+      "octopamine": 8,
+      "serotonin": 23
+    },
+    "groups": {
+      "CX": 250,
+      "DAN": 331,
+      "KC": 5177,
+      "MBON": 96,
+      "PN": 685,
+      "descending": 250
+    },
+    "neurons": 6789,
+    "nt_basis": {
+      "known_nt": 6415,
+      "top_nt": 374
+    },
+    "predicted_transmitters": {
+      "acetylcholine": 740,
+      "dopamine": 5534,
+      "gaba": 271,
+      "glutamate": 212,
+      "octopamine": 8,
+      "serotonin": 24
+    },
+    "sides": {
+      "center": 7,
+      "left": 3379,
+      "right": 3403
+    },
+    "signs": {
+      "-1.0": 467,
+      "0.0": 399,
+      "1.0": 5923
+    },
+    "synapses": 1367086
+  },
+  "dataset": {
+    "attribution": [
+      "Dorkenwald et al., Nature 634, 124-138 (2024), doi:10.1038/s41586-024-07558-y",
+      "Schlegel et al., Nature 634, 139-152 (2024), doi:10.1038/s41586-024-07686-5"
+    ],
+    "license": "CC BY-NC 4.0",
+    "license_note": "FlyWire's public-release guidelines specify CC BY-NC 4.0. The Zenodo connectivity record metadata currently reports CC BY 4.0; this derivative conservatively follows the FlyWire guideline.",
+    "license_url": "https://flywire.ai/guidelines",
+    "materialization_version": 783,
+    "name": "FlyWire FAFB public connectome"
+  },
+  "generated_at": "2026-09-05T20:16:03.261663+00:00",
+  "model_assumptions": {
+    "note": "Sign is a declared rate-model assumption applied to effective_nt, not an EM measurement.",
+    "sign": {
+      "acetylcholine": 1.0,
+      "gaba": -1.0,
+      "glutamate": -1.0,
+      "mixed_excitation_and_inhibition": 0.0,
+      "other_or_unavailable": 0.0
+    },
+    "synthetic_mappings": "No sensory injection or action readout mapping is stored in this artifact.",
+    "transmitter_resolution": "Positive small-molecule known_nt annotations take precedence; top_nt prediction is the fallback. Negative evidence and peptide-only known_nt fields do not override top_nt. Multiple positive known transmitters are retained with '+'."
+  },
+  "npz_schema": {
+    "count": "float32[E], positive measured synapse counts",
+    "effective_nt": "Unicode[N], known_nt-first model transmitter",
+    "group": "Unicode[N]",
+    "ids": "Unicode[N], exact FlyWire root IDs",
+    "labels": "Unicode[N]",
+    "nt_basis": "Unicode[N], known_nt/top_nt/unavailable provenance",
+    "nt_confidence": "float32[N], top_nt_conf annotation; 0 if unavailable",
+    "post": "int32[E], postsynaptic local indices",
+    "pre": "int32[E], presynaptic local indices",
+    "predicted_nt": "Unicode[N], top_nt annotation",
+    "side": "Unicode[N]",
+    "sign": "float32[N], model sign by presynaptic neuron",
+    "type": "Unicode[N], cell_type annotation"
+  },
+  "schema_version": 1,
+  "selection": {
+    "core_cell_classes": {
+      "ALPN": "PN",
+      "DAN": "DAN",
+      "Kenyon_Cell": "KC",
+      "MBON": "MBON"
+    },
+    "descending": "top 250 descending-superclass cells by measured synapse count incident to core",
+    "edge_rule": "all measured directed source rows with both endpoints selected; duplicate pairs summed",
+    "navigation": "top 250 CX cells by measured synapse count incident to core",
+    "threshold": "none; one-synapse directed connections are retained"
+  },
+  "sources": {
+    "annotations": {
+      "materialization_version": 783,
+      "path": "supplemental_files/Supplemental_file1_neuron_annotations.tsv",
+      "repository": "https://github.com/flyconnectome/flywire_annotations",
+      "revision": "8587524c1748ce5ef2080822a2fc890fc03bf597",
+      "rows": 139248,
+      "sha256": "9a4f8b2f843196074431ebd7cd883536afa1be86c8a4ce90970441e8be81d1be",
+      "tag": "v3.1.0"
+    },
+    "completeness": {
+      "path": "Completeness_783.csv",
+      "repository": "https://github.com/philshiu/Drosophila_brain_model",
+      "repository_license": "MIT",
+      "revision": "91bdd1e7dcf193f3e7ca5a8933497fcef63b7960",
+      "rows": 138639,
+      "sha256": "bbb847a4cc2caaa7a16349722d220c087317b946d148d4d592d94d250617a311"
+    },
+    "connectivity": {
+      "path": "Connectivity_783.parquet",
+      "repository": "https://github.com/philshiu/Drosophila_brain_model",
+      "repository_license": "MIT",
+      "revision": "91bdd1e7dcf193f3e7ca5a8933497fcef63b7960",
+      "rows": 15091983,
+      "sha256": "efeb23fb99098e9c390f6869969b2a121a2ee92c833cfc45ecb2c1d8e1af0347",
+      "underlying_data_record": "https://doi.org/10.5281/zenodo.10676866"
+    }
+  }
+}

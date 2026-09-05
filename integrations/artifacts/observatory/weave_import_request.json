@@ -1,0 +1,48 @@
+{
+  "evidence": [
+    {
+      "artifact_uri": "file:habitat_activity.gam",
+      "id": "gamfit:habitat-activity:v1",
+      "parent_ids": [],
+      "text": "Descriptive native GAM fit over 378 habitat telemetry rows; this is not a causal claim.",
+      "time": 63.0
+    }
+  ],
+  "habitat_id": "da3ed986-34f1-4b95-a7d3-d4336617aded",
+  "journal": [
+    {
+      "id": "da3ed986-34f1-4b95-a7d3-d4336617aded:0:0",
+      "kind": "hatched",
+      "text": "Mica, Fern and Pip entered the nursery.",
+      "time": 0.0
+    },
+    {
+      "id": "da3ed986-34f1-4b95-a7d3-d4336617aded:159:1",
+      "kind": "feeding",
+      "resident": "fern",
+      "text": "Fern started feeding.",
+      "time": 7.95
+    },
+    {
+      "id": "da3ed986-34f1-4b95-a7d3-d4336617aded:160:2",
+      "kind": "feeding",
+      "resident": "pip",
+      "text": "Pip started feeding.",
+      "time": 8.0
+    },
+    {
+      "command": {
+        "color": "#ef8e9c",
+        "kind": "food",
+        "odor": 0,
+        "op": "add",
+        "x": 624.6878877171216,
+        "y": 0
+      },
+      "id": "da3ed986-34f1-4b95-a7d3-d4336617aded:779:3",
+      "kind": "caregiver",
+      "text": "Placed food.",
+      "time": 38.95
+    }
+  ]
+}

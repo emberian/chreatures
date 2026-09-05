@@ -1,0 +1,234 @@
+{
+  "artifacts": {
+    "counts.npy": {
+      "bytes": 102252916,
+      "sha256": "a99058bf2fa83c21aa935d4642d574b0048a67104b8c5c5315cb58d0f991c368"
+    },
+    "indices.npy": {
+      "bytes": 102252916,
+      "sha256": "35b82f6561e8105b584680af5298da2e2e622712ca41527c964ab3f87f0574f5"
+    },
+    "indptr.npy": {
+      "bytes": 1321112,
+      "sha256": "4a353b734bc04b36935ac1e34c21db67bdf59745acf0a8b4b329fe20050b13de"
+    },
+    "neurons.npz": {
+      "bytes": 5791338,
+      "sha256": "0e6706229b93cbdcab48905504bd3b8f6075534488c65ad2c8f844668036ea9a"
+    },
+    "row_synapses.npy": {
+      "bytes": 1321104,
+      "sha256": "cbbabdd3c05b3d4e9f262b059417866358c199da0a8d4ac247851da3b9a93e3a"
+    }
+  },
+  "counts": {
+    "afferent_neurons": 15912,
+    "classes": {
+      "ALIN": 24,
+      "ALLN": 420,
+      "ALON": 14,
+      "ALPN": 686,
+      "CX": 2950,
+      "DAN": 340,
+      "Kenyon_Cell": 4064,
+      "MBON": 97,
+      "SEZPN": 27,
+      "chemosensory": 58,
+      "gustatory": 1428,
+      "hygrosensory": 66,
+      "mechanosensory": 1733,
+      "mechanosensory_proprioceptive": 1454,
+      "mechanosensory_tactile": 2558,
+      "mechanosensory_tbc": 11,
+      "ol_bilateral": 116,
+      "olfactory": 2639,
+      "thermosensory": 25,
+      "unavailable": 140598,
+      "unknown_sensory": 1707,
+      "visual": 4107
+    },
+    "edges": 25563197,
+    "effective_transmitters": {
+      "acetylcholine": 104047,
+      "dopamine": 395,
+      "gaba": 22108,
+      "glutamate": 29616,
+      "histamine": 5924,
+      "octopamine": 133,
+      "serotonin": 375,
+      "unavailable": 2524
+    },
+    "efferent_neurons": 925,
+    "neurons": 165122,
+    "nt_basis": {
+      "consensus_nt": 78024,
+      "ground_truth": 83496,
+      "predicted_nt": 1078,
+      "unavailable": 2524
+    },
+    "source_connectivity_rows": 151856684,
+    "superclasses": {
+      "ENS": 47,
+      "ascending_neuron": 1846,
+      "cb_efferent": 4,
+      "cb_endocrine": 72,
+      "cb_intrinsic": 32160,
+      "cb_motor": 107,
+      "cb_sensory": 4868,
+      "cb_sensory_tbc": 5,
+      "descending_neuron": 1314,
+      "efferent_ascending": 8,
+      "efferent_descending": 4,
+      "ol_intrinsic": 89390,
+      "ol_sensory": 4114,
+      "sensory_ascending": 537,
+      "sensory_ascending_tbc": 2,
+      "sensory_descending": 12,
+      "unavailable": 516,
+      "visual_centrifugal": 563,
+      "visual_projection": 9201,
+      "visual_projection_tbc": 2,
+      "vnc_efferent": 94,
+      "vnc_endocrine": 22,
+      "vnc_intrinsic": 13151,
+      "vnc_motor": 708,
+      "vnc_sensory": 6365,
+      "vnc_sensory_tbc": 9,
+      "vnc_tbc": 1
+    },
+    "synapses": 124025046
+  },
+  "dataset": {
+    "citation": "Sexual dimorphism in the complete Drosophila male central nervous system connectome, Cell (2026), doi:10.1016/j.cell.2026.08.015",
+    "doi": "10.1016/j.cell.2026.08.015",
+    "download_url": "https://male-cns.janelia.org/download/",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "name": "MaleCNS connectome",
+    "project_url": "https://male-cns.janelia.org/",
+    "scope": "adult male Drosophila brain and ventral nerve cord",
+    "version": "v1.0"
+  },
+  "dataset_hash": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "generated_at": "2026-09-05T20:42:19.358104+00:00",
+  "graph": {
+    "canonical": "presynaptic indices strictly increase within every row; source has one row per directed pair",
+    "counts": "uint32[E], measured synapse counts",
+    "format": "memory-mappable NumPy CSR",
+    "indices": "int32[E], presynaptic local indices",
+    "indptr": "int64[N+1]",
+    "ordering": "neurons by ascending exact bodyId; edges grouped by postsynaptic row",
+    "orientation": "rows are postsynaptic targets; indices are presynaptic sources",
+    "row_synapses": "uint64[N], total measured incoming synapses retained per target",
+    "shape": [
+      165122,
+      165122
+    ]
+  },
+  "metadata": {
+    "fields": {
+      "body_ids": "int64",
+      "classes": "<U29",
+      "consensus_nt": "<U13",
+      "dimorphism": "<U30",
+      "effective_nt": "<U13",
+      "entry_nerves": "<U6",
+      "exit_nerves": "<U11",
+      "flywire_types": "<U47",
+      "fru_dsx": "<U14",
+      "ground_truth_nt": "<U13",
+      "hemibrain_types": "<U41",
+      "ids": "<U10",
+      "instances": "<U34",
+      "labels": "<U32",
+      "manc_types": "<U32",
+      "nt_basis": "<U12",
+      "nt_confidence": "float32",
+      "predicted_nt": "<U13",
+      "receptor_types": "<U14",
+      "root_sides": "<U7",
+      "sides": "<U7",
+      "sign": "float32",
+      "soma_neuromeres": "<U3",
+      "soma_sides": "<U1",
+      "status_labels": "<U21",
+      "statuses": "<U6",
+      "subclasses": "<U22",
+      "superclasses": "<U21",
+      "types": "<U32"
+    },
+    "file": "neurons.npz",
+    "ordering": "row-aligned with graph local indices"
+  },
+  "neurotransmitters": {
+    "caveat": "Transmitter labels and neuron-level model signs do not determine exact synaptic physiology, receptor-specific effects, cotransmission, or modulatory dynamics.",
+    "model_sign": {
+      "acetylcholine": 1.0,
+      "gaba": -1.0,
+      "glutamate": -1.0,
+      "histamine": -1.0,
+      "other_or_unavailable": 0.0
+    },
+    "resolution": "ground_truth, then non-unclear consensus_nt, then non-unclear predicted_nt"
+  },
+  "normalization": {
+    "caveat": "This is an explicit stable rate-model transform, not a measured MaleCNS property.",
+    "runtime_default": "count * model_sign[source] / max(total retained incoming count[target], 1)"
+  },
+  "populations": {
+    "afferent": {
+      "count": 15912,
+      "default_channels": "16 engineered runtime channels derived from afferent class, subclass, side, and deterministic body-ID partitions; see chreatures.malecns.DEFAULT_INPUT_CHANNELS",
+      "rule": "superclass contains '_sensory' or starts with 'sensory_'"
+    },
+    "efferent": {
+      "count": 925,
+      "default_readouts": "47 largest exact superclass/region/side signatures plus other_efferent; 48 disjoint row-normalized populations",
+      "rule": "superclass contains '_motor'/'_efferent' or starts with 'efferent_'"
+    },
+    "note": "These annotation-derived populations are interface selectors, not physiological response or control models."
+  },
+  "schema_version": 1,
+  "selection": {
+    "edge_rule": "full directed weight row iff both body_pre and body_post satisfy neuron_rule",
+    "excluded_annotation_rows": 46455,
+    "excluded_statuses": {
+      "Anchor": 611,
+      "Assign": 1832,
+      "Glia": 11864,
+      "Orphan": 15925,
+      "Unimportant": 10751,
+      "unavailable": 5472
+    },
+    "included_annotation_rows": 165122,
+    "neuron_rule": "body annotation status equals 'Traced'",
+    "reason": "Traced annotations are curated neurons; orphan, glia, unimportant, assign, anchor, and missing-status segments are excluded as non-curated graph fragments/classes.",
+    "threshold": "none beyond the official source file's minconf-0.5 inclusion"
+  },
+  "sources": {
+    "annotations": {
+      "bytes": 14483314,
+      "filename": "body-annotations-male-cns-v1.0-minconf-0.5.feather",
+      "gs_url": "gs://flyem-male-cns/v1.0/connectome-data/flat-connectome/body-annotations-male-cns-v1.0-minconf-0.5.feather",
+      "rows": 211577,
+      "sha256": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-annotations-male-cns-v1.0-minconf-0.5.feather"
+    },
+    "connectivity": {
+      "bytes": 1051241946,
+      "filename": "connectome-weights-male-cns-v1.0-minconf-0.5.feather",
+      "gs_url": "gs://flyem-male-cns/v1.0/connectome-data/flat-connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather",
+      "rows": 151856684,
+      "sha256": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1",
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather"
+    },
+    "neurotransmitters": {
+      "bytes": 43282834,
+      "filename": "body-neurotransmitters-male-cns-v1.0.feather",
+      "gs_url": "gs://flyem-male-cns/v1.0/connectome-data/flat-connectome/body-neurotransmitters-male-cns-v1.0.feather",
+      "rows": 1835518,
+      "sha256": "95c9289220663abeb3409f3ad9e5a7f8a53f8093f5139d15502cd08da8879621",
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-neurotransmitters-male-cns-v1.0.feather"
+    }
+  }
+}

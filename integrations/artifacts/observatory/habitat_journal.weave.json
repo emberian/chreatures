@@ -1,0 +1,135 @@
+{
+  "nodes": {
+    "3": {
+      "id": 3,
+      "from": [],
+      "to": [],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "da3ed986-34f1-4b95-a7d3-d4336617aded:160:2",
+        "time": 8.0,
+        "record_type": "episode",
+        "text": "Pip started feeding.",
+        "artifact_uri": null,
+        "source": {
+          "id": "da3ed986-34f1-4b95-a7d3-d4336617aded:160:2",
+          "kind": "feeding",
+          "resident": "pip",
+          "text": "Pip started feeding.",
+          "time": 8.0
+        }
+      }
+    },
+    "4": {
+      "id": 4,
+      "from": [],
+      "to": [],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "da3ed986-34f1-4b95-a7d3-d4336617aded:779:3",
+        "time": 38.95,
+        "record_type": "episode",
+        "text": "Placed food.",
+        "artifact_uri": null,
+        "source": {
+          "command": {
+            "color": "#ef8e9c",
+            "kind": "food",
+            "odor": 0,
+            "op": "add",
+            "x": 624.6878877171216,
+            "y": 0
+          },
+          "id": "da3ed986-34f1-4b95-a7d3-d4336617aded:779:3",
+          "kind": "caregiver",
+          "text": "Placed food.",
+          "time": 38.95
+        }
+      }
+    },
+    "1": {
+      "id": 1,
+      "from": [],
+      "to": [],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "da3ed986-34f1-4b95-a7d3-d4336617aded:0:0",
+        "time": 0.0,
+        "record_type": "episode",
+        "text": "Mica, Fern and Pip entered the nursery.",
+        "artifact_uri": null,
+        "source": {
+          "id": "da3ed986-34f1-4b95-a7d3-d4336617aded:0:0",
+          "kind": "hatched",
+          "text": "Mica, Fern and Pip entered the nursery.",
+          "time": 0.0
+        }
+      }
+    },
+    "5": {
+      "id": 5,
+      "from": [],
+      "to": [],
+      "active": true,
+      "bookmarked": true,
+      "contents": {
+        "source_id": "gamfit:habitat-activity:v1",
+        "time": 63.0,
+        "record_type": "evidence",
+        "text": "Descriptive native GAM fit over 378 habitat telemetry rows; this is not a causal claim.",
+        "artifact_uri": "file:habitat_activity.gam",
+        "source": {
+          "artifact_uri": "file:habitat_activity.gam",
+          "id": "gamfit:habitat-activity:v1",
+          "parent_ids": [],
+          "text": "Descriptive native GAM fit over 378 habitat telemetry rows; this is not a causal claim.",
+          "time": 63.0
+        }
+      }
+    },
+    "2": {
+      "id": 2,
+      "from": [],
+      "to": [],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "da3ed986-34f1-4b95-a7d3-d4336617aded:159:1",
+        "time": 7.95,
+        "record_type": "episode",
+        "text": "Fern started feeding.",
+        "artifact_uri": null,
+        "source": {
+          "id": "da3ed986-34f1-4b95-a7d3-d4336617aded:159:1",
+          "kind": "feeding",
+          "resident": "fern",
+          "text": "Fern started feeding.",
+          "time": 7.95
+        }
+      }
+    }
+  },
+  "roots": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "active": [
+    5
+  ],
+  "bookmarked": [
+    5
+  ],
+  "metadata": {
+    "schema_version": 1,
+    "library": "universal-weave 0.5.0",
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+    "habitat_id": "da3ed986-34f1-4b95-a7d3-d4336617aded",
+    "description": "habitat journal and linked analysis evidence"
+  }
+}

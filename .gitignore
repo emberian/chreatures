@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.DS_Store
+runs/*
+!runs/.gitkeep
+.cache/
+node_modules/
+target/
+*.log
+.playwright-mcp/
+# Local conversations, imported drafts, and operational instructions.
+/AGENTS.md
+/ARCHITECTURE.md
+/COGNITIVE_ORGANS.md
+/earlierresearch_plan.md
+/og_convo.md
+.env
+.env.*
+*.pem
+*.key
+/hollow-garden-first.png

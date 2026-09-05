@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chreatures"
+version = "0.1.0"
+description = "An embodied nursery for connectome-rooted artificial life"
+requires-python = ">=3.11"
+dependencies = ["numpy>=2.0", "scipy>=1.14", "fastapi>=0.115", "uvicorn>=0.30", "websockets>=14", "mujoco>=3.9,<4"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+data = ["pyarrow>=18", "pandas>=2.2"]
+
+[project.scripts]
+chreatures = "chreatures.server:main"
+chreatures3d = "chreatures.server:main3d"
+
+[tool.hatch.build.targets.wheel]
+packages = ["chreatures"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,141 @@
+{
+  "gamfit": {
+    "data": {
+      "held_out_rows": 76,
+      "rows": 378,
+      "split": "every fifth row after ordering by model time and resident",
+      "time_range": [
+        0.5,
+        63.0
+      ],
+      "training_rows": 302
+    },
+    "fit_seconds": 0.1508212500011723,
+    "formula": "activity ~ s(energy, k=8) + s(time, k=8)",
+    "interpretation": "descriptive only; no causal claim",
+    "library": {
+      "name": "gamfit",
+      "native_crate": "gam-pyffi",
+      "native_engine_crate": "gam",
+      "native_extension_available": true,
+      "source_commit": "7c7eca8ac4826de95c8e743a20294bee132a9bcc",
+      "version": "0.1.259"
+    },
+    "metrics": {
+      "held_out_rmse": 0.03761661131778847,
+      "rmse_ratio": 0.7080912925384211,
+      "training_mean_null_rmse": 0.05312395691654038
+    },
+    "native_messages": [
+      "[0s] [RHO uncertainty] standard REML: heavy rho-importance tail detected k_hat=0.525 evals=33"
+    ],
+    "persistence": {
+      "bytes": 357147,
+      "model_file": "habitat_activity.gam",
+      "reload_max_abs_prediction_delta": 0.0,
+      "sha256": "54260e78c9dd945fbb25ca9c6755a449c72a4638eeffe5852b6f023f7f382808"
+    },
+    "status": "complete"
+  },
+  "limitations": [
+    "The GAM is descriptive and does not establish a causal or biological mechanism.",
+    "Bounded runtime history may omit earlier telemetry; the source checkpoint remains authoritative.",
+    "Journal episodes are external evidence records, not the resident's internal memory."
+  ],
+  "provenance": {
+    "checkpoint_sha256": "96108d9a4ed92ae15784bbf67c6661200c512dee52d6a70cbb73f55b2f4eb3e0",
+    "checkpoint_verified": true,
+    "habitat_id": "da3ed986-34f1-4b95-a7d3-d4336617aded",
+    "input_bytes": 1275610,
+    "input_file": "/Users/ember/dev/chreatures/runs/first-live-checkpoint.json",
+    "input_format": "chreatures-checkpoint-v1",
+    "input_sha256": "fc721d71984fd2571b0f3c2e77ab62419b2fd66e0d796e8bf6412ac7e36633f2",
+    "journal_events": 4,
+    "rejected_telemetry_rows": 0,
+    "resident_ids": [
+      "fern",
+      "mica",
+      "pip"
+    ],
+    "telemetry_candidates": 378,
+    "telemetry_excerpt": {
+      "bytes": 13400,
+      "file": "telemetry_used.csv",
+      "numeric_format": "10 significant decimal digits",
+      "rows": 378,
+      "sha256": "7e6bc445f53c49b16938d88d9917856f7a9e92e51c399f95177a1c1fdfafe8b6"
+    },
+    "telemetry_rows": 378,
+    "time_range": [
+      0.49999999999999994,
+      62.99999999999856
+    ]
+  },
+  "report_type": "chreatures-observatory",
+  "schema_version": 1,
+  "weave": {
+    "artifact": "integrations/artifacts/observatory/habitat_journal.weave.json",
+    "artifact_file": "habitat_journal.weave.json",
+    "bytes": 3476,
+    "integration": "native-universal-weave-dag",
+    "library": {
+      "name": "universal-weave",
+      "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+      "version": "0.5.0"
+    },
+    "node_count": 5,
+    "records": [
+      {
+        "node_id": 1,
+        "parents": [],
+        "record_type": "episode",
+        "source_id": "da3ed986-34f1-4b95-a7d3-d4336617aded:0:0",
+        "text": "Mica, Fern and Pip entered the nursery.",
+        "time": 0.0
+      },
+      {
+        "node_id": 2,
+        "parents": [],
+        "record_type": "episode",
+        "source_id": "da3ed986-34f1-4b95-a7d3-d4336617aded:159:1",
+        "text": "Fern started feeding.",
+        "time": 7.95
+      },
+      {
+        "node_id": 3,
+        "parents": [],
+        "record_type": "episode",
+        "source_id": "da3ed986-34f1-4b95-a7d3-d4336617aded:160:2",
+        "text": "Pip started feeding.",
+        "time": 8.0
+      },
+      {
+        "node_id": 4,
+        "parents": [],
+        "record_type": "episode",
+        "source_id": "da3ed986-34f1-4b95-a7d3-d4336617aded:779:3",
+        "text": "Placed food.",
+        "time": 38.95
+      },
+      {
+        "node_id": 5,
+        "parents": [],
+        "record_type": "evidence",
+        "source_id": "gamfit:habitat-activity:v1",
+        "text": "Descriptive native GAM fit over 378 habitat telemetry rows; this is not a causal claim.",
+        "time": 63.0
+      }
+    ],
+    "reload_equal": true,
+    "request_file": "weave_import_request.json",
+    "status": "complete",
+    "topological_order": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "validated_after_reload": true
+  }
+}
