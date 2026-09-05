@@ -57,6 +57,17 @@ class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
         self._fast_advance_syncs = -1
         self._fast_food_amounts: tuple[float, ...] = ()
 
+    def _rebuild_preserving(self) -> None:
+        """Rebind model-address caches after a successful topology rebuild.
+
+        Dynamic entities may insert free joints ahead of resident joints in the
+        compiled model. The inherited rebuild preserves state by joint name;
+        only after that transaction completes is it safe to resolve the new
+        integer qpos/dof addresses used by the vectorized controller.
+        """
+        super()._rebuild_preserving()
+        self._prepare_fast_articulation()
+
     def _illumination(self, body: PhysicsBody) -> float:
         cache = self._fast_sense_illumination
         if cache is not None:

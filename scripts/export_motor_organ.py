@@ -38,6 +38,11 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--run-record", type=Path)
     parser.add_argument("--training-genome", type=Path,
                         help="optional runner genome whose model arrays must match the checkpoint")
+    parser.add_argument("--initial-genome", type=Path)
+    parser.add_argument("--evaluation-summary", type=Path)
+    parser.add_argument("--training-lineage", default="unknown")
+    parser.add_argument("--objective-label", default="unknown")
+    parser.add_argument("--training-scope", default="unknown")
     parser.add_argument("--cohort-checkpoint", type=Path,
                         help="full cohort JSON.gz used to derive the physical interface")
     parser.add_argument("--sensorium-interface")
@@ -80,6 +85,16 @@ def main() -> int:
             for name in trainer.model.state_dict():
                 if name not in genome.files or not np.array_equal(state[name], np.asarray(genome[name])):
                     raise SystemExit(f"training genome array differs from checkpoint: {name}")
+    initial_genome_hash = sha256(args.initial_genome.resolve()) if args.initial_genome else None
+    evaluation = None
+    if args.evaluation_summary:
+        summary_path = args.evaluation_summary.resolve()
+        summary = json.loads(summary_path.read_text())
+        evaluation = {
+            "summary_sha256": sha256(summary_path),
+            "steps": summary.get("steps"),
+            "evaluations": summary.get("evaluations"),
+        }
     run = None
     if args.run_record:
         run = json.loads(args.run_record.read_text())
@@ -148,6 +163,7 @@ def main() -> int:
     provenance = {
         "checkpoint_sha256": sha256(checkpoint),
         "training_genome_sha256": training_genome_hash,
+        "initial_genome_sha256": initial_genome_hash,
         "graph_sha256": args.graph_sha256,
         "port_spec_sha256": args.port_spec_sha256,
         "port_bundle_sha256": args.port_bundle_sha256,
@@ -158,6 +174,12 @@ def main() -> int:
             else (extra.get("step") if isinstance(extra, dict) else None)
         ),
         "training_interface": interface,
+        "training_design": {
+            "lineage": args.training_lineage,
+            "objective": args.objective_label,
+            "scope": args.training_scope,
+        },
+        "heldout_evaluation": evaluation,
     }
     metadata = {
         "format": ARTIFACT_FORMAT, "version": 1, "actions": list(ACTIONS),

@@ -175,6 +175,8 @@ def handler_type(state):
                 )
 
         def log_message(self, fmt, *args):
+            if self.path == "/v1/step" and len(args) > 1 and str(args[1]) == "200":
+                return
             print(
                 f"{self.log_date_time_string()} {fmt % args}",
                 file=sys.stderr,

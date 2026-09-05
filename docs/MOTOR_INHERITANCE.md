@@ -220,3 +220,35 @@ The final artifact has the same legacy-world-v0 camera, analytic odor, and
 lightweight-hexapod training boundary as the earlier candidate.  Deployment
 with body-v1 and diffusion remains a cross-environment transfer, and the
 artifact has not been applied to an existing live resident.
+
+## Fresh canonical 20,000-step artifact
+
+`data/genomes/nursery-20000-fresh-canonical.npz` is a distinct same-budget run
+trained from the zero-update initialization, rather than continued from the
+earlier nursery lineage.  The artifact metadata explicitly records lineage
+`fresh-zero-update-initialization`, objective
+`legacy-symmetric-energy-target-v1`, and scope
+`one-MaleCNS-topology_seed-20260906_16x3-cohort`.  One topology and one seed do
+not establish robustness.
+
+- canonical artifact SHA-256:
+  `96f616e3a1a17d068a73e4719eca1a8a7add219103655696aee514ed0ecdb544`
+- NPZ file SHA-256:
+  `27531a2916920a65cdcaa70bc541e87acae248e66b0b7e14da88848547c5197c`
+- learned training-genome SHA-256:
+  `bf66a3bcfa711281941a83252e907e6fb738ee959f63f89d06bb04fb614b9333`
+- zero-update initial-genome SHA-256:
+  `820c876fdd30330c26849544571f2f60d2a938b3a1029b3f86423ade630973e8`
+- final learner checkpoint SHA-256:
+  `587fdf2bc2b53d2f8d0d67dd9cfb09fef5136d7cf77f7ff7db8d6d77b678b73c`
+
+Its held-out bodily reward was `+0.039181`, versus `-0.361541` for its fixed
+initialization and `-0.788359` with neural features silenced.  This supports a
+bounded regulation-objective improvement for that run.  It does not establish
+overall energy competence: learned nutrition (`0.333589`) was below initial
+nutrition (`0.512667`), final energy was lower (`0.873553` versus `0.904367`),
+and the silenced policy ingested `4.005000` while scoring much worse.  The
+legacy symmetric potential can reward energy expenditure above `0.85`, so its
+positive return may partly represent movement toward that target by burning
+energy.  This artifact preserves the same legacy sensorium and chemistry
+transfer caveats as the other nursery genomes.

@@ -1,0 +1,14 @@
+{
+  "artifact_bytes": 207261844,
+  "artifact_sha256": "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0",
+  "edges": 25563197,
+  "format": "metal-csr-v2",
+  "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "inputs": 351,
+  "neurons": 165122,
+  "port_bundle_sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2",
+  "port_spec_sha256": "fffb48c65bdb5bc2503ff8ad7c65b4419e12aa9ef5b58b9f36bc910f64dadb6f",
+  "readouts": 384,
+  "recipe": "normalized-signed-float32-recurrence+retinal-v1-csr",
+  "schema_version": 1
+}
