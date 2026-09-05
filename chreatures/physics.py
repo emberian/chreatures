@@ -195,6 +195,13 @@ class PhysicsWorld:
         physical = spec.get("physical_materials")
         if not isinstance(materials, dict) or not isinstance(physical, dict):
             raise ValueError("materials and physical_materials are required")
+        compiler = spec.get("compiler", {})
+        if not isinstance(compiler, dict):
+            raise ValueError("compiler settings must be a mapping")
+        if "material_order" in compiler:
+            order = compiler["material_order"]
+            if not isinstance(order, list) or len(order) != len(set(order)) or set(order) != set(materials):
+                raise ValueError("compiler material_order must list every material exactly once")
         for name, material in materials.items():
             if not _ID.match(name) or not isinstance(material, dict):
                 raise ValueError("invalid visual material")
@@ -231,6 +238,18 @@ class PhysicsWorld:
             _vector(entity.get("position"), 3, f"{entity['id']} position")
             if "quaternion" in entity:
                 _unit_quaternion(entity["quaternion"])
+            if entity["mobility"] == "hinge":
+                joint = entity.get("joint", {})
+                if not isinstance(joint, dict):
+                    raise ValueError(f"invalid hinge joint on {entity['id']}")
+                axis = np.asarray(_vector(joint.get("axis", [0, 1, 0]), 3, "hinge axis"), dtype=float)
+                if float(np.linalg.norm(axis)) < 1e-9:
+                    raise ValueError("hinge axis cannot be zero")
+                limits = _vector(joint.get("range", [-45, 45]), 2, "hinge range", 360.0)
+                if limits[0] >= limits[1]:
+                    raise ValueError("hinge range must be increasing")
+                _number(joint.get("damping", 0.05), "hinge damping", 0.0, 1e4)
+                _number(joint.get("initial", 0.0), "hinge initial", limits[0], limits[1])
             shapes = entity.get("shapes")
             if not isinstance(shapes, list) or not shapes:
                 raise ValueError(f"{entity['id']} requires at least one shape")
@@ -272,6 +291,16 @@ class PhysicsWorld:
                 elif component_type == "shade":
                     _number(component.get("radius", 1.0), "shade radius", 0.01, 20.0)
                     _number(component.get("strength", 1.0), "shade strength", 0.0, 1.0)
+                elif component_type == "light":
+                    _vector(component.get("position", [0, 0, 0]), 3, "light position", 20.0)
+                    direction = np.asarray(_vector(component.get("direction", [0, 0, -1]), 3, "light direction"), dtype=float)
+                    if float(np.linalg.norm(direction)) < 1e-9:
+                        raise ValueError("light direction cannot be zero")
+                    color = _vector(component.get("color", [1, 1, 1]), 3, "light color", 1.0)
+                    if any(value < 0.0 for value in color):
+                        raise ValueError("light color cannot be negative")
+                    _number(component.get("intensity", 1.0), "light intensity", 0.0, 1.0)
+                    _number(component.get("radius", 2.0), "light radius", 0.05, 20.0)
         limits = spec.get("limits", {})
         if len(spec["entities"]) > int(limits.get("entities", 96)):
             raise ValueError("entity capacity exceeded")
@@ -339,13 +368,23 @@ class PhysicsWorld:
                 "friction": physical["friction"], "condim": 4,
             }
             pieces.append(f"<geom {self._attrs(attrs)}/>")
+        for index, component in enumerate(entity.get("components", [])):
+            if component.get("type") != "light":
+                continue
+            intensity = float(component.get("intensity", 1.0))
+            color = np.asarray(component.get("color", [1.0, 1.0, 1.0]), dtype=float) * intensity
+            direction = np.asarray(component.get("direction", [0, 0, -1]), dtype=float)
+            direction /= np.linalg.norm(direction)
+            pieces.append(f'<light {self._attrs({"name": f"entity:{entity_id}:light:{index}", "mode": "fixed", "pos": component.get("position", [0, 0, 0]), "dir": direction, "diffuse": color, "specular": color * 0.15, "directional": "false", "castshadow": "true", "cutoff": 70, "exponent": 1.0})}/>')
         pieces.append("</body>")
         return "".join(pieces)
 
     def _compile_model(self) -> None:
         self._entities = [self._expand_entity(raw, self.spec.get("presets", {})) for raw in self.spec["entities"]]
         assets = []
-        for name, material in self.spec["materials"].items():
+        material_order = self.spec.get("compiler", {}).get("material_order", self.spec["materials"])
+        for name in material_order:
+            material = self.spec["materials"][name]
             assets.append(f'<material {self._attrs({"name": f"mat:{name}", "rgba": material["rgba"]})}/>')
         world = [
             '<light name="caregiver-light" pos="6 4 3" dir="0 0 -1" diffuse="0 0 0" specular="0 0 0" directional="false"/>',
@@ -558,12 +597,50 @@ class PhysicsWorld:
             result[int(resonator["tone"])] += self._resonance[entity["id"]] * float(resonator.get("gain", 1.0)) / (1.0 + (distance / 1.4) ** 2)
         return np.clip(result, 0.0, 2.0).tolist()
 
+    def _scene_lights(self) -> list[dict[str, Any]]:
+        """Resolve declarative body-local lights into current world coordinates."""
+        result: list[dict[str, Any]] = []
+        for entity in self._entities:
+            body_id = self._entity_mj[entity["id"]]
+            rotation = self.data.xmat[body_id].reshape(3, 3)
+            origin = self.data.xpos[body_id]
+            for index, component in enumerate(self._components[entity["id"]]):
+                if component.get("type") != "light":
+                    continue
+                local_position = np.asarray(component.get("position", [0, 0, 0]), dtype=float)
+                local_direction = np.asarray(component.get("direction", [0, 0, -1]), dtype=float)
+                direction = rotation @ (local_direction / np.linalg.norm(local_direction))
+                result.append({
+                    "id": f"{entity['id']}:{index}", "entity": entity["id"],
+                    "position": (origin + rotation @ local_position).astype(float).tolist(),
+                    "direction": direction.astype(float).tolist(),
+                    "color": list(map(float, component.get("color", [1, 1, 1]))),
+                    "intensity": float(component.get("intensity", 1.0)),
+                    "radius": float(component.get("radius", 2.0)),
+                })
+        return result
+
     def _illumination(self, body: PhysicsBody) -> float:
-        base = 0.68
-        if self._light["remaining"] <= 0.0:
-            return base
-        distance = float(np.linalg.norm(np.array([body.x, body.y, body.z]) - np.asarray(self._light["position"])))
-        return float(min(1.0, base + self._light["intensity"] / (1.0 + (distance / 1.8) ** 2)))
+        point = np.array([body.x, body.y, body.z + 0.035], dtype=float)
+        value = 0.42
+        for light in self._scene_lights():
+            source = np.asarray(light["position"], dtype=float)
+            delta = point - source
+            distance = float(np.linalg.norm(delta))
+            if distance < 1e-8:
+                visibility = 1.0
+                cone = 1.0
+            else:
+                ray_distance, geom_id = self._ray(point, -delta / distance, self._body_mj[body.id])
+                hit_entity = self._geom_entity.get(geom_id)
+                visibility = 1.0 if ray_distance < 0.0 or ray_distance >= distance - 0.07 or hit_entity == light["entity"] else 0.10
+                cone = max(0.0, float(np.dot(delta / distance, np.asarray(light["direction"])))) ** 0.35
+            radius = float(light["radius"])
+            value += visibility * cone * float(light["intensity"]) / (1.0 + (distance / radius) ** 2)
+        if self._light["remaining"] > 0.0:
+            distance = float(np.linalg.norm(point - np.asarray(self._light["position"])))
+            value += self._light["intensity"] / (1.0 + (distance / 1.8) ** 2)
+        return float(min(1.0, value))
 
     def _shade(self, body: PhysicsBody) -> float:
         origin = np.array([body.x, body.y, body.z + 0.06])
@@ -1044,7 +1121,8 @@ class PhysicsWorld:
             "time": self.time, "bodies": body_views,
             "objects": [obj.to_dict() for obj in self.objects], "entities": entities,
             "signals": [signal.to_dict() for signal in self.signals], "hand": copy.deepcopy(self._hand),
-            "light": copy.deepcopy(self._light), "engine": {"name": "MuJoCo", "version": mujoco.__version__},
+            "light": copy.deepcopy(self._light), "lights": self._scene_lights(),
+            "engine": {"name": "MuJoCo", "version": mujoco.__version__},
         }
 
     def snapshot(self) -> dict[str, Any]:
@@ -1071,7 +1149,42 @@ class PhysicsWorld:
         engine = snapshot.get("engine", {})
         if engine != {"name": "MuJoCo", "version": mujoco.__version__}:
             raise ValueError("snapshot requires a different MuJoCo engine version")
-        world = cls(seed=snapshot["seed"], spec=snapshot["spec"])
+        raw_spec = snapshot.get("spec")
+        if not isinstance(raw_spec, dict):
+            raise ValueError("snapshot habitat specification is invalid")
+        restore_spec = copy.deepcopy(raw_spec)
+        # Early v1 checkpoints were written through a canonical JSON encoder
+        # that sorted mapping keys, while the original compiler emitted visual
+        # materials in declaration order. Recover that order from the exact
+        # saved MuJoCo material table. New scenes carry material_order explicitly.
+        compiler = restore_spec.get("compiler", {})
+        if isinstance(compiler, dict) and "material_order" not in compiler:
+            mutable = snapshot.get("model_mutable", {})
+            try:
+                saved_rgba = np.asarray(mutable.get("mat_rgba", []) if isinstance(mutable, dict) else [], dtype=float)
+            except (TypeError, ValueError):
+                saved_rgba = np.empty((0, 4), dtype=float)
+            materials = restore_spec.get("materials", {})
+            valid_materials = isinstance(materials, dict) and all(
+                isinstance(value, dict) and isinstance(value.get("rgba"), list)
+                for value in materials.values()
+            )
+            if valid_materials and saved_rgba.shape == (len(materials), 4):
+                unmatched = set(materials)
+                recovered: list[str] = []
+                for row in saved_rgba:
+                    matches = [
+                        name for name in unmatched
+                        if np.allclose(row, np.asarray(materials[name].get("rgba"), dtype=float), rtol=0.0, atol=1e-6)
+                    ]
+                    if len(matches) != 1:
+                        recovered = []
+                        break
+                    recovered.append(matches[0])
+                    unmatched.remove(matches[0])
+                if recovered and not unmatched:
+                    restore_spec["materials"] = {name: materials[name] for name in recovered}
+        world = cls(seed=snapshot["seed"], spec=restore_spec)
         if snapshot.get("model_signature") != world._model_signature or snapshot.get("mj_state_spec") != int(STATE_SPEC):
             raise ValueError("snapshot model or integration state contract differs")
         state = np.asarray(snapshot.get("mj_state"), dtype=float)

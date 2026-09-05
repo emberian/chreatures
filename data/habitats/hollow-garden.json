@@ -5,6 +5,9 @@
   "size": [12.0, 8.0, 3.5],
   "gravity": [0.0, 0.0, -9.81],
   "physics_timestep": 0.005,
+  "compiler": {
+    "material_order": ["soil", "sandstone", "slate", "wood", "berry", "nectar", "violet", "cyan", "leaf", "cream", "mica", "fern", "pip"]
+  },
   "limits": {
     "entities": 96,
     "signals": 256,
@@ -43,7 +46,7 @@
     "vertical_force": 30.0
   },
   "bodies": [
-    {"id": "mica", "name": "Mica", "position": [2.1, 3.0, 0.075], "heading": 0.15, "material": "mica", "energy": 0.78, "gut": 0.12, "fatigue": 0.05},
+    {"id": "mica", "name": "Mica", "position": [0.55, 2.15, 0.09], "heading": 0.05, "material": "mica", "energy": 0.78, "gut": 0.12, "fatigue": 0.05},
     {"id": "fern", "name": "Fern", "position": [5.7, 1.65, 0.075], "heading": 1.6, "material": "fern", "energy": 0.74, "gut": 0.18, "fatigue": 0.05},
     {"id": "pip", "name": "Pip", "position": [9.2, 5.55, 0.075], "heading": 3.2, "material": "pip", "energy": 0.82, "gut": 0.08, "fatigue": 0.05}
   ],
@@ -94,14 +97,22 @@
       "id": "high-walk", "mobility": "static", "material": "sandstone", "physical_material": "rock", "position": [8.3, 2.15, 0.52],
       "shapes": [
         {"type": "box", "size": [1.75, 0.82, 0.12]},
+        {"type": "box", "size": [1.75, 0.035, 0.055], "position": [0.0, -0.855, 0.175]},
+        {"type": "box", "size": [0.89, 0.035, 0.055], "position": [-0.86, 0.855, 0.175]},
+        {"type": "box", "size": [0.14, 0.035, 0.055], "position": [1.61, 0.855, 0.175]},
+        {"type": "box", "size": [0.035, 0.82, 0.055], "position": [1.785, 0.0, 0.175]},
         {"type": "box", "size": [0.56, 0.60, 0.045], "position": [-1.05, 1.38, 0.232], "quaternion": [0.99148, 0.13028, 0.0, 0.0]},
         {"type": "box", "size": [0.80, 0.55, 0.09], "position": [-1.05, 2.52, 0.34]}
       ],
       "components": [{"type": "shade", "radius": 1.3, "strength": 0.35}]
     },
     {
-      "id": "west-ramp", "mobility": "static", "material": "sandstone", "physical_material": "rock", "position": [5.05, 2.15, 0.274], "quaternion": [0.99468, 0.0, -0.10296, 0.0],
-      "shapes": [{"type": "box", "size": [1.55, 0.82, 0.055]}], "components": []
+      "id": "west-ramp", "mobility": "static", "material": "sandstone", "physical_material": "rock", "position": [3.40, 2.15, 0.255], "quaternion": [0.99863, 0.0, -0.05234, 0.0],
+      "shapes": [
+        {"type": "box", "size": [3.18, 0.82, 0.055]},
+        {"type": "box", "size": [3.18, 0.035, 0.055], "position": [0.0, -0.855, 0.11]},
+        {"type": "box", "size": [3.18, 0.035, 0.055], "position": [0.0, 0.855, 0.11]}
+      ], "components": []
     },
     {
       "id": "east-ramp", "mobility": "static", "material": "sandstone", "physical_material": "rock", "position": [9.05, 4.468, 0.274], "quaternion": [0.99468, -0.10296, 0.0, 0.0],
@@ -166,7 +177,10 @@
       "components": [{"type": "resonator", "tone": 2, "gain": 0.90}]
     },
     {
-      "id": "berry-a", "preset": "berry", "position": [2.85, 2.72, 0.13]
+      "id": "berry-a", "preset": "berry", "position": [2.85, 2.72, 0.35]
+    },
+    {
+      "id": "berry-nook", "preset": "berry", "position": [1.55, 5.15, 0.13]
     },
     {
       "id": "berry-b", "preset": "berry", "position": [7.6, 1.95, 0.76]
