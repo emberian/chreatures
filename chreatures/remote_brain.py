@@ -76,6 +76,7 @@ class RemoteBrain:
         readout_map: tuple[Sequence[str], sparse.spmatrix] | None = None,
         port_metadata: Mapping[str, Any] | None = None,
         recurrence: bool | sparse.spmatrix = True,
+        microbatch_size: int | None = None,
     ) -> None:
         if capacity <= 0 or capacity > 4096:
             raise ValueError("capacity must be between 1 and 4096")
@@ -88,6 +89,9 @@ class RemoteBrain:
         self.tau = float(tau)
         self.gain = float(gain)
         self.support_recovery = float(support_recovery)
+        if microbatch_size is not None and not 1 <= microbatch_size <= capacity:
+            raise ValueError("microbatch_size must be in 1..capacity")
+        self.microbatch_size = microbatch_size
         self.n = int(graph.n)
         self.graph_hash = str(graph.hash)
         self.edge_count = int(graph.edge_count)
@@ -215,7 +219,8 @@ class RemoteBrain:
         ids = [str(item.get("id", "")) for item in residents]
         if len(set(ids)) != len(ids) or any(resident not in self._slots for resident in ids):
             raise ValueError("step resident IDs must be unique and already allocated")
-        slots = torch.tensor([self._slots[resident] for resident in ids], device=self.device)
+        slot_values = [self._slots[resident] for resident in ids]
+        slots = torch.tensor(slot_values, device=self.device)
         channels = np.zeros((len(residents), len(self.input_names)), dtype=np.float32)
         for row, item in enumerate(residents):
             senses = item.get("senses")
@@ -230,52 +235,71 @@ class RemoteBrain:
                     raise ValueError("sensory channel values must be finite in [0, 1]")
                 channels[row, self._input_position[name]] = scalar
 
-        selected_rates = self.rates.index_select(0, slots)
-        selected_adaptation = self.adaptation.index_select(0, slots)
-        selected_support = self.support.index_select(0, slots)
-        channel_tensor = torch.as_tensor(channels, device=self.device)
-        drive = torch.sparse.mm(self.input_matrix, channel_tensor.T).T
-        alpha = min(1.0, dt / 2 / self.tau)
-        for _ in range(2):
-            recurrent = (
-                0.0
-                if self.matrix is None
-                else torch.sparse.mm(self.matrix, selected_rates.T).T
-            )
-            target = torch.relu(
-                torch.tanh(
-                    0.005
-                    + drive
-                    + self.gain * recurrent
-                    - 0.10 * selected_adaptation
-                )
-            )
-            selected_rates.add_(
-                alpha * (target * selected_support - selected_rates)
-            )
-        selected_adaptation.add_(
-            dt / 5 * (selected_rates - selected_adaptation)
+        direct_prefix = slot_values == list(range(len(slot_values)))
+        selected_rates = (
+            self.rates[: len(ids)]
+            if direct_prefix
+            else self.rates.index_select(0, slots)
         )
-        selected_support.add_(
-            dt
-            * (
-                self.support_recovery * (1 - selected_support)
-                - 0.003 * selected_rates
+        selected_adaptation = (
+            self.adaptation[: len(ids)]
+            if direct_prefix
+            else self.adaptation.index_select(0, slots)
+        )
+        selected_support = (
+            self.support[: len(ids)]
+            if direct_prefix
+            else self.support.index_select(0, slots)
+        )
+        channel_tensor = torch.as_tensor(channels, device=self.device)
+        alpha = min(1.0, dt / 2 / self.tau)
+        chunk_size = self.microbatch_size or len(ids)
+        combined = torch.empty(
+            (len(ids), len(self.readout_names) + 3),
+            dtype=self.dtype,
+            device=self.device,
+        )
+        for start in range(0, len(ids), chunk_size):
+            stop = min(start + chunk_size, len(ids))
+            rates = selected_rates[start:stop]
+            adaptation = selected_adaptation[start:stop]
+            support = selected_support[start:stop]
+            dense_channels = channel_tensor[start:stop].T.contiguous()
+            drive = torch.sparse.mm(self.input_matrix, dense_channels).T
+            for _ in range(2):
+                recurrent = (
+                    0.0
+                    if self.matrix is None
+                    else torch.sparse.mm(self.matrix, rates.T).T
+                )
+                target = torch.relu(
+                    torch.tanh(
+                        0.005 + drive + self.gain * recurrent - 0.10 * adaptation
+                    )
+                )
+                rates.add_(alpha * (target * support - rates))
+            adaptation.add_(dt / 5 * (rates - adaptation))
+            support.add_(
+                dt
+                * (
+                    self.support_recovery * (1 - support)
+                    - 0.003 * rates
+                )
+            ).clamp_(0.65, 1)
+            readout = torch.sparse.mm(self.readout_matrix, rates.T).T
+            combined[start:stop, : len(self.readout_names)] = readout
+            combined[start:stop, len(self.readout_names) :] = torch.stack(
+                (rates.mean(dim=1), rates.amax(dim=1), support.mean(dim=1)), dim=1
             )
-        ).clamp_(0.65, 1)
-        self.rates.index_copy_(0, slots, selected_rates)
-        self.adaptation.index_copy_(0, slots, selected_adaptation)
-        self.support.index_copy_(0, slots, selected_support)
-        readout = torch.sparse.mm(self.readout_matrix, selected_rates.T).T
-        activity_mean = selected_rates.mean(dim=1)
-        activity_peak = selected_rates.amax(dim=1)
-        support_mean = selected_support.mean(dim=1)
-        readout_cpu = readout.float().cpu().numpy()
-        means = activity_mean.float().cpu().numpy()
-        peaks = activity_peak.float().cpu().numpy()
-        supports = support_mean.float().cpu().numpy()
+        if not direct_prefix:
+            self.rates.index_copy_(0, slots, selected_rates)
+            self.adaptation.index_copy_(0, slots, selected_adaptation)
+            self.support.index_copy_(0, slots, selected_support)
+        combined_cpu = combined.float().cpu().numpy()
+        readout_cpu = combined_cpu[:, : len(self.readout_names)]
+        means, peaks, supports = combined_cpu[:, -3:].T
         output = []
-        for row, (resident, slot) in enumerate(zip(ids, slots.cpu().tolist(), strict=True)):
+        for row, (resident, slot) in enumerate(zip(ids, slot_values, strict=True)):
             self.times[slot] += dt
             vector = readout_cpu[row].tolist()
             output.append(
@@ -326,6 +350,7 @@ class RemoteBrain:
                 "support_recovery": self.support_recovery,
                 "substeps": 2,
                 "recurrence": self.recurrence_metadata,
+                "microbatch_size": self.microbatch_size,
             },
             "inputs": self.input_names,
             "readouts": self.readout_names,

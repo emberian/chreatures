@@ -159,6 +159,7 @@ class PhysicsWorld:
         self._signal_cooldown: dict[str, float] = {}
         self._grips: dict[str, str | None] = {}
         self._hand: dict[str, Any] | None = None
+        self._acoustics: Any | None = None
         self._light = {"position": [6.0, 4.0, 3.0], "intensity": 0.0, "remaining": 0.0, "color": [1.0, 0.94, 0.78]}
         self._compile_model()
         self.bodies = self._make_bodies()
@@ -200,7 +201,7 @@ class PhysicsWorld:
             raise ValueError("compiler settings must be a mapping")
         if "material_order" in compiler:
             order = compiler["material_order"]
-            if not isinstance(order, list) or len(order) != len(set(order)) or set(order) != set(materials):
+            if not isinstance(order, list) or not all(isinstance(name, str) for name in order) or len(order) != len(set(order)) or set(order) != set(materials):
                 raise ValueError("compiler material_order must list every material exactly once")
         for name, material in materials.items():
             if not _ID.match(name) or not isinstance(material, dict):
@@ -278,6 +279,8 @@ class PhysicsWorld:
                 if component_type == "food":
                     _number(component.get("amount"), "food amount", 0.0, 100.0)
                     _number(component.get("nutrition", 1.0), "food nutrition", 0.0, 10.0)
+                    if "capacity" in component:
+                        _number(component["capacity"], "food capacity", component["amount"], 100.0)
                 elif component_type == "scent":
                     odor = component.get("odor")
                     if isinstance(odor, bool) or not isinstance(odor, int) or odor not in (0, 1, 2):
@@ -301,6 +304,79 @@ class PhysicsWorld:
                         raise ValueError("light color cannot be negative")
                     _number(component.get("intensity", 1.0), "light intensity", 0.0, 1.0)
                     _number(component.get("radius", 2.0), "light radius", 0.05, 20.0)
+                elif component_type == "reservoir":
+                    reservoir_id = component.get("id", entity["id"])
+                    if not isinstance(reservoir_id, str) or not _ID.match(reservoir_id):
+                        raise ValueError("reservoir id is invalid")
+                    material = _number(component.get("material", 0.0), "reservoir material", 0.0, 1e6)
+                    material_capacity = _number(component.get("material_capacity", material), "reservoir material capacity", material, 1e6)
+                    energy = _number(component.get("energy", 0.0), "reservoir energy", 0.0, 1e6)
+                    _number(component.get("energy_capacity", energy), "reservoir energy capacity", energy, 1e6)
+                    _number(component.get("uptake_rate", 0.0), "reservoir uptake rate", 0.0, 1e3)
+                elif component_type == "producer":
+                    producer_id = component.get("id", entity["id"])
+                    reservoir_id = component.get("reservoir", entity["id"])
+                    if not isinstance(producer_id, str) or not _ID.match(producer_id):
+                        raise ValueError("producer id is invalid")
+                    if not isinstance(reservoir_id, str) or not _ID.match(reservoir_id):
+                        raise ValueError("producer reservoir id is invalid")
+                    _number(component.get("growth_rate", 0.01), "producer growth rate", 0.0, 100.0)
+                    _number(component.get("maintenance_rate", 0.0), "producer maintenance rate", 0.0, 100.0)
+                    _number(component.get("capture_area", 0.1), "producer capture area", 0.0, 100.0)
+                    _number(component.get("efficiency", 0.25), "producer efficiency", 0.0, 1.0)
+                    _number(component.get("light_half_saturation", 0.3), "light half saturation", 1e-6, 10.0)
+                    energy_cost = _number(component.get("energy_cost", 1.0), "growth energy cost", 1e-6, 1e4)
+                    _number(component.get("energy_content", 0.8), "food energy content", 0.0, energy_cost)
+                    _number(component.get("turnover_rate", 0.0), "producer turnover rate", 0.0, 100.0)
+                    _number(component.get("recycle_fraction", 0.0), "producer recycle fraction", 0.0, 1.0)
+                    _vector(component.get("sample_offset", [0, 0, 0.12]), 3, "producer sample offset", 5.0)
+                    if "food_capacity" in component:
+                        _number(component["food_capacity"], "producer food capacity", 1e-6, 100.0)
+                    visual = component.get("visual")
+                    if visual is not None:
+                        if not isinstance(visual, dict):
+                            raise ValueError("producer visual must be a mapping")
+                        indices = visual.get("shape_indices", [0])
+                        if not isinstance(indices, list) or not indices or not all(isinstance(i, int) and not isinstance(i, bool) for i in indices) or len(set(indices)) != len(indices) or any(i < 0 or i >= len(shapes) for i in indices):
+                            raise ValueError("producer visual shape indices are invalid")
+                        scale = _vector(visual.get("scale_range", [0.94, 1.06]), 2, "producer scale range", 1.15)
+                        if scale[0] < 0.85 or scale[0] > scale[1] or scale[1] > 1.15:
+                            raise ValueError("producer scale range must stay within [0.85, 1.15]")
+                        _number(visual.get("max_scale_rate", 0.02), "producer visual rate", 0.0, 0.2)
+                        for key in ("empty_color", "full_color"):
+                            if key in visual:
+                                color = _vector(visual[key], 3, f"producer {key}", 1.0)
+                                if any(value < 0.0 for value in color):
+                                    raise ValueError("producer visual colors cannot be negative")
+                        if "exclusive_material" in visual and not isinstance(visual["exclusive_material"], bool):
+                            raise ValueError("exclusive_material must be boolean")
+                        has_empty, has_full = "empty_color" in visual, "full_color" in visual
+                        if has_empty != has_full or (has_empty and not visual.get("exclusive_material", False)):
+                            raise ValueError("producer growth color requires two endpoints and an exclusive material")
+                elif component_type == "acoustic_resonator":
+                    emitter_id = component.get("id", entity["id"])
+                    if not isinstance(emitter_id, str) or not _ID.match(emitter_id):
+                        raise ValueError("acoustic emitter id is invalid")
+                    drive = component.get("drive", "contact")
+                    if drive not in {"contact", "hinge", "both"} or drive in {"hinge", "both"} and entity["mobility"] != "hinge":
+                        raise ValueError("acoustic hinge drive requires a hinged entity")
+                    tones = _vector(component.get("tones", [1, 0, 0]), 3, "acoustic tones", 1.0)
+                    if any(value < 0.0 for value in tones) or sum(tones) <= 0.0:
+                        raise ValueError("acoustic tones require positive weight")
+                    capacity = _number(component.get("energy_capacity", 0.05), "acoustic capacity", 1e-8, 100.0)
+                    _number(component.get("initial_energy", 0.0), "acoustic initial energy", 0.0, capacity)
+                    _number(component.get("capture_efficiency", 0.25), "acoustic capture efficiency", 0.0, 1.0)
+                    _number(component.get("impact_threshold", 1e-5), "acoustic impact threshold", 0.0, 10.0)
+                    _number(component.get("min_impact_speed", 0.02), "acoustic impact speed", 0.0, 20.0)
+                    _number(component.get("cooldown", 0.08), "acoustic cooldown", 0.0, 10.0)
+                    _number(component.get("decay_time", 0.7), "acoustic decay time", 0.01, 100.0)
+                    _number(component.get("radiative_fraction", 0.65), "acoustic radiative fraction", 0.0, 1.0)
+                    _number(component.get("reference_energy", 0.003), "acoustic reference energy", 1e-9, 100.0)
+                    _number(component.get("gain", 1.0), "acoustic gain", 0.0, 10.0)
+                    _number(component.get("range", 1.8), "acoustic range", 0.05, 50.0)
+                    _number(component.get("occlusion", 0.12), "acoustic occlusion", 0.0, 1.0)
+                    _number(component.get("hinge_damping", 0.002), "acoustic hinge damping", 0.0, 100.0)
+                    _number(component.get("max_hinge_torque", 0.03), "acoustic hinge torque", 0.0, 100.0)
         limits = spec.get("limits", {})
         if len(spec["entities"]) > int(limits.get("entities", 96)):
             raise ValueError("entity capacity exceeded")
@@ -509,6 +585,161 @@ class PhysicsWorld:
             components=components,
         )
 
+    def ecology_components(self) -> list[dict[str, Any]]:
+        """Return authored ecology components for an optional environment layer.
+
+        This integration view is deliberately separate from ``sense``: it is
+        world machinery and is never included in an organism observation.
+        """
+        self._sync_public_state()
+        result = []
+        for entity in self._entities:
+            components = [
+                copy.deepcopy(component) for component in self._components[entity["id"]]
+                if component.get("type") in {"food", "producer", "reservoir"}
+            ]
+            if components:
+                position, quaternion = self._pose(entity["id"])
+                result.append({
+                    "entity": entity["id"], "position": position.astype(float).tolist(),
+                    "quaternion": quaternion.astype(float).tolist(), "shape_count": len(entity["shapes"]),
+                    "components": components,
+                })
+        return result
+
+    def ecology_food_amount(self, entity_id: str, value: float | None = None) -> float:
+        """Read or safely update the ordinary edible component on an entity."""
+        if not isinstance(entity_id, str) or entity_id not in self._components:
+            raise ValueError("unknown ecology entity")
+        food = next((component for component in self._components[entity_id] if component.get("type") == "food"), None)
+        if food is None:
+            raise ValueError("ecology entity has no food component")
+        if value is not None:
+            capacity = float(food.get("capacity", 100.0))
+            food["amount"] = _number(value, "food amount", 0.0, capacity)
+            self._sync_public_state()
+        return float(food["amount"])
+
+    def apply_growth_visual(
+        self,
+        entity_id: str,
+        shape_indices: list[int],
+        scale: float,
+        color: list[float] | None = None,
+        *,
+        exclusive_material: bool = False,
+    ) -> None:
+        """Apply a tightly bounded, absolute growth visualization.
+
+        Absolute scaling from authored dimensions avoids accumulating numeric
+        drift. The narrow scale range prevents ecology updates from creating a
+        sudden large collider. Recoloring is allowed only for materials unused
+        by any other entity.
+        """
+        entity = self._entity(entity_id)
+        factor = _number(scale, "growth visual scale", 0.85, 1.15)
+        if not isinstance(shape_indices, list) or not shape_indices or any(
+            isinstance(index, bool) or not isinstance(index, int) or index < 0 or index >= len(entity["shapes"])
+            for index in shape_indices
+        ):
+            raise ValueError("growth visual shape indices are invalid")
+        geom_ids: list[int] = []
+        for index in shape_indices:
+            geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, f"entity:{entity_id}:geom:{index}")
+            geom_ids.append(geom_id)
+        rgb: np.ndarray | None = None
+        selected_materials: set[int] = set()
+        if color is not None:
+            rgb = np.asarray(_vector(color, 3, "growth visual color", 1.0), dtype=float)
+            if np.any(rgb < 0.0) or not exclusive_material:
+                raise ValueError("growth color requires a nonnegative exclusive material")
+            selected_materials = {int(self.model.geom_matid[geom_id]) for geom_id in geom_ids}
+            if -1 in selected_materials:
+                raise ValueError("growth color requires an authored material")
+            for material_id in selected_materials:
+                users = np.flatnonzero(self.model.geom_matid == material_id)
+                if any(self._geom_entity.get(int(geom_id)) != entity_id for geom_id in users):
+                    raise ValueError("growth material is shared by another entity")
+        for index, geom_id in zip(shape_indices, geom_ids, strict=True):
+            authored_size = np.asarray(entity["shapes"][index]["size"], dtype=float)
+            self.model.geom_size[geom_id, : len(authored_size)] = authored_size * factor
+        if rgb is not None:
+            for material_id in selected_materials:
+                self.model.mat_rgba[material_id, :3] = rgb
+        mujoco.mj_forward(self.model, self.data)
+        self._sync_public_state()
+
+    def acoustic_components(self) -> list[dict[str, Any]]:
+        """Return authored acoustic transducers outside organism observation."""
+        result = []
+        for entity in self._entities:
+            components = [
+                copy.deepcopy(component) for component in self._components[entity["id"]]
+                if component.get("type") == "acoustic_resonator"
+            ]
+            if components:
+                result.append({"entity": entity["id"], "components": components})
+        return result
+
+    def attach_acoustics(self, engine: Any | None) -> None:
+        """Attach one optional local acoustic transducer engine."""
+        if engine is not None and (
+            not callable(getattr(engine, "ingest_contact", None))
+            or not callable(getattr(engine, "before_substep", None))
+            or not callable(getattr(engine, "sample", None))
+        ):
+            raise TypeError("acoustic engine does not implement the integration protocol")
+        if engine is not None and self._acoustics is not None and self._acoustics is not engine:
+            raise RuntimeError("an acoustic engine is already attached")
+        self._acoustics = engine
+
+    def acoustic_entity_state(self, entity_id: str) -> dict[str, Any]:
+        """Expose physical source pose and hinge motion to environment machinery."""
+        entity = self._entity(entity_id)
+        position, quaternion = self._pose(entity_id)
+        value: dict[str, Any] = {
+            "mobility": entity["mobility"], "position": position.astype(float).tolist(),
+            "quaternion": quaternion.astype(float).tolist(),
+        }
+        if entity["mobility"] == "hinge":
+            joint_id = self._entity_joint[entity_id]
+            dof = int(self.model.jnt_dofadr[joint_id])
+            velocity = float(self.data.qvel[dof])
+            value.update({
+                "joint_velocity": velocity, "joint_inertia": float(self.model.dof_M0[dof]),
+                "joint_energy": 0.5 * float(self.model.dof_M0[dof]) * velocity * velocity,
+            })
+        return value
+
+    def apply_acoustic_hinge_torque(self, entity_id: str, torque: float) -> None:
+        entity = self._entity(entity_id)
+        if entity["mobility"] != "hinge":
+            raise ValueError("acoustic torque requires a hinged entity")
+        value = _number(torque, "acoustic hinge torque", -100.0, 100.0)
+        joint_id = self._entity_joint[entity_id]
+        self.data.qfrc_applied[self.model.jnt_dofadr[joint_id]] += value
+
+    def acoustic_visibility(
+        self,
+        listener: list[float] | np.ndarray,
+        source: list[float] | np.ndarray,
+        source_entity: str | None,
+        exclude_body: int,
+        transmission: float,
+    ) -> float:
+        """Return direct-path sound transmission through current geometry."""
+        start = np.asarray(listener, dtype=float)
+        end = np.asarray(source, dtype=float)
+        delta = end - start
+        distance = float(np.linalg.norm(delta))
+        if distance < 1e-9:
+            return 1.0
+        ray_distance, geom_id = self._ray(start, delta / distance, exclude_body)
+        hit_entity = self._geom_entity.get(geom_id)
+        if ray_distance < 0.0 or ray_distance >= distance - 0.07 or source_entity is not None and hit_entity == source_entity:
+            return 1.0
+        return _number(transmission, "acoustic transmission", 0.0, 1.0)
+
     def sense(self, body_id: str) -> dict[str, Any]:
         body = self._body(body_id)
         vision = self._vision(body)
@@ -620,27 +851,39 @@ class PhysicsWorld:
                 })
         return result
 
-    def _illumination(self, body: PhysicsBody) -> float:
-        point = np.array([body.x, body.y, body.z + 0.035], dtype=float)
-        value = 0.42
+    def _environment_at(self, point: np.ndarray, exclude_body: int = -1) -> dict[str, float]:
+        upward_distance, upward_geom = self._ray(point + np.array([0.0, 0.0, 1e-4]), np.array([0.0, 0.0, 1.0]), exclude_body)
+        sky_exposure = 1.0 if upward_geom < 0 or upward_distance < 0.0 else 0.08
+        value = 0.42 * sky_exposure
         for light in self._scene_lights():
             source = np.asarray(light["position"], dtype=float)
             delta = point - source
             distance = float(np.linalg.norm(delta))
             if distance < 1e-8:
-                visibility = 1.0
-                cone = 1.0
+                visibility = cone = 1.0
             else:
-                ray_distance, geom_id = self._ray(point, -delta / distance, self._body_mj[body.id])
+                ray_distance, geom_id = self._ray(point, -delta / distance, exclude_body)
                 hit_entity = self._geom_entity.get(geom_id)
                 visibility = 1.0 if ray_distance < 0.0 or ray_distance >= distance - 0.07 or hit_entity == light["entity"] else 0.10
                 cone = max(0.0, float(np.dot(delta / distance, np.asarray(light["direction"])))) ** 0.35
-            radius = float(light["radius"])
-            value += visibility * cone * float(light["intensity"]) / (1.0 + (distance / radius) ** 2)
+            value += visibility * cone * float(light["intensity"]) / (1.0 + (distance / float(light["radius"])) ** 2)
         if self._light["remaining"] > 0.0:
             distance = float(np.linalg.norm(point - np.asarray(self._light["position"])))
             value += self._light["intensity"] / (1.0 + (distance / 1.8) ** 2)
-        return float(min(1.0, value))
+        return {"illumination": float(min(1.0, value)), "sky_exposure": sky_exposure}
+
+    def sample_environment(self, points: Any) -> list[dict[str, float]]:
+        """Sample anonymous physical light conditions for ecology integrations."""
+        if not isinstance(points, (list, tuple)) or len(points) > 128:
+            raise ValueError("points must be a sequence of at most 128 positions")
+        clean = [_vector(point, 3, "environment sample point", max(self.width, self.height, self.depth) * 2) for point in points]
+        if any(not (0.0 <= p[0] <= self.width and 0.0 <= p[1] <= self.height and 0.0 <= p[2] <= self.depth) for p in clean):
+            raise ValueError("environment sample point is outside habitat")
+        return [self._environment_at(np.asarray(point, dtype=float)) for point in clean]
+
+    def _illumination(self, body: PhysicsBody) -> float:
+        point = np.array([body.x, body.y, body.z + 0.035], dtype=float)
+        return self._environment_at(point, self._body_mj[body.id])["illumination"]
 
     def _shade(self, body: PhysicsBody) -> float:
         origin = np.array([body.x, body.y, body.z + 0.06])

@@ -121,7 +121,10 @@ fn import_weave(request: ImportRequest) -> Result<EvidenceWeave, Box<dyn Error>>
                     time,
                     record_type: "episode".to_owned(),
                     text,
-                    artifact_uri: None,
+                    artifact_uri: source
+                        .get("artifact_uri")
+                        .and_then(Value::as_str)
+                        .map(str::to_owned),
                     source,
                 },
             ),
@@ -242,16 +245,46 @@ fn run(args: &Args) -> Result<Value, Box<dyn Error>> {
         .iter()
         .map(|id| {
             let record = reloaded.get_contents(id).expect("ordered node must exist");
+            let parents: Vec<_> = reloaded
+                .get_parents(id)
+                .expect("ordered node must expose parents")
+                .iter()
+                .copied()
+                .collect();
+            let parent_source_ids: Vec<_> = parents
+                .iter()
+                .map(|parent| {
+                    reloaded
+                        .get_contents(parent)
+                        .expect("parent node must exist")
+                        .source_id
+                        .clone()
+                })
+                .collect();
             serde_json::json!({
                 "node_id": id,
                 "source_id": record.source_id,
                 "time": record.time,
                 "record_type": record.record_type,
                 "text": record.text,
-                "parents": reloaded.get_parents(id),
+                "artifact_uri": record.artifact_uri,
+                "parents": parents,
+                "parent_source_ids": parent_source_ids,
             })
         })
         .collect();
+    let edge_count: usize = records
+        .iter()
+        .map(|record| record["parents"].as_array().map_or(0, Vec::len))
+        .sum();
+    let multi_parent_nodes = records
+        .iter()
+        .filter(|record| {
+            record["parents"]
+                .as_array()
+                .is_some_and(|parents| parents.len() > 1)
+        })
+        .count();
 
     Ok(serde_json::json!({
         "integration": "native-universal-weave-dag",
@@ -263,6 +296,8 @@ fn run(args: &Args) -> Result<Value, Box<dyn Error>> {
         "artifact": args.output,
         "bytes": persisted.len(),
         "node_count": reloaded.len(),
+        "edge_count": edge_count,
+        "multi_parent_nodes": multi_parent_nodes,
         "topological_order": topological_order,
         "records": records,
         "reload_equal": true,

@@ -257,6 +257,11 @@ def main() -> None:
     parser.add_argument("--tau", type=float, default=0.16)
     parser.add_argument("--gain", type=float, default=0.92)
     parser.add_argument("--support-recovery", type=float, default=0.024)
+    parser.add_argument(
+        "--microbatch-size",
+        type=int,
+        help="evaluate resident cohorts in exact GPU chunks (3 is tuned for gfx1030)",
+    )
     parser.add_argument("--feature-count", type=int)
     parser.add_argument("--bind", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
@@ -295,6 +300,7 @@ def main() -> None:
         input_map=inputs,
         readout_map=readouts,
         port_metadata=port_metadata,
+        microbatch_size=args.microbatch_size,
     )
     expected_features = args.feature_count
     if expected_features is None:

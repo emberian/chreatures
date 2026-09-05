@@ -71,6 +71,8 @@ def create_app(checkpoint: Path | None = None, seed=7, autostep=True, dimension=
                 log.exception("Preserving the previous checkpoint after an incomplete tick")
 
     app = FastAPI(title="Chreatures", lifespan=lifespan)
+    from .observatory import router as observatory_router
+    app.include_router(observatory_router)
     app.state.authority = authority
     app.mount("/assets", StaticFiles(directory=ROOT / "web"), name="assets")
 

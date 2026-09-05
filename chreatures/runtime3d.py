@@ -29,6 +29,9 @@ class Habitat3D:
         from .fields import FieldEnvironment
         if body_mode not in ("crawler", "articulated") or ecology not in ("analytic", "diffusion"):
             raise ValueError("Unknown body or ecology model")
+        if spec is None:
+            spec = json.loads((Path(__file__).resolve().parents[1] / "data/habitats/hollow-garden.json").read_text())
+            spec["sensorium"] = {"frame": "body-v1"}
         self.body_mode = body_mode
         world_type = ArticulatedSensoriumWorld if body_mode == "articulated" else SensoriumWorld
         self.world = world_type(seed=seed, spec=spec)

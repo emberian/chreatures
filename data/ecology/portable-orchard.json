@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "include_authored": false,
+  "ambient": {
+    "material": 5.0,
+    "material_capacity": 8.0,
+    "material_inflow_rate": 0.0015,
+    "photon_flux": 1.0,
+    "light_variability": 0.04,
+    "light_correlation_time": 45.0,
+    "max_step": 0.25
+  },
+  "reservoirs": [
+    {
+      "id": "west-rootstock",
+      "entity": "berry-a",
+      "material": 1.4,
+      "material_capacity": 2.5,
+      "energy": 0.35,
+      "energy_capacity": 2.0,
+      "uptake_rate": 0.018
+    },
+    {
+      "id": "walk-rootstock",
+      "entity": "berry-b",
+      "material": 1.1,
+      "material_capacity": 2.2,
+      "energy": 0.25,
+      "energy_capacity": 1.8,
+      "uptake_rate": 0.014
+    }
+  ],
+  "producers": [
+    {
+      "id": "west-fruiting-body",
+      "entity": "berry-a",
+      "reservoir": "west-rootstock",
+      "food_capacity": 1.25,
+      "growth_rate": 0.035,
+      "maintenance_rate": 0.001,
+      "capture_area": 0.34,
+      "efficiency": 0.32,
+      "light_half_saturation": 0.24,
+      "energy_cost": 1.0,
+      "energy_content": 0.78,
+      "turnover_rate": 0.0008,
+      "recycle_fraction": 0.55,
+      "sample_offset": [0.0, 0.0, 0.13],
+      "visual": {
+        "shape_indices": [0],
+        "scale_range": [0.90, 1.08],
+        "max_scale_rate": 0.012
+      }
+    },
+    {
+      "id": "walk-fruiting-body",
+      "entity": "berry-b",
+      "reservoir": "walk-rootstock",
+      "food_capacity": 1.10,
+      "growth_rate": 0.028,
+      "maintenance_rate": 0.001,
+      "capture_area": 0.28,
+      "efficiency": 0.30,
+      "light_half_saturation": 0.28,
+      "energy_cost": 1.0,
+      "energy_content": 0.78,
+      "turnover_rate": 0.0012,
+      "recycle_fraction": 0.60,
+      "sample_offset": [0.0, 0.0, 0.13],
+      "visual": {
+        "shape_indices": [0],
+        "scale_range": [0.92, 1.07],
+        "max_scale_rate": 0.010
+      }
+    }
+  ]
+}
