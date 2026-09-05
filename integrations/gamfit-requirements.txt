@@ -1,0 +1,4 @@
+# Native Rust-backed GAM wheel. Release source:
+# https://github.com/SauersML/gam/tree/7c7eca8ac4826de95c8e743a20294bee132a9bcc
+gamfit==0.1.259
+

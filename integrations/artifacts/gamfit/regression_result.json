@@ -1,0 +1,40 @@
+{
+  "experiment": {
+    "formula": "y ~ s(x, k=14)",
+    "held_out_rows": 60,
+    "noise_standard_deviation": 0.08,
+    "null_model": "training-response mean",
+    "seed": 20260905,
+    "split": "indices divisible by 3 held out",
+    "train_rows": 120,
+    "truth": "0.65*x**2 + sin(2.2*x)"
+  },
+  "integration": "native-gamfit-regression",
+  "library": {
+    "abi": "cp310+",
+    "name": "gamfit",
+    "native_crate": "gam-pyffi",
+    "native_engine_crate": "gam",
+    "native_extension_available": true,
+    "source_commit": "7c7eca8ac4826de95c8e743a20294bee132a9bcc",
+    "version": "0.1.259"
+  },
+  "metrics": {
+    "held_out_rmse": 0.07446772100320022,
+    "null_rmse": 1.8810805151053633,
+    "rmse_ratio": 0.0395877371570292
+  },
+  "persistence": {
+    "bytes": 213188,
+    "model_file": "nonlinear_response.gam",
+    "reload_max_abs_prediction_delta": 0.0,
+    "sha256": "c0dfa7d1d39c9e32efc3b1297b185d469c262203081457ef7f86ac89f04db38e"
+  },
+  "runtime": {
+    "fit_seconds": 0.17723612500049057,
+    "machine": "arm64",
+    "platform": "darwin",
+    "python": "3.14.7"
+  },
+  "schema_version": 1
+}

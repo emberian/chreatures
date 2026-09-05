@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "name": "chreatures-lightweight-hexapod",
+  "units": "meters",
+  "description": "Engineered twelve-hinge body for inexpensive MuJoCo embodiment; this is not an anatomical fly model.",
+  "trunk": {
+    "thorax_size": [0.085, 0.055, 0.032],
+    "head_size": [0.041, 0.048, 0.032],
+    "head_position": [0.095, 0.0, 0.006],
+    "abdomen_size": [0.078, 0.047, 0.030],
+    "abdomen_position": [-0.104, 0.0, 0.002],
+    "density": 135.0,
+    "friction": [0.55, 0.012, 0.002]
+  },
+  "legs": {
+    "upper_radius": 0.009,
+    "lower_radius": 0.007,
+    "tarsus_radius": 0.012,
+    "upper_lateral": 0.069,
+    "upper_drop": 0.006,
+    "lower_lateral": 0.028,
+    "lower_drop": 0.054,
+    "density": 95.0,
+    "tarsus_density": 75.0,
+    "tarsus_friction": [3.5, 0.035, 0.006],
+    "hip_range_degrees": [-42.0, 42.0],
+    "knee_range_degrees": [-58.0, 58.0],
+    "hip_damping": 0.020,
+    "knee_damping": 0.018,
+    "armature": 0.000035,
+    "layout": [
+      {"name": "lf", "side": 1, "hip_position": [0.061, 0.041, -0.006], "phase": 0.0},
+      {"name": "lm", "side": 1, "hip_position": [0.000, 0.050, -0.008], "phase": 0.5},
+      {"name": "lh", "side": 1, "hip_position": [-0.061, 0.041, -0.006], "phase": 0.0},
+      {"name": "rf", "side": -1, "hip_position": [0.061, -0.041, -0.006], "phase": 0.5},
+      {"name": "rm", "side": -1, "hip_position": [0.000, -0.050, -0.008], "phase": 0.0},
+      {"name": "rh", "side": -1, "hip_position": [-0.061, -0.041, -0.006], "phase": 0.5}
+    ]
+  },
+  "antennae": {
+    "base_position": [0.126, 0.0, 0.018],
+    "tip_positions": [[0.182, 0.038, 0.026], [0.182, -0.038, 0.026]],
+    "radius": 0.0025
+  },
+  "controller": {
+    "frequency_hz": 2.2,
+    "stance_fraction": 0.64,
+    "hip_sweep_degrees": 27.0,
+    "knee_stance_degrees": 4.0,
+    "knee_swing_degrees": 35.0,
+    "hip_kp": 0.500,
+    "hip_kd": 0.0060,
+    "knee_kp": 0.600,
+    "knee_kd": 0.0080,
+    "max_joint_torque": 0.100,
+    "turn_gain": 0.72,
+    "idle_knee_degrees": 3.0,
+    "posture_kp": 0.090,
+    "posture_kd": 0.006,
+    "max_posture_torque": 0.050
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "nodes": {
+    "1": {
+      "id": 1,
+      "from": [],
+      "to": [
+        2
+      ],
+      "active": true,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "demo:episode:1",
+        "time": 0.5,
+        "record_type": "episode",
+        "text": "synthetic demonstration episode",
+        "artifact_uri": null,
+        "source": {
+          "id": "demo:episode:1",
+          "kind": "observation",
+          "text": "synthetic demonstration episode",
+          "time": 0.5
+        }
+      }
+    },
+    "2": {
+      "id": 2,
+      "from": [
+        1
+      ],
+      "to": [],
+      "active": true,
+      "bookmarked": true,
+      "contents": {
+        "source_id": "demo:evidence:1",
+        "time": 0.5,
+        "record_type": "evidence",
+        "text": "synthetic demonstration evidence",
+        "artifact_uri": "artifact://synthetic/demo",
+        "source": {
+          "artifact_uri": "artifact://synthetic/demo",
+          "id": "demo:evidence:1",
+          "parent_ids": [
+            "demo:episode:1"
+          ],
+          "text": "synthetic demonstration evidence",
+          "time": 0.5
+        }
+      }
+    }
+  },
+  "roots": [
+    1
+  ],
+  "active": [
+    2,
+    1
+  ],
+  "bookmarked": [
+    2
+  ],
+  "metadata": {
+    "schema_version": 1,
+    "library": "universal-weave 0.5.0",
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+    "habitat_id": "synthetic-demo",
+    "description": "habitat journal and linked analysis evidence"
+  }
+}
