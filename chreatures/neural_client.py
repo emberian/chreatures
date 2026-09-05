@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import http.client
+import hashlib
 import json
 from urllib.parse import urlsplit
 
@@ -28,8 +29,23 @@ class NeuralClient:
         self.graph = self.metadata["brain"]["graph"]
         self.input_names = self.metadata["brain"]["inputs"]
         self.output_names = self.metadata["brain"]["readouts"]
+        self.port_spec = None
         if self.input_names != CHANNELS:
-            raise ValueError("Remote sensory map differs from this explicitly versioned interface")
+            from .neural_ports import load_port_spec
+            spec = load_port_spec()
+            if self.input_names != spec["physical_inputs"]["ordered_names"]:
+                raise ValueError("Remote sensory map differs from the supported versioned interfaces")
+            expected_hash = hashlib.sha256(json.dumps(spec, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+            if self.metadata["brain"].get("ports", {}).get("spec_hash") != expected_hash:
+                raise ValueError("Remote sensory port semantics differ from the local specification")
+            self.port_spec = spec
+
+    def encode(self, senses):
+        if self.port_spec is None:
+            return sensory_channels(senses)
+        from .neural_ports import encode_physical_senses
+        names, values = encode_physical_senses(senses, self.port_spec)
+        return dict(zip(names, values.astype(float).tolist(), strict=True))
 
     def _request(self, method, path, value=None):
         connection = http.client.HTTPConnection(self.host, self.port, timeout=self.timeout)
@@ -64,11 +80,17 @@ class NeuralClient:
     def step(self, entries, dt):
         return self.mutate("/v1/step", residents=entries, dt=dt)["residents"]
 
-    def snapshot(self, name):
-        return self.mutate("/v1/snapshot", name=name)["snapshot"]
+    def snapshot(self, name, ids=None):
+        values = {"name": name}
+        if ids is not None and self.metadata["brain"].get("ports"):
+            values["resident_ids"] = ids
+        return self.mutate("/v1/snapshot", **values)["snapshot"]
 
     def restore(self, receipt):
-        return self.mutate("/v1/restore", name=receipt["name"], sha256=receipt["sha256"])
+        values = {"name": receipt["name"], "sha256": receipt["sha256"]}
+        if receipt.get("scope") == "cohort":
+            values["resident_ids"] = receipt["residents"]
+        return self.mutate("/v1/restore", **values)
 
 
 def sensory_channels(senses):

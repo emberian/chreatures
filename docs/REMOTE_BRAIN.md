@@ -20,14 +20,16 @@ physiology.
 
 ## Start and connect
 
-On hbox, all generated files, caches, logs, and snapshots belong under
-`/tank/chreatures`. The live service was launched with:
+On the project compute node, generated files, caches, logs, and snapshots belong
+under `/tank/chreatures`. The project-owned replacement environment is used for
+new launches; the original shared environment disappeared during development.
+For the compact 16-input/48-readout interface:
 
 ```sh
 HSA_OVERRIDE_GFX_VERSION=10.3.0 \
-PYTHONPATH=/tank/chreatures/envs/python-packages:/tank/chreatures/service-src \
+PYTHONPATH=/tank/chreatures/service-src \
 PYTORCH_KERNEL_CACHE_PATH=/tank/chreatures/cache/pytorch \
-/home/hbox/h1-ghost/venv/bin/python \
+/tank/chreatures/envs/rocm-dev/bin/python \
   /tank/chreatures/service-src/scripts/serve_brain.py \
   --graph /tank/chreatures/data/malecns/derived \
   --device cuda --capacity 16 --bind 127.0.0.1 --port 8765 \

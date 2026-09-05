@@ -18,14 +18,23 @@ import uuid
 import numpy as np
 
 from .cognition import AdaptiveOrgan
-from .neural_client import NeuralClient, sensory_channels
+from .neural_client import NeuralClient
 from .runtime import canonical
 
 
 class Habitat3D:
-    def __init__(self, seed=7, brain_url="http://127.0.0.1:18765", spec=None):
-        from .physics import PhysicsWorld
-        self.world = PhysicsWorld(seed=seed, spec=spec)
+    def __init__(self, seed=7, brain_url="http://127.0.0.1:18765", spec=None,
+                 body_mode="articulated", ecology="diffusion"):
+        from .sensorium import SensoriumWorld, ArticulatedSensoriumWorld
+        from .fields import FieldEnvironment
+        if body_mode not in ("crawler", "articulated") or ecology not in ("analytic", "diffusion"):
+            raise ValueError("Unknown body or ecology model")
+        self.body_mode = body_mode
+        world_type = ArticulatedSensoriumWorld if body_mode == "articulated" else SensoriumWorld
+        self.world = world_type(seed=seed, spec=spec)
+        self.field = FieldEnvironment.from_world(self.world) if ecology == "diffusion" else None
+        self.last_senses = {}
+        self.sensed_at = 0.0
         self.neural = NeuralClient(brain_url)
         self.id = str(uuid.uuid4())
         self.tick = 0
@@ -50,6 +59,23 @@ class Habitat3D:
         self.pending_step = None
         self.note("hatched", "Three new residents entered the hollow garden with full MaleCNS circuits.")
 
+    def sense(self):
+        """Sample the body, including local concentration from physical transport."""
+        sensed = {b.id: self.world.sense(b.id) for b in self.world.bodies}
+        if self.field is not None:
+            for body in self.world.bodies:
+                values = sensed[body.id]
+                positions = values.get("antenna_position")
+                if positions is None:
+                    # Geometry stays at the transducer boundary. Only the two
+                    # measured chemical concentrations reach cognition.
+                    rotation = self.world.data.xmat[self.world._body_mj[body.id]].reshape(3, 3)
+                    center = np.asarray([body.x, body.y, body.z])
+                    positions = [center + rotation @ np.asarray([.105, side * .055, .035]) for side in (-1, 1)]
+                concentration = np.asarray(self.field.sample(positions))[:, :3]
+                values["odor"] = (-np.expm1(-concentration / .1)).tolist()
+        return sensed
+
     def note(self, kind, text, **fields):
         self.journal.append({"id": f"{self.id}:{self.tick}:{len(self.journal)}", "time": self.world.time,
                              "kind": kind, "text": text, **fields})
@@ -60,8 +86,10 @@ class Habitat3D:
             raise RuntimeError("A previous world step is incomplete; restore its checkpoint before advancing")
         for _ in range(steps):
             started = time.perf_counter()
-            sensed = {b.id: self.world.sense(b.id) for b in self.world.bodies}
-            entries = [{"id": self.remote_ids[b.id], "senses": sensory_channels(sensed[b.id])} for b in self.world.bodies]
+            sensed = self.sense()
+            self.last_senses = sensed
+            self.sensed_at = self.world.time
+            entries = [{"id": self.remote_ids[b.id], "senses": self.neural.encode(sensed[b.id])} for b in self.world.bodies]
             self.pending_step = {"tick": self.tick, "neural_seq": self.neural.next_seq}
             responses = self.neural.step(entries, dt)
             inverse = {v: k for k, v in self.remote_ids.items()}
@@ -86,6 +114,8 @@ class Habitat3D:
                 actions[body_id] = action
                 self.neural_state[body_id] = response
             self.outcomes = self.world.advance(actions, dt)
+            if self.field is not None:
+                self.field.advance(dt, sources=self.field.sources_from_world(self.world))
             self.tick += 1
             self.pending_step = None
             for b in self.world.bodies:
@@ -127,21 +157,28 @@ class Habitat3D:
                      "speed": self.speed, "saved_at": self.saved_at, "error": self.error,
                      "neural": copy.deepcopy(self.neural_state),
                      "cognition": {key: organ.view() for key, organ in self.organs.items()},
-                     "senses": {b.id: self.world.sense(b.id) for b in self.world.bodies},
+                     "senses": copy.deepcopy(self.last_senses or self.sense()), "sensed_at": self.sensed_at,
+                     "ecology": {"kind": "diffusion", "channels": self.field.channels,
+                                 "time": self.field.time} if self.field is not None else {"kind": "analytic"},
                      "journal": list(self.journal)[-40:], "history": {k: list(v) for k, v in self.history.items()},
                      "anatomy": {"dataset": "MaleCNS v1.0", "neurons": self.neural.graph["neurons"],
                                  "connections": self.neural.graph["edges"], "sha256": self.neural.graph["sha256"],
-                                 "scope": "full traced curated brain and nerve cord"},
+                                 "scope": "full traced curated brain and nerve cord",
+                                 "inputs": len(self.neural.input_names), "readouts": len(self.neural.output_names)},
                      "performance": {"step_ms": sum(self.timings) / max(1, len(self.timings)), "dt": 0.05}})
         return view
 
     def save(self, path):
         if self.pending_step is not None:
             raise RuntimeError("Cannot checkpoint an incomplete distributed tick")
-        receipt = self.neural.snapshot(f"world-{self.id}-{self.tick}")
+        receipt = self.neural.snapshot(f"world-{self.id}-{self.tick}", list(self.remote_ids.values()))
         state = {"version": 1, "kind": "chreatures-3d", "id": self.id, "tick": self.tick,
                  "branch": self.branch, "paused": self.paused, "speed": self.speed,
-                 "world": self.world.snapshot(), "organs": {k: v.snapshot() for k, v in self.organs.items()},
+                 "world": self.world.snapshot(), "body_mode": self.body_mode,
+                 "field": self.field.snapshot() if self.field is not None else None,
+                 "last_senses": self.last_senses, "sensed_at": self.sensed_at,
+                 "input_names": self.neural.input_names, "output_names": self.neural.output_names,
+                 "organs": {k: v.snapshot() for k, v in self.organs.items()},
                  "remote_ids": self.remote_ids, "brain_url": self.neural.url, "graph_sha256": self.neural.graph["sha256"],
                  "neural_snapshot": receipt, "neural_state": self.neural_state,
                  "outcomes": self.outcomes, "journal": list(self.journal),
@@ -162,7 +199,8 @@ class Habitat3D:
 
     @classmethod
     def load(cls, path, brain_url=None):
-        from .physics import PhysicsWorld
+        from .sensorium import SensoriumWorld, ArticulatedSensoriumWorld
+        from .fields import FieldEnvironment
         envelope = json.loads(Path(path).read_text())
         if envelope.get("format") != "chreatures-3d-checkpoint-v1":
             raise ValueError("Unsupported 3D checkpoint")
@@ -170,11 +208,19 @@ class Habitat3D:
         if hashlib.sha256(canonical(value)).hexdigest() != envelope["sha256"]:
             raise ValueError("3D checkpoint checksum mismatch")
         instance = cls.__new__(cls)
-        instance.world = PhysicsWorld.restore(value["world"])
+        instance.body_mode = value.get("body_mode", "crawler")
+        world_type = ArticulatedSensoriumWorld if instance.body_mode == "articulated" else SensoriumWorld
+        instance.world = world_type.restore(value["world"])
+        instance.field = FieldEnvironment.restore(value["field"]) if value.get("field") is not None else None
+        instance.last_senses = copy.deepcopy(value.get("last_senses", {}))
+        instance.sensed_at = value.get("sensed_at", instance.world.time)
         instance.organs = {key: AdaptiveOrgan.restore(organ) for key, organ in value["organs"].items()}
         instance.neural = NeuralClient(brain_url or value["brain_url"])
         if instance.neural.graph["sha256"] != value["graph_sha256"]:
             raise ValueError("Remote anatomy differs from saved resident anatomy")
+        if (value.get("input_names", instance.neural.input_names) != instance.neural.input_names
+                or value.get("output_names", instance.neural.output_names) != instance.neural.output_names):
+            raise ValueError("Remote neural ports differ from saved resident interface")
         instance.neural.restore(value["neural_snapshot"])
         for key in ("id", "tick", "branch", "paused", "speed", "remote_ids", "neural_state", "outcomes"):
             setattr(instance, key, copy.deepcopy(value[key]))
