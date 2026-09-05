@@ -197,14 +197,38 @@ class RelationalContextMemory:
         if self.current_observation is None:
             raise RuntimeError("begin(observation) must precede prediction")
         weights = self._edge_weights(action_value)
-        support = float(weights.sum())
-        if support <= 1e-10:
+        match_mass = float(weights.sum())
+        nearest_action_distance: float | None = None
+        action_similarity = 0.0
+        best_edge_match = 0.0
+        if self.transition_count and self.context_count:
+            action_distance = self._action_distance(action_value)
+            source = self.edge_source[: self.transition_count]
+            source_relevance = self.posterior[source]
+            emission = self._emission(self.current_observation)
+            emission /= max(float(emission.sum()), 1e-9)
+            source_relevance = 0.82 * source_relevance + 0.18 * emission[source]
+            plausible = source_relevance > 1e-4
+            if plausible.any():
+                nearest_action_distance = float(action_distance[plausible].min())
+                action_similarity = float(math.exp(
+                    -0.5 * (nearest_action_distance / self.config.action_bandwidth) ** 2
+                ))
+            best_edge_match = float(weights.max(initial=0.0))
+        observation_distance: float | None = None
+        observation_similarity = 0.0
+        if self.context_count:
+            observation_distance = float(self._observation_distance(self.current_observation).min())
+            observation_similarity = float(math.exp(
+                -0.5 * (observation_distance / self.config.observation_bandwidth) ** 2
+            ))
+        if match_mass <= 1e-10:
             next_observation = self.current_observation.copy()
             outcome = np.zeros(self.config.outcome_dim, dtype=np.float32)
             transition_variance = 1.0
             effective = 0.0
         else:
-            normalized = weights / support
+            normalized = weights / match_mass
             used = np.flatnonzero(normalized > 1e-8)
             edge_weight = normalized[used]
             delta = self.edge_delta_mean[used]
@@ -257,6 +281,14 @@ class RelationalContextMemory:
             "uncertainty": uncertainty,
             "confidence": 1.0 - uncertainty,
             "support": effective,
+            "effective_support": effective,
+            "support_diagnostics_version": "absolute-match-v2",
+            "action_match_mass": match_mass,
+            "best_edge_match": best_edge_match,
+            "nearest_action_distance": nearest_action_distance,
+            "action_similarity": action_similarity,
+            "nearest_observation_distance": observation_distance,
+            "observation_similarity": observation_similarity,
             "context_entropy": entropy,
             "basis": "experienced action-conditioned latent transitions",
         }

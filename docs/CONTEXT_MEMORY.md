@@ -16,6 +16,15 @@ When a familiar-looking emission arrives through a novel established route, the 
 
 Predicted sensation blends local transition delta with the learned destination prototype. The former preserves continuous short-timescale change; the latter represents the reusable relational map. Predicted outcomes and uncertainty use observed edge statistics. Uncertainty includes limited support, action novelty, successor variance, context entropy, and sensory novelty. It is an empirical confidence signal, not a probability calibrated for safety decisions.
 
+Prediction diagnostics are versioned as `absolute-match-v2`. The historical
+`support` field remains the effective count of the normalized contributing
+edges. It is retained for compatibility, but it is not an absolute coverage
+measure: even tiny raw kernel weights normalize to one before their edge counts
+are averaged. New fields therefore report unnormalized `action_match_mass`,
+the best edge match, nearest action distance and kernel similarity, and nearest
+observation distance and similarity. Consumers should use these absolute
+diagnostics before allowing a consequence estimate to affect action.
+
 `ContextMemoryConfig` fixes context and transition capacities. When full, low-visit stale contexts or edges are replaced and incident edges are removed. One experience creates a queryable transition immediately. Snapshots include every prototype, moment, edge, posterior, counter, and current anonymous observation and validate dimensions, finiteness, bounds, and graph references on restore.
 
 ## Relationship to existing organs
