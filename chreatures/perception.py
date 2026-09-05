@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import hashlib
 import io
 import json
 import math
@@ -19,6 +20,7 @@ from typing import Any, Protocol
 
 MODEL_REPOSITORY = "HuggingFaceTB/SmolVLM2-500M-Video-Instruct"
 MODEL_REVISION = "7b375e1b73b11138ff12fe22c8f2822d8fe03467"
+DENSE_POOLING_VERSION = "smolvlm2-native-tiles-mean-v1"
 MAX_FRAMES = 4
 MAX_FRAME_BYTES = 1_500_000
 MAX_TOTAL_FRAME_BYTES = 4_000_000
@@ -118,6 +120,96 @@ class PerceptionRequest:
         }
 
 
+@dataclass(frozen=True)
+class EmbedObservation:
+    sensor_id: str
+    world_sequence: int
+    model_time: float
+    captured_at: float
+    provenance: str
+    frame: VisualFrame
+    frame_sha256: str
+
+    @classmethod
+    def from_mapping(cls, value: Any) -> "EmbedObservation":
+        if not isinstance(value, dict) or set(value) != {"source", "frame"}:
+            raise ValueError("each embed observation requires only source and frame")
+        source = value["source"]
+        if not isinstance(source, dict):
+            raise ValueError("embed source must be an object")
+        allowed = {
+            "sensor_id", "world_sequence", "model_time", "captured_at", "provenance"
+        }
+        if set(source) != allowed:
+            raise ValueError("embed source fields differ from the required contract")
+        sensor_id = source["sensor_id"]
+        if not isinstance(sensor_id, str) or not SENSOR_ID.fullmatch(sensor_id):
+            raise ValueError("sensor_id must be 1-96 safe identifier characters")
+        sequence = source["world_sequence"]
+        if not isinstance(sequence, int) or isinstance(sequence, bool) or sequence < 0:
+            raise ValueError("world_sequence must be a nonnegative integer")
+        provenance = source["provenance"]
+        if provenance not in PROVENANCE:
+            raise ValueError(f"provenance must be one of {sorted(PROVENANCE)}")
+        frame_value = value["frame"]
+        if not isinstance(frame_value, dict) or set(frame_value) != {
+            "mime_type", "data_base64", "sha256"
+        }:
+            raise ValueError("embed frame requires mime_type, data_base64, and sha256")
+        frame = _frame(
+            {
+                "mime_type": frame_value["mime_type"],
+                "data_base64": frame_value["data_base64"],
+            }
+        )
+        digest = frame_value["sha256"]
+        actual = hashlib.sha256(frame.data).hexdigest()
+        if not isinstance(digest, str) or digest != actual:
+            raise ValueError("embed frame sha256 does not match decoded bytes")
+        return cls(
+            sensor_id=sensor_id,
+            world_sequence=sequence,
+            model_time=_finite(source["model_time"], "model_time"),
+            captured_at=_finite(source["captured_at"], "captured_at"),
+            provenance=provenance,
+            frame=frame,
+            frame_sha256=digest,
+        )
+
+    def source(self) -> dict[str, Any]:
+        return {
+            "sensor_id": self.sensor_id,
+            "world_sequence": self.world_sequence,
+            "model_time": self.model_time,
+            "captured_at": self.captured_at,
+            "provenance": self.provenance,
+        }
+
+
+@dataclass(frozen=True)
+class EmbedRequest:
+    request_id: str
+    observations: tuple[EmbedObservation, ...]
+
+    @classmethod
+    def from_mapping(cls, value: Any) -> "EmbedRequest":
+        if not isinstance(value, dict) or set(value) != {"request_id", "observations"}:
+            raise ValueError("embed request requires only request_id and observations")
+        request_id = value["request_id"]
+        if not isinstance(request_id, str) or not REQUEST_ID.fullmatch(request_id):
+            raise ValueError("request_id must be 1-128 safe identifier characters")
+        rows = value["observations"]
+        if not isinstance(rows, list) or not 1 <= len(rows) <= MAX_FRAMES:
+            raise ValueError(f"observations must contain 1-{MAX_FRAMES} frames")
+        observations = tuple(EmbedObservation.from_mapping(row) for row in rows)
+        if sum(len(row.frame.data) for row in observations) > MAX_TOTAL_FRAME_BYTES:
+            raise ValueError("decoded frames exceed total byte limit")
+        identities = {(row.sensor_id, row.world_sequence) for row in observations}
+        if len(identities) != len(observations):
+            raise ValueError("embed cohort sensor/tick pairs must be unique")
+        return cls(request_id=request_id, observations=observations)
+
+
 def _finite(value: Any, name: str) -> float:
     if isinstance(value, bool):
         raise ValueError(f"{name} must be finite")
@@ -159,6 +251,8 @@ class PerceptionBackend(Protocol):
 
     def infer(self, request: PerceptionRequest) -> dict[str, Any]: ...
 
+    def embed(self, request: EmbedRequest) -> dict[str, Any]: ...
+
 
 class UnavailableBackend:
     """Explicit disabled state; it never manufactures perception output."""
@@ -175,6 +269,9 @@ class UnavailableBackend:
         }
 
     def infer(self, request: PerceptionRequest) -> dict[str, Any]:
+        return {"status": "unavailable", "reason": self.reason}
+
+    def embed(self, request: EmbedRequest) -> dict[str, Any]:
         return {"status": "unavailable", "reason": self.reason}
 
 
@@ -250,18 +347,84 @@ class SmolVLMBackend:
             "torch_version": self.torch_version,
             "transformers_version": self.transformers_version,
             "dense_feature": "mean of native modality-projected image tokens",
+            "embed_pooling_version": DENSE_POOLING_VERSION,
             **self._model_metadata,
         }
 
     def _images(self, request: PerceptionRequest) -> list[Any]:
+        return self._decode_frames(request.frames)
+
+    def _decode_frames(self, frames: Iterable[VisualFrame]) -> list[Any]:
         images = []
-        for frame in request.frames:
+        for frame in frames:
             image = self.Image.open(io.BytesIO(frame.data))
             image.load()
             if image.width * image.height > MAX_IMAGE_PIXELS:
                 raise ValueError("decoded image exceeds pixel limit")
             images.append(image.convert("RGB"))
         return images
+
+    def embed(self, request: EmbedRequest) -> dict[str, Any]:
+        images = self._decode_frames(row.frame for row in request.observations)
+        try:
+            inputs = self.processor.image_processor(images=images, return_tensors="pt")
+            pixel_values = inputs["pixel_values"].to(
+                device=self.device, dtype=getattr(self.torch, self.dtype_name)
+            )
+            mask = inputs.get("pixel_attention_mask")
+            if mask is not None:
+                mask = mask.to(self.device)
+            with self.torch.inference_mode():
+                features = self.model.get_image_features(pixel_values, mask).float()
+                features = features.mean(dim=tuple(range(1, features.ndim - 1)))
+                count = len(images)
+                if features.shape[0] % count:
+                    raise RuntimeError(
+                        "native image-feature rows do not group by source frame"
+                    )
+                rows_per_view = features.shape[0] // count
+                vectors = features.reshape(
+                    count, rows_per_view, features.shape[-1]
+                ).mean(dim=1).cpu().numpy()
+        finally:
+            for image in images:
+                image.close()
+        results = []
+        for observation, vector in zip(request.observations, vectors):
+            little_endian = vector.astype("<f4", copy=False)
+            results.append(
+                {
+                    "source": observation.source(),
+                    "frame_sha256": observation.frame_sha256,
+                    "feature": {
+                        "kind": "smolvlm_native_image_feature",
+                        "dimension": int(little_endian.size),
+                        "dtype": "float32-le",
+                        "sha256": hashlib.sha256(little_endian.tobytes()).hexdigest(),
+                        "values": little_endian.tolist(),
+                    },
+                }
+            )
+        del features, pixel_values, mask
+        if self.device.startswith("cuda"):
+            # Keep immutable model weights resident but return temporary batch
+            # tiles and attention workspaces to the shared ROCm device.
+            self.torch.cuda.empty_cache()
+        return {
+            "status": "ok",
+            "pooling": {
+                "version": DENSE_POOLING_VERSION,
+                "native_api": "get_image_features",
+                "native_rows_per_view": rows_per_view,
+                "operation": (
+                    "mean token rows, then mean native global/adaptive tiles "
+                    "per source frame"
+                ),
+                "dimension": int(vectors.shape[1]),
+                "dtype": "float32-le",
+            },
+            "observations": results,
+        }
 
     def infer(self, request: PerceptionRequest) -> dict[str, Any]:
         images = self._images(request)
@@ -503,6 +666,11 @@ class PerceptionService:
             "max_frames": MAX_FRAMES,
             "max_frame_bytes": MAX_FRAME_BYTES,
             "max_total_frame_bytes": MAX_TOTAL_FRAME_BYTES,
+            "embed": {
+                "endpoint": "/v1/embed",
+                "pooling_version": DENSE_POOLING_VERSION,
+                "generated_labels": False,
+            },
         }
 
     def submit(self, value: Any) -> Future[dict[str, Any]]:
@@ -535,6 +703,42 @@ class PerceptionService:
 
     async def perceive(self, value: Any) -> dict[str, Any]:
         return await asyncio.wrap_future(self.submit(value))
+
+    def submit_embed(self, value: Any) -> Future[dict[str, Any]]:
+        request = EmbedRequest.from_mapping(value)
+        if not self.capacity.acquire(blocking=False):
+            return _finished(
+                self._embed_response(
+                    request,
+                    {"status": "busy", "reason": "perception queue is full"},
+                    0.0,
+                )
+            )
+        future = self.executor.submit(self._embed, request)
+        future.add_done_callback(lambda _future: self.capacity.release())
+        return future
+
+    async def embed(self, value: Any) -> dict[str, Any]:
+        return await asyncio.wrap_future(self.submit_embed(value))
+
+    def _embed(self, request: EmbedRequest) -> dict[str, Any]:
+        started = time.perf_counter()
+        try:
+            result = self.backend.embed(request)
+        except Exception as error:
+            result = {"status": "error", "reason": f"{type(error).__name__}: {error}"}
+        return self._embed_response(request, result, time.perf_counter() - started)
+
+    def _embed_response(
+        self, request: EmbedRequest, result: dict[str, Any], elapsed: float
+    ) -> dict[str, Any]:
+        return {
+            "request_id": request.request_id,
+            "completed_at": time.time(),
+            "latency_seconds": elapsed,
+            "model": self.backend.metadata(),
+            **result,
+        }
 
     def _infer(self, request: PerceptionRequest) -> dict[str, Any]:
         started = time.perf_counter()

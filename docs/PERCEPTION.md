@@ -102,13 +102,53 @@ model's native modality-projected image tokens. This is a real model feature,
 not a handcrafted scene vector. It is large and should be requested only by a
 consumer that needs it.
 
+## Dense-only persistent endpoint
+
+`POST /v1/embed` bypasses text generation. It accepts a cohort of one to four
+resident-view PNGs, each with its sensor ID, capture tick, model time, capture
+time, provenance, and SHA-256. The service verifies every digest before native
+inference. A sensor/tick pair must be unique within a cohort, while several
+ticks from one sensor may be batched together.
+
+```json
+{
+  "request_id": "eyes.tick.38891",
+  "observations": [{
+    "source": {
+      "sensor_id": "retina.opaque-digest",
+      "world_sequence": 38891,
+      "model_time": 1944.55,
+      "captured_at": 1788645579.45,
+      "provenance": "resident_fov"
+    },
+    "frame": {
+      "mime_type": "image/png",
+      "data_base64": "...",
+      "sha256": "..."
+    }
+  }]
+}
+```
+
+SmolVLM produces a global row plus adaptive tile rows for these images. Pooling
+contract `smolvlm2-native-tiles-mean-v1` first averages native token rows and
+then averages the rows belonging to each input image. The response contains one
+960-dimensional `float32-le` vector per source frame, with SHA-256 over its
+exact little-endian bytes. It also identifies the model revision, native API,
+tile count, completion timestamp, and inference latency. It emits no generated
+labels or affordances.
+
+The embedding service uses the same single model worker as `/v1/perceive`. The
+persvati deployment admits one cohort total, so a simultaneous request receives
+`status: busy` instead of accumulating latency or blocking simulation ticks.
+
 ## Ordering and backpressure
 
 `world_sequence` is monotonically increasing per `sensor_id`. A request at or
 behind the latest accepted sequence immediately returns `status: stale`. If a
 newer frame arrives while an older inference is running, the older result is
 discarded after inference and returned as stale. The default deployment uses
-one model worker and two total pending requests. A full queue returns
+one model worker and one total pending request. A full queue returns
 `status: busy` without blocking the simulation.
 
 Other explicit states are `unavailable`, `error`, and
@@ -133,7 +173,7 @@ HF_HOME=/tank/chreatures/cache/huggingface \
   --backend smolvlm2 \
   --model-path /tank/chreatures/models/SmolVLM2-500M-Video-Instruct \
   --device cuda --dtype float16 --max-new-tokens 128 \
-  --max-workers 1 --max-pending 2 \
+  --max-workers 1 --max-pending 1 \
   --bind 127.0.0.1 --port 8775 \
   --pid-file /tank/chreatures/runs/perception/perception.pid
 ```
@@ -197,3 +237,116 @@ documented in `docs/RETINAL_RENDER.md`. Its first `resident_fov` run used Pip's
 actual saved MuJoCo pose and gaze, with native inference on persvati. That
 measurement is separate from the external-image result above and remains
 explicitly an uncertain model observation rather than controller input.
+
+## Nonblocking running-world client
+
+`chreatures/perception_client.py` provides `AsyncPerceptionClient`. A world
+calls `submit_cohort` with frozen PNG bytes and capture metadata; the call only
+validates, snapshots, and schedules work on one background thread. A second
+cohort is rejected while one is pending. `min_interval_seconds` adds explicit
+capture-rate control, and the HTTP timeout bounds failed remote work.
+
+Each frozen record keeps the capture/action input and its later outcome.
+`record_outcome` can attach a bodily consequence after the action resolves.
+`take_completed(current_sequences)` returns each cohort once. A result is
+`current` only when its captured sequence exactly equals the caller's current
+sequence. Older results are `historical_experience: true` and
+`usable_as_current_perception: false`; they remain valid episodic evidence but
+cannot masquerade as the current visual field.
+
+Client snapshots retain pending PNG payloads, causality, completed responses,
+response hashes, and delivery state. Restore revalidates every frozen image and
+completed feature hash. Pending pure inference may be reissued; a recorded
+completed response is consumed without network work. Delivered records are not
+returned again, which gives the runtime a checkpointable single-delivery
+boundary for VisualMemory binding.
+
+### Reproducible model-tick delivery
+
+Pass `delivery_tick` to `submit_cohort` when an observation may influence a
+replayable research world. The chosen tick is frozen with the PNG request and
+does not change when inference finishes:
+
+```python
+client.submit_cohort(request_id, views, delivery_tick=capture_tick + 200)
+event = client.take_scheduled(world.tick, current_sensor_sequences)
+```
+
+Before the slot, `take_scheduled` returns `status: not_due`. At the exact slot,
+it returns `awaiting` without waiting internally if inference is unfinished; the
+runtime can then explicitly hold that model tick and poll at its own cadence.
+When ready at the held tick it returns `delivered`. If the runtime advances past
+an undelivered slot, the result is `missed_delivery` and no cohort is applied
+retroactively. Scheduled records are excluded from `take_completed`, so wall
+completion cannot accidentally bypass this rule.
+
+A transport, busy, invalid, or backend error is also `awaiting` at the fixed
+slot because it contains no usable native feature. The runtime may call
+`retry_failed` while holding the same tick; this reissues the frozen request and
+retains its deadline and attempt count. A transient wall-clock failure therefore
+cannot silently turn into an observation-absence event in model history.
+
+Scheduled submission ignores the wall-clock `min_interval_seconds`. Set
+`min_interval_ticks` to rate-limit capture deterministically in model time.
+Snapshots retain capture tick, delivery tick, frozen request, attempts,
+canonical completion bytes, response hash, and delivery state. Reissued pure
+inference keeps the original deadline. Completion wall time remains audit data
+and never chooses the observation event tick.
+
+The focused contract check reused the recorded native three-view response and
+made no network request. For capture tick 38,891 and delivery tick 38,900 it
+observed `not_due`, then `delivered`, then `idle` on a second take. A pending
+checkpoint restored with the same deadline returned `awaiting` at tick 38,900.
+Advancing an undelivered copy to tick 38,901 returned `missed_delivery`. All
+three capture-time observations remained historical. The evidence is
+`runs/perception/scheduled-delivery/contract.json`, SHA-256
+`9773ffbd6a235c71ac8e532691c98b3df5b118599b57b58a4c7f56a3d130d2cf`.
+
+### Capture interval and episodic binding
+
+The current `visual-weights.json` dynamics head learned adjacent research
+frames separated by 0.08 seconds of model time. The service's measured 8.33
+seconds is wall inference latency and says nothing about that learned horizon.
+A runtime should retain each feature at its capture tick, aggregate the actual
+action/outcome interval, and deliver it at the fixed slot above. It may use a
+late feature as historical retrieval evidence.
+
+It should bind or score the present one-step dynamics head only when the paired
+captures have the trained 0.08-second model-time separation. Features captured
+at variable or multi-second model intervals remain valid raw episodes, but the
+current head is not a generalized prediction for those gaps. Supporting that
+claim requires retraining a horizon-conditioned transition model with elapsed
+model time as an explicit input.
+
+## Actual three-view roundtrip
+
+The batch check restored `runs/hollow-garden.json` at tick 38,891, checkpoint
+SHA-256
+`c4ae4ee680e1f2c8aa889d2ee16c58837b6f855d942201f39ca999cca964e7dc`,
+and rendered Mica, Fern, and Pip from their saved MuJoCo body cameras. The
+recorded three-frame cohort completed in 8.42 seconds wall time, with 8.33
+seconds in the service. The vectors were:
+
+| View | PNG SHA-256 | Native feature SHA-256 |
+| --- | --- | --- |
+| Mica | `ab3dd791989c215ae5395e05753b90fca4fe8d6e5dadb24e967c2907aca24cd3` | `b85a6f31ffbe56d227c8433ddc7bf00c5a5a6496458db764586cb3269ae14eb7` |
+| Fern | `707b2a5267ad1e9e24e0222b43a0b3e76e77f28ec38b9dc15d14ff2273c2b02e` | `afe5559815fd8df2220ee6332366eaa157e739cbef7b8e7777e7a69c4cac2c1f` |
+| Pip | `2dc8e4728d5c9781e209dffba03ae79f0ddddde8268032c4a1769ac5735e4274` | `b940b17ec137f109b05e292365c42d7b85a743d313eca61e2707ffc207f766dd` |
+
+The pending snapshot was restored and reissued after the original completion;
+all three vector hashes matched. A completed snapshot returned one cohort on
+its first take and none on its second. The capture tick was deliberately
+compared to tick 38,892, so every delayed result was classified historical and
+none was marked usable as current perception. This static-render check had no
+captured action/outcome, recorded as empty maps rather than invented behavior.
+
+Evidence lives in `runs/perception/embed-batch3`: `benchmark.json` is 58,650
+bytes with SHA-256
+`a0b0057dba4dcfbbb56a69b81f34ddde116b6ba8507efbed5a9aee4ce78827a1`;
+`restore-check.json` hashes to
+`5cb548c41eabd3084af71f71ff0312a3a8067d0d41a2d84ffb8533ae160b85dd`.
+
+The persistent service is on persvati at `127.0.0.1:8775`, with its PID in
+`/home/ember/chreatures/runs/perception/perception.pid`. After explicit cache
+release following a batch, idle measurements were 301,105,152 bytes VRAM and
+1,698,226,176 bytes shared GTT, with zero GPU busy.
