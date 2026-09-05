@@ -92,11 +92,21 @@ trajectory begins with `memory.begin(feature)`; subsequent calls naturally use
 the next feature left by the preceding record. Episode resets call
 `memory.begin(feature)` again.
 
-The contextual correction is bounded to 0.32 score units by default. It is the
-predicted drive improvement multiplied by two gates:
+The contextual correction is bounded to 0.32 score units by default. Under the
+new `absolute-v2` coverage rule, predicted drive improvement is multiplied by
+the historical repetition and uncertainty gates plus absolute coverage:
 
 * a support gate that rises from minimum support 0.5 to full support 5;
 * an uncertainty gate that falls to zero at heuristic uncertainty 0.58.
+* an action-distance kernel gate, rising between similarity 0.20 and 0.80;
+* an unnormalized action-match-mass gate, rising between 0.12 and 0.80;
+* an observation-similarity gate, rising between 0.25 and 0.75.
+
+The three absolute gates combine by their minimum before multiplying the first
+two. A far query can therefore have a large historical effective count yet
+receive exactly zero correction. Snapshots written before this diagnostic
+retain `effective-v1` behavior explicitly on restore; their action scores do
+not silently change.
 
 An action with no matching experience receives zero correction. A one-shot
 edge can have a small influence; repeated consistent experience increases it.
@@ -107,6 +117,15 @@ Relational-memory uncertainty is a coverage heuristic. In the existing real
 trajectory evaluation its uncertainty/error correlation was only 0.068. It is
 not calibrated confidence or a probability. The gate uses it conservatively
 alongside actual edge support; decision provenance states this limitation.
+
+An optional `candidate_evidence` callback can add another private memory's
+candidate-level evidence without importing that memory implementation. It is
+called once per macro boundary with an immutable tuple of physical candidate
+vectors and returns a source label, one correction per candidate, and aligned
+JSON diagnostics. Applied corrections are separately clipped to 0.12 score
+units and audited with requested values. `None` does not call external code or
+change actions, scores, or random streams. Disabling refinement makes both
+relational and external applied corrections zero.
 
 ## Controls and private state
 
@@ -130,6 +149,24 @@ and trained artifact. Direct `tick` and `refine_and_commit` returned the exact
 same physical action, selected candidate zero, and left the two motor RNG states
 identical. A disabled-refiner check with an explicitly supplied ancestral
 baseline likewise returned that baseline exactly.
+
+Live orchard checkpoints at ticks 1,187, 1,526, and 2,011 showed that the frozen
+representation was not collapsed: no neural value clipped during normalization,
+projection saturation was zero for Fern and Mica and about 5--6% for Pip, and
+within-resident checkpoint changes reached 0.44--0.55 RMS. The original 0.95
+context-allocation threshold merged those moderate changes. A
+`projection-v2` LivingMotor profile with observation bandwidth 0.28,
+new-context threshold 0.34, and action bandwidth 0.20 is available explicitly
+for research organisms. It is not the default. Three sparse checkpoints formed
+two rather than one states for Fern and Mica under that profile, which is too
+little evidence to establish a general improvement. Pip's sharper physical
+interaction already formed three path contexts under the legacy profile.
+
+At tick 2,011 the live gates were active, but candidate correction differences
+were usually below 0.001 while inherited alternative penalties ranged from
+0.024 to 0.251. Sparse nutrition was diluted across hundreds of transitions.
+Zero changed choices in that run therefore does not show a dead projection or
+inactive gate, and it also does not show useful contextual control yet.
 
 ## Physical alternate-history probe
 
@@ -163,3 +200,14 @@ private snapshot reproduced both state and the next sampled decision exactly.
 This demonstrates a narrow learned affordance under familiar coverage. It does
 not establish calibrated uncertainty, long-horizon planning, or general object
 understanding.
+
+The absolute-v2 gate was then evaluated with six training episodes per history
+using different MuJoCo seeds, headings, and lateral starts, followed by an
+independent seventh episode. In the held-out front-food episode, forward and
+reverse ingested 0.085 and 0.017 and the refiner chose forward. In the held-out
+rear-food episode they ingested 0.034 and 0.085 and it chose reverse, changing
+the inherited tie-break to the physically better candidate. Exact-action match
+mass was 0.969 and observation similarity was 0.979/0.985, so the new absolute
+gate passed covered queries. When both memories received the identical current
+input they still chose in opposite directions, preserving the earlier causal
+history control. This remains a small controlled physical affordance test.

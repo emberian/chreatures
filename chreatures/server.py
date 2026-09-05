@@ -22,7 +22,7 @@ log = logging.getLogger("chreatures")
 
 def create_app(checkpoint: Path | None = None, seed=7, autostep=True, dimension=2, brain_url="http://127.0.0.1:18765",
                body_mode="articulated", ecology="diffusion", resources=None, acoustics=None, motor_genome=None,
-               personal_memory=False, habitat_spec=None):
+               personal_memory=False, habitat_spec=None, perception_url=None):
     checkpoint = checkpoint or ROOT / ("runs/hollow-garden.json" if dimension == 3 else "runs/residents.json")
     authority = {"habitat": None, "error": None, "alive": True}
     lock = asyncio.Lock()
@@ -35,6 +35,7 @@ def create_app(checkpoint: Path | None = None, seed=7, autostep=True, dimension=
                 authority["habitat"] = Habitat3D.load(checkpoint, brain_url) if checkpoint.exists() else Habitat3D(
                     seed, brain_url, body_mode=body_mode, ecology=ecology, resources=resources,
                     acoustics=acoustics, motor_genome=motor_genome, personal_memory=personal_memory,
+                    perception_url=perception_url,
                     spec=json.loads(Path(habitat_spec).read_text()) if habitat_spec is not None else None)
             else:
                 authority["habitat"] = Habitat.load(checkpoint) if checkpoint.exists() else Habitat(seed)
@@ -72,6 +73,9 @@ def create_app(checkpoint: Path | None = None, seed=7, autostep=True, dimension=
                 authority["habitat"].save(checkpoint)
             except Exception:
                 log.exception("Preserving the previous checkpoint after an incomplete tick")
+            vision = getattr(authority["habitat"], "vision", None)
+            if vision is not None:
+                vision.close()
 
     app = FastAPI(title="Chreatures", lifespan=lifespan)
     from .observatory import router as observatory_router
@@ -110,6 +114,63 @@ def create_app(checkpoint: Path | None = None, seed=7, autostep=True, dimension=
         if dimension == 3:
             return get_habitat().neural.metadata["brain"]
         return next(iter(get_habitat().brains.values())).graph.summary()
+
+    def visitor_habitat():
+        habitat = get_habitat()
+        if dimension != 3:
+            raise HTTPException(400, "Performances require a 3D habitat")
+        return habitat
+
+    async def visitor_payload(request):
+        check_origin(request.headers)
+        if not request.headers.get("content-type", "").startswith("application/json"):
+            raise HTTPException(415, "Use application/json")
+        if len(await request.body()) > 32768:
+            raise HTTPException(413, "Performance is too large")
+        try:
+            return await request.json()
+        except (ValueError, UnicodeDecodeError) as error:
+            raise HTTPException(400, "Invalid JSON") from error
+
+    @app.get("/api/visitor")
+    async def visitor_state():
+        async with lock:
+            habitat = visitor_habitat()
+            return habitat.visitor.view(habitat.tick, habitat.paused)
+
+    @app.post("/api/visitor/motifs")
+    async def visitor_motif(request: Request):
+        value = await visitor_payload(request)
+        async with lock:
+            habitat = visitor_habitat()
+            try:
+                result = habitat.visitor.add_motif(habitat.world, value)
+                habitat.note("visitor-motif", "A visitor saved a sensory performance.", motif=result)
+                return result
+            except (ValueError, KeyError, TypeError) as error:
+                raise HTTPException(400, str(error)) from error
+
+    @app.post("/api/visitor/schedules")
+    async def visitor_schedule(request: Request):
+        value = await visitor_payload(request)
+        async with lock:
+            habitat = visitor_habitat()
+            try:
+                result = habitat.visitor.schedule(habitat.world, habitat.tick, value)
+                habitat.note("visitor-performance", "A visitor scheduled a sensory performance.", performance=result)
+                return result
+            except (ValueError, KeyError, TypeError) as error:
+                raise HTTPException(400, str(error)) from error
+
+    @app.delete("/api/visitor/schedules/{identifier}")
+    async def visitor_cancel(identifier: str, request: Request):
+        check_origin(request.headers)
+        async with lock:
+            habitat = visitor_habitat()
+            try:
+                return habitat.visitor.cancel(habitat.world, identifier)
+            except StopIteration as error:
+                raise HTTPException(404, "Unknown performance") from error
 
     @app.get("/api/checkpoint")
     async def export_checkpoint():
@@ -183,11 +244,14 @@ def main(default_dimension=2):
                         help="Learn private action consequences around the inherited motor for new worlds")
     parser.add_argument("--habitat", type=Path,
                         help="Physical habitat specification for new 3D worlds; saved worlds contain their own specification")
+    parser.add_argument("--perception-url",
+                        help="Optional native visual feature service for new personal-memory residents")
     args = parser.parse_args()
     uvicorn.run(create_app(args.checkpoint, args.seed, dimension=args.dimension, brain_url=args.brain_url,
                           body_mode=args.body, ecology=args.ecology, resources=args.resources,
                           acoustics=args.acoustics, motor_genome=args.motor_genome,
-                          personal_memory=args.personal_memory, habitat_spec=args.habitat), host=args.host, port=args.port)
+                          personal_memory=args.personal_memory, habitat_spec=args.habitat,
+                          perception_url=args.perception_url), host=args.host, port=args.port)
 
 
 def main3d():

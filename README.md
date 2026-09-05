@@ -44,9 +44,9 @@ This compact **2D reference uses a female FlyWire v783 subset of 6,789 neurons**
 
 ## Run the full 3D habitat
 
-The full graph is downloaded separately; large arrays and checkpoints do not belong in Git. The neural service needs PyTorch with a working accelerator backend, while the habitat/browser can run on another machine.
+The full graph is downloaded separately; large arrays and checkpoints do not belong in Git. The neural service can use PyTorch on AMD or the local Rust/Metal backend on Apple Silicon. The habitat/browser can run separately from it.
 
-1. Follow [MaleCNS acquisition](docs/MALECNS.md), the [persistent neural service instructions](docs/REMOTE_BRAIN.md), and [rich retinal port setup](docs/NEURAL_PORTS.md).
+1. Follow [MaleCNS acquisition](docs/MALECNS.md), then choose the [persistent accelerator service](docs/REMOTE_BRAIN.md) or the [local Apple Metal backend](docs/METAL_BRAIN.md). Both use the [rich retinal port setup](docs/NEURAL_PORTS.md).
 2. Reach that service over localhost or an SSH forward, then run:
 
 ```sh
@@ -71,13 +71,19 @@ A small [trained motor artifact](data/genomes/nursery-20000.npz) is included. Fo
 
 Use a fresh checkpoint and a separate ordered neural service. The inherited motor runs on NumPy, with private working context and random state. With `--personal-memory`, a separate private action-conditioned memory records actual bodily consequences and can refine future choices. It preserves the inherited policy’s exploration. The current live orchard has sparse personal reinforcement and no demonstrated durable individual strategies yet. Its training used earlier camera and odor semantics, so this richer world is a [transfer experiment](docs/MOTOR_INHERITANCE.md). [Resource production](docs/ECOLOGY.md) and [physical sound](docs/ACOUSTICS.md) preserve finite pools and transfer histories in the whole-world checkpoint.
 
-Open `/observatory` for the native GAM fits and navigable Weave evidence graph. [Visual memory](docs/VISUAL_MEMORY.md), [contextual maps](docs/CONTEXT_MEMORY.md), and [asynchronous native perception](docs/PERCEPTION.md) are separate developing organs; they are not all active in existing residents.
+The newer [terrarium](docs/TERRARIUM.md) adds connected terraces, an underdeck, a return ramp, renewable movable food and five acoustic mechanisms. The [visitor panel](docs/VISITOR.md) records and schedules sound, light and physical gestures in model time, including across a checkpoint.
+
+![The terrarium running full MaleCNS on Metal](docs/assets/terrarium-garden.png)
+
+Optional native vision now joins the personal motor loop. A resident's actual camera captures a pair of views around one five-tick motor action. A fixed model-time delivery boundary makes those delayed features available to its private [visual episodic memory](docs/VISUAL_EPISODES.md), which can contribute bounded action evidence. More than twenty genuine pairs have been retained in the live terrarium; improved visual decisions remain unestablished. The native inference service setup is in [PERCEPTION.md](docs/PERCEPTION.md).
+
+For a fresh terrarium, use the terrarium habitat/resource/acoustic JSON files and add `--perception-url http://127.0.0.1:18775` when that service is available. Existing saved lives retain their own organs. Open `/observatory` for native GAM fits and the navigable Weave evidence graph; the scientific archive remains separate from personal memory.
 
 ## Building wide and deep
 
 We are building with parallel agents and human direction. Working commits are intentionally frequent. The priorities are physical possibilities, consequential personal learning, credible biological contribution and a world worth spending time in.
 
-Python currently connects the scientific ecosystem; MuJoCo and PyTorch do the heavy numerical work. Rust is present through GAM, the Weave adapter and a new [local Metal full-graph prototype](docs/METAL_BRAIN.md). Its three-resident recurrent update measured 8.85 ms on an M2 Max; complete sensory/service integration is in progress. We choose implementation languages by the work they improve.
+Python currently connects the scientific ecosystem; MuJoCo and PyTorch do the heavy numerical work. Rust is present through GAM, the Weave adapter and the [local Metal full-graph backend](docs/METAL_BRAIN.md). A complete three-resident request, including 351 sensory inputs and 384 readouts, measured 9.55 ms with its optional SIMD kernel on an M2 Max. The active terrarium uses the original row kernel; saved numerical backends are pinned. We choose implementation languages by the work they improve.
 
 Useful contributions include better embodied learning, controllable bodies, combinable physical environments, grounded perception, memory mechanisms and experiments that distinguish the proposed explanation from a simpler one. An LLM may become a bounded perceptual or semantic organ; it should not silently supply all behavior while the rest of the organism is decorative.
 

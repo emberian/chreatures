@@ -20,12 +20,13 @@ import numpy as np
 from .cognition import AdaptiveOrgan
 from .neural_client import NeuralClient
 from .runtime import canonical
+from .visitor_events import VisitorPerformances
 
 
 class Habitat3D:
     def __init__(self, seed=7, brain_url="http://127.0.0.1:18765", spec=None,
                  body_mode="articulated", ecology="diffusion", resources=None, acoustics=None,
-                 motor_genome=None, personal_memory=False):
+                 motor_genome=None, personal_memory=False, perception_url=None):
         from .sensorium import SensoriumWorld, ArticulatedSensoriumWorld
         from .fields import FieldEnvironment
         from .ecology import Ecology
@@ -34,6 +35,8 @@ class Habitat3D:
             raise ValueError("Unknown body or ecology model")
         if personal_memory and motor_genome is None:
             raise ValueError("Personal contextual motor learning requires an inherited motor artifact")
+        if perception_url is not None and not personal_memory:
+            raise ValueError("Native visual episodes require the personal motor organ")
         self.personal_memory = bool(personal_memory)
         if spec is None:
             spec = json.loads((Path(__file__).resolve().parents[1] / "data/habitats/hollow-garden.json").read_text())
@@ -83,6 +86,11 @@ class Habitat3D:
         self.timings = deque(maxlen=120)
         self.phase_timings = deque(maxlen=120)
         self.pending_step = None
+        self.visitor = VisitorPerformances()
+        self.vision = None
+        if perception_url is not None:
+            from .embodied_vision import EmbodiedVision
+            self.vision = EmbodiedVision(perception_url, [b.id for b in self.world.bodies])
         self.note("hatched", f"{len(self.world.bodies)} new residents entered the habitat with full MaleCNS circuits.")
         if self.motor_artifact is not None:
             self.note("inheritance", "Inherited a population-trained motor interface and private working context.",
@@ -148,6 +156,11 @@ class Habitat3D:
             raise RuntimeError("A previous world step is incomplete; restore its checkpoint before advancing")
         for _ in range(steps):
             started = time.perf_counter()
+            if self.vision is not None and not self.vision.poll(self.tick):
+                break
+            for event in self.visitor.advance(self.world, self.tick):
+                self.note("visitor-event", "A scheduled physical stimulus occurred.", **event)
+            before_physiology = self.vision.physiology(self.world, self.neural_state) if self.vision is not None else None
             sensed = self.sense()
             self.last_senses = sensed
             self.sensed_at = self.world.time
@@ -167,7 +180,9 @@ class Habitat3D:
                 if self.motors:
                     if self.personal_memory:
                         action = self.motors[body_id].tick(features, local_body,
-                                    self.outcomes[body_id] if self.tick else None, dt)
+                                    self.outcomes[body_id] if self.tick else None, dt,
+                                    candidate_evidence=self.vision.candidate_evidence(body_id, self.tick, local_body,
+                                        self.motors[body_id].refiner.config) if self.vision is not None else None)
                     else:
                         action = self.motors[body_id].tick(features, local_body, dt)
                 else:
@@ -185,6 +200,8 @@ class Habitat3D:
                 actions[body_id] = action
                 self.neural_state[body_id] = response
             cognition_done = time.perf_counter()
+            if self.vision is not None:
+                self.vision.begin_step(self.world, self.tick, actions, before_physiology)
             self.outcomes = self.world.advance(actions, dt)
             physics_done = time.perf_counter()
             if self.acoustics is not None:
@@ -204,6 +221,9 @@ class Habitat3D:
                                        "resources": (resources_done-acoustics_done)*1000,
                                        "fields": (fields_done-resources_done)*1000})
             self.tick += 1
+            if self.vision is not None:
+                self.vision.finish_step(self.world, self.tick, self.outcomes,
+                                        self.vision.physiology(self.world, self.neural_state))
             self.pending_step = None
             for b in self.world.bodies:
                 if self.outcomes[b.id].get("nutrition", 0) > 0 and self.tick % 20 == 0:
@@ -235,6 +255,7 @@ class Habitat3D:
             self.note("observation", text, origin="caregiver")
             return {"bookmarked": True}
         result = self.world.command(command)
+        self.visitor.direct_command(command)
         self.note("caregiver", f"Outside interaction: {op}.", command=copy.deepcopy(command))
         return result
 
@@ -250,6 +271,8 @@ class Habitat3D:
                                  "time": self.field.time} if self.field is not None else {"kind": "analytic"},
                      "resources": copy.deepcopy(self.resource_state),
                      "acoustics": copy.deepcopy(self.acoustic_state),
+                     "visitor": self.visitor.view(self.tick, self.paused),
+                     "vision": self.vision.view(self.tick) if self.vision is not None else None,
                      "journal": list(self.journal)[-40:], "history": {k: list(v) for k, v in self.history.items()},
                      "anatomy": {"dataset": "MaleCNS v1.0", "neurons": self.neural.graph["neurons"],
                                  "connections": self.neural.graph["edges"], "sha256": self.neural.graph["sha256"],
@@ -272,6 +295,8 @@ class Habitat3D:
                  "resource_state": self.resource_state,
                  "acoustics": self.acoustics.snapshot() if self.acoustics is not None else None,
                  "acoustic_state": self.acoustic_state,
+                 "visitor": self.visitor.snapshot(),
+                 "vision": self.vision.snapshot() if self.vision is not None else None,
                  "last_senses": self.last_senses, "sensed_at": self.sensed_at,
                  "input_names": self.neural.input_names, "output_names": self.neural.output_names,
                  "organs": {k: v.snapshot() for k, v in self.organs.items()},
@@ -312,6 +337,11 @@ class Habitat3D:
         instance.body_mode = value.get("body_mode", "crawler")
         world_type = ArticulatedSensoriumWorld if instance.body_mode == "articulated" else SensoriumWorld
         instance.world = world_type.restore(value["world"])
+        instance.visitor = VisitorPerformances.restore(value.get("visitor"), instance.world)
+        instance.vision = None
+        if value.get("vision") is not None:
+            from .embodied_vision import EmbodiedVision
+            instance.vision = EmbodiedVision.restore(value["vision"])
         instance.field = FieldEnvironment.restore(value["field"]) if value.get("field") is not None else None
         instance.resources = Ecology.restore(instance.world, value["resources"]) if value.get("resources") is not None else None
         instance.resource_state = copy.deepcopy(value.get("resource_state"))

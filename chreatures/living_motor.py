@@ -10,7 +10,7 @@ from __future__ import annotations
 import copy
 import math
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 import numpy as np
 
@@ -210,6 +210,10 @@ class LivingMotorOrgan:
         local_physiology: Mapping[str, Any],
         previous_physics_outcome: Mapping[str, Any] | None,
         dt: float = PHYSICS_DT,
+        *,
+        candidate_evidence: Callable[
+            [tuple[tuple[float, ...], ...]], Mapping[str, Any]
+        ] | None = None,
     ) -> dict[str, float]:
         """Consume the preceding outcome and return this tick's physical action.
 
@@ -229,7 +233,7 @@ class LivingMotorOrgan:
                 raise ValueError("initial episode tick cannot consume a prior physics outcome")
             decision = self.refiner.refine_and_commit(
                 self.motor, self.memory, projected, raw_neural_features,
-                local_physiology, step,
+                local_physiology, step, candidate_evidence=candidate_evidence,
             )
             self._new_pending(projected, physiology, decision)
             self.metrics["ticks"] += 1
@@ -273,7 +277,7 @@ class LivingMotorOrgan:
         self.motor.open_macro_boundary(normalized)
         decision = self.refiner.refine_and_commit(
             self.motor, self.memory, projected, raw_neural_features,
-            local_physiology, step,
+            local_physiology, step, candidate_evidence=candidate_evidence,
         )
         self._new_pending(projected, physiology, decision)
         self.metrics["ticks"] += 1

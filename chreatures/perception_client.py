@@ -520,6 +520,19 @@ class AsyncPerceptionClient:
                 counts[record["state"]] += 1
             return {"closed": self._closed, **counts}
 
+    def prune_delivered(self, keep: int = 1) -> None:
+        """Bound transport history after its features enter private memory.
+
+        Pending and completed-but-undelivered responses are never discarded.
+        The organism must preserve its own episode and provenance first.
+        """
+        if type(keep) is not int or keep < 0:
+            raise ValueError("keep must be a nonnegative integer")
+        with self._lock:
+            delivered = [key for key, row in self.records.items() if row["state"] == "delivered"]
+            for key in delivered[:max(0, len(delivered) - keep)]:
+                del self.records[key]
+
     def snapshot(self) -> dict[str, Any]:
         with self._lock:
             return {

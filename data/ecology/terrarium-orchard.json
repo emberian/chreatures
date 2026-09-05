@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "include_authored": false,
+  "ambient": {
+    "material": 6.2,
+    "material_capacity": 10.0,
+    "material_inflow_rate": 0.0018,
+    "photon_flux": 1.0,
+    "light_variability": 0.05,
+    "light_correlation_time": 55.0,
+    "max_step": 0.25
+  },
+  "reservoirs": [
+    {
+      "id": "sun-rootstock",
+      "entity": "sun-berry",
+      "material": 1.55,
+      "material_capacity": 2.70,
+      "energy": 0.34,
+      "energy_capacity": 2.10,
+      "uptake_rate": 0.017
+    },
+    {
+      "id": "shade-rootstock",
+      "entity": "shade-nectar",
+      "material": 1.35,
+      "material_capacity": 2.50,
+      "energy": 0.30,
+      "energy_capacity": 1.90,
+      "uptake_rate": 0.015
+    },
+    {
+      "id": "screen-rootstock",
+      "entity": "screen-seed",
+      "material": 1.20,
+      "material_capacity": 2.20,
+      "energy": 0.27,
+      "energy_capacity": 1.75,
+      "uptake_rate": 0.014
+    }
+  ],
+  "producers": [
+    {
+      "id": "sun-fruit",
+      "entity": "sun-berry",
+      "reservoir": "sun-rootstock",
+      "food_capacity": 1.20,
+      "growth_rate": 0.036,
+      "maintenance_rate": 0.0011,
+      "capture_area": 0.35,
+      "efficiency": 0.32,
+      "light_half_saturation": 0.24,
+      "energy_cost": 1.0,
+      "energy_content": 0.78,
+      "turnover_rate": 0.0009,
+      "recycle_fraction": 0.56,
+      "sample_offset": [0.0, 0.0, 0.12],
+      "visual": {"shape_indices": [0], "scale_range": [0.90, 1.08], "max_scale_rate": 0.012}
+    },
+    {
+      "id": "shade-fruit",
+      "entity": "shade-nectar",
+      "reservoir": "shade-rootstock",
+      "food_capacity": 1.05,
+      "growth_rate": 0.031,
+      "maintenance_rate": 0.0009,
+      "capture_area": 0.31,
+      "efficiency": 0.31,
+      "light_half_saturation": 0.20,
+      "energy_cost": 1.0,
+      "energy_content": 0.75,
+      "turnover_rate": 0.0007,
+      "recycle_fraction": 0.62,
+      "sample_offset": [0.0, 0.0, 0.13],
+      "visual": {"shape_indices": [0], "scale_range": [0.91, 1.07], "max_scale_rate": 0.011}
+    },
+    {
+      "id": "screen-fruit",
+      "entity": "screen-seed",
+      "reservoir": "screen-rootstock",
+      "food_capacity": 0.90,
+      "growth_rate": 0.027,
+      "maintenance_rate": 0.0008,
+      "capture_area": 0.27,
+      "efficiency": 0.29,
+      "light_half_saturation": 0.27,
+      "energy_cost": 1.0,
+      "energy_content": 0.72,
+      "turnover_rate": 0.0011,
+      "recycle_fraction": 0.58,
+      "sample_offset": [0.0, 0.0, 0.10],
+      "visual": {"shape_indices": [0], "scale_range": [0.92, 1.06], "max_scale_rate": 0.010}
+    }
+  ]
+}

@@ -136,3 +136,48 @@ The laptop now executes the full graph in Rust/Metal. The first isolated B3
 recurrent measurement was 8.853 ms, with maximum scalar-reference error 2.3e-8
 and exact own-backend restoration. This excludes sensory/readout projection
 and RPC; a complete local service is the next integration.
+
+## Cycle 5 — local neural execution, visual episodes and visitors
+
+A complete persistent Rust/Metal service now receives 351 sensory scalars per
+resident and returns 384 readouts plus physiological summaries. All 165,122
+neurons and 25,563,197 edges remain on the local GPU. Complete B3 request time
+measured 15.429 ms for the original row kernel and 9.546 ms for an optional
+SIMD reduction kernel. Numerical backend identity is pinned in snapshots.
+The new terrarium runs the original row kernel; existing remote worlds continue.
+
+The terrarium contains two connected elevations, a separate return ramp, an
+underdeck and occluded passages, five acoustic mechanisms and three renewable
+movable producers. A torque-driven articulated probe physically traversed the
+two ascending ramps. A separate full-graph social probe confirms anonymous
+tone and shared-object changes reach another body's senses and neural readouts;
+this establishes a pathway, not learned communication.
+
+A visitor can record actual sound/light/hand commands and schedule a named
+performance. Names stay in the visitor archive. Integer model ticks order the
+events, pause freezes them, and a physical checkpoint taken during a hand
+gesture replayed exactly through completion. The active terrarium completed
+a first four-event performance through the public API.
+
+Native vision is now in an actual resident loop. Every capture episode pairs
+two body-camera rasters around a five-tick held action. The native AMD service
+returns 960-dimensional features, delivered at a fixed later model tick; the
+world waits at that boundary if necessary. Only the resident's own actual
+steps, bodily consequences and features enter its private visual memory.
+Comparable empirical episodes can supply bounded candidate-action evidence.
+Over twenty real pairs have been retained; useful visual learning and changed
+choices are not yet demonstrated.
+
+An effort-unit bug in the new visual summaries was fixed at an explicitly
+recorded checkpoint boundary. Raw effort rates are retained; utility now uses
+their model-time integral. Schema v2 recomputes derived summaries from the
+unchanged raw steps and records the migration. The same whole-world identity
+resumed, retaining its visual episodes, pending request and neural state.
+
+Personal-context support now distinguishes normalized effective count from
+absolute sensory/action match. Existing snapshots retain their old gate; new
+refiners use the conservative absolute gate. An independent physical held-out
+probe supports opposite action choices from opposite actual reinforcement
+histories. The live orchard still has sparse personal reinforcement. A new
+opt-in homeostatic objective addresses the old objective's incentive to burn
+energy above its target; training it is a separate ongoing experiment.

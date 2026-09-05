@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import copy
+import json
 import math
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 import numpy as np
 
@@ -40,6 +41,13 @@ class ContextualMotorConfig:
     minimum_support: float = 0.5
     full_support: float = 5.0
     uncertainty_ceiling: float = 0.58
+    coverage_gate_version: str = "absolute-v2"
+    minimum_action_similarity: float = 0.20
+    full_action_similarity: float = 0.80
+    minimum_match_mass: float = 0.12
+    full_match_mass: float = 0.80
+    minimum_observation_similarity: float = 0.25
+    full_observation_similarity: float = 0.75
     feature_value_min_count: int = 8
     feature_value_rate: float = 0.04
     feature_value_gain: float = 0.18
@@ -50,6 +58,7 @@ class ContextualMotorConfig:
     fatigue_drive_weight: float = 0.50
     nutrition_weight: float = 3.0
     effort_weight: float = 0.0002
+    max_external_correction: float = 0.12
 
     def validate(self) -> None:
         if not 1 <= self.candidate_count <= 9:
@@ -62,8 +71,20 @@ class ContextualMotorConfig:
             raise ValueError("support gates are inconsistent")
         if not 0 < self.uncertainty_ceiling < 1:
             raise ValueError("uncertainty_ceiling must be in (0, 1)")
+        if self.coverage_gate_version not in {"effective-v1", "absolute-v2"}:
+            raise ValueError("unsupported contextual coverage gate version")
+        for low, high, name in (
+            (self.minimum_action_similarity, self.full_action_similarity, "action similarity"),
+            (self.minimum_match_mass, self.full_match_mass, "match mass"),
+            (self.minimum_observation_similarity, self.full_observation_similarity,
+             "observation similarity"),
+        ):
+            if not 0 <= low < high <= 1:
+                raise ValueError(f"invalid {name} gate")
         if self.feature_value_min_count < 1 or not 0 < self.feature_value_rate <= 0.2:
             raise ValueError("invalid feature-value learning parameters")
+        if not 0 < self.max_external_correction <= self.max_logit_correction:
+            raise ValueError("external correction bound must be positive and no larger than contextual bound")
         numeric = asdict(self)
         if any(isinstance(value, float) and not math.isfinite(value) for value in numeric.values()):
             raise ValueError("contextual motor configuration must be finite")
@@ -238,6 +259,47 @@ class ContextualMotorRefiner:
             utility += self.config.feature_value_gain * maturity * feature_term
         return float(utility), feature_term, named
 
+    @staticmethod
+    def _linear_gate(value: float, low: float, high: float) -> float:
+        return float(np.clip((value - low) / (high - low), 0.0, 1.0))
+
+    def _external_evidence(
+        self,
+        callback: Callable[[tuple[tuple[float, ...], ...]], Mapping[str, Any]],
+        actions: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, str, list[dict[str, Any]]]:
+        immutable = tuple(tuple(float(value) for value in action) for action in actions)
+        result = callback(immutable)
+        if not isinstance(result, Mapping):
+            raise ValueError("candidate evidence must return a mapping")
+        source = result.get("source")
+        if not isinstance(source, str) or not source or len(source) > 96:
+            raise ValueError("candidate evidence requires a short source string")
+        requested = _vector(result.get("corrections"), len(actions), "candidate evidence corrections")
+        raw_diagnostics = result.get("diagnostics", [{} for _ in actions])
+        if not isinstance(raw_diagnostics, (list, tuple)) or len(raw_diagnostics) != len(actions):
+            raise ValueError("candidate evidence diagnostics must align with candidates")
+        diagnostics: list[dict[str, Any]] = []
+        for item in raw_diagnostics:
+            if not isinstance(item, Mapping):
+                raise ValueError("each candidate evidence diagnostic must be a mapping")
+            copied = copy.deepcopy(dict(item))
+            try:
+                encoded = json.dumps(copied, sort_keys=True, allow_nan=False)
+            except (TypeError, ValueError) as error:
+                raise ValueError("candidate evidence diagnostics must be finite JSON values") from error
+            if len(encoded.encode()) > 8192:
+                raise ValueError("candidate evidence diagnostic is too large")
+            diagnostics.append(copied)
+        applied = np.clip(
+            requested,
+            -self.config.max_external_correction,
+            self.config.max_external_correction,
+        ).astype(np.float32)
+        if not self.enabled:
+            applied.fill(0.0)
+        return requested, applied, source, diagnostics
+
     def refine(
         self,
         memory: RelationalContextMemory,
@@ -251,6 +313,9 @@ class ContextualMotorRefiner:
         inherited_scores: Any | None = None,
         baseline_latent: Any | None = None,
         deterministic: bool = False,
+        candidate_evidence: Callable[
+            [tuple[tuple[float, ...], ...]], Mapping[str, Any]
+        ] | None = None,
     ) -> dict[str, Any]:
         """Choose one inherited candidate and return complete decision provenance."""
         self._check_memory(memory, self.feature_dim)
@@ -324,7 +389,31 @@ class ContextualMotorRefiner:
                 (self.config.uncertainty_ceiling - uncertainty)
                 / self.config.uncertainty_ceiling, 0.0, 1.0
             ))
-            gate = support_gate * uncertainty_gate if self.enabled else 0.0
+            action_similarity = float(prediction.get("action_similarity", 0.0))
+            match_mass = float(prediction.get("action_match_mass", 0.0))
+            observation_similarity = float(prediction.get("observation_similarity", 0.0))
+            action_gate = self._linear_gate(
+                action_similarity,
+                self.config.minimum_action_similarity,
+                self.config.full_action_similarity,
+            )
+            mass_gate = self._linear_gate(
+                match_mass,
+                self.config.minimum_match_mass,
+                self.config.full_match_mass,
+            )
+            observation_gate = self._linear_gate(
+                observation_similarity,
+                self.config.minimum_observation_similarity,
+                self.config.full_observation_similarity,
+            )
+            absolute_gate = min(action_gate, mass_gate, observation_gate)
+            if self.config.coverage_gate_version == "effective-v1":
+                gate = support_gate * uncertainty_gate if self.enabled else 0.0
+            else:
+                if prediction.get("support_diagnostics_version") != "absolute-match-v2":
+                    raise ValueError("relational memory lacks absolute-v2 support diagnostics")
+                gate = support_gate * uncertainty_gate * absolute_gate if self.enabled else 0.0
             correction = float(np.clip(
                 self.config.correction_gain * utility * gate,
                 -self.config.max_logit_correction,
@@ -340,11 +429,39 @@ class ContextualMotorRefiner:
                 "predicted_feature_value": feature_term,
                 "predicted_outcome": predicted_outcome,
                 "support": support,
+                "effective_support": float(prediction.get("effective_support", support)),
+                "support_diagnostics_version": prediction.get("support_diagnostics_version"),
+                "action_match_mass": match_mass,
+                "best_edge_match": float(prediction.get("best_edge_match", 0.0)),
+                "nearest_action_distance": prediction.get("nearest_action_distance"),
+                "action_similarity": action_similarity,
+                "nearest_observation_distance": prediction.get("nearest_observation_distance"),
+                "observation_similarity": observation_similarity,
                 "uncertainty": uncertainty,
+                "effective_support_gate": support_gate,
+                "uncertainty_gate": uncertainty_gate,
+                "action_similarity_gate": action_gate,
+                "match_mass_gate": mass_gate,
+                "observation_similarity_gate": observation_gate,
+                "absolute_coverage_gate": absolute_gate,
                 "coverage_gate": gate,
                 "contextual_correction": correction,
                 "combined_score": float(total[index]),
             })
+        relational_choice = int(np.argmax(total))
+        external_source = None
+        if candidate_evidence is not None:
+            if not callable(candidate_evidence):
+                raise ValueError("candidate_evidence must be callable")
+            requested_external, external, external_source, evidence_diagnostics = self._external_evidence(
+                candidate_evidence, actions
+            )
+            total += external
+            for index, audit in enumerate(audits):
+                audit["external_evidence"] = evidence_diagnostics[index]
+                audit["external_requested_correction"] = float(requested_external[index])
+                audit["external_correction"] = float(external[index])
+                audit["combined_score"] = float(total[index])
         inherited_choice = int(np.argmax(inherited))
         selected = int(np.argmax(total))
         self.decision_count += 1
@@ -369,9 +486,16 @@ class ContextualMotorRefiner:
                 "memory_revision": self.memory_revision,
                 "decision_count": self.decision_count,
                 "max_logit_correction": self.config.max_logit_correction,
+                "coverage_gate_version": self.config.coverage_gate_version,
                 "uncertainty_status": "heuristic; weak empirical calibration, not a probability",
             },
         }
+        if external_source is not None:
+            decision["relational_selected_index"] = relational_choice
+            decision["provenance"]["external_evidence"] = {
+                "source": external_source,
+                "max_correction": self.config.max_external_correction,
+            }
         self.last_decision = copy.deepcopy(decision)
         return decision
 
@@ -430,6 +554,10 @@ class ContextualMotorRefiner:
         raw_motor_senses: Any,
         local_physiology: Mapping[str, Any],
         dt: float,
+        *,
+        candidate_evidence: Callable[
+            [tuple[tuple[float, ...], ...]], Mapping[str, Any]
+        ] | None = None,
     ) -> dict[str, Any]:
         """Refine and install the first tick of a MotorOrgan macro action."""
         if not isinstance(motor, MotorOrgan):
@@ -455,6 +583,7 @@ class ContextualMotorRefiner:
             policy_artifact_sha256=motor.artifact.sha256,
             baseline_latent=baseline_latent,
             deterministic=motor.deterministic,
+            candidate_evidence=candidate_evidence,
         )
         decision["action"] = motor.commit_macro_action(
             normalized, hidden, decision["action_vector"], float(dt)
@@ -504,9 +633,13 @@ class ContextualMotorRefiner:
             raise ValueError("unsupported contextual motor snapshot")
         if not isinstance(value.get("enabled"), bool) or not isinstance(value.get("learning"), bool):
             raise ValueError("invalid contextual motor flags")
+        raw_config = dict(value["config"])
+        # Snapshots written before absolute match diagnostics retain their exact
+        # effective-count gate rather than silently changing on restore.
+        raw_config.setdefault("coverage_gate_version", "effective-v1")
         instance = cls(
             int(value["feature_dim"]),
-            config=ContextualMotorConfig(**value["config"]),
+            config=ContextualMotorConfig(**raw_config),
             enabled=bool(value["enabled"]),
         )
         instance.learning = bool(value["learning"])
