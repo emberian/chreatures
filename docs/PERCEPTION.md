@@ -192,6 +192,8 @@ must not treat these numbers as calibrated probabilities. The service was
 stopped after validation to leave the GPU to the developmental run; it can be
 started with the command above when a perception window is scheduled.
 
-Resident field-of-view rendering is not present yet. Until the 3D renderer
-submits a `resident_fov` frame, this proves only the external-image transport,
-native VLM execution, dense visual feature, provenance, and failure semantics.
+Body-local rendering is now implemented in `chreatures/retinal_render.py` and
+documented in `docs/RETINAL_RENDER.md`. Its first `resident_fov` run used Pip's
+actual saved MuJoCo pose and gaze, with native inference on persvati. That
+measurement is separate from the external-image result above and remains
+explicitly an uncertain model observation rather than controller input.

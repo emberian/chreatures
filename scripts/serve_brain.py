@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import signal
+import socket
 import sys
 import threading
 from http import HTTPStatus
@@ -85,6 +86,12 @@ def handler_type(
 ) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
         server_version = "ChreaturesMaleCNS/1"
+        protocol_version = "HTTP/1.1"
+
+        def setup(self):
+            super().setup()
+            self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            self.connection.settimeout(30)
 
         def _json(self) -> dict[str, Any]:
             content_type = self.headers.get("Content-Type", "").split(";", 1)[0]
@@ -164,6 +171,10 @@ def handler_type(
                         "feature_names": sequenced.brain.readout_names,
                         "residents": result,
                     }
+                    if request.get("compact") is True:
+                        keys = ("id", "time", "features", "activity", "activity_peak", "support")
+                        response["residents"] = [{key: entry[key] for key in keys} for entry in result]
+                        response.pop("feature_names")
                 elif self.path == "/v1/snapshot":
                     seq, result = sequenced.mutate(
                         sequence,

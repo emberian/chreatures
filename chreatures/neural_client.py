@@ -4,6 +4,7 @@ from __future__ import annotations
 import http.client
 import hashlib
 import json
+import time
 from urllib.parse import urlsplit
 
 import numpy as np
@@ -24,6 +25,8 @@ class NeuralClient:
         self.host, self.port = parsed.hostname, parsed.port or 80
         self.timeout = timeout
         self.uncertain = False
+        self._connection = None
+        self._last_request = 0.0
         self.metadata = self._request("GET", "/v1/metadata")
         self.next_seq = self.metadata["next_seq"]
         self.graph = self.metadata["brain"]["graph"]
@@ -48,17 +51,32 @@ class NeuralClient:
         return dict(zip(names, values.astype(float).tolist(), strict=True))
 
     def _request(self, method, path, value=None):
-        connection = http.client.HTTPConnection(self.host, self.port, timeout=self.timeout)
+        # Reuse the SSH-forwarded transport while actively stepping, but discard
+        # idle connections before a new mutation. Never retry a sent mutation.
+        if self._connection is not None and time.monotonic() - self._last_request > 5:
+            self._connection.close()
+            self._connection = None
+        if self._connection is None:
+            self._connection = http.client.HTTPConnection(self.host, self.port, timeout=self.timeout)
+        connection = self._connection
         payload = None if value is None else json.dumps(value, allow_nan=False).encode()
         try:
             connection.request(method, path, body=payload, headers={"Content-Type": "application/json"})
             response = connection.getresponse()
             data = json.loads(response.read())
+            self._last_request = time.monotonic()
             if response.status >= 400:
                 raise NeuralServiceError(data.get("message", data.get("error", "Remote neural request rejected")))
             return data
-        finally:
+        except Exception:
             connection.close()
+            self._connection = None
+            raise
+
+    def close(self):
+        if self._connection is not None:
+            self._connection.close()
+            self._connection = None
 
     def mutate(self, path, **value):
         if self.uncertain:
@@ -78,7 +96,7 @@ class NeuralClient:
         return self.mutate("/v1/residents/create", resident_ids=ids)
 
     def step(self, entries, dt):
-        return self.mutate("/v1/step", residents=entries, dt=dt)["residents"]
+        return self.mutate("/v1/step", residents=entries, dt=dt, compact=True)["residents"]
 
     def snapshot(self, name, ids=None):
         values = {"name": name}
