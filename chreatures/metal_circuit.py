@@ -8,6 +8,17 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 
 SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}\Z")
+CANONICAL_ARTIFACT_SHA256 = "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0"
+CANONICAL_GRAPH_SHA256 = "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625"
+CANONICAL_PORT_SPEC_SHA256 = "fffb48c65bdb5bc2503ff8ad7c65b4419e12aa9ef5b58b9f36bc910f64dadb6f"
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(8 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class MetalCircuit:
@@ -24,6 +35,7 @@ class MetalCircuit:
         gain: float = 0.92,
         support_recovery: float = 0.024,
         kernel: str = "row",
+        manifest: str | Path | None = None,
     ):
         if capacity != 3:
             raise ValueError("experimental Metal backend has fixed capacity 3")
@@ -35,6 +47,7 @@ class MetalCircuit:
             raise ValueError(
                 "native v1 dynamics are fixed at tau=.16, gain=.92, recovery=.024"
             )
+        port_bundle = Path(port_bundle)
         with np.load(port_bundle, allow_pickle=False) as z:
             self.input_names = z["input_names"].astype(str).tolist()
             self.readout_names = z["readout_names"].astype(str).tolist()
@@ -47,6 +60,38 @@ class MetalCircuit:
         self._slots = {}
         self._resident_for_slot = [None] * 3
         self.times = np.zeros(3, dtype=np.float64)
+        artifact = Path(artifact)
+        manifest_path = (
+            Path(manifest) if manifest is not None else artifact.with_suffix(".manifest.json")
+        )
+        receipt = json.loads(manifest_path.read_text(encoding="utf-8"))
+        expected = {
+            "schema_version": 1,
+            "format": "metal-csr-v2",
+            "artifact_sha256": CANONICAL_ARTIFACT_SHA256,
+            "artifact_bytes": 207261844,
+            "graph_sha256": CANONICAL_GRAPH_SHA256,
+            "port_spec_sha256": CANONICAL_PORT_SPEC_SHA256,
+            "neurons": self.n,
+            "edges": self.edge_count,
+            "inputs": 351,
+            "readouts": 384,
+        }
+        if any(receipt.get(key) != value for key, value in expected.items()):
+            raise ValueError("Metal artifact manifest is not the pinned canonical v2 recipe")
+        if (
+            self.graph_hash != receipt["graph_sha256"]
+            or self.port_spec_hash != receipt["port_spec_sha256"]
+        ):
+            raise ValueError("port bundle identity differs from the Metal artifact manifest")
+        if _sha256(port_bundle) != receipt.get("port_bundle_sha256"):
+            raise ValueError("port bundle checksum differs from the Metal artifact manifest")
+        if artifact.stat().st_size != receipt["artifact_bytes"]:
+            raise ValueError("Metal artifact byte size differs from its manifest")
+        self.artifact_sha256 = _sha256(artifact)
+        if self.artifact_sha256 != receipt["artifact_sha256"]:
+            raise ValueError("Metal artifact checksum differs from its manifest")
+        self.artifact_manifest = receipt
         if binary is None:
             binary = (
                 Path(__file__).resolve().parent.parent
@@ -189,6 +234,8 @@ class MetalCircuit:
                 "sha256": self.graph_hash,
                 "neurons": self.n,
                 "edges": self.edge_count,
+                "artifact_sha256": self.artifact_sha256,
+                "artifact_format": "metal-csr-v2",
             },
             "device": {
                 "type": "metal",
@@ -234,8 +281,9 @@ class MetalCircuit:
         path.parent.mkdir(parents=True, exist_ok=True)
         metadata = json.dumps(
             {
-                "version": 2,
+                "version": 3,
                 "graph_sha256": self.graph_hash,
+                "artifact_sha256": self.artifact_sha256,
                 "port_spec_hash": self.port_spec_hash,
                 "kernel": self.kernel,
                 "resident_ids": self._resident_for_slot,
@@ -250,6 +298,7 @@ class MetalCircuit:
         return {
             "name": name,
             "sha256": digest,
+            "artifact_sha256": self.artifact_sha256,
             "bytes": path.stat().st_size,
             "scope": "all",
             "residents": residents,
@@ -267,8 +316,17 @@ class MetalCircuit:
             if length > 2_000_000:
                 raise ValueError("snapshot metadata is too large")
             meta = json.loads(handle.read(length))
+        version = meta.get("version")
+        legacy_verified = (
+            version == 2
+            and self.artifact_sha256 == CANONICAL_ARTIFACT_SHA256
+            and self.graph_hash == CANONICAL_GRAPH_SHA256
+            and self.port_spec_hash == CANONICAL_PORT_SPEC_SHA256
+        )
         if (
-            meta.get("version") != 2
+            version not in {2, 3}
+            or (version == 3 and meta.get("artifact_sha256") != self.artifact_sha256)
+            or (version == 2 and not legacy_verified)
             or meta.get("graph_sha256") != self.graph_hash
             or meta.get("port_spec_hash") != self.port_spec_hash
             or meta.get("kernel") != self.kernel
@@ -276,7 +334,7 @@ class MetalCircuit:
             or meta.get("readout_names") != self.readout_names
         ):
             raise ValueError(
-                "snapshot is incompatible with this graph, port interface, or Metal kernel"
+                "snapshot is incompatible with this artifact, graph, port interface, or Metal kernel"
             )
         slots = meta["resident_ids"]
         active = [x for x in slots if x is not None]
@@ -293,6 +351,7 @@ class MetalCircuit:
         return {
             "name": name,
             "sha256": digest,
+            "artifact_sha256": self.artifact_sha256,
             "bytes": path.stat().st_size,
             "scope": "all",
             "residents": active,

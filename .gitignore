@@ -23,4 +23,5 @@ target/
 /hollow-garden-first.png
 
 # Local full connectome Metal buffers (derived from separately licensed data).
-/data/metal-brain/
+/data/metal-brain/*
+!/data/metal-brain/metal-csr-v2.manifest.json

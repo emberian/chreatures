@@ -36,6 +36,13 @@ and the actual 384-row readout. It is 207,261,844 bytes. The preparation script
 derives it from the canonical arrays and compact public port bundle; it does
 not change either. The root `.gitignore` excludes `data/metal-brain/` bulk artifacts.
 
+`data/metal-brain/metal-csr-v2.manifest.json` is the checked-in canonical
+receipt for the ignored binary. It pins artifact SHA-256 and byte size, graph
+SHA-256, retinal-v1 semantic spec SHA-256, compact port-bundle SHA-256, array
+counts, format, and construction recipe. `MetalCircuit` hashes the full binary
+and compact port bundle and validates every identity before spawning native
+code. A same-shaped altered binary cannot inherit the canonical graph label.
+
 The persistent worker retains rate, adaptation, support, drive, and scratch
 buffers. A Python request transfers 351 x 3 input scalars and returns 387 x 3
 scalars; it never transfers the full neural state during a step. All input
@@ -54,9 +61,12 @@ The stable default remains `kernel="row"`. An explicitly selected
 `kernel="simd"` assigns one 32-lane SIMD group to each CSR row; lanes traverse
 the row at stride 32 and reduce the three resident accumulators with
 `simd_sum`. Select it only for a new world, either through the Python argument
-or `serve_metal.py --kernel simd`. Snapshot version 2 pins the graph, canonical
-port spec hash, and kernel identity, so the two float32 reduction orders cannot
-silently cross-restore.
+or `serve_metal.py --kernel simd`. Snapshot version 3 pins the artifact, graph,
+canonical port spec, and kernel identity, so the two float32 reduction orders
+cannot silently cross-restore. Version 2 snapshots without artifact identity
+have one labeled migration path: they are accepted only when the loaded
+artifact independently authenticates as the pinned canonical v2 digest and
+the graph and port hashes are canonical. Kernel identity must still match.
 
 ## Reproduce
 
@@ -70,8 +80,9 @@ With the canonical graph available locally:
 ```
 
 The preparation command verifies the canonical graph hashes and the compact
-port bundle against the semantic spec before atomically writing
-`data/metal-brain/metal-csr-v2.bin`. The checked 413 KB port bundle is included
+port bundle against the semantic spec before writing
+`data/metal-brain/metal-csr-v2.bin` and its sidecar through temporary files and
+atomic renames. The checked 413 KB port bundle is included
 in the repository. If it is absent, also pass `--annotation` with the pinned
 MaleCNS annotation Feather named by the spec; the command will rebuild and
 verify the bundle first. No hbox path is assumed. Add `--complete` to the
@@ -159,3 +170,21 @@ and dynamic resident cohorts have not been measured.
 The benchmark performs one untimed GPU warm-up step before its checks and timed
 loop. The parity check compares that first step against an independent scalar
 Rust implementation over the same full CSR and deterministic initial state.
+
+## Explicit execution migration
+
+Normal restore rejects a different numerical kernel. The operator tool
+`scripts/migrate_metal_world.py` instead makes a new world manifest and native
+receipt from an authenticated paused checkpoint. It preserves all three native
+state arrays byte for byte, records both parent hashes and the payload hash,
+and declares the changed future float32 reduction order. It leaves the source
+files intact. The optional physical execution change is recorded separately.
+
+The continuous terrarium migrated at tick 11,825 from `row`/`reference` to
+`simd`/`vectorized`. Before resumption, physics, chemical fields, ecology,
+acoustics, motors, outcomes, neural summaries, feature statistics, resident row
+order, visitor state and the entire native state payload matched the paused
+source exactly. Its current manifest is `runs/terrarium-simd.json`; the older
+`runs/terrarium-garden.json` is a preserved historical checkpoint. This is exact
+state preservation at the boundary, not a claim of bit-identical future
+trajectories across different neural reduction orders.

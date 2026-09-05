@@ -39,6 +39,11 @@ def main():
     p.add_argument(
         "--output", type=Path, default=ROOT / "data/metal-brain/metal-csr-v2.bin"
     )
+    p.add_argument(
+        "--manifest",
+        type=Path,
+        help="sidecar path (default: OUTPUT with .manifest.json suffix)",
+    )
     a = p.parse_args()
     graph = MaleCNSGraph.load(a.graph, mmap=True, verify=True)
     spec = load_port_spec(a.port_spec)
@@ -101,13 +106,35 @@ def main():
         ):
             f.write(np.asarray(array, dtype=dtype).tobytes())
     tmp.replace(a.output)
+    artifact_hash = sha(a.output)
+    manifest_path = a.manifest or a.output.with_suffix(".manifest.json")
+    manifest = {
+        "schema_version": 1,
+        "format": "metal-csr-v2",
+        "recipe": "normalized-signed-float32-recurrence+retinal-v1-csr",
+        "artifact_sha256": artifact_hash,
+        "artifact_bytes": a.output.stat().st_size,
+        "graph_sha256": graph.hash,
+        "port_spec_sha256": bundle.spec_hash,
+        "port_bundle_sha256": receipt["sha256"],
+        "neurons": graph.n,
+        "edges": graph.edge_count,
+        "inputs": 351,
+        "readouts": 384,
+    }
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_tmp = manifest_path.with_suffix(".tmp")
+    manifest_tmp.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    manifest_tmp.replace(manifest_path)
     print(
         json.dumps(
             {
                 "artifact": {
                     "path": str(a.output),
                     "bytes": a.output.stat().st_size,
-                    "sha256": sha(a.output),
+                    "sha256": artifact_hash,
                     "format": "metal-csr-v2",
                     "neurons": graph.n,
                     "edges": graph.edge_count,
@@ -117,6 +144,7 @@ def main():
                 "graph_sha256": graph.hash,
                 "port_spec_sha256": bundle.spec_hash,
                 "port_bundle": receipt,
+                "manifest": {"path": str(manifest_path), **manifest},
             },
             indent=2,
             sort_keys=True,
