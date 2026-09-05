@@ -20,7 +20,8 @@ from .world import MODEL_DT
 log = logging.getLogger("chreatures")
 
 
-def create_app(checkpoint: Path | None = None, seed=7, autostep=True, dimension=2, brain_url="http://127.0.0.1:18765"):
+def create_app(checkpoint: Path | None = None, seed=7, autostep=True, dimension=2, brain_url="http://127.0.0.1:18765",
+               body_mode="articulated", ecology="diffusion"):
     checkpoint = checkpoint or ROOT / ("runs/hollow-garden.json" if dimension == 3 else "runs/residents.json")
     authority = {"habitat": None, "error": None, "alive": True}
     lock = asyncio.Lock()
@@ -30,7 +31,8 @@ def create_app(checkpoint: Path | None = None, seed=7, autostep=True, dimension=
         try:
             if dimension == 3:
                 from .runtime3d import Habitat3D
-                authority["habitat"] = Habitat3D.load(checkpoint, brain_url) if checkpoint.exists() else Habitat3D(seed, brain_url)
+                authority["habitat"] = Habitat3D.load(checkpoint, brain_url) if checkpoint.exists() else Habitat3D(
+                    seed, brain_url, body_mode=body_mode, ecology=ecology)
             else:
                 authority["habitat"] = Habitat.load(checkpoint) if checkpoint.exists() else Habitat(seed)
         except Exception as exc:
@@ -157,9 +159,14 @@ def main(default_dimension=2):
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--dimension", type=int, choices=(2, 3), default=default_dimension)
     parser.add_argument("--brain-url", default="http://127.0.0.1:18765")
+    parser.add_argument("--body", choices=("crawler", "articulated"), default="articulated",
+                        help="Body for new worlds; saved worlds retain their original body")
+    parser.add_argument("--ecology", choices=("analytic", "diffusion"), default="diffusion",
+                        help="Chemical ecology for new worlds; saved worlds retain their original model")
     parser.add_argument("--checkpoint", type=Path)
     args = parser.parse_args()
-    uvicorn.run(create_app(args.checkpoint, args.seed, dimension=args.dimension, brain_url=args.brain_url), host=args.host, port=args.port)
+    uvicorn.run(create_app(args.checkpoint, args.seed, dimension=args.dimension, brain_url=args.brain_url,
+                          body_mode=args.body, ecology=args.ecology), host=args.host, port=args.port)
 
 
 def main3d():

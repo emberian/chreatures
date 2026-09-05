@@ -152,11 +152,42 @@ contains input and readout names, CSR pointers/indices/values, the semantic
 port spec, and per-port provenance. Serialization uses only numeric/string
 NumPy arrays with `allow_pickle=False` on load.
 
-The current `serve_brain.py --mapping-json` path describes compact selector
-maps. The rich bundle is already in the tuple form expected by `RemoteBrain`;
-a separate rich service should load it in Python and pass
-`remote_brain_kwargs()`. This avoids expanding 351 explicit index lists into a
-large mapping JSON and leaves the production 16/48 process undisturbed.
+`serve_brain.py` loads a serialized interface directly and checks all three
+identities before allocating resident state: the graph hash embedded in the
+bundle, the bundle's semantic spec hash, and the bundle file checksum and size
+recorded by the spec. For example:
+
+```shell
+python scripts/serve_brain.py \
+  --graph /tank/chreatures/data/malecns/derived \
+  --port-bundle /tank/chreatures/data/ports/retinal-v1-maps.npz \
+  --port-spec /tank/chreatures/data/ports/retinal-v1.json \
+  --device cuda --capacity 16 --port 8767 \
+  --snapshot-dir /tank/chreatures/runs/server/malecns-retinal-v1/snapshots \
+  --pid-file /tank/chreatures/runs/server/malecns-retinal-v1/brain.pid
+```
+
+`GET /v1/metadata` reports `brain.ports.mode = "versioned_bundle"`, the bundle and
+spec hashes, and the 351 ordered input names and 384 ordered readout names in
+the existing `brain.inputs` and `brain.readouts` fields. Omitting
+`--port-bundle` keeps the original 16-input/48-readout defaults. A caller may
+still use `--mapping-json` for explicit selector maps; the two mapping options
+are mutually exclusive.
+
+Snapshot requests may include `resident_ids` to create a named cohort
+snapshot. Its receipt records `scope = "cohort"` and the exact ordered resident
+IDs. Restoring that receipt changes only those residents, creates missing cohort
+members when capacity permits, and leaves every other resident and its clock
+untouched. Requests without `resident_ids` retain the original full-service
+snapshot behavior. Snapshot metadata also pins the port interface, so state
+cannot be restored into a graph service with different port mappings.
+
+The isolated rich service on hbox runs at `127.0.0.1:8767`; the compact 16/48
+service remains at `127.0.0.1:8765`. A bounded GPU replay on the rich service
+produced 384 features for each resident, reproduced a two-resident cohort with
+maximum absolute feature delta 0, and preserved an independent resident whose
+clock advanced from 0.10 to 0.15 seconds across the cohort restore. The check
+residents were removed afterward, leaving all 16 slots available.
 
 ## Optional learned features
 
