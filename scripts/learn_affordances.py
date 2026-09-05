@@ -34,7 +34,7 @@ if mp.current_process().name == "MainProcess":
     from chreatures.malecns import MaleCNSGraph
     from chreatures.neural_ports import NeuralPortBundle
     from chreatures.remote_brain import RemoteBrain
-    from chreatures.fast_circuit import MicrobatchedResidentCircuit
+    from chreatures.fast_circuit import MicrobatchedResidentCircuit, TritonFusedCircuit
 
 
 HABITAT = ROOT / "data/habitats/hollow-garden.json"
@@ -68,12 +68,18 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--workers", type=int, default=16)
     parser.add_argument("--seed", type=int, default=20260906)
     parser.add_argument("--device", default="cuda")
-    parser.add_argument("--brain-backend", choices=("microbatch", "reference"), default="microbatch")
+    parser.add_argument(
+        "--brain-backend", choices=("triton", "microbatch", "reference"), default="triton"
+    )
     parser.add_argument("--microbatch-size", type=int, default=3)
     parser.add_argument("--resume", type=Path)
     parser.add_argument(
         "--restore-audit-only", action="store_true",
         help="load an exact full checkpoint, write restore-audit.json, and exit",
+    )
+    parser.add_argument(
+        "--resume-drops-pending-rollout", action="store_true",
+        help="record that a legacy checkpoint omitted its pending PPO rollout",
     )
     parser.add_argument(
         "--warm-start-learner", type=Path,
@@ -134,7 +140,7 @@ def affordance_spec(seed: int, episode: int, *, held_out: bool = False) -> dict[
 def _world_worker(connection, port_spec: dict[str, Any]) -> None:
     """Own one MuJoCo instance so native and Python work spans CPU cores."""
     from chreatures.neural_ports import encode_physical_senses
-    from chreatures.sensorium import ArticulatedSensoriumWorld
+    from chreatures.physical_batch import FastArticulatedSensoriumWorld as ArticulatedSensoriumWorld
     world = None
     try:
         while True:
@@ -218,7 +224,8 @@ class FixedCohortBrain:
     """Resident-ID and checkpoint shell around the measured fixed GPU circuit."""
 
     def __init__(
-        self, graph: Any, ports: Any, batch_size: int, *, device: str, microbatch_size: int
+        self, graph: Any, ports: Any, batch_size: int, *, device: str,
+        backend: str, microbatch_size: int,
     ) -> None:
         self.graph = graph
         self.ports = ports
@@ -226,10 +233,17 @@ class FixedCohortBrain:
         self.device = torch.device(device)
         self.capacity = batch_size
         self.resident_ids: list[str] = []
-        self.circuit = MicrobatchedResidentCircuit(
-            graph, batch_size, device=device, microbatch_size=microbatch_size,
-            input_map=(ports.input_names, ports.input_map),
-            readout_map=(ports.readout_names, ports.readout_map),
+        kwargs = {
+            "device": device,
+            "input_map": (ports.input_names, ports.input_map),
+            "readout_map": (ports.readout_names, ports.readout_map),
+        }
+        self.circuit = (
+            TritonFusedCircuit(graph, batch_size, **kwargs)
+            if backend == "triton" else
+            MicrobatchedResidentCircuit(
+                graph, batch_size, microbatch_size=microbatch_size, **kwargs
+            )
         )
 
     def add_residents(self, resident_ids: list[str]) -> None:
@@ -453,18 +467,29 @@ class AffordanceCohort:
 
 def save_checkpoint(
     output: Path, cohort: AffordanceCohort, trainer: PredictivePPOTrainer,
-    step: int, episode_step: int, features: np.ndarray, physiology: np.ndarray,
+    rollout: MacroRollout, step: int, episode_step: int,
+    features: np.ndarray, physiology: np.ndarray,
 ) -> dict[str, Any]:
     directory = output / "checkpoints"
     directory.mkdir(parents=True, exist_ok=True)
     tag = f"step-{step:07d}"
     neural = cohort.brain.snapshot(directory, f"neural-{tag}")
     learner = trainer.snapshot(directory / f"learner-{tag}.pt")
+    rollout_path = directory / f"rollout-{tag}.npz"
+    rollout_temporary = rollout_path.with_name(rollout_path.name + ".tmp")
+    rollout_arrays = rollout.arrays() if len(rollout) else {}
+    with rollout_temporary.open("wb") as handle:
+        np.savez_compressed(handle, length=np.asarray(len(rollout)), **rollout_arrays)
+    os.replace(rollout_temporary, rollout_path)
+    rollout_receipt = {
+        "path": rollout_path.name, "length": len(rollout),
+        "bytes": rollout_path.stat().st_size, "sha256": sha256(rollout_path),
+    }
     state = {
-        "version": 1, "step": step, "episode": cohort.episode,
+        "version": 2, "step": step, "episode": cohort.episode,
         "episode_step": episode_step, "resident_ids": cohort.resident_ids,
         "graph_sha256": cohort.brain.graph_hash, "port_spec_sha256": cohort.ports.spec_hash,
-        "neural": neural, "learner": learner,
+        "neural": neural, "learner": learner, "rollout": rollout_receipt,
         "worlds": cohort.world_pool.call_all("snapshot"),
         "features": features.tolist(), "physiology": physiology.tolist(),
         "cohort": {"worlds": cohort.world_count, "seed": cohort.seed},
@@ -477,17 +502,17 @@ def save_checkpoint(
     return {
         "step": step, "cohort": path.name, "cohort_bytes": path.stat().st_size,
         "cohort_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-        "neural": neural, "learner": learner,
+        "neural": neural, "learner": learner, "rollout": rollout_receipt,
     }
 
 
 def restore_checkpoint(
     path: Path, brain: RemoteBrain, ports: NeuralPortBundle, workers: int,
-) -> tuple[AffordanceCohort, PredictivePPOTrainer, int, int, np.ndarray, np.ndarray]:
+) -> tuple[AffordanceCohort, PredictivePPOTrainer, MacroRollout, int, int, np.ndarray, np.ndarray]:
     with gzip.open(path, "rt", encoding="utf-8") as handle:
         state = json.load(handle)
     if (
-        state.get("version") != 1
+        state.get("version") not in (1, 2)
         or state.get("graph_sha256") != brain.graph_hash
         or state.get("port_spec_sha256") != ports.spec_hash
     ):
@@ -513,10 +538,26 @@ def restore_checkpoint(
     )
     if trainer.resident_ids != cohort.resident_ids:
         raise ValueError("checkpoint learner residents differ")
+    rollout = MacroRollout()
+    if state.get("version") == 2:
+        receipt = state["rollout"]
+        rollout_path = path.parent / receipt["path"]
+        if sha256(rollout_path) != receipt["sha256"]:
+            raise ValueError("checkpoint rollout checksum differs")
+        with np.load(rollout_path, allow_pickle=False) as value:
+            length = int(value["length"])
+            if length != int(receipt["length"]):
+                raise ValueError("checkpoint rollout length differs")
+            if length:
+                arrays = {name: np.asarray(value[name]) for name in MacroRollout.FIELDS}
+                if any(len(array) != length for array in arrays.values()):
+                    raise ValueError("checkpoint rollout arrays differ")
+                for index in range(length):
+                    rollout.append(**{name: array[index] for name, array in arrays.items()})
     features = np.asarray(state["features"], dtype=np.float32)
     physiology = np.asarray(state["physiology"], dtype=np.float32)
     return (
-        cohort, trainer, int(state["step"]), int(state["episode_step"]),
+        cohort, trainer, rollout, int(state["step"]), int(state["episode_step"]),
         features, physiology,
     )
 
@@ -581,6 +622,8 @@ def main() -> int:
         raise SystemExit("use either exact resume or warm-start, not both")
     if args.restore_audit_only and not args.resume:
         raise SystemExit("--restore-audit-only requires --resume")
+    if args.resume_drops_pending_rollout and not args.resume:
+        raise SystemExit("--resume-drops-pending-rollout requires --resume")
     if args.first_checkpoint and (
         not args.checkpoint_every or args.first_checkpoint >= args.checkpoint_every
     ):
@@ -590,10 +633,10 @@ def main() -> int:
     config = PredictivePPOConfig(
         feature_dim=len(ports.readout_names), macro_steps=args.macro_steps, seed=args.seed
     )
-    if args.brain_backend == "microbatch":
+    if args.brain_backend in ("triton", "microbatch"):
         brain = FixedCohortBrain(
             graph, ports, args.worlds * 3, device=args.device,
-            microbatch_size=args.microbatch_size,
+            backend=args.brain_backend, microbatch_size=args.microbatch_size,
         )
     else:
         brain = RemoteBrain(
@@ -603,7 +646,7 @@ def main() -> int:
     source_paths = [
         ROOT / "chreatures" / name for name in (
             "learning.py", "fast_circuit.py", "remote_brain.py", "malecns.py", "neural_ports.py",
-            "physics.py", "articulated.py", "sensorium.py",
+            "physics.py", "articulated.py", "sensorium.py", "physical_batch.py",
         )
     ] + [Path(__file__).resolve(), HABITAT, ROOT / "data/bodies/hexapod.json",
          ROOT / "data/ports/retinal-v1.json"]
@@ -624,15 +667,20 @@ def main() -> int:
         ),
         "resume": (
             {"path": str(args.resume.resolve()), "sha256": sha256(args.resume.resolve()),
-             "semantics": "exact neural, physical, learner, optimizer and private-state restore"}
+             "semantics": (
+                 "neural, physical, learner, optimizer and private-state restore; "
+                 "legacy pending rollout explicitly discarded"
+                 if args.resume_drops_pending_rollout else
+                 "exact neural, physical, learner, optimizer, private-state and rollout restore"
+             ),
+             "training_discontinuity": bool(args.resume_drops_pending_rollout)}
             if args.resume else None
         ),
     }
     (args.output / "run.json").write_text(json.dumps(run_record, indent=2, sort_keys=True) + "\n")
     initial_genome = args.output / "initial-genome.npz"
-    rollout = MacroRollout()
     if args.resume:
-        cohort, trainer, step, episode_step, raw, physiology = restore_checkpoint(
+        cohort, trainer, rollout, step, episode_step, raw, physiology = restore_checkpoint(
             args.resume.resolve(), brain, ports, args.workers
         )
         if cohort.world_count != args.worlds or trainer.config != config:
@@ -648,6 +696,7 @@ def main() -> int:
                 "episode": cohort.episode, "episode_step": episode_step,
                 "worlds": cohort.world_count, "residents": len(cohort.resident_ids),
                 "learner_updates": trainer.update_count,
+                "pending_rollout_decisions": len(rollout),
                 "neural_times_min": float(brain.circuit.times.min()) if hasattr(brain, "circuit") else None,
                 "neural_times_max": float(brain.circuit.times.max()) if hasattr(brain, "circuit") else None,
                 "brain": brain.metadata(),
@@ -659,6 +708,7 @@ def main() -> int:
             print(json.dumps(receipt, indent=2, sort_keys=True))
             return 0
     else:
+        rollout = MacroRollout()
         cohort = AffordanceCohort(brain, ports, args.worlds, args.workers, args.seed)
         trainer = PredictivePPOTrainer(cohort.resident_ids, config, device=args.device)
         trainer.export_genome(initial_genome)
@@ -674,6 +724,7 @@ def main() -> int:
         normalized = trainer.normalize(raw, update=True)
         step = 0
         episode_step = 0
+    process_start_step = step
     started = time.perf_counter()
     stop = False
     def request_stop(_signum, _frame):
@@ -766,7 +817,7 @@ def main() -> int:
                 )
                 if args.checkpoint_every and step >= next_checkpoint:
                     checkpoints.append(save_checkpoint(
-                        args.output, cohort, trainer, step, episode_step,
+                        args.output, cohort, trainer, rollout, step, episode_step,
                         raw, physiology,
                     ))
                     next_checkpoint = (
@@ -780,7 +831,7 @@ def main() -> int:
 
     if stop:
         checkpoints.append(save_checkpoint(
-            args.output, cohort, trainer, step, episode_step, raw, physiology
+            args.output, cohort, trainer, rollout, step, episode_step, raw, physiology
         ))
         cohort.close()
         return 130
@@ -788,7 +839,7 @@ def main() -> int:
     learned_receipt = trainer.export_genome(learned_genome)
     if not checkpoints or checkpoints[-1]["step"] != step:
         checkpoints.append(save_checkpoint(
-            args.output, cohort, trainer, step, episode_step, raw, physiology
+            args.output, cohort, trainer, rollout, step, episode_step, raw, physiology
         ))
 
     training_elapsed = time.perf_counter() - started
@@ -814,7 +865,14 @@ def main() -> int:
     }
     summary = {
         "format": "chreatures-affordance-learning-v1",
-        "completed": True, "steps": step, "resident_steps": step * args.worlds * 3,
+        "completed": True, "steps": step,
+        "process_start_step": process_start_step,
+        "steps_advanced": step - process_start_step,
+        "resident_steps_advanced": (step - process_start_step) * args.worlds * 3,
+        "cumulative_resident_steps": step * args.worlds * 3,
+        "policy_exposure_resident_steps": (
+            trainer.decision_count * args.macro_steps * args.worlds * 3
+        ),
         "elapsed_training_seconds": training_elapsed,
         "training_timing_seconds": training_timings,
         "config": vars(args) | {"graph": str(args.graph), "port_bundle": str(args.port_bundle), "output": str(args.output), "resume": str(args.resume) if args.resume else None},
@@ -827,7 +885,11 @@ def main() -> int:
         "environment": {name: os.environ[name] for name in ("HSA_OVERRIDE_GFX_VERSION", "PYTORCH_KERNEL_CACHE_PATH") if name in os.environ},
     }
     (args.output / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True, default=str) + "\n")
-    print(json.dumps({"evaluations": evaluations, "steps": step, "resident_steps": summary["resident_steps"]}, indent=2))
+    print(json.dumps({
+        "evaluations": evaluations, "steps": step,
+        "resident_steps_advanced": summary["resident_steps_advanced"],
+        "cumulative_resident_steps": summary["cumulative_resident_steps"],
+    }, indent=2))
     return 0
 
 

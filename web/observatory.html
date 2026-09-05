@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101713">
+  <link rel="icon" href="data:,">
+  <title>Chreatures · evidence observatory</title>
+  <link rel="stylesheet" href="/assets/observatory.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="wordmark" href="/" aria-label="Open the live garden"><span>✳</span> chreatures</a>
+    <div class="top-context"><span class="context-label">EVIDENCE OBSERVATORY</span><span id="api-state" class="api-state">reading archive</span></div>
+    <a class="garden-link" href="/">Live garden <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">ARCHIVED LIFE / NATIVE EVIDENCE</p>
+        <h1 id="page-title">A traceable view of one world and one development run.</h1>
+        <p class="lede">Every summary below resolves to a checked source or immutable artifact. The adult checkpoint and population run are separate observations, joined only in the evidence graph.</p>
+      </div>
+      <div class="receipt-card">
+        <span>ARTIFACT SET</span>
+        <code id="artifact-set">—</code>
+        <small id="archive-count">loading receipts</small>
+      </div>
+    </section>
+
+    <section class="source-pair" aria-label="Archived sources">
+      <article class="source-card adult-source">
+        <div class="source-heading"><span class="source-index">01</span><div><p class="eyebrow">ADULT WHOLE-WORLD SNAPSHOT</p><h2 id="adult-name">3D checkpoint</h2></div><span id="adult-verified" class="verified">verifying</span></div>
+        <p class="source-note">A single saved physical world with three continuing residents. This is later-life state, not a continuation of the development cohort below.</p>
+        <dl class="source-facts">
+          <div><dt>Moment</dt><dd id="adult-moment">—</dd></div>
+          <div><dt>Physics</dt><dd id="adult-physics">—</dd></div>
+          <div><dt>3D bodies</dt><dd id="adult-bodies">—</dd></div>
+          <div><dt>Environment</dt><dd id="adult-ecology">—</dd></div>
+          <div><dt>External memory count</dt><dd id="adult-memory">—</dd></div>
+          <div><dt>Source checksum</dt><dd><code id="adult-hash">—</code></dd></div>
+        </dl>
+        <p id="adult-caveat" class="caveat"></p>
+      </article>
+
+      <div class="source-divider" aria-hidden="true"><span>independent<br>sources</span><i></i></div>
+
+      <article class="source-card run-source">
+        <div class="source-heading"><span class="source-index">02</span><div><p class="eyebrow">DEVELOPMENT POPULATION RUN</p><h2 id="run-name">Eight physical worlds</h2></div><span id="run-verified" class="verified">verifying</span></div>
+        <p class="source-note">A completed experiment over multiple independent worlds. Aggregates describe the cohort; they are not biography for the adult residents.</p>
+        <dl class="source-facts">
+          <div><dt>Population</dt><dd id="run-population">—</dd></div>
+          <div><dt>Duration</dt><dd id="run-duration">—</dd></div>
+          <div><dt>Nutrition</dt><dd id="run-nutrition">—</dd></div>
+          <div><dt>Contact-positive steps</dt><dd id="run-contact">—</dd></div>
+          <div><dt>Archived episodes</dt><dd id="run-memory">—</dd></div>
+          <div><dt>Trajectory checksum</dt><dd><code id="run-hash">—</code></dd></div>
+        </dl>
+        <p id="run-caveat" class="caveat"></p>
+      </article>
+    </section>
+
+    <section class="section-block model-section" aria-labelledby="models-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">WHOLE-WORLD HOLDOUT</p><h2 id="models-title">Descriptive prediction checks</h2></div>
+        <p id="split-summary" class="section-copy">Loading split…</p>
+      </div>
+      <div id="model-grid" class="model-grid" aria-live="polite"></div>
+      <p class="interpretation">Lower held-out error is useful predictive evidence. It does not establish causality, personality, subjective experience, or behavioral skill.</p>
+    </section>
+
+    <section class="section-block weave-section" aria-labelledby="weave-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">UNIVERSAL WEAVE</p><h2 id="weave-title">Navigate the evidence ancestry</h2></div>
+        <p id="weave-status" class="section-copy">Loading native roundtrip…</p>
+      </div>
+      <div class="weave-layout">
+        <div class="graph-shell">
+          <div class="graph-legend"><span><i class="source-dot"></i> source</span><span><i class="analysis-dot"></i> derived evidence</span><span><i class="comparison-dot"></i> multi-parent comparison</span></div>
+          <svg id="evidence-graph" role="img" aria-label="Evidence ancestry graph"></svg>
+        </div>
+        <aside id="node-detail" class="node-detail" aria-live="polite">
+          <p class="eyebrow">SELECT A NODE</p><h3>Evidence detail</h3><p>Choose a node to inspect its parents, descendants, and artifact receipt.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section-block provenance-section" aria-labelledby="provenance-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">IMMUTABLE OUTPUTS</p><h2 id="provenance-title">Artifact provenance</h2></div>
+        <p class="section-copy">Downloads are served only when their bytes still match the manifest.</p>
+      </div>
+      <div class="artifact-table-wrap"><table><thead><tr><th>Artifact</th><th>Purpose</th><th>Size</th><th>SHA-256</th><th></th></tr></thead><tbody id="artifact-rows"></tbody></table></div>
+    </section>
+
+    <section class="limitations"><p class="eyebrow">READING LIMITS</p><ul id="limitations-list"></ul></section>
+  </main>
+
+  <footer><span>External research archive. No observatory record is written into resident memory.</span><a href="/">Return to the live garden</a></footer>
+  <div id="fatal" class="fatal" role="alert" hidden></div>
+  <script type="module" src="/assets/observatory.js"></script>
+</body>
+</html>

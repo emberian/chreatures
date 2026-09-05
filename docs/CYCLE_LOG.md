@@ -22,7 +22,7 @@ worlds with three residents each: 49,152 resident-steps in 293.17 seconds,
 neural/physical/cognitive state cold-restored successfully. Actor and predictive
 parameters changed; held-out behavioral improvement remains to be established.
 
-The next integration connects the articulated body, finite-volume scent fields,
+The next integration connected the articulated body, finite-volume scent fields,
 351 sensory channels and 384 anatomical population readouts. The richer sparse
 service is running separately from the first residents. Retinal sampling now
 uses MuJoCo's existing native batch operation: approximately 1.8–2.0 times faster
@@ -51,3 +51,58 @@ The final terrain pass has a continuous floor-to-deck approach, a lookout branch
 a south return, an under-ramp passage, an open nook and a resonant hinged flap.
 A commanded articulated body can traverse the approach. Discovering and using
 those routes remains a learning target.
+
+## Cycle 3 — faster development and consequential surroundings
+
+The second live world uses full body-coordinate vision, twelve physical leg
+hinges, 351 sensory inputs, 384 anatomical readouts and local chemical transport.
+The first crawler residents retain their older embodiment and interfaces.
+
+The full graph now has a native AMD Triton implementation for developmental
+cohorts. A paired exclusive B48 measurement reduced the complete neural step
+from 159.442 ms to 27.286 ms: 5.843×. No edges, neural substeps or sensory
+channels were removed. Full state/readout differences stayed below 1e-6 across
+backends; restoration within the new backend is exact. Tiny three-resident
+cohorts still favor Torch, so existing neural services remain on it.
+
+The first predictive PPO stage reached 8,000 physical steps across 48 residents.
+The measured continuation from step 1,230 advanced 324,960 resident-steps in
+416.408 seconds: 780.389 resident-steps/s end to end. This denominator excludes
+steps preceding the resumed process. A separate physical optimization preserved
+all state/sensor/outcome values and improved its four-worker benchmark by 1.28×;
+the following training stage adopts it.
+
+In four held-out worlds, learned ingestion was 0.7514 versus 0.6711 for the
+initial policy, a 12% difference. Silencing neural features reduced it to 0.4831.
+The learned policy's overall bodily return improved over initial, but the
+silenced policy scored better still. This is modest sensor-dependent ingestion
+evidence, not demonstrated general foraging or biological-wiring superiority.
+Training continues toward 20,000 steps and a matched-rewiring sensitivity probe.
+
+Finite resource growth and physical acoustic transducers now join the runtime
+through explicit new-world configuration. Shading changes production; material
+and energy pools constrain it. Contacts and damped hinges charge acoustic
+oscillators that decay and reach listeners through occlusion. Neither mechanism
+supplies a policy for approaching a named object. The complete physical, neural,
+field, resource, acoustic and cognitive state replayed exactly from a real
+full-graph checkpoint. This exposed and fixed canonical-JSON reordering of
+remote resident rows in later neural artifacts.
+
+An inherited trained motor artifact also runs on the laptop with NumPy alone,
+including private random state and working context. It matches the Torch
+computation within float32 tolerance and preserves its own stochastic replay
+exactly, including in the joined world. Its learned weights are an inheritance;
+they are distinct from a resident's personal episodes. Deployment into the
+newer body-coordinate retina and diffusion environment is an explicit transfer
+experiment because the current training stage used legacy camera/odor semantics.
+
+Separate memory lanes now implement rapidly bound visual episodes and
+action-conditioned contextual maps. Both were exercised on genuine physical
+views/trajectories with simpler controls. Native SmolVLM supplies timestamped
+960-dimensional features through a persistent AMD service; these are incomplete
+organ integrations, not evidence that language already controls a resident.
+
+The native GAM/Universal Weave observatory has a browser view with actual
+held-out fits, persistence baselines, multi-parent evidence ancestry, hashes and
+downloads. It distinguishes the archived adult world from developmental cohorts
+and keeps fitted explanations outside the creatures' own memories.
