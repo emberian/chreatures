@@ -85,11 +85,17 @@ def handler_type(
                 self._respond(HTTPStatus.NOT_FOUND, {"error": "unknown endpoint"})
 
         def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
-            if self.path != "/v1/perceive":
+            if self.path not in {"/v1/perceive", "/v1/embed"}:
                 self._respond(HTTPStatus.NOT_FOUND, {"error": "unknown endpoint"})
                 return
             try:
-                response = perception.submit(self._json()).result(timeout=request_timeout)
+                value = self._json()
+                future = (
+                    perception.submit_embed(value)
+                    if self.path == "/v1/embed"
+                    else perception.submit(value)
+                )
+                response = future.result(timeout=request_timeout)
                 self._respond(HTTPStatus.OK, response)
             except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
                 self._respond(
@@ -140,7 +146,7 @@ def main() -> None:
     )
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--max-workers", type=int, default=1)
-    parser.add_argument("--max-pending", type=int, default=2)
+    parser.add_argument("--max-pending", type=int, default=1)
     parser.add_argument("--request-timeout", type=float, default=180.0)
     parser.add_argument("--bind", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8775)
