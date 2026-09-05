@@ -106,3 +106,33 @@ The native GAM/Universal Weave observatory has a browser view with actual
 held-out fits, persistence baselines, multi-parent evidence ancestry, hashes and
 downloads. It distinguishes the archived adult world from developmental cohorts
 and keeps fitted explanations outside the creatures' own memories.
+
+## Cycle 4 — inherited movement and private lives
+
+The 20k continuation completed and exported a compact immutable NumPy motor
+artifact. Four held-out worlds produced ingestion 2.858586 versus 0.371626 for
+the initial policy, while neural silencing produced 2.173134. More movement and
+effort accompanied this gain: bodily return worsened to -0.639589 from
+-0.390715. A larger same-policy topology probe produced more ingestion under
+the matched rewired graph (17.528 versus 12.263). These contradictory outcomes
+remain part of the record. Fresh canonical and rewired developmental runs now
+start from exactly matched shared arrays on separate AMD machines; hardware and
+framework differences remain a limitation of that comparison.
+
+A new orchard joins the 20k inherited policy, private contextual motor memory,
+full MaleCNS, articulated bodies, chemical fields, finite resource production
+and mechanical acoustic transducers. The existing worlds continue separately.
+An initial outside visit physically placed fruit and emitted tones; it supplied
+no goal, caregiver identity or object label to the organisms.
+
+The joined inherited-plus-personal world replayed exactly across a checkpoint
+inside a held motor macro, including the remote neural artifact. Live inspection
+found healthy projected feature variation but coarse context allocation and
+sparse reinforcement. Experimental memory profiles are versioned; existing
+snapshots retain their original interpretation. More contexts alone would not
+establish useful learning or individuality.
+
+The laptop now executes the full graph in Rust/Metal. The first isolated B3
+recurrent measurement was 8.853 ms, with maximum scalar-reference error 2.3e-8
+and exact own-backend restoration. This excludes sensory/readout projection
+and RPC; a complete local service is the next integration.

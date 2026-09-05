@@ -178,6 +178,35 @@ The native kernel is therefore selected explicitly for large fixed cohorts.
 The Torch path remains preferable for a three-resident cohort and remains the
 default for the small live services.
 
+## ROCm 7 / gfx1150 portability
+
+The same source and canonical graph were staged on persvati without changing
+its shared Python or ROCm installations. The run uses Torch 2.10.0 with ROCm
+7.0 from `/home/ember/kaxsim/.venv7`, Triton 3.6.0, and the existing isolated
+dependency target `/home/ember/chreatures-compute/envs/python-packages`.
+Persvati reports an AMD Radeon 890M, `gfx1150`, and wave32. All six derived
+graph arrays, the graph manifest, the retinal bundle, and its JSON spec match
+the hbox files byte for byte.
+
+Full graph parity passed at batches 3 and 48. At batch 48 the largest state
+difference from Torch CSR was `1.19e-7`, the largest readout difference was
+`5.96e-8`, physiology differed by at most `3.58e-7`, and same-backend replay
+was exact. Paired ABBA throughput was:
+
+| Batch | Torch CSR | Triton fused | Speedup | Triton resident steps/s |
+|---:|---:|---:|---:|---:|
+| 3 | 29.381 ms | 36.678 ms | 0.80x | 81.8 |
+| 48 | 1,884.757 ms | 215.699 ms | 8.74x | 222.5 |
+
+The integrated GPU is much slower in absolute terms than hbox's discrete GPU,
+but the full graph kernel is functional and provides useful independent
+compute. A fresh 20,000-step canonical control is running there alongside the
+matched-rewire hbox run. Both use the exact same imported shared model arrays,
+seed, curriculum, and source hashes. The ROCm, Torch, and GPU differences can
+change reductions and stochastic trajectories, so analysis must compare
+seeded evaluation distributions with uncertainty rather than claim stepwise
+trajectory identity.
+
 The existing 48-resident developmental run then restored its step-1,230
 checkpoint into the Triton circuit and completed at step 8,000. This process
 executed 6,770 steps, or 324,960 resident steps, in `416.408 s`: `780.39`
@@ -213,3 +242,11 @@ Executed reports are stored at:
 - `/tank/chreatures/runs/benchmarks/fast-circuit-triton-full-b96-abba-operational.json`
 - `/tank/chreatures/runs/benchmarks/fast-circuit-triton-full-b192-abba-operational.json`
 - `/tank/chreatures/runs/learning/affordance-16x3-v3-continuation/summary.json`
+
+Persvati receipts are stored at:
+
+- `/home/ember/chreatures-compute/runs/benchmarks/fast-circuit-gfx1150-b3-parity.json`
+- `/home/ember/chreatures-compute/runs/benchmarks/fast-circuit-gfx1150-b48-parity.json`
+- `/home/ember/chreatures-compute/runs/benchmarks/fast-circuit-gfx1150-b3-abba.json`
+- `/home/ember/chreatures-compute/runs/benchmarks/fast-circuit-gfx1150-b48-abba.json`
+- `/home/ember/chreatures-compute/runs/learning/affordance-canonical-fresh-16x3-v1/cross-hardware-control.json`

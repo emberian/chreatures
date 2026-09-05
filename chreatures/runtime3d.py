@@ -25,13 +25,16 @@ from .runtime import canonical
 class Habitat3D:
     def __init__(self, seed=7, brain_url="http://127.0.0.1:18765", spec=None,
                  body_mode="articulated", ecology="diffusion", resources=None, acoustics=None,
-                 motor_genome=None):
+                 motor_genome=None, personal_memory=False):
         from .sensorium import SensoriumWorld, ArticulatedSensoriumWorld
         from .fields import FieldEnvironment
         from .ecology import Ecology
         from .acoustics import Acoustics
         if body_mode not in ("crawler", "articulated") or ecology not in ("analytic", "diffusion"):
             raise ValueError("Unknown body or ecology model")
+        if personal_memory and motor_genome is None:
+            raise ValueError("Personal contextual motor learning requires an inherited motor artifact")
+        self.personal_memory = bool(personal_memory)
         if spec is None:
             spec = json.loads((Path(__file__).resolve().parents[1] / "data/habitats/hollow-garden.json").read_text())
             spec["sensorium"] = {"frame": "body-v1"}
@@ -52,7 +55,11 @@ class Habitat3D:
             from .motor_inheritance import MotorArtifact, MotorOrgan
             self.motor_artifact = MotorArtifact.load(motor_genome)
             self._validate_motor_interface()
-            self.motors = {b.id: MotorOrgan(self.motor_artifact, seed=seed * 1009 + i)
+            motor_type = MotorOrgan
+            if self.personal_memory:
+                from .living_motor import LivingMotorOrgan
+                motor_type = LivingMotorOrgan
+            self.motors = {b.id: motor_type(self.motor_artifact, seed=seed * 1009 + i)
                            for i, b in enumerate(self.world.bodies)}
         self.id = str(uuid.uuid4())
         self.tick = 0
@@ -76,7 +83,7 @@ class Habitat3D:
         self.timings = deque(maxlen=120)
         self.phase_timings = deque(maxlen=120)
         self.pending_step = None
-        self.note("hatched", "Three new residents entered the hollow garden with full MaleCNS circuits.")
+        self.note("hatched", f"{len(self.world.bodies)} new residents entered the habitat with full MaleCNS circuits.")
         if self.motor_artifact is not None:
             self.note("inheritance", "Inherited a population-trained motor interface and private working context.",
                       artifact_sha256=self.motor_artifact.sha256,
@@ -93,11 +100,21 @@ class Habitat3D:
             raise ValueError("Inherited motor anatomy or neural interface differs from this world")
 
     def memory_count(self, body_id):
+        if self.personal_memory:
+            return self.motors[body_id].memory.transition_count
         return len(self.organs[body_id].memory.records) if body_id in self.organs else 0
 
     def cognitive_view(self):
         if not self.motors:
             return {key: organ.view() for key, organ in self.organs.items()}
+        if self.personal_memory:
+            return {key: {**organ.view(), "controller": "inherited-with-personal-context",
+                           "time": self.world.time, "memory_count": self.memory_count(key),
+                           "learning_enabled": organ.refiner.learning, "context": organ.motor.context.tolist(),
+                           "metrics": {**organ.metrics,
+                                       "prediction_error": organ.motor.last_prediction_error or 0.0,
+                                       "learning_progress": 0.0}}
+                    for key, organ in self.motors.items()}
         return {key: {**motor.view(), "controller": "inherited-predictive-ppo",
                        "time": self.world.time, "memory_count": 0, "learning": False,
                        "metrics": {"prediction_error": motor.last_prediction_error or 0.0,
@@ -148,7 +165,11 @@ class Habitat3D:
                 local_body = {key: float(getattr(body, key)) for key in ("energy", "gut", "fatigue", "speed", "angular_velocity")}
                 local_body["support"] = float(response["support"])
                 if self.motors:
-                    action = self.motors[body_id].tick(features, local_body, dt)
+                    if self.personal_memory:
+                        action = self.motors[body_id].tick(features, local_body,
+                                    self.outcomes[body_id] if self.tick else None, dt)
+                    else:
+                        action = self.motors[body_id].tick(features, local_body, dt)
                 else:
                     mean, variance = self.feature_mean[body_id], self.feature_variance[body_id]
                     delta = features - mean
@@ -219,7 +240,8 @@ class Habitat3D:
 
     def view(self):
         view = self.world.view()
-        view.update({"id": self.id, "tick": self.tick, "branch": self.branch, "paused": self.paused,
+        view.update({"id": self.id, "name": self.world.spec.get("name", "The hollow garden"),
+                     "tick": self.tick, "branch": self.branch, "paused": self.paused,
                      "speed": self.speed, "saved_at": self.saved_at, "error": self.error,
                      "neural": copy.deepcopy(self.neural_state),
                      "cognition": self.cognitive_view(),
@@ -254,6 +276,7 @@ class Habitat3D:
                  "input_names": self.neural.input_names, "output_names": self.neural.output_names,
                  "organs": {k: v.snapshot() for k, v in self.organs.items()},
                  "motor_artifact": self.motor_artifact.to_value() if self.motor_artifact is not None else None,
+                 "personal_memory": self.personal_memory,
                  "motors": {k: v.snapshot_value() for k, v in self.motors.items()},
                  "remote_ids": self.remote_ids, "brain_url": self.neural.url, "graph_sha256": self.neural.graph["sha256"],
                  "neural_snapshot": receipt, "neural_state": self.neural_state,
@@ -299,10 +322,15 @@ class Habitat3D:
         instance.organs = {key: AdaptiveOrgan.restore(organ) for key, organ in value["organs"].items()}
         instance.motor_artifact = None
         instance.motors = {}
+        instance.personal_memory = bool(value.get("personal_memory", False))
         if value.get("motor_artifact") is not None:
             from .motor_inheritance import MotorArtifact, MotorOrgan
             instance.motor_artifact = MotorArtifact.from_value(value["motor_artifact"])
-            instance.motors = {key: MotorOrgan.restore_value(state, instance.motor_artifact)
+            motor_type = MotorOrgan
+            if instance.personal_memory:
+                from .living_motor import LivingMotorOrgan
+                motor_type = LivingMotorOrgan
+            instance.motors = {key: motor_type.restore_value(state, instance.motor_artifact)
                                for key, state in value["motors"].items()}
             if set(instance.motors) != {body.id for body in instance.world.bodies} or instance.organs:
                 raise ValueError("Saved motor controllers do not match the physical cohort")
