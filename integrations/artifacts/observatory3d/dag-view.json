@@ -1,0 +1,155 @@
+{
+  "edges": [
+    {
+      "source": "source:adult-3d-checkpoint",
+      "target": "summary:adult-3d"
+    },
+    {
+      "source": "source:development-run",
+      "target": "summary:development"
+    },
+    {
+      "source": "summary:development",
+      "target": "model:movement_outcome_dynamics"
+    },
+    {
+      "source": "summary:development",
+      "target": "model:energy_dynamics"
+    },
+    {
+      "source": "summary:development",
+      "target": "model:prediction_error_dynamics"
+    },
+    {
+      "source": "summary:adult-3d",
+      "target": "comparison:adult-and-development"
+    },
+    {
+      "source": "summary:development",
+      "target": "comparison:adult-and-development"
+    },
+    {
+      "source": "model:movement_outcome_dynamics",
+      "target": "comparison:adult-and-development"
+    },
+    {
+      "source": "model:energy_dynamics",
+      "target": "comparison:adult-and-development"
+    },
+    {
+      "source": "model:prediction_error_dynamics",
+      "target": "comparison:adult-and-development"
+    }
+  ],
+  "levels": 4,
+  "multi_parent_nodes": 1,
+  "native_roundtrip": {
+    "node_count": 10,
+    "reload_equal": true,
+    "status": "complete",
+    "validated_after_reload": true
+  },
+  "nodes": [
+    {
+      "artifact_uri": "urn:sha256:d84507ecd3b111e25bbc2e7a2e3f9a2995c35431a688a072ed7c0d6c4ff17235",
+      "depth": 0,
+      "id": "source:adult-3d-checkpoint",
+      "kind": "verified_source",
+      "lane": "source",
+      "parent_count": 0,
+      "time": 1183.849999999471,
+      "title": "Verified 3D whole-world checkpoint."
+    },
+    {
+      "artifact_uri": "urn:sha256:c1526b5a90af31713cb585b8393a8360a07b857debb23c93949ce74b6737b4d3",
+      "depth": 0,
+      "id": "source:development-run",
+      "kind": "verified_source",
+      "lane": "source",
+      "parent_count": 0,
+      "time": 2048,
+      "title": "Verified eight-world developmental run."
+    },
+    {
+      "artifact_uri": null,
+      "depth": 0,
+      "id": "adult-event:fd054f15-2b0b-4fd7-8a93-278b3a7ce229:0:0",
+      "kind": "hatched",
+      "lane": "source",
+      "parent_count": 0,
+      "time": 0.0,
+      "title": "Three new residents entered the hollow garden with full MaleCNS circuits."
+    },
+    {
+      "artifact_uri": null,
+      "depth": 0,
+      "id": "adult-event:fd054f15-2b0b-4fd7-8a93-278b3a7ce229:4700:1",
+      "kind": "feeding",
+      "lane": "source",
+      "parent_count": 0,
+      "time": 234.99999999985877,
+      "title": "Mica ingested a resource."
+    },
+    {
+      "artifact_uri": "urn:sha256:d84507ecd3b111e25bbc2e7a2e3f9a2995c35431a688a072ed7c0d6c4ff17235",
+      "depth": 1,
+      "id": "summary:adult-3d",
+      "kind": "evidence",
+      "lane": "analysis",
+      "parent_count": 1,
+      "time": 1183.849999999471,
+      "title": "Three-resident 3D state at tick 23677; 48 externalized memory-count summary."
+    },
+    {
+      "artifact_uri": "urn:sha256:e0c5ade7c74d78684c91a0f00c6302a0fc21ecc9a700b542592a67a18f6aa0e9",
+      "depth": 1,
+      "id": "summary:development",
+      "kind": "evidence",
+      "lane": "analysis",
+      "parent_count": 1,
+      "time": 2048,
+      "title": "Development across 8 worlds and 24 residents."
+    },
+    {
+      "artifact_uri": "urn:sha256:30c71a672586890e93af8ed291eaaba7e77f2d0239fd5533ce44137daca7ef2c",
+      "depth": 2,
+      "id": "model:movement_outcome_dynamics",
+      "kind": "evidence",
+      "lane": "analysis",
+      "parent_count": 1,
+      "time": 2048,
+      "title": "Native GAM movement_outcome_dynamics on complete held-out worlds; RMSE/persistence=0.90624. No causal claim."
+    },
+    {
+      "artifact_uri": "urn:sha256:b270c8fd2638c1e82328ab05e25529617f5f3a3c61b3c3a40699ca200d28feeb",
+      "depth": 2,
+      "id": "model:energy_dynamics",
+      "kind": "evidence",
+      "lane": "analysis",
+      "parent_count": 1,
+      "time": 2048,
+      "title": "Native GAM energy_dynamics on complete held-out worlds; RMSE/persistence=1.00091. No causal claim."
+    },
+    {
+      "artifact_uri": "urn:sha256:99f88684e34a991a2ba615566117c796d2ef157fd461da919189229a5d748dc5",
+      "depth": 2,
+      "id": "model:prediction_error_dynamics",
+      "kind": "evidence",
+      "lane": "analysis",
+      "parent_count": 1,
+      "time": 2048,
+      "title": "Native GAM prediction_error_dynamics on complete held-out worlds; RMSE/persistence=0.991092. No causal claim."
+    },
+    {
+      "artifact_uri": null,
+      "depth": 3,
+      "id": "comparison:adult-and-development",
+      "kind": "evidence",
+      "lane": "comparison",
+      "parent_count": 5,
+      "time": 2048,
+      "title": "Cross-source comparison joins the adult whole-world state, developmental population summary, and held-out dynamics. It is archival evidence, not creature memory."
+    }
+  ],
+  "schema_version": 1
+}

@@ -1,0 +1,528 @@
+"""Versioned predictive PPO for embodied, full-circuit developmental learning."""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+import hashlib
+import json
+import math
+from pathlib import Path
+from typing import Any, Sequence
+
+import numpy as np
+import torch
+from torch import nn
+from torch.distributions import Normal
+
+
+ACTIONS = (
+    "thrust", "yaw", "gaze_pitch", "grip",
+    "signal_low", "signal_mid", "signal_high", "posture",
+)
+
+
+@dataclass(frozen=True)
+class PredictivePPOConfig:
+    feature_dim: int = 384
+    physiology_dim: int = 6
+    context_dim: int = 32
+    projection_dim: int = 64
+    hidden_dim: int = 128
+    macro_steps: int = 5
+    gamma_seconds: float = 8.0
+    gae_seconds: float = 2.0
+    clip_ratio: float = 0.18
+    learning_rate: float = 3e-4
+    predictor_rate: float = 0.35
+    value_rate: float = 0.55
+    entropy_rate: float = 0.002
+    curiosity_rate: float = 0.08
+    epochs: int = 4
+    minibatch_size: int = 512
+    max_grad_norm: float = 0.8
+    seed: int = 20260905
+
+
+class RunningMoments:
+    """Mergeable population moments used only to standardize neural readouts."""
+
+    def __init__(self, dimension: int) -> None:
+        self.count = 1e-4
+        self.mean = np.zeros(dimension, dtype=np.float64)
+        self.m2 = np.ones(dimension, dtype=np.float64) * 1e-4
+
+    def update(self, values: np.ndarray) -> None:
+        values = np.asarray(values, dtype=np.float64)
+        if values.ndim != 2 or values.shape[1:] != self.mean.shape or not np.isfinite(values).all():
+            raise ValueError("running-moment observations have the wrong shape")
+        count = len(values)
+        if not count:
+            return
+        mean = values.mean(axis=0)
+        centered = values - mean
+        m2 = np.sum(centered * centered, axis=0)
+        delta = mean - self.mean
+        total = self.count + count
+        self.mean += delta * count / total
+        self.m2 += m2 + delta * delta * self.count * count / total
+        self.count = total
+
+    def normalize(self, values: np.ndarray) -> np.ndarray:
+        variance = self.m2 / max(self.count, 1.0)
+        return np.clip(
+            (np.asarray(values, dtype=np.float64) - self.mean)
+            / np.sqrt(np.maximum(variance, 1e-5)),
+            -5.0,
+            5.0,
+        ).astype(np.float32)
+
+    def snapshot(self) -> dict[str, Any]:
+        return {"count": self.count, "mean": self.mean.tolist(), "m2": self.m2.tolist()}
+
+    @classmethod
+    def restore(cls, value: dict[str, Any]) -> "RunningMoments":
+        mean = np.asarray(value["mean"], dtype=np.float64)
+        instance = cls(len(mean))
+        instance.count = float(value["count"])
+        instance.mean = mean
+        instance.m2 = np.asarray(value["m2"], dtype=np.float64)
+        if instance.count <= 0 or instance.m2.shape != mean.shape or not np.isfinite(mean).all() or not np.isfinite(instance.m2).all():
+            raise ValueError("invalid running moments")
+        return instance
+
+
+class PredictiveActorCritic(nn.Module):
+    """Compact shared genome with private external recurrent context."""
+
+    def __init__(self, config: PredictivePPOConfig) -> None:
+        super().__init__()
+        self.config = config
+        torch.manual_seed(config.seed)
+        self.feature_encoder = nn.Sequential(
+            nn.Linear(config.feature_dim, config.hidden_dim),
+            nn.Tanh(),
+        )
+        self.trunk = nn.Sequential(
+            nn.Linear(config.hidden_dim + config.physiology_dim + config.context_dim, config.hidden_dim),
+            nn.Tanh(),
+            nn.Linear(config.hidden_dim, config.hidden_dim),
+            nn.Tanh(),
+        )
+        self.policy_mean = nn.Linear(config.hidden_dim, len(ACTIONS))
+        self.value = nn.Linear(config.hidden_dim, 1)
+        self.predictor = nn.Sequential(
+            nn.Linear(config.hidden_dim + len(ACTIONS), config.hidden_dim),
+            nn.Tanh(),
+            nn.Linear(config.hidden_dim, config.projection_dim),
+        )
+        self.log_std = nn.Parameter(torch.tensor(
+            [math.log(v) for v in (0.62, 0.54, 0.22, 0.28, 0.16, 0.16, 0.16, 0.28)],
+            dtype=torch.float32,
+        ))
+        generator = torch.Generator(device="cpu").manual_seed(config.seed + 91)
+        projection = torch.randn(
+            config.projection_dim, config.feature_dim, generator=generator
+        ) / math.sqrt(config.feature_dim)
+        context_feature = torch.randn(
+            config.context_dim, config.projection_dim, generator=generator
+        ) / math.sqrt(config.projection_dim)
+        context_action = torch.randn(
+            config.context_dim, len(ACTIONS), generator=generator
+        ) / math.sqrt(len(ACTIONS))
+        context_recur = torch.randn(
+            config.context_dim, config.context_dim, generator=generator
+        ) / math.sqrt(config.context_dim)
+        radius = torch.linalg.matrix_norm(context_recur, ord=2)
+        context_recur *= 0.72 / radius.clamp_min(1e-6)
+        self.register_buffer("projection", projection)
+        self.register_buffer("context_feature", context_feature)
+        self.register_buffer("context_action", context_action)
+        self.register_buffer("context_recur", context_recur)
+        nn.init.orthogonal_(self.policy_mean.weight, gain=0.01)
+        nn.init.zeros_(self.policy_mean.bias)
+        nn.init.orthogonal_(self.value.weight, gain=1.0)
+        nn.init.zeros_(self.value.bias)
+
+    def forward(
+        self, features: torch.Tensor, physiology: torch.Tensor, context: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        encoded = self.feature_encoder(features)
+        hidden = self.trunk(torch.cat((encoded, physiology, context), dim=-1))
+        return self.policy_mean(hidden), self.value(hidden).squeeze(-1), hidden
+
+    def distribution(self, mean: torch.Tensor) -> Normal:
+        std = self.log_std.clamp(-3.5, 0.3).exp().expand_as(mean)
+        return Normal(mean, std)
+
+    @staticmethod
+    def squashed_log_prob(distribution: Normal, latent: torch.Tensor) -> torch.Tensor:
+        action = torch.tanh(latent)
+        return (
+            distribution.log_prob(latent)
+            - torch.log(torch.clamp(1 - action.square(), min=1e-6))
+        ).sum(dim=-1)
+
+    def projected(self, features: torch.Tensor) -> torch.Tensor:
+        return torch.tanh(features @ self.projection.T)
+
+    def next_context(
+        self, context: torch.Tensor, next_features: torch.Tensor, action: torch.Tensor
+    ) -> torch.Tensor:
+        projected = self.projected(next_features)
+        return torch.tanh(
+            projected @ self.context_feature.T
+            + action @ self.context_action.T
+            + context @ self.context_recur.T
+        )
+
+
+class MacroRollout:
+    """Resident-major macro transitions retained until one PPO update."""
+
+    FIELDS = (
+        "features", "physiology", "context", "latent", "action", "log_prob",
+        "value", "reward", "done", "prediction_target",
+    )
+
+    def __init__(self) -> None:
+        self.rows: dict[str, list[np.ndarray]] = {name: [] for name in self.FIELDS}
+
+    def append(self, **values: np.ndarray) -> None:
+        if set(values) != set(self.FIELDS):
+            raise ValueError("macro rollout transition fields differ")
+        for name in self.FIELDS:
+            value = np.asarray(values[name])
+            if not np.isfinite(value).all():
+                raise ValueError(f"nonfinite rollout field {name}")
+            self.rows[name].append(value.copy())
+
+    def __len__(self) -> int:
+        return len(self.rows["reward"])
+
+    def arrays(self) -> dict[str, np.ndarray]:
+        if not len(self):
+            raise ValueError("rollout is empty")
+        return {name: np.stack(values) for name, values in self.rows.items()}
+
+    def clear(self) -> None:
+        for values in self.rows.values():
+            values.clear()
+
+
+class PredictivePPOTrainer:
+    """Owns shared learned parameters and private per-resident context state."""
+
+    VERSION = 1
+
+    def __init__(
+        self,
+        resident_ids: Sequence[str],
+        config: PredictivePPOConfig | None = None,
+        *,
+        device: str | torch.device = "cpu",
+    ) -> None:
+        ids = [str(value) for value in resident_ids]
+        if not ids or len(set(ids)) != len(ids):
+            raise ValueError("resident ids must be nonempty and unique")
+        self.resident_ids = ids
+        self.config = config or PredictivePPOConfig()
+        self.device = torch.device(device)
+        self.model = PredictiveActorCritic(self.config).to(self.device)
+        self.optimizer = torch.optim.Adam(
+            self.model.parameters(), lr=self.config.learning_rate
+        )
+        count = len(ids)
+        self.context = np.zeros((count, self.config.context_dim), dtype=np.float32)
+        self.moments = RunningMoments(self.config.feature_dim)
+        self.error_fast = np.zeros(count, dtype=np.float32)
+        self.error_slow = np.zeros(count, dtype=np.float32)
+        self.update_count = 0
+        self.decision_count = 0
+        self.rng = np.random.default_rng(self.config.seed + 311)
+
+    def normalize(self, raw_features: np.ndarray, *, update: bool) -> np.ndarray:
+        raw = np.asarray(raw_features, dtype=np.float32)
+        expected = (len(self.resident_ids), self.config.feature_dim)
+        if raw.shape != expected or not np.isfinite(raw).all():
+            raise ValueError(f"features must have shape {expected}")
+        if update:
+            self.moments.update(raw)
+        return self.moments.normalize(raw)
+
+    @torch.no_grad()
+    def act(
+        self,
+        normalized_features: np.ndarray,
+        physiology: np.ndarray,
+        *,
+        deterministic: bool = False,
+        silence_features: bool = False,
+    ) -> dict[str, np.ndarray]:
+        features = np.asarray(normalized_features, dtype=np.float32)
+        physiology = np.asarray(physiology, dtype=np.float32)
+        if silence_features:
+            features = np.zeros_like(features)
+        feature_tensor = torch.as_tensor(features, device=self.device)
+        physiology_tensor = torch.as_tensor(physiology, device=self.device)
+        context_tensor = torch.as_tensor(self.context, device=self.device)
+        mean, value, hidden = self.model(feature_tensor, physiology_tensor, context_tensor)
+        distribution = self.model.distribution(mean)
+        latent = mean if deterministic else distribution.sample()
+        action = torch.tanh(latent)
+        log_prob = self.model.squashed_log_prob(distribution, latent)
+        prediction = self.model.predictor(torch.cat((hidden, action), dim=-1))
+        self.decision_count += 1
+        return {
+            "features": features.copy(),
+            "physiology": physiology.copy(),
+            "context": self.context.copy(),
+            "latent": latent.cpu().numpy(),
+            "action": action.cpu().numpy(),
+            "log_prob": log_prob.cpu().numpy(),
+            "value": value.cpu().numpy(),
+            "prediction": prediction.cpu().numpy(),
+        }
+
+    @torch.no_grad()
+    def finish_transition(
+        self,
+        previous: dict[str, np.ndarray],
+        next_normalized_features: np.ndarray,
+        accumulated_reward: np.ndarray,
+        done: np.ndarray,
+        macro_dt: float,
+    ) -> dict[str, np.ndarray]:
+        next_features = np.asarray(next_normalized_features, dtype=np.float32)
+        next_tensor = torch.as_tensor(next_features, device=self.device)
+        previous_tensor = torch.as_tensor(previous["features"], device=self.device)
+        target = (
+            self.model.projected(next_tensor) - self.model.projected(previous_tensor)
+        ).cpu().numpy()
+        prediction_error = np.mean((target - previous["prediction"]) ** 2, axis=1)
+        fast_alpha = min(1.0, macro_dt / 1.0)
+        slow_alpha = min(1.0, macro_dt / 12.0)
+        self.error_fast += fast_alpha * (prediction_error - self.error_fast)
+        self.error_slow += slow_alpha * (prediction_error - self.error_slow)
+        learning_progress = np.clip(self.error_slow - self.error_fast, 0, 0.2)
+        reward = np.asarray(accumulated_reward, dtype=np.float32)
+        reward = reward + np.float32(
+            self.config.curiosity_rate * macro_dt
+        ) * learning_progress
+        context_tensor = torch.as_tensor(self.context, device=self.device)
+        action_tensor = torch.as_tensor(previous["action"], device=self.device)
+        self.context = self.model.next_context(
+            context_tensor, next_tensor, action_tensor
+        ).cpu().numpy()
+        self.context[np.asarray(done, dtype=bool)] = 0
+        return {
+            "reward": reward,
+            "prediction_target": target.astype(np.float32),
+            "prediction_error": prediction_error.astype(np.float32),
+            "learning_progress": learning_progress.astype(np.float32),
+        }
+
+    @torch.no_grad()
+    def bootstrap_value(
+        self, normalized_features: np.ndarray, physiology: np.ndarray
+    ) -> np.ndarray:
+        features = torch.as_tensor(normalized_features, device=self.device)
+        body = torch.as_tensor(physiology, device=self.device)
+        context = torch.as_tensor(self.context, device=self.device)
+        return self.model(features, body, context)[1].cpu().numpy()
+
+    def update(self, rollout: MacroRollout, bootstrap_value: np.ndarray, macro_dt: float) -> dict[str, float]:
+        data = rollout.arrays()
+        rewards = data["reward"].astype(np.float32)
+        values = data["value"].astype(np.float32)
+        dones = data["done"].astype(np.float32)
+        last = np.asarray(bootstrap_value, dtype=np.float32)
+        if rewards.shape != values.shape or last.shape != rewards.shape[1:]:
+            raise ValueError("rollout value shapes differ")
+        gamma = math.exp(-macro_dt / self.config.gamma_seconds)
+        lam = math.exp(-macro_dt / self.config.gae_seconds)
+        advantages = np.zeros_like(rewards)
+        gae = np.zeros_like(last)
+        next_value = last
+        for index in range(len(rewards) - 1, -1, -1):
+            continuation = 1.0 - dones[index]
+            delta = rewards[index] + gamma * next_value * continuation - values[index]
+            gae = delta + gamma * lam * continuation * gae
+            advantages[index] = gae
+            next_value = values[index]
+        returns = advantages + values
+        flat = {
+            name: value.reshape((-1, *value.shape[2:]))
+            for name, value in data.items()
+            if name not in {"reward", "done"}
+        }
+        flat_advantages = advantages.reshape(-1)
+        flat_returns = returns.reshape(-1)
+        flat_advantages = (
+            flat_advantages - flat_advantages.mean()
+        ) / max(float(flat_advantages.std()), 1e-6)
+        count = len(flat_advantages)
+        metrics = {name: [] for name in (
+            "policy_loss", "value_loss", "prediction_loss", "entropy",
+            "approx_kl", "clip_fraction",
+        )}
+        for _ in range(self.config.epochs):
+            order = self.rng.permutation(count)
+            for start in range(0, count, self.config.minibatch_size):
+                indices = order[start : start + self.config.minibatch_size]
+                tensor = lambda name: torch.as_tensor(flat[name][indices], device=self.device)
+                features = tensor("features")
+                physiology = tensor("physiology")
+                context = tensor("context")
+                latent = tensor("latent")
+                action = tensor("action")
+                old_log_prob = tensor("log_prob")
+                target = tensor("prediction_target")
+                advantage = torch.as_tensor(flat_advantages[indices], device=self.device)
+                return_value = torch.as_tensor(flat_returns[indices], device=self.device)
+                mean, value, hidden = self.model(features, physiology, context)
+                distribution = self.model.distribution(mean)
+                log_prob = self.model.squashed_log_prob(distribution, latent)
+                ratio = torch.exp(log_prob - old_log_prob)
+                clipped = torch.clamp(
+                    ratio, 1 - self.config.clip_ratio, 1 + self.config.clip_ratio
+                )
+                policy_loss = -torch.minimum(ratio * advantage, clipped * advantage).mean()
+                value_loss = 0.5 * (value - return_value).square().mean()
+                predicted = self.model.predictor(torch.cat((hidden, action), dim=-1))
+                prediction_loss = 0.5 * (predicted - target).square().mean()
+                entropy = distribution.entropy().sum(dim=-1).mean()
+                loss = (
+                    policy_loss
+                    + self.config.value_rate * value_loss
+                    + self.config.predictor_rate * prediction_loss
+                    - self.config.entropy_rate * entropy
+                )
+                self.optimizer.zero_grad(set_to_none=True)
+                loss.backward()
+                nn.utils.clip_grad_norm_(self.model.parameters(), self.config.max_grad_norm)
+                self.optimizer.step()
+                with torch.no_grad():
+                    metrics["policy_loss"].append(float(policy_loss))
+                    metrics["value_loss"].append(float(value_loss))
+                    metrics["prediction_loss"].append(float(prediction_loss))
+                    metrics["entropy"].append(float(entropy))
+                    metrics["approx_kl"].append(float((old_log_prob - log_prob).mean()))
+                    metrics["clip_fraction"].append(float((torch.abs(ratio - 1) > self.config.clip_ratio).float().mean()))
+        self.update_count += 1
+        rollout.clear()
+        output = {name: float(np.mean(values)) for name, values in metrics.items()}
+        output.update({
+            "reward_mean": float(rewards.mean()),
+            "advantage_mean": float(advantages.mean()),
+            "advantage_std": float(advantages.std()),
+            "explained_variance": float(
+                1 - np.var(flat_returns - values.reshape(-1))
+                / max(np.var(flat_returns), 1e-8)
+            ),
+            "samples": float(count),
+            "update": float(self.update_count),
+        })
+        return output
+
+    def reset_private_state(self) -> None:
+        self.context.fill(0)
+        self.error_fast.fill(0)
+        self.error_slow.fill(0)
+
+    def snapshot(self, path: str | Path, *, extra: dict[str, Any] | None = None) -> dict[str, Any]:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        value = {
+            "version": self.VERSION,
+            "config": asdict(self.config),
+            "resident_ids": self.resident_ids,
+            "model": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+            "context": self.context,
+            "moments": self.moments.snapshot(),
+            "error_fast": self.error_fast,
+            "error_slow": self.error_slow,
+            "update_count": self.update_count,
+            "decision_count": self.decision_count,
+            "numpy_rng": self.rng.bit_generator.state,
+            "torch_rng": torch.get_rng_state(),
+            "device_rng": (
+                torch.cuda.get_rng_state(self.device)
+                if self.device.type == "cuda" else None
+            ),
+            "extra": extra or {},
+        }
+        temporary = path.with_name(path.name + ".tmp")
+        torch.save(value, temporary)
+        temporary.replace(path)
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        return {"path": str(path), "bytes": path.stat().st_size, "sha256": digest}
+
+    @classmethod
+    def restore(
+        cls, path: str | Path, *, device: str | torch.device = "cpu",
+        expected_sha256: str | None = None,
+    ) -> tuple["PredictivePPOTrainer", dict[str, Any]]:
+        path = Path(path)
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        if expected_sha256 is not None and digest != expected_sha256:
+            raise ValueError("learner checkpoint checksum differs")
+        value = torch.load(path, map_location=device, weights_only=False)
+        if value.get("version") != cls.VERSION:
+            raise ValueError("unsupported learner checkpoint")
+        instance = cls(
+            value["resident_ids"], PredictivePPOConfig(**value["config"]), device=device
+        )
+        instance.model.load_state_dict(value["model"], strict=True)
+        instance.optimizer.load_state_dict(value["optimizer"])
+        instance.context = np.asarray(value["context"], dtype=np.float32)
+        instance.moments = RunningMoments.restore(value["moments"])
+        instance.error_fast = np.asarray(value["error_fast"], dtype=np.float32)
+        instance.error_slow = np.asarray(value["error_slow"], dtype=np.float32)
+        instance.update_count = int(value["update_count"])
+        instance.decision_count = int(value["decision_count"])
+        instance.rng.bit_generator.state = value["numpy_rng"]
+        torch.set_rng_state(value["torch_rng"].cpu())
+        if instance.device.type == "cuda" and value.get("device_rng") is not None:
+            torch.cuda.set_rng_state(value["device_rng"].cpu(), instance.device)
+        return instance, dict(value.get("extra", {}))
+
+    def export_genome(self, path: str | Path) -> dict[str, Any]:
+        """Write shared learned arrays only; exclude resident context and memory."""
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        arrays = {
+            name: value.detach().cpu().numpy()
+            for name, value in self.model.state_dict().items()
+        }
+        metadata = {
+            "format": "chreatures-predictive-ppo-genome-v1",
+            "version": self.VERSION,
+            "config": asdict(self.config),
+            "actions": list(ACTIONS),
+            "updates": self.update_count,
+            "decisions": self.decision_count,
+            "scope": "shared policy, value, predictor and fixed feature/context transforms only",
+        }
+        arrays["metadata"] = np.asarray(json.dumps(metadata, sort_keys=True))
+        np.savez_compressed(path, **arrays)
+        return {
+            "path": str(path), "bytes": path.stat().st_size,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "metadata": metadata,
+        }
+
+    def import_genome(self, path: str | Path) -> None:
+        """Load shared arrays while retaining private context and normalizers."""
+        with np.load(path, allow_pickle=False) as value:
+            metadata = json.loads(str(value["metadata"]))
+            if metadata.get("format") != "chreatures-predictive-ppo-genome-v1" or metadata.get("actions") != list(ACTIONS):
+                raise ValueError("incompatible predictive PPO genome")
+            state = self.model.state_dict()
+            restored = {}
+            for name, target in state.items():
+                array = np.asarray(value[name])
+                if tuple(array.shape) != tuple(target.shape) or not np.isfinite(array).all():
+                    raise ValueError(f"invalid genome array {name}")
+                restored[name] = torch.as_tensor(array, device=self.device, dtype=target.dtype)
+            self.model.load_state_dict(restored, strict=True)

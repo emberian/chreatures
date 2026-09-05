@@ -1,0 +1,65 @@
+{
+  "all_sources_verified": true,
+  "artifact_set_sha256": "08e9a26247a5c11e7b79fcb5d69bb0c9ef30bd09925c3ad57dc5d2a74045990b",
+  "artifacts": {
+    "adult_world_timeseries.csv": {
+      "artifact_uri": "urn:sha256:859ed25d65c6e4d2562aebd0ac5f7f1ad36ef47c2e35e044ab4287912cc17071",
+      "bytes": 118074,
+      "file": "adult_world_timeseries.csv",
+      "sha256": "859ed25d65c6e4d2562aebd0ac5f7f1ad36ef47c2e35e044ab4287912cc17071"
+    },
+    "dag-view.json": {
+      "artifact_uri": "urn:sha256:002e36eb43bf9b7181c99b67c3ca94c66a6cc22a966bc31a08fb2e410127a451",
+      "bytes": 4791,
+      "file": "dag-view.json",
+      "sha256": "002e36eb43bf9b7181c99b67c3ca94c66a6cc22a966bc31a08fb2e410127a451"
+    },
+    "development_world_timeseries.csv": {
+      "artifact_uri": "urn:sha256:6c734259ff9897cc8fe122d6e1fc5544fbc7d3301b09dd9ff724956dab892d77",
+      "bytes": 4311294,
+      "file": "development_world_timeseries.csv",
+      "sha256": "6c734259ff9897cc8fe122d6e1fc5544fbc7d3301b09dd9ff724956dab892d77"
+    },
+    "energy_dynamics.gam.gz": {
+      "artifact_uri": "urn:sha256:b270c8fd2638c1e82328ab05e25529617f5f3a3c61b3c3a40699ca200d28feeb",
+      "bytes": 7667765,
+      "file": "energy_dynamics.gam.gz",
+      "sha256": "b270c8fd2638c1e82328ab05e25529617f5f3a3c61b3c3a40699ca200d28feeb"
+    },
+    "movement_outcome_dynamics.gam.gz": {
+      "artifact_uri": "urn:sha256:30c71a672586890e93af8ed291eaaba7e77f2d0239fd5533ce44137daca7ef2c",
+      "bytes": 9999420,
+      "file": "movement_outcome_dynamics.gam.gz",
+      "sha256": "30c71a672586890e93af8ed291eaaba7e77f2d0239fd5533ce44137daca7ef2c"
+    },
+    "observatory.json": {
+      "artifact_uri": "urn:sha256:7c9a318f78decfe2b73e9c8dc2b1a07ab468908c8a78657f31c3151e80bd6472",
+      "bytes": 21904,
+      "file": "observatory.json",
+      "sha256": "7c9a318f78decfe2b73e9c8dc2b1a07ab468908c8a78657f31c3151e80bd6472"
+    },
+    "observatory.weave-request.json": {
+      "artifact_uri": "urn:sha256:440b8ffe4f7f32095557311e2e36cbdcf8fb0165aa68624e1d05f6c4b80c1ee3",
+      "bytes": 3412,
+      "file": "observatory.weave-request.json",
+      "sha256": "440b8ffe4f7f32095557311e2e36cbdcf8fb0165aa68624e1d05f6c4b80c1ee3"
+    },
+    "observatory.weave.json": {
+      "artifact_uri": "urn:sha256:dc50ef97e3fdb73a7a0d565be04f918562f123560313cbf6c5de2b0aaacd1d76",
+      "bytes": 8888,
+      "file": "observatory.weave.json",
+      "sha256": "dc50ef97e3fdb73a7a0d565be04f918562f123560313cbf6c5de2b0aaacd1d76"
+    },
+    "prediction_error_dynamics.gam.gz": {
+      "artifact_uri": "urn:sha256:99f88684e34a991a2ba615566117c796d2ef157fd461da919189229a5d748dc5",
+      "bytes": 7659193,
+      "file": "prediction_error_dynamics.gam.gz",
+      "sha256": "99f88684e34a991a2ba615566117c796d2ef157fd461da919189229a5d748dc5"
+    }
+  },
+  "dag_view": "dag-view.json",
+  "format": "chreatures-observatory-manifest-v1",
+  "native_weave_roundtrip": true,
+  "report": "observatory.json",
+  "schema_version": 1
+}

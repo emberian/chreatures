@@ -4,9 +4,9 @@
 
 Chreatures is an ambitious work in progress inspired by *Creatures*: organisms whose surroundings, physiology, learning, and encounters have consequences for one another. We want lives that become different through experience, and instruments that let us investigate why.
 
-![The first live MaleCNS habitat](docs/assets/hollow-garden.png)
+![Articulated residents in the live MaleCNS habitat](docs/assets/articulated-garden.png)
 
-*The first 3D garden, running real physics and full MaleCNS neural state. This screenshot shows the initial synthetic crawler bodies; articulated bodies and richer ecology are being integrated.*
+*The articulated garden, running real physics, full MaleCNS neural state, and chemical transport. Six-legged bodies explore an elevated walk, sheltered passages and movable objects.*
 
 ## What exists today
 
@@ -14,7 +14,7 @@ The live 3D loop couples MuJoCo bodies to **165,122 traced MaleCNS neurons**, **
 
 The garden contains ramps, an elevated walk, an underpass, rolling and stackable objects, edible resources, a seesaw and a resonant pendulum. Objects have independently specified geometry, material and sensory properties. Residents see an occluded retinal field from their bodies, sample scent and contact, and can move, look, grip and signal. A human can physically hold and release objects, offer resources, place lights and make sounds. The browser renders the authoritative simulation state.
 
-Other substantial backend pieces are implemented: a six-legged body with twelve physical hinges, conservative 3D chemical transport around solid geometry, a richer 351-channel sensory interface with 384 anatomical population readouts, and batched developmental worlds on AMD GPUs. Their integration status and measured results live in the [cycle log](docs/CYCLE_LOG.md); source code existing is not a claim that every subsystem is already active in every resident.
+The newer live world runs six-legged bodies with twelve physical hinges, conservative 3D chemical transport around solid geometry, and a 351-channel sensory interface with 384 anatomical population readouts. Its retina rotates with the complete body orientation, including climbing and inversion. Batched developmental worlds run on AMD GPUs. Older saved residents retain their original bodies and interfaces; see the [cycle log](docs/CYCLE_LOG.md).
 
 **This is a synthetic species experiment, not a recovered fly.** Anatomy is measured; rate dynamics, physiological laws, body mechanics and sensory/motor mappings contain explicit modeling assumptions. Personal learning mechanisms are running, but durable individuality, useful learned manipulation and reciprocal social skills remain research targets.
 
@@ -22,8 +22,8 @@ Other substantial backend pieces are implemented: a six-legged body with twelve 
 
 Two projects are central to where this is going:
 
-- **[SauersML/gam](https://github.com/SauersML/gam)** — Rust-backed statistical modeling for fitted physiological response laws, nonlinear effects of state and upbringing, event histories, representation geometry and intervention analysis. The current native integration fits real habitat telemetry and saves/reloads the resulting model. The broader mechanism and geometry work is ahead.
-- **[transkatgirl/universal-weave](https://github.com/transkatgirl/universal-weave)** — branching histories and evidence records. Our Rust adapter imports real journal events into a native independent weave, preserving event identity and artifact ancestry through serialization. The intended observatory connects encounters, competing interpretations and experiments without confusing the scientific archive with a resident’s own memory.
+- **[SauersML/gam](https://github.com/SauersML/gam)** — Rust-backed statistical modeling for fitted physiological response laws, nonlinear effects of state and upbringing, event histories, representation geometry and intervention analysis. The native integration now fits real 3D developmental telemetry with entire worlds held out, compares against persistence baselines, and saves/reloads immutable model artifacts. The broader mechanism and geometry work is ahead.
+- **[transkatgirl/universal-weave](https://github.com/transkatgirl/universal-weave)** — branching histories and evidence records. Our Rust adapter imports real journal events and multi-parent comparisons into a native independent weave, preserving event identity and artifact ancestry through serialization. The [3D observatory](docs/OBSERVATORY.md) keeps adult snapshots, research cohorts, fits and claims distinct from residents’ own memories.
 
 Both native libraries have been executed, not merely named in an architecture diagram. See [the integration contracts and receipts](docs/LIBRARIES.md). Their warnings and limitations are retained with their results.
 
@@ -46,16 +46,19 @@ This compact **2D reference uses a female FlyWire v783 subset of 6,789 neurons**
 
 The full graph is downloaded separately; large arrays and checkpoints do not belong in Git. The neural service needs PyTorch with a working accelerator backend, while the habitat/browser can run on another machine.
 
-1. Follow [MaleCNS acquisition](docs/MALECNS.md) and the [persistent neural service instructions](docs/REMOTE_BRAIN.md).
+1. Follow [MaleCNS acquisition](docs/MALECNS.md), the [persistent neural service instructions](docs/REMOTE_BRAIN.md), and [rich retinal port setup](docs/NEURAL_PORTS.md).
 2. Reach that service over localhost or an SSH forward, then run:
 
 ```sh
-uv run chreatures3d --port 8766 --brain-url http://127.0.0.1:18765
+uv run chreatures3d --port 8768 --brain-url http://127.0.0.1:18767 \
+  --checkpoint runs/articulated-garden.json
 ```
 
-Open **http://127.0.0.1:8766**. A 3D checkpoint contains physics, personal cognitive state and the checksum of a server-side neural snapshot. Preserve both parts. Restore checks anatomy identity; a failed distributed step pauses instead of blindly advancing again.
+Open **http://127.0.0.1:8768**. The example assumes the rich neural service is forwarded to local port 18767. A 3D checkpoint contains physics, personal cognitive state and the checksum of a server-side neural snapshot. Preserve both parts. Restore checks anatomy and sensory-interface identity; a failed distributed step pauses instead of blindly advancing again.
 
 Actual circuit workloads have run on an AMD RX 6750 XT and Radeon 890M. [GPU results](docs/GPU_NURSERY.md), [developmental training](docs/DEVELOPMENT.md), [3D direction](docs/THREE_DIMENSIONS.md), [articulated body](docs/ARTICULATED.md), [chemical fields](docs/FIELDS.md), [retinal ports](docs/NEURAL_PORTS.md).
+
+The next learning stage uses a shared predictive actor–critic with private recurrent state, articulated environments in persistent worker processes, and the full neural graph on every physical tick. [Learning protocol](docs/LEARNING.md) and [measured sparse-loop optimization](docs/FAST_CIRCUIT.md). Training is running; useful learned behavior must still earn its claim in held-out environments and neural controls.
 
 ## Building wide and deep
 

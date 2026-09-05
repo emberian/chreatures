@@ -1,0 +1,658 @@
+{
+  "archive_scope": "external immutable evidence archive; summaries and references are not resident memory",
+  "dag": {
+    "edges": 10,
+    "file": "dag-view.json",
+    "multi_parent_nodes": 1,
+    "nodes": 10
+  },
+  "development": {
+    "source": {
+      "all_receipts_verified": true,
+      "format": "chreatures-development-run-v1",
+      "path": "runs/development/initial-8x3-20260905",
+      "receipt_set_sha256": "982df4937a418c3344a80644dd7772ce2ab5e31d8977bc8b99446753df7b0f65",
+      "receipts": {
+        "development.jsonl": {
+          "artifact_uri": "urn:sha256:2cee44242daacfc288a34d8a2945da86e22c68da460bbdd795bf32dcd45d7422",
+          "bytes": 641919,
+          "path": "runs/development/initial-8x3-20260905/development.jsonl",
+          "sha256": "2cee44242daacfc288a34d8a2945da86e22c68da460bbdd795bf32dcd45d7422",
+          "verified": true
+        },
+        "egg-manifest.json": {
+          "artifact_uri": "urn:sha256:6d4455c86bb44c1cd1dbbb383464c6c4deff768fac44efbbf2ef8931648a58a4",
+          "bytes": 1066,
+          "path": "runs/development/initial-8x3-20260905/egg-manifest.json",
+          "sha256": "6d4455c86bb44c1cd1dbbb383464c6c4deff768fac44efbbf2ef8931648a58a4",
+          "verified": true
+        },
+        "egg.npz": {
+          "artifact_uri": "urn:sha256:34ed3170f94b657d8a7f56313e773349568626d168d70ec2adffbe271f798bc4",
+          "bytes": 43718,
+          "path": "runs/development/initial-8x3-20260905/egg.npz",
+          "sha256": "34ed3170f94b657d8a7f56313e773349568626d168d70ec2adffbe271f798bc4",
+          "verified": true
+        },
+        "experienced_episodes.json.gz": {
+          "artifact_uri": "urn:sha256:ae18506ae9eb5af30aaf5a375185e297a88c840a777cefe0b760b803befd0ac7",
+          "bytes": 249685,
+          "path": "runs/development/initial-8x3-20260905/experienced_episodes.json.gz",
+          "sha256": "ae18506ae9eb5af30aaf5a375185e297a88c840a777cefe0b760b803befd0ac7",
+          "verified": true
+        },
+        "run.json": {
+          "artifact_uri": "urn:sha256:7bbdfb86f5c1a14b35f2c2194318316d99c93ca8606c1d58ec05fd5efb470f26",
+          "bytes": 14786,
+          "path": "runs/development/initial-8x3-20260905/run.json",
+          "sha256": "7bbdfb86f5c1a14b35f2c2194318316d99c93ca8606c1d58ec05fd5efb470f26",
+          "verified": true
+        },
+        "summary.json": {
+          "artifact_uri": "urn:sha256:c1526b5a90af31713cb585b8393a8360a07b857debb23c93949ce74b6737b4d3",
+          "bytes": 4433,
+          "path": "runs/development/initial-8x3-20260905/summary.json",
+          "sha256": "c1526b5a90af31713cb585b8393a8360a07b857debb23c93949ce74b6737b4d3",
+          "verified": true
+        },
+        "trajectory.npz": {
+          "artifact_uri": "urn:sha256:e0c5ade7c74d78684c91a0f00c6302a0fc21ecc9a700b542592a67a18f6aa0e9",
+          "bytes": 19106493,
+          "path": "runs/development/initial-8x3-20260905/trajectory.npz",
+          "sha256": "e0c5ade7c74d78684c91a0f00c6302a0fc21ecc9a700b542592a67a18f6aa0e9",
+          "verified": true
+        }
+      }
+    },
+    "summary": {
+      "cognition": {
+        "learning_progress": {
+          "count": 49152,
+          "max": 0.00024661587667651474,
+          "mean": 3.1102469281600594e-06,
+          "min": 0.0
+        },
+        "memory_records": {
+          "max": 32,
+          "mean": 8.541666666666666,
+          "min": 1,
+          "total": 205
+        },
+        "parameter_l2_change": {
+          "actor": 0.0009516053833067417,
+          "critic": 0.0008477878291159868,
+          "model": 0.01934940740466118
+        },
+        "prediction_error": {
+          "count": 49152,
+          "max": 0.00161257095169276,
+          "mean": 1.5442449017440033e-05,
+          "min": 0.0
+        },
+        "scope": "inherited sensorimotor interface; no personal neural or autobiographical state"
+      },
+      "completed": true,
+      "config": {
+        "dt": 0.05,
+        "inheritance_seed": 7301,
+        "rich_steps": 1280,
+        "seed": 20260905,
+        "simple_steps": 768,
+        "worlds": 8
+      },
+      "ecology": {
+        "curriculum": [
+          "simple resource garden",
+          "rich hollow garden"
+        ],
+        "world_seed_count": 8
+      },
+      "finished_unix": 1788642419.5998688,
+      "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+      "outcomes": {
+        "contact_positive_resident_steps": 1602,
+        "distance_total": 233.81812945539514,
+        "effort_mean": 0.1576527949445108,
+        "nutrition_total": 0.17691349855158478
+      },
+      "phases": {
+        "rich_steps": 1280,
+        "simple_steps": 768
+      },
+      "physics": {
+        "articulation_recorded": false,
+        "dimension": 3,
+        "world_family": "MuJoCo synthetic crawler development worlds"
+      },
+      "residents": 24,
+      "steps": 2048,
+      "worlds": 8
+    },
+    "whole_world_holdout": [
+      "world-03",
+      "world-07"
+    ]
+  },
+  "gamfit": {
+    "interpretation": "descriptive held-out prediction only; no causal claim",
+    "library": {
+      "name": "gamfit",
+      "native_crate": "gam-pyffi",
+      "native_engine_crate": "gam",
+      "native_extension_available": true,
+      "source_commit": "7c7eca8ac4826de95c8e743a20294bee132a9bcc",
+      "version": "0.1.259"
+    },
+    "models": {
+      "energy_dynamics": {
+        "artifact": {
+          "artifact_uri": "urn:sha256:b270c8fd2638c1e82328ab05e25529617f5f3a3c61b3c3a40699ca200d28feeb",
+          "bytes": 7667765,
+          "compression": "gzip",
+          "file": "energy_dynamics.gam.gz",
+          "native_payload_sha256": "4e0de8238a6b219b6674c0c5ae9912ff0c455dbdafc2b116037a3d0ff0df43d0",
+          "reload_max_abs_prediction_delta": 0.0,
+          "sha256": "b270c8fd2638c1e82328ab05e25529617f5f3a3c61b3c3a40699ca200d28feeb"
+        },
+        "baselines": {
+          "persistence": {
+            "mae": 0.0001979712903392837,
+            "rmse": 0.0016827709880973807
+          },
+          "training_mean": {
+            "mae": 0.030331937676276587,
+            "rmse": 0.03687732074458521
+          }
+        },
+        "description": "one-step mean bodily-energy dynamics after physical outcomes",
+        "formula": "energy_next ~ s(energy, k=10) + s(nutrition, k=8) + s(effort, k=8) + s(contact, k=6) + s(prediction_error, k=8) + phase",
+        "held_out": {
+          "mae": 0.00022356718774266214,
+          "rmse": 0.0016842991974066763
+        },
+        "native_messages": [],
+        "rmse_vs_persistence": 1.00090815049707,
+        "status": "complete",
+        "target": "energy_next",
+        "warnings": []
+      },
+      "movement_outcome_dynamics": {
+        "artifact": {
+          "artifact_uri": "urn:sha256:30c71a672586890e93af8ed291eaaba7e77f2d0239fd5533ce44137daca7ef2c",
+          "bytes": 9999420,
+          "compression": "gzip",
+          "file": "movement_outcome_dynamics.gam.gz",
+          "native_payload_sha256": "b2c313769009828947e99a1755a82edba646c351ac9f13a14fa4b090e2e56306",
+          "reload_max_abs_prediction_delta": 0.0,
+          "sha256": "30c71a672586890e93af8ed291eaaba7e77f2d0239fd5533ce44137daca7ef2c"
+        },
+        "baselines": {
+          "persistence": {
+            "mae": 0.004191484585098308,
+            "rmse": 0.005742841940364049
+          },
+          "training_mean": {
+            "mae": 0.006369601324443905,
+            "rmse": 0.00799801747840616
+          }
+        },
+        "description": "one-step locomotor outcome under the learned controller",
+        "formula": "distance_next ~ s(speed, k=10) + s(support, k=8) + s(activity, k=8) + s(effort, k=8) + s(distance, k=10) + phase",
+        "held_out": {
+          "mae": 0.0038780039130331405,
+          "rmse": 0.005204391926857235
+        },
+        "native_messages": [],
+        "rmse_vs_persistence": 0.9062397991972803,
+        "status": "complete",
+        "target": "distance_next",
+        "warnings": []
+      },
+      "prediction_error_dynamics": {
+        "artifact": {
+          "artifact_uri": "urn:sha256:99f88684e34a991a2ba615566117c796d2ef157fd461da919189229a5d748dc5",
+          "bytes": 7659193,
+          "compression": "gzip",
+          "file": "prediction_error_dynamics.gam.gz",
+          "native_payload_sha256": "7db8baa031b72f4b70e1196e7a31e2629b6596e0aef553aff90f4db76d566a91",
+          "reload_max_abs_prediction_delta": 0.0,
+          "sha256": "99f88684e34a991a2ba615566117c796d2ef157fd461da919189229a5d748dc5"
+        },
+        "baselines": {
+          "persistence": {
+            "mae": 8.401422878772504e-07,
+            "rmse": 2.8776491815713942e-06
+          },
+          "training_mean": {
+            "mae": 2.2984557259656784e-05,
+            "rmse": 4.702601980671155e-05
+          }
+        },
+        "description": "one-step action-conditioned forward-model error dynamics",
+        "formula": "prediction_error_next ~ s(prediction_error, k=10) + s(activity, k=8) + s(learning_progress, k=8) + s(step_fraction, k=12) + phase",
+        "held_out": {
+          "mae": 1.003808252171428e-06,
+          "rmse": 2.852015041148465e-06
+        },
+        "native_messages": [],
+        "rmse_vs_persistence": 0.991091985573818,
+        "status": "complete",
+        "target": "prediction_error_next",
+        "warnings": []
+      }
+    },
+    "split": {
+      "adjacent_rows_cross_boundary": false,
+      "held_out_rows": 4094,
+      "held_out_worlds": [
+        "world-03",
+        "world-07"
+      ],
+      "rule": "world index modulo 4 equals 3",
+      "training_rows": 12282,
+      "training_worlds": [
+        "world-00",
+        "world-01",
+        "world-02",
+        "world-04",
+        "world-05",
+        "world-06"
+      ],
+      "unit": "complete physical world"
+    },
+    "status": "complete"
+  },
+  "limitations": [
+    "The adult checkpoint predates explicit body_mode and diffusion-field fields.",
+    "The development run used synthetic crawler bodies; it is not articulated-body evidence.",
+    "GAM results are descriptive held-out predictions and do not establish causality or skill.",
+    "The observatory is an external archive and does not alter resident memory."
+  ],
+  "report_type": "chreatures-3d-observatory",
+  "schema_version": 2,
+  "source_set_sha256": "d7f4dae977990600ee88e6d4a47d04d8b339c3423a37587f79acd128b4740d7d",
+  "source_snapshot_unix": 1788642419.5998688,
+  "timeseries": {
+    "adult_world": {
+      "artifact_uri": "urn:sha256:859ed25d65c6e4d2562aebd0ac5f7f1ad36ef47c2e35e044ab4287912cc17071",
+      "bytes": 118074,
+      "file": "adult_world_timeseries.csv",
+      "rows": 1080,
+      "sha256": "859ed25d65c6e4d2562aebd0ac5f7f1ad36ef47c2e35e044ab4287912cc17071"
+    },
+    "development_world": {
+      "artifact_uri": "urn:sha256:6c734259ff9897cc8fe122d6e1fc5544fbc7d3301b09dd9ff724956dab892d77",
+      "bytes": 4311294,
+      "file": "development_world_timeseries.csv",
+      "rows": 16376,
+      "sha256": "6c734259ff9897cc8fe122d6e1fc5544fbc7d3301b09dd9ff724956dab892d77"
+    }
+  },
+  "weave": {
+    "artifact": "observatory.weave.json",
+    "bytes": 8888,
+    "edge_count": 10,
+    "integration": "native-universal-weave-dag",
+    "library": {
+      "name": "universal-weave",
+      "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+      "version": "0.5.0"
+    },
+    "multi_parent_nodes": 1,
+    "node_count": 10,
+    "records": [
+      {
+        "artifact_uri": "urn:sha256:d84507ecd3b111e25bbc2e7a2e3f9a2995c35431a688a072ed7c0d6c4ff17235",
+        "node_id": 1,
+        "parent_source_ids": [],
+        "parents": [],
+        "record_type": "episode",
+        "source_id": "source:adult-3d-checkpoint",
+        "text": "Verified 3D whole-world checkpoint.",
+        "time": 1183.849999999471
+      },
+      {
+        "artifact_uri": "urn:sha256:d84507ecd3b111e25bbc2e7a2e3f9a2995c35431a688a072ed7c0d6c4ff17235",
+        "node_id": 5,
+        "parent_source_ids": [
+          "source:adult-3d-checkpoint"
+        ],
+        "parents": [
+          1
+        ],
+        "record_type": "evidence",
+        "source_id": "summary:adult-3d",
+        "text": "Three-resident 3D state at tick 23677; 48 externalized memory-count summary.",
+        "time": 1183.849999999471
+      },
+      {
+        "artifact_uri": "urn:sha256:c1526b5a90af31713cb585b8393a8360a07b857debb23c93949ce74b6737b4d3",
+        "node_id": 2,
+        "parent_source_ids": [],
+        "parents": [],
+        "record_type": "episode",
+        "source_id": "source:development-run",
+        "text": "Verified eight-world developmental run.",
+        "time": 2048
+      },
+      {
+        "artifact_uri": "urn:sha256:e0c5ade7c74d78684c91a0f00c6302a0fc21ecc9a700b542592a67a18f6aa0e9",
+        "node_id": 6,
+        "parent_source_ids": [
+          "source:development-run"
+        ],
+        "parents": [
+          2
+        ],
+        "record_type": "evidence",
+        "source_id": "summary:development",
+        "text": "Development across 8 worlds and 24 residents.",
+        "time": 2048
+      },
+      {
+        "artifact_uri": "urn:sha256:30c71a672586890e93af8ed291eaaba7e77f2d0239fd5533ce44137daca7ef2c",
+        "node_id": 7,
+        "parent_source_ids": [
+          "summary:development"
+        ],
+        "parents": [
+          6
+        ],
+        "record_type": "evidence",
+        "source_id": "model:movement_outcome_dynamics",
+        "text": "Native GAM movement_outcome_dynamics on complete held-out worlds; RMSE/persistence=0.90624. No causal claim.",
+        "time": 2048
+      },
+      {
+        "artifact_uri": "urn:sha256:b270c8fd2638c1e82328ab05e25529617f5f3a3c61b3c3a40699ca200d28feeb",
+        "node_id": 8,
+        "parent_source_ids": [
+          "summary:development"
+        ],
+        "parents": [
+          6
+        ],
+        "record_type": "evidence",
+        "source_id": "model:energy_dynamics",
+        "text": "Native GAM energy_dynamics on complete held-out worlds; RMSE/persistence=1.00091. No causal claim.",
+        "time": 2048
+      },
+      {
+        "artifact_uri": "urn:sha256:99f88684e34a991a2ba615566117c796d2ef157fd461da919189229a5d748dc5",
+        "node_id": 9,
+        "parent_source_ids": [
+          "summary:development"
+        ],
+        "parents": [
+          6
+        ],
+        "record_type": "evidence",
+        "source_id": "model:prediction_error_dynamics",
+        "text": "Native GAM prediction_error_dynamics on complete held-out worlds; RMSE/persistence=0.991092. No causal claim.",
+        "time": 2048
+      },
+      {
+        "artifact_uri": null,
+        "node_id": 10,
+        "parent_source_ids": [
+          "summary:adult-3d",
+          "summary:development",
+          "model:movement_outcome_dynamics",
+          "model:energy_dynamics",
+          "model:prediction_error_dynamics"
+        ],
+        "parents": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "record_type": "evidence",
+        "source_id": "comparison:adult-and-development",
+        "text": "Cross-source comparison joins the adult whole-world state, developmental population summary, and held-out dynamics. It is archival evidence, not creature memory.",
+        "time": 2048
+      },
+      {
+        "artifact_uri": null,
+        "node_id": 3,
+        "parent_source_ids": [],
+        "parents": [],
+        "record_type": "episode",
+        "source_id": "adult-event:fd054f15-2b0b-4fd7-8a93-278b3a7ce229:0:0",
+        "text": "Three new residents entered the hollow garden with full MaleCNS circuits.",
+        "time": 0.0
+      },
+      {
+        "artifact_uri": null,
+        "node_id": 4,
+        "parent_source_ids": [],
+        "parents": [],
+        "record_type": "episode",
+        "source_id": "adult-event:fd054f15-2b0b-4fd7-8a93-278b3a7ce229:4700:1",
+        "text": "Mica ingested a resource.",
+        "time": 234.99999999985877
+      }
+    ],
+    "reload_equal": true,
+    "status": "complete",
+    "topological_order": [
+      1,
+      5,
+      2,
+      6,
+      7,
+      8,
+      9,
+      10,
+      3,
+      4
+    ],
+    "validated_after_reload": true
+  },
+  "world": {
+    "source": {
+      "artifact_uri": "urn:sha256:d84507ecd3b111e25bbc2e7a2e3f9a2995c35431a688a072ed7c0d6c4ff17235",
+      "bytes": 1102454,
+      "checksum_verified": true,
+      "format": "chreatures-3d-checkpoint-v1",
+      "path": "runs/hollow-garden.json",
+      "sha256": "d84507ecd3b111e25bbc2e7a2e3f9a2995c35431a688a072ed7c0d6c4ff17235",
+      "state_sha256": "06e3b251722f7aee96d05133b5bf6e64c5d8963b3dda3e49232d3dd24ac86bfc"
+    },
+    "summary": {
+      "anatomy_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+      "articulation": {
+        "body_mode": "legacy crawler (checkpoint predates explicit body_mode)",
+        "body_mode_recorded": false,
+        "jointed_environment_entities": 2,
+        "mobility_counts": {
+          "hinge": 2,
+          "preset": 8,
+          "static": 11
+        },
+        "resident_pose_3d_count": 3,
+        "resident_velocity_3d_count": 3
+      },
+      "branch": "resident",
+      "cognition": {
+        "memory_records": 48,
+        "resident_count": 3,
+        "residents": [
+          {
+            "learning": true,
+            "memory": {
+              "capacity": 384,
+              "count": 9,
+              "origin_counts": {
+                "experienced": 9
+              }
+            },
+            "metrics": {
+              "advantage": 3.242682527970786e-05,
+              "homeostatic_outcome": 0.0,
+              "learning_progress": 5.976829711575936e-08,
+              "novelty": 0.14850060641765594,
+              "prediction_error": 3.313505823786614e-07,
+              "recalled_value": 0.0009862047154456377
+            },
+            "model_time": 1183.849999999471,
+            "resident_id": "fern"
+          },
+          {
+            "learning": true,
+            "memory": {
+              "capacity": 384,
+              "count": 7,
+              "origin_counts": {
+                "experienced": 7
+              }
+            },
+            "metrics": {
+              "advantage": 3.996988838765158e-05,
+              "homeostatic_outcome": 0.0,
+              "learning_progress": 1.9236960143902644e-07,
+              "novelty": 0.13650411367416382,
+              "prediction_error": 2.8897957372609906e-07,
+              "recalled_value": 0.005390916485339403
+            },
+            "model_time": 1183.849999999471,
+            "resident_id": "mica"
+          },
+          {
+            "learning": true,
+            "memory": {
+              "capacity": 384,
+              "count": 32,
+              "origin_counts": {
+                "experienced": 32
+              }
+            },
+            "metrics": {
+              "advantage": 3.596325465854189e-05,
+              "homeostatic_outcome": 0.0,
+              "learning_progress": 2.0257572370505254e-07,
+              "novelty": 0.13362686336040497,
+              "prediction_error": 4.0597902690444256e-07,
+              "recalled_value": -0.00020834809402003884
+            },
+            "model_time": 1183.849999999471,
+            "resident_id": "pip"
+          }
+        ],
+        "scope": "summary only; personal records remain in the source checkpoint"
+      },
+      "ecology": {
+        "component_counts": {
+          "food": 4,
+          "resonator": 6,
+          "scent": 6,
+          "shade": 2
+        },
+        "explicit_field_state": false,
+        "kind": "analytic/legacy",
+        "resource_remaining": {
+          "berry-a": 0.7321934937684705,
+          "berry-b": 0.75,
+          "nectar-a": 0.65,
+          "nectar-b": 0.65
+        }
+      },
+      "habitat_id": "fd054f15-2b0b-4fd7-8a93-278b3a7ce229",
+      "history": [
+        {
+          "activity": {
+            "count": 360,
+            "max": 0.022691160440444946,
+            "mean": 0.02070984094041503,
+            "min": 0.013259879313409328
+          },
+          "energy": {
+            "count": 360,
+            "max": 0.0,
+            "mean": 0.0,
+            "min": 0.0
+          },
+          "memory_range": [
+            8,
+            9
+          ],
+          "resident_id": "fern",
+          "rows": 360,
+          "time_range": [
+            1003.9999999991594,
+            1183.5000000026228
+          ]
+        },
+        {
+          "activity": {
+            "count": 360,
+            "max": 0.021460510790348053,
+            "mean": 0.01301150556990049,
+            "min": 0.00639795046299696
+          },
+          "energy": {
+            "count": 360,
+            "max": 0.0,
+            "mean": 0.0,
+            "min": 0.0
+          },
+          "memory_range": [
+            7,
+            7
+          ],
+          "resident_id": "mica",
+          "rows": 360,
+          "time_range": [
+            1003.9999999991594,
+            1183.5000000026228
+          ]
+        },
+        {
+          "activity": {
+            "count": 360,
+            "max": 0.02302667498588562,
+            "mean": 0.01577943848290791,
+            "min": 0.006036742124706507
+          },
+          "energy": {
+            "count": 360,
+            "max": 0.0,
+            "mean": 0.0,
+            "min": 0.0
+          },
+          "memory_range": [
+            31,
+            32
+          ],
+          "resident_id": "pip",
+          "rows": 360,
+          "time_range": [
+            1003.9999999991594,
+            1183.5000000026228
+          ]
+        }
+      ],
+      "journal_events": 2,
+      "model_time": 1183.849999999471,
+      "physics": {
+        "dimension": 3,
+        "engine": {
+          "name": "MuJoCo",
+          "version": "3.12.0"
+        },
+        "entity_count": 21,
+        "habitat": "hollow-garden",
+        "model_signature": "48a6732fec0ee59df864a29a539c9f14a623e6e92cfb6ae04a05bd2e3c0fa9ec",
+        "resident_count": 3,
+        "size": [
+          12.0,
+          8.0,
+          3.5
+        ],
+        "units": "meters"
+      },
+      "tick": 23677
+    }
+  }
+}
