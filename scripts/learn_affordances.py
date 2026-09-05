@@ -51,6 +51,10 @@ def sha256(path: Path) -> str:
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--graph", type=Path, required=True)
+    parser.add_argument(
+        "--port-graph", type=Path,
+        help="canonical graph used to validate port maps when training a neuron-aligned control",
+    )
     parser.add_argument("--port-bundle", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--worlds", type=int, default=16)
@@ -629,7 +633,13 @@ def main() -> int:
     ):
         raise SystemExit("--first-checkpoint must be smaller than --checkpoint-every")
     graph = MaleCNSGraph.load(args.graph, mmap=True)
-    ports = NeuralPortBundle.load(args.port_bundle, graph)
+    port_graph = MaleCNSGraph.load(args.port_graph, mmap=True) if args.port_graph else graph
+    if (
+        port_graph is not graph
+        and (port_graph.n != graph.n or not np.array_equal(port_graph.ids, graph.ids))
+    ):
+        raise SystemExit("port graph and recurrence graph neuron ordering differs")
+    ports = NeuralPortBundle.load(args.port_bundle, port_graph)
     config = PredictivePPOConfig(
         feature_dim=len(ports.readout_names), macro_steps=args.macro_steps, seed=args.seed
     )
@@ -655,6 +665,7 @@ def main() -> int:
         "pid": os.getpid(), "argv": [sys.executable, *sys.argv],
         "command": shlex.join([sys.executable, *sys.argv]),
         "graph_sha256": graph.hash, "port_spec_sha256": ports.spec_hash,
+        "port_graph_sha256": port_graph.hash,
         "port_bundle_sha256": sha256(args.port_bundle),
         "source_sha256": {str(path.relative_to(ROOT)): sha256(path) for path in source_paths},
         "torch": {"version": torch.__version__, "hip": torch.version.hip},

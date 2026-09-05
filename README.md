@@ -10,7 +10,7 @@ Chreatures is an ambitious work in progress inspired by *Creatures*: organisms w
 
 ## What exists today
 
-The live 3D loop couples MuJoCo bodies to **165,122 traced MaleCNS neurons**, **25,563,197 directed connections**, and **124,025,046 measured synapses**. Each resident has private neural activity, adaptation and support state, contextual/episodic memory, an online predictive model, and an adaptive actor–critic motor interface.
+The live 3D loop couples MuJoCo bodies to **165,122 traced MaleCNS neurons**, **25,563,197 directed connections**, and **124,025,046 measured synapses**. Residents keep private neural activity, adaptation and support state. Controller lineages include online adaptive organs and inherited population-trained motor policies with personal contextual memory.
 
 The garden contains ramps, an elevated walk, an underpass, rolling and stackable objects, edible resources, a seesaw and a resonant pendulum. Objects have independently specified geometry, material and sensory properties. Residents see an occluded retinal field from their bodies, sample scent and contact, and can move, look, grip and signal. A human can physically hold and release objects, offer resources, place lights and make sounds. The browser renders the authoritative simulation state.
 
@@ -58,17 +58,18 @@ Open **http://127.0.0.1:8768**. The example assumes the rich neural service is f
 
 Actual circuit workloads have run on an AMD RX 6750 XT and Radeon 890M. [GPU results](docs/GPU_NURSERY.md), [developmental training](docs/DEVELOPMENT.md), [3D direction](docs/THREE_DIMENSIONS.md), [articulated body](docs/ARTICULATED.md), [chemical fields](docs/FIELDS.md), [retinal ports](docs/NEURAL_PORTS.md).
 
-Development uses a shared predictive actor–critic with private recurrent state, articulated environments in persistent worker processes, and the full neural graph on every physical tick. The native AMD kernel improved a paired 48-resident neural benchmark by **5.84×**. The first 8,000-step stage showed a modest **12% increase in held-out ingestion**; its overall regulation score remains mixed. [Learning protocol](docs/LEARNING.md), [measured sparse-loop optimization](docs/FAST_CIRCUIT.md), and [physical throughput](docs/PHYSICAL_THROUGHPUT.md).
+Development uses a shared predictive actor–critic with private recurrent state, articulated environments in persistent worker processes, and the full neural graph on every physical tick. The native AMD kernel improved a paired 48-resident neural benchmark by **5.84×**. The 20,000-step stage increased held-out ingestion from 0.372 to 2.859 in its evaluation, but movement cost increased and overall bodily return worsened. Removing neural features reduced ingestion to 2.173; a matched rewired graph produced more ingestion under the same policy in a larger probe. These results show sensory and topological effects, without establishing an advantage for the biological wiring. [Learning protocol](docs/LEARNING.md), [measured sparse-loop optimization](docs/FAST_CIRCUIT.md), and [physical throughput](docs/PHYSICAL_THROUGHPUT.md).
 
-A small [trained motor artifact](data/genomes/nursery-8000.npz) is included. For a new experimental world, add:
+A small [trained motor artifact](data/genomes/nursery-20000.npz) is included. For a new experimental world, add:
 
 ```sh
---motor-genome data/genomes/nursery-8000.npz \
+--motor-genome data/genomes/nursery-20000.npz --personal-memory \
+--habitat data/habitats/orchard-garden.json \
 --resources data/ecology/portable-orchard.json \
 --acoustics data/components/acoustic-play.json
 ```
 
-Use a fresh checkpoint and a separate ordered neural service. The inherited motor runs on NumPy, with private working context and random state. It is distinct from personal episodic learning. Its training used earlier camera and odor semantics, so this richer world is a [transfer experiment](docs/MOTOR_INHERITANCE.md). [Resource production](docs/ECOLOGY.md) and [physical sound](docs/ACOUSTICS.md) preserve finite pools and transfer histories in the whole-world checkpoint.
+Use a fresh checkpoint and a separate ordered neural service. The inherited motor runs on NumPy, with private working context and random state. With `--personal-memory`, a separate private action-conditioned memory records actual bodily consequences and can refine future choices. It preserves the inherited policy’s exploration. The current live orchard has sparse personal reinforcement and no demonstrated durable individual strategies yet. Its training used earlier camera and odor semantics, so this richer world is a [transfer experiment](docs/MOTOR_INHERITANCE.md). [Resource production](docs/ECOLOGY.md) and [physical sound](docs/ACOUSTICS.md) preserve finite pools and transfer histories in the whole-world checkpoint.
 
 Open `/observatory` for the native GAM fits and navigable Weave evidence graph. [Visual memory](docs/VISUAL_MEMORY.md), [contextual maps](docs/CONTEXT_MEMORY.md), and [asynchronous native perception](docs/PERCEPTION.md) are separate developing organs; they are not all active in existing residents.
 
@@ -76,7 +77,7 @@ Open `/observatory` for the native GAM fits and navigable Weave evidence graph. 
 
 We are building with parallel agents and human direction. Working commits are intentionally frequent. The priorities are physical possibilities, consequential personal learning, credible biological contribution and a world worth spending time in.
 
-Python currently connects the scientific ecosystem; MuJoCo and PyTorch do the heavy numerical work. Rust is already present through GAM and the Weave adapter, and PyO3 is an option where profiling identifies a useful native boundary. We choose implementation languages by the work they improve.
+Python currently connects the scientific ecosystem; MuJoCo and PyTorch do the heavy numerical work. Rust is present through GAM, the Weave adapter and a new [local Metal full-graph prototype](docs/METAL_BRAIN.md). Its three-resident recurrent update measured 8.85 ms on an M2 Max; complete sensory/service integration is in progress. We choose implementation languages by the work they improve.
 
 Useful contributions include better embodied learning, controllable bodies, combinable physical environments, grounded perception, memory mechanisms and experiments that distinguish the proposed explanation from a simpler one. An LLM may become a bounded perceptual or semantic organ; it should not silently supply all behavior while the rest of the organism is decorative.
 

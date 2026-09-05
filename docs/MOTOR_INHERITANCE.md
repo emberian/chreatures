@@ -93,6 +93,7 @@ resulting NPZ is loaded with `allow_pickle=False` and does not require Torch.
 ```sh
 PYTHONPATH=. python scripts/export_motor_organ.py \
   --checkpoint /path/to/checkpoints/learner-step-0001230.pt \
+  --training-genome /path/to/learned-genome.npz \
   --output /path/to/motor-step-0001230.npz \
   --graph-sha256 48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625 \
   --port-spec-sha256 fffb48c65bdb5bc2503ff8ad7c65b4419e12aa9ef5b58b9f36bc910f64dadb6f \
@@ -105,7 +106,9 @@ PYTHONPATH=. python scripts/export_motor_organ.py \
 The artifact records checkpoint, graph, rich-port specification, port-bundle,
 and optional run-record hashes, plus the learner configuration and update and
 decision counts.  When a run record is supplied, the exporter refuses a graph
-or port-spec mismatch.  A supplied cohort checkpoint also records its hash,
+or port-spec mismatch.  When a training genome is supplied, every model array
+must exactly match the checkpoint before its hash is recorded.  A supplied
+cohort checkpoint also records its hash,
 the canonical hash of its embedded physical specification, the native physics
 model signature, and the body, sensorium, and chemical interfaces that the
 snapshot establishes.  Explicit `--sensorium-interface`, `--body-interface`,
@@ -183,3 +186,37 @@ camera, analytic odor, and `chreatures-lightweight-hexapod:v1`.  Use under the
 new body-v1 sensorium and diffusion chemistry is explicitly cross-environment
 transfer.  It is suitable as an immutable baseline motor inheritance for new
 residents; it has not been installed into or used to replace any live resident.
+
+## Nursery final 20,000-step artifact
+
+`data/genomes/nursery-20000.npz` supersedes the 8,000-step candidate for new
+baseline residents while preserving that earlier artifact for comparisons.  It
+contains the completed learner at 20,000 physical steps, 76 PPO updates, and
+4,832 policy decisions:
+
+- canonical artifact SHA-256:
+  `c24eefae2b93a3e933fa0a1a85357a5fed8c8937889ea5f339b8453987701122`
+- NPZ file SHA-256:
+  `b89e07d09669084934e09bb3262c56cebe21b9c93fde286255fd77e8544c5a29`
+- source learner checkpoint SHA-256:
+  `c224dac3fc8c4adc26ebffb5469e22b21095b8f1d7725af129dea3eac7bf6c0f`
+- linked cohort checkpoint SHA-256:
+  `0596f7a7f8ed64011778bb674fd74ae9c8a8c81c77733971d016ea3a3161a83b`
+- training runner's learned-genome SHA-256:
+  `1726da913280fb925242607baae7ce69fc2f356590b9d9335e309e74be1262fd`
+
+In the final held-out evaluation, total nutrition was `0.371626` for the fixed
+initial policy, `2.858586` for the learned policy, and `2.173134` with learned
+neural features silenced.  The learned policy therefore ingested 7.69 times
+the initialization total, and silencing reduced its ingestion by 24.0%.  This
+supports a bounded claim of sensor-dependent ingestion in that evaluation.
+The silenced policy still substantially exceeded initialization, so the result
+also includes feature-independent learned behavior.  Bodily reward did not
+improve: learned reward was `-0.639589`, compared with `-0.390715` initially
+and `-0.318102` when silenced.  The evaluation therefore does not establish a
+better general policy or improved homeostatic control.
+
+The final artifact has the same legacy-world-v0 camera, analytic odor, and
+lightweight-hexapod training boundary as the earlier candidate.  Deployment
+with body-v1 and diffusion remains a cross-environment transfer, and the
+artifact has not been applied to an existing live resident.

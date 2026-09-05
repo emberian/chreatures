@@ -91,6 +91,16 @@ topology. This tests sensitivity to the curated connectome; demonstrating an
 anatomical learning advantage would additionally require training the matched
 control from the same initialized policy.
 
+The first canonical 20,000-step run learned a narrow, sensor-dependent
+ingestion behavior. On its 12-resident held-out evaluation, nutrition was
+2.8586 versus 0.3716 for the initialized actor (7.69×); zeroing all neural
+features reduced it to 2.1731 (31.5% less than intact). The learned actor did
+not improve final energy or total bodily return, so this is not evidence of
+general homeostatic competence. A larger 48-resident frozen-policy control was
+also unfavorable to a simple anatomy claim: the matched rewire produced
+17.5283 nutrition versus 12.2630 for the canonical graph. It established
+topology sensitivity, not canonical superiority.
+
 ## Reproducible hbox run
 
 The isolated ROCm environment is `/tank/chreatures/envs/rocm-dev` with PyTorch
@@ -115,6 +125,22 @@ PYTORCH_KERNEL_CACHE_PATH=/tank/chreatures/cache/torch-learning \
 
 This starts an independent in-process GPU brain and research residents. It does
 not call the live services on ports 8765, 8767 or 8768.
+
+A matched-rewire training control uses the identical initialized actor,
+configuration, seed, curriculum and sparse ports. `--port-graph` validates the
+serialized ports against their canonical source, then requires exact neuron
+identity and ordering before using the separate recurrence graph:
+
+```sh
+.../learn_affordances.py \
+  --graph /tank/chreatures/data/malecns/controls/matched-rewire-v1-seed20260905 \
+  --port-graph /tank/chreatures/data/malecns/derived \
+  --port-bundle /tank/chreatures/data/ports/retinal-v1-maps.npz \
+  --output /tank/chreatures/runs/learning/affordance-matched-rewire-16x3-v1 \
+  --worlds 16 --steps 20000 --episode-steps 400 --macro-steps 5 \
+  --rollout-decisions 64 --checkpoint-every 4000 --brain-backend triton \
+  --eval-worlds 4 --eval-steps 800 --workers 16 --seed 20260906
+```
 
 ## Persistence and export
 

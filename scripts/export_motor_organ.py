@@ -36,6 +36,8 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--port-spec-sha256", required=True)
     parser.add_argument("--port-bundle-sha256")
     parser.add_argument("--run-record", type=Path)
+    parser.add_argument("--training-genome", type=Path,
+                        help="optional runner genome whose model arrays must match the checkpoint")
     parser.add_argument("--cohort-checkpoint", type=Path,
                         help="full cohort JSON.gz used to derive the physical interface")
     parser.add_argument("--sensorium-interface")
@@ -70,6 +72,14 @@ def main() -> int:
         "normalizer_mean": np.asarray(moments["mean"], dtype=np.float64),
         "normalizer_m2": np.asarray(moments["m2"], dtype=np.float64),
     })
+    training_genome_hash = None
+    if args.training_genome:
+        genome_path = args.training_genome.resolve()
+        training_genome_hash = sha256(genome_path)
+        with np.load(genome_path, allow_pickle=False) as genome:
+            for name in trainer.model.state_dict():
+                if name not in genome.files or not np.array_equal(state[name], np.asarray(genome[name])):
+                    raise SystemExit(f"training genome array differs from checkpoint: {name}")
     run = None
     if args.run_record:
         run = json.loads(args.run_record.read_text())
@@ -137,6 +147,7 @@ def main() -> int:
         )
     provenance = {
         "checkpoint_sha256": sha256(checkpoint),
+        "training_genome_sha256": training_genome_hash,
         "graph_sha256": args.graph_sha256,
         "port_spec_sha256": args.port_spec_sha256,
         "port_bundle_sha256": args.port_bundle_sha256,

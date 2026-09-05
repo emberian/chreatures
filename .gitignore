@@ -21,3 +21,6 @@ target/
 *.pem
 *.key
 /hollow-garden-first.png
+
+# Local full connectome Metal buffers (derived from separately licensed data).
+/data/metal-brain/
