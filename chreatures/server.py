@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import json
 import logging
 import time
@@ -10,7 +11,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .runtime import Habitat
@@ -22,7 +23,8 @@ log = logging.getLogger("chreatures")
 
 def create_app(checkpoint: Path | None = None, seed=7, autostep=True, dimension=2, brain_url="http://127.0.0.1:18765",
                body_mode="articulated", ecology="diffusion", resources=None, acoustics=None, motor_genome=None,
-               personal_memory=False, habitat_spec=None, perception_url=None):
+               personal_memory=False, habitat_spec=None, perception_url=None, physics_backend=None,
+               personal_plasticity=False):
     checkpoint = checkpoint or ROOT / ("runs/hollow-garden.json" if dimension == 3 else "runs/residents.json")
     authority = {"habitat": None, "error": None, "alive": True}
     lock = asyncio.Lock()
@@ -36,6 +38,8 @@ def create_app(checkpoint: Path | None = None, seed=7, autostep=True, dimension=
                     seed, brain_url, body_mode=body_mode, ecology=ecology, resources=resources,
                     acoustics=acoustics, motor_genome=motor_genome, personal_memory=personal_memory,
                     perception_url=perception_url,
+                    physics_backend=physics_backend,
+                    personal_plasticity=personal_plasticity,
                     spec=json.loads(Path(habitat_spec).read_text()) if habitat_spec is not None else None)
             else:
                 authority["habitat"] = Habitat.load(checkpoint) if checkpoint.exists() else Habitat(seed)
@@ -178,6 +182,16 @@ def create_app(checkpoint: Path | None = None, seed=7, autostep=True, dimension=
             get_habitat().save(checkpoint)
         return FileResponse(checkpoint, filename="chreatures-checkpoint.json", media_type="application/json")
 
+    @app.get("/api/vision/{resident}/frame")
+    async def visual_frame(resident: str):
+        async with lock:
+            vision = getattr(get_habitat(), "vision", None)
+            if vision is None or resident not in vision.frames:
+                raise HTTPException(404, "No delivered native view for this resident")
+            return Response(base64.b64decode(vision.frames[resident]), media_type="image/png",
+                            headers={"ETag": '"' + vision.latest[resident]["frame_sha256"] + '"',
+                                     "Cache-Control": "no-store"})
+
     @app.post("/api/command")
     async def command(request: Request):
         check_origin(request.headers)
@@ -242,16 +256,21 @@ def main(default_dimension=2):
                         help="Inherited NumPy motor artifact for new worlds; existing lives keep their controllers")
     parser.add_argument("--personal-memory", action="store_true",
                         help="Learn private action consequences around the inherited motor for new worlds")
+    parser.add_argument("--personal-plasticity", action="store_true",
+                        help="Learn a private motor adapter from actual bodily consequences in new worlds")
     parser.add_argument("--habitat", type=Path,
                         help="Physical habitat specification for new 3D worlds; saved worlds contain their own specification")
     parser.add_argument("--perception-url",
                         help="Optional native visual feature service for new personal-memory residents")
+    parser.add_argument("--physics-backend", choices=("reference", "vectorized"),
+                        help="Execution path for new worlds; articulated worlds default to vectorized")
     args = parser.parse_args()
     uvicorn.run(create_app(args.checkpoint, args.seed, dimension=args.dimension, brain_url=args.brain_url,
                           body_mode=args.body, ecology=args.ecology, resources=args.resources,
                           acoustics=args.acoustics, motor_genome=args.motor_genome,
                           personal_memory=args.personal_memory, habitat_spec=args.habitat,
-                          perception_url=args.perception_url), host=args.host, port=args.port)
+                          perception_url=args.perception_url, physics_backend=args.physics_backend,
+                          personal_plasticity=args.personal_plasticity), host=args.host, port=args.port)
 
 
 def main3d():

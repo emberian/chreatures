@@ -43,6 +43,7 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--training-lineage", default="unknown")
     parser.add_argument("--objective-label", default="unknown")
     parser.add_argument("--training-scope", default="unknown")
+    parser.add_argument("--deployment-caveat", default="unknown")
     parser.add_argument("--cohort-checkpoint", type=Path,
                         help="full cohort JSON.gz used to derive the physical interface")
     parser.add_argument("--sensorium-interface")
@@ -93,6 +94,10 @@ def main() -> int:
         evaluation = {
             "summary_sha256": sha256(summary_path),
             "steps": summary.get("steps"),
+            "scope": {
+                key: summary.get("config", {}).get(key)
+                for key in ("eval_steps", "eval_worlds", "seed")
+            },
             "evaluations": summary.get("evaluations"),
         }
     run = None
@@ -104,6 +109,13 @@ def main() -> int:
         ):
             if recorded is not None and supplied != recorded:
                 raise SystemExit("supplied provenance differs from run record")
+        objective_value = run.get("reward_objective")
+        if objective_value is not None:
+            if objective_value.get("format") == "chreatures-finite-energy-homeostasis-v1":
+                from chreatures.homeostasis import FiniteEnergyConfig
+                FiniteEnergyConfig.from_value(objective_value)
+            else:
+                raise SystemExit("run record contains an unsupported explicit reward objective")
     interface = {
         "sensorium": args.sensorium_interface or "unknown",
         "body": args.body_interface or "unknown",
@@ -177,7 +189,9 @@ def main() -> int:
         "training_design": {
             "lineage": args.training_lineage,
             "objective": args.objective_label,
+            "objective_config": run.get("reward_objective") if run else None,
             "scope": args.training_scope,
+            "deployment_caveat": args.deployment_caveat,
         },
         "heldout_evaluation": evaluation,
     }

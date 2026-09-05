@@ -73,9 +73,25 @@ Use a fresh checkpoint and a separate ordered neural service. The inherited moto
 
 The newer [terrarium](docs/TERRARIUM.md) adds connected terraces, an underdeck, a return ramp, renewable movable food and five acoustic mechanisms. The [visitor panel](docs/VISITOR.md) records and schedules sound, light and physical gestures in model time, including across a checkpoint.
 
+The latest **learning garden** adds a [passive pressure lift and coupled gate](docs/MECHANICAL_ASSEMBLIES.md), an inherited finite-energy policy, and [private lifetime motor plasticity](docs/PERSONAL_PLASTICITY.md). Reed, Tansy and Sorrel have separate actor/value parameters and eligibility traces. Their actual five-tick bodily consequences update their own motor tendencies; contextual and visual evidence use the same versioned physiological objective. For a new world with its own neural service:
+
+```sh
+uv run chreatures3d --port 8771 --brain-url http://127.0.0.1:18768 \
+  --checkpoint runs/learning-garden.json \
+  --habitat data/habitats/learning-garden.json \
+  --motor-genome data/genomes/nursery-20000-finite-energy.npz \
+  --personal-memory --personal-plasticity \
+  --resources data/ecology/terrarium-orchard.json \
+  --acoustics data/components/terrarium-play.json
+```
+
+The fresh finite-energy training run improved short held-out bodily return from 0.092 to 0.122; silencing neural features scored -0.961. Those probes lasted only 40 model seconds. Longer observation of the older inherited residents exposed reserve depletion and persistent fatigue. **Sustained feeding and recovery remain unmet capabilities.** New [embodied developmental worlds](docs/EMBODIED_TRAINING.md) use the actual body-frame senses, diffusion and resource ecology, with 1,200-second horizons. The optional [edge-tiled AMD backend](docs/TILED_CIRCUIT.md) cuts a complete B48 device update from 34.1 to 20.5 ms.
+
 ![The terrarium running full MaleCNS on Metal](docs/assets/terrarium-garden.png)
 
 Optional native vision now joins the personal motor loop. A resident's actual camera captures a pair of views around one five-tick motor action. A fixed model-time delivery boundary makes those delayed features available to its private [visual episodic memory](docs/VISUAL_EPISODES.md), which can contribute bounded action evidence. More than twenty genuine pairs have been retained in the live terrarium; improved visual decisions remain unestablished. The native inference service setup is in [PERCEPTION.md](docs/PERCEPTION.md).
+
+The original terrarium retained the legacy retinal frame because its supplied habitat lacked an explicit selector. The newer learning garden explicitly uses `body-v1`, including complete body rotation and self-occlusion. New world construction now makes that choice explicit; restoration preserves each older world's saved semantics.
 
 For a fresh terrarium, use the terrarium habitat/resource/acoustic JSON files and add `--perception-url http://127.0.0.1:18775` when that service is available. Existing saved lives retain their own organs. Open `/observatory` for native GAM fits and the navigable Weave evidence graph; the scientific archive remains separate from personal memory.
 

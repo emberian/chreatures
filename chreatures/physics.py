@@ -22,6 +22,8 @@ from typing import Any
 import mujoco
 import numpy as np
 
+from .mechanics import assembly_view, equality_xml, normalize_assemblies
+
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SPEC = ROOT / "data/habitats/hollow-garden.json"
@@ -29,7 +31,7 @@ MODEL_DT = 0.05
 STATE_SPEC = mujoco.mjtState.mjSTATE_INTEGRATION
 _ID = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,95}$")
 _SHAPES = {"box", "sphere", "capsule", "cylinder", "ellipsoid"}
-_MOBILITY = {"static", "free", "hinge"}
+_MOBILITY = {"static", "free", "hinge", "slide"}
 _MUTABLE_MODEL_FIELDS = (
     "geom_size", "geom_pos", "geom_quat", "geom_rgba", "geom_friction",
     "geom_contype", "geom_conaffinity", "mat_rgba", "light_pos", "light_diffuse",
@@ -187,8 +189,8 @@ class PhysicsWorld:
     def _validate_spec(spec: dict[str, Any]) -> None:
         if not isinstance(spec, dict) or spec.get("version") != 1:
             raise ValueError("unsupported habitat specification")
-        size = _vector(spec.get("size"), 3, "size")
-        if any(value <= 0.0 for value in size):
+        habitat_size = _vector(spec.get("size"), 3, "size")
+        if any(value <= 0.0 for value in habitat_size):
             raise ValueError("habitat size must be positive")
         _vector(spec.get("gravity"), 3, "gravity")
         _number(spec.get("physics_timestep"), "physics_timestep", 0.0001, 0.02)
@@ -226,12 +228,14 @@ class PhysicsWorld:
             _vector(body.get("position"), 3, "body position")
             _number(body.get("heading", 0.0), "body heading", -1e4, 1e4)
         entity_ids: set[str] = set()
+        expanded_entities: list[dict[str, Any]] = []
         presets = spec.get("presets", {})
         for raw in spec["entities"]:
             if not isinstance(raw, dict) or not _ID.match(str(raw.get("id", ""))) or raw["id"] in entity_ids or raw["id"] in body_ids:
                 raise ValueError("entity ids must be globally unique")
             entity_ids.add(raw["id"])
             entity = PhysicsWorld._expand_entity(raw, presets)
+            expanded_entities.append(entity)
             if entity.get("mobility") not in _MOBILITY:
                 raise ValueError(f"invalid mobility for {entity['id']}")
             if entity.get("material") not in materials or entity.get("physical_material") not in physical:
@@ -239,18 +243,22 @@ class PhysicsWorld:
             _vector(entity.get("position"), 3, f"{entity['id']} position")
             if "quaternion" in entity:
                 _unit_quaternion(entity["quaternion"])
-            if entity["mobility"] == "hinge":
+            if entity["mobility"] in {"hinge", "slide"}:
                 joint = entity.get("joint", {})
                 if not isinstance(joint, dict):
-                    raise ValueError(f"invalid hinge joint on {entity['id']}")
+                    raise ValueError(f"invalid one-axis joint on {entity['id']}")
+                if set(joint) - {"axis", "range", "damping", "initial"}:
+                    raise ValueError(f"unknown joint field on {entity['id']}")
                 axis = np.asarray(_vector(joint.get("axis", [0, 1, 0]), 3, "hinge axis"), dtype=float)
                 if float(np.linalg.norm(axis)) < 1e-9:
-                    raise ValueError("hinge axis cannot be zero")
-                limits = _vector(joint.get("range", [-45, 45]), 2, "hinge range", 360.0)
+                    raise ValueError("joint axis cannot be zero")
+                default_range = [-45, 45] if entity["mobility"] == "hinge" else [0, 1]
+                range_bound = 360.0 if entity["mobility"] == "hinge" else max(habitat_size) * 2.0
+                limits = _vector(joint.get("range", default_range), 2, "joint range", range_bound)
                 if limits[0] >= limits[1]:
-                    raise ValueError("hinge range must be increasing")
-                _number(joint.get("damping", 0.05), "hinge damping", 0.0, 1e4)
-                _number(joint.get("initial", 0.0), "hinge initial", limits[0], limits[1])
+                    raise ValueError("joint range must be increasing")
+                _number(joint.get("damping", 0.05), "joint damping", 0.0, 1e4)
+                _number(joint.get("initial", 0.0), "joint initial", limits[0], limits[1])
             shapes = entity.get("shapes")
             if not isinstance(shapes, list) or not shapes:
                 raise ValueError(f"{entity['id']} requires at least one shape")
@@ -387,6 +395,7 @@ class PhysicsWorld:
         _number(limits.get("acoustic_work", 5.0), "acoustic work limit", 1e-8, 5.0)
         if len(spec["entities"]) > int(limits.get("entities", 96)):
             raise ValueError("entity capacity exceeded")
+        normalize_assemblies(spec.get("assemblies", []), expanded_entities)
 
     @staticmethod
     def _expand_entity(raw: dict[str, Any], presets: dict[str, Any]) -> dict[str, Any]:
@@ -436,10 +445,10 @@ class PhysicsWorld:
         mobility = entity["mobility"]
         if mobility == "free":
             pieces.append(f'<freejoint name="entity:{entity_id}:free"/>')
-        elif mobility == "hinge":
+        elif mobility in {"hinge", "slide"}:
             joint = entity.get("joint", {})
             pieces.append(
-                f'<joint {self._attrs({"name": f"entity:{entity_id}:hinge", "type": "hinge", "axis": joint.get("axis", [0, 1, 0]), "range": joint.get("range", [-45, 45]), "limited": "true", "damping": joint.get("damping", 0.05), "armature": 0.001})}/>'
+                f'<joint {self._attrs({"name": f"entity:{entity_id}:{mobility}", "type": mobility, "axis": joint.get("axis", [0, 1, 0]), "range": joint.get("range", [-45, 45] if mobility == "hinge" else [0, 1]), "limited": "true", "damping": joint.get("damping", 0.05), "armature": 0.001})}/>'
             )
         physical = self.spec["physical_materials"][entity["physical_material"]]
         for index, shape in enumerate(entity["shapes"]):
@@ -464,6 +473,7 @@ class PhysicsWorld:
 
     def _compile_model(self) -> None:
         self._entities = [self._expand_entity(raw, self.spec.get("presets", {})) for raw in self.spec["entities"]]
+        self._assemblies = normalize_assemblies(self.spec.get("assemblies", []), self._entities)
         assets = []
         material_order = self.spec.get("compiler", {}).get("material_order", self.spec["materials"])
         for name in material_order:
@@ -475,11 +485,14 @@ class PhysicsWorld:
         ]
         world.extend(self.build_body(body) for body in self.spec["bodies"])
         world.extend(self._entity_xml(entity) for entity in self._entities)
+        assembly_constraints = equality_xml(
+            self._assemblies, {entity["id"]: entity["mobility"] for entity in self._entities},
+        )
         xml = (
             '<mujoco model="hollow-garden"><compiler angle="degree" coordinate="local"/>'
             f'<option timestep="{float(self.spec["physics_timestep"]):.10g}" gravity="{self._attrs_value(self.spec["gravity"])}" integrator="implicitfast" cone="elliptic"/>'
             '<size njmax="3000" nconmax="800"/><visual><map znear="0.01"/></visual>'
-            f'<asset>{"".join(assets)}</asset><worldbody>{"".join(world)}</worldbody></mujoco>'
+            f'<asset>{"".join(assets)}</asset><worldbody>{"".join(world)}</worldbody>{assembly_constraints}</mujoco>'
         )
         self._xml = xml
         self.model = mujoco.MjModel.from_xml_string(xml)
@@ -503,15 +516,17 @@ class PhysicsWorld:
         self._entity_joint = {}
         for entity in self._entities:
             if entity["mobility"] != "static":
-                suffix = "free" if entity["mobility"] == "free" else "hinge"
+                suffix = entity["mobility"]
                 self._entity_joint[entity["id"]] = mujoco.mj_name2id(
                     self.model, mujoco.mjtObj.mjOBJ_JOINT, f"entity:{entity['id']}:{suffix}"
                 )
         for entity in self._entities:
-            if entity["mobility"] == "hinge":
+            if entity["mobility"] in {"hinge", "slide"}:
                 initial = float(entity.get("joint", {}).get("initial", 0.0))
                 joint_id = self._entity_joint[entity["id"]]
-                self.data.qpos[self.model.jnt_qposadr[joint_id]] = math.radians(initial)
+                self.data.qpos[self.model.jnt_qposadr[joint_id]] = (
+                    math.radians(initial) if entity["mobility"] == "hinge" else initial
+                )
         self._geom_entity: dict[int, str] = {}
         self._geom_resident: dict[int, str] = {}
         for geom_id in range(self.model.ngeom):
@@ -1404,7 +1419,7 @@ class PhysicsWorld:
             if entity["id"] in self._entity_joint:
                 joint_id = self._entity_joint[entity["id"]]
                 qadr, dadr = int(self.model.jnt_qposadr[joint_id]), int(self.model.jnt_dofadr[joint_id])
-                if entity["mobility"] == "hinge":
+                if entity["mobility"] in {"hinge", "slide"}:
                     value["joint"] = {"position": float(self.data.qpos[qadr]), "velocity": float(self.data.qvel[dadr])}
             entities.append(value)
         body_views = []
@@ -1418,6 +1433,7 @@ class PhysicsWorld:
             "dimension": 3, "width": self.width, "height": self.height, "depth": self.depth,
             "time": self.time, "bodies": body_views,
             "objects": [obj.to_dict() for obj in self.objects], "entities": entities,
+            "assemblies": assembly_view(self._assemblies, self.model, self.data, self._entity_joint),
             "signals": [signal.to_dict() for signal in self.signals], "hand": copy.deepcopy(self._hand),
             "light": copy.deepcopy(self._light), "lights": self._scene_lights(),
             "engine": {"name": "MuJoCo", "version": mujoco.__version__},

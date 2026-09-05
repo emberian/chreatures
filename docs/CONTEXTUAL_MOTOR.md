@@ -81,10 +81,42 @@ energy_delta, gut_delta, fatigue_delta, nutrition, effort, contact
 ```
 
 `nutrition`, `effort`, and `contact` must come from the physical world's
-outcome. The organ learns reduction in a smooth energy/gut/fatigue drive plus a
-small direct nutrition term and effort cost. It also learns a regularized
-linear value over resulting anonymous features after eight transitions. It
-does not assign value to named things or locations.
+outcome. `effort` is the time integral over the 0.25-second macro, formed by
+summing each measured effort rate times its physical `dt`.
+
+Utility is explicitly versioned. `legacy-quadratic-v1` remains the default for
+standalone refiners and for snapshots that do not contain a utility profile.
+It retains the original target-centered energy/gut/fatigue drive and direct
+nutrition term exactly, including its known behavior of valuing movement from
+energy above 0.85 toward that target. Existing lives therefore do not silently
+change their learned action scores when restored.
+
+New `LivingMotorOrgan(..., plasticity=True)` instances instead require
+`finite-energy-v1`. This profile uses the same immutable, checksummed
+`FiniteEnergyConfig` as the private actor. Its smooth one-sided reserve
+potential is monotonic in energy, and nutrition is recorded without a second
+bonus because ingestion already changes the measured gut state. The contextual
+helper converts aggregate effort back to the interval mean once, then the
+finite objective integrates it once. It also learns a regularized linear value
+over resulting anonymous features after eight transitions. It does not assign
+value to named things or locations.
+
+External candidate evidence can use the identical accounting function:
+
+```python
+reward, terms = refiner.config.transition_utility(
+    before_physiology,
+    after_physiology,
+    {"nutrition": nutrition, "effort": effort_integral},
+    duration=0.25,
+)
+identity = refiner.config.finite_energy_sha256
+```
+
+The returned terms include the potential delta, physical effort cost,
+observed nutrition, effort integral, and duration. The SHA-256 identifies the
+exact immutable finite-energy coefficients used by actor, refiner, and any
+external evidence callback.
 
 `record` requires the memory's current observation to equal the supplied
 pre-action feature. This catches stale or reordered asynchronous results. A
@@ -143,6 +175,9 @@ ancestral baselines use `MotorOrgan.rng`, so exact continuation of the joined
 decision also requires the motor organ's private snapshot. This is private
 per-resident state. The inherited motor artifact is referenced in decision
 provenance by SHA-256 and remains under the motor organ's own snapshot contract.
+Finite-profile snapshots additionally embed the checksummed
+`FiniteEnergyConfig`. Legacy snapshots omit both new utility fields and restore
+to `legacy-quadratic-v1`.
 
 An empty-memory comparison used two `MotorOrgan` instances with the same seed
 and trained artifact. Direct `tick` and `refine_and_commit` returned the exact

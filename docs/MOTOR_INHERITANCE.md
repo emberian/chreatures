@@ -116,6 +116,9 @@ snapshot establishes.  Explicit `--sensorium-interface`, `--body-interface`,
 checkpoints; absent evidence is written as `unknown` rather than guessed.
 When present, the run record also supplies the source habitat, physics module,
 and sensorium module hashes independently of the randomized checkpoint world.
+For a run with an explicit versioned reward objective, the exporter validates
+and embeds the complete configuration.  Evaluation provenance carries the
+held-out world count, tick count, and seed alongside the reported metrics.
 
 The step-1230 equivalence-check cohort has no `spec.sensorium` field.  Its artifact is
 therefore labeled `legacy-world-v0-default (spec.sensorium absent)` with
@@ -252,3 +255,41 @@ legacy symmetric potential can reward energy expenditure above `0.85`, so its
 positive return may partly represent movement toward that target by burning
 energy.  This artifact preserves the same legacy sensorium and chemistry
 transfer caveats as the other nursery genomes.
+
+## Fresh finite-energy 20,000-step artifact
+
+`data/genomes/nursery-20000-finite-energy.npz` is the experimental baseline
+trained from the zero-update initialization with the versioned finite-energy
+objective.  Its metadata embeds the exact objective value from `run.json` and
+validates configuration SHA-256
+`01ae937a153a056c8cc5fa5be4d55cdfb38dbfcede4dbceb16ec33e19c5f4d00`;
+the label is not inferred from the directory name.
+
+- canonical artifact SHA-256:
+  `34f7318965f39efe6527229b6eb6e39a90c5c79db912a61938a6c2240ad86c37`
+- NPZ file SHA-256:
+  `5282681d1836e032a528d5c76cb987912cde29e898ceb9b2cbeb362380138529`
+- learned training-genome SHA-256:
+  `9e8582452427fcc4ca7d613f2de5d4a06ee8e21be668f9494fe8223b12e4859f`
+- zero-update initial-genome SHA-256:
+  `820c876fdd30330c26849544571f2f60d2a938b3a1029b3f86423ade630973e8`
+- final learner checkpoint SHA-256:
+  `5ed22cc4dc58e34d5ffb2c7fcf57cfaabe26075fe930b3553b8b2cb1668bc21c`
+- linked cohort checkpoint SHA-256:
+  `47015b5789177113eeccc0417aaa61ccfb0f152034b5ad177c3c8079affaa1f4`
+
+The run is a fresh one-topology, one-seed cohort with 960,000 resident-step
+exposures and 63 PPO updates.  Its held-out measurement covers four worlds for
+800 ticks, only 40 model-seconds.  Learned reward was `0.122391`, versus
+`0.091740` for initialization and `-0.960556` with neural features silenced.
+Learned nutrition was `2.867567`, versus `0.594270` initially and `2.211617`
+when silenced.  This is a modest short-horizon sensor-dependent improvement
+under the finite-energy objective.
+
+It is not evidence of sustained autonomous regulation: 40 seconds does not
+exercise the collapse observed around 1,100 seconds in existing warm worlds.
+Training still used the legacy-world-v0 sensorium, analytic odor, short
+20-second episodes, and reset physiology.  Hatching it into the warm body-v1,
+diffusion, finite-resource world is a cross-environment transfer.  The artifact
+is an experimental inherited baseline for a new private actor generation, not
+a repair or replacement for an existing resident.
