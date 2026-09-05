@@ -58,7 +58,19 @@ Open **http://127.0.0.1:8768**. The example assumes the rich neural service is f
 
 Actual circuit workloads have run on an AMD RX 6750 XT and Radeon 890M. [GPU results](docs/GPU_NURSERY.md), [developmental training](docs/DEVELOPMENT.md), [3D direction](docs/THREE_DIMENSIONS.md), [articulated body](docs/ARTICULATED.md), [chemical fields](docs/FIELDS.md), [retinal ports](docs/NEURAL_PORTS.md).
 
-The next learning stage uses a shared predictive actor–critic with private recurrent state, articulated environments in persistent worker processes, and the full neural graph on every physical tick. [Learning protocol](docs/LEARNING.md) and [measured sparse-loop optimization](docs/FAST_CIRCUIT.md). Training is running; useful learned behavior must still earn its claim in held-out environments and neural controls.
+Development uses a shared predictive actor–critic with private recurrent state, articulated environments in persistent worker processes, and the full neural graph on every physical tick. The native AMD kernel improved a paired 48-resident neural benchmark by **5.84×**. The first 8,000-step stage showed a modest **12% increase in held-out ingestion**; its overall regulation score remains mixed. [Learning protocol](docs/LEARNING.md), [measured sparse-loop optimization](docs/FAST_CIRCUIT.md), and [physical throughput](docs/PHYSICAL_THROUGHPUT.md).
+
+A small [trained motor artifact](data/genomes/nursery-8000.npz) is included. For a new experimental world, add:
+
+```sh
+--motor-genome data/genomes/nursery-8000.npz \
+--resources data/ecology/portable-orchard.json \
+--acoustics data/components/acoustic-play.json
+```
+
+Use a fresh checkpoint and a separate ordered neural service. The inherited motor runs on NumPy, with private working context and random state. It is distinct from personal episodic learning. Its training used earlier camera and odor semantics, so this richer world is a [transfer experiment](docs/MOTOR_INHERITANCE.md). [Resource production](docs/ECOLOGY.md) and [physical sound](docs/ACOUSTICS.md) preserve finite pools and transfer histories in the whole-world checkpoint.
+
+Open `/observatory` for the native GAM fits and navigable Weave evidence graph. [Visual memory](docs/VISUAL_MEMORY.md), [contextual maps](docs/CONTEXT_MEMORY.md), and [asynchronous native perception](docs/PERCEPTION.md) are separate developing organs; they are not all active in existing residents.
 
 ## Building wide and deep
 

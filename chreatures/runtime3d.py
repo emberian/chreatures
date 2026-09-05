@@ -24,9 +24,12 @@ from .runtime import canonical
 
 class Habitat3D:
     def __init__(self, seed=7, brain_url="http://127.0.0.1:18765", spec=None,
-                 body_mode="articulated", ecology="diffusion"):
+                 body_mode="articulated", ecology="diffusion", resources=None, acoustics=None,
+                 motor_genome=None):
         from .sensorium import SensoriumWorld, ArticulatedSensoriumWorld
         from .fields import FieldEnvironment
+        from .ecology import Ecology
+        from .acoustics import Acoustics
         if body_mode not in ("crawler", "articulated") or ecology not in ("analytic", "diffusion"):
             raise ValueError("Unknown body or ecology model")
         if spec is None:
@@ -36,9 +39,21 @@ class Habitat3D:
         world_type = ArticulatedSensoriumWorld if body_mode == "articulated" else SensoriumWorld
         self.world = world_type(seed=seed, spec=spec)
         self.field = FieldEnvironment.from_world(self.world) if ecology == "diffusion" else None
+        self.resources = Ecology(self.world, resources, seed=seed) if resources is not None else None
+        self.resource_state = None
+        self.acoustics = Acoustics(self.world, acoustics) if acoustics is not None else None
+        self.acoustic_state = None
         self.last_senses = {}
         self.sensed_at = 0.0
         self.neural = NeuralClient(brain_url)
+        self.motor_artifact = None
+        self.motors = {}
+        if motor_genome is not None:
+            from .motor_inheritance import MotorArtifact, MotorOrgan
+            self.motor_artifact = MotorArtifact.load(motor_genome)
+            self._validate_motor_interface()
+            self.motors = {b.id: MotorOrgan(self.motor_artifact, seed=seed * 1009 + i)
+                           for i, b in enumerate(self.world.bodies)}
         self.id = str(uuid.uuid4())
         self.tick = 0
         self.paused = False
@@ -48,7 +63,7 @@ class Habitat3D:
         self.error = None
         self.remote_ids = {b.id: f"{self.id}:{b.id}" for b in self.world.bodies}
         self.neural.create(list(self.remote_ids.values()))
-        self.organs = {b.id: AdaptiveOrgan(feature_dim=len(self.neural.output_names), seed=seed) for b in self.world.bodies}
+        self.organs = {} if self.motors else {b.id: AdaptiveOrgan(feature_dim=len(self.neural.output_names), seed=seed) for b in self.world.bodies}
         for i, organ in enumerate(self.organs.values()):
             # Shared inherited maps; separate stochastic lives.
             organ.rng = np.random.default_rng(seed * 1009 + i)
@@ -62,6 +77,32 @@ class Habitat3D:
         self.phase_timings = deque(maxlen=120)
         self.pending_step = None
         self.note("hatched", "Three new residents entered the hollow garden with full MaleCNS circuits.")
+        if self.motor_artifact is not None:
+            self.note("inheritance", "Inherited a population-trained motor interface and private working context.",
+                      artifact_sha256=self.motor_artifact.sha256,
+                      training=self.motor_artifact.metadata["training_provenance"])
+
+    def _validate_motor_interface(self):
+        artifact = self.motor_artifact
+        if artifact is None:
+            return
+        provenance = artifact.metadata["training_provenance"]
+        if (provenance["graph_sha256"] != self.neural.graph["sha256"]
+                or provenance["port_spec_sha256"] != self.neural.metadata["brain"].get("ports", {}).get("spec_hash")
+                or artifact.config["feature_dim"] != len(self.neural.output_names)):
+            raise ValueError("Inherited motor anatomy or neural interface differs from this world")
+
+    def memory_count(self, body_id):
+        return len(self.organs[body_id].memory.records) if body_id in self.organs else 0
+
+    def cognitive_view(self):
+        if not self.motors:
+            return {key: organ.view() for key, organ in self.organs.items()}
+        return {key: {**motor.view(), "controller": "inherited-predictive-ppo",
+                       "time": self.world.time, "memory_count": 0, "learning": False,
+                       "metrics": {"prediction_error": motor.last_prediction_error or 0.0,
+                                   "learning_progress": 0.0}}
+                for key, motor in self.motors.items()}
 
     def sense(self):
         """Sample the body, including local concentration from physical transport."""
@@ -104,14 +145,17 @@ class Habitat3D:
                 body_id = inverse[response["id"]]
                 body = next(b for b in self.world.bodies if b.id == body_id)
                 features = np.asarray(response["features"], dtype=np.float32)
-                mean, variance = self.feature_mean[body_id], self.feature_variance[body_id]
-                delta = features - mean
-                mean += np.float32(dt / 20) * delta
-                variance += np.float32(dt / 20) * (delta * delta - variance)
-                normalized = np.clip(delta / np.sqrt(np.maximum(variance, 1e-6)), -2, 2)
                 local_body = {key: float(getattr(body, key)) for key in ("energy", "gut", "fatigue", "speed", "angular_velocity")}
                 local_body["support"] = float(response["support"])
-                action = self.organs[body_id].step(normalized, local_body, self.outcomes[body_id], dt)
+                if self.motors:
+                    action = self.motors[body_id].tick(features, local_body, dt)
+                else:
+                    mean, variance = self.feature_mean[body_id], self.feature_variance[body_id]
+                    delta = features - mean
+                    mean += np.float32(dt / 20) * delta
+                    variance += np.float32(dt / 20) * (delta * delta - variance)
+                    normalized = np.clip(delta / np.sqrt(np.maximum(variance, 1e-6)), -2, 2)
+                    action = self.organs[body_id].step(normalized, local_body, self.outcomes[body_id], dt)
                 for channel in ("grip", "signal_low", "signal_mid", "signal_high"):
                     action[channel] = max(0.0, action[channel])
                 # Ingestion is an embodied contact reflex, not an object/position
@@ -122,6 +166,12 @@ class Habitat3D:
             cognition_done = time.perf_counter()
             self.outcomes = self.world.advance(actions, dt)
             physics_done = time.perf_counter()
+            if self.acoustics is not None:
+                self.acoustic_state = self.acoustics.advance(dt)
+            acoustics_done = time.perf_counter()
+            if self.resources is not None:
+                self.resource_state = self.resources.advance(dt)
+            resources_done = time.perf_counter()
             if self.field is not None:
                 self.field.advance(dt, sources=self.field.sources_from_world(self.world))
             fields_done = time.perf_counter()
@@ -129,7 +179,9 @@ class Habitat3D:
                                        "neural": (neural_done-sensed_done)*1000,
                                        "cognition": (cognition_done-neural_done)*1000,
                                        "physics": (physics_done-cognition_done)*1000,
-                                       "fields": (fields_done-physics_done)*1000})
+                                       "acoustics": (acoustics_done-physics_done)*1000,
+                                       "resources": (resources_done-acoustics_done)*1000,
+                                       "fields": (fields_done-resources_done)*1000})
             self.tick += 1
             self.pending_step = None
             for b in self.world.bodies:
@@ -138,7 +190,7 @@ class Habitat3D:
                 if self.tick % 10 == 0:
                     self.history[b.id].append({"time": self.world.time, "x": float(b.x), "y": float(b.y), "z": float(b.z),
                                                "energy": b.energy, "activity": self.neural_state[b.id]["activity"],
-                                               "memory": len(self.organs[b.id].memory.records)})
+                                               "memory": self.memory_count(b.id)})
             self.timings.append((time.perf_counter() - started) * 1000)
 
     def command(self, command):
@@ -170,10 +222,12 @@ class Habitat3D:
         view.update({"id": self.id, "tick": self.tick, "branch": self.branch, "paused": self.paused,
                      "speed": self.speed, "saved_at": self.saved_at, "error": self.error,
                      "neural": copy.deepcopy(self.neural_state),
-                     "cognition": {key: organ.view() for key, organ in self.organs.items()},
+                     "cognition": self.cognitive_view(),
                      "senses": copy.deepcopy(self.last_senses or self.sense()), "sensed_at": self.sensed_at,
                      "ecology": {"kind": "diffusion", "channels": self.field.channels,
                                  "time": self.field.time} if self.field is not None else {"kind": "analytic"},
+                     "resources": copy.deepcopy(self.resource_state),
+                     "acoustics": copy.deepcopy(self.acoustic_state),
                      "journal": list(self.journal)[-40:], "history": {k: list(v) for k, v in self.history.items()},
                      "anatomy": {"dataset": "MaleCNS v1.0", "neurons": self.neural.graph["neurons"],
                                  "connections": self.neural.graph["edges"], "sha256": self.neural.graph["sha256"],
@@ -192,9 +246,15 @@ class Habitat3D:
                  "branch": self.branch, "paused": self.paused, "speed": self.speed,
                  "world": self.world.snapshot(), "body_mode": self.body_mode,
                  "field": self.field.snapshot() if self.field is not None else None,
+                 "resources": self.resources.snapshot() if self.resources is not None else None,
+                 "resource_state": self.resource_state,
+                 "acoustics": self.acoustics.snapshot() if self.acoustics is not None else None,
+                 "acoustic_state": self.acoustic_state,
                  "last_senses": self.last_senses, "sensed_at": self.sensed_at,
                  "input_names": self.neural.input_names, "output_names": self.neural.output_names,
                  "organs": {k: v.snapshot() for k, v in self.organs.items()},
+                 "motor_artifact": self.motor_artifact.to_value() if self.motor_artifact is not None else None,
+                 "motors": {k: v.snapshot_value() for k, v in self.motors.items()},
                  "remote_ids": self.remote_ids, "brain_url": self.neural.url, "graph_sha256": self.neural.graph["sha256"],
                  "neural_snapshot": receipt, "neural_state": self.neural_state,
                  "outcomes": self.outcomes, "journal": list(self.journal),
@@ -217,6 +277,8 @@ class Habitat3D:
     def load(cls, path, brain_url=None):
         from .sensorium import SensoriumWorld, ArticulatedSensoriumWorld
         from .fields import FieldEnvironment
+        from .ecology import Ecology
+        from .acoustics import Acoustics
         envelope = json.loads(Path(path).read_text())
         if envelope.get("format") != "chreatures-3d-checkpoint-v1":
             raise ValueError("Unsupported 3D checkpoint")
@@ -228,10 +290,24 @@ class Habitat3D:
         world_type = ArticulatedSensoriumWorld if instance.body_mode == "articulated" else SensoriumWorld
         instance.world = world_type.restore(value["world"])
         instance.field = FieldEnvironment.restore(value["field"]) if value.get("field") is not None else None
+        instance.resources = Ecology.restore(instance.world, value["resources"]) if value.get("resources") is not None else None
+        instance.resource_state = copy.deepcopy(value.get("resource_state"))
+        instance.acoustics = Acoustics.restore(instance.world, value["acoustics"]) if value.get("acoustics") is not None else None
+        instance.acoustic_state = copy.deepcopy(value.get("acoustic_state"))
         instance.last_senses = copy.deepcopy(value.get("last_senses", {}))
         instance.sensed_at = value.get("sensed_at", instance.world.time)
         instance.organs = {key: AdaptiveOrgan.restore(organ) for key, organ in value["organs"].items()}
+        instance.motor_artifact = None
+        instance.motors = {}
+        if value.get("motor_artifact") is not None:
+            from .motor_inheritance import MotorArtifact, MotorOrgan
+            instance.motor_artifact = MotorArtifact.from_value(value["motor_artifact"])
+            instance.motors = {key: MotorOrgan.restore_value(state, instance.motor_artifact)
+                               for key, state in value["motors"].items()}
+            if set(instance.motors) != {body.id for body in instance.world.bodies} or instance.organs:
+                raise ValueError("Saved motor controllers do not match the physical cohort")
         instance.neural = NeuralClient(brain_url or value["brain_url"])
+        instance._validate_motor_interface()
         if instance.neural.graph["sha256"] != value["graph_sha256"]:
             raise ValueError("Remote anatomy differs from saved resident anatomy")
         if (value.get("input_names", instance.neural.input_names) != instance.neural.input_names
@@ -240,6 +316,9 @@ class Habitat3D:
         instance.neural.restore(value["neural_snapshot"])
         for key in ("id", "tick", "branch", "paused", "speed", "remote_ids", "neural_state", "outcomes"):
             setattr(instance, key, copy.deepcopy(value[key]))
+        # Canonical JSON sorts mapping keys; artifact row order follows the
+        # physical cohort, so reload must not reorder future neural snapshots.
+        instance.remote_ids = {body.id: value["remote_ids"][body.id] for body in instance.world.bodies}
         instance.feature_mean = {k: np.asarray(v, dtype=np.float32) for k, v in value["feature_mean"].items()}
         instance.feature_variance = {k: np.asarray(v, dtype=np.float32) for k, v in value["feature_variance"].items()}
         instance.journal = deque(value["journal"], maxlen=256)

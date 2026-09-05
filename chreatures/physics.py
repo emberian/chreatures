@@ -358,7 +358,9 @@ class PhysicsWorld:
                     if not isinstance(emitter_id, str) or not _ID.match(emitter_id):
                         raise ValueError("acoustic emitter id is invalid")
                     drive = component.get("drive", "contact")
-                    if drive not in {"contact", "hinge", "both"} or drive in {"hinge", "both"} and entity["mobility"] != "hinge":
+                    if drive not in {"contact", "hinge", "both"}:
+                        raise ValueError("acoustic drive must be contact, hinge, or both")
+                    if drive in {"hinge", "both"} and entity["mobility"] != "hinge":
                         raise ValueError("acoustic hinge drive requires a hinged entity")
                     tones = _vector(component.get("tones", [1, 0, 0]), 3, "acoustic tones", 1.0)
                     if any(value < 0.0 for value in tones) or sum(tones) <= 0.0:
@@ -377,7 +379,12 @@ class PhysicsWorld:
                     _number(component.get("occlusion", 0.12), "acoustic occlusion", 0.0, 1.0)
                     _number(component.get("hinge_damping", 0.002), "acoustic hinge damping", 0.0, 100.0)
                     _number(component.get("max_hinge_torque", 0.03), "acoustic hinge torque", 0.0, 100.0)
+                    _vector(component.get("source_offset", [0, 0, 0]), 3, "acoustic source offset", 5.0)
         limits = spec.get("limits", {})
+        if not isinstance(limits, dict):
+            raise ValueError("habitat limits must be a mapping")
+        _number(limits.get("acoustic_impulse", 10.0), "acoustic impulse limit", 1e-6, 10.0)
+        _number(limits.get("acoustic_work", 5.0), "acoustic work limit", 1e-8, 5.0)
         if len(spec["entities"]) > int(limits.get("entities", 96)):
             raise ValueError("entity capacity exceeded")
 
@@ -687,6 +694,7 @@ class PhysicsWorld:
             not callable(getattr(engine, "ingest_contact", None))
             or not callable(getattr(engine, "before_substep", None))
             or not callable(getattr(engine, "sample", None))
+            or not callable(getattr(engine, "handles", None))
         ):
             raise TypeError("acoustic engine does not implement the integration protocol")
         if engine is not None and self._acoustics is not None and self._acoustics is not engine:
@@ -736,7 +744,9 @@ class PhysicsWorld:
             return 1.0
         ray_distance, geom_id = self._ray(start, delta / distance, exclude_body)
         hit_entity = self._geom_entity.get(geom_id)
-        if ray_distance < 0.0 or ray_distance >= distance - 0.07 or source_entity is not None and hit_entity == source_entity:
+        if ray_distance < 0.0 or ray_distance >= distance - 0.07 or (
+            source_entity is not None and hit_entity == source_entity
+        ):
             return 1.0
         return _number(transmission, "acoustic transmission", 0.0, 1.0)
 
@@ -815,17 +825,32 @@ class PhysicsWorld:
     def _sound(self, body: PhysicsBody) -> list[float]:
         result = np.zeros(3, dtype=float)
         point = np.array([body.x, body.y, body.z])
+        listener_body = self._body_mj[body.id]
         for signal in self.signals:
-            distance = float(np.linalg.norm(point - np.array([signal.x, signal.y, signal.z])))
+            source = np.array([signal.x, signal.y, signal.z])
+            distance = float(np.linalg.norm(point - source))
             envelope = min(1.0, signal.remaining / 0.3)
-            result[signal.tone] += signal.strength * envelope / (1.0 + (distance / 1.4) ** 2)
+            visibility = 1.0 if self._acoustics is None else self.acoustic_visibility(
+                point, source, None, listener_body, 0.16,
+            )
+            result[signal.tone] += visibility * signal.strength * envelope / (1.0 + (distance / 1.4) ** 2)
         for entity in self._entities:
             resonator = next((c for c in self._components[entity["id"]] if c.get("type") == "resonator"), None)
             if resonator is None or self._resonance.get(entity["id"], 0.0) <= 0.0:
                 continue
+            if self._acoustics is not None and self._acoustics.handles(entity["id"]):
+                continue
             position, _ = self._pose(entity["id"])
             distance = float(np.linalg.norm(point - position))
-            result[int(resonator["tone"])] += self._resonance[entity["id"]] * float(resonator.get("gain", 1.0)) / (1.0 + (distance / 1.4) ** 2)
+            visibility = 1.0 if self._acoustics is None else self.acoustic_visibility(
+                point, position, entity["id"], listener_body, 0.16,
+            )
+            result[int(resonator["tone"])] += visibility * self._resonance[entity["id"]] * float(resonator.get("gain", 1.0)) / (1.0 + (distance / 1.4) ** 2)
+        if self._acoustics is not None:
+            sample = np.asarray(self._acoustics.sample(point, listener_body), dtype=float)
+            if sample.shape != (3,) or not np.isfinite(sample).all() or np.any(sample < 0.0):
+                raise RuntimeError("acoustic engine returned an invalid sample")
+            result += sample
         return np.clip(result, 0.0, 2.0).tolist()
 
     def _scene_lights(self) -> list[dict[str, Any]]:
@@ -975,10 +1000,13 @@ class PhysicsWorld:
         try:
             for _ in range(substeps):
                 self.data.xfrc_applied[:] = 0.0
+                self.data.qfrc_applied[:] = 0.0
                 for body in self.bodies:
                     self._apply_crawler_forces(body, clean.get(body.id, {}), motor_noise[body.id])
                 self._apply_hand_force()
                 self._apply_grip_forces()
+                if self._acoustics is not None:
+                    self._acoustics.before_substep(self.model.opt.timestep)
                 mujoco.mj_step(self.model, self.data)
                 self._collect_contacts(contacted_entities)
                 self._excite_hinges()
@@ -1141,6 +1169,33 @@ class PhysicsWorld:
             contact = self.data.contact[index]
             first, second = int(contact.geom1), int(contact.geom2)
             world_normal = np.asarray(contact.frame[:3], dtype=float)
+            if self._acoustics is not None:
+                force = np.zeros(6, dtype=float)
+                mujoco.mj_contactForce(self.model, self.data, index, force)
+                point = np.asarray(contact.pos, dtype=float)
+                velocities = []
+                for geom_id in (first, second):
+                    body_id = int(self.model.geom_bodyid[geom_id])
+                    linear, angular = self._velocity(body_id)
+                    velocities.append(linear + np.cross(angular, point - self.data.xpos[body_id]))
+                relative_speed = abs(float(np.dot(velocities[1] - velocities[0], world_normal)))
+                impulse = min(
+                    float(self.spec.get("limits", {}).get("acoustic_impulse", 10.0)),
+                    abs(float(force[0])) * float(self.model.opt.timestep),
+                )
+                impact_work = min(
+                    float(self.spec.get("limits", {}).get("acoustic_work", 5.0)),
+                    0.5 * impulse * relative_speed,
+                )
+                for entity_id in {
+                    value for value in (self._geom_entity.get(first), self._geom_entity.get(second))
+                    if value is not None
+                }:
+                    self._acoustics.ingest_contact({
+                        "entity": entity_id, "position": point.astype(float).tolist(),
+                        "normal_impulse": impulse, "relative_normal_speed": relative_speed,
+                        "impact_work": impact_work,
+                    })
             participants: list[tuple[str, int, np.ndarray]] = []
             if first in self._geom_resident:
                 participants.append((self._geom_resident[first], second, world_normal))

@@ -1,9 +1,10 @@
 # Versioned neural ports
 
 `retinal-v1` is a separate rich sensory and readout interface for the full
-MaleCNS graph. It leaves the live 16-input/48-readout service unchanged. A new
-service can load this bundle as an explicit `RemoteBrain` override when the 3D
-runtime is ready to consume the larger schema.
+MaleCNS graph. It leaves the live 16-input/48-readout service unchanged. A separate
+service loads this bundle as an explicit `RemoteBrain` override. The articulated
+3D runtime now consumes all 351 inputs and 384 readouts; older lives retain their
+original interface.
 
 The interface has 351 physical input channels and 384 readouts. Both maps are
 SciPy CSR matrices. The graph remains the same 165,122-neuron,

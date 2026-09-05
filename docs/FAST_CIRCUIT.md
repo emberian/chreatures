@@ -7,13 +7,13 @@ step, reduce update frequency, or substitute a smaller anatomy.
 
 ## Interfaces
 
-`MicrobatchedResidentCircuit` is the measured throughput choice on the hbox RX
-6750 XT:
+`TritonFusedCircuit` is the measured throughput choice on the hbox RX 6750 XT.
+`MicrobatchedResidentCircuit` remains the portable Torch CSR fallback:
 
 ```python
 import numpy as np
 
-from chreatures.fast_circuit import MicrobatchedResidentCircuit
+from chreatures.fast_circuit import TritonFusedCircuit
 from chreatures.malecns import MaleCNSGraph
 from chreatures.neural_ports import NeuralPortBundle
 
@@ -21,10 +21,9 @@ graph = MaleCNSGraph.load("/tank/chreatures/data/malecns/derived")
 ports = NeuralPortBundle.load(
     "/tank/chreatures/data/ports/retinal-v1-maps.npz", graph
 )
-circuit = MicrobatchedResidentCircuit(
+circuit = TritonFusedCircuit(
     graph,
     batch_size=48,
-    microbatch_size=3,
     device="cuda",
     input_map=(ports.input_names, ports.input_map),
     readout_map=(ports.readout_names, ports.readout_map),
@@ -41,6 +40,11 @@ Input is one contiguous CPU float32 array shaped `[channels, residents]`.
 Features and all three physiology values return in one device-to-host copy.
 The fixed cohort avoids resident dictionaries, slot gathers/scatters, and
 device synchronization for slot IDs.
+
+The Triton backend requires a HIP wave32 target and Triton 3.5.1 in the
+measured environment. The project run used
+`HSA_OVERRIDE_GFX_VERSION=10.3.0` and a persistent `TRITON_CACHE_DIR`; it did
+not modify the shared ROCm installation or GPU driver.
 
 `export_state()` and `import_state()` use `rates`, `adaptation`, and `support`
 arrays shaped `[residents, neurons]`, plus a `[residents]` float64 clock. This
@@ -116,13 +120,76 @@ microbatch-3 device step, so local array transfer is not the main cost. HTTP,
 JSON, world simulation, and GPU queue contention are separate costs in service
 runs.
 
-The hbox project environment has Triton 3.5.1 and recognizes HIP `gfx1030`, but
-the host has no `hipcc` and PyTorch reports no `ROCM_HOME`. No native extension
-was compiled or installed. A future kernel should map wave32 lanes to resident
-columns for each postsynaptic row, use neuron-major source loads, and ping-pong
-rate buffers so each substep remains a global Jacobi update. It must beat the
-measured microbatch path and pass full-state/replay comparison before runtime
-integration.
+The hbox project environment has Triton 3.5.1 and recognizes HIP `gfx1030`,
+although the host has no `hipcc` and PyTorch reports no `ROCM_HOME`.
+`TritonFusedCircuit` is a separate experimental backend compiled through
+Triton's HIP target. Each program assigns one postsynaptic row to a wave32
+resident tile. It walks the row's CSR edges, broadcasts each edge weight and
+source index, reads neuron-major resident values coalescently, and writes the
+new rate directly. Two launches ping-pong rate buffers, preserving a global
+Jacobi boundary between substeps; adaptation and support update in the second
+launch.
+
+This mapping follows AMD's observation that sparse multiplication is generally
+limited by memory bandwidth, while adapting the usual CSR row assignment to
+the circuit's dense resident dimension. See AMD GPUOpen's [Sparse matrix vector
+multiplication notes](https://gpuopen.com/learn/amd-lab-notes/amd-lab-notes-spmv-docs-spmv_part1/)
+and the [rocSPARSE user guide](https://rocm.docs.amd.com/projects/rocSPARSE/en/latest/how-to/using-rocsparse.html).
+
+The first bounded check used 4,096 real MaleCNS target rows, 2,847,165 edges,
+and 48 residents. One fused recurrence/rate substep differed from Torch by at
+most `3.73e-9` (mean `2.11e-10`) and all outputs were finite. Its median was
+`5.079 ms` versus `12.301 ms` for Torch CSR plus the same rate update, a `2.42x`
+slice speedup. This is promising slice evidence, not a full-graph throughput
+claim.
+
+A subsequent correctness-only run covered all 165,122 neurons and 25,563,197
+edges at batch 48 for four common two-substep inputs. Compared with the Torch
+CSR reference, maximum absolute differences were `1.19e-7` in rates,
+`3.73e-9` in adaptation, `5.96e-8` in support, `5.96e-8` in the 384 readouts,
+and `2.38e-7` in physiology; clocks were exact. Snapshot/restore replay was
+bit-exact for state and every output.
+
+The coordinated full-graph batch-48 timing used two ABBA cycles with ten
+complete steps per block. Each step included the 351-channel host input copy,
+two recurrent substeps over every edge, 384 readouts, physiology reductions,
+and one host output copy. The Torch CSR median was `159.442 ms`; the Triton
+median was `27.286 ms`, a `5.843x` speedup and `1,759.15` resident steps/s
+instead of `301.05`. Individual Torch blocks ranged from `159.217` to
+`160.377 ms`; Triton blocks ranged from `27.270` to `27.325 ms`.
+
+This backend changes sparse reduction order. Transitioning a saved Torch state
+to Triton therefore preserves its float32 state arrays at the boundary but does
+not promise the old backend's future trajectory bit for bit. The measured
+cross-backend bound is `1e-6`; restore and replay within Triton are bit-exact.
+
+Short post-training ABBA runs established the batch-size boundary. These were
+run while the independent live services and worlds remained operational, so
+the batch-48 exclusive result above is the primary adoption measurement:
+
+| Batch | Torch CSR | Triton fused | Speedup | Triton resident steps/s |
+|---:|---:|---:|---:|---:|
+| 3 | 11.529 ms | 14.390 ms | 0.80x | 208.5 |
+| 48 | 159.442 ms | 27.286 ms | 5.84x | 1,759.2 |
+| 96 | 382.507 ms | 51.832 ms | 7.38x | 1,852.1 |
+| 192 | 788.586 ms | 105.388 ms | 7.48x | 1,821.8 |
+
+The native kernel is therefore selected explicitly for large fixed cohorts.
+The Torch path remains preferable for a three-resident cohort and remains the
+default for the small live services.
+
+The existing 48-resident developmental run then restored its step-1,230
+checkpoint into the Triton circuit and completed at step 8,000. This process
+executed 6,770 steps, or 324,960 resident steps, in `416.408 s`: `780.39`
+resident steps/s for the whole learner. The process-local circuit timer was
+reset on restore and accumulated `234.866 s`, corresponding to `1,383.60`
+resident steps/s; physics took `106.943 s` and sense encoding `54.730 s`. The
+circuit therefore moved from roughly 89% of the old learner wall time to 56.4%
+of this continuation. The summary's `resident_steps: 384000` is the absolute
+step-8,000 exposure count and must not be divided by this continuation's
+elapsed time. The summary also records `404,154,880` allocated device bytes and
+a completed final neural checkpoint. These are measured training figures,
+while policy quality is evaluated separately from kernel throughput.
 
 ## Reproduce
 
@@ -140,3 +207,9 @@ Executed reports are stored at:
 - `/tank/chreatures/runs/benchmarks/fast-circuit-initial.json`
 - `/tank/chreatures/runs/benchmarks/fast-circuit-microbatch48.json`
 - `/tank/chreatures/runs/benchmarks/fast-circuit-microbatch48-confirm.json`
+- `/tank/chreatures/runs/benchmarks/fast-circuit-triton-full-contention-parity.json`
+- `/tank/chreatures/runs/benchmarks/fast-circuit-triton-full-b48-abba.json`
+- `/tank/chreatures/runs/benchmarks/fast-circuit-triton-full-b3-abba-operational.json`
+- `/tank/chreatures/runs/benchmarks/fast-circuit-triton-full-b96-abba-operational.json`
+- `/tank/chreatures/runs/benchmarks/fast-circuit-triton-full-b192-abba-operational.json`
+- `/tank/chreatures/runs/learning/affordance-16x3-v3-continuation/summary.json`
