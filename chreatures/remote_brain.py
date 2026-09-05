@@ -32,6 +32,20 @@ def _torch_csr(matrix: sparse.spmatrix, device: torch.device) -> torch.Tensor:
     )
 
 
+def _sparse_sha256(matrix: sparse.csr_matrix) -> str:
+    """Hash a canonical sparse matrix without materializing a dense array."""
+    canonical = matrix.tocsr().astype(np.float32, copy=False)
+    if not canonical.has_canonical_format:
+        canonical = canonical.copy()
+        canonical.sum_duplicates()
+        canonical.sort_indices()
+    digest = hashlib.sha256()
+    digest.update(np.asarray(canonical.shape, dtype=np.int64).tobytes())
+    for array in (canonical.indptr, canonical.indices, canonical.data):
+        digest.update(np.ascontiguousarray(array).view(np.uint8))
+    return digest.hexdigest()
+
+
 def _mapping_pair(graph: Any, name: str) -> tuple[list[str], sparse.csr_matrix]:
     value = getattr(graph, name)
     value = value() if callable(value) else value
@@ -61,6 +75,7 @@ class RemoteBrain:
         input_map: tuple[Sequence[str], sparse.spmatrix] | None = None,
         readout_map: tuple[Sequence[str], sparse.spmatrix] | None = None,
         port_metadata: Mapping[str, Any] | None = None,
+        recurrence: bool | sparse.spmatrix = True,
     ) -> None:
         if capacity <= 0 or capacity > 4096:
             raise ValueError("capacity must be between 1 and 4096")
@@ -86,10 +101,34 @@ class RemoteBrain:
         if not self.port_metadata.get("mode") or not self.port_metadata.get("name"):
             raise ValueError("port metadata needs nonempty mode and name")
 
-        matrix = graph.matrix(normalized=True, signed=True)
-        if matrix.shape != (self.n, self.n) or not sparse.issparse(matrix):
-            raise ValueError("MaleCNS matrix must be sparse N x N")
-        self.matrix = _torch_csr(matrix, self.device)
+        if isinstance(recurrence, (bool, np.bool_)):
+            if recurrence:
+                matrix = graph.matrix(normalized=True, signed=True)
+                recurrence_metadata = {
+                    "mode": "graph",
+                    "sha256": self.graph_hash,
+                    "edges": self.edge_count,
+                }
+            else:
+                matrix = None
+                recurrence_metadata = {"mode": "off", "sha256": None, "edges": 0}
+        elif sparse.issparse(recurrence):
+            matrix = recurrence.tocsr().astype(np.float32, copy=True)
+            matrix.sum_duplicates()
+            matrix.sort_indices()
+            if not np.isfinite(matrix.data).all():
+                raise ValueError("recurrent matrix values must be finite")
+            recurrence_metadata = {
+                "mode": "injected",
+                "sha256": _sparse_sha256(matrix),
+                "edges": int(matrix.nnz),
+            }
+        else:
+            raise TypeError("recurrence must be True, False, or a scipy sparse matrix")
+        if matrix is not None and matrix.shape != (self.n, self.n):
+            raise ValueError("recurrent matrix must be sparse N x N")
+        self.matrix = None if matrix is None else _torch_csr(matrix, self.device)
+        self.recurrence_metadata = recurrence_metadata
 
         if input_map is None:
             self.input_names, inputs = _mapping_pair(graph, "default_input_map")
@@ -198,7 +237,11 @@ class RemoteBrain:
         drive = torch.sparse.mm(self.input_matrix, channel_tensor.T).T
         alpha = min(1.0, dt / 2 / self.tau)
         for _ in range(2):
-            recurrent = torch.sparse.mm(self.matrix, selected_rates.T).T
+            recurrent = (
+                0.0
+                if self.matrix is None
+                else torch.sparse.mm(self.matrix, selected_rates.T).T
+            )
             target = torch.relu(
                 torch.tanh(
                     0.005
@@ -282,6 +325,7 @@ class RemoteBrain:
                 "gain": self.gain,
                 "support_recovery": self.support_recovery,
                 "substeps": 2,
+                "recurrence": self.recurrence_metadata,
             },
             "inputs": self.input_names,
             "readouts": self.readout_names,
@@ -314,7 +358,7 @@ class RemoteBrain:
         slots = [slot for _, slot in active]
         resident_ids = np.asarray([resident for resident, _ in active], dtype=np.str_)
         metadata = {
-            "version": 2,
+            "version": 3,
             "scope": scope,
             "graph_sha256": self.graph_hash,
             "neurons": self.n,
@@ -324,6 +368,7 @@ class RemoteBrain:
             "gain": self.gain,
             "support_recovery": self.support_recovery,
             "ports": self.port_metadata,
+            "recurrence": self.recurrence_metadata,
         }
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(".tmp")
@@ -362,7 +407,7 @@ class RemoteBrain:
             metadata = json.loads(str(data["metadata"]))
             version = metadata.get("version")
             if (
-                version not in {1, 2}
+                version not in {1, 2, 3}
                 or metadata.get("graph_sha256") != self.graph_hash
                 or metadata.get("neurons") != self.n
                 or metadata.get("input_names") != self.input_names
@@ -374,6 +419,13 @@ class RemoteBrain:
                 raise ValueError("snapshot is incompatible with this graph or mapping")
             if version == 2 and metadata.get("ports") != self.port_metadata:
                 raise ValueError("snapshot belongs to a different neural port interface")
+            if version == 3 and (
+                metadata.get("ports") != self.port_metadata
+                or metadata.get("recurrence") != self.recurrence_metadata
+            ):
+                raise ValueError("snapshot belongs to a different neural interface")
+            if version in {1, 2} and self.recurrence_metadata["mode"] != "graph":
+                raise ValueError("legacy snapshots require graph recurrence")
             residents = data["resident_ids"].astype(str).tolist()
             if len(residents) > self.capacity or len(set(residents)) != len(residents):
                 raise ValueError("snapshot resident set is invalid")

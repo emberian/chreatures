@@ -56,6 +56,7 @@ class Habitat3D:
         self.journal = deque(maxlen=256)
         self.history = {b.id: deque(maxlen=360) for b in self.world.bodies}
         self.timings = deque(maxlen=120)
+        self.phase_timings = deque(maxlen=120)
         self.pending_step = None
         self.note("hatched", "Three new residents entered the hollow garden with full MaleCNS circuits.")
 
@@ -90,8 +91,10 @@ class Habitat3D:
             self.last_senses = sensed
             self.sensed_at = self.world.time
             entries = [{"id": self.remote_ids[b.id], "senses": self.neural.encode(sensed[b.id])} for b in self.world.bodies]
+            sensed_done = time.perf_counter()
             self.pending_step = {"tick": self.tick, "neural_seq": self.neural.next_seq}
             responses = self.neural.step(entries, dt)
+            neural_done = time.perf_counter()
             inverse = {v: k for k, v in self.remote_ids.items()}
             actions = {}
             for response in responses:
@@ -113,9 +116,17 @@ class Habitat3D:
                 action["eat"] = float(np.clip((1 - body.gut) * (1.1 - body.energy), 0, 1))
                 actions[body_id] = action
                 self.neural_state[body_id] = response
+            cognition_done = time.perf_counter()
             self.outcomes = self.world.advance(actions, dt)
+            physics_done = time.perf_counter()
             if self.field is not None:
                 self.field.advance(dt, sources=self.field.sources_from_world(self.world))
+            fields_done = time.perf_counter()
+            self.phase_timings.append({"senses": (sensed_done-started)*1000,
+                                       "neural": (neural_done-sensed_done)*1000,
+                                       "cognition": (cognition_done-neural_done)*1000,
+                                       "physics": (physics_done-cognition_done)*1000,
+                                       "fields": (fields_done-physics_done)*1000})
             self.tick += 1
             self.pending_step = None
             for b in self.world.bodies:
@@ -165,7 +176,9 @@ class Habitat3D:
                                  "connections": self.neural.graph["edges"], "sha256": self.neural.graph["sha256"],
                                  "scope": "full traced curated brain and nerve cord",
                                  "inputs": len(self.neural.input_names), "readouts": len(self.neural.output_names)},
-                     "performance": {"step_ms": sum(self.timings) / max(1, len(self.timings)), "dt": 0.05}})
+                     "performance": {"step_ms": sum(self.timings) / max(1, len(self.timings)), "dt": 0.05,
+                                     "phase_ms": {key: sum(t[key] for t in self.phase_timings) / len(self.phase_timings)
+                                                  for key in self.phase_timings[0]} if self.phase_timings else {}}})
         return view
 
     def save(self, path):
@@ -229,6 +242,7 @@ class Habitat3D:
         instance.journal = deque(value["journal"], maxlen=256)
         instance.history = {k: deque(v, maxlen=360) for k, v in value["history"].items()}
         instance.timings = deque(maxlen=120)
+        instance.phase_timings = deque(maxlen=120)
         instance.error = None
         instance.pending_step = None
         instance.saved_at = time.time()

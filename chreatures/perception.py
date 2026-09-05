@@ -400,15 +400,25 @@ def parse_model_output(text: str) -> dict[str, Any] | None:
 def _parse_delimited(text: str) -> dict[str, Any] | None:
     """Parse the compact grammar requested from small generative models."""
 
-    entries = [entry.strip(" \n\t.,") for entry in text.split(";")]
-    entries = [entry for entry in entries if entry]
-    if not 1 <= len(entries) <= 6:
+    raw_entries: list[list[str]] = []
+    if "|" in text:
+        entries = [entry.strip(" \n\t.,") for entry in text.split(";")]
+        raw_entries = [entry.split("|") for entry in entries if entry]
+    else:
+        # The 500M model sometimes uses the requested record delimiter for
+        # every field. Grouping exact triples preserves its generated values.
+        fields = [field.strip(" \n\t.,") for field in text.split(";")]
+        fields = [field for field in fields if field]
+        if len(fields) % 3:
+            return None
+        raw_entries = [fields[index : index + 3] for index in range(0, len(fields), 3)]
+    if not 1 <= len(raw_entries) <= 6:
         return None
     objects = []
     affordances = []
     seen = set()
-    for entry in entries:
-        parts = [part.strip() for part in entry.split("|")]
+    for raw_parts in raw_entries:
+        parts = [part.strip() for part in raw_parts]
         if len(parts) != 3:
             return None
         label, action, confidence_text = parts
