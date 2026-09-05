@@ -37,6 +37,7 @@ class EmbodiedVision:
         self.client = AsyncPerceptionClient(endpoint, min_interval_seconds=0)
         self.memories = {key: VisualEpisodeMemory() for key in self.ids}
         self.latest = {}
+        self.frames = {}
         self.interval_ticks = int(interval_ticks)
         self.delivery_delay_ticks = int(delivery_delay_ticks)
         self.next_capture_tick = 0
@@ -167,6 +168,7 @@ class EmbodiedVision:
                 captures[0], captures[1], self.pair["steps"]
             )
             self.latest[resident] = captures[1]
+            self.frames[resident] = self.pair["end"]["png_base64"]
             self.completed_pairs += 1
             self.pair = None
             self.client.prune_delivered(keep=1)
@@ -197,6 +199,7 @@ class EmbodiedVision:
             "residents": {
                 key: {
                     "episodes": memory.record_count,
+                    "has_frame": key in self.frames,
                     "capture_tick": self.latest.get(key, {}).get("capture_tick"),
                     "age_ticks": tick - self.latest[key]["capture_tick"]
                     if key in self.latest
@@ -213,6 +216,7 @@ class EmbodiedVision:
             "client": self.client.snapshot(),
             "memories": {k: v.snapshot() for k, v in self.memories.items()},
             "latest": copy.deepcopy(self.latest),
+            "frames": copy.deepcopy(self.frames),
             "pair": copy.deepcopy(self.pair),
             "interval_ticks": self.interval_ticks,
             "delivery_delay_ticks": self.delivery_delay_ticks,
@@ -232,6 +236,7 @@ class EmbodiedVision:
         instance.memories = {
             k: VisualEpisodeMemory.restore(v) for k, v in value["memories"].items()
         }
+        instance.frames = copy.deepcopy(value.get("frames", {}))
         for key in (
             "ids",
             "latest",

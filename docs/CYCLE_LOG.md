@@ -181,3 +181,58 @@ probe supports opposite action choices from opposite actual reinforcement
 histories. The live orchard still has sparse personal reinforcement. A new
 opt-in homeostatic objective addresses the old objective's incentive to burn
 energy above its target; training it is a separate ongoing experiment.
+
+## Cycle 6 — continuity, sustained regulation and private motor learning
+
+The terrarium migrated explicitly at tick 11,825 to the SIMD Metal kernel and
+vectorized articulated execution. All native neural state bytes and physical,
+ecological and cognitive state matched before resumption. The changed future
+reduction order is recorded. Complete Metal artifacts are now independently
+hashed before native execution; the source artifact and port bundle have a
+checked-in provenance manifest. The browser displays each resident's actual
+last-delivered native camera image with its age.
+
+A fair fresh canonical/rewired comparison now ran on the same RX 6750 XT from
+identical zero-update arrays, with 960,000 resident steps and 63 updates each.
+Canonical held-out legacy bodily return improved from -0.36154 to +0.03918;
+the matched rewired run changed from -0.20277 to -0.59905. Canonical neural
+silencing scored -0.78836. This is a useful one-seed objective result, but the
+legacy symmetric objective can reward spending energy above its target.
+The separately exported fresh genotype preserves that limitation. An 8k
+finite-energy refinement failed its comparison and remains a recorded negative
+result; a fresh finite-energy run is separate.
+
+Longer live observation exposed an additional failure the short held-out
+episodes missed. Around 1,100 model seconds, the older inherited orchard and
+terrarium policies had largely depleted reserves, accumulated fatigue near
+one, and stalled. An outside care visit placed physical food beside the
+residents; several ingested it and recovered some reserves. No physiology or
+motor commands were overwritten. Sustained feeding, useful rest and recovery
+are unmet capabilities. The next developmental profile therefore uses the
+actual rich body senses and chemical/resource environment and must examine
+longer trajectories, rather than treating short ingestion gains as viability.
+
+Fresh finite-energy training subsequently improved its short held-out reward
+from +0.09174 to +0.12239; neural silencing scored -0.96056. This remains a
+40-second acquisition result. The distinct exported genotype now seeds Reed,
+Tansy and Sorrel in the learning garden. Their private actor/critic parameters,
+eligibility and sampled-proposal credit persist with their own experience.
+Contextual and visual action evidence share the actor's finite-energy
+configuration. An actual five-tick interval gives the same utility through
+all three paths within float32 rounding; nutrition is not rewarded twice.
+
+The learning garden joins those organs with generic passive mechanical
+assemblies. A real weight lowers a pressure lift and raises an occluding gate;
+the mechanism operates through ordinary forces and joint constraints. In its
+first continuity check at tick 885, a paused restart preserved the complete
+neural receipt, physical assemblies, private learning state, partial action,
+ecology, native visual episodes and pending sensory state exactly. The same
+world identity resumed and remains active.
+
+Inspection also caught a configuration omission: the first terrarium's supplied
+habitat had no retinal selector, so it used `legacy-world-v0` despite earlier
+descriptions calling it body-v1. That existing life retains its saved frame.
+The learning garden explicitly uses body-v1; new construction now supplies an
+explicit default even when a caller passes a habitat spec. Restoration still
+uses the saved selector. The earlier articulated and orchard worlds already
+had body-v1 saved correctly.

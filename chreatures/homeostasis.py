@@ -27,6 +27,7 @@ class FiniteEnergyConfig:
     effort_energy_rate: float = 0.0042
     effort_extra_weight: float = 0.25
     reward_per_energy: float = 12.0
+    max_interval_seconds: float = 2.0
 
     def __post_init__(self) -> None:
         values = np.asarray(list(asdict(self).values()), dtype=np.float64)
@@ -43,6 +44,8 @@ class FiniteEnergyConfig:
             self.effort_energy_rate, self.effort_extra_weight, self.reward_per_energy,
         ) < 0:
             raise ValueError("homeostasis weights must be nonnegative")
+        if self.max_interval_seconds <= 0:
+            raise ValueError("maximum accounting interval must be positive")
 
     def to_value(self) -> dict[str, Any]:
         value = {"format": FORMAT, "config": asdict(self)}
@@ -133,8 +136,10 @@ class FiniteEnergyObjective:
         is logged, not paid again: its stored value already enters through gut.
         ``effort`` is the world's dimensionless [0,1] actuator effort.
         """
-        if not np.isfinite(dt) or not 0 < dt <= 0.2:
-            raise ValueError("dt must be finite and in (0, 0.2] seconds")
+        if not np.isfinite(dt) or not 0 < dt <= self.config.max_interval_seconds:
+            raise ValueError(
+                f"dt must be finite and in (0, {self.config.max_interval_seconds}] seconds"
+            )
         before_terms = self.potential(before)
         after_terms = self.potential(after)
         nutrition = np.asarray(nutrition, dtype=np.float64)

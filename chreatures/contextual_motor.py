@@ -16,6 +16,7 @@ from typing import Any, Callable, Mapping
 import numpy as np
 
 from .context_memory import RelationalContextMemory
+from .homeostasis import FiniteEnergyConfig, FiniteEnergyObjective
 from .motor_inheritance import ACTIONS as MOTOR_ACTIONS, MotorOrgan
 
 
@@ -23,6 +24,10 @@ MEMORY_OUTCOMES = (
     "energy_delta", "gut_delta", "fatigue_delta",
     "nutrition", "effort", "contact",
 )
+LEGACY_UTILITY_PROFILE = "legacy-quadratic-v1"
+FINITE_ENERGY_UTILITY_PROFILE = "finite-energy-v1"
+UTILITY_PROFILES = frozenset((LEGACY_UTILITY_PROFILE, FINITE_ENERGY_UTILITY_PROFILE))
+CONTEXTUAL_INTERVAL_SECONDS = 0.25
 
 
 def _vector(value: Any, size: int, name: str) -> np.ndarray:
@@ -59,6 +64,21 @@ class ContextualMotorConfig:
     nutrition_weight: float = 3.0
     effort_weight: float = 0.0002
     max_external_correction: float = 0.12
+    utility_profile: str = LEGACY_UTILITY_PROFILE
+    finite_energy_config: FiniteEnergyConfig | None = None
+
+    def __post_init__(self) -> None:
+        if self.utility_profile not in UTILITY_PROFILES:
+            raise ValueError("unsupported contextual utility profile")
+        if self.utility_profile == FINITE_ENERGY_UTILITY_PROFILE:
+            if self.finite_energy_config is None:
+                object.__setattr__(self, "finite_energy_config", FiniteEnergyConfig())
+            elif not isinstance(self.finite_energy_config, FiniteEnergyConfig):
+                raise ValueError("finite-energy utility requires a FiniteEnergyConfig")
+            if self.finite_energy_config.max_interval_seconds < CONTEXTUAL_INTERVAL_SECONDS:
+                raise ValueError("finite-energy config must admit the 0.25-second motor macro")
+        elif self.finite_energy_config is not None:
+            raise ValueError("legacy utility cannot carry a finite-energy configuration")
 
     def validate(self) -> None:
         if not 1 <= self.candidate_count <= 9:
@@ -88,6 +108,130 @@ class ContextualMotorConfig:
         numeric = asdict(self)
         if any(isinstance(value, float) and not math.isfinite(value) for value in numeric.values()):
             raise ValueError("contextual motor configuration must be finite")
+
+    @property
+    def finite_energy_sha256(self) -> str | None:
+        """Canonical identity of the finite-energy coefficients, when active."""
+        if self.finite_energy_config is None:
+            return None
+        return str(self.finite_energy_config.to_value()["sha256"])
+
+    def to_value(self) -> dict[str, Any]:
+        """Encode config while retaining the exact legacy snapshot schema."""
+        value = asdict(self)
+        value.pop("finite_energy_config")
+        if self.utility_profile == LEGACY_UTILITY_PROFILE:
+            value.pop("utility_profile")
+        else:
+            assert self.finite_energy_config is not None
+            value["finite_energy_config"] = self.finite_energy_config.to_value()
+        return value
+
+    @classmethod
+    def from_value(cls, value: Mapping[str, Any]) -> "ContextualMotorConfig":
+        raw = dict(value)
+        raw.setdefault("utility_profile", LEGACY_UTILITY_PROFILE)
+        encoded = raw.get("finite_energy_config")
+        if encoded is not None:
+            if not isinstance(encoded, Mapping):
+                raise ValueError("invalid finite-energy contextual configuration")
+            raw["finite_energy_config"] = FiniteEnergyConfig.from_value(encoded)
+        return cls(**raw)
+
+    def transition_utility(
+        self,
+        before: Mapping[str, Any],
+        after: Mapping[str, Any],
+        physical_outcome: Mapping[str, Any],
+        *,
+        duration: float = CONTEXTUAL_INTERVAL_SECONDS,
+    ) -> tuple[float, dict[str, float]]:
+        """Score one measured interval for refiner or external evidence."""
+        return contextual_transition_utility(
+            self, before, after, physical_outcome, duration=duration,
+        )
+
+
+def _utility_physiology(value: Mapping[str, Any], name: str) -> dict[str, float]:
+    if not isinstance(value, Mapping) or not {"energy", "gut", "fatigue"} <= set(value):
+        raise ValueError(f"{name} physiology requires energy, gut and fatigue")
+    result = {key: float(value[key]) for key in ("energy", "gut", "fatigue")}
+    if any(not math.isfinite(item) or not 0.0 <= item <= 1.0 for item in result.values()):
+        raise ValueError(f"{name} physiology values must be finite in [0, 1]")
+    return result
+
+
+def contextual_transition_utility(
+    config: ContextualMotorConfig,
+    before: Mapping[str, Any],
+    after: Mapping[str, Any],
+    physical_outcome: Mapping[str, Any],
+    *,
+    duration: float = CONTEXTUAL_INTERVAL_SECONDS,
+) -> tuple[float, dict[str, float]]:
+    """Score one actual interval using a versioned contextual utility.
+
+    ``physical_outcome['effort']`` is the time integral of actuator effort,
+    not a rate. The finite-energy objective consumes its mean over ``duration``
+    and integrates it exactly once internally. Observed nutrition is logged by
+    that objective; its effect already appears in the measured after-state.
+    """
+    if not isinstance(config, ContextualMotorConfig):
+        raise TypeError("config must be a ContextualMotorConfig")
+    config.validate()
+    start = _utility_physiology(before, "before")
+    finish = _utility_physiology(after, "after")
+    if not isinstance(physical_outcome, Mapping):
+        raise ValueError("physical outcome must be a mapping")
+    nutrition = float(physical_outcome.get("nutrition", 0.0))
+    effort_integral = float(physical_outcome.get("effort", 0.0))
+    seconds = float(duration)
+    if (
+        not math.isfinite(nutrition) or nutrition < 0.0
+        or not math.isfinite(effort_integral) or effort_integral < 0.0
+        or not math.isfinite(seconds) or seconds <= 0.0
+    ):
+        raise ValueError("nutrition, effort integral and duration must be finite and nonnegative")
+
+    if config.utility_profile == LEGACY_UTILITY_PROFILE:
+        def drive(state: Mapping[str, float]) -> float:
+            return (
+                config.energy_drive_weight * (config.energy_target - state["energy"]) ** 2
+                + config.gut_drive_weight * (config.gut_target - state["gut"]) ** 2
+                + config.fatigue_drive_weight * state["fatigue"] ** 2
+            )
+        utility = float(
+            drive(start) - drive(finish)
+            + config.nutrition_weight * nutrition * max(0.0, 1.0 - finish["energy"])
+            - config.effort_weight * effort_integral
+        )
+        return utility, {
+            "reward": utility,
+            "nutrition_observed": nutrition,
+            "effort_integral": effort_integral,
+            "duration": seconds,
+        }
+
+    finite = config.finite_energy_config
+    if finite is None:
+        raise RuntimeError("finite-energy profile has no immutable configuration")
+    tolerance = max(1e-9, seconds * 1e-6)
+    if effort_integral > seconds + tolerance:
+        raise ValueError("effort integral exceeds duration")
+    reward, terms = FiniteEnergyObjective(finite).transition(
+        start,
+        finish,
+        nutrition=nutrition,
+        effort=min(1.0, effort_integral / seconds),
+        dt=seconds,
+    )
+    result = {
+        key: float(np.asarray(value))
+        for key, value in terms.items()
+        if np.asarray(value).ndim == 0
+    }
+    result.update({"effort_integral": effort_integral, "duration": seconds})
+    return float(reward), result
 
 
 class ContextualMotorRefiner:
@@ -143,15 +287,10 @@ class ContextualMotorRefiner:
         after: Mapping[str, float],
         physical_outcome: Mapping[str, Any],
     ) -> float:
-        nutrition = max(0.0, float(physical_outcome.get("nutrition", 0.0)))
-        effort = max(0.0, float(physical_outcome.get("effort", 0.0)))
-        if not math.isfinite(nutrition) or not math.isfinite(effort):
-            raise ValueError("physical outcome must be finite")
-        return float(
-            self._drive(before) - self._drive(after)
-            + self.config.nutrition_weight * nutrition * max(0.0, 1.0 - after["energy"])
-            - self.config.effort_weight * effort
-        )
+        return self.config.transition_utility(
+            before, after, physical_outcome,
+            duration=CONTEXTUAL_INTERVAL_SECONDS,
+        )[0]
 
     def memory_outcome(
         self,
@@ -243,11 +382,20 @@ class ContextualMotorRefiner:
             "gut": float(np.clip(current_physiology["gut"] + named["gut_delta"], 0, 1)),
             "fatigue": float(np.clip(current_physiology["fatigue"] + named["fatigue_delta"], 0, 1)),
         }
-        utility = (
-            self._drive(current_physiology) - self._drive(after)
-            + self.config.nutrition_weight * max(0.0, named["nutrition"]) * max(0.0, 1.0 - after["energy"])
-            - self.config.effort_weight * max(0.0, named["effort"])
-        )
+        predicted_outcome = {
+            "nutrition": max(0.0, named["nutrition"]),
+            # The memory predicts an integral. Keep extrapolation within the
+            # physically possible macro interval before scoring it as a rate.
+            "effort": float(np.clip(
+                named["effort"], 0.0, CONTEXTUAL_INTERVAL_SECONDS,
+            )),
+        }
+        utility = self.config.transition_utility(
+            current_physiology,
+            after,
+            predicted_outcome,
+            duration=CONTEXTUAL_INTERVAL_SECONDS,
+        )[0]
         feature_term = 0.0
         if self.feature_value_count >= self.config.feature_value_min_count:
             next_feature = _vector(
@@ -267,7 +415,7 @@ class ContextualMotorRefiner:
         self,
         callback: Callable[[tuple[tuple[float, ...], ...]], Mapping[str, Any]],
         actions: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray, str, list[dict[str, Any]]]:
+    ) -> tuple[np.ndarray, np.ndarray, str, list[dict[str, Any]], bool]:
         immutable = tuple(tuple(float(value) for value in action) for action in actions)
         result = callback(immutable)
         if not isinstance(result, Mapping):
@@ -275,6 +423,9 @@ class ContextualMotorRefiner:
         source = result.get("source")
         if not isinstance(source, str) or not source or len(source) > 96:
             raise ValueError("candidate evidence requires a short source string")
+        credit_contract = result.get("proposal_credit_contract")
+        if credit_contract not in (None, "candidate-and-frozen-state-only-v1"):
+            raise ValueError("unsupported candidate evidence proposal-credit contract")
         requested = _vector(result.get("corrections"), len(actions), "candidate evidence corrections")
         raw_diagnostics = result.get("diagnostics", [{} for _ in actions])
         if not isinstance(raw_diagnostics, (list, tuple)) or len(raw_diagnostics) != len(actions):
@@ -298,7 +449,10 @@ class ContextualMotorRefiner:
         ).astype(np.float32)
         if not self.enabled:
             applied.fill(0.0)
-        return requested, applied, source, diagnostics
+        return (
+            requested, applied, source, diagnostics,
+            credit_contract == "candidate-and-frozen-state-only-v1",
+        )
 
     def refine(
         self,
@@ -313,6 +467,7 @@ class ContextualMotorRefiner:
         inherited_scores: Any | None = None,
         baseline_latent: Any | None = None,
         deterministic: bool = False,
+        proposal_credit_contract: str | None = None,
         candidate_evidence: Callable[
             [tuple[tuple[float, ...], ...]], Mapping[str, Any]
         ] | None = None,
@@ -450,12 +605,14 @@ class ContextualMotorRefiner:
             })
         relational_choice = int(np.argmax(total))
         external_source = None
+        external_proposal_independent = False
         if candidate_evidence is not None:
             if not callable(candidate_evidence):
                 raise ValueError("candidate_evidence must be callable")
-            requested_external, external, external_source, evidence_diagnostics = self._external_evidence(
-                candidate_evidence, actions
-            )
+            (
+                requested_external, external, external_source, evidence_diagnostics,
+                external_proposal_independent,
+            ) = self._external_evidence(candidate_evidence, actions)
             total += external
             for index, audit in enumerate(audits):
                 audit["external_evidence"] = evidence_diagnostics[index]
@@ -490,12 +647,36 @@ class ContextualMotorRefiner:
                 "uncertainty_status": "heuristic; weak empirical calibration, not a probability",
             },
         }
+        if self.config.utility_profile == FINITE_ENERGY_UTILITY_PROFILE:
+            decision["provenance"]["utility"] = {
+                "profile": self.config.utility_profile,
+                "finite_energy_sha256": self.config.finite_energy_sha256,
+                "interval_seconds": CONTEXTUAL_INTERVAL_SECONDS,
+                "effort_semantics": "time-integral",
+            }
+        if proposal_credit_contract is not None:
+            if candidate_actions is not None:
+                raise ValueError("caller-supplied candidates cannot claim proposal credit")
+            if proposal_credit_contract != "latent-proposal-downstream-selector-v2":
+                raise ValueError("unsupported proposal credit contract")
+            decision["provenance"].update({
+                "candidate_pipeline": "generated-around-baseline-v1",
+                "proposal_credit_contract": proposal_credit_contract,
+            })
         if external_source is not None:
             decision["relational_selected_index"] = relational_choice
             decision["provenance"]["external_evidence"] = {
                 "source": external_source,
                 "max_correction": self.config.max_external_correction,
             }
+            if proposal_credit_contract is not None:
+                decision["provenance"]["external_evidence"].update({
+                    "proposal_independent": external_proposal_independent,
+                    "proposal_credit_contract": (
+                        "candidate-and-frozen-state-only-v1"
+                        if external_proposal_independent else None
+                    ),
+                })
         self.last_decision = copy.deepcopy(decision)
         return decision
 
@@ -538,13 +719,19 @@ class ContextualMotorRefiner:
             np.clip(self.feature_value, -2.0, 2.0, out=self.feature_value)
             self.feature_value_count += 1
             self.memory_revision += 1
-        return {
+        result = {
             "memory_revision": self.memory_revision,
             "experienced_utility": utility,
             "context": transition.get("context"),
             "contexts": memory.context_count,
             "transitions": memory.transition_count,
         }
+        if self.config.utility_profile == FINITE_ENERGY_UTILITY_PROFILE:
+            result.update({
+                "utility_profile": self.config.utility_profile,
+                "finite_energy_sha256": self.config.finite_energy_sha256,
+            })
+        return result
 
     def refine_and_commit(
         self,
@@ -555,6 +742,9 @@ class ContextualMotorRefiner:
         local_physiology: Mapping[str, Any],
         dt: float,
         *,
+        policy_mean_override: Any | None = None,
+        baseline_latent: Any | None = None,
+        proposal_credit_contract: str | None = None,
         candidate_evidence: Callable[
             [tuple[tuple[float, ...], ...]], Mapping[str, Any]
         ] | None = None,
@@ -570,19 +760,25 @@ class ContextualMotorRefiner:
         motor_physiology = motor.physiology_vector(local_physiology)
         mean, inherited_value, hidden = motor.forward(normalized, motor_physiology)
         log_std = np.clip(motor.artifact.arrays["log_std"], -3.5, 0.3).astype(np.float32)
-        baseline_latent = mean if motor.deterministic else (
-            mean + np.exp(log_std).astype(np.float32)
-            * motor.rng.standard_normal(len(MOTOR_ACTIONS), dtype=np.float32)
+        selection_mean = (
+            mean if policy_mean_override is None
+            else _vector(policy_mean_override, len(MOTOR_ACTIONS), "policy mean override")
         )
+        if baseline_latent is None:
+            baseline_latent = selection_mean if motor.deterministic else (
+                selection_mean + np.exp(log_std).astype(np.float32)
+                * motor.rng.standard_normal(len(MOTOR_ACTIONS), dtype=np.float32)
+            )
         decision = self.refine(
             memory,
             feature,
             local_physiology,
-            mean,
+            selection_mean,
             log_std,
             policy_artifact_sha256=motor.artifact.sha256,
             baseline_latent=baseline_latent,
             deterministic=motor.deterministic,
+            proposal_credit_contract=proposal_credit_contract,
             candidate_evidence=candidate_evidence,
         )
         decision["action"] = motor.commit_macro_action(
@@ -593,6 +789,11 @@ class ContextualMotorRefiner:
             "motor_macro_steps": int(motor.artifact.config["macro_steps"]),
             "motor_commit": "MotorOrgan.commit_macro_action",
         })
+        if policy_mean_override is not None:
+            decision["provenance"].update({
+                "inherited_pre_tanh_mean": mean.astype(float).tolist(),
+                "policy_mean_source": "private personal-plasticity offset",
+            })
         self.last_decision = copy.deepcopy(decision)
         return decision
 
@@ -613,7 +814,7 @@ class ContextualMotorRefiner:
         return {
             "version": self.VERSION,
             "feature_dim": self.feature_dim,
-            "config": asdict(self.config),
+            "config": self.config.to_value(),
             "enabled": self.enabled,
             "learning": self.learning,
             "feature_value": self.feature_value.tolist(),
@@ -639,7 +840,7 @@ class ContextualMotorRefiner:
         raw_config.setdefault("coverage_gate_version", "effective-v1")
         instance = cls(
             int(value["feature_dim"]),
-            config=ContextualMotorConfig(**raw_config),
+            config=ContextualMotorConfig.from_value(raw_config),
             enabled=bool(value["enabled"]),
         )
         instance.learning = bool(value["learning"])
@@ -664,6 +865,8 @@ class ContextualMotorRefiner:
 
 
 __all__ = [
-    "MOTOR_ACTIONS", "MEMORY_OUTCOMES", "ContextualMotorConfig",
-    "ContextualMotorRefiner",
+    "MOTOR_ACTIONS", "MEMORY_OUTCOMES", "LEGACY_UTILITY_PROFILE",
+    "FINITE_ENERGY_UTILITY_PROFILE", "UTILITY_PROFILES",
+    "CONTEXTUAL_INTERVAL_SECONDS", "contextual_transition_utility",
+    "ContextualMotorConfig", "ContextualMotorRefiner",
 ]

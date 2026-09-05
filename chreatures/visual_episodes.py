@@ -680,8 +680,8 @@ class VisualEpisodeMemory:
     ) -> Callable[[tuple[tuple[float, ...], ...]], dict[str, Any]]:
         """Build the callback accepted by ``ContextualMotorRefiner.refine``.
 
-        Utility uses that refiner's exact energy/gut/fatigue drive and
-        nutrition/effort weights.  The returned correction remains bounded by
+        Utility uses that refiner's versioned physiological objective. The
+        legacy path retains its original arithmetic. The correction is bounded by
         the visual episode's age, visual support, action support, and sample
         support.  Creating a callback without native history is rejected so an
         absent organ cannot silently become neutral evidence.
@@ -690,6 +690,20 @@ class VisualEpisodeMemory:
         if not self._records:
             raise ValueError("candidate evidence requires bound native visual history")
         frozen_capture = self._capture(delayed_capture, "delayed_capture")
+        # A selector can depend on the sampled proposal and its own fixed
+        # evidence, but must not read the personal actor's current parameters.
+        frozen_utility = copy.deepcopy(utility_config)
+        utility_profile = (
+            frozen_utility.get("utility_profile", "legacy-drive-v1")
+            if isinstance(frozen_utility, Mapping)
+            else getattr(frozen_utility, "utility_profile", "legacy-drive-v1")
+        )
+        if utility_profile == "finite-energy-v1":
+            if isinstance(frozen_utility, Mapping):
+                from .contextual_motor import ContextualMotorConfig
+                frozen_utility = ContextualMotorConfig.from_value(frozen_utility)
+            if not callable(getattr(frozen_utility, "transition_utility", None)):
+                raise ValueError("finite-energy vision requires the versioned utility helper")
         frozen_tick = _tick(current_tick, "current_tick")
         if frozen_tick < frozen_capture["delivery_tick"]:
             raise ValueError("native capture has not reached its fixed delivery tick")
@@ -777,6 +791,10 @@ class VisualEpisodeMemory:
                     - weights["effort_weight"]
                     * max(0.0, outcomes.get("effort", 0.0))
                 )
+                if utility_profile == "finite-energy-v1":
+                    utility, _ = frozen_utility.transition_utility(
+                        current, after, outcomes, duration=0.25
+                    )
                 bound = float(candidate["controller_influence_bound"])
                 correction = bound * math.tanh(weights["correction_gain"] * utility)
                 corrections.append(correction)
@@ -796,6 +814,7 @@ class VisualEpisodeMemory:
                 )
             return {
                 "source": "native-visual-episodes-v2",
+                "proposal_credit_contract": "candidate-and-frozen-state-only-v1",
                 "corrections": corrections,
                 "diagnostics": diagnostics,
             }

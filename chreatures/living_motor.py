@@ -16,12 +16,18 @@ import numpy as np
 
 from .context_memory import ContextMemoryConfig, RelationalContextMemory
 from .contextual_motor import (
+    FINITE_ENERGY_UTILITY_PROFILE,
     MEMORY_OUTCOMES,
     MOTOR_ACTIONS,
     ContextualMotorConfig,
     ContextualMotorRefiner,
 )
 from .motor_inheritance import MotorArtifact, MotorOrgan
+from .personal_plasticity import (
+    FORMAT as PLASTICITY_FORMAT,
+    PersonalMotorPlasticity,
+    PersonalPlasticityConfig,
+)
 
 
 FORMAT = "chreatures-living-motor-organ-v1"
@@ -79,6 +85,7 @@ class LivingMotorOrgan:
         deterministic: bool = False,
         contextual_enabled: bool = True,
         frozen: bool = False,
+        plasticity: bool = False,
         relational_profile: str | None = None,
         memory_config: ContextMemoryConfig | None = None,
         refiner_config: ContextualMotorConfig | None = None,
@@ -112,6 +119,15 @@ class LivingMotorOrgan:
             or memory_config.outcome_dim != len(MEMORY_OUTCOMES)
         ):
             raise ValueError("memory configuration differs from living motor dimensions")
+        if plasticity:
+            if refiner_config is None:
+                refiner_config = ContextualMotorConfig(
+                    utility_profile=FINITE_ENERGY_UTILITY_PROFILE,
+                )
+            elif refiner_config.utility_profile != FINITE_ENERGY_UTILITY_PROFILE:
+                raise ValueError(
+                    "personal plasticity requires contextual utility_profile='finite-energy-v1'"
+                )
         self.memory = RelationalContextMemory(memory_config)
         self.refiner = ContextualMotorRefiner(
             projection_dim,
@@ -120,8 +136,17 @@ class LivingMotorOrgan:
             enabled=contextual_enabled,
         )
         self.refiner.freeze(frozen)
+        self.personal_plasticity = (
+            PersonalMotorPlasticity(
+                PersonalPlasticityConfig(seed=private_seed + 3301),
+                objective_config=refiner_config.finite_energy_config,
+                learning=not frozen,
+            )
+            if plasticity else None
+        )
         self.pending: dict[str, Any] | None = None
         self.last_record: dict[str, Any] | None = None
+        self.last_plasticity_update: dict[str, Any] | None = None
         self.last_actual_correction: float | None = None
         self.metrics: dict[str, int | float] = {
             "ticks": 0,
@@ -190,11 +215,19 @@ class LivingMotorOrgan:
             "outcome": {"nutrition": 0.0, "effort": 0.0, "contact": 0.0},
             "outcomes_seen": 0,
         }
+        if self.personal_plasticity is not None:
+            self.pending.update({
+                "tick_before_physiology": dict(physiology),
+                "plasticity_transitions": [],
+            })
         self.metrics["macro_decisions"] += 1
         self.metrics["context_changed_choices"] += int(decision["context_changed_choice"])
         self.last_actual_correction = float(candidate["contextual_correction"])
 
-    def _accumulate(self, value: Mapping[str, Any], dt: float) -> None:
+    def _accumulate(
+        self, value: Mapping[str, Any], dt: float,
+        after_physiology: Mapping[str, float],
+    ) -> None:
         if self.pending is None:
             raise RuntimeError("physics outcome arrived without a pending motor transition")
         outcome = self._physics_outcome(value)
@@ -202,7 +235,123 @@ class LivingMotorOrgan:
         total["nutrition"] += outcome["nutrition"]
         total["effort"] += outcome["effort"] * dt
         total["contact"] = max(total["contact"], outcome["contact"])
+        if self.personal_plasticity is not None:
+            if outcome["effort"] > 1.0:
+                raise ValueError("personal plasticity requires physical effort in [0, 1]")
+            tick_before = dict(self.pending["tick_before_physiology"])
+            tick_after = dict(after_physiology)
+            self.pending["plasticity_transitions"].append({
+                "before": tick_before,
+                "after": tick_after,
+                "nutrition": outcome["nutrition"],
+                "effort": outcome["effort"],
+                "dt": dt,
+            })
+            self.pending["tick_before_physiology"] = tick_after
         self.pending["outcomes_seen"] += 1
+
+    def _refine_and_commit(
+        self,
+        projected: np.ndarray,
+        normalized: np.ndarray,
+        raw_neural_features: Any,
+        local_physiology: Mapping[str, Any],
+        step: float,
+        candidate_evidence: Callable[
+            [tuple[tuple[float, ...], ...]], Mapping[str, Any]
+        ] | None,
+    ) -> dict[str, Any]:
+        """Select one macro action, optionally adapting its ancestral mean."""
+        if self.personal_plasticity is None:
+            # This is the original path, including the exact MotorOrgan RNG
+            # draw performed by ContextualMotorRefiner.
+            return self.refiner.refine_and_commit(
+                self.motor, self.memory, projected, raw_neural_features,
+                local_physiology, step, candidate_evidence=candidate_evidence,
+            )
+
+        motor_physiology = self.motor.physiology_vector(local_physiology)
+        inherited_mean, _inherited_value, _hidden = self.motor.forward(
+            normalized, motor_physiology
+        )
+        log_std = np.clip(
+            self.motor.artifact.arrays["log_std"], -3.5, 0.3
+        ).astype(np.float32)
+        inherited_noise = None if self.motor.deterministic else self.motor.rng.standard_normal(
+            len(MOTOR_ACTIONS), dtype=np.float32
+        )
+        proposal = self.personal_plasticity.propose(
+            projected,
+            inherited_mean,
+            log_std,
+            inherited_noise=inherited_noise,
+            deterministic=self.motor.deterministic,
+        )
+        decision = self.refiner.refine_and_commit(
+            self.motor, self.memory, projected, raw_neural_features,
+            local_physiology, step,
+            policy_mean_override=proposal.adapted_mean,
+            baseline_latent=proposal.latent_action,
+            proposal_credit_contract="latent-proposal-downstream-selector-v2",
+            candidate_evidence=candidate_evidence,
+        )
+        selected = int(decision["selected_index"])
+        selected_action = _vector(
+            decision["action_vector"], len(MOTOR_ACTIONS), "selected action"
+        )
+        reranking_active = any(
+            abs(float(candidate["contextual_correction"])) > 0.0
+            or abs(float(candidate.get("external_correction", 0.0))) > 0.0
+            for candidate in decision["candidates"]
+        )
+        generated_pipeline = bool(
+            decision["provenance"].get("candidate_pipeline")
+            == "generated-around-baseline-v1"
+            and decision["provenance"].get("proposal_credit_contract")
+            == "latent-proposal-downstream-selector-v2"
+        )
+        external = decision["provenance"].get("external_evidence")
+        proposal_independent_selector = bool(
+            generated_pipeline
+            and (
+                external is None
+                or bool(external.get("proposal_independent", False))
+            )
+        )
+        provenance = (
+            "latent_proposal_composite_selector"
+            if proposal_independent_selector else "unknown_selection_actor_skipped"
+        )
+        self.personal_plasticity.commit(
+            proposal, executed_action=selected_action, provenance=provenance,
+            selection_pipeline=(
+                "generated-candidate-selector-v1"
+                if proposal_independent_selector else "unknown-selection-v1"
+            ),
+            proposal_independent=proposal_independent_selector,
+        )
+        personal = self.personal_plasticity.pending
+        if personal is None:
+            raise RuntimeError("personal plasticity did not retain its committed proposal")
+        decision["provenance"]["personal_plasticity"] = {
+            "format": PLASTICITY_FORMAT,
+            "decision_sequence": personal.sequence,
+            "selected_candidate": selected,
+            "reranking_active": reranking_active,
+            "external_evidence_declared_independent": (
+                None if external is None else bool(external.get("proposal_independent", False))
+            ),
+            "actor_eligible": personal.actor_eligible,
+            "selection": personal.provenance,
+            "credit_assignment": personal.credit_assignment,
+            "selection_pipeline": personal.selection_pipeline,
+            "proposal_independent_selection": personal.proposal_independent_selection,
+            "proposal_log_probability": personal.proposal_log_probability,
+            "raw_standard_noise": personal.standard_noise.astype(float).tolist(),
+            "raw_baseline_latent": personal.latent_action.astype(float).tolist(),
+        }
+        self.refiner.last_decision = copy.deepcopy(decision)
+        return decision
 
     def tick(
         self,
@@ -231,9 +380,9 @@ class LivingMotorOrgan:
                 raise RuntimeError("pending transition exists at an open motor boundary")
             if previous_physics_outcome is not None:
                 raise ValueError("initial episode tick cannot consume a prior physics outcome")
-            decision = self.refiner.refine_and_commit(
-                self.motor, self.memory, projected, raw_neural_features,
-                local_physiology, step, candidate_evidence=candidate_evidence,
+            decision = self._refine_and_commit(
+                projected, normalized, raw_neural_features,
+                local_physiology, step, candidate_evidence,
             )
             self._new_pending(projected, physiology, decision)
             self.metrics["ticks"] += 1
@@ -246,7 +395,7 @@ class LivingMotorOrgan:
         expected_seen = self.motor.held_ticks - 1
         if int(self.pending["outcomes_seen"]) != expected_seen:
             raise RuntimeError("pending outcome count differs from inherited hold state")
-        self._accumulate(previous_physics_outcome, step)
+        self._accumulate(previous_physics_outcome, step, physiology)
 
         if self.motor.held_ticks < MACRO_STEPS:
             action = self.motor.continue_macro_action(step)
@@ -266,6 +415,13 @@ class LivingMotorOrgan:
             completed["outcome"],
         )
         self.last_record = copy.deepcopy(record)
+        if self.personal_plasticity is not None:
+            transitions = completed.get("plasticity_transitions")
+            if not isinstance(transitions, list) or len(transitions) != MACRO_STEPS:
+                raise RuntimeError("personal plasticity requires five physical tick records")
+            self.last_plasticity_update = self.personal_plasticity.observe(
+                projected, transitions=transitions
+            )
         self.metrics["recorded_transitions"] += 1
         self.metrics["experienced_nutrition"] += float(completed["outcome"]["nutrition"])
         self.metrics["experienced_effort"] += float(completed["outcome"]["effort"])
@@ -275,9 +431,9 @@ class LivingMotorOrgan:
         # The relational graph sees the completed transition before inherited
         # context advances and the next candidate set is evaluated.
         self.motor.open_macro_boundary(normalized)
-        decision = self.refiner.refine_and_commit(
-            self.motor, self.memory, projected, raw_neural_features,
-            local_physiology, step, candidate_evidence=candidate_evidence,
+        decision = self._refine_and_commit(
+            projected, normalized, raw_neural_features,
+            local_physiology, step, candidate_evidence,
         )
         self._new_pending(projected, physiology, decision)
         self.metrics["ticks"] += 1
@@ -286,6 +442,8 @@ class LivingMotorOrgan:
     def freeze(self, frozen: bool = True) -> None:
         """Freeze learning while retaining already learned refinement."""
         self.refiner.freeze(frozen)
+        if self.personal_plasticity is not None:
+            self.personal_plasticity.set_learning(not frozen)
 
     def set_refinement_enabled(self, enabled: bool) -> None:
         """Enable contextual choice changes without changing learning state."""
@@ -299,6 +457,8 @@ class LivingMotorOrgan:
         """Discard an incomplete transition and reset inference, not learning."""
         self.motor.reset_episode()
         self.memory.reset()
+        if self.personal_plasticity is not None:
+            self.personal_plasticity.discard_pending()
         self.pending = None
         self.metrics["episodes"] += 1
 
@@ -318,7 +478,21 @@ class LivingMotorOrgan:
             "learning": {
                 "frozen": not self.refiner.learning,
                 "refinement_enabled": self.refiner.enabled,
+                "plasticity_enabled": self.personal_plasticity is not None,
+                "plasticity_frozen": (
+                    None if self.personal_plasticity is None
+                    else not self.personal_plasticity.learning
+                ),
             },
+            "utility": {
+                "profile": self.refiner.config.utility_profile,
+                "finite_energy_sha256": self.refiner.config.finite_energy_sha256,
+            },
+            "plasticity": (
+                None if self.personal_plasticity is None
+                else self.personal_plasticity.view()
+            ),
+            "last_plasticity_update": copy.deepcopy(self.last_plasticity_update),
             "last_contextual_correction": self.last_actual_correction,
             "last_record": copy.deepcopy(self.last_record),
             "metrics": copy.deepcopy(self.metrics),
@@ -340,7 +514,16 @@ class LivingMotorOrgan:
                 "outcome": copy.deepcopy(self.pending["outcome"]),
                 "outcomes_seen": int(self.pending["outcomes_seen"]),
             }
-        return {
+            if self.personal_plasticity is not None:
+                pending.update({
+                    "tick_before_physiology": copy.deepcopy(
+                        self.pending["tick_before_physiology"]
+                    ),
+                    "plasticity_transitions": copy.deepcopy(
+                        self.pending["plasticity_transitions"]
+                    ),
+                })
+        result = {
             "format": FORMAT,
             "version": 1,
             "artifact_sha256": self.artifact.sha256,
@@ -354,6 +537,12 @@ class LivingMotorOrgan:
             "last_record": copy.deepcopy(self.last_record),
             "metrics": copy.deepcopy(self.metrics),
         }
+        if self.personal_plasticity is not None:
+            result.update({
+                "plasticity": self.personal_plasticity.snapshot_value(),
+                "last_plasticity_update": copy.deepcopy(self.last_plasticity_update),
+            })
+        return result
 
     def snapshot_value(self, *, include_artifact: bool = False) -> dict[str, Any]:
         """Return private JSON state with a shared artifact reference by default."""
@@ -386,15 +575,34 @@ class LivingMotorOrgan:
             shared,
             relational_profile=profile,
             memory_config=saved_config if profile == CUSTOM_PROFILE else None,
+            plasticity=value.get("plasticity") is not None,
         )
         instance.motor = MotorOrgan.restore_value(value["motor"], shared)
         instance.refiner, instance.memory = ContextualMotorRefiner.restore(value["contextual"])
+        if value.get("plasticity") is not None:
+            instance.personal_plasticity = PersonalMotorPlasticity.restore_value(
+                value["plasticity"]
+            )
+            last_plasticity_update = value.get("last_plasticity_update")
+            if last_plasticity_update is not None and not isinstance(last_plasticity_update, dict):
+                raise ValueError("invalid last personal plasticity update")
+            instance.last_plasticity_update = copy.deepcopy(last_plasticity_update)
+            if instance.refiner.config.utility_profile == FINITE_ENERGY_UTILITY_PROFILE:
+                personal_identity = str(
+                    instance.personal_plasticity.objective.config.to_value()["sha256"]
+                )
+                if personal_identity != instance.refiner.config.finite_energy_sha256:
+                    raise ValueError(
+                        "personal and contextual finite-energy configuration identities differ"
+                    )
         if instance.refiner.feature_dim != 64:
             raise ValueError("living motor contextual feature dimension differs")
         if profile != CUSTOM_PROFILE and instance.memory.config != _profile_memory_config(profile):
             raise ValueError("saved memory configuration differs from its relational profile")
         instance.relational_profile = profile
-        instance.pending = instance._restore_pending(value.get("pending"))
+        instance.pending = instance._restore_pending(
+            value.get("pending"), instance.personal_plasticity is not None
+        )
         correction = value.get("last_actual_correction")
         instance.last_actual_correction = None if correction is None else _finite(
             correction, "last actual correction"
@@ -414,6 +622,12 @@ class LivingMotorOrgan:
             == int(instance.metrics["macro_decisions"])
         ):
             raise ValueError("living motor decision counters differ")
+        if (
+            instance.personal_plasticity is not None
+            and instance.personal_plasticity.decision_count
+            != int(instance.metrics["macro_decisions"])
+        ):
+            raise ValueError("personal plasticity decision counter differs")
         if int(instance.metrics["recorded_transitions"]) > int(instance.metrics["macro_decisions"]):
             raise ValueError("living motor transition count exceeds decisions")
         return instance
@@ -432,12 +646,16 @@ class LivingMotorOrgan:
         return cls.restore(value, artifact)
 
     @staticmethod
-    def _restore_pending(value: Any) -> dict[str, Any] | None:
+    def _restore_pending(value: Any, plasticity: bool = False) -> dict[str, Any] | None:
         if value is None:
             return None
-        if not isinstance(value, dict) or set(value) != {
+        basic = {
             "feature", "before_physiology", "action", "outcome", "outcomes_seen",
-        }:
+        }
+        expected = basic | (
+            {"tick_before_physiology", "plasticity_transitions"} if plasticity else set()
+        )
+        if not isinstance(value, dict) or set(value) != expected:
             raise ValueError("invalid pending living motor transition")
         physiology = ContextualMotorRefiner.physiology(value["before_physiology"])
         action = _vector(value["action"], len(MOTOR_ACTIONS), "pending action")
@@ -447,13 +665,57 @@ class LivingMotorOrgan:
         seen = int(value["outcomes_seen"])
         if isinstance(value["outcomes_seen"], bool) or not 0 <= seen <= MACRO_STEPS:
             raise ValueError("invalid pending outcome count")
-        return {
+        result = {
             "feature": _vector(value["feature"], 64, "pending feature"),
             "before_physiology": physiology,
             "action": action,
             "outcome": outcome,
             "outcomes_seen": seen,
         }
+        if plasticity:
+            tick_before = ContextualMotorRefiner.physiology(value["tick_before_physiology"])
+            transitions = value["plasticity_transitions"]
+            if not isinstance(transitions, list) or len(transitions) != seen:
+                raise ValueError("pending physical tick records differ from outcome count")
+            restored_transitions = []
+            previous = physiology
+            nutrition_total = 0.0
+            effort_total = 0.0
+            for index, transition in enumerate(transitions):
+                if not isinstance(transition, dict) or set(transition) != {
+                    "before", "after", "nutrition", "effort", "dt",
+                }:
+                    raise ValueError("invalid pending personal physical tick")
+                before = ContextualMotorRefiner.physiology(transition["before"])
+                after = ContextualMotorRefiner.physiology(transition["after"])
+                if any(abs(before[key] - previous[key]) > 2e-6 for key in before):
+                    raise ValueError("pending physical tick physiology is not contiguous")
+                nutrition = _finite(transition["nutrition"], "pending tick nutrition")
+                effort = _finite(transition["effort"], "pending tick effort")
+                tick_dt = _finite(transition["dt"], "pending tick dt")
+                if nutrition < 0 or not 0 <= effort <= 1 or not math.isclose(
+                    tick_dt, PHYSICS_DT, rel_tol=0.0, abs_tol=1e-12
+                ):
+                    raise ValueError("invalid pending personal physical outcome")
+                restored_transitions.append({
+                    "before": before, "after": after, "nutrition": nutrition,
+                    "effort": effort, "dt": tick_dt,
+                })
+                nutrition_total += nutrition
+                effort_total += effort * tick_dt
+                previous = after
+            if any(abs(tick_before[key] - previous[key]) > 2e-6 for key in tick_before):
+                raise ValueError("pending current physiology differs from physical tick history")
+            if (
+                abs(nutrition_total - outcome["nutrition"]) > 2e-6
+                or abs(effort_total - outcome["effort"]) > 2e-6
+            ):
+                raise ValueError("pending physical tick totals differ from contextual outcome")
+            result.update({
+                "tick_before_physiology": tick_before,
+                "plasticity_transitions": restored_transitions,
+            })
+        return result
 
     @staticmethod
     def _restore_metrics(value: Any) -> dict[str, int | float]:
@@ -484,6 +746,8 @@ class LivingMotorOrgan:
         if held == 0:
             if self.pending is not None:
                 raise ValueError("open motor boundary cannot have a pending transition")
+            if self.personal_plasticity is not None and self.personal_plasticity.pending is not None:
+                raise ValueError("open motor boundary cannot have pending personal plasticity")
             return
         if self.pending is None:
             raise ValueError("held motor action requires a pending transition")
@@ -491,6 +755,14 @@ class LivingMotorOrgan:
             raise ValueError("pending outcome count differs from held motor ticks")
         if not np.array_equal(self.pending["action"], self.motor.held_action):
             raise ValueError("pending action differs from inherited held action")
+        if self.personal_plasticity is not None:
+            personal = self.personal_plasticity.pending
+            if personal is None:
+                raise ValueError("held motor action requires pending personal plasticity")
+            if not np.array_equal(personal.physical_action, self.pending["action"]):
+                raise ValueError("personal plasticity action differs from inherited held action")
+            if len(self.pending.get("plasticity_transitions", ())) != held - 1:
+                raise ValueError("personal physical tick count differs from held motor ticks")
 
 
 __all__ = [

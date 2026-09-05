@@ -1,0 +1,1604 @@
+{
+  "version": 1,
+  "name": "Learning garden",
+  "units": "meters",
+  "size": [
+    12.0,
+    8.0,
+    3.5
+  ],
+  "gravity": [
+    0.0,
+    0.0,
+    -9.81
+  ],
+  "physics_timestep": 0.005,
+  "compiler": {
+    "material_order": [
+      "loam",
+      "terracotta",
+      "limestone",
+      "darkstone",
+      "timber",
+      "leaf",
+      "berry",
+      "nectar",
+      "seed",
+      "violet",
+      "cyan",
+      "cream",
+      "mica",
+      "fern",
+      "pip"
+    ]
+  },
+  "limits": {
+    "entities": 96,
+    "signals": 256,
+    "hand_force": 60.0,
+    "impulse": 4.0,
+    "acoustic_impulse": 10.0,
+    "acoustic_work": 5.0
+  },
+  "materials": {
+    "loam": {
+      "rgba": [
+        0.2,
+        0.29,
+        0.2,
+        1.0
+      ]
+    },
+    "terracotta": {
+      "rgba": [
+        0.66,
+        0.36,
+        0.23,
+        1.0
+      ]
+    },
+    "limestone": {
+      "rgba": [
+        0.69,
+        0.66,
+        0.52,
+        1.0
+      ]
+    },
+    "darkstone": {
+      "rgba": [
+        0.24,
+        0.29,
+        0.34,
+        1.0
+      ]
+    },
+    "timber": {
+      "rgba": [
+        0.47,
+        0.29,
+        0.16,
+        1.0
+      ]
+    },
+    "leaf": {
+      "rgba": [
+        0.18,
+        0.55,
+        0.27,
+        1.0
+      ]
+    },
+    "berry": {
+      "rgba": [
+        0.88,
+        0.1,
+        0.22,
+        1.0
+      ]
+    },
+    "nectar": {
+      "rgba": [
+        0.96,
+        0.67,
+        0.1,
+        1.0
+      ]
+    },
+    "seed": {
+      "rgba": [
+        0.68,
+        0.47,
+        0.2,
+        1.0
+      ]
+    },
+    "violet": {
+      "rgba": [
+        0.56,
+        0.23,
+        0.81,
+        1.0
+      ]
+    },
+    "cyan": {
+      "rgba": [
+        0.12,
+        0.67,
+        0.73,
+        1.0
+      ]
+    },
+    "cream": {
+      "rgba": [
+        0.88,
+        0.82,
+        0.65,
+        1.0
+      ]
+    },
+    "mica": {
+      "rgba": [
+        0.94,
+        0.48,
+        0.32,
+        1.0
+      ]
+    },
+    "fern": {
+      "rgba": [
+        0.32,
+        0.73,
+        0.42,
+        1.0
+      ]
+    },
+    "pip": {
+      "rgba": [
+        0.32,
+        0.55,
+        0.89,
+        1.0
+      ]
+    }
+  },
+  "physical_materials": {
+    "earth": {
+      "density": 950,
+      "friction": [
+        1.15,
+        0.025,
+        0.004
+      ]
+    },
+    "masonry": {
+      "density": 1800,
+      "friction": [
+        0.95,
+        0.018,
+        0.003
+      ]
+    },
+    "timber": {
+      "density": 560,
+      "friction": [
+        0.82,
+        0.014,
+        0.003
+      ]
+    },
+    "light": {
+      "density": 38,
+      "friction": [
+        0.7,
+        0.012,
+        0.002
+      ]
+    },
+    "mechanism-light": {
+      "density": 1.0,
+      "friction": [
+        0.88,
+        0.012,
+        0.002
+      ]
+    },
+    "mechanism-weight": {
+      "density": 3.0,
+      "friction": [
+        0.82,
+        0.012,
+        0.002
+      ]
+    },
+    "body": {
+      "density": 160,
+      "friction": [
+        0.72,
+        0.03,
+        0.006
+      ]
+    }
+  },
+  "body_prototype": {
+    "shape": {
+      "type": "ellipsoid",
+      "size": [
+        0.11,
+        0.075,
+        0.055
+      ]
+    },
+    "physical_material": "body",
+    "radius": 0.1,
+    "traction_force": 10.0,
+    "turn_torque": 0.2,
+    "posture_torque": 0.18,
+    "vertical_force": 30.0
+  },
+  "bodies": [
+    {
+      "id": "mica",
+      "name": "Reed",
+      "position": [
+        0.78,
+        1.72,
+        0.1
+      ],
+      "heading": 0.05,
+      "material": "mica",
+      "energy": 0.8,
+      "gut": 0.1,
+      "fatigue": 0.04
+    },
+    {
+      "id": "fern",
+      "name": "Tansy",
+      "position": [
+        3.4,
+        6.55,
+        0.1
+      ],
+      "heading": 5.75,
+      "material": "fern",
+      "energy": 0.76,
+      "gut": 0.16,
+      "fatigue": 0.04
+    },
+    {
+      "id": "pip",
+      "name": "Sorrel",
+      "position": [
+        10.15,
+        1.8,
+        0.72
+      ],
+      "heading": 3.15,
+      "material": "pip",
+      "energy": 0.82,
+      "gut": 0.08,
+      "fatigue": 0.04
+    }
+  ],
+  "presets": {
+    "berry-pod": {
+      "mobility": "free",
+      "material": "berry",
+      "physical_material": "light",
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.085
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "food",
+          "amount": 0.62,
+          "capacity": 1.2,
+          "nutrition": 1.0
+        },
+        {
+          "type": "scent",
+          "odor": 0,
+          "strength": 1.0
+        }
+      ]
+    },
+    "nectar-pod": {
+      "mobility": "free",
+      "material": "nectar",
+      "physical_material": "light",
+      "shapes": [
+        {
+          "type": "capsule",
+          "size": [
+            0.065,
+            0.095
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "food",
+          "amount": 0.52,
+          "capacity": 1.05,
+          "nutrition": 0.92
+        },
+        {
+          "type": "scent",
+          "odor": 1,
+          "strength": 1.0
+        }
+      ]
+    },
+    "seed-pod": {
+      "mobility": "free",
+      "material": "seed",
+      "physical_material": "light",
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.095,
+            0.07,
+            0.06
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "food",
+          "amount": 0.46,
+          "capacity": 0.9,
+          "nutrition": 0.82
+        },
+        {
+          "type": "scent",
+          "odor": 2,
+          "strength": 0.82
+        }
+      ]
+    },
+    "play-ball": {
+      "mobility": "free",
+      "material": "violet",
+      "physical_material": "light",
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.15
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "scent",
+          "odor": 2,
+          "strength": 0.4
+        },
+        {
+          "type": "resonator",
+          "tone": 2,
+          "gain": 0.42
+        }
+      ]
+    },
+    "play-block": {
+      "mobility": "free",
+      "material": "cyan",
+      "physical_material": "light",
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.13,
+            0.13,
+            0.13
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "resonator",
+          "tone": 1,
+          "gain": 0.3
+        }
+      ]
+    }
+  },
+  "entities": [
+    {
+      "id": "ground",
+      "mobility": "static",
+      "material": "loam",
+      "physical_material": "earth",
+      "position": [
+        6.0,
+        4.0,
+        -0.12
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            6.0,
+            4.0,
+            0.12
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "west-wall",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        -0.1,
+        4.0,
+        0.45
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.1,
+            4.0,
+            0.45
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "east-wall",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        12.1,
+        4.0,
+        0.45
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.1,
+            4.0,
+            0.45
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "north-wall",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        6.0,
+        -0.1,
+        0.45
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            6.0,
+            0.1,
+            0.45
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "south-wall",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        6.0,
+        8.1,
+        0.45
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            6.0,
+            0.1,
+            0.45
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "west-rise",
+      "mobility": "static",
+      "material": "terracotta",
+      "physical_material": "masonry",
+      "position": [
+        1.9,
+        1.8,
+        0.0903
+      ],
+      "quaternion": [
+        0.99854609,
+        0.0,
+        -0.05390453,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            1.32,
+            0.72,
+            0.05
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            1.32,
+            0.025,
+            0.055
+          ],
+          "position": [
+            0.0,
+            -0.745,
+            0.08
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            1.32,
+            0.025,
+            0.055
+          ],
+          "position": [
+            0.0,
+            0.745,
+            0.08
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "middle-terrace",
+      "mobility": "static",
+      "material": "terracotta",
+      "physical_material": "masonry",
+      "position": [
+        4.4,
+        1.8,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            1.4,
+            1.15,
+            0.14
+          ],
+          "position": [
+            0.0,
+            0.0,
+            0.14
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            1.4,
+            0.03,
+            0.07
+          ],
+          "position": [
+            0.0,
+            -1.18,
+            0.35
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.48,
+            0.03,
+            0.07
+          ],
+          "position": [
+            -0.92,
+            1.18,
+            0.35
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "upper-rise",
+      "mobility": "static",
+      "material": "limestone",
+      "physical_material": "masonry",
+      "position": [
+        7.2,
+        1.8,
+        0.4003
+      ],
+      "quaternion": [
+        0.99838672,
+        0.0,
+        -0.05677991,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            1.5,
+            0.72,
+            0.05
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            1.5,
+            0.025,
+            0.055
+          ],
+          "position": [
+            0.0,
+            -0.745,
+            0.08
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "upper-terrace",
+      "mobility": "static",
+      "material": "limestone",
+      "physical_material": "masonry",
+      "position": [
+        9.8,
+        1.8,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            1.2,
+            1.15,
+            0.12
+          ],
+          "position": [
+            0.0,
+            0.0,
+            0.5
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.25
+          ],
+          "position": [
+            -1.05,
+            -1.0,
+            0.25
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.25
+          ],
+          "position": [
+            1.05,
+            -1.0,
+            0.25
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.25
+          ],
+          "position": [
+            -1.05,
+            1.0,
+            0.25
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.25
+          ],
+          "position": [
+            1.05,
+            1.0,
+            0.25
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            1.2,
+            0.03,
+            0.07
+          ],
+          "position": [
+            0.0,
+            -1.18,
+            0.69
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.03,
+            0.42,
+            0.07
+          ],
+          "position": [
+            1.23,
+            -0.73,
+            0.69
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "shade",
+          "radius": 1.55,
+          "strength": 0.78
+        }
+      ]
+    },
+    {
+      "id": "garden-return",
+      "mobility": "static",
+      "material": "limestone",
+      "physical_material": "masonry",
+      "position": [
+        9.8,
+        5.025,
+        0.2606
+      ],
+      "quaternion": [
+        0.99719167,
+        -0.07489171,
+        0.0,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.78,
+            2.1,
+            0.05
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.025,
+            2.1,
+            0.055
+          ],
+          "position": [
+            -0.805,
+            0.0,
+            0.08
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.025,
+            2.1,
+            0.055
+          ],
+          "position": [
+            0.805,
+            0.0,
+            0.08
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "echo-arch",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        6.4,
+        5.4,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.13,
+            0.72,
+            0.43
+          ],
+          "position": [
+            -0.78,
+            0.0,
+            0.43
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.13,
+            0.72,
+            0.43
+          ],
+          "position": [
+            0.78,
+            0.0,
+            0.43
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.91,
+            0.72,
+            0.1
+          ],
+          "position": [
+            0.0,
+            0.0,
+            0.91
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "shade",
+          "radius": 1.12,
+          "strength": 0.82
+        }
+      ]
+    },
+    {
+      "id": "garden-screen",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "timber",
+      "position": [
+        3.85,
+        4.45,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.055,
+            0.82,
+            0.38
+          ],
+          "position": [
+            0.0,
+            0.0,
+            0.38
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.48,
+            0.055,
+            0.3
+          ],
+          "position": [
+            0.43,
+            -0.765,
+            0.3
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "shade",
+          "radius": 0.88,
+          "strength": 0.48
+        }
+      ]
+    },
+    {
+      "id": "underdeck-light",
+      "mobility": "static",
+      "material": "cyan",
+      "physical_material": "light",
+      "position": [
+        9.8,
+        1.8,
+        0.31
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.045
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "light",
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "direction": [
+            0.0,
+            0.0,
+            -1.0
+          ],
+          "color": [
+            0.16,
+            0.65,
+            0.78
+          ],
+          "intensity": 0.44,
+          "radius": 1.65
+        }
+      ]
+    },
+    {
+      "id": "terrace-light",
+      "mobility": "static",
+      "material": "nectar",
+      "physical_material": "light",
+      "position": [
+        10.65,
+        1.08,
+        1.02
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.05
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "light",
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "direction": [
+            -0.25,
+            0.25,
+            -1.0
+          ],
+          "color": [
+            1.0,
+            0.58,
+            0.19
+          ],
+          "intensity": 0.68,
+          "radius": 2.25
+        }
+      ]
+    },
+    {
+      "id": "balance-plank",
+      "mobility": "hinge",
+      "material": "timber",
+      "physical_material": "timber",
+      "position": [
+        5.05,
+        6.55,
+        0.31
+      ],
+      "joint": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "range": [
+          -22.0,
+          22.0
+        ],
+        "damping": 0.065,
+        "initial": 3.0
+      },
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            1.12,
+            0.34,
+            0.05
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "resonator",
+          "tone": 0,
+          "gain": 0.45
+        }
+      ]
+    },
+    {
+      "id": "balance-fulcrum",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        5.05,
+        6.55,
+        0.17
+      ],
+      "shapes": [
+        {
+          "type": "cylinder",
+          "size": [
+            0.11,
+            0.31
+          ],
+          "quaternion": [
+            0.70710678,
+            0.70710678,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "leaf-gate",
+      "mobility": "hinge",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        7.02,
+        4.66,
+        0.34
+      ],
+      "joint": {
+        "axis": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "range": [
+          -72.0,
+          72.0
+        ],
+        "damping": 0.032,
+        "initial": -8.0
+      },
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.58,
+            0.025,
+            0.31
+          ],
+          "position": [
+            -0.58,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "resonator",
+          "tone": 1,
+          "gain": 0.48
+        }
+      ]
+    },
+    {
+      "id": "bell-frame",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "timber",
+      "position": [
+        1.4,
+        6.25,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.84
+          ],
+          "position": [
+            -0.48,
+            0.0,
+            0.84
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.84
+          ],
+          "position": [
+            0.48,
+            0.0,
+            0.84
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.56,
+            0.08,
+            0.08
+          ],
+          "position": [
+            0.0,
+            0.0,
+            1.67
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "rain-bell",
+      "mobility": "hinge",
+      "material": "cream",
+      "physical_material": "timber",
+      "position": [
+        1.4,
+        6.25,
+        1.6
+      ],
+      "joint": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "range": [
+          -62.0,
+          62.0
+        ],
+        "damping": 0.022,
+        "initial": 14.0
+      },
+      "shapes": [
+        {
+          "type": "capsule",
+          "size": [
+            0.055
+          ],
+          "fromto": [
+            0.0,
+            0.0,
+            -0.02,
+            0.0,
+            0.0,
+            -0.72
+          ]
+        },
+        {
+          "type": "sphere",
+          "size": [
+            0.135
+          ],
+          "position": [
+            0.0,
+            0.0,
+            -0.79
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "resonator",
+          "tone": 2,
+          "gain": 0.75
+        }
+      ]
+    },
+    {
+      "id": "sun-berry",
+      "preset": "berry-pod",
+      "position": [
+        10.3,
+        1.72,
+        0.72
+      ]
+    },
+    {
+      "id": "shade-nectar",
+      "preset": "nectar-pod",
+      "position": [
+        9.72,
+        1.78,
+        0.14
+      ],
+      "quaternion": [
+        0.70710678,
+        0.70710678,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "screen-seed",
+      "preset": "seed-pod",
+      "position": [
+        4.45,
+        4.55,
+        0.1
+      ]
+    },
+    {
+      "id": "way-berry",
+      "preset": "berry-pod",
+      "position": [
+        4.25,
+        1.8,
+        0.38
+      ]
+    },
+    {
+      "id": "floor-nectar",
+      "preset": "nectar-pod",
+      "position": [
+        8.05,
+        6.65,
+        0.12
+      ],
+      "quaternion": [
+        0.70710678,
+        0.70710678,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "tone-ball",
+      "preset": "play-ball",
+      "position": [
+        3.25,
+        5.3,
+        0.17
+      ]
+    },
+    {
+      "id": "cyan-ball",
+      "preset": "play-ball",
+      "material": "cyan",
+      "position": [
+        8.45,
+        4.6,
+        0.17
+      ]
+    },
+    {
+      "id": "rattle-block",
+      "preset": "play-block",
+      "position": [
+        6.42,
+        5.4,
+        0.15
+      ]
+    },
+    {
+      "id": "stack-block-a",
+      "preset": "play-block",
+      "position": [
+        2.55,
+        6.85,
+        0.15
+      ]
+    },
+    {
+      "id": "stack-block-b",
+      "preset": "play-block",
+      "material": "leaf",
+      "position": [
+        2.55,
+        6.85,
+        0.43
+      ]
+    },
+    {
+      "id": "lift-approach",
+      "mobility": "static",
+      "material": "terracotta",
+      "physical_material": "masonry",
+      "position": [
+        6.2,
+        3.85,
+        0.0602
+      ],
+      "quaternion": [
+        0.99792222,
+        0.0,
+        -0.06442964,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.68,
+            0.5,
+            0.03
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.68,
+            0.02,
+            0.04
+          ],
+          "position": [
+            0.0,
+            -0.52,
+            0.065
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.68,
+            0.02,
+            0.04
+          ],
+          "position": [
+            0.0,
+            0.52,
+            0.065
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "pressure-lift",
+      "mobility": "slide",
+      "material": "cyan",
+      "physical_material": "mechanism-light",
+      "position": [
+        7.5,
+        3.85,
+        0.0
+      ],
+      "joint": {
+        "axis": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "range": [
+          0.0,
+          0.18
+        ],
+        "damping": 0.55,
+        "initial": 0.18
+      },
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.6,
+            0.5,
+            0.035
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "resonator",
+          "tone": 0,
+          "gain": 0.34
+        }
+      ]
+    },
+    {
+      "id": "passage-gate",
+      "mobility": "slide",
+      "material": "leaf",
+      "physical_material": "mechanism-weight",
+      "position": [
+        8.15,
+        3.85,
+        0.25
+      ],
+      "joint": {
+        "axis": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "range": [
+          0.0,
+          0.42
+        ],
+        "damping": 0.75,
+        "initial": 0.0
+      },
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.035,
+            0.55,
+            0.25
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "shade",
+          "radius": 0.7,
+          "strength": 0.46
+        }
+      ]
+    },
+    {
+      "id": "lift-frame",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "timber",
+      "position": [
+        8.15,
+        3.85,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.055,
+            0.055,
+            0.46
+          ],
+          "position": [
+            0.0,
+            -0.64,
+            0.46
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.055,
+            0.055,
+            0.46
+          ],
+          "position": [
+            0.0,
+            0.64,
+            0.46
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.055,
+            0.72,
+            0.055
+          ],
+          "position": [
+            0.0,
+            0.0,
+            0.92
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "counterweight-block",
+      "preset": "play-block",
+      "material": "cream",
+      "position": [
+        5.32,
+        3.85,
+        0.15
+      ]
+    },
+    {
+      "id": "first-fruit-mica",
+      "preset": "berry-pod",
+      "position": [
+        1.0396750677026914,
+        1.7329945840103764,
+        0.115
+      ]
+    },
+    {
+      "id": "first-fruit-fern",
+      "preset": "berry-pod",
+      "position": [
+        3.6239100284619954,
+        6.417847439850193,
+        0.115
+      ]
+    },
+    {
+      "id": "first-fruit-pip",
+      "preset": "berry-pod",
+      "position": [
+        9.890009188797452,
+        1.7978141156845413,
+        0.735
+      ]
+    }
+  ],
+  "assemblies": [
+    {
+      "id": "lifted-passage",
+      "type": "joint_coupling",
+      "joint_a": "pressure-lift",
+      "joint_b": "passage-gate",
+      "offset": 0.18,
+      "ratio": -0.42857143,
+      "solref": [
+        0.012,
+        1.0
+      ],
+      "solimp": [
+        0.95,
+        0.99,
+        0.001,
+        0.5,
+        2.0
+      ]
+    }
+  ],
+  "sensorium": {
+    "frame": "body-v1"
+  }
+}

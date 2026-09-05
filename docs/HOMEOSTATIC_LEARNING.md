@@ -107,6 +107,11 @@ reward, terms = objective.transition(
 manifest_value = config.to_value()  # versioned, canonical SHA-256
 ```
 
+The default maximum accounting interval is explicitly configured as 2 seconds,
+so a complete `0.25 s` motor macro is accepted without inventing intermediate
+transitions.  This bound guards accidental episode-scale aggregation; the
+potential delta itself and the effort term remain valid over the full interval.
+
 Inputs may be scalar, batched dictionaries, or arrays ending in
 `[energy, gut, fatigue]`.  Unknown physiology fields are rejected.  The API
 returns a resident reward array and named arrays for before/after reserve,

@@ -23,10 +23,21 @@ from .runtime import canonical
 from .visitor_events import VisitorPerformances
 
 
+def physical_world_type(body_mode, execution):
+    from .sensorium import SensoriumWorld, ArticulatedSensoriumWorld
+    if execution == "vectorized" and body_mode == "articulated":
+        from .physical_batch import FastArticulatedSensoriumWorld
+        return FastArticulatedSensoriumWorld
+    if execution != "reference":
+        raise ValueError("Vectorized physics requires an articulated body")
+    return ArticulatedSensoriumWorld if body_mode == "articulated" else SensoriumWorld
+
+
 class Habitat3D:
     def __init__(self, seed=7, brain_url="http://127.0.0.1:18765", spec=None,
                  body_mode="articulated", ecology="diffusion", resources=None, acoustics=None,
-                 motor_genome=None, personal_memory=False, perception_url=None):
+                 motor_genome=None, personal_memory=False, perception_url=None, physics_backend=None,
+                 personal_plasticity=False):
         from .sensorium import SensoriumWorld, ArticulatedSensoriumWorld
         from .fields import FieldEnvironment
         from .ecology import Ecology
@@ -37,12 +48,19 @@ class Habitat3D:
             raise ValueError("Personal contextual motor learning requires an inherited motor artifact")
         if perception_url is not None and not personal_memory:
             raise ValueError("Native visual episodes require the personal motor organ")
+        if personal_plasticity and not personal_memory:
+            raise ValueError("Personal motor plasticity requires a personal memory organ")
         self.personal_memory = bool(personal_memory)
+        self.personal_plasticity = bool(personal_plasticity)
         if spec is None:
             spec = json.loads((Path(__file__).resolve().parents[1] / "data/habitats/hollow-garden.json").read_text())
-            spec["sensorium"] = {"frame": "body-v1"}
+        # This constructor creates a new life. Restoring an older snapshot
+        # follows its saved selector, including legacy worlds with no selector.
+        spec = copy.deepcopy(spec)
+        spec.setdefault("sensorium", {"frame": "body-v1"})
         self.body_mode = body_mode
-        world_type = ArticulatedSensoriumWorld if body_mode == "articulated" else SensoriumWorld
+        self.physics_backend = physics_backend or ("vectorized" if body_mode == "articulated" else "reference")
+        world_type = physical_world_type(body_mode, self.physics_backend)
         self.world = world_type(seed=seed, spec=spec)
         self.field = FieldEnvironment.from_world(self.world) if ecology == "diffusion" else None
         self.resources = Ecology(self.world, resources, seed=seed) if resources is not None else None
@@ -62,7 +80,8 @@ class Habitat3D:
             if self.personal_memory:
                 from .living_motor import LivingMotorOrgan
                 motor_type = LivingMotorOrgan
-            self.motors = {b.id: motor_type(self.motor_artifact, seed=seed * 1009 + i)
+            private_options = {"plasticity": self.personal_plasticity} if self.personal_memory else {}
+            self.motors = {b.id: motor_type(self.motor_artifact, seed=seed * 1009 + i, **private_options)
                            for i, b in enumerate(self.world.bodies)}
         self.id = str(uuid.uuid4())
         self.tick = 0
@@ -87,6 +106,7 @@ class Habitat3D:
         self.phase_timings = deque(maxlen=120)
         self.pending_step = None
         self.visitor = VisitorPerformances()
+        self.execution_migrations = []
         self.vision = None
         if perception_url is not None:
             from .embodied_vision import EmbodiedVision
@@ -279,6 +299,7 @@ class Habitat3D:
                                  "scope": "full traced curated brain and nerve cord",
                                  "inputs": len(self.neural.input_names), "readouts": len(self.neural.output_names)},
                      "performance": {"step_ms": sum(self.timings) / max(1, len(self.timings)), "dt": 0.05,
+                                     "physics_backend": self.physics_backend,
                                      "phase_ms": {key: sum(t[key] for t in self.phase_timings) / len(self.phase_timings)
                                                   for key in self.phase_timings[0]} if self.phase_timings else {}}})
         return view
@@ -290,6 +311,8 @@ class Habitat3D:
         state = {"version": 1, "kind": "chreatures-3d", "id": self.id, "tick": self.tick,
                  "branch": self.branch, "paused": self.paused, "speed": self.speed,
                  "world": self.world.snapshot(), "body_mode": self.body_mode,
+                 "physics_backend": self.physics_backend,
+                 "execution_migrations": self.execution_migrations,
                  "field": self.field.snapshot() if self.field is not None else None,
                  "resources": self.resources.snapshot() if self.resources is not None else None,
                  "resource_state": self.resource_state,
@@ -302,6 +325,7 @@ class Habitat3D:
                  "organs": {k: v.snapshot() for k, v in self.organs.items()},
                  "motor_artifact": self.motor_artifact.to_value() if self.motor_artifact is not None else None,
                  "personal_memory": self.personal_memory,
+                 "personal_plasticity": self.personal_plasticity,
                  "motors": {k: v.snapshot_value() for k, v in self.motors.items()},
                  "remote_ids": self.remote_ids, "brain_url": self.neural.url, "graph_sha256": self.neural.graph["sha256"],
                  "neural_snapshot": receipt, "neural_state": self.neural_state,
@@ -335,7 +359,9 @@ class Habitat3D:
             raise ValueError("3D checkpoint checksum mismatch")
         instance = cls.__new__(cls)
         instance.body_mode = value.get("body_mode", "crawler")
-        world_type = ArticulatedSensoriumWorld if instance.body_mode == "articulated" else SensoriumWorld
+        instance.physics_backend = value.get("physics_backend", "reference")
+        instance.execution_migrations = copy.deepcopy(value.get("execution_migrations", []))
+        world_type = physical_world_type(instance.body_mode, instance.physics_backend)
         instance.world = world_type.restore(value["world"])
         instance.visitor = VisitorPerformances.restore(value.get("visitor"), instance.world)
         instance.vision = None
@@ -353,6 +379,7 @@ class Habitat3D:
         instance.motor_artifact = None
         instance.motors = {}
         instance.personal_memory = bool(value.get("personal_memory", False))
+        instance.personal_plasticity = bool(value.get("personal_plasticity", False))
         if value.get("motor_artifact") is not None:
             from .motor_inheritance import MotorArtifact, MotorOrgan
             instance.motor_artifact = MotorArtifact.from_value(value["motor_artifact"])
@@ -364,6 +391,11 @@ class Habitat3D:
                                for key, state in value["motors"].items()}
             if set(instance.motors) != {body.id for body in instance.world.bodies} or instance.organs:
                 raise ValueError("Saved motor controllers do not match the physical cohort")
+            if instance.personal_memory and any(
+                (motor.personal_plasticity is not None) != instance.personal_plasticity
+                for motor in instance.motors.values()
+            ):
+                raise ValueError("Saved personal plasticity selector differs from its organs")
         instance.neural = NeuralClient(brain_url or value["brain_url"])
         instance._validate_motor_interface()
         if instance.neural.graph["sha256"] != value["graph_sha256"]:
