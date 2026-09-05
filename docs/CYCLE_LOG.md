@@ -36,3 +36,18 @@ pin it. The original signature check remains mandatory.
 The first public working checkpoint is available at
 [emberian/chreatures](https://github.com/emberian/chreatures). Private imported
 conversations, live resident state and operational instructions remain local.
+
+### Integrated 3D continuity result
+
+A dedicated research world joined the articulated sensorium, conservative scent
+transport, personal cognitive organs and the full MaleCNS 351→384 service. After
+30 steps it checkpointed, advanced eight more steps, restored, and replayed.
+Physical integration state, full neural readouts, personal cognitive state and
+chemical fields all matched exactly. The comparison advanced actual GPU state;
+it did not substitute a mock neural service. The test cohort was removed after
+the comparison; no existing resident history was rolled back.
+
+The final terrain pass has a continuous floor-to-deck approach, a lookout branch,
+a south return, an under-ramp passage, an open nook and a resonant hinged flap.
+A commanded articulated body can traverse the approach. Discovering and using
+those routes remains a learning target.
