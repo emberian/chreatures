@@ -211,3 +211,12 @@ The sample's full and partial physical masses are approximately `0.0750631` and
 `0.0356214` MuJoCo mass units. These values are physical consequences of the
 sample geometry and its habitat density; they are not treated as chemical
 inventory or a calibrated mapping from elemental equivalents to kilograms.
+
+`scripts/probe_material_overhead.py` profiles the unconditional material calls
+in a fresh fast-articulated recycling world and compares complete continuation
+snapshots. Its local research-reference branch emulates the earlier scans on a
+disposable instance; it is not a runtime backend. The archived measurement in
+`data/performance/material-overhead-v1.receipt.json` supports reduced recurring
+material overhead and explicitly makes no whole-world speedup claim because
+shared-host wall time was noisy and physical topology compilation still
+dominates deposit events.

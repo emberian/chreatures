@@ -19,7 +19,7 @@ import numpy as np
 from .growth import GrowthSystem
 from .metabolism import Chemistry, MetabolicWeb, canonical
 
-FORMAT = "chreatures-biosphere-v3"
+FORMAT = "chreatures-biosphere-v4"
 KINDS = ("branch", "root", "leaf")
 
 
@@ -624,6 +624,9 @@ class Biosphere:
             "web": self.web.snapshot(),
             "growth": {key: value.snapshot() for key, value in self.growth.items()},
             "parts": copy.deepcopy(self.parts),
+            # JSON canonicalization sorts mapping keys. Part insertion order
+            # is causal state because floating-point reductions use it.
+            "part_order": list(self.parts),
             "active": self.active.copy(),
             "initial_totals": copy.deepcopy(self.initial_totals),
             "initial_ledger": self.initial_ledger.copy(),
@@ -643,8 +646,14 @@ class Biosphere:
             snapshot["mobility"] = None
             snapshot["material_objects"] = None
         if snapshot.get("format") == "chreatures-biosphere-v2":
-            snapshot["format"] = FORMAT
+            snapshot["format"] = "chreatures-biosphere-v3"
             snapshot["exchange"] = None
+        if snapshot.get("format") == "chreatures-biosphere-v3":
+            snapshot["format"] = FORMAT
+            # Older artifacts did not retain pre-serialization insertion order.
+            # Preserve their available document order, as the old loader did;
+            # do not invent an allegedly exact historical continuation.
+            snapshot["part_order"] = list(snapshot["parts"])
         if snapshot.get("format") != FORMAT:
             raise ValueError("unsupported biosphere snapshot")
         mobile_state = snapshot["mobility"]
@@ -664,7 +673,17 @@ class Biosphere:
             key: GrowthSystem.restore(instance.growth[key].grammar, value)
             for key, value in snapshot["growth"].items()
         }
-        instance.parts = copy.deepcopy(snapshot["parts"])
+        part_order = snapshot.get("part_order")
+        if (
+            not isinstance(part_order, list)
+            or any(not isinstance(key, str) for key in part_order)
+            or len(part_order) != len(set(part_order))
+            or set(part_order) != set(snapshot["parts"])
+        ):
+            raise ValueError("developmental part order differs from saved tissue")
+        instance.parts = {
+            key: copy.deepcopy(snapshot["parts"][key]) for key in part_order
+        }
         for part in instance.parts.values():
             if (
                 part["colony"] not in instance.growth

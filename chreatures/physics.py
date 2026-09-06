@@ -1558,6 +1558,12 @@ class PhysicsWorld:
             setattr(self, name, getattr(candidate, name))
         if hasattr(candidate, "_leg_joints"):
             self._leg_joints = candidate._leg_joints
+        self._grips = {
+            body_id: entity_id if entity_id in self._entity_mj else None
+            for body_id, entity_id in self._grips.items()
+        }
+        if self._hand is not None and self._hand.get("entity_id") not in self._entity_mj:
+            self._hand = None
         for (object_type, name), values in mutable_by_name.items():
             object_id = mujoco.mj_name2id(self.model, object_type, name)
             if object_id >= 0:

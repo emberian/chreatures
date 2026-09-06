@@ -85,7 +85,11 @@ Fresh birth-v3 worlds can additionally enable [physical recycling](ECOLOGICAL_EX
 mobile material leaves through body-local outlets into finite free deposits,
 and constructed roots acquire configured resources under actual physical contact.
 The native chemical ledger spans all these compartments. The current snapshot
-format is v3; v1/v2 data import with exchange disabled.
+format is v4. It explicitly preserves developmental part iteration order because
+floating-point tissue and illumination reductions depend on that order. Earlier
+v1/v2 data import with exchange disabled; v3 imports retain the order available
+in their saved document. Those earlier artifacts did not record the order before
+canonical JSON serialization, so exact recovery of that lost order is not claimed.
 
 Embodied reproduction, autonomous predation, full mass-to-inertia coupling
 and conservation of every physical object in the world remain unimplemented.
