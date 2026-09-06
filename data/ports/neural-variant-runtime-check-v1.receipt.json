@@ -1,0 +1,26 @@
+{
+  "batch": 3,
+  "claim_boundary": "one bounded full-graph B3 mechanism check; timings include cold compilation and are not a benchmark",
+  "compatibility_group": "b84a8dadddf93cad732717842511e52aec892c3883202daaac27948514416a3b",
+  "features_max_abs": 2.9802322387695312e-08,
+  "format": "chreatures-neural-variant-runtime-check-v1",
+  "gpu": "AMD Radeon Graphics",
+  "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "mismatched_identity_rejected": true,
+  "phenotype_sha256": [
+    "fa22cf390d1df52f3c54eaec09deb172b1709540ea5d0e85610fb2289886df55",
+    "2f717739974e82c2f64e0bb84dc384b46dc0620fba0d2d34080581a10ce83582",
+    "3b7db4e052e6ff8e73dfa60767b97451f1ea5e3ddda7587cd36aa271cc91f69e"
+  ],
+  "physiology_max_abs": 0.0,
+  "rates_max_abs": 1.150183379650116e-07,
+  "recipe_sha256": "352b4c0cd9dacb5d84914a43651268b44073e4df0b8d9a33a1b44db64ed8bd46",
+  "reference_identity_equal": true,
+  "same_backend_replay_features_max_abs": 0.0,
+  "same_backend_replay_state_max_abs": 0.0,
+  "state_identity": "673e1ca532932c78ed155982e021d4bc8aabde2526f25baef97cc8e1c92ce3ca",
+  "timing_seconds": {
+    "torch": 0.4079989120364189,
+    "triton_edge8": 3.924315827898681
+  }
+}

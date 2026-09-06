@@ -31,6 +31,14 @@ derived = DerivedCircuitGraph.load(receipt["path"], mmap=True)
 ports = NeuralPortBundle.load(Path(receipt["path"]) / "ports.npz", derived)
 ```
 
+Population neural genotypes use
+`materialize_population_structural_variant(...)` to resolve one exact named
+template from an authenticated neural-variant recipe before invoking this same
+compiler. A variation seed therefore cannot silently select an arbitrary
+subgraph. The compiled graph and derived-port hashes form a separate hardware
+compatibility group; parameter-only candidates continue to share the canonical
+sparse graph. See [NEURAL_VARIANTS.md](NEURAL_VARIANTS.md).
+
 The derived loader presents the same `n`, `hash`, CSR arrays, neuron metadata,
 `matrix()`, and sparse-port boundary consumed by `RemoteBrain` and
 `NeuronMajorCircuit`. The compiler also emits the existing dimension-generic

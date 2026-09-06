@@ -1,0 +1,431 @@
+{
+  "bounds": {
+    "combined": {
+      "excitability_gain": [
+        0.65,
+        1.45
+      ],
+      "input_gain": [
+        0.7,
+        1.3
+      ],
+      "learning_rate_gain": [
+        0.5,
+        1.75
+      ],
+      "modulator_gain": [
+        0.5,
+        1.75
+      ],
+      "readout_gain": [
+        0.7,
+        1.3
+      ],
+      "recurrent_source_gain": [
+        0.65,
+        1.45
+      ],
+      "recurrent_target_gain": [
+        0.65,
+        1.45
+      ]
+    },
+    "mutation_log_sigma_max": 0.18,
+    "parameters": {
+      "excitability_gain": [
+        0.85,
+        1.15
+      ],
+      "input_gain": [
+        0.8,
+        1.2
+      ],
+      "learning_rate_gain": [
+        0.75,
+        1.25
+      ],
+      "modulator_gain": [
+        0.75,
+        1.25
+      ],
+      "readout_gain": [
+        0.8,
+        1.2
+      ],
+      "recurrent_source_gain": [
+        0.85,
+        1.15
+      ],
+      "recurrent_target_gain": [
+        0.85,
+        1.15
+      ]
+    }
+  },
+  "format": "chreatures-neural-variant-recipe-v1",
+  "input_groups": [
+    {
+      "basis": "retinal-v2 port provenance family",
+      "match": {
+        "family": "retina"
+      },
+      "name": "retina",
+      "parameters": [
+        "input_gain"
+      ]
+    },
+    {
+      "basis": "retinal-v2 port provenance family",
+      "match": {
+        "family": "odor"
+      },
+      "name": "odor",
+      "parameters": [
+        "input_gain"
+      ]
+    },
+    {
+      "basis": "retinal-v2 port provenance family",
+      "match": {
+        "family": "contact"
+      },
+      "name": "contact",
+      "parameters": [
+        "input_gain"
+      ]
+    },
+    {
+      "basis": "retinal-v2 port provenance family",
+      "match": {
+        "family": "contact_normal"
+      },
+      "name": "contact_normal",
+      "parameters": [
+        "input_gain"
+      ]
+    },
+    {
+      "basis": "retinal-v2 port provenance family",
+      "match": {
+        "family": "touch"
+      },
+      "name": "touch",
+      "parameters": [
+        "input_gain"
+      ]
+    },
+    {
+      "basis": "retinal-v2 port provenance family",
+      "match": {
+        "family": "proprio/linear"
+      },
+      "name": "linear_proprioception",
+      "parameters": [
+        "input_gain"
+      ]
+    },
+    {
+      "basis": "retinal-v2 port provenance family",
+      "match": {
+        "family": "proprio/angular"
+      },
+      "name": "angular_proprioception",
+      "parameters": [
+        "input_gain"
+      ]
+    },
+    {
+      "basis": "retinal-v2 port provenance family",
+      "match": {
+        "family": "sound"
+      },
+      "name": "sound",
+      "parameters": [
+        "input_gain"
+      ]
+    },
+    {
+      "basis": "retinal-v2 port provenance family",
+      "match": {
+        "family": "shade"
+      },
+      "name": "shade",
+      "parameters": [
+        "input_gain"
+      ]
+    }
+  ],
+  "model_boundary": {
+    "engineered": "Every gain, its bounds, group overlap, genotype recombination, and any circuit-blueprint structural birth are engineered hypotheses.",
+    "excluded": "No rates, support, adaptation, memories, learned weights, receptor physiology, reward meaning, or anatomical contribution claim enters a genotype.",
+    "measured": "Canonical MaleCNS v1.0 neuron IDs, curated annotation strings, edge directions/counts, and retinal-v2 port source memberships."
+  },
+  "name": "canonical-male-cns-population-v1",
+  "neuron_groups": [
+    {
+      "basis": "curated superclass annotation",
+      "name": "visual_pathways",
+      "parameters": [
+        "excitability_gain",
+        "recurrent_source_gain",
+        "recurrent_target_gain"
+      ],
+      "selectors": [
+        {
+          "superclasses": [
+            "ol_sensory",
+            "ol_intrinsic",
+            "visual_projection",
+            "visual_centrifugal"
+          ]
+        }
+      ]
+    },
+    {
+      "basis": "curated class annotation",
+      "name": "olfactory_pathways",
+      "parameters": [
+        "excitability_gain",
+        "recurrent_source_gain",
+        "recurrent_target_gain"
+      ],
+      "selectors": [
+        {
+          "classes": [
+            "olfactory",
+            "ALPN",
+            "ALLN",
+            "ALIN",
+            "ALON"
+          ]
+        }
+      ]
+    },
+    {
+      "basis": "curated sensory class annotation",
+      "name": "mechanosensory_pathways",
+      "parameters": [
+        "excitability_gain",
+        "recurrent_source_gain",
+        "recurrent_target_gain"
+      ],
+      "selectors": [
+        {
+          "classes": [
+            "mechanosensory",
+            "mechanosensory_tactile",
+            "mechanosensory_proprioceptive",
+            "mechanosensory_tbc"
+          ]
+        }
+      ]
+    },
+    {
+      "basis": "curated Kenyon_Cell class annotation",
+      "name": "kenyon_cells",
+      "parameters": [
+        "excitability_gain",
+        "recurrent_source_gain",
+        "learning_rate_gain",
+        "modulator_gain"
+      ],
+      "selectors": [
+        {
+          "classes": "Kenyon_Cell"
+        }
+      ]
+    },
+    {
+      "basis": "curated MBON class annotation",
+      "name": "mushroom_body_outputs",
+      "parameters": [
+        "excitability_gain",
+        "recurrent_target_gain",
+        "learning_rate_gain",
+        "modulator_gain"
+      ],
+      "selectors": [
+        {
+          "classes": "MBON"
+        }
+      ]
+    },
+    {
+      "basis": "curated DAN class annotation; transmitter label does not establish receptor action",
+      "name": "dopaminergic_annotated",
+      "parameters": [
+        "excitability_gain",
+        "recurrent_source_gain",
+        "modulator_gain"
+      ],
+      "selectors": [
+        {
+          "classes": "DAN"
+        }
+      ]
+    },
+    {
+      "basis": "curated CX class annotation",
+      "name": "central_complex",
+      "parameters": [
+        "excitability_gain",
+        "recurrent_source_gain",
+        "recurrent_target_gain",
+        "learning_rate_gain"
+      ],
+      "selectors": [
+        {
+          "classes": "CX"
+        }
+      ]
+    },
+    {
+      "basis": "curated ascending superclasses",
+      "name": "ascending_pathways",
+      "parameters": [
+        "excitability_gain",
+        "recurrent_source_gain",
+        "recurrent_target_gain"
+      ],
+      "selectors": [
+        {
+          "superclasses": [
+            "ascending_neuron",
+            "sensory_ascending",
+            "efferent_ascending"
+          ]
+        }
+      ]
+    },
+    {
+      "basis": "curated descending superclasses",
+      "name": "descending_pathways",
+      "parameters": [
+        "excitability_gain",
+        "recurrent_source_gain",
+        "recurrent_target_gain"
+      ],
+      "selectors": [
+        {
+          "superclasses": [
+            "descending_neuron",
+            "sensory_descending",
+            "efferent_descending"
+          ]
+        }
+      ]
+    },
+    {
+      "basis": "curated VNC intrinsic superclass",
+      "name": "vnc_intrinsic",
+      "parameters": [
+        "excitability_gain",
+        "recurrent_source_gain",
+        "recurrent_target_gain",
+        "learning_rate_gain"
+      ],
+      "selectors": [
+        {
+          "superclasses": "vnc_intrinsic"
+        }
+      ]
+    },
+    {
+      "basis": "curated motor and efferent superclasses",
+      "name": "motor_efferent",
+      "parameters": [
+        "excitability_gain",
+        "recurrent_source_gain",
+        "recurrent_target_gain"
+      ],
+      "selectors": [
+        {
+          "superclasses": [
+            "vnc_motor",
+            "cb_motor",
+            "vnc_efferent",
+            "cb_efferent",
+            "efferent_ascending",
+            "efferent_descending"
+          ]
+        }
+      ]
+    }
+  ],
+  "overlap_policy": "multiply_then_clip",
+  "readout_groups": [
+    {
+      "basis": "retinal-v2 readout domain",
+      "match": {
+        "domain": "visual"
+      },
+      "name": "visual",
+      "parameters": [
+        "readout_gain"
+      ]
+    },
+    {
+      "basis": "retinal-v2 readout domain",
+      "match": {
+        "domain": "mushroom_body"
+      },
+      "name": "mushroom_body",
+      "parameters": [
+        "readout_gain"
+      ]
+    },
+    {
+      "basis": "retinal-v2 readout domain",
+      "match": {
+        "domain": "navigation"
+      },
+      "name": "navigation",
+      "parameters": [
+        "readout_gain"
+      ]
+    },
+    {
+      "basis": "retinal-v2 readout domain",
+      "match": {
+        "domain": "efferent"
+      },
+      "name": "efferent",
+      "parameters": [
+        "readout_gain"
+      ]
+    }
+  ],
+  "sha256": "352b4c0cd9dacb5d84914a43651268b44073e4df0b8d9a33a1b44db64ed8bd46",
+  "source": {
+    "canonical_graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "input_count": 351,
+    "port_bundle_sha256": "933b871fdd11dafa8c43afceb9862101984bf0950592af84631a4d7aa9bebe53",
+    "port_spec_sha256": "a3182cc5c546fac164774e56cfcf3d4f185c2feab5a994fe3d2a37cc8604302e",
+    "readout_count": 384
+  },
+  "structural_templates": [
+    {
+      "bounds": {
+        "maximum_removals": 24,
+        "maximum_reweights": 48,
+        "reweight_factor_max": 1.35,
+        "reweight_factor_min": 0.7
+      },
+      "name": "gamma1pedc_module_duplicate",
+      "template": {
+        "boundary": "bidirectional",
+        "name": "gamma1pedc_kc_mbon11_ppl101",
+        "ports": "inherit",
+        "selector": {
+          "fields": [
+            "kc_body_ids",
+            "mbon_body_ids",
+            "dan_body_ids"
+          ],
+          "npz": "data/mushroom/gamma1pedc-kc-mbon11-v1.npz",
+          "sha256": "27bbc1adde8efe26d9f62e8e5674d4a3c9e787ab200b498f89ddc19c9101bdff"
+        }
+      }
+    }
+  ]
+}

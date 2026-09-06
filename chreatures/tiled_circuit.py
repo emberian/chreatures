@@ -15,7 +15,9 @@ if triton is not None:
 
     @triton.jit
     def _edge_tiled_rate_substep(
-        row_pointer, columns, weights, rate_in, rate_out, adaptation, support,
+        row_pointer, columns, weights, rate_in, rate_out,
+        recurrent_source_gain, recurrent_target_gain, excitability_gain,
+        adaptation, support,
         drive, batch_size, alpha, gain, dt, support_recovery,
         BLOCK_B: tl.constexpr, EDGE_TILE: tl.constexpr, FINAL: tl.constexpr,
     ):
@@ -37,15 +39,24 @@ if triton is not None:
             values = tl.load(rate_in + offsets,
                              mask=edge_mask[:, None] & resident_mask[None, :],
                              other=0.0)
-            recurrent += tl.sum(weight[:, None] * values, axis=0)
+            source_gains = tl.load(
+                recurrent_source_gain + offsets,
+                mask=edge_mask[:, None] & resident_mask[None, :],
+                other=1.0)
+            recurrent += tl.sum(weight[:, None] * source_gains * values, axis=0)
 
         offset = row * batch_size + resident
         old_rate = tl.load(rate_in + offset, mask=resident_mask, other=0.0)
         old_adaptation = tl.load(adaptation + offset, mask=resident_mask, other=0.0)
         old_support = tl.load(support + offset, mask=resident_mask, other=1.0)
         sensory = tl.load(drive + offset, mask=resident_mask, other=0.0)
+        target_gain = tl.load(recurrent_target_gain + offset,
+                              mask=resident_mask, other=1.0)
+        excitability = tl.load(excitability_gain + offset,
+                               mask=resident_mask, other=1.0)
         target = tl.maximum(libdevice.tanh(
-            0.005 + sensory + gain * recurrent - 0.10 * old_adaptation), 0.0)
+            0.005 + excitability * (sensory + gain * target_gain * recurrent)
+            - 0.10 * old_adaptation), 0.0)
         new_rate = old_rate + alpha * (target * old_support - old_rate)
         tl.store(rate_out + offset, new_rate, mask=resident_mask)
         if FINAL:
@@ -81,9 +92,11 @@ class EdgeTiledTritonCircuit(TritonFusedCircuit):
         tail = (self.batch_size, alpha, self.gain, dt, self.support_recovery)
         options = {"BLOCK_B": self.resident_tile, "EDGE_TILE": self.edge_tile,
                    "num_warps": self.num_warps}
-        _edge_tiled_rate_substep[grid](*head, self.rates, self.rate_buffer,
+        variants = (self.recurrent_source_gain, self.recurrent_target_gain,
+                    self.excitability_gain)
+        _edge_tiled_rate_substep[grid](*head, self.rates, self.rate_buffer, *variants,
             self.adaptation, self.support, drive, *tail, FINAL=False, **options)
-        _edge_tiled_rate_substep[grid](*head, self.rate_buffer, self.rates,
+        _edge_tiled_rate_substep[grid](*head, self.rate_buffer, self.rates, *variants,
             self.adaptation, self.support, drive, *tail, FINAL=True, **options)
 
     @torch.no_grad()
@@ -93,9 +106,11 @@ class EdgeTiledTritonCircuit(TritonFusedCircuit):
             self._validate_device_channels(channels)
         if not np.isfinite(dt) or not 0 < dt <= 0.2:
             raise ValueError("dt must be finite and in (0, 0.2]")
-        drive = torch.sparse.mm(self.input_matrix, channels).contiguous()
+        drive = torch.sparse.mm(
+            self.input_matrix, channels * self.input_gain
+        ).contiguous()
         self._launch_pair(drive, dt)
-        readout = torch.sparse.mm(self.readout_matrix, self.rates)
+        readout = self.readout_gain * torch.sparse.mm(self.readout_matrix, self.rates)
         physiology = torch.stack((self.rates.mean(0), self.rates.amax(0),
                                   self.support.mean(0)))
         return torch.cat((readout, physiology), dim=0).T.contiguous()
