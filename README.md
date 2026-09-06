@@ -8,6 +8,8 @@ Chreatures is an ambitious work in progress inspired by *Creatures*: organisms w
 
 *The articulated garden, running real physics, full MaleCNS neural state, and chemical transport. Six-legged bodies explore an elevated walk, sheltered passages and movable objects.*
 
+[Read the public field guide and lab notebook](https://emberian.github.io/chreatures/). It records running mechanisms, measured results and open questions, including social ecologies and constructed habitats.
+
 ## What exists today
 
 The live 3D loop couples MuJoCo bodies to **165,122 traced MaleCNS neurons**, **25,563,197 directed connections**, and **124,025,046 measured synapses**. Residents keep private neural activity, adaptation and support state. Controller lineages include online adaptive organs and inherited population-trained motor policies with personal contextual memory.
@@ -17,6 +19,10 @@ The garden contains ramps, an elevated walk, an underpass, rolling and stackable
 The newer live world runs six-legged bodies with twelve physical hinges, conservative 3D chemical transport around solid geometry, and a 351-channel sensory interface with 384 anatomical population readouts. Its retina rotates with the complete body orientation, including climbing and inversion. Batched developmental worlds run on AMD GPUs. Older saved residents retain their original bodies and interfaces; see the [cycle log](docs/CYCLE_LOG.md).
 
 **This is a synthetic species experiment, not a recovered fly.** Anatomy is measured; rate dynamics, physiological laws, body mechanics and sensory/motor mappings contain explicit modeling assumptions. Personal learning mechanisms are running, but durable individuality, useful learned manipulation and reciprocal social skills remain research targets.
+
+The new [ecological substrate](docs/ECOLOGICAL_COMMONS.md) joins a conserved synthetic chemistry to resource-funded developmental grammars. Three related colonies built over 1,600 physical parts in a 180-second non-neural experiment; removed leaf material entered another compartment’s digestion, and exact checkpoint continuation preserved chemistry, geometry and growth. Static construction and removal also change chemical transport. The live reef runs this beside full-MaleCNS mobile residents; their existing physiology is not yet part of the common food web. [Biosphere implementation and scope](docs/BIOSPHERE.md).
+
+[Inherited body traits](docs/BODY_INHERITANCE.md) now change actual articulated geometry and motor parameters. A [circuit blueprint compiler](docs/CIRCUIT_BLUEPRINT.md) can derive new recurrent architectures from the measured graph while retaining edge ancestry. A 168,749-neuron synthetic derivative has executed on AMD hardware; improved behavior is not established. Dependent young, embodied reproduction and [eusocial organization](docs/SOCIAL_ECOLOGIES.md) remain open implementation and research directions.
 
 ## GAM × Universal Weave
 
@@ -107,7 +113,7 @@ The implementation direction is a Rust simulation core with batched native inter
 
 Our maintenance policy favors one current implementation of each mechanism. Superseded production code belongs in Git history or a pinned release; older snapshots receive a one-way data migration where practical. Hardware-specific kernels serve their respective devices, and independent numerical reference equations may remain in research probes. The `pre-native-world-20260905` tag preserves the previous world engine.
 
-A separate [trainable recurrent predictive-state organ](docs/PREDICTIVE_STATE.md) learns multi-step sensory consequences from actual action histories and exports weights for native inference. It has run on a short real rollout; long-history training and policy integration remain work in progress. An auxiliary prediction loss alone is not a planning capability.
+A separate [recurrent predictive-state organ](docs/PREDICTIVE_STATE.md) trained on 184,320 aligned transitions from full-connectome developmental worlds. It beat persistence on held-out feature and physiology prediction at the reported horizons. Rust inference maintains private recurrent state and supports [counterfactual queries](docs/FORESIGHT.md). Action discrimination is strongest in neural features and angular motion, and weak for energy and gut contents. Improved planning and long-term regulation remain unestablished.
 
 Useful contributions include better embodied learning, controllable bodies, combinable physical environments, grounded perception, memory mechanisms and experiments that distinguish the proposed explanation from a simpler one. An LLM may become a bounded perceptual or semantic organ; it should not silently supply all behavior while the rest of the organism is decorative.
 

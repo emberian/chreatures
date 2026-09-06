@@ -10,6 +10,7 @@ runs/*
 .cache/
 node_modules/
 target/
+/dist/site/
 *.log
 .playwright-mcp/
 # Local conversations, imported drafts, and operational instructions.
