@@ -11,7 +11,9 @@ These are synthetic units and constitutive laws, not calibrated plant biology.
 ## A developmental boundary
 
 At a due growth boundary, local light rays and the colony’s own mineral pool
-supply signals to its grammar. A proposal requests exact soft/tough tissue and
+supply signals to its grammar. Living Reef’s [native illumination cycle](ILLUMINATION.md)
+moves one directional scene light and supplies the same direct and diffuse flux
+to phototrophic sampling; terrain and constructed geometry occlude it. A proposal requests exact soft/tough tissue and
 assembly work. The runtime prepares a single physical topology transaction,
 checks the developmental receipts on unpublished state, transfers material and
 pays work, commits geometry, then publishes the resulting developmental state.
@@ -74,19 +76,19 @@ part stocks and geometry correspondence. Existing saved worlds retain their
 own habitat/body specifications; current source changes do not reconstruct an
 already living resident.
 
-Current birth-v3 worlds bind every mobile resident to private body/gut
+Current birth-v4 worlds bind every mobile resident to private body/gut
 compartments in the same web. `resident_physiology_coupled` then reports true. See
 [SOMATIC_PHYSIOLOGY.md](SOMATIC_PHYSIOLOGY.md) for funded activation, physical
 mouth contact, digestion and absorption, and [MATERIAL_OBJECTS.md](MATERIAL_OBJECTS.md)
 for finite shared stores and geometry boundaries.
 
-Birth-v3 worlds can additionally enable [physical recycling](ECOLOGICAL_EXCHANGE.md):
+Birth-v4 worlds can additionally enable [physical recycling](ECOLOGICAL_EXCHANGE.md):
 mobile material leaves through body-local outlets into finite free deposits,
 and constructed roots acquire configured resources under actual physical contact.
 The native chemical ledger spans all these compartments. The current snapshot
-format is v4. It explicitly preserves developmental part iteration order because
+format is v5. It explicitly preserves developmental part iteration order because
 floating-point tissue and illumination reductions depend on that order. Current
-source accepts only birth-v3 and snapshot-v4 documents; older processes remain
+source accepts only birth-v4 and snapshot-v5 documents; older processes remain
 responsible for artifacts they already loaded.
 
 Embodied reproduction, autonomous predation, full mass-to-inertia coupling

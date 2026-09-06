@@ -34,7 +34,11 @@ from research.sensorimotor_skills.online_model import (
     sample_worker_actions,
 )
 from research.sensorimotor_skills.rich_data import RichNormalizer
-from research.sensorimotor_skills.rich_model import RichSensorimotorModel
+from research.sensorimotor_skills.rich_model import (
+    RICH_CHANNEL_NAMES_SHA256,
+    RICH_PROFILE_SHA256,
+    RichSensorimotorModel,
+)
 
 FORMAT = "chreatures-rich-online-sensorimotor-development-v1"
 ACTIONS = (
@@ -512,6 +516,9 @@ def main() -> int:
     identity = {
         "format": FORMAT,
         "controller_mode": "rich-achieved-goal",
+        "normalizer": normalizer.to_value(),
+        "rich_profile_sha256": RICH_PROFILE_SHA256,
+        "rich_channel_names_sha256": RICH_CHANNEL_NAMES_SHA256,
         "seed": args.seed,
         "dt_seconds": 0.05,
         "action_order": list(ACTIONS),

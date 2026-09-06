@@ -6,15 +6,11 @@ manipulated, ingested through a mouth, or partially depleted by contacting roots
 The scientific claim is material transport under supplied physiological laws;
 learned gardening, waste handling and a stable food web are not established.
 
-Build a new habitat and birth configuration:
-
-```sh
-uv run python scripts/build_chemical_habitat.py --recycling --output runs/recycling-reef-birth
-```
-
-Use these `habitat.json` and `biosphere.json` files with a fresh 3D world and its own
-ordered neural service. Existing checkpoints import with exchange disabled;
-their original mobile physiology and material inventories are preserved.
+This document records the retired recycling-reef assay. Its exact habitat
+builder is preserved at
+[`867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa`](https://github.com/emberian/chreatures/blob/867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa/scripts/build_chemical_habitat.py).
+Current worlds consume the authored birth-v4 Living Reef data directly and do
+not migrate this builder's birth-v2/v3 output.
 
 Exchange v2 also closes the photosynthesis-to-food loop. A material emitter
 names a non-structural donor compartment, an existing physical attachment and
@@ -74,13 +70,9 @@ only ordinary physical light, odor, contact, and ingestion consequences; no
 emitter identity, pool ledger, object label, or world position enters policy
 input.
 
-Exchange-v1 configuration and snapshot hashes remain valid migration inputs.
-Restore validates the original v1 config hash and exact private keys before a
-one-way conversion to canonical v2 with an empty emitter set. It preserves the
-mobile elapsed phases, acquired/egested vectors, capacity counts, and last
-receipt numerically; subsequent snapshots use only the current v2 schema. Only
-newly built recycling habitats select active emitters; no live instance is
-migrated in place.
+The earlier exchange-v1 migration behavior belongs to the archived assay source
+above. The current chemical training profile accepts authored birth-v4 inputs
+and biosphere-v5 snapshots only.
 
 Root acquisition requires a MuJoCo contact between a material object and a
 resource-funded root part. Founder attachment placeholders do not acquire
@@ -99,9 +91,8 @@ diffusion through soil, complete recycling and embodied reproduction remain open
 
 ## Executed coupled experiment
 
-```sh
-uv run python scripts/probe_ecological_exchange.py
-```
+The executed probe source is archived at
+[`scripts/probe_ecological_exchange.py` from `867cdb8`](https://github.com/emberian/chreatures/blob/867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa/scripts/probe_ecological_exchange.py).
 
 Three mobile residents generated physical deposits from their private chemistry
 under supplied quiet actions. In a disposable research branch, one resulting
@@ -119,9 +110,8 @@ scarcity, empty-slot reuse, changing position, atomic rejection and replay.
 
 ## Executed colony exudation assay
 
-```sh
-uv run python scripts/probe_colony_exudation.py
-```
+The executed probe source is archived at
+[`scripts/probe_colony_exudation.py` from `867cdb8`](https://github.com/emberian/chreatures/blob/867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa/scripts/probe_colony_exudation.py).
 
 The causal source assay sets every colony founder reserve to zero. After 20
 model-seconds, the daylight branch had captured `1.7501939` photon-energy units

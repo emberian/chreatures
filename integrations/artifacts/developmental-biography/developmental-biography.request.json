@@ -1,0 +1,304 @@
+{
+  "archive_id": "developmental-biography:07d883ee816f9b6b0a49ba2e3925265c191335b020f3ef8ee63cc8388afd233b:b41c861d5664ee05b2572966210d7ce9145415c6471d986e205791c2ab9fe80c",
+  "description": "External sparse developmental biography and research-law provenance; this graph is not organism memory.",
+  "evidence": [
+    {
+      "blob_refs": [
+        {
+          "bytes": 109995,
+          "media_type": "application/json",
+          "role": "online_run_identity",
+          "sha256": "d66e72514bc100b3c321b3fd775b91acb2338da32430e0ba13b6d6e191513295",
+          "uri": "urn:sha256:d66e72514bc100b3c321b3fd775b91acb2338da32430e0ba13b6d6e191513295",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2167,
+          "media_type": "application/json",
+          "role": "online_result",
+          "sha256": "07d883ee816f9b6b0a49ba2e3925265c191335b020f3ef8ee63cc8388afd233b",
+          "uri": "urn:sha256:07d883ee816f9b6b0a49ba2e3925265c191335b020f3ef8ee63cc8388afd233b",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "behavior_claim": false,
+        "dt_seconds": 0.05,
+        "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+        "port_bundle_sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2",
+        "residents_per_world": 3,
+        "seed": 20260911,
+        "source_commit": "bec8a499b0df3d55f357db82ee0385ff8d12da45",
+        "worlds": 4
+      },
+      "id": "online-development:seed-20260911:07d883ee816f9b6b0a49ba2e3925265c191335b020f3ef8ee63cc8388afd233b",
+      "parent_ids": [],
+      "record_type": "development_run",
+      "text": "Joined online sensorimotor worker and achieved-goal manager research run began.",
+      "time": {
+        "domain": "online_update",
+        "value": 0
+      }
+    },
+    {
+      "blob_refs": [],
+      "fields": {
+        "elapsed_seconds": 670.7167567033321,
+        "last_update": {
+          "elapsed_seconds": 670.0690271919593,
+          "entropy": 18.026508331298828,
+          "goal_progress_reward_mean": 0.001925165648572147,
+          "loss": -0.04502630978822708,
+          "manager_entropy": 4.839569091796875,
+          "manager_events": 156,
+          "manager_policy_loss": -0.013404528610408306,
+          "manager_value_loss": 0.0013495206367224455,
+          "physical_reward_mean": -0.0007457563770003617,
+          "physical_steps": 20480,
+          "policy_loss": -0.013647678308188915,
+          "update": 160,
+          "value_loss": 0.009348767809569836
+        },
+        "status": "research joined-development run; no behavior claim"
+      },
+      "id": "developmental-milestone:online-development:seed-20260911:07d883ee816f9b6b0a49ba2e3925265c191335b020f3ef8ee63cc8388afd233b:update-160",
+      "parent_ids": [
+        "online-development:seed-20260911:07d883ee816f9b6b0a49ba2e3925265c191335b020f3ef8ee63cc8388afd233b"
+      ],
+      "record_type": "developmental_milestone",
+      "text": "Completed 160 online updates and 20480 physical steps.",
+      "time": {
+        "domain": "online_update",
+        "value": 160
+      }
+    },
+    {
+      "blob_refs": [
+        {
+          "bytes": 49445887,
+          "media_type": "application/x-pytorch",
+          "role": "online_training_checkpoint",
+          "sha256": "0f20e21df906c83873415034dee060bd0a57fc12ccdd8ad259647c71d6dd9304",
+          "uri": "urn:sha256:0f20e21df906c83873415034dee060bd0a57fc12ccdd8ad259647c71d6dd9304",
+          "verification": "reported_by_hash_verified_source_receipt"
+        }
+      ],
+      "fields": {
+        "format": "chreatures-online-sensorimotor-development-v1",
+        "verification": "reported_by_hash_verified_source_receipt"
+      },
+      "id": "model-artifact:online:0f20e21df906c83873415034dee060bd0a57fc12ccdd8ad259647c71d6dd9304",
+      "parent_ids": [
+        "developmental-milestone:online-development:seed-20260911:07d883ee816f9b6b0a49ba2e3925265c191335b020f3ef8ee63cc8388afd233b:update-160"
+      ],
+      "record_type": "model_artifact",
+      "text": "Final joined-development PyTorch artifact recorded by the completed run.",
+      "time": {
+        "domain": "online_update",
+        "value": 160
+      }
+    },
+    {
+      "blob_refs": [
+        {
+          "bytes": 2824347,
+          "media_type": "application/x-npz",
+          "role": "native_developmental_resident",
+          "sha256": "ae4929c2a3312bee0bc999f465be735c6aba877a0db073756718caefdff598c9",
+          "uri": "urn:sha256:ae4929c2a3312bee0bc999f465be735c6aba877a0db073756718caefdff598c9",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "artifact_identity": "b41c861d5664ee05b2572966210d7ce9145415c6471d986e205791c2ab9fe80c",
+        "execution": "developmental-resident-native-v1",
+        "format": "chreatures-native-developmental-resident-v1",
+        "observation_contract": {
+          "format": "chreatures-sensorimotor-observation-v1",
+          "neural_readout_dim": 384,
+          "observation_dim": 357,
+          "physiology_dim": 6,
+          "previous_action_plus_oral_dim": 9,
+          "source_sense_dim": 351
+        },
+        "temporal_contract": {
+          "manager_commit_ticks": 10,
+          "observation_interval_seconds": 0.05,
+          "previous": "actual-executed-action-8-plus-oral-1",
+          "reset": "reset-before-row"
+        }
+      },
+      "id": "model-export:native:b41c861d5664ee05b2572966210d7ce9145415c6471d986e205791c2ab9fe80c",
+      "parent_ids": [
+        "model-artifact:online:0f20e21df906c83873415034dee060bd0a57fc12ccdd8ad259647c71d6dd9304"
+      ],
+      "record_type": "model_export",
+      "text": "Joined worker, goal encoder, and goal manager exported for native resident execution.",
+      "time": {
+        "domain": "online_update",
+        "value": 160
+      }
+    },
+    {
+      "blob_refs": [
+        {
+          "bytes": 21904,
+          "media_type": "application/json",
+          "role": "gam_observatory_report",
+          "sha256": "7c9a318f78decfe2b73e9c8dc2b1a07ab468908c8a78657f31c3151e80bd6472",
+          "uri": "urn:sha256:7c9a318f78decfe2b73e9c8dc2b1a07ab468908c8a78657f31c3151e80bd6472",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2944,
+          "media_type": "application/json",
+          "role": "gam_observatory_manifest",
+          "sha256": "a5526222cd2e3d9e4fb8ed6ce89a8c77be8e4ba955135f023bf844fca299696e",
+          "uri": "urn:sha256:a5526222cd2e3d9e4fb8ed6ce89a8c77be8e4ba955135f023bf844fca299696e",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "held_out_worlds": [
+          "world-03",
+          "world-07"
+        ],
+        "interpretation": "descriptive held-out prediction only; no causal claim",
+        "source_set_sha256": "d7f4dae977990600ee88e6d4a47d04d8b339c3423a37587f79acd128b4740d7d"
+      },
+      "id": "gam-source:d7f4dae977990600ee88e6d4a47d04d8b339c3423a37587f79acd128b4740d7d",
+      "parent_ids": [],
+      "record_type": "verified_source",
+      "text": "Verified multi-world developmental telemetry used by the native GAM fits.",
+      "time": {
+        "domain": "development_step",
+        "value": 2048
+      }
+    },
+    {
+      "blob_refs": [
+        {
+          "bytes": 7667765,
+          "media_type": "application/gzip",
+          "role": "native_gam_energy_dynamics",
+          "sha256": "b270c8fd2638c1e82328ab05e25529617f5f3a3c61b3c3a40699ca200d28feeb",
+          "uri": "urn:sha256:b270c8fd2638c1e82328ab05e25529617f5f3a3c61b3c3a40699ca200d28feeb",
+          "verification": "reported_by_hash_verified_source_receipt"
+        }
+      ],
+      "fields": {
+        "baselines": {
+          "persistence": {
+            "mae": 0.0001979712903392837,
+            "rmse": 0.0016827709880973807
+          },
+          "training_mean": {
+            "mae": 0.030331937676276587,
+            "rmse": 0.03687732074458521
+          }
+        },
+        "formula": "energy_next ~ s(energy, k=10) + s(nutrition, k=8) + s(effort, k=8) + s(contact, k=6) + s(prediction_error, k=8) + phase",
+        "gamfit_source_commit": "7c7eca8ac4826de95c8e743a20294bee132a9bcc",
+        "held_out": {
+          "mae": 0.00022356718774266214,
+          "rmse": 0.0016842991974066763
+        },
+        "reload_max_abs_prediction_delta": 0.0
+      },
+      "id": "gam-law-fit:energy_dynamics:b270c8fd2638c1e82328ab05e25529617f5f3a3c61b3c3a40699ca200d28feeb",
+      "parent_ids": [
+        "gam-source:d7f4dae977990600ee88e6d4a47d04d8b339c3423a37587f79acd128b4740d7d"
+      ],
+      "record_type": "gam_law_fit",
+      "text": "Native GAM fit for energy_dynamics; descriptive held-out prediction, with no causal claim.",
+      "time": {
+        "domain": "development_step",
+        "value": 2048
+      }
+    },
+    {
+      "blob_refs": [
+        {
+          "bytes": 9999420,
+          "media_type": "application/gzip",
+          "role": "native_gam_movement_outcome_dynamics",
+          "sha256": "30c71a672586890e93af8ed291eaaba7e77f2d0239fd5533ce44137daca7ef2c",
+          "uri": "urn:sha256:30c71a672586890e93af8ed291eaaba7e77f2d0239fd5533ce44137daca7ef2c",
+          "verification": "reported_by_hash_verified_source_receipt"
+        }
+      ],
+      "fields": {
+        "baselines": {
+          "persistence": {
+            "mae": 0.004191484585098308,
+            "rmse": 0.005742841940364049
+          },
+          "training_mean": {
+            "mae": 0.006369601324443905,
+            "rmse": 0.00799801747840616
+          }
+        },
+        "formula": "distance_next ~ s(speed, k=10) + s(support, k=8) + s(activity, k=8) + s(effort, k=8) + s(distance, k=10) + phase",
+        "gamfit_source_commit": "7c7eca8ac4826de95c8e743a20294bee132a9bcc",
+        "held_out": {
+          "mae": 0.0038780039130331405,
+          "rmse": 0.005204391926857235
+        },
+        "reload_max_abs_prediction_delta": 0.0
+      },
+      "id": "gam-law-fit:movement_outcome_dynamics:30c71a672586890e93af8ed291eaaba7e77f2d0239fd5533ce44137daca7ef2c",
+      "parent_ids": [
+        "gam-source:d7f4dae977990600ee88e6d4a47d04d8b339c3423a37587f79acd128b4740d7d"
+      ],
+      "record_type": "gam_law_fit",
+      "text": "Native GAM fit for movement_outcome_dynamics; descriptive held-out prediction, with no causal claim.",
+      "time": {
+        "domain": "development_step",
+        "value": 2048
+      }
+    },
+    {
+      "blob_refs": [
+        {
+          "bytes": 7659193,
+          "media_type": "application/gzip",
+          "role": "native_gam_prediction_error_dynamics",
+          "sha256": "99f88684e34a991a2ba615566117c796d2ef157fd461da919189229a5d748dc5",
+          "uri": "urn:sha256:99f88684e34a991a2ba615566117c796d2ef157fd461da919189229a5d748dc5",
+          "verification": "reported_by_hash_verified_source_receipt"
+        }
+      ],
+      "fields": {
+        "baselines": {
+          "persistence": {
+            "mae": 8.401422878772504e-07,
+            "rmse": 2.8776491815713942e-06
+          },
+          "training_mean": {
+            "mae": 2.2984557259656784e-05,
+            "rmse": 4.702601980671155e-05
+          }
+        },
+        "formula": "prediction_error_next ~ s(prediction_error, k=10) + s(activity, k=8) + s(learning_progress, k=8) + s(step_fraction, k=12) + phase",
+        "gamfit_source_commit": "7c7eca8ac4826de95c8e743a20294bee132a9bcc",
+        "held_out": {
+          "mae": 1.003808252171428e-06,
+          "rmse": 2.852015041148465e-06
+        },
+        "reload_max_abs_prediction_delta": 0.0
+      },
+      "id": "gam-law-fit:prediction_error_dynamics:99f88684e34a991a2ba615566117c796d2ef157fd461da919189229a5d748dc5",
+      "parent_ids": [
+        "gam-source:d7f4dae977990600ee88e6d4a47d04d8b339c3423a37587f79acd128b4740d7d"
+      ],
+      "record_type": "gam_law_fit",
+      "text": "Native GAM fit for prediction_error_dynamics; descriptive held-out prediction, with no causal claim.",
+      "time": {
+        "domain": "development_step",
+        "value": 2048
+      }
+    }
+  ],
+  "habitat_id": null,
+  "journal": []
+}

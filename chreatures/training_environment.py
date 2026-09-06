@@ -27,6 +27,8 @@ SNAPSHOT_FORMAT = "chreatures-embodied-training-world-v1"
 SNAPSHOT_FORMAT_V2 = "chreatures-embodied-training-world-v2"
 SNAPSHOT_FORMAT_V3 = "chreatures-embodied-training-world-v3"
 SNAPSHOT_FORMAT_V4 = "chreatures-embodied-training-world-v4"
+BIOSPHERE_BIRTH_FORMAT = "chreatures-biosphere-birth-v4"
+BIOSPHERE_SNAPSHOT_FORMAT = "chreatures-biosphere-v5"
 ROOT = Path(__file__).resolve().parents[1]
 PHYSICAL_BACKENDS = {
     "reference": ArticulatedSensoriumWorld,
@@ -81,6 +83,19 @@ class EmbodiedTrainingProfile:
                 isinstance(raw[key], dict) for key in ("habitat", "biosphere", "physiology")
             ):
                 raise ValueError("chemical nursery requires a biosphere and no scalar ecology")
+            birth = raw["biosphere"]
+            if (
+                birth.get("format") != BIOSPHERE_BIRTH_FORMAT
+                or not isinstance(birth.get("illumination_cycle"), dict)
+            ):
+                raise ValueError("chemical training requires the current solar birth-v4")
+            illumination_sources = {
+                "native_environment",
+                "native_environment_shim",
+                "native_illumination",
+            }
+            if not illumination_sources <= set(raw["sources"]):
+                raise ValueError("chemical training omits native illumination provenance")
             if raw["physiology"] != {
                 "energy": "normalized usable ATP plus 0.72 reserve against capacity",
                 "gut": "normalized conserved chemical mass against gut capacity",
@@ -290,6 +305,9 @@ class EmbodiedTrainingProfile:
             "native_lib": ROOT / "native/world-kernels/src/lib.rs",
             "native_contacts": ROOT / "native/world-kernels/src/contacts.rs",
             "native_growth": ROOT / "native/world-kernels/src/growth.rs",
+            "native_environment": ROOT / "native/world-kernels/src/environment.rs",
+            "native_environment_shim": ROOT / "native/world-kernels/src/environment_shim.c",
+            "native_illumination": ROOT / "native/world-kernels/src/illumination.rs",
             "native_metabolism": ROOT / "native/world-kernels/src/metabolism.rs",
             "native_sensorium": ROOT / "native/world-kernels/src/sensorium.rs",
             "native_sensorium_shim": ROOT / "native/world-kernels/src/sensorium_shim.c",
@@ -339,10 +357,10 @@ class EmbodiedTrainingProfile:
         condition_value = json.loads(conditions_path.read_text())
         cls._validate_encounter_conditions(condition_value)
         birth = value["biosphere"]
-        if birth.get("format") == "chreatures-biosphere-birth-v2":
-            birth["format"] = "chreatures-biosphere-birth-v3"
-            birth["exchange"] = None
-        if birth.get("format") != "chreatures-biosphere-birth-v3" or birth.get("exchange") is not None:
+        if (
+            birth.get("format") != BIOSPHERE_BIRTH_FORMAT
+            or birth.get("exchange") is not None
+        ):
             raise ValueError("chemical encounter profile requires exchange=None")
         mobiles = birth.get("mobiles")
         materials = birth.get("material_objects")
@@ -831,6 +849,13 @@ class EmbodiedTrainingWorld:
         }
 
     def snapshot(self) -> dict[str, Any]:
+        biosphere_snapshot = None
+        if self.profile_version in (3, 4):
+            biosphere_snapshot = self.biosphere.snapshot()
+            if biosphere_snapshot.get("format") != BIOSPHERE_SNAPSHOT_FORMAT:
+                raise RuntimeError(
+                    "chemical world did not produce the current biosphere snapshot"
+                )
         value = {
             "format": SNAPSHOT_FORMAT, "version": 1,
             "seed": self.seed, "profile": self.profile.to_value(),
@@ -846,12 +871,12 @@ class EmbodiedTrainingWorld:
         elif self.profile_version == 3:
             value.update({
                 "format": SNAPSHOT_FORMAT_V3, "version": 3, "stage": 0,
-                "biosphere": self.biosphere.snapshot(),
+                "biosphere": biosphere_snapshot,
             })
         elif self.profile_version == 4:
             value.update({
                 "format": SNAPSHOT_FORMAT_V4, "version": 4, "stage": self.stage,
-                "biosphere": self.biosphere.snapshot(),
+                "biosphere": biosphere_snapshot,
             })
         return value
 
@@ -904,7 +929,7 @@ class EmbodiedTrainingWorld:
         if instance.profile_version in (3, 4):
             if snapshot.get("resources") is not None or not isinstance(
                 snapshot.get("biosphere"), Mapping
-            ):
+            ) or snapshot["biosphere"].get("format") != BIOSPHERE_SNAPSHOT_FORMAT:
                 raise ValueError("chemical nursery snapshot composition differs")
             from .biosphere import Biosphere
 

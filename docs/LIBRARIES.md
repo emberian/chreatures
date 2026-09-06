@@ -62,6 +62,20 @@ event's string ID, numeric time, text, and complete JSON object. Optional
 evidence records can name journal event IDs as parents. Missing parents and
 duplicate IDs are rejected rather than repaired.
 
+The current bridge also accepts sparse biography records such as births,
+achieved-goal selections, snapshots, native model exports or promotions, and
+GAM law fits. Universal Weave requires a `Copy` identifier type, so the native
+node identifier is the first 128 bits of SHA-256 over the complete source ID.
+It is serialized as 32 lowercase hexadecimal characters; collision detection
+is mandatory at import. The identifier is stable across import order and safe
+from JavaScript integer truncation. Parent records may appear later in the
+request: the adapter resolves them topologically and rejects cycles.
+
+A `blob_refs` entry carries a role, exact `urn:sha256:` URI, SHA-256, optional
+byte size and media type, and whether the exporter verified local bytes or
+obtained the hash from a verified source receipt. The Rust boundary checks the
+lowercase digest and requires the URI to match it.
+
 The bridge writes the library's own serialized `IndependentWeave`, reads it
 back into the same native type, validates the reloaded topology, checks
 equality, and prints a JSON receipt. Numeric tensors and checkpoints remain
@@ -69,6 +83,49 @@ outside these display records; their `artifact_uri` fields are references. The
 serde payload has integration schema metadata but is not promised compatible
 with future crate releases, so both the Git revision and generated `Cargo.lock`
 stay pinned.
+
+### Developmental biography export
+
+`integrations/export_developmental_weave.py` builds a compact external record
+from a completed online-development result and identity plus its native model
+export. An optional current developmental checkpoint adds its authenticated
+journal, current achieved-goal selections, snapshot, and an evidence-backed
+model-promotion node. Goal keys and four-frame raw windows remain private. The
+exporter does not infer missing selection history from a checkpoint's latest
+state. An optional observatory report and manifest add completed native GAM
+fits as a separate evidence branch, preserving the report's descriptive,
+non-causal interpretation.
+
+For the completed `bec8a49` joined-development run, the executed command was:
+
+```bash
+python3 integrations/export_developmental_weave.py \
+  --online-result /tmp/bec8a49-development-result.json \
+  --online-identity /tmp/bec8a49-development-identity.json \
+  --native-artifact data/genomes/developmental-resident-online-v1b.npz \
+  --training-artifact-bytes 49445887 \
+  --source-commit bec8a499b0df3d55f357db82ee0385ff8d12da45 \
+  --gam-report integrations/artifacts/observatory3d/observatory.json \
+  --gam-manifest integrations/artifacts/observatory3d/manifest.json
+```
+
+The portable output in
+`integrations/artifacts/developmental-biography/developmental-biography.json`
+contains eight actual provenance nodes and six edges: run start, final update
+160, the reported 49,445,887-byte PyTorch checkpoint, its locally verified
+2,824,347-byte native export, and three earlier native GAM fits rooted in their
+verified developmental telemetry. The result receipt SHA is
+`07d883ee816f9b6b0a49ba2e3925265c191335b020f3ef8ee63cc8388afd233b`;
+the final training artifact SHA is
+`0f20e21df906c83873415034dee060bd0a57fc12ccdd8ad259647c71d6dd9304`;
+and the native file SHA is
+`ae4929c2a3312bee0bc999f465be735c6aba877a0db073756718caefdff598c9`
+with internal artifact identity
+`b41c861d5664ee05b2572966210d7ce9145415c6471d986e205791c2ab9fe80c`.
+No compatible current developmental habitat checkpoint existed during this
+export, so it contains no resident birth, goal-selection, snapshot, or
+promotion claim. Supplying `--checkpoint` adds those records only after
+envelope and resident-model identity verification.
 
 ## Observing habitat records
 

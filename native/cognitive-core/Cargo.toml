@@ -6,9 +6,12 @@ license = "AGPL-3.0-or-later"
 
 [lib]
 name = "_cognitive_core"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 matrixmultiply = "0.3.10"
 numpy = "0.28"
 pyo3 = { version = "0.28.3", features = ["extension-module"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"

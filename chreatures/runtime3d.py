@@ -1,29 +1,44 @@
-"""A whole 3D world coupled to full MaleCNS state and personal learning organs.
-
-The physical world is local; the full curated nervous systems persist on AMD.
-A checkpoint references a checksum-verified server-side neural artifact and
-contains physical integration state plus every personal cognitive parameter.
-"""
+"""One physical habitat coupled to a full connectome and native resident cohort."""
 
 from __future__ import annotations
 
 import copy
 import hashlib
 import json
+import math
 import time
 import uuid
 from collections import deque
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
 from .checkpoint import canonical, write_envelope
-from .cognition import AdaptiveOrgan
 from .neural_client import NeuralClient
+from .sensorimotor_worker_native import DevelopmentalResidentCohort
 from .visitor_events import VisitorPerformances
 
+MODEL_DT = 0.05
+SOURCE_SENSE_DIM = 351
+NEURAL_DIM = 384
+PHYSIOLOGY_DIM = 6
+RICH_RETINA_DIM = 4096
+ACTION_NAMES = (
+    "thrust",
+    "yaw",
+    "gaze_pitch",
+    "grip",
+    "signal_low",
+    "signal_mid",
+    "signal_high",
+    "posture",
+)
+CHECKPOINT_FORMAT = "chreatures-developmental-habitat-checkpoint-v1"
+INTERRUPTED_FORMAT = "chreatures-developmental-habitat-interrupted-v1"
 
-def physical_world_type(body_mode, execution):
+
+def physical_world_type(body_mode: str, execution: str):
     from .sensorium import ArticulatedSensoriumWorld, SensoriumWorld
 
     if execution == "vectorized" and body_mode == "articulated":
@@ -35,57 +50,44 @@ def physical_world_type(body_mode, execution):
     return ArticulatedSensoriumWorld if body_mode == "articulated" else SensoriumWorld
 
 
+def _finite_row(value: Any, shape: tuple[int, ...], name: str) -> np.ndarray:
+    row = np.ascontiguousarray(value, dtype=np.float32)
+    if row.shape != shape or not np.isfinite(row).all():
+        raise ValueError(f"{name} has invalid shape or nonfinite values")
+    return row
+
+
 class Habitat3D:
+    """A synchronous cohort: senses -> connectome -> native cognition -> physics."""
+
     def __init__(
         self,
-        seed=7,
-        brain_url="http://127.0.0.1:18765",
-        spec=None,
-        body_mode="articulated",
-        ecology="diffusion",
-        resources=None,
-        biosphere=None,
-        acoustics=None,
-        motor_genome=None,
-        personal_memory=False,
-        perception_url=None,
-        physics_backend=None,
-        personal_plasticity=False,
-        predictive_model=None,
-        visitor_materials=None,
-    ):
+        seed: int = 7,
+        brain_url: str = "http://127.0.0.1:18765",
+        spec: dict[str, Any] | None = None,
+        body_mode: str = "articulated",
+        ecology: str = "diffusion",
+        resources: str | Path | None = None,
+        biosphere: str | Path | None = None,
+        acoustics: str | Path | None = None,
+        resident_artifact: str | Path | None = None,
+        physics_backend: str | None = None,
+        visitor_materials: str | Path | None = None,
+    ) -> None:
         from .acoustics import Acoustics
         from .ecology import Ecology
         from .fields import FieldEnvironment
 
-        if body_mode not in ("crawler", "articulated") or ecology not in (
-            "analytic",
-            "diffusion",
-        ):
-            raise ValueError("Unknown body or ecology model")
-        if personal_memory and motor_genome is None:
-            raise ValueError(
-                "Personal contextual motor learning requires an inherited motor artifact"
-            )
-        if perception_url is not None and not personal_memory:
-            raise ValueError("Native visual episodes require the personal motor organ")
-        if personal_plasticity and not personal_memory:
-            raise ValueError(
-                "Personal motor plasticity requires a personal memory organ"
-            )
-        if predictive_model is not None and not personal_memory:
-            raise ValueError(
-                "Predictive foresight requires the personal contextual motor organ"
-            )
+        if resident_artifact is None:
+            raise ValueError("A current --resident-artifact is required for a new life")
+        if body_mode not in {"crawler", "articulated"}:
+            raise ValueError("Unknown body model")
+        if ecology not in {"analytic", "diffusion"}:
+            raise ValueError("Unknown ecology model")
         if resources is not None and biosphere is not None:
             raise ValueError(
-                "Legacy resources and the developmental biosphere are mutually exclusive"
+                "Resources and a developmental biosphere are mutually exclusive"
             )
-        self.personal_memory = bool(personal_memory)
-        self.personal_plasticity = bool(personal_plasticity)
-        self.predictive_model = (
-            None if predictive_model is None else str(Path(predictive_model).resolve())
-        )
         if spec is None:
             spec = json.loads(
                 (
@@ -93,10 +95,7 @@ class Habitat3D:
                     / "data/habitats/hollow-garden.json"
                 ).read_text()
             )
-        # This constructor creates a new life. Restoring an older snapshot
-        # follows its saved selector, including legacy worlds with no selector.
         spec = copy.deepcopy(spec)
-        spec.setdefault("sensorium", {"frame": "body-v1"})
         self.body_mode = body_mode
         self.physics_backend = physics_backend or (
             "vectorized" if body_mode == "articulated" else "reference"
@@ -121,72 +120,27 @@ class Habitat3D:
 
             if self.biosphere is None:
                 raise ValueError("Material offerings require a developmental biosphere")
-            self.visitor_materials = VisitorMaterialSupply(self.biosphere, visitor_materials)
+            self.visitor_materials = VisitorMaterialSupply(
+                self.biosphere, visitor_materials
+            )
         self.acoustics = (
             Acoustics(self.world, acoustics) if acoustics is not None else None
         )
         self.acoustic_state = None
-        self.last_senses = {}
-        self.sensed_at = 0.0
+
         self.neural = NeuralClient(brain_url)
-        self.motor_artifact = None
-        self.motors = {}
-        self.foresights = {}
-        self.foresight_deployment = None
-        if motor_genome is not None:
-            from .motor_inheritance import MotorArtifact, MotorOrgan
+        self._validate_neural_interface()
+        self.resident_artifact = str(Path(resident_artifact).expanduser().resolve())
+        cohort_size = len(self.world.bodies)
+        self.residents = DevelopmentalResidentCohort(
+            self.resident_artifact,
+            cohort_size,
+            action_mode="sample",
+            goal_seed=(seed * 1009 + 17) % 2**64,
+            action_seed=(seed * 1009 + 31) % 2**64,
+        )
+        self._validate_resident_interface()
 
-            self.motor_artifact = MotorArtifact.load(motor_genome)
-            self._validate_motor_interface()
-            motor_type = MotorOrgan
-            if self.personal_memory:
-                from .living_motor import LivingMotorOrgan
-
-                motor_type = LivingMotorOrgan
-            for i, body in enumerate(self.world.bodies):
-                private_seed = seed * 1009 + i
-                options = (
-                    {"plasticity": self.personal_plasticity}
-                    if self.personal_memory
-                    else {}
-                )
-                if self.personal_plasticity:
-                    from .personal_plasticity import PersonalPlasticityConfig
-
-                    # New lives can learn both motor means and exploration.
-                    # Restore never consults this birth-time default.
-                    options["plasticity_config"] = PersonalPlasticityConfig(
-                        seed=private_seed + 3301,
-                        variance_adaptation="state-log-std-v2",
-                    )
-                self.motors[body.id] = motor_type(
-                    self.motor_artifact, seed=private_seed, **options
-                )
-            if self.predictive_model is not None:
-                from .foresight import ForesightConfig, ResidentForesight
-
-                for i, body in enumerate(self.world.bodies):
-                    self.foresights[body.id] = ResidentForesight(
-                        self.predictive_model,
-                        config=ForesightConfig(seed=seed * 1009 + i + 7919),
-                    )
-                self._validate_foresight_interface()
-                training = next(iter(self.foresights.values())).experienced.metadata[
-                    "training_input_identity"
-                ]
-                self.foresight_deployment = {
-                    "status": "cross-environment-research-transfer",
-                    "source_dataset_manifest_sha256": training[
-                        "dataset_manifest_sha256"
-                    ],
-                    "deployed_body": self.body_mode,
-                    "deployed_ecology": ecology,
-                    "deployed_biosphere": biosphere is not None,
-                    "evidence": (
-                        "neural graph, ports, feature preprocessing, actions and timing "
-                        "match; physical ecology equivalence is not claimed"
-                    ),
-                }
         self.id = str(uuid.uuid4())
         self.tick = 0
         self.paused = False
@@ -194,167 +148,108 @@ class Habitat3D:
         self.branch = "resident"
         self.saved_at = None
         self.error = None
-        self.remote_ids = {b.id: f"{self.id}:{b.id}" for b in self.world.bodies}
+        self.remote_ids = {
+            body.id: f"{self.id}:{body.id}" for body in self.world.bodies
+        }
         self.neural.create(list(self.remote_ids.values()))
-        self.organs = (
-            {}
-            if self.motors
-            else {
-                b.id: AdaptiveOrgan(
-                    feature_dim=len(self.neural.output_names), seed=seed
-                )
-                for b in self.world.bodies
-            }
-        )
-        for i, organ in enumerate(self.organs.values()):
-            # Shared inherited maps; separate stochastic lives.
-            organ.rng = np.random.default_rng(seed * 1009 + i)
-        self.outcomes = {b.id: {} for b in self.world.bodies}
+        self.actual_previous = np.zeros((cohort_size, 9), dtype=np.float32)
+        self.reset_rows = np.ones(cohort_size, dtype=np.bool_)
+        self.outcomes = {body.id: {} for body in self.world.bodies}
         self.neural_state = {
-            b.id: {
-                "features": [0.0] * len(self.neural.output_names),
-                "activity": 0.0,
-                "support": 1.0,
-            }
-            for b in self.world.bodies
+            body.id: {"features": [0.0] * NEURAL_DIM, "activity": 0.0, "support": 1.0}
+            for body in self.world.bodies
         }
-        self.feature_mean = {
-            b.id: np.zeros(len(self.neural.output_names), dtype=np.float32)
-            for b in self.world.bodies
+        self.cognition_state = {
+            body.id: self._empty_cognition(body.id) for body in self.world.bodies
         }
-        self.feature_variance = {
-            b.id: np.ones(len(self.neural.output_names), dtype=np.float32) * 0.01
-            for b in self.world.bodies
-        }
+        self.last_senses: dict[str, Any] = {}
+        self.sensed_at = 0.0
         self.journal = deque(maxlen=256)
-        self.history = {b.id: deque(maxlen=360) for b in self.world.bodies}
+        self.history = {body.id: deque(maxlen=360) for body in self.world.bodies}
         self.timings = deque(maxlen=120)
         self.phase_timings = deque(maxlen=120)
         self.pending_step = None
         self.visitor = VisitorPerformances()
-        self.execution_migrations = []
-        self.vision = None
-        if perception_url is not None:
-            from .embodied_vision import EmbodiedVision
-
-            self.vision = EmbodiedVision(
-                perception_url, [b.id for b in self.world.bodies]
-            )
+        self.execution_migrations: list[dict[str, Any]] = []
         self.note(
             "hatched",
-            f"{len(self.world.bodies)} new residents entered the habitat with connectome-based circuits.",
+            f"{cohort_size} new residents entered with one native developmental cohort.",
             neurons=int(self.neural.graph["neurons"]),
             graph_sha256=self.neural.graph["sha256"],
-            dataset=self.neural.metadata["brain"].get("dataset", "unknown"),
+            resident_artifact_sha256=self.residents.model_identity["artifact_sha256"],
         )
-        if self.motor_artifact is not None:
-            self.note(
-                "inheritance",
-                "Inherited a population-trained motor interface and private working context.",
-                artifact_sha256=self.motor_artifact.sha256,
-                training=self.motor_artifact.metadata["training_provenance"],
-            )
-        if self.foresight_deployment is not None:
-            self.note(
-                "foresight",
-                "Enabled private predictive candidate evidence as a research transfer.",
-                deployment=copy.deepcopy(self.foresight_deployment),
-            )
 
-    def _validate_motor_interface(self):
-        artifact = self.motor_artifact
-        if artifact is None:
-            return
-        provenance = artifact.metadata["training_provenance"]
-        if (
-            provenance["graph_sha256"] != self.neural.graph["sha256"]
-            or provenance["port_spec_sha256"]
-            != self.neural.metadata["brain"].get("ports", {}).get("spec_hash")
-            or artifact.config["feature_dim"] != len(self.neural.output_names)
-        ):
+    def _validate_neural_interface(self) -> None:
+        if len(self.neural.input_names) != SOURCE_SENSE_DIM:
             raise ValueError(
-                "Inherited motor anatomy or neural interface differs from this world"
+                "Current resident artifacts require exactly 351 physical neural inputs"
+            )
+        if len(self.neural.output_names) != NEURAL_DIM:
+            raise ValueError(
+                "Current resident artifacts require exactly 384 neural readouts"
             )
 
-    def _validate_foresight_interface(self):
-        if not self.foresights:
-            return
-        expected_graph = self.neural.graph["sha256"]
-        expected_ports = self.neural.metadata["brain"].get("ports", {}).get("spec_hash")
-        for organ in self.foresights.values():
-            record = organ.experienced.input_identity["record"][
-                "training_input_identity"
-            ]
-            if (
-                record.get("graph_sha256") != expected_graph
-                or record.get("port_spec_sha256") != expected_ports
-                or organ.experienced.feature_dim != len(self.neural.output_names)
-            ):
-                raise ValueError(
-                    "Predictive foresight anatomy or neural interface differs from this world"
-                )
+    def _validate_resident_interface(self) -> None:
+        from .sensorium import RICH_CHANNEL_NAMES_SHA256, RICH_PROFILE_SHA256
 
-    def memory_count(self, body_id):
-        if self.personal_memory:
-            return self.motors[body_id].memory.transition_count
-        return len(self.organs[body_id].memory.records) if body_id in self.organs else 0
+        expected = {
+            "format": "chreatures-rich-sensorimotor-observation-v1",
+            "observation_dim": 4453,
+            "rich_body_dim": RICH_RETINA_DIM,
+            "rich_profile_sha256": RICH_PROFILE_SHA256,
+            "rich_channel_names_sha256": RICH_CHANNEL_NAMES_SHA256,
+            "observation_order": [
+                "rich_body_v1_4096",
+                "canonical_channels_351",
+                "physiology_6",
+            ],
+            "source_sense_dim": SOURCE_SENSE_DIM,
+            "physiology_dim": PHYSIOLOGY_DIM,
+            "neural_readout_dim": NEURAL_DIM,
+            "previous_action_plus_oral_dim": 9,
+        }
+        if self.residents.observation_contract != expected:
+            raise ValueError(
+                "Resident artifact observation contract differs from this host"
+            )
 
-    def cognitive_view(self):
-        if not self.motors:
-            return {key: organ.view() for key, organ in self.organs.items()}
-        if self.personal_memory:
-            return {
-                key: {
-                    **organ.view(),
-                    "controller": "inherited-with-personal-context",
-                    "time": self.world.time,
-                    "memory_count": self.memory_count(key),
-                    "learning_enabled": organ.refiner.learning,
-                    "context": organ.motor.context.tolist(),
-                    "metrics": {
-                        **organ.metrics,
-                        "prediction_error": organ.motor.last_prediction_error or 0.0,
-                        "learning_progress": 0.0,
-                    },
-                    **({
-                        "foresight": {
-                            "status": self.foresights[key].status,
-                            "observations": self.foresights[key].observation_count,
-                            "model_artifact_sha256": self.foresights[key]
-                            .experienced.model_identity["artifact_sha256"],
-                            "input_identity_sha256": self.foresights[key]
-                            .experienced.input_identity["sha256"],
-                            "deployment": copy.deepcopy(self.foresight_deployment),
-                        }
-                    } if key in self.foresights else {}),
-                }
-                for key, organ in self.motors.items()
-            }
+    def _empty_cognition(self, body_id: str) -> dict[str, Any]:
         return {
-            key: {
-                **motor.view(),
-                "controller": "inherited-predictive-ppo",
-                "time": self.world.time,
-                "memory_count": 0,
-                "learning": False,
-                "metrics": {
-                    "prediction_error": motor.last_prediction_error or 0.0,
-                    "learning_progress": 0.0,
-                },
-            }
-            for key, motor in self.motors.items()
+            "controller": "native-developmental-resident",
+            "resident": body_id,
+            "memory_count": 0,
+            "memory_inserted_slot": -1,
+            "goal": {
+                "valid": False,
+                "changed": False,
+                "slot": -1,
+                "recorded_tick": 0,
+                "recorded_time": 0.0,
+                "remaining_ticks": 0,
+            },
+            "sampled_proposal": {name: 0.0 for name in ACTION_NAMES},
+            "executed_action": {
+                **{name: 0.0 for name in ACTION_NAMES},
+                "oral": 0.0,
+            },
+            "outcome": {},
+            "model_identity": copy.deepcopy(self.residents.model_identity),
         }
 
-    def sense(self):
-        """Sample the body, including local concentration from physical transport."""
-        sensed = {b.id: self.world.sense(b.id) for b in self.world.bodies}
+    def memory_count(self, body_id: str) -> int:
+        return int(self.cognition_state[body_id]["memory_count"])
+
+    def cognitive_view(self) -> dict[str, dict[str, Any]]:
+        return copy.deepcopy(self.cognition_state)
+
+    def sense(self) -> dict[str, dict[str, Any]]:
+        """Sample physical transducers and replace odor with transported concentration."""
+        sensed = {body.id: self.world.sense(body.id) for body in self.world.bodies}
         if self.field is not None:
             for body in self.world.bodies:
                 values = sensed[body.id]
                 positions = values.get("antenna_position")
                 if positions is None:
-                    # Geometry stays at the transducer boundary. Only the two
-                    # measured chemical concentrations reach cognition.
                     rotation = self.world.data.xmat[
                         self.world._body_mj[body.id]
                     ].reshape(3, 3)
@@ -367,7 +262,7 @@ class Habitat3D:
                 values["odor"] = (-np.expm1(-concentration / 0.1)).tolist()
         return sensed
 
-    def note(self, kind, text, **fields):
+    def note(self, kind: str, text: str, **fields: Any) -> None:
         self.journal.append(
             {
                 "id": f"{self.id}:{self.tick}:{len(self.journal)}",
@@ -378,201 +273,253 @@ class Habitat3D:
             }
         )
 
-    @staticmethod
-    def _combined_candidate_evidence(*callbacks):
-        active = tuple(callback for callback in callbacks if callback is not None)
-        if not active:
-            return None
-        if len(active) == 1:
-            return active[0]
-
-        def combined(candidates):
-            reports = [callback(candidates) for callback in active]
-            count = len(candidates)
-            corrections = np.zeros(count, dtype=np.float32)
-            diagnostics = [dict() for _ in candidates]
-            sources = []
-            independent = True
-            for report in reports:
-                source = report.get("source")
-                values = np.asarray(report.get("corrections"), dtype=np.float32)
-                items = report.get("diagnostics")
-                if (
-                    not isinstance(source, str)
-                    or values.shape != (count,)
-                    or not np.isfinite(values).all()
-                    or not isinstance(items, (list, tuple))
-                    or len(items) != count
-                ):
-                    raise ValueError("combined candidate evidence is malformed")
-                sources.append(source)
-                corrections += values
-                independent &= (
-                    report.get("proposal_credit_contract")
-                    == "candidate-and-frozen-state-only-v1"
+    def _source_rows(self, sensed: dict[str, dict[str, Any]]) -> np.ndarray:
+        rows = []
+        for body in self.world.bodies:
+            encoded = self.neural.encode(sensed[body.id])
+            if set(encoded) != set(self.neural.input_names):
+                raise ValueError(
+                    "Physical encoder channel identity differs from the neural service"
                 )
-                for index, item in enumerate(items):
-                    diagnostics[index][source] = copy.deepcopy(item)
-            result = {
-                "source": "private-foresight+visual-evidence-v1",
-                "corrections": corrections.astype(float).tolist(),
-                "diagnostics": diagnostics,
+            rows.append([encoded[name] for name in self.neural.input_names])
+        values = _finite_row(rows, (len(rows), SOURCE_SENSE_DIM), "physical senses")
+        if np.any((values < 0.0) | (values > 1.0)):
+            raise ValueError("Physical senses exceed their declared [0,1] range")
+        return values
+
+    def _physiology_rows(self, responses: dict[str, dict[str, Any]]) -> np.ndarray:
+        rows = []
+        for body in self.world.bodies:
+            response = responses[body.id]
+            rows.append(
+                (
+                    body.energy,
+                    body.gut,
+                    body.fatigue,
+                    math.tanh(float(body.speed) / 2),
+                    math.tanh(float(body.angular_velocity) / 4),
+                    response["support"],
+                )
+            )
+        result = _finite_row(rows, (len(rows), PHYSIOLOGY_DIM), "physiology")
+        if np.any((result[:, :3] < 0.0) | (result[:, :3] > 1.0)):
+            raise ValueError("Physiology exceeds its declared range")
+        return result
+
+    def _resident_observations(
+        self, source: np.ndarray, physiology: np.ndarray
+    ) -> np.ndarray:
+        rich = _finite_row(
+            self.world.rich_retina_batch(),
+            (len(self.world.bodies), RICH_RETINA_DIM),
+            "rich body senses",
+        )
+        if np.any((rich < 0.0) | (rich > 1.0)):
+            raise ValueError("Rich body senses exceed their declared [0,1] range")
+        return np.ascontiguousarray(
+            np.concatenate((rich, source, physiology), axis=1), dtype=np.float32
+        )
+
+    def _actions(
+        self, proposed: np.ndarray, oral_command: np.ndarray
+    ) -> tuple[dict[str, dict[str, float]], np.ndarray]:
+        values = _finite_row(proposed, (len(self.world.bodies), 8), "native action")
+        if np.any((values < -1.0) | (values > 1.0)) or np.any(values[:, 3:7] < 0.0):
+            raise ValueError("Native action exceeds the physical actuator bounds")
+        oral = _finite_row(oral_command, (len(values),), "native oral command")
+        if np.any((oral < 0.0) | (oral > 1.0)):
+            raise ValueError("Native oral command exceeds its physical bounds")
+        actions = {}
+        for index, body in enumerate(self.world.bodies):
+            action = dict(
+                zip(ACTION_NAMES, values[index].astype(float).tolist(), strict=True)
+            )
+            action["eat"] = float(oral[index])
+            actions[body.id] = action
+        return actions, oral
+
+    def _record_cognition(
+        self, result: dict[str, np.ndarray], actions: np.ndarray
+    ) -> None:
+        for index, body in enumerate(self.world.bodies):
+            self.cognition_state[body.id] = {
+                "controller": "native-developmental-resident",
+                "resident": body.id,
+                "memory_count": int(result["memory_count"][index]),
+                "memory_inserted_slot": int(result["memory_inserted_slot"][index]),
+                "goal": {
+                    "valid": bool(result["goal_valid"][index]),
+                    "changed": bool(result["goal_changed"][index]),
+                    "slot": int(result["goal_slot"][index]),
+                    "recorded_tick": int(result["goal_recorded_tick"][index]),
+                    "recorded_time": float(result["goal_recorded_time"][index]),
+                    "remaining_ticks": int(result["goal_remaining_ticks"][index]),
+                },
+                "sampled_proposal": dict(
+                    zip(
+                        ACTION_NAMES, actions[index].astype(float).tolist(), strict=True
+                    )
+                ),
+                "consequence_refinement": {
+                    "candidate_scores": result["candidate_scores"][index]
+                    .astype(float)
+                    .tolist(),
+                    "candidate_out_of_domain": result["candidate_out_of_domain"][index]
+                    .astype(bool)
+                    .tolist(),
+                    "selected_candidate": int(result["selected_candidate"][index]),
+                    "selected_private_correction": result[
+                        "selected_consequence_correction"
+                    ][index]
+                    .astype(float)
+                    .tolist(),
+                    "completed_private_updates_before_action": int(
+                        result["personal_consequence_updates"][index]
+                    ),
+                    "meaning": "predicted body component of the remembered sensory goal",
+                },
+                "model_identity": copy.deepcopy(self.residents.model_identity),
             }
-            if independent:
-                result["proposal_credit_contract"] = (
-                    "candidate-and-frozen-state-only-v1"
-                )
-            return result
 
-        return combined
+    def _record_execution(self, actions: np.ndarray, oral: np.ndarray) -> None:
+        """Publish actions and outcomes only after their physical tick commits."""
+        for index, body in enumerate(self.world.bodies):
+            self.cognition_state[body.id]["executed_action"] = {
+                **dict(
+                    zip(
+                        ACTION_NAMES,
+                        actions[index].astype(float).tolist(),
+                        strict=True,
+                    )
+                ),
+                "oral": float(oral[index]),
+            }
+            self.cognition_state[body.id]["outcome"] = copy.deepcopy(
+                self.outcomes[body.id]
+            )
 
-    def step(self, steps=1):
-        dt = 0.05
+    def step(self, steps: int = 1) -> None:
+        if type(steps) is not int or steps < 1:
+            raise ValueError("steps must be a positive integer")
         if self.pending_step is not None:
             raise RuntimeError(
-                "A previous world step is incomplete; restore its checkpoint before advancing"
+                "A previous world step is incomplete; restore its checkpoint"
             )
         for _ in range(steps):
             started = time.perf_counter()
-            if self.vision is not None and not self.vision.poll(self.tick):
-                break
             for event in self.visitor.advance(self.world, self.tick):
                 self.note(
                     "visitor-event", "A scheduled physical stimulus occurred.", **event
                 )
-            before_physiology = (
-                self.vision.physiology(self.world, self.neural_state)
-                if self.vision is not None
-                else None
-            )
             sensed = self.sense()
             self.last_senses = sensed
             self.sensed_at = self.world.time
+            source = self._source_rows(sensed)
             entries = [
                 {
-                    "id": self.remote_ids[b.id],
-                    "senses": self.neural.encode(sensed[b.id]),
+                    "id": self.remote_ids[body.id],
+                    "senses": dict(
+                        zip(
+                            self.neural.input_names,
+                            source[index].astype(float).tolist(),
+                            strict=True,
+                        )
+                    ),
                 }
-                for b in self.world.bodies
+                for index, body in enumerate(self.world.bodies)
             ]
             sensed_done = time.perf_counter()
-            self.pending_step = {"tick": self.tick, "neural_seq": self.neural.next_seq}
-            responses = self.neural.step(entries, dt)
+            self.pending_step = {
+                "tick": self.tick,
+                "neural_seq": self.neural.next_seq,
+                "phase": "neural",
+            }
+            remote = self.neural.step(entries, MODEL_DT)
             neural_done = time.perf_counter()
-            inverse = {v: k for k, v in self.remote_ids.items()}
-            actions = {}
-            for response in responses:
-                body_id = inverse[response["id"]]
-                body = next(b for b in self.world.bodies if b.id == body_id)
-                features = np.asarray(response["features"], dtype=np.float32)
-                local_body = {
-                    key: float(getattr(body, key))
-                    for key in ("energy", "gut", "fatigue", "speed", "angular_velocity")
-                }
-                local_body["support"] = float(response["support"])
-                if self.motors:
-                    if self.personal_memory:
-                        motor = self.motors[body_id]
-                        foresight = self.foresights.get(body_id)
-                        macro_boundary = motor.motor.held_ticks in (0, 5)
-                        if foresight is not None and macro_boundary:
-                            previous_action = (
-                                np.zeros(8, dtype=np.float32)
-                                if motor.pending is None
-                                else np.asarray(motor.pending["action"], dtype=np.float32)
-                            )
-                            foresight.observe(
-                                features,
-                                motor.motor.physiology_vector(local_body),
-                                previous_action,
-                                reset=foresight.observation_count == 0,
-                            )
-                        visual_evidence = (
-                            self.vision.candidate_evidence(
-                                body_id,
-                                self.tick,
-                                local_body,
-                                motor.refiner.config,
-                            )
-                            if self.vision is not None
-                            else None
-                        )
-                        evidence = self._combined_candidate_evidence(
-                            foresight.candidate_evidence if foresight is not None else None,
-                            visual_evidence,
-                        )
-                        maturation = self.motors[body_id].variance_maturation
-                        maturation_queued = (
-                            maturation is not None and maturation["status"] == "queued"
-                        )
-                        action = self.motors[body_id].tick(
-                            features,
-                            local_body,
-                            self.outcomes[body_id] if self.tick else None,
-                            dt,
-                            candidate_evidence=evidence,
-                        )
-                        if foresight is not None and macro_boundary:
-                            foresight.commit_executed(tuple(action[name] for name in (
-                                "thrust", "yaw", "gaze_pitch", "grip",
-                                "signal_low", "signal_mid", "signal_high", "posture",
-                            )))
-                        if maturation_queued and maturation["status"] == "applied":
-                            self.note(
-                                "development",
-                                f"{body.name} acquired a private capacity to learn action variance.",
-                                resident=body_id,
-                                maturation=copy.deepcopy(maturation),
-                            )
-                    else:
-                        action = self.motors[body_id].tick(features, local_body, dt)
-                else:
-                    mean, variance = (
-                        self.feature_mean[body_id],
-                        self.feature_variance[body_id],
-                    )
-                    delta = features - mean
-                    mean += np.float32(dt / 20) * delta
-                    variance += np.float32(dt / 20) * (delta * delta - variance)
-                    normalized = np.clip(
-                        delta / np.sqrt(np.maximum(variance, 1e-6)), -2, 2
-                    )
-                    action = self.organs[body_id].step(
-                        normalized, local_body, self.outcomes[body_id], dt
-                    )
-                for channel in ("grip", "signal_low", "signal_mid", "signal_high"):
-                    action[channel] = max(0.0, action[channel])
-                # Ingestion is an embodied contact reflex, not an object/position
-                # query. Movement, looking, grip and signaling are learned outputs.
-                action["eat"] = float(
-                    np.clip((1 - body.gut) * (1.1 - body.energy), 0, 1)
+            inverse = {
+                remote_id: body_id for body_id, remote_id in self.remote_ids.items()
+            }
+            try:
+                response_by_body = {inverse[row["id"]]: row for row in remote}
+            except KeyError as error:
+                raise ValueError(
+                    "Neural response contains an unknown resident"
+                ) from error
+            if set(response_by_body) != set(self.remote_ids):
+                raise ValueError(
+                    "Neural response cohort differs from the physical cohort"
                 )
-                actions[body_id] = action
-                self.neural_state[body_id] = response
+            neural = _finite_row(
+                [response_by_body[body.id]["features"] for body in self.world.bodies],
+                (len(self.world.bodies), NEURAL_DIM),
+                "neural readouts",
+            )
+            physiology = self._physiology_rows(response_by_body)
+            observation = self._resident_observations(source, physiology)
+            self.pending_step["phase"] = "resident"
+            native = self.residents.step(
+                observation,
+                neural,
+                physiology,
+                self.actual_previous,
+                np.full(len(self.world.bodies), self.tick, dtype=np.uint64),
+                np.full(len(self.world.bodies), self.world.time, dtype=np.float64),
+                self.reset_rows,
+            )
+            if not np.array_equal(
+                native["actual_previous_action"], self.actual_previous[:, :8]
+            ):
+                raise RuntimeError("Native resident previous-action accounting differs")
+            if not np.array_equal(native["physiology"], physiology):
+                raise RuntimeError("Native resident physiology accounting differs")
+            proposed = _finite_row(
+                native["proposed_action"],
+                (len(self.world.bodies), 8),
+                "native proposed action",
+            )
+            actions, oral = self._actions(proposed, native["oral_command"])
+            self._record_cognition(native, proposed)
+            for body in self.world.bodies:
+                self.neural_state[body.id] = response_by_body[body.id]
             cognition_done = time.perf_counter()
-            if self.vision is not None:
-                self.vision.begin_step(
-                    self.world, self.tick, actions, before_physiology
-                )
-            self.outcomes = self.world.advance(actions, dt)
+            self.pending_step["phase"] = "physics"
+            self.outcomes = self.world.advance(actions, MODEL_DT)
             physics_done = time.perf_counter()
+            self.actual_previous = np.ascontiguousarray(
+                np.concatenate((proposed, oral[:, None]), axis=1), dtype=np.float32
+            )
+            self.reset_rows.fill(False)
+            self._record_execution(proposed, oral)
             if self.acoustics is not None:
-                self.acoustic_state = self.acoustics.advance(dt)
+                self.acoustic_state = self.acoustics.advance(MODEL_DT)
             acoustics_done = time.perf_counter()
             if self.resources is not None:
-                self.resource_state = self.resources.advance(dt)
+                self.resource_state = self.resources.advance(MODEL_DT)
             resources_done = time.perf_counter()
             if self.biosphere is not None:
-                self.biosphere.advance(dt)
+                self.biosphere.advance(MODEL_DT)
             biosphere_done = time.perf_counter()
             if self.field is not None:
                 self.field.sync_static_geometry(self.world)
                 self.field.sync_dynamic_barriers(self.world.diffusion_barriers())
                 self.field.advance(
-                    dt, sources=self.field.sources_from_world(self.world)
-                    + (self.biosphere.field_sources() if self.biosphere is not None else [])
+                    MODEL_DT,
+                    sources=self.field.sources_from_world(self.world)
+                    + (
+                        self.biosphere.field_sources()
+                        if self.biosphere is not None
+                        else []
+                    ),
                 )
             fields_done = time.perf_counter()
+            self.pending_step["phase"] = "personal-consequences"
+            self.residents.observe_consequences(
+                np.full(len(self.world.bodies), self.tick, dtype=np.uint64),
+                physiology,
+                self._physiology_rows(response_by_body),
+                self.actual_previous,
+            )
+            personal_done = time.perf_counter()
             self.phase_timings.append(
                 {
                     "senses": (sensed_done - started) * 1000,
@@ -583,39 +530,36 @@ class Habitat3D:
                     "resources": (resources_done - acoustics_done) * 1000,
                     "biosphere": (biosphere_done - resources_done) * 1000,
                     "fields": (fields_done - biosphere_done) * 1000,
+                    "personal_learning": (personal_done - fields_done) * 1000,
                 }
             )
             self.tick += 1
-            if self.vision is not None:
-                self.vision.finish_step(
-                    self.world,
-                    self.tick,
-                    self.outcomes,
-                    self.vision.physiology(self.world, self.neural_state),
-                )
             self.pending_step = None
-            for b in self.world.bodies:
-                if self.outcomes[b.id].get("nutrition", 0) > 0 and self.tick % 20 == 0:
+            for body in self.world.bodies:
+                if (
+                    self.outcomes[body.id].get("nutrition", 0.0) > 0.0
+                    and self.tick % 20 == 0
+                ):
                     self.note(
-                        "feeding", f"{b.name} ingested a resource.", resident=b.id
+                        "feeding", f"{body.name} ingested a resource.", resident=body.id
                     )
                 if self.tick % 10 == 0:
-                    self.history[b.id].append(
+                    self.history[body.id].append(
                         {
                             "time": self.world.time,
-                            "x": float(b.x),
-                            "y": float(b.y),
-                            "z": float(b.z),
-                            "energy": b.energy,
-                            "activity": self.neural_state[b.id]["activity"],
-                            "memory": self.memory_count(b.id),
+                            "x": float(body.x),
+                            "y": float(body.y),
+                            "z": float(body.z),
+                            "energy": body.energy,
+                            "activity": self.neural_state[body.id]["activity"],
+                            "memory": self.memory_count(body.id),
                         }
                     )
             self.timings.append((time.perf_counter() - started) * 1000)
 
-    def command(self, command):
+    def command(self, command: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(command, dict):
-            raise ValueError("Command must be an object")
+            raise TypeError("Command must be an object")
         op = command.get("op")
         if op == "pause":
             if type(command.get("paused")) is not bool:
@@ -623,11 +567,11 @@ class Habitat3D:
             self.paused = command["paused"]
             return {"paused": self.paused}
         if op == "speed":
-            if type(command.get("value")) is not int or command["value"] not in (
+            if type(command.get("value")) is not int or command["value"] not in {
                 1,
                 2,
                 4,
-            ):
+            }:
                 raise ValueError("speed must be 1, 2 or 4")
             self.speed = command["value"]
             return {"speed": self.speed}
@@ -637,48 +581,15 @@ class Habitat3D:
                 raise ValueError("Bookmark text must be at most 500 characters")
             self.note("observation", text, origin="caregiver")
             return {"bookmarked": True}
-        if op == "mature_variance":
-            if set(command) - {"op", "residents"}:
-                raise ValueError("Unknown variance maturation option")
-            if not self.paused or not self.personal_memory:
-                raise ValueError(
-                    "Variance maturation requires a paused personal-learning world"
-                )
-            ids = command.get("residents", list(self.motors))
-            if (
-                not isinstance(ids, list)
-                or not ids
-                or any(
-                    not isinstance(key, str) or key not in self.motors for key in ids
-                )
-                or len(ids) != len(set(ids))
-            ):
-                raise ValueError("Residents must be distinct members of this world")
-            # Check the complete cohort before queuing any developmental change.
-            for key in ids:
-                motor = self.motors[key]
-                if (
-                    motor.personal_plasticity is None
-                    or motor.variance_maturation is not None
-                    or motor.personal_plasticity.config.variance_adaptation
-                    != "fixed-inherited-v1"
-                ):
-                    raise ValueError(f"Resident {key} cannot queue this maturation")
-            records = {key: self.motors[key].queue_state_log_std_v2() for key in ids}
-            self.note(
-                "development",
-                "Queued private variance learning after each current motor action completes.",
-                residents=ids,
-                maturation=copy.deepcopy(records),
-            )
-            return {"queued": records}
         if op == "offer_material":
             if self.visitor_materials is None:
                 raise ValueError("This world has no outside material supply")
             result = self.visitor_materials.command(command)
             self.note(
-                "caregiver", "A visitor placed a finite material offering.",
-                command=copy.deepcopy(command), transfer=copy.deepcopy(result),
+                "caregiver",
+                "A visitor placed a finite material offering.",
+                command=copy.deepcopy(command),
+                transfer=copy.deepcopy(result),
             )
             return result
         result = self.world.command(command)
@@ -688,7 +599,13 @@ class Habitat3D:
         )
         return result
 
-    def view(self):
+    def _public_senses(self) -> dict[str, Any]:
+        from .sensorium import serialize_rich_retina
+
+        source = self.last_senses or self.sense()
+        return {key: serialize_rich_retina(value) for key, value in source.items()}
+
+    def view(self) -> dict[str, Any]:
         view = self.world.view()
         view.update(
             {
@@ -703,52 +620,66 @@ class Habitat3D:
                 "error": self.error,
                 "neural": copy.deepcopy(self.neural_state),
                 "cognition": self.cognitive_view(),
-                "senses": copy.deepcopy(self.last_senses or self.sense()),
+                "outcomes": copy.deepcopy(self.outcomes),
+                "senses": self._public_senses(),
                 "sensed_at": self.sensed_at,
-                "ecology": {
-                    "kind": "diffusion",
-                    "channels": self.field.channels,
-                    "time": self.field.time,
-                }
-                if self.field is not None
-                else {"kind": "analytic"},
+                "ecology": (
+                    {
+                        "kind": "diffusion",
+                        "channels": self.field.channels,
+                        "time": self.field.time,
+                    }
+                    if self.field is not None
+                    else {"kind": "analytic"}
+                ),
                 "resources": copy.deepcopy(self.resource_state),
                 "biosphere": self._biosphere_view(),
                 "acoustics": copy.deepcopy(self.acoustic_state),
                 "visitor": self.visitor.view(self.tick, self.paused),
-                "visitor_materials": self.visitor_materials.view()
-                if self.visitor_materials is not None else None,
-                "vision": self.vision.view(self.tick)
-                if self.vision is not None
-                else None,
+                "visitor_materials": (
+                    self.visitor_materials.view()
+                    if self.visitor_materials is not None
+                    else None
+                ),
                 "journal": list(self.journal)[-40:],
-                "history": {k: list(v) for k, v in self.history.items()},
+                "history": {key: list(value) for key, value in self.history.items()},
                 "anatomy": {
-                    "dataset": "MaleCNS v1.0",
+                    "dataset": self.neural.metadata["brain"].get("dataset", "unknown"),
                     "neurons": self.neural.graph["neurons"],
                     "connections": self.neural.graph["edges"],
                     "sha256": self.neural.graph["sha256"],
-                    "scope": "full traced curated brain and nerve cord",
+                    "scope": self.neural.metadata["brain"].get(
+                        "scope", "configured neural graph"
+                    ),
                     "inputs": len(self.neural.input_names),
                     "readouts": len(self.neural.output_names),
                 },
+                "resident_controller": {
+                    **copy.deepcopy(self.residents.model_identity),
+                    "observation_contract": copy.deepcopy(
+                        self.residents.observation_contract
+                    ),
+                    "rich_retina_available": hasattr(self.world, "rich_retina_batch"),
+                },
                 "performance": {
                     "step_ms": sum(self.timings) / max(1, len(self.timings)),
-                    "dt": 0.05,
+                    "dt": MODEL_DT,
                     "physics_backend": self.physics_backend,
-                    "phase_ms": {
-                        key: sum(t[key] for t in self.phase_timings)
-                        / len(self.phase_timings)
-                        for key in self.phase_timings[0]
-                    }
-                    if self.phase_timings
-                    else {},
+                    "phase_ms": (
+                        {
+                            key: sum(row[key] for row in self.phase_timings)
+                            / len(self.phase_timings)
+                            for key in self.phase_timings[0]
+                        }
+                        if self.phase_timings
+                        else {}
+                    ),
                 },
             }
         )
         return view
 
-    def _biosphere_view(self):
+    def _biosphere_view(self) -> dict[str, Any] | None:
         if self.biosphere is None:
             return None
         report = self.biosphere.last_report
@@ -767,7 +698,11 @@ class Habitat3D:
             "developments": copy.deepcopy(developments[-16:]),
             "developments_truncated": max(0, len(developments) - 16),
             "resident_physiology_coupled": self.biosphere.mobility is not None,
-            "mobile_physiology": self.biosphere.mobility.view() if self.biosphere.mobility is not None else None,
+            "mobile_physiology": (
+                self.biosphere.mobility.view()
+                if self.biosphere.mobility is not None
+                else None
+            ),
             "whole_food_web": False,
             "exchange": (
                 self.biosphere.exchange.view()
@@ -776,12 +711,12 @@ class Habitat3D:
             ),
         }
 
-    def save(self, path):
+    def save(self, path: str | Path) -> str:
         if self.pending_step is not None:
             raise RuntimeError("Cannot checkpoint an incomplete distributed tick")
         state = {
             "version": 1,
-            "kind": "chreatures-3d",
+            "kind": "chreatures-developmental-habitat",
             "id": self.id,
             "tick": self.tick,
             "branch": self.branch,
@@ -804,38 +739,22 @@ class Habitat3D:
             else None,
             "acoustic_state": self.acoustic_state,
             "visitor": self.visitor.snapshot(),
-            "vision": self.vision.snapshot() if self.vision is not None else None,
-            "last_senses": self.last_senses,
+            "last_senses": self._public_senses() if self.last_senses else {},
             "sensed_at": self.sensed_at,
-            "input_names": self.neural.input_names,
-            "output_names": self.neural.output_names,
-            "organs": {k: v.snapshot() for k, v in self.organs.items()},
-            "motor_artifact": self.motor_artifact.to_value()
-            if self.motor_artifact is not None
-            else None,
-            "personal_memory": self.personal_memory,
-            "personal_plasticity": self.personal_plasticity,
-            "motors": {k: v.snapshot_value() for k, v in self.motors.items()},
+            "neural_identity": copy.deepcopy(self.neural.metadata["brain"]),
             "remote_ids": self.remote_ids,
             "brain_url": self.neural.url,
-            "graph_sha256": self.neural.graph["sha256"],
             "neural_state": self.neural_state,
             "outcomes": self.outcomes,
+            "resident_controller": self.residents.snapshot_value(),
+            "actual_previous_plus_oral": self.actual_previous.astype(float).tolist(),
+            "reset_rows": self.reset_rows.astype(bool).tolist(),
+            "cognition_state": self.cognition_state,
             "journal": list(self.journal),
-            "history": {k: list(v) for k, v in self.history.items()},
-            "feature_mean": {k: v.tolist() for k, v in self.feature_mean.items()},
-            "feature_variance": {
-                k: v.tolist() for k, v in self.feature_variance.items()
-            },
+            "history": {key: list(value) for key, value in self.history.items()},
         }
         if self.visitor_materials is not None:
             state["visitor_materials"] = self.visitor_materials.snapshot()
-        if self.foresights:
-            state.update({
-                "predictive_model": self.predictive_model,
-                "foresights": {key: organ.snapshot() for key, organ in self.foresights.items()},
-                "foresight_deployment": copy.deepcopy(self.foresight_deployment),
-            })
         request = {
             "name": f"world-{self.id}-{self.tick}",
             "resident_ids": list(self.remote_ids.values()),
@@ -847,68 +766,72 @@ class Habitat3D:
                 request["name"], request["resident_ids"]
             )
         except Exception as error:
-            # The local tick is complete. Preserve its private state even if a
-            # remote save's outcome is unknown. This is a recovery artifact,
-            # never a loadable whole-world checkpoint without a verified neural
-            # receipt. The preceding complete checkpoint remains authoritative.
             destination = Path(path)
             interrupted = destination.with_name(
                 f"{destination.stem}.interrupted-{self.tick}.json"
             )
-            write_envelope(interrupted, {
-                "world": state, "neural_request": request,
-                "error": str(error),
-            }, format="chreatures-3d-interrupted-save-v1")
+            write_envelope(
+                interrupted,
+                {"world": state, "neural_request": request, "error": str(error)},
+                format=INTERRUPTED_FORMAT,
+            )
             raise
-        digest = write_envelope(path, state, format="chreatures-3d-checkpoint-v1")
+        digest = write_envelope(path, state, format=CHECKPOINT_FORMAT)
         self.saved_at = time.time()
         return digest
 
     @classmethod
-    def load(cls, path, brain_url=None):
+    def load(
+        cls,
+        path: str | Path,
+        brain_url: str | None = None,
+        resident_artifact: str | Path | None = None,
+    ) -> Habitat3D:
         from .acoustics import Acoustics
         from .ecology import Ecology
         from .fields import FieldEnvironment
 
         envelope = json.loads(Path(path).read_text())
-        if envelope.get("format") != "chreatures-3d-checkpoint-v1":
-            raise ValueError("Unsupported 3D checkpoint")
-        value = envelope["state"]
-        if hashlib.sha256(canonical(value)).hexdigest() != envelope["sha256"]:
+        if envelope.get("format") != CHECKPOINT_FORMAT:
+            raise ValueError(
+                "Unsupported 3D checkpoint; current lives require a developmental habitat checkpoint"
+            )
+        value = envelope.get("state")
+        if not isinstance(value, dict) or hashlib.sha256(
+            canonical(value)
+        ).hexdigest() != envelope.get("sha256"):
             raise ValueError("3D checkpoint checksum mismatch")
+        if (
+            value.get("version") != 1
+            or value.get("kind") != "chreatures-developmental-habitat"
+        ):
+            raise ValueError("Unsupported developmental habitat state")
+        if resident_artifact is None:
+            raise ValueError(
+                "A current --resident-artifact is required to restore this life"
+            )
         instance = cls.__new__(cls)
-        instance.body_mode = value.get("body_mode", "crawler")
-        instance.physics_backend = value.get("physics_backend", "reference")
-        instance.execution_migrations = copy.deepcopy(
-            value.get("execution_migrations", [])
-        )
+        instance.body_mode = value["body_mode"]
+        instance.physics_backend = value["physics_backend"]
+        instance.execution_migrations = copy.deepcopy(value["execution_migrations"])
         world_type = physical_world_type(instance.body_mode, instance.physics_backend)
         instance.world = world_type.restore(value["world"])
-        instance.visitor = VisitorPerformances.restore(
-            value.get("visitor"), instance.world
-        )
-        instance.vision = None
-        if value.get("vision") is not None:
-            from .embodied_vision import EmbodiedVision
-
-            instance.vision = EmbodiedVision.restore(value["vision"])
+        instance.visitor = VisitorPerformances.restore(value["visitor"], instance.world)
         instance.field = (
             FieldEnvironment.restore(value["field"])
-            if value.get("field") is not None
+            if value["field"] is not None
             else None
         )
-        if value.get("resources") is not None and value.get("biosphere") is not None:
-            raise ValueError(
-                "Saved world contains both legacy resources and a developmental biosphere"
-            )
+        if value["resources"] is not None and value["biosphere"] is not None:
+            raise ValueError("Saved world contains conflicting ecological mechanisms")
         instance.resources = (
             Ecology.restore(instance.world, value["resources"])
-            if value.get("resources") is not None
+            if value["resources"] is not None
             else None
         )
-        instance.resource_state = copy.deepcopy(value.get("resource_state"))
+        instance.resource_state = copy.deepcopy(value["resource_state"])
         instance.biosphere = None
-        if value.get("biosphere") is not None:
+        if value["biosphere"] is not None:
             from .biosphere import Biosphere
 
             instance.biosphere = Biosphere.restore(instance.world, value["biosphere"])
@@ -917,82 +840,42 @@ class Habitat3D:
             from .visitor_materials import VisitorMaterialSupply
 
             if instance.biosphere is None:
-                raise ValueError("Saved offerings require their shared biosphere")
+                raise ValueError("Saved offerings lack their shared biosphere")
             instance.visitor_materials = VisitorMaterialSupply.restore(
                 instance.biosphere, value["visitor_materials"]
             )
         instance.acoustics = (
             Acoustics.restore(instance.world, value["acoustics"])
-            if value.get("acoustics") is not None
+            if value["acoustics"] is not None
             else None
         )
-        instance.acoustic_state = copy.deepcopy(value.get("acoustic_state"))
-        instance.last_senses = copy.deepcopy(value.get("last_senses", {}))
-        instance.sensed_at = value.get("sensed_at", instance.world.time)
-        instance.organs = {
-            key: AdaptiveOrgan.restore(organ) for key, organ in value["organs"].items()
-        }
-        instance.motor_artifact = None
-        instance.motors = {}
-        instance.foresights = {}
-        instance.predictive_model = value.get("predictive_model")
-        instance.foresight_deployment = copy.deepcopy(
-            value.get("foresight_deployment")
-        )
-        instance.personal_memory = bool(value.get("personal_memory", False))
-        instance.personal_plasticity = bool(value.get("personal_plasticity", False))
-        if value.get("motor_artifact") is not None:
-            from .motor_inheritance import MotorArtifact, MotorOrgan
-
-            instance.motor_artifact = MotorArtifact.from_value(value["motor_artifact"])
-            motor_type = MotorOrgan
-            if instance.personal_memory:
-                from .living_motor import LivingMotorOrgan
-
-                motor_type = LivingMotorOrgan
-            instance.motors = {
-                key: motor_type.restore_value(state, instance.motor_artifact)
-                for key, state in value["motors"].items()
-            }
-            if (
-                set(instance.motors) != {body.id for body in instance.world.bodies}
-                or instance.organs
-                ):
-                raise ValueError(
-                    "Saved motor controllers do not match the physical cohort"
-                )
-            if instance.personal_memory and any(
-                (motor.personal_plasticity is not None) != instance.personal_plasticity
-                for motor in instance.motors.values()
-            ):
-                raise ValueError(
-                    "Saved personal plasticity selector differs from its organs"
-                )
-        if value.get("foresights"):
-            from .foresight import ResidentForesight
-
-            if instance.predictive_model is None or not instance.personal_memory:
-                raise ValueError("Saved foresight lacks its predictive model selector")
-            instance.foresights = {
-                key: ResidentForesight.restore(instance.predictive_model, state)
-                for key, state in value["foresights"].items()
-            }
-            if set(instance.foresights) != set(instance.motors):
-                raise ValueError("Saved foresight organs do not match motor residents")
-            if not isinstance(instance.foresight_deployment, dict):
-                raise ValueError("Saved foresight lacks deployment transfer provenance")
+        instance.acoustic_state = copy.deepcopy(value["acoustic_state"])
+        instance.last_senses = copy.deepcopy(value["last_senses"])
+        instance.sensed_at = float(value["sensed_at"])
         instance.neural = NeuralClient(brain_url or value["brain_url"])
-        instance._validate_motor_interface()
-        instance._validate_foresight_interface()
-        if instance.neural.graph["sha256"] != value["graph_sha256"]:
-            raise ValueError("Remote anatomy differs from saved resident anatomy")
-        if (
-            value.get("input_names", instance.neural.input_names)
-            != instance.neural.input_names
-            or value.get("output_names", instance.neural.output_names)
-            != instance.neural.output_names
-        ):
-            raise ValueError("Remote neural ports differ from saved resident interface")
+        instance._validate_neural_interface()
+        if instance.neural.metadata["brain"] != value["neural_identity"]:
+            raise ValueError(
+                "Remote neural graph, sources, or ports differ from this life"
+            )
+        instance.resident_artifact = str(Path(resident_artifact).expanduser().resolve())
+        instance.residents = DevelopmentalResidentCohort.restore_value(
+            value["resident_controller"], instance.resident_artifact
+        )
+        instance._validate_resident_interface()
+        cohort_size = len(instance.world.bodies)
+        if instance.residents.batch_size != cohort_size:
+            raise ValueError(
+                "Resident controller cohort differs from the physical cohort"
+            )
+        instance.actual_previous = _finite_row(
+            value["actual_previous_plus_oral"],
+            (cohort_size, 9),
+            "saved previous action",
+        )
+        instance.reset_rows = np.asarray(value["reset_rows"], dtype=np.bool_)
+        if instance.reset_rows.shape != (cohort_size,):
+            raise ValueError("Saved reset boundary differs from the physical cohort")
         instance.neural.restore(value["neural_snapshot"])
         for key in (
             "id",
@@ -1003,23 +886,23 @@ class Habitat3D:
             "remote_ids",
             "neural_state",
             "outcomes",
+            "cognition_state",
         ):
             setattr(instance, key, copy.deepcopy(value[key]))
-        # Canonical JSON sorts mapping keys; artifact row order follows the
-        # physical cohort, so reload must not reorder future neural snapshots.
+        expected_ids = [body.id for body in instance.world.bodies]
+        if set(instance.remote_ids) != set(expected_ids) or set(
+            instance.cognition_state
+        ) != set(expected_ids):
+            raise ValueError(
+                "Saved resident identities differ from the physical cohort"
+            )
         instance.remote_ids = {
-            body.id: value["remote_ids"][body.id] for body in instance.world.bodies
-        }
-        instance.feature_mean = {
-            k: np.asarray(v, dtype=np.float32) for k, v in value["feature_mean"].items()
-        }
-        instance.feature_variance = {
-            k: np.asarray(v, dtype=np.float32)
-            for k, v in value["feature_variance"].items()
+            body_id: value["remote_ids"][body_id] for body_id in expected_ids
         }
         instance.journal = deque(value["journal"], maxlen=256)
         instance.history = {
-            k: deque(v, maxlen=360) for k, v in value["history"].items()
+            body_id: deque(value["history"][body_id], maxlen=360)
+            for body_id in expected_ids
         }
         instance.timings = deque(maxlen=120)
         instance.phase_timings = deque(maxlen=120)

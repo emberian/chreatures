@@ -1064,7 +1064,30 @@
           ]
         }
       ],
-      "components": []
+      "components": [
+        {
+          "type": "light",
+          "position": [
+            0.0,
+            0.0,
+            10.0
+          ],
+          "direction": [
+            0.0,
+            0.0,
+            -1.0
+          ],
+          "color": [
+            1.0,
+            0.9,
+            0.72
+          ],
+          "intensity": 0.0,
+          "ambient_intensity": 0.0,
+          "radius": 20.0,
+          "directional": true
+        }
+      ]
     },
     {
       "id": "west-wall",

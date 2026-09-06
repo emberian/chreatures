@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import base64
 import json
 import logging
 import time
@@ -12,7 +11,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .physics import MODEL_DT
@@ -32,13 +31,9 @@ def create_app(
     resources=None,
     biosphere=None,
     acoustics=None,
-    motor_genome=None,
-    personal_memory=False,
+    resident_artifact=None,
     habitat_spec=None,
-    perception_url=None,
     physics_backend=None,
-    personal_plasticity=False,
-    predictive_model=None,
     visitor_materials=None,
 ):
     checkpoint = checkpoint or ROOT / "runs/hollow-garden.json"
@@ -52,7 +47,7 @@ def create_app(
 
             restoring = checkpoint.exists()
             authority["habitat"] = (
-                Habitat3D.load(checkpoint, brain_url)
+                Habitat3D.load(checkpoint, brain_url, resident_artifact)
                 if restoring
                 else Habitat3D(
                     seed,
@@ -62,12 +57,8 @@ def create_app(
                     resources=resources,
                     biosphere=biosphere,
                     acoustics=acoustics,
-                    motor_genome=motor_genome,
-                    personal_memory=personal_memory,
-                    perception_url=perception_url,
+                    resident_artifact=resident_artifact,
                     physics_backend=physics_backend,
-                    personal_plasticity=personal_plasticity,
-                    predictive_model=predictive_model,
                     visitor_materials=visitor_materials,
                     spec=json.loads(Path(habitat_spec).read_text())
                     if habitat_spec is not None
@@ -98,7 +89,8 @@ def create_app(
                             authority["error"] = str(exc)
                             log.exception("Paused after simulation error")
                     if (
-                        habitat and habitat.pending_step is None
+                        habitat
+                        and habitat.pending_step is None
                         and not habitat.neural.uncertain
                         and time.monotonic() - last_save > 30
                     ):
@@ -122,9 +114,6 @@ def create_app(
                 log.exception(
                     "Preserving the previous checkpoint after an incomplete tick"
                 )
-            vision = getattr(authority["habitat"], "vision", None)
-            if vision is not None:
-                vision.close()
 
     app = FastAPI(title="Chreatures", lifespan=lifespan)
     from .observatory import router as observatory_router
@@ -236,21 +225,6 @@ def create_app(
             media_type="application/json",
         )
 
-    @app.get("/api/vision/{resident}/frame")
-    async def visual_frame(resident: str):
-        async with lock:
-            vision = getattr(get_habitat(), "vision", None)
-            if vision is None or resident not in vision.frames:
-                raise HTTPException(404, "No delivered native view for this resident")
-            return Response(
-                base64.b64decode(vision.frames[resident]),
-                media_type="image/png",
-                headers={
-                    "ETag": '"' + vision.latest[resident]["frame_sha256"] + '"',
-                    "Cache-Control": "no-store",
-                },
-            )
-
     @app.post("/api/command")
     async def command(request: Request):
         check_origin(request.headers)
@@ -261,7 +235,7 @@ def create_app(
         try:
             value = await request.json()
             if not isinstance(value, dict):
-                raise ValueError("Command must be an object")
+                raise TypeError("Command must be an object")
             async with lock:
                 habitat = get_habitat()
                 if value.get("op") == "save":
@@ -327,7 +301,8 @@ def main():
         help="Native metabolic and developmental configuration for new 3D research worlds",
     )
     parser.add_argument(
-        "--visitor-materials", type=Path,
+        "--visitor-materials",
+        type=Path,
         help="Finite outside material supplies for new chemical worlds",
     )
     parser.add_argument(
@@ -336,36 +311,15 @@ def main():
         help="Physical acoustic transducers for new 3D worlds; saved worlds preserve their mechanisms",
     )
     parser.add_argument(
-        "--motor-genome",
+        "--resident-artifact",
         type=Path,
-        help="Inherited NumPy motor artifact for new worlds; existing lives keep their controllers",
-    )
-    parser.add_argument(
-        "--personal-memory",
-        action="store_true",
-        help="Learn private action consequences around the inherited motor for new worlds",
-    )
-    parser.add_argument(
-        "--personal-plasticity",
-        action="store_true",
-        help="Learn a private motor adapter from actual bodily consequences in new worlds",
-    )
-    parser.add_argument(
-        "--predictive-model",
-        type=Path,
-        help=(
-            "Native physical-unit predictive-state artifact for opt-in private "
-            "foresight in new personal-memory worlds"
-        ),
+        required=True,
+        help="Checksum-verified native developmental resident artifact",
     )
     parser.add_argument(
         "--habitat",
         type=Path,
         help="Physical habitat specification for new 3D worlds; saved worlds contain their own specification",
-    )
-    parser.add_argument(
-        "--perception-url",
-        help="Optional native visual feature service for new personal-memory residents",
     )
     parser.add_argument(
         "--physics-backend",
@@ -383,13 +337,9 @@ def main():
             resources=args.resources,
             biosphere=args.biosphere,
             acoustics=args.acoustics,
-            motor_genome=args.motor_genome,
-            personal_memory=args.personal_memory,
+            resident_artifact=args.resident_artifact,
             habitat_spec=args.habitat,
-            perception_url=args.perception_url,
             physics_backend=args.physics_backend,
-            personal_plasticity=args.personal_plasticity,
-            predictive_model=args.predictive_model,
             visitor_materials=args.visitor_materials,
         ),
         host=args.host,

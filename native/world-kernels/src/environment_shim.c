@@ -29,6 +29,7 @@ int chreatures_environment_batch(
     const double *sample_world_offset, const int *sample_profiles,
     int profile_count, const int *profile_offsets, const double *ray_directions,
     const double *ray_weights, const double *blocked_transmission,
+    const double *solar_direction, double solar_direct, double solar_diffuse,
     int light_count, const int *light_bodies, const double *light_local_position,
     const double *light_local_direction, const double *light_intensity,
     const double *light_radius, const double *flash_position,
@@ -36,8 +37,8 @@ int chreatures_environment_batch(
     double *illumination) {
   const mjModel *model = (const mjModel *)model_address;
   mjData *data = (mjData *)data_address;
-  if (!model || !data || sample_count < 0 || profile_count <= 0 ||
-      light_count < 0) return -1;
+  if (!model || !data || !solar_direction || sample_count < 0 ||
+      profile_count <= 0 || light_count < 0) return -1;
 
   for (int sample = 0; sample < sample_count; ++sample) {
     const int body = sample_bodies[sample];
@@ -70,7 +71,20 @@ int chreatures_environment_batch(
           (geom < 0 || distance < 0.0) ? 1.0 : blocked_transmission[profile];
       sky_exposure += ray_weights[ray] * exposure;
     }
-    double value = 0.42 * sky_exposure;
+    double solar_origin[3] = {
+        point[0] + 1.0e-4 * solar_direction[0],
+        point[1] + 1.0e-4 * solar_direction[1],
+        point[2] + 1.0e-4 * solar_direction[2]};
+    int solar_geom = -1;
+    double solar_normal[3];
+    const double solar_distance =
+        mj_ray(model, data, solar_origin, solar_direction, NULL, 1, -1,
+               &solar_geom, solar_normal);
+    const double solar_exposure =
+        (solar_geom < 0 || solar_distance < 0.0)
+            ? 1.0
+            : blocked_transmission[profile];
+    double value = solar_diffuse * sky_exposure + solar_direct * solar_exposure;
 
     for (int light = 0; light < light_count; ++light) {
       const int light_body = light_bodies[light];

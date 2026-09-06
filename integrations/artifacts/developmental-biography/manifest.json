@@ -1,0 +1,91 @@
+{
+  "archive_scope": "external evidence graph; never resident memory or controller input",
+  "artifacts": {
+    "developmental-biography.json": {
+      "bytes": 23981,
+      "media_type": "application/json",
+      "role": "developmental-biography",
+      "sha256": "20c04cd566d99a6f673bb20c6324ba8fea3836a282a045cefe3d64f0e2d913e6",
+      "uri": "urn:sha256:20c04cd566d99a6f673bb20c6324ba8fea3836a282a045cefe3d64f0e2d913e6",
+      "verification": "verified_local_sha256"
+    },
+    "developmental-biography.request.json": {
+      "bytes": 12109,
+      "media_type": "application/json",
+      "role": "developmental-biography.request",
+      "sha256": "4eb207aff1907776cc1d2efcaf924502f349f1a293cd90166e93a4ea21767b4b",
+      "uri": "urn:sha256:4eb207aff1907776cc1d2efcaf924502f349f1a293cd90166e93a4ea21767b4b",
+      "verification": "verified_local_sha256"
+    },
+    "developmental-biography.weave.json": {
+      "bytes": 23268,
+      "media_type": "application/json",
+      "role": "developmental-biography.weave",
+      "sha256": "7abef1064f4de527a4783c36b067ff004e89ef7ab24bb891d5fdf6e537535449",
+      "uri": "urn:sha256:7abef1064f4de527a4783c36b067ff004e89ef7ab24bb891d5fdf6e537535449",
+      "verification": "verified_local_sha256"
+    }
+  },
+  "edge_count": 6,
+  "format": "chreatures-developmental-biography-manifest-v1",
+  "native_weave_roundtrip": true,
+  "node_count": 8,
+  "source": {
+    "archive_id": "developmental-biography:07d883ee816f9b6b0a49ba2e3925265c191335b020f3ef8ee63cc8388afd233b:b41c861d5664ee05b2572966210d7ce9145415c6471d986e205791c2ab9fe80c",
+    "inputs": {
+      "gam": {
+        "manifest": {
+          "bytes": 2944,
+          "media_type": "application/json",
+          "role": "gam_observatory_manifest",
+          "sha256": "a5526222cd2e3d9e4fb8ed6ce89a8c77be8e4ba955135f023bf844fca299696e",
+          "uri": "urn:sha256:a5526222cd2e3d9e4fb8ed6ce89a8c77be8e4ba955135f023bf844fca299696e",
+          "verification": "verified_local_sha256"
+        },
+        "models": 3,
+        "report": {
+          "bytes": 21904,
+          "media_type": "application/json",
+          "role": "gam_observatory_report",
+          "sha256": "7c9a318f78decfe2b73e9c8dc2b1a07ab468908c8a78657f31c3151e80bd6472",
+          "uri": "urn:sha256:7c9a318f78decfe2b73e9c8dc2b1a07ab468908c8a78657f31c3151e80bd6472",
+          "verification": "verified_local_sha256"
+        }
+      },
+      "native_artifact": {
+        "artifact_identity": "b41c861d5664ee05b2572966210d7ce9145415c6471d986e205791c2ab9fe80c",
+        "bytes": 2824347,
+        "media_type": "application/x-npz",
+        "role": "native_developmental_resident",
+        "sha256": "ae4929c2a3312bee0bc999f465be735c6aba877a0db073756718caefdff598c9",
+        "uri": "urn:sha256:ae4929c2a3312bee0bc999f465be735c6aba877a0db073756718caefdff598c9",
+        "verification": "verified_local_sha256"
+      },
+      "online_identity": {
+        "bytes": 109995,
+        "media_type": "application/json",
+        "role": "online_run_identity",
+        "sha256": "d66e72514bc100b3c321b3fd775b91acb2338da32430e0ba13b6d6e191513295",
+        "uri": "urn:sha256:d66e72514bc100b3c321b3fd775b91acb2338da32430e0ba13b6d6e191513295",
+        "verification": "verified_local_sha256"
+      },
+      "online_result": {
+        "bytes": 2167,
+        "media_type": "application/json",
+        "role": "online_result",
+        "sha256": "07d883ee816f9b6b0a49ba2e3925265c191335b020f3ef8ee63cc8388afd233b",
+        "uri": "urn:sha256:07d883ee816f9b6b0a49ba2e3925265c191335b020f3ef8ee63cc8388afd233b",
+        "verification": "verified_local_sha256"
+      },
+      "online_training_checkpoint": {
+        "bytes": 49445887,
+        "media_type": "application/x-pytorch",
+        "role": "online_training_checkpoint",
+        "sha256": "0f20e21df906c83873415034dee060bd0a57fc12ccdd8ad259647c71d6dd9304",
+        "uri": "urn:sha256:0f20e21df906c83873415034dee060bd0a57fc12ccdd8ad259647c71d6dd9304",
+        "verification": "reported_by_hash_verified_source_receipt"
+      }
+    },
+    "source_commit": "bec8a499b0df3d55f357db82ee0385ff8d12da45"
+  }
+}

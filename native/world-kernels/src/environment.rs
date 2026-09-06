@@ -30,6 +30,9 @@ unsafe extern "C" {
         ray_directions: *const f64,
         ray_weights: *const f64,
         blocked_transmission: *const f64,
+        solar_direction: *const f64,
+        solar_direct: f64,
+        solar_diffuse: f64,
         lights: i32,
         light_bodies: *const i32,
         light_local_position: *const f64,
@@ -261,6 +264,9 @@ impl LightEnvironment {
         bud_bodies: PyReadonlyArray1<'_, i32>,
         bud_local: PyReadonlyArray2<'_, f64>,
         bud_profiles: PyReadonlyArray1<'_, i32>,
+        solar_direction: Vec<f64>,
+        solar_direct: f64,
+        solar_diffuse: f64,
         light_bodies: PyReadonlyArray1<'_, i32>,
         light_local_position: PyReadonlyArray2<'_, f64>,
         light_local_direction: PyReadonlyArray2<'_, f64>,
@@ -299,6 +305,12 @@ impl LightEnvironment {
             || bud_profiles
                 .iter()
                 .any(|profile| *profile < 0 || *profile as usize >= self.blocked_transmission.len())
+            || solar_direction.len() != 3
+            || solar_direction.iter().any(|value| !value.is_finite())
+            || !solar_direct.is_finite()
+            || solar_direct < 0.0
+            || !solar_diffuse.is_finite()
+            || solar_diffuse < 0.0
             || lights > MAX_LIGHTS
             || light_local_position.len() != lights * 3
             || light_local_direction.len() != lights * 3
@@ -322,6 +334,16 @@ impl LightEnvironment {
                 .any(|value| !value.is_finite() || *value <= 0.0)
         {
             return Err(PyValueError::new_err("invalid physical light sample"));
+        }
+        let solar_norm = solar_direction
+            .iter()
+            .map(|value| value * value)
+            .sum::<f64>()
+            .sqrt();
+        if solar_norm <= 1.0e-12 || (solar_norm - 1.0).abs() > 1.0e-10 {
+            return Err(PyValueError::new_err(
+                "solar direction must be a normalized physical vector",
+            ));
         }
 
         self.sample_bodies.clear();
@@ -357,6 +379,9 @@ impl LightEnvironment {
                 self.ray_directions.as_ptr(),
                 self.ray_weights.as_ptr(),
                 self.blocked_transmission.as_ptr(),
+                solar_direction.as_ptr(),
+                solar_direct,
+                solar_diffuse,
                 lights as i32,
                 light_bodies.as_ptr(),
                 light_local_position.as_ptr(),
