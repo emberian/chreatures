@@ -495,3 +495,61 @@ ticks. The offered packet transferred 0.22 reserve with zero elemental and store
 energy residual. Acoustics were disabled in this assay. Its private neural service
 was stopped afterward; the ongoing recycling residents were untouched. See the
 [receipt](../data/ecology/whole-visitor-offering-replay-v1.receipt.json).
+
+## 2026-09-06, overnight — rich native residents in a growing reef
+
+The joined rich controller now receives 1,024 body-bound retinal rays (an
+8×32 peripheral field and 24×32 foveal field, RGB plus proximity), canonical
+body senses, and physiology. Full MaleCNS recurrence supplies 384 population
+readouts to a learned goal manager. Rust executes the frozen visual front end,
+private recurrent history, an achieved-history reservoir, goal selection,
+20 Hz model-time actions, and bounded consequence refinement. Cached frame
+codes reduced the measured M2 three-resident controller/consequence path from
+1.740 to 0.704 ms; this is not whole-world throughput.
+
+Two actual hbox collection episodes produced 196,608 resident transitions.
+Persvati fitted the rich front end and recurrent bootstrap in 71.96 seconds.
+The first rich online hbox run reached update39 before exiting without a
+recorded cause; its last durable checkpoint is update20, containing 61,440
+online transitions. That checkpoint supplies the first running rich native
+resident artifact. A detached, supervised child run inherits those shared
+weights and optimizer while creating fresh worlds and private state. It does
+not claim to continue the unsaved updates21–39. Future training checkpoints
+now include the current boundary observations and goal code as well as the
+world, neural, private, optimizer, and RNG state.
+
+The Living Reef joins six inherited bodies, twelve growing colonies, terraces,
+ramps and passages, finite transferable food and waste, root uptake, secretion,
+physical acoustic transducers, and a 240-second solar cycle. Four of the six
+mobile bodies have continuously parameterized photon capture coupled to the
+same finite carbon-fixation chemistry; two have zero capture. These supplied
+metabolic traits are not evolved ecological roles. Body motion, photons,
+growth, chemical exchange, sensing, recurrence and action advance together.
+
+The first live launch at `14f6fcd` paused when a pooled retinal ndarray reached
+its initial autosave. Its birth checkpoint and paused process remain separate;
+the unsaved interval was not recovered. `215647b` fixes the explicit JSON
+boundary and starts a new research birth with the same inherited model. This
+new cohort passed its first complete autosave and continued through more than
+100 model seconds with hundreds of growing parts. The
+[first-life receipt](../data/development/rich-resident-first-life-v1.receipt.json)
+pins its source, native binaries, artifact and saved state. Public recording
+uses actual HTTP state and actual queued sensory performances, headlessly.
+
+The running world exposed a substantive coupling gap: the older GAM bank's
+energy and oral-action ranges exclude this richer body's current physiology.
+Its domain guard therefore suppresses refinement and private updates. We are
+refitting the laws on actual rich transitions for a subsequent birth, rather
+than expanding old bounds by assertion. The current life keeps its pinned
+inherited bank and exposes the inactive status.
+
+A separate real three-member sensory-consequence ensemble completed on
+persvati in 37.0 seconds of GPU fitting. It learned from 147,312 rows in worlds
+0–2 and was evaluated descriptively on 49,104 rows in world3. Standardized
+next-state error was 0.7412 versus 0.9752 for zero change and 1.3595 with
+permuted actions; goal-space RMS error was 0.05449 versus 0.09880 for zero
+change. The frozen visual representation had already seen world3, so this is
+not an end-to-end held-out-world claim. Its compact weights and raw fit receipt
+are committed in `5b23729`; native predictive action coupling is the next
+controller revision, separate from the already-running v1 life. Forecast
+accuracy alone does not establish better physical choices.
