@@ -602,3 +602,56 @@ chemical-nursery episode reset. `9e11041` removes that transition. A new declare
 grandchild inherited the child's durable checkpoint20, and has now crossed
 update40/tick5120 and completed the next episode's first update. The earlier
 interrupted lineages and durable checkpoint identities remain recorded.
+
+
+## 2026-09-06, 14:10 — completed development and a private-learning birth
+
+The supervised grandchild completed all 160 updates and 491,520 resident
+transitions in 2,186.866 seconds on hbox (224.76 resident-transitions/second).
+Its exported native v3 controller inherits those updates plus 40 earlier updates;
+its private state is created separately at birth. The complete transition audit
+found mouth contact in 90 of 96 resident episodes, 1,853 contact steps and 28.35
+units of ingested material. Every episode still lost energy. Dense goal shaping
+was 76.1% of the magnitude of mean adverse physical reward. A paired future
+comparison of coefficients 0.01 and 0.001 is proposed, not already performed.
+See [the audit](RICH_DEVELOPMENT_ANALYSIS.md).
+
+The current collection/training path now uses one family-v5 environment and an
+extracted cohort transport. The native v3 collector advances actual sampled
+controls and credits private consequence/goal learning from resulting bodily
+state. Commit `762cc60` removes the retired Python controllers, trainers and
+compatibility branches: 21,711 lines removed, with 1,737 replacement lines.
+Historical experiments retain their source pins and scientific rationale.
+
+Native GAM fits now cover the complete four-episode development. The effort
+model generalizes strongly to the final episode; the body-law residual fit only
+slightly beats its baseline there; the proposed goal-progress GAM failed native
+convergence and was not minted. The [public atlas](https://emberian.github.io/chreatures/atlas.html)
+exposes actual numerical surfaces. The [native Weave evidence record](GRANDCHILD_EVIDENCE_WEAVE.md)
+connects these results, failures, lineage and future comparisons without
+starting another life or merging runtime states.
+
+The courtyard automatically paused at model time 458.9 seconds. Two material
+packets had escaped its finite terrain and kept falling; the field rejected a
+position beyond its numerical input range. Its last complete checkpoint is
+preserved at tick 9021. Commit `47bb316` gives generated nurseries a physical
+catchment basin and rejects obstructed dormant material spawns before chemistry
+moves. It also batches contact metadata and ownership in native code. A prior
+matched family benchmark measured 44.18→41.78 ms per complete physical advance;
+that 5.8% improvement excludes neural inference and sensing. The source receipt
+separates benchmarked and subsequently hardened binary identities.
+
+A separate v3 world is now running from immutable source `4547ca3` at local
+port 8781, backed by a dedicated Metal MaleCNS service at 18779. It uses braided
+passages, the catchment, the completed grandchild weights, the installed H1
+forecast, rich GAM laws and private goal associations. All six residents have
+completed bodily-outcome learning updates. A process restart at tick 457 restored
+the exact observed bodies, senses, cognition, ecology, materials and visitor
+state, then resumed successfully. This is joined execution and persistence
+evidence, not a claim that the new controller sustains itself. The
+[birth receipt](../data/development/braided-residents-v3.receipt.json) records
+source, model, native binaries, generated world and restoration scope.
+
+The original 10am autonomous window passed during the usage interruption.
+After the user's plan refresh, this batch was completed; no additional long
+paired training sweep was started.

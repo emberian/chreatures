@@ -63,14 +63,17 @@ The repository includes `data/genomes/developmental-resident-rich-grandchild-upd
 python scripts/export_sensorimotor_worker.py --help
 ```
 
-Then start a fresh world using that artifact:
+Generate a current nursery, including the physical catchment, then start a fresh world:
 
 ```sh
+uv run python scripts/generate_nursery_family.py \
+  --output runs/new-nursery --variant braided-passages:20260913
+
 uv run chreatures --port 8790 \
   --brain-url http://127.0.0.1:18790 \
   --resident-artifact data/genomes/developmental-resident-rich-grandchild-update160-v3.npz \
-  --habitat data/habitats/living-reef.json \
-  --biosphere data/biosphere/living-reef.json \
+  --habitat runs/new-nursery/nursery-braided-passages-20260913.habitat.json \
+  --biosphere runs/new-nursery/nursery-braided-passages-20260913.biosphere.json \
   --visitor-materials data/visitors/living-reef.json \
   --checkpoint runs/new-reef.json
 ```
