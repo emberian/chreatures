@@ -368,9 +368,11 @@ each episode with empty guts and varies physical packet placement across three
 body-local encounter distributions, checking support and initial collisions.
 Policies receive ordinary limited senses, not placement coordinates. At the
 11,500-step interim report, the 48-resident cohort had nine mouth-to-material
-transfers, 0.19167 ingested mass and 0.16664 absorbed reserve, with encounters
+transfer ticks, 0.19167 ingested mass and 0.16664 absorbed reserve, with encounters
 in every stage. This is an opportunity/telemetry result; learned improvement
-requires the completed held-out comparison. Training sources: `4d7f98d`,
+requires the completed held-out comparison. Transfer ticks can include repeated
+contact with one packet, so they are not a count of independent encounters.
+Training sources: `4d7f98d`,
 `0e64524`, `9a4437f`.
 
 The final recurrent predictive artifact carries its original feature
