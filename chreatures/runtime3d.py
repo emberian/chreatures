@@ -476,6 +476,12 @@ class Habitat3D:
         self.contact_event_state[child_id] = []
         if self.visitor_materials is not None:
             self.visitor_materials.biosphere = self.biosphere
+        # Publish one coherent sensory sample for the expanded cohort. The last
+        # pre-action sample has no newborn row; it must not survive this boundary
+        # as though it described every body now present. Sampling advances no
+        # neural or learned state and records its actual physical time.
+        self.last_senses = self.sense()
+        self.sensed_at = self.world.time
         self.pending_step = None
         self.note("born", f"A funded offspring of {parent.name} entered the world.",
                   resident=child_id, parent=parent_id, funding=prepared.funding,
