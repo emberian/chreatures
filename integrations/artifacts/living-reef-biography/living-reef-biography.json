@@ -1,0 +1,1633 @@
+{
+  "archive": {
+    "archive_id": "living-reef-biography:d5fbd433-ffa2-4877-b55d-b2d0461166ed:f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4",
+    "description": "External public biography of an authenticated living-reef snapshot plus separate research-fit provenance; never organism memory or controller input.",
+    "habitat_id": "d5fbd433-ffa2-4877-b55d-b2d0461166ed",
+    "library": "universal-weave 0.5.0",
+    "schema_version": 2,
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f"
+  },
+  "artifact": "living-reef-biography.weave.json",
+  "bytes": 63723,
+  "edge_count": 37,
+  "edges": [
+    {
+      "source": "gam-source:12efc0458bb2b13b7a9bf4915f974abc7ddac337096e416a453ac56221181344",
+      "target": "gam-law-fit:movement_response:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6"
+    },
+    {
+      "source": "gam-source:12efc0458bb2b13b7a9bf4915f974abc7ddac337096e416a453ac56221181344",
+      "target": "gam-law-fit:energy_cost:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6"
+    },
+    {
+      "source": "gam-source:12efc0458bb2b13b7a9bf4915f974abc7ddac337096e416a453ac56221181344",
+      "target": "gam-law-fit:fatigue_recovery:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6"
+    },
+    {
+      "source": "gam-law-fit:movement_response:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+      "target": "gam-law-bank:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6"
+    },
+    {
+      "source": "gam-law-fit:energy_cost:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+      "target": "gam-law-bank:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6"
+    },
+    {
+      "source": "gam-law-fit:fatigue_recovery:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+      "target": "gam-law-bank:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6"
+    },
+    {
+      "source": "online-update20:60761370b83aaf55446e2ae85e39e0a8139046863c2585d86314323bc5085893",
+      "target": "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+    },
+    {
+      "source": "gam-law-bank:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+      "target": "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+    },
+    {
+      "source": "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4",
+      "target": "deployment:215647bde626994af3b18fd6adc97a5d0c72574b:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d"
+    },
+    {
+      "source": "deployment:215647bde626994af3b18fd6adc97a5d0c72574b:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+      "target": "research-birth:d5fbd433-ffa2-4877-b55d-b2d0461166ed:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d"
+    },
+    {
+      "source": "research-birth:d5fbd433-ffa2-4877-b55d-b2d0461166ed:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+      "target": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:3940-4120:22c35cfc46a3784710af27654711a927e4e2e47b2048a881b8b719f79a88680f"
+    },
+    {
+      "source": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:3940-4120:22c35cfc46a3784710af27654711a927e4e2e47b2048a881b8b719f79a88680f",
+      "target": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4140-4340:145dfa29ba01c054a80291b72cee54425c144a8dff1b9a23e169a67fc088ee59"
+    },
+    {
+      "source": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4140-4340:145dfa29ba01c054a80291b72cee54425c144a8dff1b9a23e169a67fc088ee59",
+      "target": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4360-4560:b3a4f53dacaf9258fbee00e7ee006bb552245df13a898766343e8273a940b25e"
+    },
+    {
+      "source": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4360-4560:b3a4f53dacaf9258fbee00e7ee006bb552245df13a898766343e8273a940b25e",
+      "target": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311"
+    },
+    {
+      "source": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:bramble:4781:116:2033"
+    },
+    {
+      "source": "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:bramble:4781:116:2033"
+    },
+    {
+      "source": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:fern:4781:81:3331"
+    },
+    {
+      "source": "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:fern:4781:81:3331"
+    },
+    {
+      "source": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:lumen:4781:106:410"
+    },
+    {
+      "source": "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:lumen:4781:106:410"
+    },
+    {
+      "source": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:mica:4781:121:1904"
+    },
+    {
+      "source": "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:mica:4781:121:1904"
+    },
+    {
+      "source": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:pip:4781:89:92"
+    },
+    {
+      "source": "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:pip:4781:89:92"
+    },
+    {
+      "source": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:silt:4781:98:3226"
+    },
+    {
+      "source": "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4",
+      "target": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:silt:4781:98:3226"
+    },
+    {
+      "source": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+      "target": "snapshot:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4781:f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4"
+    },
+    {
+      "source": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:bramble:4781:116:2033",
+      "target": "snapshot:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4781:f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4"
+    },
+    {
+      "source": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:fern:4781:81:3331",
+      "target": "snapshot:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4781:f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4"
+    },
+    {
+      "source": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:lumen:4781:106:410",
+      "target": "snapshot:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4781:f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4"
+    },
+    {
+      "source": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:mica:4781:121:1904",
+      "target": "snapshot:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4781:f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4"
+    },
+    {
+      "source": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:pip:4781:89:92",
+      "target": "snapshot:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4781:f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4"
+    },
+    {
+      "source": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:silt:4781:98:3226",
+      "target": "snapshot:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4781:f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4"
+    },
+    {
+      "source": "rich-prediction-data:14bb5f01f6fa2a69323180ed9c7d683e9ae1127f4bc22f11a3d0609c8fc855fe",
+      "target": "frozen-rich-front:bd3d70f5803c5b06f76143aa2f79c51c824736b9142a54c4dc2b3a26211f0ff0"
+    },
+    {
+      "source": "rich-prediction-data:14bb5f01f6fa2a69323180ed9c7d683e9ae1127f4bc22f11a3d0609c8fc855fe",
+      "target": "forecast-fit:bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf"
+    },
+    {
+      "source": "frozen-rich-front:bd3d70f5803c5b06f76143aa2f79c51c824736b9142a54c4dc2b3a26211f0ff0",
+      "target": "forecast-fit:bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf"
+    },
+    {
+      "source": "forecast-fit:bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf",
+      "target": "proposed-organ:bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf"
+    }
+  ],
+  "format": "chreatures-portable-weave-biography-v1",
+  "integration": "native-universal-weave-dag",
+  "library": {
+    "name": "universal-weave",
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+    "version": "0.5.0"
+  },
+  "multi_parent_nodes": 10,
+  "node_count": 24,
+  "node_id_contract": "lowercase first-128-bit SHA-256 of source_id",
+  "records": [
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "8d0877b94068ed6d90abd60576b98e38",
+      "parent_source_ids": [],
+      "parents": [],
+      "record_type": "verified_source",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "evidence_scope": "research_fit_source",
+          "model_library": "SauersML/gam",
+          "model_source_commit": "7c7eca8ac4826de95c8e743a20294bee132a9bcc",
+          "model_version": "0.1.259",
+          "telemetry_sha256": [
+            "587c5d4d2516b2b5a5c1490d13ebaa8d7fabca98bd394d3dea536a7a7b8dd1be",
+            "c7bccecbdeefa503b0a873afe3afcbd7db9bec3a72d2745dcfe14b73bc1e220c"
+          ]
+        },
+        "id": "gam-source:12efc0458bb2b13b7a9bf4915f974abc7ddac337096e416a453ac56221181344",
+        "parent_ids": [],
+        "record_type": "verified_source",
+        "text": "Two hash-pinned exploratory telemetry packets supplied the descriptive GAM fits.",
+        "time": {
+          "domain": "research_collection",
+          "value": "sensorimotor-play-v1"
+        }
+      },
+      "source_id": "gam-source:12efc0458bb2b13b7a9bf4915f974abc7ddac337096e416a453ac56221181344",
+      "text": "Two hash-pinned exploratory telemetry packets supplied the descriptive GAM fits.",
+      "time": {
+        "domain": "research_collection",
+        "value": "sensorimotor-play-v1"
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "d441e30a7093f445b4c44f61e91fd33f",
+      "parent_source_ids": [
+        "gam-source:12efc0458bb2b13b7a9bf4915f974abc7ddac337096e416a453ac56221181344"
+      ],
+      "parents": [
+        "8d0877b94068ed6d90abd60576b98e38"
+      ],
+      "record_type": "gam_law_fit",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "conservative_residual_bound": 0.06893974018745257,
+          "evidence_scope": "research_fit",
+          "metrics": {
+            "conservative_residual_bound": 0.06893974018745257,
+            "export_grid_max_abs_error": 0.030352391541728092,
+            "held_out_abs_residual_q995": 0.06893974018745257,
+            "held_out_mean_baseline_rmse": 0.023460164662232143,
+            "held_out_rmse": 0.018491922387083547,
+            "held_out_zero_baseline_rmse": 0.02346016769592061,
+            "in_domain_export_grid_max_abs_error": 2.5029408625403676e-05,
+            "in_domain_held_out_rows": 44184,
+            "target_training_standard_deviation": 0.023422956746057287
+          },
+          "term_count": 12
+        },
+        "id": "gam-law-fit:movement_response:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+        "parent_ids": [
+          "gam-source:12efc0458bb2b13b7a9bf4915f974abc7ddac337096e416a453ac56221181344"
+        ],
+        "record_type": "gam_law_fit",
+        "text": "Native GAM fit for movement_response; conditional prediction with no causal claim.",
+        "time": {
+          "domain": "research_fit",
+          "value": "movement_response"
+        }
+      },
+      "source_id": "gam-law-fit:movement_response:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+      "text": "Native GAM fit for movement_response; conditional prediction with no causal claim.",
+      "time": {
+        "domain": "research_fit",
+        "value": "movement_response"
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "cdcc06c1b3b8215e5386c19717c7569e",
+      "parent_source_ids": [
+        "gam-source:12efc0458bb2b13b7a9bf4915f974abc7ddac337096e416a453ac56221181344"
+      ],
+      "parents": [
+        "8d0877b94068ed6d90abd60576b98e38"
+      ],
+      "record_type": "gam_law_fit",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "conservative_residual_bound": 0.00011612457133394416,
+          "evidence_scope": "research_fit",
+          "metrics": {
+            "conservative_residual_bound": 0.00011612457133394416,
+            "export_grid_max_abs_error": 3.105441508064388e-05,
+            "held_out_abs_residual_q995": 0.00011612457133394416,
+            "held_out_mean_baseline_rmse": 6.343118700364783e-05,
+            "held_out_rmse": 1.909995694971648e-05,
+            "held_out_zero_baseline_rmse": 0.00010077418234118648,
+            "in_domain_export_grid_max_abs_error": 6.420795807773774e-07,
+            "in_domain_held_out_rows": 44184,
+            "target_training_standard_deviation": 6.255348099129193e-05
+          },
+          "term_count": 12
+        },
+        "id": "gam-law-fit:energy_cost:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+        "parent_ids": [
+          "gam-source:12efc0458bb2b13b7a9bf4915f974abc7ddac337096e416a453ac56221181344"
+        ],
+        "record_type": "gam_law_fit",
+        "text": "Native GAM fit for energy_cost; conditional prediction with no causal claim.",
+        "time": {
+          "domain": "research_fit",
+          "value": "energy_cost"
+        }
+      },
+      "source_id": "gam-law-fit:energy_cost:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+      "text": "Native GAM fit for energy_cost; conditional prediction with no causal claim.",
+      "time": {
+        "domain": "research_fit",
+        "value": "energy_cost"
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "262e14fe9362c6dec5b1adbf05bfccf2",
+      "parent_source_ids": [
+        "gam-source:12efc0458bb2b13b7a9bf4915f974abc7ddac337096e416a453ac56221181344"
+      ],
+      "parents": [
+        "8d0877b94068ed6d90abd60576b98e38"
+      ],
+      "record_type": "gam_law_fit",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "conservative_residual_bound": 0.0004546963172722839,
+          "evidence_scope": "research_fit",
+          "metrics": {
+            "conservative_residual_bound": 0.0004546963172722839,
+            "export_grid_max_abs_error": 0.0014988117993844413,
+            "held_out_abs_residual_q995": 0.0004546963172722839,
+            "held_out_mean_baseline_rmse": 0.00016509301036580617,
+            "held_out_rmse": 6.977803312853787e-05,
+            "held_out_zero_baseline_rmse": 0.0001672299399438003,
+            "in_domain_export_grid_max_abs_error": 9.6133736512456e-07,
+            "in_domain_held_out_rows": 44184,
+            "target_training_standard_deviation": 0.00016653531697074882
+          },
+          "term_count": 12
+        },
+        "id": "gam-law-fit:fatigue_recovery:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+        "parent_ids": [
+          "gam-source:12efc0458bb2b13b7a9bf4915f974abc7ddac337096e416a453ac56221181344"
+        ],
+        "record_type": "gam_law_fit",
+        "text": "Native GAM fit for fatigue_recovery; conditional prediction with no causal claim.",
+        "time": {
+          "domain": "research_fit",
+          "value": "fatigue_recovery"
+        }
+      },
+      "source_id": "gam-law-fit:fatigue_recovery:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+      "text": "Native GAM fit for fatigue_recovery; conditional prediction with no causal claim.",
+      "time": {
+        "domain": "research_fit",
+        "value": "fatigue_recovery"
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [
+        {
+          "bytes": 150514,
+          "media_type": "application/json",
+          "role": "native_gam_law_bank",
+          "sha256": "41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+          "uri": "urn:sha256:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2987,
+          "media_type": "application/json",
+          "role": "gam_fit_report",
+          "sha256": "ed888133dd4cbc591f77c6c376ada499b38d3d68f9476425e1cfe72d88bb8164",
+          "uri": "urn:sha256:ed888133dd4cbc591f77c6c376ada499b38d3d68f9476425e1cfe72d88bb8164",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 988,
+          "media_type": "application/json",
+          "role": "gam_native_evaluation",
+          "sha256": "854d2a002898a379a20e10fc716e4412502b16af42e12d211e0820a5daec9def",
+          "uri": "urn:sha256:854d2a002898a379a20e10fc716e4412502b16af42e12d211e0820a5daec9def",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "32d05b6c96548c57bc4b254b77e987ed",
+      "parent_source_ids": [
+        "gam-law-fit:movement_response:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+        "gam-law-fit:energy_cost:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+        "gam-law-fit:fatigue_recovery:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6"
+      ],
+      "parents": [
+        "d441e30a7093f445b4c44f61e91fd33f",
+        "cdcc06c1b3b8215e5386c19717c7569e",
+        "262e14fe9362c6dec5b1adbf05bfccf2"
+      ],
+      "record_type": "gam_law_bank",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "bytes": 150514,
+            "media_type": "application/json",
+            "role": "native_gam_law_bank",
+            "sha256": "41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+            "uri": "urn:sha256:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 2987,
+            "media_type": "application/json",
+            "role": "gam_fit_report",
+            "sha256": "ed888133dd4cbc591f77c6c376ada499b38d3d68f9476425e1cfe72d88bb8164",
+            "uri": "urn:sha256:ed888133dd4cbc591f77c6c376ada499b38d3d68f9476425e1cfe72d88bb8164",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 988,
+            "media_type": "application/json",
+            "role": "gam_native_evaluation",
+            "sha256": "854d2a002898a379a20e10fc716e4412502b16af42e12d211e0820a5daec9def",
+            "uri": "urn:sha256:854d2a002898a379a20e10fc716e4412502b16af42e12d211e0820a5daec9def",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "evidence_scope": "inherited_research_law",
+          "fit_status": "conditional predictive fits; no causal claim",
+          "law_names": [
+            "movement_response",
+            "energy_cost",
+            "fatigue_recovery"
+          ],
+          "native_evaluation_status": "executed native Rust load, validation, interpolation, domain check, and candidate score"
+        },
+        "id": "gam-law-bank:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+        "parent_ids": [
+          "gam-law-fit:movement_response:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+          "gam-law-fit:energy_cost:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+          "gam-law-fit:fatigue_recovery:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6"
+        ],
+        "record_type": "gam_law_bank",
+        "text": "Three descriptive GAM laws were exported and executed by the native Rust evaluator.",
+        "time": {
+          "domain": "research_fit",
+          "value": "law-bank"
+        }
+      },
+      "source_id": "gam-law-bank:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+      "text": "Three descriptive GAM laws were exported and executed by the native Rust evaluator.",
+      "time": {
+        "domain": "research_fit",
+        "value": "law-bank"
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [
+        {
+          "media_type": "application/x-pytorch",
+          "role": "rich_online_update20_checkpoint",
+          "sha256": "60761370b83aaf55446e2ae85e39e0a8139046863c2585d86314323bc5085893",
+          "uri": "urn:sha256:60761370b83aaf55446e2ae85e39e0a8139046863c2585d86314323bc5085893",
+          "verification": "reported_by_verified_native_export"
+        }
+      ],
+      "node_id": "58ebdf0ebb77679c47db47afd700a279",
+      "parent_source_ids": [],
+      "parents": [],
+      "record_type": "developmental_milestone",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "media_type": "application/x-pytorch",
+            "role": "rich_online_update20_checkpoint",
+            "sha256": "60761370b83aaf55446e2ae85e39e0a8139046863c2585d86314323bc5085893",
+            "uri": "urn:sha256:60761370b83aaf55446e2ae85e39e0a8139046863c2585d86314323bc5085893",
+            "verification": "reported_by_verified_native_export"
+          }
+        ],
+        "fields": {
+          "evidence_scope": "model_provenance",
+          "format": "chreatures-rich-online-sensorimotor-development-v1",
+          "physical_steps": 2560,
+          "source_locator": "rich-sensorimotor-online-v2-seed20260913/checkpoint-update-000020.pt (private training archive)",
+          "updates": 20
+        },
+        "id": "online-update20:60761370b83aaf55446e2ae85e39e0a8139046863c2585d86314323bc5085893",
+        "parent_ids": [],
+        "record_type": "developmental_milestone",
+        "text": "Rich online development reached the update-20 checkpoint used for this native export.",
+        "time": {
+          "domain": "online_update",
+          "value": 20
+        }
+      },
+      "source_id": "online-update20:60761370b83aaf55446e2ae85e39e0a8139046863c2585d86314323bc5085893",
+      "text": "Rich online development reached the update-20 checkpoint used for this native export.",
+      "time": {
+        "domain": "online_update",
+        "value": 20
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [
+        {
+          "bytes": 3660839,
+          "media_type": "application/x-npz",
+          "role": "native_update20_resident",
+          "sha256": "c18f2580b19bb36bee12fb16ed5b86bfdf7a1426fee1f18438e12eb9298e99f3",
+          "uri": "urn:sha256:c18f2580b19bb36bee12fb16ed5b86bfdf7a1426fee1f18438e12eb9298e99f3",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "822ada4c39232d7264a38ddf347cafb8",
+      "parent_source_ids": [
+        "online-update20:60761370b83aaf55446e2ae85e39e0a8139046863c2585d86314323bc5085893",
+        "gam-law-bank:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6"
+      ],
+      "parents": [
+        "58ebdf0ebb77679c47db47afd700a279",
+        "32d05b6c96548c57bc4b254b77e987ed"
+      ],
+      "record_type": "model_export",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "bytes": 3660839,
+            "media_type": "application/x-npz",
+            "role": "native_update20_resident",
+            "sha256": "c18f2580b19bb36bee12fb16ed5b86bfdf7a1426fee1f18438e12eb9298e99f3",
+            "uri": "urn:sha256:c18f2580b19bb36bee12fb16ed5b86bfdf7a1426fee1f18438e12eb9298e99f3",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "artifact_identity": "f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4",
+          "embedded_gam_law_file_sha256": "41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+          "evidence_scope": "installed_model_provenance",
+          "execution": "developmental-resident-native-rich-v1",
+          "format": "chreatures-native-developmental-resident-rich-v1",
+          "private_gam_learning_supported": true
+        },
+        "id": "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4",
+        "parent_ids": [
+          "online-update20:60761370b83aaf55446e2ae85e39e0a8139046863c2585d86314323bc5085893",
+          "gam-law-bank:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6"
+        ],
+        "record_type": "model_export",
+        "text": "Update-20 worker, achieved-goal manager, and inherited GAM laws were exported for native execution.",
+        "time": {
+          "domain": "online_update",
+          "value": 20
+        }
+      },
+      "source_id": "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4",
+      "text": "Update-20 worker, achieved-goal manager, and inherited GAM laws were exported for native execution.",
+      "time": {
+        "domain": "online_update",
+        "value": 20
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [
+        {
+          "bytes": 772,
+          "media_type": "application/json",
+          "role": "frozen_deployment_manifest",
+          "sha256": "a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+          "uri": "urn:sha256:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "75810629c232da9f4d3b97363289bf9a",
+      "parent_source_ids": [
+        "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+      ],
+      "parents": [
+        "822ada4c39232d7264a38ddf347cafb8"
+      ],
+      "record_type": "model_promotion",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "bytes": 772,
+            "media_type": "application/json",
+            "role": "frozen_deployment_manifest",
+            "sha256": "a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+            "uri": "urn:sha256:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "deployment_semantics": "new research birth after fixing JSON boundary; no continuation of paused 14f6fcd live state",
+          "evidence_scope": "installed_release",
+          "native_file_sha256": {
+            "_cognitive_core.cpython-312-darwin.so": "438ef4faa0f52fb73ed418068333633c13fde7475248bc5acfdaf4a94af8626b",
+            "_world_kernels.cpython-312-darwin.so": "e07d8715bf6ec213225d8b7af8be2be4eb345b334b3037cb613f83d585207a67"
+          },
+          "source_archive_sha256": "f558dd190e19bf7c56b7a06a75f70a23ff4903ffc70c7859f3b91bb4184cda31",
+          "source_revision": "215647bde626994af3b18fd6adc97a5d0c72574b"
+        },
+        "id": "deployment:215647bde626994af3b18fd6adc97a5d0c72574b:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+        "parent_ids": [
+          "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+        ],
+        "record_type": "model_promotion",
+        "text": "The frozen 215647b deployment pinned the update-20 resident and native engines for a new life.",
+        "time": {
+          "domain": "unix_time",
+          "value": 1788685949.6473
+        }
+      },
+      "source_id": "deployment:215647bde626994af3b18fd6adc97a5d0c72574b:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+      "text": "The frozen 215647b deployment pinned the update-20 resident and native engines for a new life.",
+      "time": {
+        "domain": "unix_time",
+        "value": 1788685949.6473
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "dbead2a71734df3c39f7c2ad5e280858",
+      "parent_source_ids": [
+        "deployment:215647bde626994af3b18fd6adc97a5d0c72574b:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d"
+      ],
+      "parents": [
+        "75810629c232da9f4d3b97363289bf9a"
+      ],
+      "record_type": "research_birth",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "birth_attestation": "frozen deployment semantics plus authenticated later checkpoint",
+          "evidence_scope": "actual_life",
+          "habitat_id": "d5fbd433-ffa2-4877-b55d-b2d0461166ed",
+          "raw_birth_checkpoint_available": false,
+          "resident_names": [
+            "bramble",
+            "fern",
+            "lumen",
+            "mica",
+            "pip",
+            "silt"
+          ]
+        },
+        "id": "research-birth:d5fbd433-ffa2-4877-b55d-b2d0461166ed:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+        "parent_ids": [
+          "deployment:215647bde626994af3b18fd6adc97a5d0c72574b:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d"
+        ],
+        "record_type": "research_birth",
+        "text": "Six residents began a new research life from the frozen deployment.",
+        "time": {
+          "domain": "model_tick",
+          "value": 0
+        }
+      },
+      "source_id": "research-birth:d5fbd433-ffa2-4877-b55d-b2d0461166ed:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+      "text": "Six residents began a new research life from the frozen deployment.",
+      "time": {
+        "domain": "model_tick",
+        "value": 0
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "6292c75f50161163fe8e93546c1fa499",
+      "parent_source_ids": [
+        "research-birth:d5fbd433-ffa2-4877-b55d-b2d0461166ed:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d"
+      ],
+      "parents": [
+        "dbead2a71734df3c39f7c2ad5e280858"
+      ],
+      "record_type": "experienced_interval",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "end_time_seconds": 205.99999999988515,
+          "event_kind_counts": {
+            "feeding": 58
+          },
+          "evidence_scope": "actual_experience",
+          "raw_events_published": false,
+          "resident_event_counts": {
+            "bramble": 10,
+            "fern": 9,
+            "lumen": 10,
+            "mica": 9,
+            "pip": 10,
+            "silt": 10
+          },
+          "source": "bounded_checkpoint_journal_tail",
+          "source_event_count": 58,
+          "source_event_sha256": "22c35cfc46a3784710af27654711a927e4e2e47b2048a881b8b719f79a88680f",
+          "source_host_id_reuse_count": 48,
+          "source_host_id_unique_count": 10,
+          "start_time_seconds": 196.99999999989333
+        },
+        "id": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:3940-4120:22c35cfc46a3784710af27654711a927e4e2e47b2048a881b8b719f79a88680f",
+        "parent_ids": [
+          "research-birth:d5fbd433-ffa2-4877-b55d-b2d0461166ed:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d"
+        ],
+        "record_type": "experienced_interval",
+        "text": "Authenticated checkpoint journal tail records 58 actual resident event observations in this interval.",
+        "time": {
+          "domain": "model_tick_interval",
+          "end": 4120,
+          "start": 3940
+        }
+      },
+      "source_id": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:3940-4120:22c35cfc46a3784710af27654711a927e4e2e47b2048a881b8b719f79a88680f",
+      "text": "Authenticated checkpoint journal tail records 58 actual resident event observations in this interval.",
+      "time": {
+        "domain": "model_tick_interval",
+        "end": 4120,
+        "start": 3940
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "d95749577e597912b7354c37b27c4b56",
+      "parent_source_ids": [
+        "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:3940-4120:22c35cfc46a3784710af27654711a927e4e2e47b2048a881b8b719f79a88680f"
+      ],
+      "parents": [
+        "6292c75f50161163fe8e93546c1fa499"
+      ],
+      "record_type": "experienced_interval",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "end_time_seconds": 216.99999999987512,
+          "event_kind_counts": {
+            "feeding": 66
+          },
+          "evidence_scope": "actual_experience",
+          "raw_events_published": false,
+          "resident_event_counts": {
+            "bramble": 11,
+            "fern": 11,
+            "lumen": 11,
+            "mica": 11,
+            "pip": 11,
+            "silt": 11
+          },
+          "source": "bounded_checkpoint_journal_tail",
+          "source_event_count": 66,
+          "source_event_sha256": "145dfa29ba01c054a80291b72cee54425c144a8dff1b9a23e169a67fc088ee59",
+          "source_host_id_reuse_count": 55,
+          "source_host_id_unique_count": 11,
+          "start_time_seconds": 206.99999999988424
+        },
+        "id": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4140-4340:145dfa29ba01c054a80291b72cee54425c144a8dff1b9a23e169a67fc088ee59",
+        "parent_ids": [
+          "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:3940-4120:22c35cfc46a3784710af27654711a927e4e2e47b2048a881b8b719f79a88680f"
+        ],
+        "record_type": "experienced_interval",
+        "text": "Authenticated checkpoint journal tail records 66 actual resident event observations in this interval.",
+        "time": {
+          "domain": "model_tick_interval",
+          "end": 4340,
+          "start": 4140
+        }
+      },
+      "source_id": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4140-4340:145dfa29ba01c054a80291b72cee54425c144a8dff1b9a23e169a67fc088ee59",
+      "text": "Authenticated checkpoint journal tail records 66 actual resident event observations in this interval.",
+      "time": {
+        "domain": "model_tick_interval",
+        "end": 4340,
+        "start": 4140
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "f0897b5d2769cb2fc8dc5fb4018cef1e",
+      "parent_source_ids": [
+        "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4140-4340:145dfa29ba01c054a80291b72cee54425c144a8dff1b9a23e169a67fc088ee59"
+      ],
+      "parents": [
+        "d95749577e597912b7354c37b27c4b56"
+      ],
+      "record_type": "experienced_interval",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "end_time_seconds": 227.9999999998651,
+          "event_kind_counts": {
+            "feeding": 66
+          },
+          "evidence_scope": "actual_experience",
+          "raw_events_published": false,
+          "resident_event_counts": {
+            "bramble": 11,
+            "fern": 11,
+            "lumen": 11,
+            "mica": 11,
+            "pip": 11,
+            "silt": 11
+          },
+          "source": "bounded_checkpoint_journal_tail",
+          "source_event_count": 66,
+          "source_event_sha256": "b3a4f53dacaf9258fbee00e7ee006bb552245df13a898766343e8273a940b25e",
+          "source_host_id_reuse_count": 55,
+          "source_host_id_unique_count": 11,
+          "start_time_seconds": 217.99999999987423
+        },
+        "id": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4360-4560:b3a4f53dacaf9258fbee00e7ee006bb552245df13a898766343e8273a940b25e",
+        "parent_ids": [
+          "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4140-4340:145dfa29ba01c054a80291b72cee54425c144a8dff1b9a23e169a67fc088ee59"
+        ],
+        "record_type": "experienced_interval",
+        "text": "Authenticated checkpoint journal tail records 66 actual resident event observations in this interval.",
+        "time": {
+          "domain": "model_tick_interval",
+          "end": 4560,
+          "start": 4360
+        }
+      },
+      "source_id": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4360-4560:b3a4f53dacaf9258fbee00e7ee006bb552245df13a898766343e8273a940b25e",
+      "text": "Authenticated checkpoint journal tail records 66 actual resident event observations in this interval.",
+      "time": {
+        "domain": "model_tick_interval",
+        "end": 4560,
+        "start": 4360
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "6b8e8fc5885890b11094b68c1379c259",
+      "parent_source_ids": [
+        "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4360-4560:b3a4f53dacaf9258fbee00e7ee006bb552245df13a898766343e8273a940b25e"
+      ],
+      "parents": [
+        "f0897b5d2769cb2fc8dc5fb4018cef1e"
+      ],
+      "record_type": "experienced_interval",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "end_time_seconds": 238.9999999998551,
+          "event_kind_counts": {
+            "feeding": 66
+          },
+          "evidence_scope": "actual_experience",
+          "raw_events_published": false,
+          "resident_event_counts": {
+            "bramble": 11,
+            "fern": 11,
+            "lumen": 11,
+            "mica": 11,
+            "pip": 11,
+            "silt": 11
+          },
+          "source": "bounded_checkpoint_journal_tail",
+          "source_event_count": 66,
+          "source_event_sha256": "8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+          "source_host_id_reuse_count": 55,
+          "source_host_id_unique_count": 11,
+          "start_time_seconds": 228.99999999986423
+        },
+        "id": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+        "parent_ids": [
+          "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4360-4560:b3a4f53dacaf9258fbee00e7ee006bb552245df13a898766343e8273a940b25e"
+        ],
+        "record_type": "experienced_interval",
+        "text": "Authenticated checkpoint journal tail records 66 actual resident event observations in this interval.",
+        "time": {
+          "domain": "model_tick_interval",
+          "end": 4780,
+          "start": 4580
+        }
+      },
+      "source_id": "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+      "text": "Authenticated checkpoint journal tail records 66 actual resident event observations in this interval.",
+      "time": {
+        "domain": "model_tick_interval",
+        "end": 4780,
+        "start": 4580
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "5efa4d334c4e03c4273f23cecf0b01c0",
+      "parent_source_ids": [
+        "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+        "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+      ],
+      "parents": [
+        "6b8e8fc5885890b11094b68c1379c259",
+        "822ada4c39232d7264a38ddf347cafb8"
+      ],
+      "record_type": "achieved_goal_selection",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "achieved_history_recorded_tick": 2033,
+          "achieved_history_recorded_time_seconds": 101.64999999998004,
+          "evidence_scope": "actual_private_state_summary",
+          "private_key_window_or_rng_published": false,
+          "remaining_commitment_ticks": 10,
+          "resident": "bramble",
+          "selected_slot": 116,
+          "selection_observed_at_checkpoint_tick": 4781
+        },
+        "id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:bramble:4781:116:2033",
+        "parent_ids": [
+          "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+          "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+        ],
+        "record_type": "achieved_goal_selection",
+        "text": "bramble held a private achieved-history goal at the captured checkpoint.",
+        "time": {
+          "domain": "model_tick",
+          "value": 4781
+        }
+      },
+      "source_id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:bramble:4781:116:2033",
+      "text": "bramble held a private achieved-history goal at the captured checkpoint.",
+      "time": {
+        "domain": "model_tick",
+        "value": 4781
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "309c39d2983135227f908dcb302f2d93",
+      "parent_source_ids": [
+        "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+        "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+      ],
+      "parents": [
+        "6b8e8fc5885890b11094b68c1379c259",
+        "822ada4c39232d7264a38ddf347cafb8"
+      ],
+      "record_type": "achieved_goal_selection",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "achieved_history_recorded_tick": 3331,
+          "achieved_history_recorded_time_seconds": 166.54999999992103,
+          "evidence_scope": "actual_private_state_summary",
+          "private_key_window_or_rng_published": false,
+          "remaining_commitment_ticks": 10,
+          "resident": "fern",
+          "selected_slot": 81,
+          "selection_observed_at_checkpoint_tick": 4781
+        },
+        "id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:fern:4781:81:3331",
+        "parent_ids": [
+          "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+          "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+        ],
+        "record_type": "achieved_goal_selection",
+        "text": "fern held a private achieved-history goal at the captured checkpoint.",
+        "time": {
+          "domain": "model_tick",
+          "value": 4781
+        }
+      },
+      "source_id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:fern:4781:81:3331",
+      "text": "fern held a private achieved-history goal at the captured checkpoint.",
+      "time": {
+        "domain": "model_tick",
+        "value": 4781
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "334635c0d0df3554e25cb4e29f7665fb",
+      "parent_source_ids": [
+        "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+        "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+      ],
+      "parents": [
+        "6b8e8fc5885890b11094b68c1379c259",
+        "822ada4c39232d7264a38ddf347cafb8"
+      ],
+      "record_type": "achieved_goal_selection",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "achieved_history_recorded_tick": 410,
+          "achieved_history_recorded_time_seconds": 20.50000000000021,
+          "evidence_scope": "actual_private_state_summary",
+          "private_key_window_or_rng_published": false,
+          "remaining_commitment_ticks": 10,
+          "resident": "lumen",
+          "selected_slot": 106,
+          "selection_observed_at_checkpoint_tick": 4781
+        },
+        "id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:lumen:4781:106:410",
+        "parent_ids": [
+          "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+          "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+        ],
+        "record_type": "achieved_goal_selection",
+        "text": "lumen held a private achieved-history goal at the captured checkpoint.",
+        "time": {
+          "domain": "model_tick",
+          "value": 4781
+        }
+      },
+      "source_id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:lumen:4781:106:410",
+      "text": "lumen held a private achieved-history goal at the captured checkpoint.",
+      "time": {
+        "domain": "model_tick",
+        "value": 4781
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "1a7fe3783574bf4f451e026778975126",
+      "parent_source_ids": [
+        "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+        "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+      ],
+      "parents": [
+        "6b8e8fc5885890b11094b68c1379c259",
+        "822ada4c39232d7264a38ddf347cafb8"
+      ],
+      "record_type": "achieved_goal_selection",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "achieved_history_recorded_tick": 1904,
+          "achieved_history_recorded_time_seconds": 95.1999999999859,
+          "evidence_scope": "actual_private_state_summary",
+          "private_key_window_or_rng_published": false,
+          "remaining_commitment_ticks": 10,
+          "resident": "mica",
+          "selected_slot": 121,
+          "selection_observed_at_checkpoint_tick": 4781
+        },
+        "id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:mica:4781:121:1904",
+        "parent_ids": [
+          "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+          "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+        ],
+        "record_type": "achieved_goal_selection",
+        "text": "mica held a private achieved-history goal at the captured checkpoint.",
+        "time": {
+          "domain": "model_tick",
+          "value": 4781
+        }
+      },
+      "source_id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:mica:4781:121:1904",
+      "text": "mica held a private achieved-history goal at the captured checkpoint.",
+      "time": {
+        "domain": "model_tick",
+        "value": 4781
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "17fb9d17a090acb2290b45c534ed90c5",
+      "parent_source_ids": [
+        "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+        "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+      ],
+      "parents": [
+        "6b8e8fc5885890b11094b68c1379c259",
+        "822ada4c39232d7264a38ddf347cafb8"
+      ],
+      "record_type": "achieved_goal_selection",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "achieved_history_recorded_tick": 92,
+          "achieved_history_recorded_time_seconds": 4.599999999999924,
+          "evidence_scope": "actual_private_state_summary",
+          "private_key_window_or_rng_published": false,
+          "remaining_commitment_ticks": 10,
+          "resident": "pip",
+          "selected_slot": 89,
+          "selection_observed_at_checkpoint_tick": 4781
+        },
+        "id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:pip:4781:89:92",
+        "parent_ids": [
+          "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+          "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+        ],
+        "record_type": "achieved_goal_selection",
+        "text": "pip held a private achieved-history goal at the captured checkpoint.",
+        "time": {
+          "domain": "model_tick",
+          "value": 4781
+        }
+      },
+      "source_id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:pip:4781:89:92",
+      "text": "pip held a private achieved-history goal at the captured checkpoint.",
+      "time": {
+        "domain": "model_tick",
+        "value": 4781
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "b26a1f6450fcc1f83a5a8e1104864964",
+      "parent_source_ids": [
+        "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+        "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+      ],
+      "parents": [
+        "6b8e8fc5885890b11094b68c1379c259",
+        "822ada4c39232d7264a38ddf347cafb8"
+      ],
+      "record_type": "achieved_goal_selection",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "achieved_history_recorded_tick": 3226,
+          "achieved_history_recorded_time_seconds": 161.2999999999258,
+          "evidence_scope": "actual_private_state_summary",
+          "private_key_window_or_rng_published": false,
+          "remaining_commitment_ticks": 10,
+          "resident": "silt",
+          "selected_slot": 98,
+          "selection_observed_at_checkpoint_tick": 4781
+        },
+        "id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:silt:4781:98:3226",
+        "parent_ids": [
+          "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+          "native-resident:f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4"
+        ],
+        "record_type": "achieved_goal_selection",
+        "text": "silt held a private achieved-history goal at the captured checkpoint.",
+        "time": {
+          "domain": "model_tick",
+          "value": 4781
+        }
+      },
+      "source_id": "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:silt:4781:98:3226",
+      "text": "silt held a private achieved-history goal at the captured checkpoint.",
+      "time": {
+        "domain": "model_tick",
+        "value": 4781
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [
+        {
+          "bytes": 78894647,
+          "media_type": "application/json",
+          "role": "private_living_reef_checkpoint",
+          "sha256": "658a0026967415557089507331a449128b75330984f94c723b5274688df3ef6b",
+          "uri": "urn:sha256:658a0026967415557089507331a449128b75330984f94c723b5274688df3ef6b",
+          "verification": "verified_from_single_coherent_read_not_published"
+        },
+        {
+          "bytes": 15880039,
+          "media_type": "application/octet-stream",
+          "role": "private_neural_state",
+          "sha256": "4540cb637c23cbbebf217ed355857bb184e910ee26c23172551d97d13b264ab5",
+          "uri": "urn:sha256:4540cb637c23cbbebf217ed355857bb184e910ee26c23172551d97d13b264ab5",
+          "verification": "reported_by_authenticated_checkpoint"
+        }
+      ],
+      "node_id": "f9a790331897fe182c0f1bda1a79f282",
+      "parent_source_ids": [
+        "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+        "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:bramble:4781:116:2033",
+        "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:fern:4781:81:3331",
+        "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:lumen:4781:106:410",
+        "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:mica:4781:121:1904",
+        "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:pip:4781:89:92",
+        "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:silt:4781:98:3226"
+      ],
+      "parents": [
+        "6b8e8fc5885890b11094b68c1379c259",
+        "5efa4d334c4e03c4273f23cecf0b01c0",
+        "309c39d2983135227f908dcb302f2d93",
+        "334635c0d0df3554e25cb4e29f7665fb",
+        "1a7fe3783574bf4f451e026778975126",
+        "17fb9d17a090acb2290b45c534ed90c5",
+        "b26a1f6450fcc1f83a5a8e1104864964"
+      ],
+      "record_type": "snapshot",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "bytes": 78894647,
+            "media_type": "application/json",
+            "role": "private_living_reef_checkpoint",
+            "sha256": "658a0026967415557089507331a449128b75330984f94c723b5274688df3ef6b",
+            "uri": "urn:sha256:658a0026967415557089507331a449128b75330984f94c723b5274688df3ef6b",
+            "verification": "verified_from_single_coherent_read_not_published"
+          },
+          {
+            "bytes": 15880039,
+            "media_type": "application/octet-stream",
+            "role": "private_neural_state",
+            "sha256": "4540cb637c23cbbebf217ed355857bb184e910ee26c23172551d97d13b264ab5",
+            "uri": "urn:sha256:4540cb637c23cbbebf217ed355857bb184e910ee26c23172551d97d13b264ab5",
+            "verification": "reported_by_authenticated_checkpoint"
+          }
+        ],
+        "fields": {
+          "achieved_goal_selection_count": 6,
+          "biosphere": {
+            "config_sha256": "a7b1842e4f87b33738c305458b461d789105a7cbfa6396de474d0a60baff66fb",
+            "format": "chreatures-biosphere-v6",
+            "part_count": 975
+          },
+          "branch": "resident",
+          "checkpoint_file_published": false,
+          "checkpoint_state_sha256": "f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4",
+          "engine_identity_sha256": "6a005cd1506a74e2ebbb4a9ba35c67f231c48f9f80e44fb5794b2c36cd2772aa",
+          "evidence_scope": "actual_life_snapshot",
+          "gam_private_update_claim": "none observed in this checkpoint; all recorded candidates were out of inherited fit domain",
+          "goal_memory_capacity": 128,
+          "goal_observation_dimension": 4453,
+          "habitat_id": "d5fbd433-ffa2-4877-b55d-b2d0461166ed",
+          "paused": false,
+          "private_gam_adaptation_summary": [
+            {
+              "last_completed_tick": 4780,
+              "out_of_domain_observations": 4781,
+              "resident": "mica",
+              "updates": 0
+            },
+            {
+              "last_completed_tick": 4780,
+              "out_of_domain_observations": 4781,
+              "resident": "fern",
+              "updates": 0
+            },
+            {
+              "last_completed_tick": 4780,
+              "out_of_domain_observations": 4781,
+              "resident": "pip",
+              "updates": 0
+            },
+            {
+              "last_completed_tick": 4780,
+              "out_of_domain_observations": 4781,
+              "resident": "lumen",
+              "updates": 0
+            },
+            {
+              "last_completed_tick": 4780,
+              "out_of_domain_observations": 4781,
+              "resident": "silt",
+              "updates": 0
+            },
+            {
+              "last_completed_tick": 4780,
+              "out_of_domain_observations": 4781,
+              "resident": "bramble",
+              "updates": 0
+            }
+          ],
+          "private_goal_keys_windows_rng_published": false,
+          "resident_count": 6,
+          "resident_state_summary": [
+            {
+              "achieved_memory_count": 128,
+              "age_seconds": 239.0500000000201,
+              "energy": 0.35900738661713577,
+              "fatigue": 0.002950772085690364,
+              "gut": 0.27888230638093553,
+              "history_samples": 360,
+              "resident": "mica"
+            },
+            {
+              "achieved_memory_count": 128,
+              "age_seconds": 239.0500000000201,
+              "energy": 0.35833828800986517,
+              "fatigue": 0.002719142355820092,
+              "gut": 0.34401825076774806,
+              "history_samples": 360,
+              "resident": "fern"
+            },
+            {
+              "achieved_memory_count": 128,
+              "age_seconds": 239.0500000000201,
+              "energy": 0.3364018356842209,
+              "fatigue": 0.0,
+              "gut": 0.19799696200055797,
+              "history_samples": 360,
+              "resident": "pip"
+            },
+            {
+              "achieved_memory_count": 128,
+              "age_seconds": 239.0500000000201,
+              "energy": 0.32642698128470793,
+              "fatigue": 0.6805838903502,
+              "gut": 0.2041258492904491,
+              "history_samples": 360,
+              "resident": "lumen"
+            },
+            {
+              "achieved_memory_count": 128,
+              "age_seconds": 239.0500000000201,
+              "energy": 0.309752541128081,
+              "fatigue": 0.9998888129841306,
+              "gut": 0.0004342067072911455,
+              "history_samples": 360,
+              "resident": "silt"
+            },
+            {
+              "achieved_memory_count": 128,
+              "age_seconds": 239.0500000000201,
+              "energy": 0.3501433455820201,
+              "fatigue": 0.0056127506567832,
+              "gut": 0.16663661628680218,
+              "history_samples": 360,
+              "resident": "bramble"
+            }
+          ]
+        },
+        "id": "snapshot:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4781:f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4",
+        "parent_ids": [
+          "experienced-interval:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4580-4780:8b576dc2df6de55ff38e4dfa2e9232ccbf78d3f9c59f215307642582b7a29311",
+          "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:bramble:4781:116:2033",
+          "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:fern:4781:81:3331",
+          "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:lumen:4781:106:410",
+          "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:mica:4781:121:1904",
+          "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:pip:4781:89:92",
+          "achieved-goal-current:d5fbd433-ffa2-4877-b55d-b2d0461166ed:silt:4781:98:3226"
+        ],
+        "record_type": "snapshot",
+        "text": "Authenticated living-reef checkpoint captured at model tick 4781.",
+        "time": {
+          "domain": "model_tick",
+          "value": 4781
+        }
+      },
+      "source_id": "snapshot:d5fbd433-ffa2-4877-b55d-b2d0461166ed:4781:f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4",
+      "text": "Authenticated living-reef checkpoint captured at model tick 4781.",
+      "time": {
+        "domain": "model_tick",
+        "value": 4781
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "054ea51ed30fc28839a6d06a8db832a5",
+      "parent_source_ids": [],
+      "parents": [],
+      "record_type": "verified_source",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "dataset_file_sha256": {
+            "episode-000.npz": "4a4443e0d7185c94cc411d18b2ab631fdb89f6f68b361daceaa741d6ccfd35a1",
+            "episode-001.npz": "6bbfe1acf82fbd944714d2361e48743e98b77b62247f18a11f81f4117d37a351",
+            "manifest.json": "6e64fa39e2368f67fe6c23c2372a296661a9cf6b9fc7986ff24a0303a308ab10",
+            "research/sensorimotor_skills/trajectory-schema-rich-v2.json": "0e0083664f6df18b15c408808a7ca772e64aa334dab1fd971e21cb39b5a70b51"
+          },
+          "dataset_manifest_content_sha256": "14bb5f01f6fa2a69323180ed9c7d683e9ae1127f4bc22f11a3d0609c8fc855fe",
+          "evidence_scope": "forecast_fit_source"
+        },
+        "id": "rich-prediction-data:14bb5f01f6fa2a69323180ed9c7d683e9ae1127f4bc22f11a3d0609c8fc855fe",
+        "parent_ids": [],
+        "record_type": "verified_source",
+        "text": "Hash-verified rich sensorimotor play supplied the predictor fit rows.",
+        "time": {
+          "domain": "research_collection",
+          "value": "rich-v2-seed20260912"
+        }
+      },
+      "source_id": "rich-prediction-data:14bb5f01f6fa2a69323180ed9c7d683e9ae1127f4bc22f11a3d0609c8fc855fe",
+      "text": "Hash-verified rich sensorimotor play supplied the predictor fit rows.",
+      "time": {
+        "domain": "research_collection",
+        "value": "rich-v2-seed20260912"
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [
+        {
+          "media_type": "application/x-pytorch",
+          "role": "rich_sensorimotor_bootstrap",
+          "sha256": "cadebcece6034af1346c71c68d9962ea0f598f3f4e81263a5a4beee1db50543f",
+          "uri": "urn:sha256:cadebcece6034af1346c71c68d9962ea0f598f3f4e81263a5a4beee1db50543f",
+          "verification": "reported_by_verified_predictor_artifact"
+        }
+      ],
+      "node_id": "3d5e7d66e2abf1d9b8684ac9de8cb096",
+      "parent_source_ids": [
+        "rich-prediction-data:14bb5f01f6fa2a69323180ed9c7d683e9ae1127f4bc22f11a3d0609c8fc855fe"
+      ],
+      "parents": [
+        "054ea51ed30fc28839a6d06a8db832a5"
+      ],
+      "record_type": "frozen_representation",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "media_type": "application/x-pytorch",
+            "role": "rich_sensorimotor_bootstrap",
+            "sha256": "cadebcece6034af1346c71c68d9962ea0f598f3f4e81263a5a4beee1db50543f",
+            "uri": "urn:sha256:cadebcece6034af1346c71c68d9962ea0f598f3f4e81263a5a4beee1db50543f",
+            "verification": "reported_by_verified_predictor_artifact"
+          }
+        ],
+        "fields": {
+          "bootstrap_identity_sha256": "96c3a4dc3b6919d78f001731270acf30a370148e9961476a72d1f150292aea79",
+          "copied_encoder_sha256": "bd3d70f5803c5b06f76143aa2f79c51c824736b9142a54c4dc2b3a26211f0ff0",
+          "evidence_scope": "forecast_fit_source",
+          "frame_encoder_sha256": "d4548c18db7aebb4b7af491dba515a6066ef84329e39fc2295cbe3d31dc5bf8c",
+          "goal_encoder_sha256": "49e0bd64ba5165acea8e40b324c8edb53bd58d1ed9068454bcf61ce04afba1b0",
+          "representation_saw_all_four_worlds": true
+        },
+        "id": "frozen-rich-front:bd3d70f5803c5b06f76143aa2f79c51c824736b9142a54c4dc2b3a26211f0ff0",
+        "parent_ids": [
+          "rich-prediction-data:14bb5f01f6fa2a69323180ed9c7d683e9ae1127f4bc22f11a3d0609c8fc855fe"
+        ],
+        "record_type": "frozen_representation",
+        "text": "The predictor copied and froze the bootstrap visual, body, and goal encoders.",
+        "time": {
+          "domain": "research_artifact",
+          "value": "frozen-rich-front"
+        }
+      },
+      "source_id": "frozen-rich-front:bd3d70f5803c5b06f76143aa2f79c51c824736b9142a54c4dc2b3a26211f0ff0",
+      "text": "The predictor copied and froze the bootstrap visual, body, and goal encoders.",
+      "time": {
+        "domain": "research_artifact",
+        "value": "frozen-rich-front"
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [
+        {
+          "bytes": 7545779,
+          "media_type": "application/x-npz",
+          "role": "rich_consequence_predictor",
+          "sha256": "7192e01191282a736299013159b7852b291c581ad06faff3b33b37e157d4352f",
+          "uri": "urn:sha256:7192e01191282a736299013159b7852b291c581ad06faff3b33b37e157d4352f",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 14969,
+          "media_type": "application/json",
+          "role": "rich_consequence_fit_receipt",
+          "sha256": "046adad19f5d72dc91b51ed263624951b8fff290582588ef96f31ff853cc0906",
+          "uri": "urn:sha256:046adad19f5d72dc91b51ed263624951b8fff290582588ef96f31ff853cc0906",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 62008,
+          "media_type": "application/x-npz",
+          "role": "predictor_float32_reference",
+          "sha256": "4910fed8c964089bcbda6f6470d82e1961b7ec3098e36c9cf4132306451229b1",
+          "uri": "urn:sha256:4910fed8c964089bcbda6f6470d82e1961b7ec3098e36c9cf4132306451229b1",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "1dc4c313db8587fddb1e2f057b862f4c",
+      "parent_source_ids": [
+        "rich-prediction-data:14bb5f01f6fa2a69323180ed9c7d683e9ae1127f4bc22f11a3d0609c8fc855fe",
+        "frozen-rich-front:bd3d70f5803c5b06f76143aa2f79c51c824736b9142a54c4dc2b3a26211f0ff0"
+      ],
+      "parents": [
+        "054ea51ed30fc28839a6d06a8db832a5",
+        "3d5e7d66e2abf1d9b8684ac9de8cb096"
+      ],
+      "record_type": "forecast_fit",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "bytes": 7545779,
+            "media_type": "application/x-npz",
+            "role": "rich_consequence_predictor",
+            "sha256": "7192e01191282a736299013159b7852b291c581ad06faff3b33b37e157d4352f",
+            "uri": "urn:sha256:7192e01191282a736299013159b7852b291c581ad06faff3b33b37e157d4352f",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 14969,
+            "media_type": "application/json",
+            "role": "rich_consequence_fit_receipt",
+            "sha256": "046adad19f5d72dc91b51ed263624951b8fff290582588ef96f31ff853cc0906",
+            "uri": "urn:sha256:046adad19f5d72dc91b51ed263624951b8fff290582588ef96f31ff853cc0906",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 62008,
+            "media_type": "application/x-npz",
+            "role": "predictor_float32_reference",
+            "sha256": "4910fed8c964089bcbda6f6470d82e1961b7ec3098e36c9cf4132306451229b1",
+            "uri": "urn:sha256:4910fed8c964089bcbda6f6470d82e1961b7ec3098e36c9cf4132306451229b1",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "action_permuted_scaled_rmse": 1.3594579479545958,
+          "artifact_identity": "bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf",
+          "evidence_scope": "forecast_fit",
+          "fit_seconds": 37.0192486224696,
+          "goal_space_rms": 0.054485887104041765,
+          "goal_space_zero_delta_rms": 0.09880149479234446,
+          "status": "descriptive reserved-world prediction; no causal, welfare, or calibrated-uncertainty claim",
+          "training": {
+            "batch_size": 1024,
+            "epochs": 10,
+            "hip": "7.0.51831",
+            "learning_rate": 0.0003,
+            "seed": 20260912,
+            "torch": "2.10.0+rocm7.0",
+            "train_worlds": [
+              0,
+              1,
+              2
+            ],
+            "validation_worlds": [
+              3
+            ],
+            "weight_decay": 1e-05
+          },
+          "validation_scaled_rmse": 0.7412206151177213,
+          "zero_delta_scaled_rmse": 0.9751836998365112
+        },
+        "id": "forecast-fit:bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf",
+        "parent_ids": [
+          "rich-prediction-data:14bb5f01f6fa2a69323180ed9c7d683e9ae1127f4bc22f11a3d0609c8fc855fe",
+          "frozen-rich-front:bd3d70f5803c5b06f76143aa2f79c51c824736b9142a54c4dc2b3a26211f0ff0"
+        ],
+        "record_type": "forecast_fit",
+        "text": "Three action-conditioned consequence members were fit on worlds 0\u20132 and described on world 3.",
+        "time": {
+          "domain": "research_fit",
+          "value": "rich-consequence-v1"
+        }
+      },
+      "source_id": "forecast-fit:bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf",
+      "text": "Three action-conditioned consequence members were fit on worlds 0\u20132 and described on world 3.",
+      "time": {
+        "domain": "research_fit",
+        "value": "rich-consequence-v1"
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "92a8adbb4afe9624833c20253f0eb815",
+      "parent_source_ids": [
+        "forecast-fit:bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf"
+      ],
+      "parents": [
+        "1dc4c313db8587fddb1e2f057b862f4c"
+      ],
+      "record_type": "proposed_organ",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "causal_claim": false,
+          "current_life_modified": false,
+          "evidence_scope": "proposed_future_organ",
+          "installed_in_living_reef_checkpoint": false,
+          "uncertainty_claim": false
+        },
+        "id": "proposed-organ:bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf",
+        "parent_ids": [
+          "forecast-fit:bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf"
+        ],
+        "record_type": "proposed_organ",
+        "text": "The fitted consequence predictor is a proposed organ for a later resident generation.",
+        "time": {
+          "domain": "research_design",
+          "value": "next-native-resident"
+        }
+      },
+      "source_id": "proposed-organ:bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf",
+      "text": "The fitted consequence predictor is a proposed organ for a later resident generation.",
+      "time": {
+        "domain": "research_design",
+        "value": "next-native-resident"
+      }
+    }
+  ],
+  "reload_equal": true,
+  "topological_order": [
+    "8d0877b94068ed6d90abd60576b98e38",
+    "d441e30a7093f445b4c44f61e91fd33f",
+    "cdcc06c1b3b8215e5386c19717c7569e",
+    "262e14fe9362c6dec5b1adbf05bfccf2",
+    "32d05b6c96548c57bc4b254b77e987ed",
+    "58ebdf0ebb77679c47db47afd700a279",
+    "822ada4c39232d7264a38ddf347cafb8",
+    "75810629c232da9f4d3b97363289bf9a",
+    "dbead2a71734df3c39f7c2ad5e280858",
+    "6292c75f50161163fe8e93546c1fa499",
+    "d95749577e597912b7354c37b27c4b56",
+    "f0897b5d2769cb2fc8dc5fb4018cef1e",
+    "6b8e8fc5885890b11094b68c1379c259",
+    "5efa4d334c4e03c4273f23cecf0b01c0",
+    "309c39d2983135227f908dcb302f2d93",
+    "334635c0d0df3554e25cb4e29f7665fb",
+    "1a7fe3783574bf4f451e026778975126",
+    "17fb9d17a090acb2290b45c534ed90c5",
+    "b26a1f6450fcc1f83a5a8e1104864964",
+    "f9a790331897fe182c0f1bda1a79f282",
+    "054ea51ed30fc28839a6d06a8db832a5",
+    "3d5e7d66e2abf1d9b8684ac9de8cb096",
+    "1dc4c313db8587fddb1e2f057b862f4c",
+    "92a8adbb4afe9624833c20253f0eb815"
+  ],
+  "validated_after_reload": true
+}
