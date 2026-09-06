@@ -1,0 +1,156 @@
+{
+  "format": "chreatures-rich-resident-first-life-v1",
+  "recorded_unix": 1788686355.94125,
+  "deployment": {
+    "format": "chreatures-frozen-deployment-v1",
+    "source_revision": "215647bde626994af3b18fd6adc97a5d0c72574b",
+    "source_archive_sha256": "f558dd190e19bf7c56b7a06a75f70a23ff4903ffc70c7859f3b91bb4184cda31",
+    "created_unix": 1788685949.6473,
+    "semantics": "new research birth after fixing JSON boundary; no continuation of paused 14f6fcd live state",
+    "files": {
+      "_world_kernels.cpython-312-darwin.so": "e07d8715bf6ec213225d8b7af8be2be4eb345b334b3037cb613f83d585207a67",
+      "_cognitive_core.cpython-312-darwin.so": "438ef4faa0f52fb73ed418068333633c13fde7475248bc5acfdaf4a94af8626b",
+      "models/resident.npz": "c18f2580b19bb36bee12fb16ed5b86bfdf7a1426fee1f18438e12eb9298e99f3"
+    },
+    "neural_url": "http://127.0.0.1:18777",
+    "api_url": "http://127.0.0.1:8778"
+  },
+  "world_id": "d5fbd433-ffa2-4877-b55d-b2d0461166ed",
+  "engine_identity_sha256": "6a005cd1506a74e2ebbb4a9ba35c67f231c48f9f80e44fb5794b2c36cd2772aa",
+  "current_tick_at_observation": 3249,
+  "current_model_time": 162.44999999992476,
+  "paused": false,
+  "error": null,
+  "latest_checkpoint_at_observation": {
+    "tick": 3231,
+    "state_sha256": "ece8ac04846ceb2fc55d787748922e0b6c872f3ffd92cd4c217af8c4f088e4f5",
+    "bytes": 78814300
+  },
+  "resident_artifact": {
+    "format": "chreatures-native-developmental-resident-rich-v1",
+    "artifact_sha256": "f3ea97708049ec236eeeeb37dde9ba728110e4d1f2a37a734ac609a9486186d4",
+    "file_sha256": "c18f2580b19bb36bee12fb16ed5b86bfdf7a1426fee1f18438e12eb9298e99f3",
+    "mode": "rich-achieved-goal",
+    "execution": "developmental-resident-native-rich-v1",
+    "neural_contract": {
+      "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+      "port_spec_sha256": "a3182cc5c546fac164774e56cfcf3d4f185c2feab5a994fe3d2a37cc8604302e",
+      "port_bundle_sha256": "933b871fdd11dafa8c43afceb9862101984bf0950592af84631a4d7aa9bebe53"
+    },
+    "observation_contract": {
+      "format": "chreatures-rich-sensorimotor-observation-v1",
+      "neural_readout_dim": 384,
+      "observation_dim": 4453,
+      "observation_order": [
+        "rich_body_v1_4096",
+        "canonical_channels_351",
+        "physiology_6"
+      ],
+      "physiology_dim": 6,
+      "previous_action_plus_oral_dim": 9,
+      "rich_body_dim": 4096,
+      "rich_channel_names_sha256": "b4c6b328116d820143e16ee922ccffd7b950dbe008efc580ad93056e01349bfa",
+      "rich_profile_sha256": "c71380718ba5535dbaebdeaf8aa2e88cc45cf218312a03e13507877f02a5554e",
+      "source_sense_dim": 351
+    },
+    "rich_retina_available": true
+  },
+  "bodies": [
+    {
+      "id": "mica",
+      "name": "Mica"
+    },
+    {
+      "id": "fern",
+      "name": "Fern"
+    },
+    {
+      "id": "pip",
+      "name": "Pip"
+    },
+    {
+      "id": "lumen",
+      "name": "Lumen"
+    },
+    {
+      "id": "silt",
+      "name": "Silt"
+    },
+    {
+      "id": "bramble",
+      "name": "Bramble"
+    }
+  ],
+  "current_parts": 891,
+  "training": {
+    "collection_transitions": 196608,
+    "collection_manifest_content_sha256": "14bb5f01f6fa2a69323180ed9c7d683e9ae1127f4bc22f11a3d0609c8fc855fe",
+    "bootstrap_checkpoint_sha256": "cadebcece6034af1346c71c68d9962ea0f598f3f4e81263a5a4beee1db50543f",
+    "inherited_online_updates": 20,
+    "inherited_online_transitions": 61440,
+    "online_checkpoint_sha256": "60761370b83aaf55446e2ae85e39e0a8139046863c2585d86314323bc5085893",
+    "parent_run_status": "interrupted after39updates, cause unknown; update20 is last durable checkpoint; childtraining starts fresh private/world state from shared20weights"
+  },
+  "gam_observed": {
+    "mica": {
+      "candidate_out_of_domain": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "private_updates": 0
+    },
+    "fern": {
+      "candidate_out_of_domain": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "private_updates": 0
+    },
+    "pip": {
+      "candidate_out_of_domain": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "private_updates": 0
+    },
+    "lumen": {
+      "candidate_out_of_domain": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "private_updates": 0
+    },
+    "silt": {
+      "candidate_out_of_domain": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "private_updates": 0
+    },
+    "bramble": {
+      "candidate_out_of_domain": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "private_updates": 0
+    }
+  },
+  "limits": [
+    "This is a running physical research cohort, not evidence of acquired skill, persistent personality, ecological adaptation, or consciousness.",
+    "GAM refinements are blocked outside the inherited law domain. Current rich physiology is outside the older fit; rich-domain refitting is separate next-birth work.",
+    "Predictive sensory ensemble is trained but not installed in this v1 life.",
+    "Birth at source14f6fcd is paused separately after JSON serialization failure. This215647b world is a new birth, not recovery of its unsaved interval."
+  ]
+}
