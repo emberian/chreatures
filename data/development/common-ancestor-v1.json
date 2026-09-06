@@ -14,7 +14,7 @@
     "mutation": null,
     "parent_sha256": null
   },
-  "format": "chreatures-developmental-genome-v1",
+  "format": "chreatures-developmental-genome-v2",
   "generation": 0,
   "growth": {
     "leaf_area": 1.0,
@@ -47,6 +47,7 @@
   },
   "name": "common-ancestor-v1",
   "neural": {
+    "circuit": null,
     "input_gain_loci": [
       {
         "gain": 1.02,
@@ -84,7 +85,7 @@
       }
     ]
   },
-  "sha256": "97275a9f249b1800bf985184499a9b2712604e31d992e1d5a3c6edf47b848c23",
+  "sha256": "56d4beeefede48ff40972507870d48eb0d467a78406ff999e8b11f73cc5dcfca",
   "sources": {
     "chemistry_file_sha256": "006bcb89b9e9af4562c19b0e08ab0ebf82daa1cdcbc236276f88988b054ba9e9",
     "chemistry_sha256": "fc482774de2dd3c08e92cd9f6bdaf8298c39e41a8ef173e8430b7363841e9928",

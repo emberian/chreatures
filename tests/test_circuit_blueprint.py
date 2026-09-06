@@ -10,8 +10,11 @@ from chreatures.circuit_blueprint import (
     DerivedCircuitGraph,
     compile_blueprint,
 )
+from chreatures.developmental_genome import DevelopmentalGenome
 from chreatures.malecns import MaleCNSGraph
 from chreatures.neural_ports import NeuralPortBundle
+
+ROOT = Path(__file__).resolve().parents[1]
 
 FIELDS = (
     "body_ids",
@@ -228,3 +231,195 @@ def test_compile_typed_duplicate_and_sparse_edits(tmp_path: Path) -> None:
             np.maximum(np.tanh(0.005 + 0.92 * (recurrent @ rate)), 0) - rate
         )
     assert rate[4] > 0 and rate[5] > 0
+
+
+def test_compile_second_generation_preserves_direct_and_root_ancestry(
+    tmp_path: Path,
+) -> None:
+    parent = _toy_graph(tmp_path / "parent")
+    selector1 = tmp_path / "selector1.npz"
+    np.savez_compressed(selector1, cells=np.asarray([20], np.int64))
+    ports0 = NeuralPortBundle(
+        spec={"name": "toy", "graph": {"dataset_hash": parent.hash}},
+        graph_hash=parent.hash,
+        input_names=["sense"],
+        input_map=sparse.csr_matrix(([1.0], ([0], [0])), shape=(4, 1)),
+        readout_names=["act"],
+        readout_map=sparse.csr_matrix(([1.0], ([0], [1])), shape=(1, 4)),
+        input_ports=[],
+        readout_ports=[],
+    )
+    first_blueprint = CircuitBlueprint.from_value(
+        {
+            "schema_version": 1,
+            "name": "generation-1",
+            "parent": {
+                "graph_sha256": parent.hash,
+                "port_spec_sha256": ports0.spec_hash,
+            },
+            "modules": [
+                {
+                    "name": "memory_g1",
+                    "copies": 1,
+                    "boundary": "incoming",
+                    "ports": "inherit",
+                    "selector": {
+                        "npz": "selector1.npz",
+                        "sha256": _hash(selector1),
+                        "fields": ["cells"],
+                    },
+                }
+            ],
+            "edits": {"add": [], "remove": [], "reweight": []},
+        }
+    )
+    compile_blueprint(
+        parent,
+        ports0,
+        first_blueprint,
+        tmp_path / "generation1",
+        selector_root=tmp_path,
+    )
+    first = DerivedCircuitGraph(tmp_path / "generation1", mmap=False)
+    ports1 = NeuralPortBundle.load(tmp_path / "generation1" / "ports.npz", first)
+    first_copy = 4
+    selector2 = tmp_path / "selector2.npz"
+    np.savez_compressed(
+        selector2, cells=np.asarray([first.body_ids[first_copy]], np.int64)
+    )
+    second_blueprint = CircuitBlueprint.from_value(
+        {
+            "schema_version": 1,
+            "name": "generation-2",
+            "parent": {
+                "graph_sha256": first.hash,
+                "port_spec_sha256": ports1.spec_hash,
+            },
+            "modules": [
+                {
+                    "name": "memory_g2",
+                    "copies": 1,
+                    "boundary": "incoming",
+                    "ports": "inherit",
+                    "selector": {
+                        "npz": "selector2.npz",
+                        "sha256": _hash(selector2),
+                        "fields": ["cells"],
+                    },
+                }
+            ],
+            "edits": {"add": [], "remove": [], "reweight": []},
+        }
+    )
+    compile_blueprint(
+        first,
+        ports1,
+        second_blueprint,
+        tmp_path / "generation2",
+        selector_root=tmp_path,
+    )
+    second = DerivedCircuitGraph(tmp_path / "generation2", mmap=False)
+    assert second.n == 6
+    for field in first.metadata_fields:
+        assert np.array_equal(getattr(second, field)[: first.n], getattr(first, field))
+    assert np.all(np.diff(second.body_ids) > 0)
+    assert len(np.unique(second.body_ids)) == second.n
+    assert second.birth_parent_indices[-1] == first_copy
+    assert second.birth_parent_body_ids[-1] == first.body_ids[first_copy]
+    assert second.ancestral_indices[-1] == 1
+    assert second.ancestral_body_ids[-1] == 20
+    assert second.lineage_depth.tolist() == [0, 0, 0, 0, 1, 2]
+    assert [item["graph_sha256"] for item in second.manifest["graph_ancestry"]] == [
+        parent.hash,
+        first.hash,
+        second.hash,
+    ]
+
+
+def test_two_structural_births_compile_active_inherited_graphs(tmp_path: Path) -> None:
+    graph0 = _toy_graph(tmp_path / "parent")
+    ports0 = NeuralPortBundle(
+        spec={"name": "toy", "graph": {"dataset_hash": graph0.hash}},
+        graph_hash=graph0.hash,
+        input_names=["sense"],
+        input_map=sparse.csr_matrix(([1.0], ([0], [0])), shape=(4, 1)),
+        readout_names=["act"],
+        readout_map=sparse.csr_matrix(([1.0], ([0], [2])), shape=(1, 4)),
+        input_ports=[],
+        readout_ports=[],
+    )
+    ports0_path = tmp_path / "ports0.npz"
+    ports0_receipt = ports0.save(ports0_path)
+    selector = tmp_path / "selector.npz"
+    np.savez_compressed(selector, cells=np.asarray([20, 30], np.int64))
+    value = DevelopmentalGenome.load(
+        ROOT / "data/development/circuit-common-ancestor-v2.json"
+    ).to_value()
+    value["name"] = "toy-circuit-founder"
+    value["sources"].update(
+        {
+            "graph_sha256": graph0.hash,
+            "port_spec_sha256": ports0.spec_hash,
+            "port_bundle_sha256": ports0_receipt["sha256"],
+        }
+    )
+    value["neural"]["circuit"]["template"]["selector"] = {
+        "npz": "selector.npz",
+        "sha256": _hash(selector),
+        "fields": ["cells"],
+    }
+    value["neural"]["circuit"]["bounds"].update(
+        {"maximum_removals": 2, "maximum_reweights": 2}
+    )
+    value["sha256"] = None
+    founder = DevelopmentalGenome(value)
+
+    first, receipt1 = founder.structural_offspring(
+        17,
+        graph0,
+        ports0,
+        ports0_path,
+        tmp_path / "generation1",
+        mutation_scale=0.5,
+        selector_root=tmp_path,
+    )
+    graph1 = DerivedCircuitGraph(receipt1["path"], mmap=False)
+    ports1_path = Path(receipt1["path"]) / "ports.npz"
+    ports1 = NeuralPortBundle.load(ports1_path, graph1)
+    second, receipt2 = first.structural_offspring(
+        29,
+        graph1,
+        ports1,
+        ports1_path,
+        tmp_path / "generation2",
+        mutation_scale=0.5,
+        selector_root=tmp_path,
+    )
+    graph2 = DerivedCircuitGraph(receipt2["path"], mmap=False)
+
+    first_value = first.to_value()
+    second_value = second.to_value()
+    assert first_value["sources"]["graph_sha256"] == graph1.hash
+    assert second_value["sources"]["graph_sha256"] == graph2.hash
+    assert (
+        second_value["neural"]["circuit"]["last_birth"]["parent"]["graph_sha256"]
+        == graph1.hash
+    )
+    assert second_value["ancestry"]["parent_sha256"] == first.sha256
+    assert second_value["ancestry"]["founder_sha256"] == founder.sha256
+    assert len(graph2.manifest["graph_ancestry"]) == 3
+    assert graph2.n == 8
+    assert np.all(np.diff(graph2.body_ids) > 0)
+    assert len(np.unique(graph2.body_ids)) == graph2.n
+    for field in graph1.metadata_fields:
+        assert np.array_equal(
+            getattr(graph2, field)[: graph1.n], getattr(graph1, field)
+        )
+    assert receipt1["blueprint_sha256"] != receipt2["blueprint_sha256"]
+    assert (
+        first_value["neural"]["circuit"]["last_birth"]["blueprint"]["variation"][
+            "removed_edges"
+        ]
+        <= 2
+    )
+    assert json.dumps(second_value, allow_nan=False)
