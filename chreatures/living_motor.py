@@ -291,12 +291,10 @@ class LivingMotorOrgan:
             )
 
         motor_physiology = self.motor.physiology_vector(local_physiology)
-        inherited_mean, _inherited_value, _hidden = self.motor.forward(
+        inherited_mean, _inherited_value, hidden = self.motor.forward(
             normalized, motor_physiology
         )
-        log_std = np.clip(
-            self.motor.artifact.arrays["log_std"], -3.5, 0.3
-        ).astype(np.float32)
+        log_std = self.motor.distribution_log_std(hidden)
         inherited_noise = None if self.motor.deterministic else self.motor.rng.standard_normal(
             len(MOTOR_ACTIONS), dtype=np.float32
         )

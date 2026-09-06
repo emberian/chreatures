@@ -61,7 +61,9 @@ runtime candidates should still originate from the inherited policy.
 
 For the opt-in personal variance-v2 pipeline, candidate zero uses the private
 adapted standard deviation but every alternative perturbation uses an explicit
-copy of the immutable inherited log standard deviation. Provenance labels this
+copy of the inherited log standard deviation frozen from the exact decision
+hidden state. Global-v1 and state-conditioned-v2 motor artifacts both enter
+through `MotorOrgan.distribution_log_std(hidden)`. Provenance labels this
 `fixed-explicit-log-std-v1`. This keeps alternative noise conditionally
 independent of private variance parameters once the sampled baseline is fixed,
 which is required by latent-proposal score credit.
