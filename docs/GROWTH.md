@@ -116,6 +116,22 @@ routes that change over generations. A grammar must develop such geometry from
 local signals and turtle productions; cognition never receives a bridge label,
 waypoint, structure ID, or grammar symbol.
 
+## Resolution and terminal growth
+
+Grammar schema version 2 requires `resolution.minimum_feature_size`. The
+current grammars declare `0.002 m`, exactly the minimum radius or half-extent
+accepted by `PhysicsWorld`. A successor whose target-rule capsule radius would
+fall below that resolution is a terminal outcome and is not stored as another
+bud. A sampled leaf is emitted only when all three half-extents meet the same
+resolution. No geometry or biomass is clamped: omitted leaves are excluded
+from requested biomass, resources, and ATP.
+
+Every stored bud therefore produces a valid capsule radius and remains valid
+under snapshot restore. Restore accepts any finite positive scale satisfying
+that physical invariant instead of imposing an unrelated numeric scale floor.
+This is a declared simulation resolution boundary, not evidence of adaptive
+growth or a generation-specific phenotype.
+
 ## Cadence and boundedness
 
 The sample grammar waits four seconds before its first event and six seconds
@@ -123,6 +139,14 @@ between accepted batches. A batch has at most 24 new shapes, each rule at most
 16 successors, and the instance at most 192 live buds. Engine limits cap a
 grammar at 64 rules, 16,384 buds, and 4,096 shapes per batch. A failed or
 underfunded event does not schedule another event or consume randomness.
+`is_due` reads the native clock so callers can avoid sampling bud-local rays
+between developmental events. `capacity()` reports live, maximum, and remaining
+bud slots. `proposal_metrics()` and each nonempty proposal report resolution
+terminals plus bud-capacity, structural-budget, and shape-limit rejections from
+the latest due evaluation. These counters are diagnostics; rejected candidates
+do not consume the private random stream. A colony can terminate with zero live
+buds at the declared resolution instead of repeatedly proposing an invalid
+collider.
 
 ## Persistence and identity
 

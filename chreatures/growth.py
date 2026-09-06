@@ -72,15 +72,20 @@ def _normalize_grammar(raw: Any) -> dict[str, Any]:
     _keys(source, {
         "version", "name", "cadence_seconds", "initial_delay_seconds",
         "max_buds", "max_shapes_per_batch", "resources", "variation",
-        "rules", "axiom",
+        "resolution", "rules", "axiom",
     }, "growth grammar")
-    if source["version"] != 1:
+    if source["version"] != 2:
         raise ValueError("unsupported growth grammar version")
     name = _identifier(source["name"], "grammar name")
     cadence = _number(source["cadence_seconds"], "cadence_seconds", 0.05, 1e9)
     initial_delay = _number(source["initial_delay_seconds"], "initial_delay_seconds", 0.0, 1e9)
     max_buds = _integer(source["max_buds"], "max_buds", 1, 16_384)
     max_shapes = _integer(source["max_shapes_per_batch"], "max_shapes_per_batch", 1, 4096)
+    resolution = _mapping(source["resolution"], "resolution")
+    _keys(resolution, {"minimum_feature_size"}, "resolution")
+    minimum_feature_size = _number(
+        resolution["minimum_feature_size"], "minimum_feature_size", 0.002, 1.0
+    )
 
     resources = _mapping(source["resources"], "resources")
     _keys(resources, {"names", "composition", "atp_per_biomass"}, "resources")
@@ -205,9 +210,10 @@ def _normalize_grammar(raw: Any) -> dict[str, Any]:
             "scale": _number(bud["scale"], "bud scale", 0.01, 100.0),
         })
     return {
-        "version": 1, "name": name, "cadence_seconds": cadence,
+        "version": 2, "name": name, "cadence_seconds": cadence,
         "initial_delay_seconds": initial_delay, "max_buds": max_buds,
         "max_shapes_per_batch": max_shapes,
+        "resolution": {"minimum_feature_size": minimum_feature_size},
         "resources": {"names": names, "composition": normalized_composition, "atp_per_biomass": normalized_atp},
         "variation": normalized_variation, "rules": normalized_rules,
         "axiom": normalized_axiom,
@@ -221,7 +227,7 @@ def _canonical(value: Any) -> str:
 class GrowthSystem:
     """One private developmental state sharing an immutable grammar."""
 
-    VERSION = 1
+    VERSION = 2
 
     def __init__(self, grammar: dict[str, Any] | str | Path, seed: int = 1):
         if isinstance(seed, bool) or not isinstance(seed, Integral) or not 0 <= seed < 2**64:
@@ -273,7 +279,7 @@ class GrowthSystem:
             list(self.resource_names), resource_rows, atp,
             [variation["length_log_sigma"], math.radians(variation["angle_sigma_degrees"]), variation["leaf_log_sigma"]],
             self._grammar["cadence_seconds"], self._grammar["initial_delay_seconds"],
-            self._grammar["max_buds"],
+            self._grammar["max_buds"], self._grammar["resolution"]["minimum_feature_size"],
         )
         self._pending: dict[str, Any] | None = None
 
@@ -344,6 +350,7 @@ class GrowthSystem:
                     "size": list(item[4]), "area": float(item[5]), "biomass": float(item[6]),
                 } for item in raw[8]],
             },
+            "metrics": self.proposal_metrics(),
         }
         self._pending = {
             "signals": [{"bud_id": item[0], "light": item[1][0], "nutrient": item[1][1], "support": item[1][2], "competition": item[1][3]} for item in normalized_signals],
@@ -357,6 +364,25 @@ class GrowthSystem:
             raise ValueError("growth transaction token differs")
         self._kernel.reject(token)
         self._pending = None
+
+    @property
+    def is_due(self) -> bool:
+        return bool(self._kernel.is_due)
+
+    def capacity(self) -> dict[str, int]:
+        live, maximum, remaining = self._kernel.capacity()
+        return {"live_buds": int(live), "max_buds": int(maximum), "remaining": int(remaining)}
+
+    def proposal_metrics(self) -> dict[str, int | float]:
+        raw = self._kernel.proposal_metrics()
+        return {
+            "live_buds": int(raw[0]), "max_buds": int(raw[1]),
+            "resolution_terminals": int(raw[2]),
+            "capacity_rejections": int(raw[3]),
+            "budget_rejections": int(raw[4]),
+            "shape_limit_rejections": int(raw[5]),
+            "minimum_feature_size": float(raw[6]),
+        }
 
     def commit(
         self, token: str, accepted_resources: Mapping[str, float],
@@ -452,7 +478,7 @@ class GrowthSystem:
                 _integer(bud["bud_id"], "bud id", 1, 2**64 - 1),
                 _identifier(bud["symbol"], "bud symbol"), bud["role"],
                 _integer(bud["generation"], "bud generation", 0, 2**32 - 1),
-                _number(bud["scale"], "bud scale", 0.001, 100.0),
+                _number(bud["scale"], "bud scale", float.fromhex("0x1.0p-1022"), 100.0),
                 _vector(bud["position"], 3, "bud position", -1e6, 1e6),
                 _vector(bud["forward"], 3, "bud forward", -1.0, 1.0),
                 _vector(bud["up"], 3, "bud up", -1.0, 1.0),
