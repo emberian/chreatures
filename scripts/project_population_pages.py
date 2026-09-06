@@ -102,6 +102,35 @@ def evidence_records(value: dict[str, Any]) -> list[dict[str, Any]]:
     return records
 
 
+def cohort_failure_events(records: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if record.get("record_type") != "evaluation_failed":
+            continue
+        fields = record["fields"]
+        key = str(fields.get("physical_output_sha256", fields.get("evaluation_identity_sha256", "")))
+        if len(key) != 64:
+            raise ValueError("failed evaluation lacks its shared physical output identity")
+        event = grouped.setdefault(key, {
+            "physical_output_sha256": key,
+            "evaluation_identity_sha256": fields.get("evaluation_identity_sha256"),
+            "failure": str(fields.get("failure", "evaluation failure")),
+            "committed_ticks": int(fields.get("committed_ticks", 0)),
+            "affected_life_ids": [],
+            "last_coherent_checkpoint_tick": 0,
+        })
+        if event["failure"] != str(fields.get("failure", "evaluation failure")) or event["committed_ticks"] != int(fields.get("committed_ticks", 0)):
+            raise ValueError("one physical evaluation output has inconsistent terminal facts")
+        event["affected_life_ids"].append(str(fields["life_id"]))
+        continuation = [parent for parent in record["parent_ids"] if fields["parent_roles"].get(parent) == "life_continuation"]
+        if continuation and continuation[0].startswith("life-checkpoint:"):
+            try:
+                event["last_coherent_checkpoint_tick"] = max(event["last_coherent_checkpoint_tick"], int(continuation[0].split(":")[-2]))
+            except ValueError as exc:
+                raise ValueError("failed evaluation checkpoint identity has an invalid tick") from exc
+    return sorted(grouped.values(), key=lambda item: item["physical_output_sha256"])
+
+
 def nullable_numbers(value: Any, label: str, *, integers: bool = False) -> list[float] | list[int] | None:
     if value is None:
         return None
@@ -229,7 +258,8 @@ def trajectory_curves(values: Iterable[dict[str, Any]], known: set[str]) -> list
 
 def project(search: dict[str, Any], status: str, evidence: dict[str, Any] | None,
             supplements: dict[str, Any] | None, evaluator_outputs: Iterable[dict[str, Any]] = (),
-            analysts: Iterable[dict[str, Any]] = (), curve_inputs: Iterable[dict[str, Any]] = ()) -> dict[str, Any]:
+            analysts: Iterable[dict[str, Any]] = (), curve_inputs: Iterable[dict[str, Any]] = (),
+            weave_receipt: dict[str, Any] | None = None) -> dict[str, Any]:
     if search.get("format") != "chreatures-population-search-v1":
         raise ValueError("native search format differs")
     genomes = search.get("genomes")
@@ -293,6 +323,7 @@ def project(search: dict[str, Any], status: str, evidence: dict[str, Any] | None
             "mutated_parameters": [str(item) for item in genome["variation"].get("mutated", [])],
             "values": finite_mapping(genome.get("values", {}), "genome values"),
         })
+    public_records = evidence_records(evidence) if evidence else []
     result: dict[str, Any] = {
         "format": FORMAT,
         "status": status,
@@ -304,7 +335,8 @@ def project(search: dict[str, Any], status: str, evidence: dict[str, Any] | None
         "cells": public_cells,
         "evaluations": public_evaluations,
         "recording_references": [],
-        "evidence_records": evidence_records(evidence) if evidence else [],
+        "evidence_records": public_records,
+        "failure_events": cohort_failure_events(public_records),
     }
     lives, evaluator_by_life = evaluator_lives(evaluator_outputs)
     native_by_life = {item["life_id"]: item for item in public_evaluations}
@@ -320,6 +352,20 @@ def project(search: dict[str, Any], status: str, evidence: dict[str, Any] | None
     result["trajectories"] = trajectory_curves(
         curve_inputs, {item["trajectory_sha256"] for item in public_evaluations}
     )
+    if weave_receipt:
+        native = weave_receipt.get("native")
+        artifact = weave_receipt.get("artifacts", {}).get("weave")
+        if not isinstance(native, Mapping) or not isinstance(artifact, Mapping):
+            raise ValueError("Weave receipt lacks native validation or artifact identity")
+        result["weave_receipt"] = {
+            "integration": str(native.get("integration")),
+            "node_count": int(native["node_count"]),
+            "edge_count": int(native["edge_count"]),
+            "multi_parent_nodes": int(native["multi_parent_nodes"]),
+            "validated_after_reload": bool(native["validated_after_reload"]),
+            "reload_equal": bool(native["reload_equal"]),
+            "artifact_sha256": sha(str(artifact["sha256"]), "Weave artifact"),
+        }
     if supplements:
         allowed = {
             "name", "lives", "environment_records", "trajectories", "gam_surfaces",
@@ -342,6 +388,7 @@ def main() -> None:
     parser.add_argument("--evaluation-output", type=Path, action="append", default=[])
     parser.add_argument("--regional-analyst", type=Path, action="append", default=[])
     parser.add_argument("--trajectory-curves", type=Path, action="append", default=[])
+    parser.add_argument("--weave-receipt", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.output.exists():
@@ -353,6 +400,7 @@ def main() -> None:
         [load_object(path, "evaluation output") for path in args.evaluation_output],
         [load_object(path, "regional analyst") for path in args.regional_analyst],
         [load_object(path, "trajectory curves") for path in args.trajectory_curves],
+        load_object(args.weave_receipt, "Weave receipt") if args.weave_receipt else None,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_name(f".{args.output.name}.tmp-{os.getpid()}")
