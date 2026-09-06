@@ -8,6 +8,10 @@ Inspired by *Creatures* and the changing societies and environments of *Children
 
 ## The current build
 
+The current **v4 organism and population wave** exposes twelve explicit actions—thrust, yaw, gaze pitch, posture, grip, three signal bands, eating, release, secretion and allocation—against twelve measured physical channels spanning movement, energy, digestion, fatigue, neural support, structure, development, gland and brood stores, reproductive maturity and exchange load. Native cohort execution keeps learning, memory and recurrent state private to each life. Immutable candidate genomes can inherit full-MaleCNS interface gains and completed GAM law fits without inheriting that private state.
+
+Regional grammars now generate bounded physical habitats and resource layouts. Clonal births require material accumulated by an actual body, and hatching is a recorded topology change rather than a counter increment. A native quality-diversity search evaluates genome–environment pairs, retains a bounded multi-member archive and records terminal failures alongside successful evaluations. These mechanisms and their evidence contracts are implemented; the first authenticated population campaign has not run yet. There is therefore no demonstrated evolutionary improvement, ecological adaptation or v4 learned behavior to report. The [population observatory](https://emberian.github.io/chreatures/population.html) will load the compact public campaign only after real evaluations exist.
+
 **Living Reef** has six varied articulated bodies and twelve growing colonies in a physical world of terraces, ramps, underpasses, a coupled gate, acoustic mechanisms and movable materials. Colonies build real collision geometry. Changes to that geometry affect light, contact, passage and chemical transport. A native solar cycle moves illumination through the landscape and supplies energy to phototrophic chemistry.
 
 Residents acquire finite material through mouth contact, digest it into usable reserves, spend energy on activity, and return material through physical deposits. Colonies can release accumulated reserves into consumable packets. These mechanisms share conserved synthetic chemistry. Their combination provides an ecological substrate; a self-sustaining food web, reproduction and evolved social organization remain goals.
@@ -63,17 +67,21 @@ The repository includes `data/genomes/developmental-resident-rich-grandchild-upd
 python scripts/export_sensorimotor_worker.py --help
 ```
 
-Generate a current nursery, including the physical catchment, then start a fresh world:
+Generate a current regional environment, including the physical catchment, then
+start a fresh world. The profile digest is explicit environment ancestry:
 
 ```sh
-uv run python scripts/generate_nursery_family.py \
-  --output runs/new-nursery --variant braided-passages:20260913
+PROFILE_SHA256="$(shasum -a 256 docs/development/POPULATION_WAVE.md | awk '{print $1}')"
+uv run python scripts/generate_regional_family.py \
+  --output runs/new-region initial \
+  --archetype braided-ridges --seed 20260913 --residents 8 \
+  --profile-sha256 "$PROFILE_SHA256"
 
 uv run chreatures --port 8790 \
   --brain-url http://127.0.0.1:18790 \
   --resident-artifact data/genomes/developmental-resident-rich-grandchild-update160-v3.npz \
-  --habitat runs/new-nursery/nursery-braided-passages-20260913.habitat.json \
-  --biosphere runs/new-nursery/nursery-braided-passages-20260913.biosphere.json \
+  --habitat runs/new-region/habitat.json \
+  --biosphere runs/new-region/biosphere.json \
   --visitor-materials data/visitors/living-reef.json \
   --checkpoint runs/new-reef.json
 ```
