@@ -37,7 +37,6 @@ from chreatures.organism_interface import (
 )
 from research.sensorimotor_skills.rich_online import (
     SlowGoalManager,
-    cold_inherit_v3_manager,
     sample_worker_actions,
 )
 from research.sensorimotor_skills.rich_data import RichNormalizer
@@ -47,7 +46,6 @@ from research.sensorimotor_skills.rich_model import (
     RICH_PROFILE_SHA256,
     PopulationAdapterBank,
     RichSensorimotorModel,
-    cold_inherit_v3_model,
 )
 
 FORMAT = DEVELOPMENT_FORMAT
@@ -89,8 +87,6 @@ def arguments() -> argparse.Namespace:
         type=Path,
         default=ROOT / "data/ports/neural-variant-canonical-v1.json",
     )
-    parser.add_argument("--cold-inherit-v3", action="store_true")
-    parser.add_argument("--new-axis-active-probability", type=float, default=0.05)
     parser.add_argument("--initialize-from-development", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--graph", type=Path, required=True)
@@ -157,8 +153,6 @@ def validate(args: argparse.Namespace) -> None:
         raise SystemExit("candidate adapter rank must be 1..32")
     if not 0 <= args.candidate_variation_scale <= 0.1:
         raise SystemExit("candidate variation scale must be in [0,0.1]")
-    if not 0 < args.new_axis_active_probability <= 0.5:
-        raise SystemExit("new-axis active probability must be in (0,0.5]")
     if not 0 <= args.goal_progress_coefficient <= 1:
         raise SystemExit("goal progress coefficient must be in [0,1]")
     if args.output.exists() and any(args.output.iterdir()):
@@ -247,55 +241,18 @@ class GoalAdapter:
 def load_bootstrap(
     path: Path,
     device: torch.device,
-    *,
-    cold_inherit_v3: bool,
-    new_axis_active_probability: float,
 ):
     with torch.serialization.safe_globals([torch.torch_version.TorchVersion]):
         value = torch.load(path, map_location=device, weights_only=True)
     source_format = value.get("format")
-    inherited_formats = {
-        "chreatures-rich-sensorimotor-bootstrap-v1",
-        "chreatures-rich-online-sensorimotor-development-v1",
-    }
-    if cold_inherit_v3 != (source_format in inherited_formats):
-        raise ValueError(
-            "bootstrap format requires an explicit cold inheritance choice"
-        )
-    if source_format not in {
-        *inherited_formats,
-        BOOTSTRAP_FORMAT,
-    }:
+    if source_format != BOOTSTRAP_FORMAT:
         raise ValueError("rich bootstrap format differs")
     identity = value["identity"]
     model = RichSensorimotorModel().to(device)
-    inherited_manager = None
-    inherited_adapters = None
-    if cold_inherit_v3:
-        model.load_state_dict(
-            cold_inherit_v3_model(
-                value["model"],
-                new_axis_active_probability=new_axis_active_probability,
-            ),
-            strict=True,
-        )
-        normalizer = RichNormalizer.cold_inherit_v3(identity["normalizer"])
-        identity = copy.deepcopy(identity)
-        identity["cold_inheritance"] = {
-            "source_format": source_format,
-            "source_sha256": sha256(path),
-            "new_action_axes": ["eat", "release", "secrete", "allocate"],
-            "new_physiology_columns": 6,
-            "new_axis_active_probability": new_axis_active_probability,
-            "new_axis_positive_magnitudes": "uniform-32-bin",
-        }
-        if "goal_manager" in value:
-            inherited_manager = cold_inherit_v3_manager(value["goal_manager"])
-    else:
-        model.load_state_dict(value["model"], strict=True)
-        normalizer = RichNormalizer.from_value(identity["normalizer"])
-        inherited_manager = value.get("goal_manager")
-        inherited_adapters = value.get("candidate_adapters")
+    model.load_state_dict(value["model"], strict=True)
+    normalizer = RichNormalizer.from_value(identity["normalizer"])
+    inherited_manager = value.get("goal_manager")
+    inherited_adapters = value.get("candidate_adapters")
     for module in (model.visual, model.body, model.goal_encoder, model.goal_decoder):
         module.requires_grad_(False)
         module.eval()
@@ -621,8 +578,6 @@ def main() -> int:
     ) = load_bootstrap(
         args.bootstrap_worker.resolve(),
         device,
-        cold_inherit_v3=args.cold_inherit_v3,
-        new_axis_active_probability=args.new_axis_active_probability,
     )
     profile = EmbodiedTrainingProfile.nursery_family(
         args.chemical_habitat,
