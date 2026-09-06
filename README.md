@@ -10,9 +10,9 @@ Inspired by *Creatures* and the changing societies and environments of *Children
 
 The current **v4 organism and population wave** exposes twelve explicit actions—thrust, yaw, gaze pitch, posture, grip, three signal bands, eating, release, secretion and allocation—against twelve measured physical channels spanning movement, energy, digestion, fatigue, neural support, structure, development, gland and brood stores, reproductive maturity and exchange load. Native cohort execution keeps learning, memory and recurrent state private to each life. Immutable candidate genomes can inherit full-MaleCNS interface gains and completed GAM law fits without inheriting that private state.
 
-Regional grammars now generate bounded physical habitats and resource layouts. Clonal births require material accumulated by an actual body, and hatching is a recorded topology change rather than a counter increment. A native quality-diversity search evaluates genome–environment pairs, retains a bounded multi-member archive and records terminal failures alongside successful evaluations. These mechanisms and their evidence contracts are implemented; the first authenticated population campaign has not run yet. There is therefore no demonstrated evolutionary improvement, ecological adaptation or v4 learned behavior to report. The [population observatory](https://emberian.github.io/chreatures/population.html) will load the compact public campaign only after real evaluations exist.
+Regional grammars generate connected physical habitats with variable elevation, cavities, ramps, finite resources and growing material. Clonal births debit a parent's actual brood stores and commit a new body with fresh private state. A native quality-diversity search evaluates genome–environment pairs and retains a bounded archive of varied candidates, including terminal failure records. The first campaign launched **80 candidate lives across ten environments** on hbox. Its first 32-life batch stopped at tick 9,967 on a shared engine error; 48 assignments remain in progress. A separate 32-resident training population runs on persvati, and eight founders inhabit an interactive M2 world. The [population observatory](https://emberian.github.io/chreatures/population.html) publishes actual genomes, environments and recorded lives. Evolutionary improvement and ecological adaptation remain unestablished.
 
-**Living Reef** has six varied articulated bodies and twelve growing colonies in a physical world of terraces, ramps, underpasses, a coupled gate, acoustic mechanisms and movable materials. Colonies build real collision geometry. Changes to that geometry affect light, contact, passage and chemical transport. A native solar cycle moves illumination through the landscape and supplies energy to phototrophic chemistry.
+The earlier **Living Reef** supplied the constructed-world substrate: articulated bodies, growing colonies, terraces, ramps, underpasses, a coupled gate, acoustic mechanisms and movable materials. The current regional family extends that substrate; the ten campaign environments contain 15–35 platforms and 22–52 connecting structures each. Colonies build real collision geometry, changing light, contact, passage and chemical transport. A native solar cycle moves illumination through the landscape and supplies energy to phototrophic chemistry.
 
 Residents acquire finite material through mouth contact, digest it into usable reserves, spend energy on activity, and return material through physical deposits. Colonies can release accumulated reserves into consumable packets. These mechanisms share conserved synthetic chemistry. Their combination provides an ecological substrate; a self-sustaining food web, reproduction and evolved social organization remain goals.
 
@@ -24,12 +24,12 @@ A resident's current control loop combines:
 
 - **Body-bound vision:** 1,024 native collision rays, divided between an 8×32 peripheral field and a 24×32 central field. Each supplies RGB and proximity. Bodies, constructed surfaces and movable objects can occlude them.
 - **Measured recurrence:** 351 sensory channels enter the full connectome; 384 named population readouts reach the resident's goal selector. These are population summaries, not recordings of 384 individual neurons.
-- **Spatial perception and working memory:** a native convolutional visual front, body-state encoder and persistent private GRU process 4,453 sensory and physiological values at each 50 ms physical tick.
+- **Spatial perception and working memory:** a native convolutional visual front, body-state encoder and persistent private GRU process the 4,459-column current observation at each 50 ms physical tick.
 - **Experienced goals:** each individual retains a private reservoir of four-frame sensory encounters. A learned manager selects among those memories; the motor controller attempts to approach the selected sensory state. The current Rust controller also learns private, physiology-dependent goal preferences from the actual bodily return of completed attempts.
 - **Personal consequence learning:** inherited GAM predictions and private bounded residual learning estimate movement, energy-cost and fatigue consequences of motor proposals. Actual delivered actions and their subsequent physical outcomes supply the updates.
 - **Action-conditioned forecasts:** an inherited three-member neural ensemble predicts the next sensory change under candidate actions. Its contribution to goal-directed action selection is bounded; predicted states never enter the resident’s experienced-memory reservoir.
 
-The oral command currently follows an engineered physiological law. Remembered goals are previously experienced states, not guarantees of present reachability. Useful navigation, durable learned habits and reciprocal interaction are still being developed.
+Eating is an explicit current action. Physical mouth contact, available material and digestive chemistry determine its consequences. Remembered goals are previously experienced states, not guarantees of present reachability. The first v4 cold inheritance conservatively initializes new action heads and extends the sensory interface; that initialization does not supply competence with the new organs. Useful navigation, durable learned habits and reciprocal interaction are still being developed.
 
 ## GAM × Universal Weave
 
@@ -41,13 +41,17 @@ Both upstream libraries have executed against actual project data. Their artifac
 
 ## What has run
 
+The current regional observatory replays **240 actual frames from eight v4 residents**, covering model seconds 51.65–118.50. The source recording contains delivered actions, body measurements, real geometry and private learning diagnostics. Its simulation ran on the M2 with the full MaleCNS graph. This is a recorded episode, not a live connection to the private world, and it does not establish successful feeding, reproduction or social learning. [Watch the regional world](https://emberian.github.io/chreatures/living.html?recording=regional-wave).
+
+The first population batch recorded **318,944 resident transitions** before an insufficient-ATP work payment stopped the cohort. Its last complete coupled checkpoint is tick 9,600. Native search retains the 32 affected lives as engine failures with no archive quality; these are not 32 independent organism failures. The actual [Universal Weave evidence](integrations/artifacts/population-wave-v1) contains 287 nodes and 601 edges linking founders, environments, evaluations, checkpoints and the shared failure.
+
 The completed rich developmental lineage ran **491,520 resident transitions and 160 additional PPO updates** in four six-resident worlds on an AMD RX 6750 XT, at **224.76 resident transitions per wall second**. It inherited 40 earlier updates. Ninety of 96 resident episodes included mouth-material contact, and the run transferred 28.35 units of conserved material into bodies. Every episode still lost energy. These are actual physical outcomes, without a matched baseline establishing improvement. [Full-transition analysis](docs/RICH_DEVELOPMENT_ANALYSIS.md).
 
 The **196,608-transition rich play corpus** includes raw retinal observations, full-circuit readouts, delivered actions and physical outcomes. Native GAM fits on that corpus supply the current consequence bank. A separate learned sensory ensemble supplies the installed one-step forecasts; longer action-suffix predictors have also been fitted and remain research artifacts. [Fitted mechanisms](docs/GAM_MECHANISMS.md).
 
-The [public observatory](https://emberian.github.io/chreatures/) replays 240 actual frames from the predictive courtyard: body-bound retinal inputs, remembered goals, candidate actions, forecast contributions, GAM updates and delivered controls. That life later paused on a physical-source error during an incomplete tick; its last complete checkpoint remains preserved. The published segment precedes the failure. A previous saved reef life ended with depleted reserves. Neither recording establishes sustained regulation or reciprocal social behavior.
+The [earlier predictive courtyard recording](https://emberian.github.io/chreatures/living.html) preserves 240 actual frames of body-bound retinal inputs, remembered goals, forecasts, GAM updates and delivered controls. That life later paused on a physical-source error during an incomplete tick; its last complete checkpoint remains preserved. The published segment precedes the failure. A previous saved reef life ended with depleted reserves.
 
-Current training uses native-generated **courtyards, tiered shelves and braided passages** with disjoint training and held-out layout seeds, physical ramps, underpasses, finite resources and growing colonies. Its current collector executes the Rust resident controller, including private consequence and goal learning, and records actual actions. The superseded Python controllers and training entry points have been removed; their research records retain Git references. [Nursery families](docs/NURSERY_FAMILIES.md).
+The current regional campaign uses the native resident controller, including private consequence and goal learning, and records actual actions and physical consequences. The earlier nursery families supplied courtyards, tiered shelves and braided passages with disjoint layout seeds. Superseded Python controllers and training entry points have been removed; their research records retain Git references. [Population campaign](docs/development/POPULATION_CAMPAIGN.md) · [Earlier nursery families](docs/NURSERY_FAMILIES.md).
 
 ## Build and run
 
@@ -61,29 +65,23 @@ uv run python native/cognitive-core/build_extension.py
 
 Acquire the [MaleCNS graph](docs/MALECNS.md), build the current [retinal-v2 port bundle](docs/NEURAL_PORTS.md), and start a dedicated [AMD neural service](docs/REMOTE_BRAIN.md) or [Apple Metal service](docs/METAL_BRAIN.md) with sufficient cohort capacity. New worlds require the **same graph and port identities** as the resident artifact. Existing frozen lives keep their loaded engine and service.
 
-The repository includes `data/genomes/developmental-resident-rich-grandchild-update160-v3.npz`, exported from the completed developmental checkpoint. It contains the trained shared controller, frozen visual representation, fitted GAM bank and sensory predictor; private state begins separately at birth. To export another checkpoint:
+Current worlds require a population-v4 native controller, matching candidate genomes and a birth manifest referencing their compiled neural phenotypes. The tracked `developmental-resident-rich-grandchild-update160-v3.npz` is an ancestor artifact; it cannot directly launch the current runtime. Export a current training checkpoint with:
 
 ```sh
-python scripts/export_sensorimotor_worker.py --help
+python scripts/export_developmental_resident.py --help
 ```
 
-Generate a current regional environment, including the physical catchment, then
-start a fresh world. The profile digest is explicit environment ancestry:
+Follow the [population birth export guide](docs/development/POPULATION_BIRTH.md) to materialize a pinned campaign world and its heterogeneous founders. Environment generation by itself does not create the required candidate genomes or neural artifacts. With those outputs and a dedicated empty neural service, a new world uses:
 
 ```sh
-PROFILE_SHA256="$(shasum -a 256 docs/development/POPULATION_WAVE.md | awk '{print $1}')"
-uv run python scripts/generate_regional_family.py \
-  --output runs/new-region initial \
-  --archetype braided-ridges --seed 20260913 --residents 8 \
-  --profile-sha256 "$PROFILE_SHA256"
-
 uv run chreatures --port 8790 \
   --brain-url http://127.0.0.1:18790 \
-  --resident-artifact data/genomes/developmental-resident-rich-grandchild-update160-v3.npz \
-  --habitat runs/new-region/habitat.json \
-  --biosphere runs/new-region/biosphere.json \
-  --visitor-materials data/visitors/living-reef.json \
-  --checkpoint runs/new-reef.json
+  --body articulated --ecology diffusion --physics-backend vectorized \
+  --resident-artifact /path/to/developmental-resident-population-v4.npz \
+  --population-birth /path/to/export/resident-birth.json \
+  --habitat /path/to/export/habitat.json \
+  --biosphere /path/to/export/biosphere.json \
+  --checkpoint runs/new-regional-life.json
 ```
 
 Use a fresh checkpoint path and a dedicated empty neural service for a new birth. The example ports are placeholders; choose unused local ports.
