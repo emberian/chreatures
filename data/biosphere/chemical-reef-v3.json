@@ -1,5 +1,5 @@
 {
-  "format": "chreatures-biosphere-birth-v4",
+  "format": "chreatures-biosphere-birth-v5",
   "chemistry": {
     "format": "chreatures-common-chemistry-v1",
     "description": "Synthetic conserved carbon-equivalent/mineral-equivalent chemistry; not calibrated molecular biochemistry.",
@@ -320,7 +320,8 @@
     },
     {
       "enzymes": {
-        "respiration": 0.012
+        "respiration": 0.012,
+        "carbon_fixation": 0.0005
       },
       "pools": {
         "reserve": 1.2,
@@ -344,7 +345,8 @@
     },
     {
       "enzymes": {
-        "respiration": 0.012
+        "respiration": 0.012,
+        "carbon_fixation": 0.0015
       },
       "pools": {
         "reserve": 1.2,
@@ -1828,5 +1830,59 @@
       0.9,
       0.72
     ]
+  },
+  "mobile_phototrophy": {
+    "version": 1,
+    "photon_flux_per_square_meter_second": 0.9,
+    "light_sampling": {
+      "frame": "world-v1",
+      "directions": [
+        [
+          0.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.7599342077,
+          0.0,
+          0.65
+        ],
+        [
+          0.3799671038,
+          0.658122327,
+          0.65
+        ],
+        [
+          -0.3799671038,
+          0.658122327,
+          0.65
+        ],
+        [
+          -0.7599342077,
+          0.0,
+          0.65
+        ],
+        [
+          -0.3799671038,
+          -0.658122327,
+          0.65
+        ],
+        [
+          0.3799671038,
+          -0.658122327,
+          0.65
+        ]
+      ],
+      "weights": [
+        0.22,
+        0.13,
+        0.13,
+        0.13,
+        0.13,
+        0.13,
+        0.13
+      ],
+      "occluded_transmission": 0.08
+    }
   }
 }

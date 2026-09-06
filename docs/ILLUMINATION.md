@@ -7,7 +7,7 @@ diffuse irradiance. The host applies that state to one predeclared MuJoCo
 directional light. Resident retinal illumination and the native developmental
 light sampler therefore receive the same direction and flux.
 
-The birth-v4 `illumination_cycle` object records its units explicitly:
+The birth-v5 `illumination_cycle` object records its units explicitly:
 `period_seconds` is simulated seconds per orbit; `phase_offset_cycles` is in
 turns, with dawn at 0, zenith at 0.25, dusk at 0.5, and midnight at 0.75;
 `path_azimuth_degrees` rotates the east-west orbit in the world frame;

@@ -94,6 +94,9 @@ pub(crate) struct AchievedGoalMemoryCohort {
 }
 
 impl AchievedGoalMemoryCohort {
+    pub(crate) fn recent_ring_state(&self) -> (&[u8], &[u8]) {
+        (&self.ring_count, &self.ring_cursor)
+    }
     pub(crate) fn key_rows(&self) -> (&[f32], &[u16]) {
         (&self.keys, &self.count)
     }

@@ -27,8 +27,8 @@ SNAPSHOT_FORMAT = "chreatures-embodied-training-world-v1"
 SNAPSHOT_FORMAT_V2 = "chreatures-embodied-training-world-v2"
 SNAPSHOT_FORMAT_V3 = "chreatures-embodied-training-world-v3"
 SNAPSHOT_FORMAT_V4 = "chreatures-embodied-training-world-v4"
-BIOSPHERE_BIRTH_FORMAT = "chreatures-biosphere-birth-v4"
-BIOSPHERE_SNAPSHOT_FORMAT = "chreatures-biosphere-v5"
+BIOSPHERE_BIRTH_FORMAT = "chreatures-biosphere-birth-v5"
+BIOSPHERE_SNAPSHOT_FORMAT = "chreatures-biosphere-v6"
 ROOT = Path(__file__).resolve().parents[1]
 PHYSICAL_BACKENDS = {
     "reference": ArticulatedSensoriumWorld,
@@ -87,8 +87,9 @@ class EmbodiedTrainingProfile:
             if (
                 birth.get("format") != BIOSPHERE_BIRTH_FORMAT
                 or not isinstance(birth.get("illumination_cycle"), dict)
+                or not isinstance(birth.get("mobile_phototrophy"), dict)
             ):
-                raise ValueError("chemical training requires the current solar birth-v4")
+                raise ValueError("chemical training requires the current mixotrophic birth-v5")
             illumination_sources = {
                 "native_environment",
                 "native_environment_shim",
