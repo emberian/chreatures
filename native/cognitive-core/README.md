@@ -97,6 +97,26 @@ in the current attempt, not the age of the achieved memory. Before any selected
 goal exists, both goal and horizon are zero. Outputs are absolute proposed
 actions, clearly separate from the supplied actual previous action.
 
+The v3 goal-memory contract gives every actual reservoir insertion or
+replacement a positive per-resident generation and returns the changed slot
+and generation atomically. Candidate identity matrices expose both
+`recorded_tick` and generation. Selection copies both fields into private state,
+so later replacement of the integer slot cannot retarget pending ten-tick
+credit. Goal-memory snapshots are version 2 and restore these matrices, the
+copied identity, counters, and RNG exactly; there is no v1 migration path.
+
+The v3 developmental controller adds a private bounded association for each
+generation-qualified goal slot. At a ten-tick boundary its context-dependent
+bias is added to the inherited manager logits before the resident's own sampler
+chooses a goal. The host reports only actual before/after energy, gut and
+fatigue, actual actuator effort, tick and timestep. Rust evaluates the
+artifact-authenticated `FiniteEnergyObjective` formula and accumulates exactly
+the ten committed transition returns from selection tick T through T+9. Slot
+replacement makes that credit ineligible rather than assigning it to the new
+memory. Learning can be frozen as an explicit intervention while outcomes and
+receipts continue. Per-slot weights, pending credit, counters and the mutable
+learning toggle are part of the native snapshot.
+
 Action mode is an immutable constructor choice. `sample` draws four signed,
 four hurdle, and four positive categorical decisions from snapshotted
 per-resident xoshiro streams; its RNG position is independent of whether a

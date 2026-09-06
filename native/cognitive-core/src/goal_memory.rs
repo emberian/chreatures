@@ -8,7 +8,7 @@ const WINDOW: usize = 4;
 const KEY: usize = 64;
 const CAPACITY: usize = 128;
 const HOLD_TICKS: u64 = 10;
-const FORMAT: &str = "chreatures-achieved-goal-memory-v1";
+const FORMAT: &str = "chreatures-achieved-goal-memory-v2";
 
 pub(crate) fn splitmix64(state: &mut u64) -> u64 {
     *state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
@@ -78,6 +78,7 @@ pub(crate) struct AchievedGoalMemoryCohort {
     keys: Vec<f32>,
     recorded_tick: Vec<u64>,
     recorded_time: Vec<f64>,
+    slot_generation: Vec<u64>,
     count: Vec<u16>,
     seen: Vec<u64>,
     rng: Vec<u64>,
@@ -87,6 +88,7 @@ pub(crate) struct AchievedGoalMemoryCohort {
     selected_key: Vec<f32>,
     selected_recorded_tick: Vec<u64>,
     selected_recorded_time: Vec<f64>,
+    selected_generation: Vec<u64>,
     selected_at_tick: Vec<u64>,
     hold_until_tick: Vec<u64>,
     has_choose_tick: Vec<bool>,
@@ -103,6 +105,12 @@ impl AchievedGoalMemoryCohort {
 
     pub(crate) fn counts(&self) -> &[u16] {
         &self.count
+    }
+
+    /// Flat `[resident, slot]` identity matrices for retrieval scoring. A
+    /// generation of zero denotes an unoccupied slot.
+    pub(crate) fn slot_identities(&self) -> (&[u64], &[u64]) {
+        (&self.recorded_tick, &self.slot_generation)
     }
 
     pub(crate) fn current_selection(&self, ticks: &[u64]) -> SelectionArrays {
@@ -171,6 +179,7 @@ impl AchievedGoalMemoryCohort {
         self.selected_key[row * KEY..(row + 1) * KEY].fill(0.0);
         self.selected_recorded_tick[row] = 0;
         self.selected_recorded_time[row] = 0.0;
+        self.selected_generation[row] = 0;
         self.selected_at_tick[row] = 0;
         self.hold_until_tick[row] = 0;
         self.has_choose_tick[row] = false;
@@ -218,11 +227,11 @@ impl AchievedGoalMemoryCohort {
         Ok(self.current_windows())
     }
 
-    pub(crate) fn remember_inner(
+    pub(crate) fn remember_with_changes_inner(
         &mut self,
         encoded_keys: &[f32],
         include: &[bool],
-    ) -> PyResult<Vec<i32>> {
+    ) -> PyResult<RememberResult> {
         if !finite_f32(encoded_keys) {
             return Err(PyValueError::new_err("goal-memory keys must be finite"));
         }
@@ -238,7 +247,8 @@ impl AchievedGoalMemoryCohort {
                 ));
             }
         }
-        let mut inserted = vec![-1; self.batch];
+        let mut slots = vec![-1; self.batch];
+        let mut generations = vec![0; self.batch];
         for row in 0..self.batch {
             self.consumed_generation[row] = self.generation[row];
             if !include[row] {
@@ -272,9 +282,11 @@ impl AchievedGoalMemoryCohort {
             let latest = (self.ring_cursor[row] as usize + WINDOW - 1) % WINDOW;
             self.recorded_tick[row * CAPACITY + slot] = self.ring_tick[row * WINDOW + latest];
             self.recorded_time[row * CAPACITY + slot] = self.ring_time[row * WINDOW + latest];
-            inserted[row] = slot as i32;
+            self.slot_generation[row * CAPACITY + slot] = self.generation[row];
+            slots[row] = slot as i32;
+            generations[row] = self.generation[row];
         }
-        Ok(inserted)
+        Ok(RememberResult { slots, generations })
     }
 
     fn selection_arrays(&self, ticks: &[u64], changed: Vec<bool>) -> SelectionArrays {
@@ -284,6 +296,7 @@ impl AchievedGoalMemoryCohort {
             key: self.selected_key.clone(),
             recorded_tick: self.selected_recorded_tick.clone(),
             recorded_time: self.selected_recorded_time.clone(),
+            generation: self.selected_generation.clone(),
             remaining: ticks
                 .iter()
                 .enumerate()
@@ -368,6 +381,7 @@ impl AchievedGoalMemoryCohort {
             self.selected_slot[row] = slot as i32;
             self.selected_recorded_tick[row] = self.recorded_tick[row * CAPACITY + slot];
             self.selected_recorded_time[row] = self.recorded_time[row * CAPACITY + slot];
+            self.selected_generation[row] = self.slot_generation[row * CAPACITY + slot];
             self.selected_at_tick[row] = ticks[row];
             self.hold_until_tick[row] = ticks[row]
                 .checked_add(HOLD_TICKS)
@@ -379,12 +393,18 @@ impl AchievedGoalMemoryCohort {
     }
 }
 
+pub(crate) struct RememberResult {
+    pub(crate) slots: Vec<i32>,
+    pub(crate) generations: Vec<u64>,
+}
+
 pub(crate) struct SelectionArrays {
     pub(crate) slot: Vec<i32>,
     pub(crate) window: Vec<f32>,
     pub(crate) key: Vec<f32>,
     pub(crate) recorded_tick: Vec<u64>,
     pub(crate) recorded_time: Vec<f64>,
+    pub(crate) generation: Vec<u64>,
     pub(crate) remaining: Vec<u64>,
     pub(crate) valid: Vec<bool>,
     pub(crate) changed: Vec<bool>,
@@ -432,6 +452,7 @@ impl AchievedGoalMemoryCohort {
             keys: vec![0.0; batch * CAPACITY * KEY],
             recorded_tick: vec![0; batch * CAPACITY],
             recorded_time: vec![0.0; batch * CAPACITY],
+            slot_generation: vec![0; batch * CAPACITY],
             count: vec![0; batch],
             seen: vec![0; batch],
             rng,
@@ -441,6 +462,7 @@ impl AchievedGoalMemoryCohort {
             selected_key: vec![0.0; batch * KEY],
             selected_recorded_tick: vec![0; batch],
             selected_recorded_time: vec![0.0; batch],
+            selected_generation: vec![0; batch],
             selected_at_tick: vec![0; batch],
             hold_until_tick: vec![0; batch],
             has_choose_tick: vec![false; batch],
@@ -487,12 +509,18 @@ impl AchievedGoalMemoryCohort {
         py: Python<'py>,
         encoded_keys: PyReadonlyArray2<'_, f32>,
         include: PyReadonlyArray1<'_, bool>,
-    ) -> PyResult<Bound<'py, numpy::PyArray1<i32>>> {
+    ) -> PyResult<Bound<'py, PyDict>> {
         if encoded_keys.shape() != [self.batch, KEY] || include.shape() != [self.batch] {
             return Err(PyValueError::new_err("goal-memory remember shapes differ"));
         }
-        let inserted = self.remember_inner(encoded_keys.as_slice()?, include.as_slice()?)?;
-        Ok(inserted.into_pyarray(py))
+        let result =
+            self.remember_with_changes_inner(encoded_keys.as_slice()?, include.as_slice()?)?;
+        let changed: Vec<bool> = result.slots.iter().map(|slot| *slot >= 0).collect();
+        let out = PyDict::new(py);
+        out.set_item("slot", result.slots.into_pyarray(py))?;
+        out.set_item("generation", result.generations.into_pyarray(py))?;
+        out.set_item("changed", changed.into_pyarray(py))?;
+        Ok(out)
     }
 
     pub(crate) fn candidates<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
@@ -522,6 +550,12 @@ impl AchievedGoalMemoryCohort {
         out.set_item(
             "recorded_time",
             Array2::from_shape_vec((self.batch, CAPACITY), self.recorded_time.clone())
+                .unwrap()
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "generation",
+            Array2::from_shape_vec((self.batch, CAPACITY), self.slot_generation.clone())
                 .unwrap()
                 .into_pyarray(py),
         )?;
@@ -556,6 +590,7 @@ impl AchievedGoalMemoryCohort {
         )?;
         out.set_item("recorded_tick", arrays.recorded_tick.into_pyarray(py))?;
         out.set_item("recorded_time", arrays.recorded_time.into_pyarray(py))?;
+        out.set_item("generation", arrays.generation.into_pyarray(py))?;
         out.set_item("remaining_ticks", arrays.remaining.into_pyarray(py))?;
         out.set_item("valid", arrays.valid.into_pyarray(py))?;
         out.set_item("changed", arrays.changed.into_pyarray(py))?;
@@ -565,7 +600,7 @@ impl AchievedGoalMemoryCohort {
     pub(crate) fn snapshot<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let out = PyDict::new(py);
         out.set_item("format", FORMAT)?;
-        out.set_item("version", 1)?;
+        out.set_item("version", 2)?;
         out.set_item("batch", self.batch)?;
         out.set_item("capacity", CAPACITY)?;
         out.set_item("window", WINDOW)?;
@@ -631,6 +666,12 @@ impl AchievedGoalMemoryCohort {
                 .unwrap()
                 .into_pyarray(py),
         )?;
+        out.set_item(
+            "slot_generation",
+            Array2::from_shape_vec((self.batch, CAPACITY), self.slot_generation.clone())
+                .unwrap()
+                .into_pyarray(py),
+        )?;
         put1!("count", self.count);
         put1!("seen", self.seen);
         out.set_item(
@@ -658,6 +699,7 @@ impl AchievedGoalMemoryCohort {
         )?;
         put1!("selected_recorded_tick", self.selected_recorded_tick);
         put1!("selected_recorded_time", self.selected_recorded_time);
+        put1!("selected_generation", self.selected_generation);
         put1!("selected_at_tick", self.selected_at_tick);
         put1!("hold_until_tick", self.hold_until_tick);
         put1!("has_choose_tick", self.has_choose_tick);
@@ -667,7 +709,7 @@ impl AchievedGoalMemoryCohort {
 
     pub(crate) fn restore(&mut self, value: &Bound<'_, PyDict>) -> PyResult<()> {
         if required(value, "format")?.extract::<String>()? != FORMAT
-            || required(value, "version")?.extract::<u8>()? != 1
+            || required(value, "version")?.extract::<u8>()? != 2
             || required(value, "batch")?.extract::<usize>()? != self.batch
             || required(value, "capacity")?.extract::<usize>()? != CAPACITY
             || required(value, "window")?.extract::<usize>()? != WINDOW
@@ -728,6 +770,11 @@ impl AchievedGoalMemoryCohort {
             PyReadonlyArray2<'_, f64>,
             [self.batch, CAPACITY]
         );
+        let slot_generation = array!(
+            "slot_generation",
+            PyReadonlyArray2<'_, u64>,
+            [self.batch, CAPACITY]
+        );
         let count = array!("count", PyReadonlyArray1<'_, u16>, [self.batch]);
         let seen = array!("seen", PyReadonlyArray1<'_, u64>, [self.batch]);
         let rng = array!("rng", PyReadonlyArray2<'_, u64>, [self.batch, 4]);
@@ -749,6 +796,11 @@ impl AchievedGoalMemoryCohort {
             PyReadonlyArray1<'_, f64>,
             [self.batch]
         );
+        let selected_generation = array!(
+            "selected_generation",
+            PyReadonlyArray1<'_, u64>,
+            [self.batch]
+        );
         let selected_at_tick = array!("selected_at_tick", PyReadonlyArray1<'_, u64>, [self.batch]);
         let hold_until_tick = array!("hold_until_tick", PyReadonlyArray1<'_, u64>, [self.batch]);
         let has_choose_tick = array!("has_choose_tick", PyReadonlyArray1<'_, bool>, [self.batch]);
@@ -765,6 +817,17 @@ impl AchievedGoalMemoryCohort {
             return Err(PyValueError::new_err("goal-memory snapshot must be finite"));
         }
         for row in 0..self.batch {
+            let occupied = count[row] as usize;
+            let generations = &slot_generation[row * CAPACITY..(row + 1) * CAPACITY];
+            let occupied_generations_valid = generations[..occupied]
+                .iter()
+                .all(|slot_generation| *slot_generation > 0 && *slot_generation <= generation[row]);
+            let empty_generations_zero = generations[occupied..].iter().all(|value| *value == 0);
+            let mut occupied_generations = generations[..occupied].to_vec();
+            occupied_generations.sort_unstable();
+            let occupied_generations_unique = occupied_generations
+                .windows(2)
+                .all(|pair| pair[0] != pair[1]);
             if ring_count[row] as usize > WINDOW
                 || ring_cursor[row] as usize >= WINDOW
                 || consumed_generation[row] > generation[row]
@@ -772,12 +835,18 @@ impl AchievedGoalMemoryCohort {
                 || seen[row] < count[row] as u64
                 || rng[row * 4..(row + 1) * 4].iter().all(|word| *word == 0)
                 || (has_push[row] && generation[row] == 0)
+                || !occupied_generations_valid
+                || !occupied_generations_unique
+                || !empty_generations_zero
                 || (selected_valid[row]
                     && (selected_slot[row] < 0
                         || selected_slot[row] as usize >= count[row] as usize
+                        || selected_generation[row] == 0
+                        || selected_generation[row] > generation[row]
                         || hold_until_tick[row]
                             != selected_at_tick[row].checked_add(HOLD_TICKS).unwrap_or(0)))
-                || (!selected_valid[row] && selected_slot[row] != -1)
+                || (!selected_valid[row]
+                    && (selected_slot[row] != -1 || selected_generation[row] != 0))
                 || (has_choose_tick[row]
                     && selected_valid[row]
                     && last_choose_tick[row] < selected_at_tick[row])
@@ -800,6 +869,7 @@ impl AchievedGoalMemoryCohort {
         self.keys = keys;
         self.recorded_tick = recorded_tick;
         self.recorded_time = recorded_time;
+        self.slot_generation = slot_generation;
         self.count = count;
         self.seen = seen;
         self.rng = rng;
@@ -809,10 +879,129 @@ impl AchievedGoalMemoryCohort {
         self.selected_key = selected_key;
         self.selected_recorded_tick = selected_recorded_tick;
         self.selected_recorded_time = selected_recorded_time;
+        self.selected_generation = selected_generation;
         self.selected_at_tick = selected_at_tick;
         self.hold_until_tick = hold_until_tick;
         self.has_choose_tick = has_choose_tick;
         self.last_choose_tick = last_choose_tick;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::personal_goals::{
+        GoalSlotIdentity, GoalSlotReplacement, GoalStart, GoalTransition, PersonalGoalAssociations,
+        PersonalGoalConfig,
+    };
+
+    #[test]
+    fn copied_identity_survives_actual_replacement_and_blocks_credit() {
+        let mut memory = AchievedGoalMemoryCohort::new(1, 1, 0x51a7).unwrap();
+        let key = vec![0.0_f32; KEY];
+        for tick in 1_u64..=CAPACITY as u64 + WINDOW as u64 - 1 {
+            memory
+                .push_inner(&[tick as f32], &[tick], &[tick as f64 * 0.05], &[false])
+                .unwrap();
+            let include = tick >= WINDOW as u64;
+            memory
+                .remember_with_changes_inner(&key, &[include])
+                .unwrap();
+        }
+        assert_eq!(memory.counts(), &[CAPACITY as u16]);
+
+        // Predict the next actual reservoir target without advancing the owned
+        // RNG. Selection consumes one draw before remember performs its draw.
+        let mut preview_rng = memory.rng[0..4].to_vec();
+        let _selection_draw = random_u64(&mut preview_rng);
+        let replacement_slot = index_below(&mut preview_rng, memory.seen[0] + 1) as usize;
+        assert!(replacement_slot < CAPACITY);
+        let identity = GoalSlotIdentity {
+            recorded_tick: memory.recorded_tick[replacement_slot],
+            generation: memory.slot_generation[replacement_slot],
+        };
+        let mut logits = vec![-100.0_f32; CAPACITY];
+        logits[replacement_slot] = 100.0;
+        let selected = memory.choose_inner(&logits, 0.01, &[132]).unwrap();
+        assert_eq!(selected.slot, vec![replacement_slot as i32]);
+        assert_eq!(selected.generation, vec![identity.generation]);
+
+        let mut associations =
+            PersonalGoalAssociations::new(1, PersonalGoalConfig::current(true)).unwrap();
+        associations
+            .replace_slots(&[GoalSlotReplacement {
+                resident: 0,
+                slot: replacement_slot,
+                identity,
+            }])
+            .unwrap();
+        associations
+            .begin_goals(&[GoalStart {
+                resident: 0,
+                slot: replacement_slot,
+                identity,
+                selected_at_tick: 132,
+                physiology: [0.35, 0.10, 0.20],
+            }])
+            .unwrap();
+
+        memory
+            .push_inner(&[132.0], &[132], &[6.6], &[false])
+            .unwrap();
+        let replacement = memory.remember_with_changes_inner(&key, &[true]).unwrap();
+        assert_eq!(replacement.slots, vec![replacement_slot as i32]);
+        let replacement_identity = GoalSlotIdentity {
+            recorded_tick: memory.recorded_tick[replacement_slot],
+            generation: replacement.generations[0],
+        };
+        assert!(replacement_identity.generation > identity.generation);
+        associations
+            .replace_slots(&[GoalSlotReplacement {
+                resident: 0,
+                slot: replacement_slot,
+                identity: replacement_identity,
+            }])
+            .unwrap();
+
+        let still_selected = memory.current_selection(&[132]);
+        assert_eq!(still_selected.recorded_tick, vec![identity.recorded_tick]);
+        assert_eq!(still_selected.generation, vec![identity.generation]);
+        assert_ne!(
+            memory.slot_generation[replacement_slot],
+            still_selected.generation[0]
+        );
+
+        let mut physiology = [0.35, 0.10, 0.20];
+        let mut final_receipt = None;
+        let mut summed_reward = 0.0_f64;
+        for offset in 0..10_u64 {
+            let after = [
+                physiology[0] + 0.002,
+                physiology[1] + 0.001,
+                physiology[2] - 0.001,
+            ];
+            let outcome = associations
+                .observe_transitions(&[GoalTransition {
+                    resident: 0,
+                    transition_tick: 132 + offset,
+                    before: physiology,
+                    after,
+                    effort: 0.20,
+                    dt: 0.05,
+                }])
+                .unwrap()
+                .pop()
+                .unwrap();
+            summed_reward += outcome.reward as f64;
+            final_receipt = outcome.receipt;
+            physiology = after;
+        }
+        let receipt = final_receipt.unwrap();
+        assert!((summed_reward - 0.34104198589921).abs() < 1e-15);
+        assert_eq!(receipt.summed_objective_return, summed_reward);
+        assert!(receipt.slot_was_replaced);
+        assert!(!receipt.attributed);
+        assert!(!receipt.learned);
     }
 }

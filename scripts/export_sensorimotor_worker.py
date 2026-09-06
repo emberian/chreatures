@@ -13,7 +13,7 @@ from typing import Any
 import numpy as np
 
 
-DEVELOPMENTAL_FORMAT = "chreatures-native-developmental-resident-rich-v2"
+DEVELOPMENTAL_FORMAT = "chreatures-native-developmental-resident-rich-v3"
 RICH_DEVELOPMENT_CHECKPOINT_FORMAT = (
     "chreatures-rich-online-sensorimotor-development-v1"
 )
@@ -25,6 +25,39 @@ DEFAULT_CONSEQUENCE_LAWS = Path(
     "integrations/gam_mechanisms/artifacts/rich_body_laws_v2/"
     "body_consequence_laws.json"
 )
+PERSONAL_GOAL_CONTRACT = {
+    "format": "chreatures-private-goal-associations-v1",
+    "objective": {
+        "format": "chreatures-finite-energy-homeostasis-v1",
+        "sha256": "01ae937a153a056c8cc5fa5be4d55cdfb38dbfcede4dbceb16ec33e19c5f4d00",
+        "config": {
+            "version": 1,
+            "assimilation_efficiency": 0.84,
+            "reserve_target": 0.85,
+            "reserve_temperature": 0.08,
+            "fatigue_energy_weight": 0.08,
+            "gut_comfort": 0.55,
+            "gut_overload_energy_weight": 0.08,
+            "effort_energy_rate": 0.0042,
+            "effort_extra_weight": 0.25,
+            "reward_per_energy": 12.0,
+            "max_interval_seconds": 2.0,
+        },
+    },
+    "features": [
+        "bias",
+        "two_energy_minus_one",
+        "two_gut_minus_one",
+        "two_fatigue_minus_one",
+    ],
+    "slots": 128,
+    "horizon_ticks": 10,
+    "return_scale": 0.01,
+    "learning_rate": 0.05,
+    "weight_norm_limit": 4.0,
+    "logit_gain": 0.35,
+    "learning_default_enabled": True,
+}
 MANAGER_ORDER = (
     "manager.query.0.weight",
     "manager.query.0.bias",
@@ -314,8 +347,8 @@ def export_rich(
     }
     metadata = {
         "format": DEVELOPMENTAL_FORMAT,
-        "version": 2,
-        "execution": "developmental-resident-native-rich-predictive-v2",
+        "version": 3,
+        "execution": "developmental-resident-native-rich-predictive-personal-goals-v3",
         "checkpoint": {
             "path": str(checkpoint_path),
             "sha256": sha256(checkpoint_path),
@@ -355,6 +388,7 @@ def export_rich(
             ),
             "pack_order": ["predictor." + x for x in predictor_names],
         },
+        "personal_goal_associations": PERSONAL_GOAL_CONTRACT,
         "training_identity": json.loads(canonical(identity)),
         "tensors": tensors,
         "pack_order": list(full_order),

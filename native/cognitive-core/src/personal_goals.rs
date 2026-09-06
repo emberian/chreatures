@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Private associations between achieved-goal slots and experienced outcomes.
 //!
-//! This mechanism never computes reward and never inspects a world. The host
-//! supplies the already-observed `FiniteEnergyObjective.transition` reward for
-//! each committed physical transition. Credit is bound to an exact reservoir
+//! This mechanism never inspects a world. The host supplies actual body
+//! physiology and effort for each committed physical transition; this module
+//! computes the authenticated `FiniteEnergyObjective.transition` reward. Credit is bound to an exact reservoir
 //! slot identity `(recorded_tick, generation)` for ten transitions. Replacing
 //! that slot clears its four learned weights and makes pending credit
 //! ineligible, even though goal memory may retain an independent copied window.
@@ -41,7 +41,41 @@ pub const PERSONAL_GOAL_HORIZON_TICKS: u8 = 10;
 pub const FINITE_ENERGY_OBJECTIVE_SHA256: &str =
     "01ae937a153a056c8cc5fa5be4d55cdfb38dbfcede4dbceb16ec33e19c5f4d00";
 
+const ASSIMILATION_EFFICIENCY: f64 = 0.84;
+const RESERVE_TARGET: f64 = 0.85;
+const RESERVE_TEMPERATURE: f64 = 0.08;
+const FATIGUE_ENERGY_WEIGHT: f64 = 0.08;
+const GUT_COMFORT: f64 = 0.55;
+const GUT_OVERLOAD_ENERGY_WEIGHT: f64 = 0.08;
+const EFFORT_ENERGY_RATE: f64 = 0.0042;
+const EFFORT_EXTRA_WEIGHT: f64 = 0.25;
+const REWARD_PER_ENERGY: f64 = 12.0;
+const MAX_INTERVAL_SECONDS: f64 = 2.0;
+const FINITE_ENERGY_FORMAT: &str = "chreatures-finite-energy-homeostasis-v1";
+
 const FORMAT: &str = "chreatures-private-goal-associations-v1";
+
+#[derive(Serialize)]
+struct FiniteEnergyCoefficientIdentity {
+    // Field order matches Python's canonical sorted-key encoding.
+    assimilation_efficiency: f64,
+    effort_energy_rate: f64,
+    effort_extra_weight: f64,
+    fatigue_energy_weight: f64,
+    gut_comfort: f64,
+    gut_overload_energy_weight: f64,
+    max_interval_seconds: f64,
+    reserve_target: f64,
+    reserve_temperature: f64,
+    reward_per_energy: f64,
+    version: u8,
+}
+
+#[derive(Serialize)]
+struct FiniteEnergyIdentity<'a> {
+    config: FiniteEnergyCoefficientIdentity,
+    format: &'a str,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct PersonalGoalConfig {
@@ -84,7 +118,9 @@ impl PersonalGoalConfig {
 
     fn validate(&self) -> Result<(), String> {
         let expected = Self::current(self.learning_enabled);
-        if self != &expected {
+        if self != &expected
+            || finite_energy_objective_identity()? != FINITE_ENERGY_OBJECTIVE_SHA256
+        {
             return Err("private goal association configuration differs".into());
         }
         Ok(())
@@ -92,7 +128,19 @@ impl PersonalGoalConfig {
 
     pub fn identity(&self) -> Result<String, String> {
         self.validate()?;
-        let encoded = serde_json::to_vec(self).map_err(|error| error.to_string())?;
+        // `learning_enabled` is a runtime intervention, not part of the
+        // anatomical/rule identity. Snapshots still persist its exact value.
+        let immutable = (
+            &self.objective_sha256,
+            &self.feature_names,
+            self.slots,
+            self.horizon_ticks,
+            self.return_scale.to_bits(),
+            self.learning_rate.to_bits(),
+            self.weight_norm_limit.to_bits(),
+            self.logit_gain.to_bits(),
+        );
+        let encoded = serde_json::to_vec(&immutable).map_err(|error| error.to_string())?;
         Ok(hex_sha256(&encoded))
     }
 }
@@ -127,6 +175,54 @@ pub struct GoalReward {
     /// Tick of the committed physical transition whose outcome was measured.
     pub transition_tick: u64,
     pub objective_transition_reward: f64,
+}
+
+/// Actual body measurements for one committed physical transition. Nutrition
+/// is intentionally absent: ingested energy is already represented by the
+/// measured after-state gut load and is never paid again here.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GoalTransition {
+    pub resident: usize,
+    pub transition_tick: u64,
+    pub before: [f64; 3],
+    pub after: [f64; 3],
+    pub effort: f64,
+    pub dt: f64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FiniteEnergyComponents {
+    pub reserve_before: f64,
+    pub reserve_after: f64,
+    pub reserve_shortfall_before: f64,
+    pub reserve_shortfall_after: f64,
+    pub fatigue_cost_before: f64,
+    pub fatigue_cost_after: f64,
+    pub gut_overload_cost_before: f64,
+    pub gut_overload_cost_after: f64,
+    pub potential_before: f64,
+    pub potential_after: f64,
+    pub potential_delta_energy: f64,
+    pub effort_cost_energy: f64,
+    pub hunger_gate: f64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct GoalTransitionOutcome {
+    /// The current objective returns float32 rewards; storing this as `f32`
+    /// preserves the exact value accumulated by the prior Python boundary.
+    pub reward: f32,
+    pub components: FiniteEnergyComponents,
+    pub receipt: Option<GoalOutcomeReceipt>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PersonalGoalStats {
+    pub completed_goals: u64,
+    pub learned_goals: u64,
+    pub frozen_goals: u64,
+    pub skipped_replaced_goals: u64,
+    pub cancelled_goals: u64,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
@@ -217,6 +313,28 @@ fn hex_sha256(value: &[u8]) -> String {
         .collect()
 }
 
+pub fn finite_energy_objective_identity() -> Result<String, String> {
+    let identity = FiniteEnergyIdentity {
+        config: FiniteEnergyCoefficientIdentity {
+            assimilation_efficiency: ASSIMILATION_EFFICIENCY,
+            effort_energy_rate: EFFORT_ENERGY_RATE,
+            effort_extra_weight: EFFORT_EXTRA_WEIGHT,
+            fatigue_energy_weight: FATIGUE_ENERGY_WEIGHT,
+            gut_comfort: GUT_COMFORT,
+            gut_overload_energy_weight: GUT_OVERLOAD_ENERGY_WEIGHT,
+            max_interval_seconds: MAX_INTERVAL_SECONDS,
+            reserve_target: RESERVE_TARGET,
+            reserve_temperature: RESERVE_TEMPERATURE,
+            reward_per_energy: REWARD_PER_ENERGY,
+            version: 1,
+        },
+        format: FINITE_ENERGY_FORMAT,
+    };
+    serde_json::to_vec(&identity)
+        .map(|encoded| hex_sha256(&encoded))
+        .map_err(|error| error.to_string())
+}
+
 fn features(physiology: [f64; 3]) -> Result<[f64; PERSONAL_GOAL_FEATURES], String> {
     if physiology
         .iter()
@@ -238,6 +356,83 @@ fn dot(weights: &[f64; PERSONAL_GOAL_FEATURES], x: &[f64; PERSONAL_GOAL_FEATURES
         .zip(x)
         .map(|(weight, value)| weight * value)
         .sum()
+}
+
+fn softplus(value: f64) -> f64 {
+    if value > 0.0 {
+        value + (-value).exp().ln_1p()
+    } else {
+        value.exp().ln_1p()
+    }
+}
+
+#[derive(Clone, Copy)]
+struct FiniteEnergyState {
+    reserve: f64,
+    reserve_shortfall: f64,
+    fatigue_cost: f64,
+    gut_overload_cost: f64,
+    potential: f64,
+}
+
+fn finite_energy_potential(physiology: [f64; 3]) -> Result<FiniteEnergyState, String> {
+    features(physiology)?;
+    let reserve = physiology[0] + ASSIMILATION_EFFICIENCY * physiology[1];
+    let shortfall =
+        RESERVE_TEMPERATURE * softplus((RESERVE_TARGET - reserve) / RESERVE_TEMPERATURE);
+    let fatigue_cost = FATIGUE_ENERGY_WEIGHT * physiology[2] * physiology[2];
+    let gut_excess = (physiology[1] - GUT_COMFORT).max(0.0);
+    let gut_overload_cost = GUT_OVERLOAD_ENERGY_WEIGHT * gut_excess * gut_excess;
+    Ok(FiniteEnergyState {
+        reserve,
+        reserve_shortfall: shortfall,
+        fatigue_cost,
+        gut_overload_cost,
+        potential: -shortfall - fatigue_cost - gut_overload_cost,
+    })
+}
+
+/// Native port of the current `FiniteEnergyObjective.transition` arithmetic.
+/// Its coefficients are authenticated by `FINITE_ENERGY_OBJECTIVE_SHA256`.
+pub fn finite_energy_transition(
+    transition: &GoalTransition,
+) -> Result<(f32, FiniteEnergyComponents), String> {
+    if !transition.dt.is_finite()
+        || !(0.0..=MAX_INTERVAL_SECONDS).contains(&transition.dt)
+        || transition.dt == 0.0
+    {
+        return Err("dt must be finite and in (0,2] seconds".into());
+    }
+    if !transition.effort.is_finite() || !(0.0..=1.0).contains(&transition.effort) {
+        return Err("effort must be finite and in [0,1]".into());
+    }
+    let before = finite_energy_potential(transition.before)?;
+    let after = finite_energy_potential(transition.after)?;
+    let potential_delta_energy = after.potential - before.potential;
+    let effort_cost_energy =
+        EFFORT_EXTRA_WEIGHT * EFFORT_ENERGY_RATE * transition.effort * transition.dt;
+    let reward = (REWARD_PER_ENERGY * (potential_delta_energy - effort_cost_energy)) as f32;
+    let hunger_argument =
+        ((before.reserve - RESERVE_TARGET) / RESERVE_TEMPERATURE).clamp(-60.0, 60.0);
+    let hunger_gate = 1.0 / (1.0 + hunger_argument.exp());
+    Ok((
+        reward,
+        FiniteEnergyComponents {
+            reserve_before: before.reserve,
+            reserve_after: after.reserve,
+            reserve_shortfall_before: before.reserve_shortfall,
+            reserve_shortfall_after: after.reserve_shortfall,
+            fatigue_cost_before: before.fatigue_cost,
+            fatigue_cost_after: after.fatigue_cost,
+            gut_overload_cost_before: before.gut_overload_cost,
+            gut_overload_cost_after: after.gut_overload_cost,
+            potential_before: before.potential,
+            potential_after: after.potential,
+            potential_delta_energy,
+            effort_cost_energy,
+            hunger_gate,
+        },
+    ))
 }
 
 impl PersonalGoalAssociations {
@@ -275,6 +470,24 @@ impl PersonalGoalAssociations {
 
     pub fn residents(&self) -> usize {
         self.residents
+    }
+
+    /// Enable or freeze NLMS updates without changing the rule identity.
+    /// Pending goals continue to consume their full outcome horizon and emit
+    /// receipts while frozen.
+    pub fn set_learning_enabled(&mut self, enabled: bool) {
+        self.config.learning_enabled = enabled;
+    }
+
+    pub fn stats(&self, resident: usize) -> Result<PersonalGoalStats, String> {
+        let individual = self.individual(resident)?;
+        Ok(PersonalGoalStats {
+            completed_goals: individual.completed_goals,
+            learned_goals: individual.learned_goals,
+            frozen_goals: individual.frozen_goals,
+            skipped_replaced_goals: individual.skipped_replaced_goals,
+            cancelled_goals: individual.cancelled_goals,
+        })
     }
 
     fn individual(&self, resident: usize) -> Result<&Individual, String> {
@@ -564,6 +777,41 @@ impl PersonalGoalAssociations {
             .collect())
     }
 
+    /// Compute the authenticated finite-energy reward from actual body
+    /// measurements, then apply exact pending-goal credit. All transitions and
+    /// pending ticks are validated before any association state is mutated.
+    pub fn observe_transitions(
+        &mut self,
+        transitions: &[GoalTransition],
+    ) -> Result<Vec<GoalTransitionOutcome>, String> {
+        if transitions.len() > self.residents {
+            return Err("goal transition batch exceeds resident cohort".into());
+        }
+        let mut rewards = Vec::with_capacity(transitions.len());
+        let mut components = Vec::with_capacity(transitions.len());
+        for transition in transitions {
+            let (reward, terms) = finite_energy_transition(transition)?;
+            rewards.push(GoalReward {
+                resident: transition.resident,
+                transition_tick: transition.transition_tick,
+                objective_transition_reward: reward as f64,
+            });
+            components.push((reward, terms));
+        }
+        // `observe_rewards` performs cohort bounds, duplicate-resident, and
+        // pending tick validation across the complete batch before mutation.
+        let receipts = self.observe_rewards(&rewards)?;
+        Ok(components
+            .into_iter()
+            .zip(receipts)
+            .map(|((reward, components), receipt)| GoalTransitionOutcome {
+                reward,
+                components,
+                receipt,
+            })
+            .collect())
+    }
+
     /// Cancel credit on a reset or discontinuity without changing learned slot
     /// models. Returns whether a pending goal was cancelled.
     pub fn cancel_pending(&mut self, resident: usize) -> Result<bool, String> {
@@ -592,7 +840,7 @@ impl PersonalGoalAssociations {
         config.validate()?;
         let state: Self = serde_json::from_str(value).map_err(|error| error.to_string())?;
         if state.schema != FORMAT
-            || state.config != *config
+            || state.config.identity()? != config.identity()?
             || state.config_sha256 != config.identity()?
             || state.residents != residents
         {

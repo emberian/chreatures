@@ -247,6 +247,7 @@ class Habitat3D:
                 "slot": -1,
                 "recorded_tick": 0,
                 "recorded_time": 0.0,
+                "generation": 0,
                 "remaining_ticks": 0,
             },
             "sampled_proposal": {name: 0.0 for name in ACTION_NAMES},
@@ -255,6 +256,21 @@ class Habitat3D:
                 "oral": 0.0,
             },
             "outcome": {},
+            "personal_goal_learning": {
+                "selected_bias": 0.0,
+                "prediction": 0.0,
+                "last_transition_reward": 0.0,
+                "last_completed_return": 0.0,
+                "completed": False,
+                "attributed": False,
+                "learned": False,
+                "completed_total": 0,
+                "learned_total": 0,
+                "frozen_total": 0,
+                "skipped_replaced_total": 0,
+                "cancelled_total": 0,
+                "learning_enabled": True,
+            },
             "model_identity": copy.deepcopy(self.residents.model_identity),
         }
 
@@ -378,6 +394,7 @@ class Habitat3D:
                     "slot": int(result["goal_slot"][index]),
                     "recorded_tick": int(result["goal_recorded_tick"][index]),
                     "recorded_time": float(result["goal_recorded_time"][index]),
+                    "generation": int(result["goal_generation"][index]),
                     "remaining_ticks": int(result["goal_remaining_ticks"][index]),
                 },
                 "sampled_proposal": dict(
@@ -419,6 +436,34 @@ class Habitat3D:
                     "empirical_goal_error_scale": float(result["forecast_goal_rms"]),
                     "meaning": "one-step predicted progress toward an achieved sensory goal; disagreement is not calibrated confidence",
                 },
+                "personal_goal_learning": {
+                    "selected_bias": float(
+                        result["personal_goal_selected_bias"][index]
+                    ),
+                    "prediction": float(result["personal_goal_prediction"][index]),
+                    "last_transition_reward": float(
+                        result["personal_goal_last_reward"][index]
+                    ),
+                    "last_completed_return": float(
+                        result["personal_goal_last_return"][index]
+                    ),
+                    "completed": bool(result["personal_goal_completed"][index]),
+                    "attributed": bool(result["personal_goal_attributed"][index]),
+                    "learned": bool(result["personal_goal_learned"][index]),
+                    "completed_total": int(
+                        result["personal_goal_completed_total"][index]
+                    ),
+                    "learned_total": int(result["personal_goal_learned_total"][index]),
+                    "frozen_total": int(result["personal_goal_frozen_total"][index]),
+                    "skipped_replaced_total": int(
+                        result["personal_goal_skipped_total"][index]
+                    ),
+                    "cancelled_total": int(
+                        result["personal_goal_cancelled_total"][index]
+                    ),
+                    "learning_enabled": bool(result["personal_goal_learning_enabled"]),
+                    "meaning": "private association between selected achieved goals and actual finite-energy transition returns",
+                },
                 "model_identity": copy.deepcopy(self.residents.model_identity),
             }
 
@@ -438,6 +483,22 @@ class Habitat3D:
             self.cognition_state[body.id]["outcome"] = copy.deepcopy(
                 self.outcomes[body.id]
             )
+
+    def _record_goal_receipts(self, receipts: dict[str, np.ndarray]) -> None:
+        for index, body in enumerate(self.world.bodies):
+            state = self.cognition_state[body.id]["personal_goal_learning"]
+            state["last_transition_reward"] = float(receipts["reward"][index])
+            completed = bool(receipts["completed"][index])
+            state["completed"] = completed
+            state["attributed"] = bool(receipts["attributed"][index])
+            state["learned"] = bool(receipts["learned"][index])
+            state["completed_total"] = int(receipts["completed_total"][index])
+            state["learned_total"] = int(receipts["learned_total"][index])
+            state["frozen_total"] = int(receipts["frozen_total"][index])
+            state["skipped_replaced_total"] = int(receipts["skipped_total"][index])
+            state["cancelled_total"] = int(receipts["cancelled_total"][index])
+            if completed:
+                state["last_completed_return"] = float(receipts["summed_return"][index])
 
     def step(self, steps: int = 1) -> None:
         if type(steps) is not int or steps < 1:
@@ -554,12 +615,18 @@ class Habitat3D:
                 )
             fields_done = time.perf_counter()
             self.pending_step["phase"] = "personal-consequences"
-            self.residents.observe_consequences(
+            goal_receipts = self.residents.observe_consequences(
                 np.full(len(self.world.bodies), self.tick, dtype=np.uint64),
                 physiology,
                 self._physiology_rows(response_by_body),
                 self.actual_previous,
+                np.asarray(
+                    [self.outcomes[body.id]["effort"] for body in self.world.bodies],
+                    dtype=np.float32,
+                ),
+                dt=MODEL_DT,
             )
+            self._record_goal_receipts(goal_receipts)
             personal_done = time.perf_counter()
             self.phase_timings.append(
                 {
@@ -616,6 +683,17 @@ class Habitat3D:
                 raise ValueError("speed must be 1, 2 or 4")
             self.speed = command["value"]
             return {"speed": self.speed}
+        if op == "personal_goal_learning":
+            if type(command.get("enabled")) is not bool:
+                raise ValueError("personal goal learning enabled must be boolean")
+            enabled = command["enabled"]
+            self.residents.set_personal_goal_learning(enabled)
+            self.note(
+                "research-intervention",
+                "Private goal association learning changed.",
+                personal_goal_learning_enabled=enabled,
+            )
+            return {"personal_goal_learning_enabled": enabled}
         if op == "bookmark":
             text = command.get("text", "A moment in the garden.")
             if not isinstance(text, str) or len(text) > 500:
