@@ -728,3 +728,39 @@ fits and any corrected schema recipes are retained separately; a fitted bank
 will enter only a new designated research birth. Larger populations and coupled
 organs are implemented, but useful ecological strategies and durable reciprocal
 behavior remain empirical work.
+
+The full campaign subsequently closed with 1,033,824 committed resident
+transitions: 16 lives completed 24,000 ticks, and 64 retained the two shared
+engine failures. Twelve completed candidates remain in the bounded search
+archive. No additional candidates were silently requested. Completion here
+means reaching the allotted simulation horizon; the completed cohort did not
+demonstrate sustained acquisition or energy regulation.
+
+Two actual native GAM fits now model one-step energy-state change and effort.
+Their source is the durable 315,392-transition B0 prefix, with one common
+founder. Training uses a declared temporal subsample; validation and final
+candidate/environment holdouts retain whole units. On 108,416 held-out rows,
+energy-change RMSE is 2.507e-5 versus 3.468e-5 for the training-mean baseline;
+effort RMSE is 0.03269 versus 0.13016. Residual calibration uses validation
+worlds only. Rust's fitted-domain gate covers 96.75% of held-out rows. The
+two earlier failed fit attempts remain in the evidence graph, which now has
+628 native Universal Weave nodes and 1,467 edges. These are predictive fits
+under recorded actions, without an established causal control benefit.
+
+Hbox's separate v5 lineage trains the physiology adapter and four organ-action
+projections on 32 bodies with four inherited policy adapters. Its exported
+update-20 checkpoint contains 81,920 actual training transitions. Both new
+organs acquired nonzero parameters; eating, release, secretion and allocation
+were executed on 4.4–6.1% of those transitions, reflecting the deliberately
+broader cold exploration as well as subsequent updates. The mean energy
+change remained negative. Persvati continues the independently pinned v4
+lineage; it is not relabeled as v5. The compact
+[training/export receipt](../data/training/population-v5-update20/receipt.json)
+binds the learned artifact and measured parameter changes.
+
+Profile v7 separates physical/source identity from absolute host paths.
+Relocating identical sources preserves the generated environment and native
+candidate-plan identity. The current training snapshot is v8, with explicit
+locator rebinding; already-allocated v6 training runs remain on their original
+source freezes. This removes a real cross-machine launch failure without
+introducing another runtime compatibility branch.
