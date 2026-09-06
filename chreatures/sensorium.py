@@ -310,6 +310,13 @@ class BatchedRaySensoriumMixin:
         super()._rebuild_preserving()
         self._prepare_native_sensorium()
 
+    def _adopt_topology_candidate(
+        self, candidate: PhysicsWorld, replaced_entities: set[str],
+    ) -> None:
+        """Rebind model-address state after an atomic topology transaction."""
+        super()._adopt_topology_candidate(candidate, replaced_entities)
+        self._prepare_native_sensorium()
+
     def _sample_retina_cohort(self) -> None:
         gaze = np.ascontiguousarray(
             [body.gaze_pitch for body in self.bodies], dtype=np.float64
