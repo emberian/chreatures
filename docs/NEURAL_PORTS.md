@@ -175,6 +175,16 @@ the existing `brain.inputs` and `brain.readouts` fields. Omitting
 still use `--mapping-json` for explicit selector maps; the two mapping options
 are mutually exclusive.
 
+For an explicitly selected derived circuit, metadata also reports
+`brain.ports.encoding_sha256` and `brain.ports.graph_identity`. The encoding
+hash covers every field read by `encode_physical_senses`: schema version,
+interface name, and the complete `physical_inputs` document. It intentionally
+excludes graph routing and readouts because those do not change physical value
+preprocessing; their exact identities remain covered by `spec_hash` and the
+required bundle checksum. This lets the ordinary `NeuralClient` encode the same
+351 physical channels for a new derived service without treating the derived
+neuron routing as the canonical port artifact.
+
 Snapshot requests may include `resident_ids` to create a named cohort
 snapshot. Its receipt records `scope = "cohort"` and the exact ordered resident
 IDs. Restoring that receipt changes only those residents, creates missing cohort

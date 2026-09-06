@@ -41,6 +41,16 @@ def _sha256(path: Path, chunk_size: int = 8 * 1024 * 1024) -> str:
     return digest.hexdigest()
 
 
+def encoding_sha256(spec: Mapping[str, Any]) -> str:
+    """Hash every declarative field consumed by physical-sense preprocessing."""
+    semantic = {
+        "schema_version": spec.get("schema_version"),
+        "name": spec.get("name"),
+        "physical_inputs": spec.get("physical_inputs"),
+    }
+    return hashlib.sha256(_canonical_json(semantic).encode()).hexdigest()
+
+
 def _names() -> list[str]:
     names = [
         f"retina/e{elevation:02d}/a{azimuth:02d}/{component}"

@@ -48,11 +48,17 @@ def _sha256(path: Path, chunk_size: int = 8 * 1024 * 1024) -> str:
     return digest.hexdigest()
 
 
-def port_bundle_config(graph: Any, bundle_path: Path, spec_path: Path | None):
-    from chreatures.neural_ports import NeuralPortBundle, load_port_spec
+def port_bundle_config(
+    graph: Any, bundle_path: Path, spec_path: Path | None, *,
+    expected_sha256: str | None = None,
+    graph_identity: dict[str, Any] | None = None,
+):
+    from chreatures.neural_ports import NeuralPortBundle, encoding_sha256, load_port_spec
 
     bundle = NeuralPortBundle.load(bundle_path, graph)
     bundle_sha256 = _sha256(bundle_path)
+    if expected_sha256 is not None and bundle_sha256 != expected_sha256:
+        raise ValueError("port bundle checksum differs from the requested identity")
     if spec_path is not None:
         semantic_spec = load_port_spec(spec_path)
         semantic_hash = hashlib.sha256(
@@ -77,6 +83,11 @@ def port_bundle_config(graph: Any, bundle_path: Path, spec_path: Path | None):
         "bundle_sha256": bundle_sha256,
         "bundle_bytes": bundle_path.stat().st_size,
     }
+    if graph_identity is not None:
+        metadata.update({
+            "encoding_sha256": encoding_sha256(bundle.spec),
+            "graph_identity": graph_identity,
+        })
     kwargs = bundle.remote_brain_kwargs()
     return kwargs["input_map"], kwargs["readout_map"], metadata
 
@@ -249,8 +260,12 @@ def write_pid(path: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--graph", type=Path)
+    parser.add_argument("--graph-kind", choices=("canonical", "derived"), default="canonical")
+    parser.add_argument("--expected-graph-sha256")
+    parser.add_argument("--expected-graph-manifest-sha256")
     parser.add_argument("--mapping-json", type=Path)
     parser.add_argument("--port-bundle", type=Path)
+    parser.add_argument("--expected-port-bundle-sha256")
     parser.add_argument("--port-spec", type=Path)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--capacity", type=int, default=16)
@@ -276,13 +291,51 @@ def main() -> None:
         parser.error("--mapping-json and --port-bundle are mutually exclusive")
     if args.port_spec is not None and args.port_bundle is None:
         parser.error("--port-spec requires --port-bundle")
+    if args.graph_kind == "derived":
+        required = {
+            "--graph": args.graph,
+            "--expected-graph-sha256": args.expected_graph_sha256,
+            "--expected-graph-manifest-sha256": args.expected_graph_manifest_sha256,
+            "--port-bundle": args.port_bundle,
+            "--expected-port-bundle-sha256": args.expected_port_bundle_sha256,
+        }
+        missing = [name for name, value in required.items() if value is None]
+        if missing:
+            parser.error(f"derived graph requires {', '.join(missing)}")
+        if args.mapping_json is not None or args.port_spec is not None:
+            parser.error(
+                "derived graph uses its compiled port bundle without selector overrides"
+            )
 
-    from chreatures.malecns import MaleCNSGraph
+    from chreatures.malecns import load_graph_artifact
 
-    graph = MaleCNSGraph.load(args.graph, mmap=True)
+    graph = load_graph_artifact(
+        args.graph, kind=args.graph_kind,
+        expected_sha256=args.expected_graph_sha256, mmap=True, verify=True,
+    )
+    manifest_path = Path(graph.path) / "manifest.json"
+    manifest_sha256 = _sha256(manifest_path)
+    if (
+        args.expected_graph_manifest_sha256 is not None
+        and manifest_sha256 != args.expected_graph_manifest_sha256
+    ):
+        raise ValueError("graph manifest checksum differs from the requested identity")
+    graph_identity = None
+    if args.graph_kind == "derived":
+        ancestry = graph.manifest["graph_ancestry"]
+        graph_identity = {
+            "kind": "derived",
+            "graph_sha256": graph.hash,
+            "manifest_sha256": manifest_sha256,
+            "measured_root_graph_sha256": ancestry[0]["graph_sha256"],
+            "parent_graph_sha256": graph.manifest["source_graph"]["dataset_hash"],
+            "blueprint_sha256": graph.manifest["derivation"]["blueprint_sha256"],
+        }
     if args.port_bundle is not None:
         inputs, readouts, port_metadata = port_bundle_config(
-            graph, args.port_bundle, args.port_spec
+            graph, args.port_bundle, args.port_spec,
+            expected_sha256=args.expected_port_bundle_sha256,
+            graph_identity=graph_identity,
         )
     else:
         inputs, readouts = mapping_config(graph, args.mapping_json)
@@ -317,6 +370,11 @@ def main() -> None:
         "port": args.port,
         "snapshot_directory": str(args.snapshot_dir.resolve()),
         "pid_file": str(args.pid_file.resolve()),
+        "graph_selection": {
+            "kind": args.graph_kind,
+            "graph_sha256": graph.hash,
+            "manifest_sha256": manifest_sha256,
+        },
     }
     server = ThreadingHTTPServer((args.bind, args.port), handler_type(sequenced, server_metadata))
     try:

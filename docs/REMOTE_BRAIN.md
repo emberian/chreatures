@@ -49,6 +49,54 @@ Full neural state never travels in an HTTP request: snapshot and restore use a
 safe checkpoint ID for compressed files inside the configured server snapshot
 directory and return a SHA-256 receipt.
 
+### Explicit derived circuit service
+
+The same AMD `RemoteBrain` service can run a compiled `CircuitBlueprint` graph.
+Derived loading is opt-in and requires the expected graph, manifest, and port
+bundle hashes. The canonical default does not infer or accept a derived graph.
+For the checked generation-two research circuit:
+
+```sh
+HSA_OVERRIDE_GFX_VERSION=10.3.0 \
+PYTHONPATH=/tank/chreatures/service-src \
+/tank/chreatures/envs/rocm-dev/bin/python \
+  /tank/chreatures/service-src/scripts/serve_brain.py \
+  --graph-kind derived \
+  --graph /tank/chreatures/data/circuit-blueprints/lineage-g2-seed40 \
+  --expected-graph-sha256 d4d927715b988e00249730dba3cb496210fc442b9fad5288cb2f0d8438331163 \
+  --expected-graph-manifest-sha256 42a781ac806733b8819c87fffa393f3759dcfb79170732869fa98d9da21302a2 \
+  --port-bundle /tank/chreatures/data/circuit-blueprints/lineage-g2-seed40/ports.npz \
+  --expected-port-bundle-sha256 01b0e6038de2ef41fc631d8d7f055d507ffad111430ae2b09d11ada327ed7d0e \
+  --device cuda --capacity 3 --microbatch-size 3 \
+  --bind 127.0.0.1 --port 8770 \
+  --snapshot-dir /tank/chreatures/runs/server/derived-g2/snapshots \
+  --pid-file /tank/chreatures/runs/server/derived-g2/brain.pid
+```
+
+Startup verifies the graph's base and derived artifacts before allocating
+state. Metadata reports the selected graph kind, exact graph and manifest
+hashes, direct parent, measured root, blueprint, full port spec, and bundle
+hashes. The derived identity is also embedded in the existing version-three
+snapshot `ports` metadata, so restore rejects another derivation, source
+manifest, or port artifact even when dimensions happen to match.
+
+The 351-channel physical encoder is allowed across graph-specific port specs
+only when its complete declarative preprocessing document has the same hash.
+This covers channel order, shapes, scaling, contact limits, and optional feature
+ports. The graph routing and readout identities remain distinct and continue to
+be pinned by the full port spec and bundle hashes.
+
+An isolated run used this command on hbox, then connected through an SSH
+tunnel with the ordinary `NeuralClient`. One direct resident produced 384
+readouts; its checksum-pinned snapshot replayed with maximum absolute delta
+zero. A fresh three-resident articulated `Habitat3D` then ran two physical
+steps, saved its whole checkpoint, and reproduced the next physical and neural
+step exactly after restore. The private service and tunnel were stopped after
+the check. The evidence is recorded in
+`data/circuit-blueprints/derived-g2-service-v1.receipt.json`. This verifies
+integration and identity enforcement, not behavioral benefit from the
+synthetic circuit.
+
 ## Ordered API
 
 `GET /v1/health` reports liveness, residents, and the next mutation sequence.
@@ -127,6 +175,10 @@ optional `readout_gains`, which are passed to `MaleCNSGraph.build_input_map`
 and `build_readout_map`. The service validates sparse `N x C` and `48 x N`
 shapes at startup. The default maps come from the pinned artifact manifest and
 are preferable for reproducible runs.
+
+Selector overrides are disabled for derived mode. A derived service must use
+the port bundle emitted by its blueprint compilation and pin that file on the
+command line.
 
 ## Measured full-graph run
 

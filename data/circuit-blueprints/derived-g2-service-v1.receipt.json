@@ -1,0 +1,87 @@
+{
+  "claim_boundary": "Research integration check only; it establishes identity-safe execution and exact continuation, not behavioral benefit or biological fidelity.",
+  "direct_client": {
+    "encoding_sha256": "bb602eaa94456e35869d7e0fbfd6530fa46f52222f65a4c28647bab728d81816",
+    "features": 384,
+    "first_time": 0.05,
+    "graph_sha256": "d4d927715b988e00249730dba3cb496210fc442b9fad5288cb2f0d8438331163",
+    "port_bundle_sha256": "01b0e6038de2ef41fc631d8d7f055d507ffad111430ae2b09d11ada327ed7d0e",
+    "port_spec_sha256": "6717b9ddfb2cf2431da3139fbeddb2ae656658e9a2455057f1819e9f61006365",
+    "replay_time": 0.1,
+    "resident": "derived-api",
+    "snapshot": {
+      "bytes": 1044731,
+      "scope": "all",
+      "sha256": "0f0fc5bff992c0134d37b18e6943e4ed0e1ff6f920f94b563bdac856d2a08a3e"
+    },
+    "snapshot_identity_embedded": {
+      "graph_manifest_sha256": "42a781ac806733b8819c87fffa393f3759dcfb79170732869fa98d9da21302a2",
+      "graph_sha256": "d4d927715b988e00249730dba3cb496210fc442b9fad5288cb2f0d8438331163",
+      "port_bundle_sha256": "01b0e6038de2ef41fc631d8d7f055d507ffad111430ae2b09d11ada327ed7d0e",
+      "version": 3
+    },
+    "snapshot_replay_max_abs_delta": 0.0
+  },
+  "embodied_habitat": {
+    "checkpoint_sha256": "4aed6a30ba23b99821505069c19693a7b217705380303683573072380fc7a185",
+    "continuation_exact": true,
+    "continuation_steps": 1,
+    "graph_sha256": "d4d927715b988e00249730dba3cb496210fc442b9fad5288cb2f0d8438331163",
+    "neural_snapshot_scope": "cohort",
+    "physics_backend": "reference",
+    "port_bundle_sha256": "01b0e6038de2ef41fc631d8d7f055d507ffad111430ae2b09d11ada327ed7d0e",
+    "port_spec_sha256": "6717b9ddfb2cf2431da3139fbeddb2ae656658e9a2455057f1819e9f61006365",
+    "readouts": 384,
+    "residents": 3,
+    "snapshot_identity_embedded": true,
+    "steps_before_snapshot": 2
+  },
+  "schema_version": 1,
+  "service": {
+    "backend": "RemoteBrain",
+    "capacity": 3,
+    "device": {
+      "gcn_arch_name": "gfx1030",
+      "type": "cuda"
+    },
+    "graph": {
+      "edges": 27550961,
+      "neurons": 172376,
+      "sha256": "d4d927715b988e00249730dba3cb496210fc442b9fad5288cb2f0d8438331163"
+    },
+    "graph_selection": {
+      "graph_sha256": "d4d927715b988e00249730dba3cb496210fc442b9fad5288cb2f0d8438331163",
+      "kind": "derived",
+      "manifest_sha256": "42a781ac806733b8819c87fffa393f3759dcfb79170732869fa98d9da21302a2"
+    },
+    "microbatch_size": 3,
+    "ports": {
+      "bundle_bytes": 425450,
+      "bundle_sha256": "01b0e6038de2ef41fc631d8d7f055d507ffad111430ae2b09d11ada327ed7d0e",
+      "encoding_sha256": "bb602eaa94456e35869d7e0fbfd6530fa46f52222f65a4c28647bab728d81816",
+      "graph_identity": {
+        "blueprint_sha256": "75e069cfbd61a8203415a1cbfd896057908471516c73a091fae4dbeedf2b670b",
+        "graph_sha256": "d4d927715b988e00249730dba3cb496210fc442b9fad5288cb2f0d8438331163",
+        "kind": "derived",
+        "manifest_sha256": "42a781ac806733b8819c87fffa393f3759dcfb79170732869fa98d9da21302a2",
+        "measured_root_graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+        "parent_graph_sha256": "5ce567fb10d391b560dc12a00a4d1595a41859ebfabed6d3b4bff1c6307f1e97"
+      },
+      "input_count": 351,
+      "mode": "versioned_bundle",
+      "name": "retinal-v1",
+      "readout_count": 384,
+      "spec_hash": "6717b9ddfb2cf2431da3139fbeddb2ae656658e9a2455057f1819e9f61006365"
+    },
+    "stopped_after_check": true,
+    "torch": "2.5.1+rocm6.2",
+    "torch_hip": "6.2.41133-dd7f95766"
+  },
+  "source_sha256": {
+    "chreatures/malecns.py": "d8f801403342bcb6965f2dc75af31a75e565d361a189567da90470f6b466dbb8",
+    "chreatures/neural_client.py": "7a96216c11b55765e6b39c1a5ad266541e13447c4ddfd52c6f928f5a7d84a241",
+    "chreatures/neural_ports.py": "5fb54dff5974953ee490fee91d130569ff171e56cd96364911bb936ec8812f86",
+    "chreatures/remote_brain.py": "24edd9238a023954e7fbad09959fe42214806425ad57a2d8ef2fa6851b6ec289",
+    "scripts/serve_brain.py": "ffa467d8e74238a7f941d3933bdd15782c89737098f076a56ab782d8cd7f8292"
+  }
+}

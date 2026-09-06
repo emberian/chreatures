@@ -22,6 +22,7 @@ from scipy import sparse
 DEFAULT_ARTIFACT_DIR = Path("/tank/chreatures/data/malecns/derived")
 SelectorValue: TypeAlias = str | int | Collection[str] | Collection[int] | None
 Selector: TypeAlias = Mapping[str, SelectorValue] | np.ndarray | Collection[int]
+GRAPH_KINDS = ("canonical", "derived")
 
 _FIELD_ALIASES = {
     "id": "ids",
@@ -65,6 +66,45 @@ def _sha256(path: Path, chunk_size: int = 8 * 1024 * 1024) -> str:
         for chunk in iter(lambda: stream.read(chunk_size), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def load_graph_artifact(
+    path: str | Path | None = None, *, kind: str = "canonical",
+    expected_sha256: str | None = None, mmap: bool = True, verify: bool = True,
+) -> MaleCNSGraph:
+    """Load one explicit canonical or derived graph through the shared interface."""
+    if kind not in GRAPH_KINDS:
+        raise ValueError(f"graph kind must be one of {GRAPH_KINDS}")
+    artifact = _resolve_artifact_dir(path)
+    manifest_path = artifact / "manifest.json"
+    if not manifest_path.is_file():
+        raise FileNotFoundError(f"MaleCNS manifest not found at {manifest_path}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    graph_format = manifest.get("format")
+    if graph_format not in {None, "chreatures-derived-circuit-v1"}:
+        raise ValueError(f"unsupported neural graph artifact format {graph_format!r}")
+    derived = graph_format == "chreatures-derived-circuit-v1"
+    if kind == "canonical" and derived:
+        raise ValueError("derived circuit requires explicit graph kind 'derived'")
+    if kind == "derived" and not derived:
+        raise ValueError("requested derived graph is not a compiled circuit blueprint")
+    if kind == "derived" and expected_sha256 is None:
+        raise ValueError("derived circuit requires an expected graph SHA-256")
+    if expected_sha256 is not None and (
+        len(expected_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in expected_sha256)
+    ):
+        raise ValueError("expected graph SHA-256 must be lowercase hexadecimal")
+    if derived:
+        from .circuit_blueprint import DerivedCircuitGraph
+        graph = DerivedCircuitGraph.load(artifact, mmap=mmap, verify=verify)
+    else:
+        graph = MaleCNSGraph.load(artifact, mmap=mmap, verify=verify)
+    if expected_sha256 is not None and graph.hash != expected_sha256:
+        raise ValueError(
+            f"graph SHA-256 differs: expected {expected_sha256}, observed {graph.hash}"
+        )
+    return graph
 
 
 class MaleCNSGraph:
