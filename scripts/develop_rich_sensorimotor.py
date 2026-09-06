@@ -173,8 +173,8 @@ def load_candidate_plan(args, graph_hash, port_spec_hash, profile_hash, bootstra
     value = json.loads(path.read_text())
     if (
         value.get("format")
-        != "chreatures-torch-population-training-candidates-v1"
-        or value.get("version") != 1
+        != "chreatures-torch-population-training-candidates-v2"
+        or value.get("version") != 2
         or value.get("content_sha256")
         != hashlib.sha256(
             canonical_bytes(
