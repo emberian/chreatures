@@ -111,3 +111,64 @@ rare structured pipe operations.
 maximum per-world CPU time for observation and advance. Training receipts use
 this measurement together with neural and optimizer timings; it is a whole-path
 measurement rather than a GPU kernel throughput figure.
+
+## Population campaign jobs
+
+Population jobs use `scripts/platform/campaign_job.py`; the launcher supervises
+ordinary commands and does not implement population search. A sealed
+`chreatures-campaign-job-v1` manifest pins the host, exact source, executable,
+environment settings, graph/ports/controller compatibility group, immutable
+artifacts, candidate IDs, resource request, command argv, and external bulk
+paths. Commands are argv arrays and never pass through a shell. Environment
+values in a manifest must not contain credentials.
+
+Create and validate a sealed job before launch:
+
+```sh
+python scripts/platform/campaign_job.py seal job.unsealed.json job.json
+python scripts/platform/campaign_job.py validate job.json
+python scripts/platform/campaign_job.py launch job.json
+python scripts/platform/campaign_job.py status job.json
+```
+
+The resource check happens before graph or weight hashes are read. It requires
+the declared available host RAM and bulk disk, and checks available AMD VRAM
+when Linux exposes it through sysfs. A source may be an exact clean Git checkout
+or an extracted source tree with a hash-pinned archive receipt and byte hashes
+for every scoped entry point. The executable has its own byte hash, and the
+environment names one or more immutable receipt artifacts for its package/ABI
+identity. Immutable files use byte hashes; large directories use a hash-pinned
+identity file plus their logical content hash.
+
+Each candidate gets a private external directory containing an identity marker.
+Candidates in one `compatibility_group` may share immutable graph and base
+weights, while controller adapters, neural state, body state, RNG, memory and
+checkpoints stay private. The sealed paths also name a campaign-relative shared
+cache for compiled kernels and read-only reusable caches. The generic launcher
+never merges candidate state.
+
+Launch is idempotent for a sealed identity. A pending, running, or completed job
+is returned without starting another process. A failed job remains failed until
+`resume` is requested. Resume is available only when the original sealed
+manifest includes a distinct `resume_argv` and versioned `resume_mode`
+description; the application command remains responsible for loading and
+validating its coherent checkpoint.
+
+Supervision is stored below the manifest's campaign-relative supervision path:
+
+```text
+job.json
+state.json
+attempts/0001/supervisor.pid
+attempts/0001/child.pid
+attempts/0001/run.log
+attempts/0001/exit-status.json
+```
+
+The launcher uses a file lock, a detached process session, and atomic JSON/PID
+writes. `state.json` reports `pending`, `running`, `completed`, or `failed` and
+points to the immutable attempt receipt. Failed attempts and logs are retained.
+Current external roots are `/tank/chreatures/campaigns/v1` on hbox,
+`/home/ember/chreatures-campaigns/v1` on persvati, and `runs/campaigns/v1` on
+the M2. The M2 root is for orchestration and compact receipts because its local
+disk has much less free space than either AMD host.

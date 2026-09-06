@@ -1,0 +1,48 @@
+{
+  "format": "chreatures-population-response-features-v1",
+  "status": "frozen input contract; response targets await measured population telemetry",
+  "excludes": [
+    "world identity",
+    "environment identity",
+    "lineage identity",
+    "object identity",
+    "privileged world coordinates"
+  ],
+  "features": [
+    {"name":"energy","unit":"physiology encoding","source":"physiology12[0]"},
+    {"name":"gut","unit":"physiology encoding","source":"physiology12[1]"},
+    {"name":"fatigue","unit":"physiology encoding","source":"physiology12[2]"},
+    {"name":"speed","unit":"tanh(speed_m_per_s / 2)","source":"physiology12[3]"},
+    {"name":"turn","unit":"body-local turn encoding","source":"physiology12[4]"},
+    {"name":"neural_support","unit":"physiology encoding","source":"physiology12[5]"},
+    {"name":"structural_integrity","unit":"fraction","source":"physiology12[6]"},
+    {"name":"development_fraction","unit":"fraction","source":"physiology12[7]"},
+    {"name":"gland_fill","unit":"fraction","source":"physiology12[8]"},
+    {"name":"brood_fill","unit":"fraction","source":"physiology12[9]"},
+    {"name":"reproductive_maturity","unit":"fraction","source":"physiology12[10]"},
+    {"name":"exchange_load","unit":"physiology encoding","source":"physiology12[11]"},
+    {"name":"history_energy_mean","unit":"physiology encoding","source":"private bounded history"},
+    {"name":"history_fatigue_mean","unit":"physiology encoding","source":"private bounded history"},
+    {"name":"history_integrity_delta","unit":"fraction per history window","source":"private bounded history"},
+    {"name":"history_development_delta","unit":"fraction per history window","source":"private bounded history"},
+    {"name":"thrust","unit":"executed action encoding","source":"executed_actions12[0]"},
+    {"name":"yaw","unit":"executed action encoding","source":"executed_actions12[1]"},
+    {"name":"gaze_pitch","unit":"executed action encoding","source":"executed_actions12[2]"},
+    {"name":"posture","unit":"executed action encoding","source":"executed_actions12[3]"},
+    {"name":"grip","unit":"executed nonnegative action encoding","source":"executed_actions12[4]"},
+    {"name":"signal_a","unit":"executed nonnegative action encoding","source":"executed_actions12[5]"},
+    {"name":"signal_b","unit":"executed nonnegative action encoding","source":"executed_actions12[6]"},
+    {"name":"eat","unit":"executed nonnegative action encoding","source":"executed_actions12[7]"},
+    {"name":"release","unit":"executed nonnegative action encoding","source":"executed_actions12[8]"},
+    {"name":"secrete","unit":"executed nonnegative action encoding","source":"executed_actions12[9]"},
+    {"name":"allocate_structure","unit":"executed nonnegative action encoding","source":"executed_actions12[10]"},
+    {"name":"allocate_reproduction","unit":"executed nonnegative action encoding","source":"executed_actions12[11]"}
+  ],
+  "fit_only_audit_units": [
+    "lineage_unit",
+    "environment_unit",
+    "candidate_unit",
+    "episode_unit",
+    "world_unit"
+  ]
+}
