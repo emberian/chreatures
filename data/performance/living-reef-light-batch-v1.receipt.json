@@ -1,0 +1,54 @@
+{
+  "format": "chreatures-living-reef-light-batch-receipt-v1",
+  "scope": "Twelve neutral 0.05-second PhysicsWorld plus Biosphere advances restored from an offline 891-part Living Reef checkpoint. Habitat3D, fields, neural inference, cognition, rendering, server work, and live services were excluded.",
+  "source": {
+    "commit": "45c67b11eab4acb40f87bf36586f05168308604e",
+    "path": "native/world-kernels/src/environment_shim.c",
+    "reference_sha256": "07ccfacb356788a355122191872dc30c2a12878c6fea36ea61b1101909f5a709",
+    "batched_sha256": "2ec605077ebb1032ab4806189b93ce6c56ce52de8582579b74e33557d0a41c8e"
+  },
+  "checkpoint": {
+    "source": "/Users/ember/paperbin/chreatures/deployments/living-reef-215647b/runs/living-reef.json",
+    "offline_copy": "/tmp/living-reef-891parts.json",
+    "sha256": "8d4361d2896e2bfeaba9c0c99fd8a524f0946b1605d2de519b4e30b831a21712",
+    "tick": 2835,
+    "parts": 891,
+    "model_revision": 108
+  },
+  "native_binaries": {
+    "reference": {
+      "path": "/tmp/chreatures-acoustic-hardened-v1/_world_kernels.cpython-312-darwin.so",
+      "sha256": "e07d8715bf6ec213225d8b7af8be2be4eb345b334b3037cb613f83d585207a67"
+    },
+    "batched": {
+      "path": "/tmp/chreatures-biosphere-light-v2/_world_kernels.cpython-312-darwin.so",
+      "sha256": "b6e95285aef09e83817d1a060ff5ec6254e4fde4f8463a413f825508ccbf9262"
+    }
+  },
+  "command": "PYTHONPATH=<native-build>:/Users/ember/dev/chreatures /Users/ember/dev/chreatures/.venv/bin/python /tmp/probe_grown_biosphere.py --checkpoint /tmp/living-reef-891parts.json --steps 12 --output <raw-result>",
+  "probe": {
+    "path": "/tmp/probe_grown_biosphere.py",
+    "sha256": "1e5b4b3914bbeb6e93d79fb03d29d5622f2d326bfe9f11d6755d67c0f9cdd1af"
+  },
+  "raw_results": {
+    "reference": {
+      "path": "/tmp/living-reef-grown-probe.json",
+      "sha256": "4fa0667050d0904b5facbffb9e99e7bfb01d86223c2b39cd68c805065df05f95"
+    },
+    "batched": {
+      "path": "/tmp/living-reef-grown-probe-multiray-v2.json",
+      "sha256": "4e4057851dc507f3f044a6b6fd86064257fc029ab9938bd8e32d4d544448755b"
+    }
+  },
+  "result": {
+    "reference_biosphere_seconds": 0.5124219160206849,
+    "batched_biosphere_seconds": 0.259606953986804,
+    "reference_biosphere_milliseconds_per_step": 42.70182633505707,
+    "batched_biosphere_milliseconds_per_step": 21.633912832233666,
+    "biosphere_phase_speedup": 1.9738374036264514,
+    "cross_binary_continuation_sha256": "ad148d14c39b73737f0fa2b680def2c2651547524d441dea7d7acc03be517d86",
+    "cross_binary_continuation_bytes": 1301391,
+    "full_world_and_biosphere_continuation_exact": true
+  },
+  "numeric_contract": "Each authored sky profile uses one mj_multiRay traversal with unchanged direction order, weights, exclusions, and accumulation. A first hit at or within the former 1e-4 direction-specific origin offset reruns that rare ray through the original offset mj_ray path. The exactness claim covers the recorded 891-part twelve-step continuation and is not a claim about excluded runtime owners."
+}
