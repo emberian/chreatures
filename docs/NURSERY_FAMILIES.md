@@ -51,6 +51,38 @@ spawn placements, and resource placements. It is a separate artifact marked
 is added to sensory observations. Residents encounter only geometry, light,
 sound, odor, and contact through the normal world mechanisms.
 
+## Training episodes
+
+`EmbodiedTrainingProfile.nursery_family(...)` turns the same compiler into a
+cold episode constructor. The current schedule is
+`data/training/nursery-family-schedule-v1.json`: six declared training variants
+and six disjoint held-out variants spanning all three structures. A world seed
+selects one entry by modulo within the requested split. Adjacent world slots
+therefore cover different structures, and adding 1009 for the next episode
+rotates the selection.
+
+Profile construction generates every declared artifact once and records its
+exact habitat, biosphere, and analyst hashes in the profile identity. Each cold
+reset regenerates its selected artifact and rejects any mismatch before the
+MuJoCo world exists. The physical world snapshot, terminal outcomes, and
+telemetry carry the selected split, index, family seed, and output hashes. The
+analyst JSON itself is discarded at this boundary and never occupies shared
+observation memory.
+
+The family keeps the current fixed transport dimensions: six residents per
+world, 4096 native retinal values, 351 physical port values, six physiology
+values, and 384 readouts. Each resident begins 0.22 m in the horizontal plane
+from at least one finite material packet on the same generated platform. These
+are ordinary conserved chemical objects rather than feeder events or policy
+features.
+
+The current rich runner selects this constructor explicitly with
+`--environment-profile nursery-family-v5`,
+`--nursery-family-config data/habitat-families/nursery-v1.json`, and
+`--nursery-family-schedule data/training/nursery-family-schedule-v1.json`.
+Family episodes use stage 0; the finite exchange ecology replaces the retired
+feeder-placement curriculum.
+
 ## Headless construction check
 
 A `courtyard-ring:20260911` artifact was built with the current native engine
