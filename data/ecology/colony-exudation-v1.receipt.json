@@ -1,0 +1,51 @@
+{
+  "format": "chreatures-colony-exudation-public-receipt-v1",
+  "scope": "Executed supplied secretion from native chemistry with zero founder reserve, matched near-dark and secretion-disabled controls, exact restored continuation, and engineered physical mouth contact. This is not evidence of learned foraging or autonomous regulation.",
+  "exchange_format": "chreatures-ecological-exchange-v2",
+  "exchange_config_sha256": "d4f7b3f98391ccaf9f52b48511b344dd79512d8cf3310930cbe18beb778ea5de",
+  "source_assay": {
+    "duration_seconds": 20.0,
+    "daylight_captured_photons": 1.7501938976512212,
+    "daylight_emitted_reserve": 0.1359373182200874,
+    "daylight_active_emitter_slots": 12,
+    "near_dark_captured_photons": 1.944846061518118e-13,
+    "near_dark_emitted_reserve": 0.0,
+    "daylight_secretion_disabled_emitted_reserve": 0.0,
+    "maximum_absolute_elemental_residual": 4.831690603168681e-13,
+    "maximum_absolute_energy_residual": 1.6964207816272392e-13,
+    "restored_continuation_exact": true
+  },
+  "engineered_contact_assay": {
+    "resident": "mica",
+    "emitted_slot": "exudate-0",
+    "mouth_contacts": 2,
+    "ingested_mass": 0.008,
+    "packet_reserve_before": 0.012,
+    "packet_reserve_after": 0.004,
+    "gut_reserve_before": 0.0,
+    "gut_reserve_after": 0.004500142991488092
+  },
+  "migration_validation": {
+    "legacy_config_sha256": "c7aa93b828cc98270aa7b2904f09614b05edaabb055779e2a7e98e064ccbd2ee",
+    "canonical_v2_config_sha256": "f51bfeed1a1c62f523f3d001bdd07815c9d62f5ff2dca1c1fa573c3c05830833",
+    "legacy_hash_validated_before_migration": true,
+    "mobile_numeric_state_preserved": true
+  },
+  "focused_validation": {
+    "missing_attachment_retained_material": true,
+    "blocked_elapsed_saturated_seconds": 2.0,
+    "mobile_donor_pool_before": 1.2,
+    "mobile_donor_pool_after": 1.1809155416,
+    "mobile_emitted_reserve": 0.02,
+    "mobile_energy_after_advance": 0.8218097406293194,
+    "manual_resync_bit_exact": true
+  },
+  "raw_assay_report_sha256": "ca2a3d2ce0f6e008735800e971d2957ee9f732329ec689c4524b35535545b9ce",
+  "sources": {
+    "chreatures/ecological_exchange.py": "b8f29090903419e1e7caab4632514216330f5302409e211509e816d41f3fe224",
+    "chreatures/material_objects.py": "c907d0917d90c7bf496e31fa8c48984755efa70f3f137e59cbe5d5c6f4f009d0",
+    "chreatures/biosphere.py": "3c2923917301df06745bdb25ff8d518dc2e2793e54d5948da91e2c7e8e5c4597",
+    "scripts/build_chemical_habitat.py": "840f1f6b708fa1f2c0ae700229544bc17240314c22aa3a5f867c3b1caa8fc53a",
+    "scripts/probe_colony_exudation.py": "07dcea92577d9aa1dc3d745e631b05d45b0b9959e9e30206974563f0d8ecf572"
+  }
+}
