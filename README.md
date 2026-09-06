@@ -1,129 +1,84 @@
 # Chreatures
 
-**A world to grow into.** Connectome-rooted artificial life, physical bodies, personal memories, and people on the other side of the glass.
+**A world to grow into.** An open artificial-life experiment in inherited bodies, personal histories, measured fly wiring, and ecologies that change their own habitat.
 
-Chreatures is an ambitious work in progress inspired by *Creatures*: organisms whose surroundings, physiology, learning, and encounters have consequences for one another. We want lives that become different through experience, and instruments that let us investigate why.
+Inspired by *Creatures* and the changing societies and environments of *Children of Time*, we are building organisms whose sensations, chemistry, movement, memories and surroundings have consequences for one another. The goal is a world worth inhabiting, with instruments for discovering how its inhabitants develop.
 
-![Articulated residents in the live MaleCNS habitat](docs/assets/articulated-garden.png)
+[Public field guide and observatory](https://emberian.github.io/chreatures/) · [Source and data notices](NOTICE.md) · [Development log](docs/CYCLE_LOG.md)
 
-*The articulated garden, running real physics, full MaleCNS neural state, and chemical transport. Six-legged bodies explore an elevated walk, sheltered passages and movable objects.*
+## The current build
 
-[Read the public field guide and lab notebook](https://emberian.github.io/chreatures/). It records running mechanisms, measured results and open questions, including social ecologies and constructed habitats.
+**Living Reef** has six varied articulated bodies and twelve growing colonies in a physical world of terraces, ramps, underpasses, a coupled gate, acoustic mechanisms and movable materials. Colonies build real collision geometry. Changes to that geometry affect light, contact, passage and chemical transport. A native solar cycle moves illumination through the landscape and supplies energy to phototrophic chemistry.
 
-## What exists today
+Residents acquire finite material through mouth contact, digest it into usable reserves, spend energy on activity, and return material through physical deposits. Colonies can release accumulated reserves into consumable packets. These mechanisms share conserved synthetic chemistry. Their combination provides an ecological substrate; a self-sustaining food web, reproduction and evolved social organization remain goals.
 
-The live 3D loop couples MuJoCo bodies to **165,122 traced MaleCNS neurons**, **25,563,197 directed connections**, and **124,025,046 measured synapses**. Residents keep private neural activity, adaptation and support state. Controller lineages include online adaptive organs and inherited population-trained motor policies with personal contextual memory.
+The current neural substrate is the **MaleCNS v1.0 brain and ventral nerve cord**: **165,122 traced neurons**, **25,563,197 directed edges** and **124,025,046 synapses** represented by those edges. Anatomical wiring constrains the recurrent network. The rate dynamics, chemical rules, bodies and sensory/motor interfaces include explicit engineering assumptions. This is a synthetic species project, not a recovered fly.
 
-The garden contains ramps, an elevated walk, an underpass, rolling and stackable objects, edible resources, a seesaw and a resonant pendulum. Objects have independently specified geometry, material and sensory properties. Residents see an occluded retinal field from their bodies, sample scent and contact, and can move, look, grip and signal. A human can physically hold and release objects, offer resources, place lights and make sounds. The browser renders the authoritative simulation state.
+A resident's current control loop combines:
 
-The newer live world runs six-legged bodies with twelve physical hinges, conservative 3D chemical transport around solid geometry, and a 351-channel sensory interface with 384 anatomical population readouts. Its retina rotates with the complete body orientation, including climbing and inversion. Batched developmental worlds run on AMD GPUs. Older saved residents retain their original bodies and interfaces; see the [cycle log](docs/CYCLE_LOG.md).
+- **Body-bound vision:** 1,024 native collision rays, divided between an 8×32 peripheral field and a 24×32 central field. Each supplies RGB and proximity. Bodies, constructed surfaces and movable objects can occlude them.
+- **Measured recurrence:** 351 sensory channels enter the full connectome; 384 named population readouts reach the resident's goal selector. These are population summaries, not recordings of 384 individual neurons.
+- **Spatial perception and working memory:** a native convolutional visual front, body-state encoder and persistent private GRU process 4,453 sensory and physiological values at each 50 ms physical tick.
+- **Experienced goals:** each individual retains a private reservoir of four-frame sensory encounters. A learned manager selects among those memories; the motor controller attempts to approach the selected sensory state.
+- **Personal consequence learning:** inherited GAM predictions and private bounded residual learning estimate movement, energy-cost and fatigue consequences of motor proposals. Actual delivered actions and their subsequent physical outcomes supply the updates.
 
-**This is a synthetic species experiment, not a recovered fly.** Anatomy is measured; rate dynamics, physiological laws, body mechanics and sensory/motor mappings contain explicit modeling assumptions. Personal learning mechanisms are running, but durable individuality, useful learned manipulation and reciprocal social skills remain research targets.
-
-Fresh [recycling worlds](docs/ECOLOGICAL_EXCHANGE.md) now return mobile material through body-local outlets into finite physical deposits. Constructed roots acquire mineral and carbon through actual contact with those objects. A coupled experiment transferred material under contact and none in its separated control, with exact continuation and chemical accounting. This supplies another ecological interaction; learned nutrient delivery and a stable food web remain open.
-
-Configured colonies can also release their own accumulated reserves into consumable physical packets. In an assay with zero founder reserve, daylight produced and released 0.135937 reserve units; the matched near-dark condition released none. A separate arranged mouth contact consumed part of an emitted packet. Production, secretion, ingestion and digestion now have a joined material path. The release rules are supplied physiology; autonomous ecological regulation remains unestablished. [Exudation mechanism and measured controls](docs/ECOLOGICAL_EXCHANGE.md).
-
-The new [ecological substrate](docs/ECOLOGICAL_COMMONS.md) joins a conserved synthetic chemistry to resource-funded developmental grammars. Three related colonies built over 1,600 physical parts in a 180-second non-neural experiment; removed leaf material entered another compartment’s digestion, and exact checkpoint continuation preserved chemistry, geometry and growth. Static construction and removal also change chemical transport. The existing live reef retains its original mobile physiology. Fresh chemical-reef worlds now bind private mobile body/gut compartments to the same reactor, gate active forces and signals with ATP, and acquire finite material through physical mouth contact. Digestive enzymes liberate reserves; shared stores divide competing requests proportionally. A full spatial food web and reproduction remain open. [Biosphere implementation and scope](docs/BIOSPHERE.md).
-
-[Inherited body traits](docs/BODY_INHERITANCE.md) now change actual articulated geometry and motor parameters. A [circuit blueprint compiler](docs/CIRCUIT_BLUEPRINT.md) can derive new recurrent architectures from the measured graph while retaining edge ancestry. A second structural generation with 172,376 neurons has executed on AMD hardware; inherited blueprints now compile actual descendants with bounded module and edge variation. Improved behavior is not established. Dependent young, embodied reproduction and [eusocial organization](docs/SOCIAL_ECOLOGIES.md) remain open implementation and research directions.
+The oral command currently follows an engineered physiological law. Remembered goals are previously experienced states, not guarantees of present reachability. Useful navigation, durable learned habits and reciprocal interaction are still being developed.
 
 ## GAM × Universal Weave
 
-Two projects are central to where this is going:
+[**SauersML/gam**](https://github.com/SauersML/gam) is part of the mechanism, not just a plotting dependency. Native GAM fits compress experienced nonlinear body responses into small, immutable consequence models. Rust evaluates these models while the resident compares motor proposals with the bodily component of a remembered sensory goal. Each resident learns its own bounded corrections from its own experience; shared inherited predictions remain unchanged. Out-of-domain candidates retain the underlying actor's support without receiving a GAM refinement. This is an explicitly engineered control layer, not a happiness measure or proof of causal understanding. [Implementation and fitted data](docs/GAM_MECHANISMS.md).
 
-- **[SauersML/gam](https://github.com/SauersML/gam)** — Rust-backed statistical modeling for fitted physiological response laws, nonlinear effects of state and upbringing, event histories, representation geometry and intervention analysis. The native integration now fits real 3D developmental telemetry with entire worlds held out, compares against persistence baselines, and saves/reloads immutable model artifacts. The broader mechanism and geometry work is ahead.
-- **[transkatgirl/universal-weave](https://github.com/transkatgirl/universal-weave)** — branching histories and evidence records. Our Rust adapter imports real journal events and multi-parent comparisons into a native independent weave, preserving event identity and artifact ancestry through serialization. The [3D observatory](docs/OBSERVATORY.md) keeps adult snapshots, research cohorts, fits and claims distinct from residents’ own memories.
+[**transkatgirl/universal-weave**](https://github.com/transkatgirl/universal-weave) connects recorded development, model artifacts, snapshots, experiments and competing explanations. Its native adapter supplies stable event identities, multi-parent evidence records and deterministic serialization. The scientific archive is separate from the incomplete, private memory available to an organism. [Native integration](docs/LIBRARIES.md).
 
-Both native libraries have been executed, not merely named in an architecture diagram. See [the integration contracts and receipts](docs/LIBRARIES.md). Their warnings and limitations are retained with their results.
+Both upstream libraries have executed against actual project data. Their artifacts preserve sources, versions and limits.
 
-## The archived first habitat
+## What has run
 
-The earlier 2D habitat used a **female FlyWire v783 subset of 6,789 neurons**, not MaleCNS. Its runtime and browser are preserved in the [compact 2D archive release](https://github.com/emberian/chreatures/tree/archive/compact-2d-flywire-v1). The running original world was handed over to an isolated archive checkout with its exact saved identity and stochastic state. Current development has one 3D launcher, `chreatures`; the female data and [provenance](docs/CONNECTOME.md) remain available for research.
+The earlier joined neural/controller experiment completed **245,760 resident transitions** and **160 PPO updates** in four three-resident chemical worlds on an AMD RX 6750 XT. It trained a continuous worker and a slower achieved-goal manager alongside the full MaleCNS circuit. These are execution and training results; they do not establish improved physical skill. [Recorded run](research/sensorimotor_skills/ONLINE_DEVELOPMENT.md).
 
-## Run the full 3D habitat
+GAM consequence models were fitted to **192,000 recorded physical transitions**, holding out complete physical worlds. Native interpolation, operating-domain checks and artifact loading have run. The new private learner, rich visual controller and their complete stochastic snapshots have executed in isolation; the larger rich-world collection and learned deployment are the current integration work.
 
-The full graph is downloaded separately; large arrays and checkpoints do not belong in Git. The neural service can use PyTorch on AMD or the local Rust/Metal backend on Apple Silicon. The habitat/browser can run separately from it.
+The new reef's physical and chemical runs have exercised growth, exudation, recycling, acoustic contacts and changing solar exposure. The coupled collection exposed and fixed two integration defects: construction invalidating a cached retinal model, and physical emitters crossing the finite chemical grid boundary. Outside-domain emission is now accounted separately rather than placed in an unrelated boundary cell.
 
-Clone the repository and run `uv sync --extra dev` to prepare the application environment.
+Earlier results, including unsuccessful behavioral comparisons, remain in the research records. A good action-likelihood fit is not treated as evidence that a requested goal can be achieved with the body.
 
-1. Build the required [native world kernels](native/world-kernels/README.md) with `uv run python native/world-kernels/build_extension.py`. Then follow [MaleCNS acquisition](docs/MALECNS.md) and choose the [persistent accelerator service](docs/REMOTE_BRAIN.md) or the [local Apple Metal backend](docs/METAL_BRAIN.md). Both use the [rich retinal port setup](docs/NEURAL_PORTS.md).
-2. Reach that service over localhost or an SSH forward, then run:
+## Build and run
 
-```sh
-uv run chreatures --port 8768 --brain-url http://127.0.0.1:18767 \
-  --checkpoint runs/articulated-garden.json
-```
-
-Open **http://127.0.0.1:8768**. The example assumes the rich neural service is forwarded to local port 18767. A 3D checkpoint contains physics, personal cognitive state and the checksum of a server-side neural snapshot. Preserve both parts. Restore checks anatomy and sensory-interface identity; a failed distributed step pauses instead of blindly advancing again.
-
-Actual circuit workloads have run on an AMD RX 6750 XT and Radeon 890M. [Native GPU results](docs/FAST_CIRCUIT.md), [developmental training](docs/DEVELOPMENT.md), [3D direction](docs/THREE_DIMENSIONS.md), [articulated body](docs/ARTICULATED.md), [chemical fields](docs/FIELDS.md), [retinal ports](docs/NEURAL_PORTS.md).
-
-Development uses a shared predictive actor–critic with private recurrent state, articulated environments in persistent worker processes, and the full neural graph on every physical tick. The native AMD kernel improved a paired 48-resident neural benchmark by **5.84×**. The 20,000-step stage increased held-out ingestion from 0.372 to 2.859 in its evaluation, but movement cost increased and overall bodily return worsened. Removing neural features reduced ingestion to 2.173; a matched rewired graph produced more ingestion under the same policy in a larger probe. These results show sensory and topological effects, without establishing an advantage for the biological wiring. [Learning protocol](docs/LEARNING.md), [measured sparse-loop optimization](docs/FAST_CIRCUIT.md), and [physical throughput](docs/PHYSICAL_THROUGHPUT.md).
-
-A small [trained motor artifact](data/genomes/nursery-20000.npz) is included. For a new experimental world, add:
+The full graph and training checkpoints are acquired separately; bulk arrays stay outside Git. Python hosts the application boundary and Torch/ROCm research training. Recurring vision, resident cognition, motor kernels, chemical transport, growth bookkeeping and model inference use Rust or the native physics engine.
 
 ```sh
---motor-genome data/genomes/nursery-20000.npz --personal-memory \
---habitat data/habitats/orchard-garden.json \
---resources data/ecology/portable-orchard.json \
---acoustics data/components/acoustic-play.json
+uv sync --extra dev
+uv run python native/world-kernels/build_extension.py
+uv run python native/cognitive-core/build_extension.py
 ```
 
-Use a fresh checkpoint and a separate ordered neural service. The inherited motor now runs its numerical path through Rust, with private working context and random state. Earlier NumPy adult snapshots require an explicit execution migration; their previous runtime remains in Git history. With `--personal-memory`, a separate private action-conditioned memory records actual bodily consequences and can refine future choices. It preserves the inherited policy’s exploration. The current live orchard has sparse personal reinforcement and no demonstrated durable individual strategies yet. Its training used earlier camera and odor semantics, so this richer world is a [transfer experiment](docs/MOTOR_INHERITANCE.md). [Resource production](docs/ECOLOGY.md) and [physical sound](docs/ACOUSTICS.md) preserve finite pools and transfer histories in the whole-world checkpoint.
+Acquire the [MaleCNS graph](docs/MALECNS.md), build the current [retinal-v2 port bundle](docs/NEURAL_PORTS.md), and start a dedicated [AMD neural service](docs/REMOTE_BRAIN.md) or [Apple Metal service](docs/METAL_BRAIN.md) with sufficient cohort capacity. New worlds require the **same graph and port identities** as the resident artifact. Existing frozen lives keep their loaded engine and service.
 
-The newer [terrarium](docs/TERRARIUM.md) adds connected terraces, an underdeck, a return ramp, renewable movable food and five acoustic mechanisms. The [visitor panel](docs/VISITOR.md) records and schedules sound, light and physical gestures in model time, including across a checkpoint.
-
-The latest **learning garden** adds a [passive pressure lift and coupled gate](docs/MECHANICAL_ASSEMBLIES.md), an inherited finite-energy policy, and [private lifetime motor plasticity](docs/PERSONAL_PLASTICITY.md). Reed, Tansy and Sorrel have separate motor means, state-dependent exploration, value parameters and eligibility traces. Their actual five-tick bodily consequences update their own motor tendencies; contextual and visual evidence use the same versioned physiological objective. For a new world with its own neural service:
+The current resident artifact is exported from a self-contained rich developmental training checkpoint, including the fitted GAM law bank:
 
 ```sh
-uv run chreatures --port 8771 --brain-url http://127.0.0.1:18768 \
-  --checkpoint runs/learning-garden.json \
-  --habitat data/habitats/learning-garden.json \
-  --motor-genome data/genomes/nursery-20000-finite-energy.npz \
-  --personal-memory --personal-plasticity \
-  --resources data/ecology/terrarium-orchard.json \
-  --acoustics data/components/terrarium-play.json
+python scripts/export_sensorimotor_worker.py --help
 ```
 
-To make moving gates also regulate chemical transport, select `data/habitats/counterweight-chemistry.json`. Its opt-in [diffusion barriers](docs/FIELDS.md) change face permeability without deleting chemical mass. A weight left on a lift can therefore alter another resident's passage and sensory environment.
+Then start a fresh world using that artifact:
 
-The fresh finite-energy training run improved short held-out bodily return from 0.092 to 0.122; silencing neural features scored -0.961. Those probes lasted only 40 model seconds. Longer observation of the older inherited residents exposed reserve depletion and persistent fatigue. **Sustained feeding and recovery remain unmet capabilities.** New [embodied developmental worlds](docs/EMBODIED_TRAINING.md) use the actual body-frame senses, diffusion and resource ecology, with 1,200-second horizons. The optional [edge-tiled AMD backend](docs/TILED_CIRCUIT.md) cuts a complete B48 device update from 34.1 to 20.5 ms.
+```sh
+uv run chreatures --port 8777 \
+  --brain-url http://127.0.0.1:18777 \
+  --resident-artifact /path/to/rich-developmental-resident.npz \
+  --habitat data/habitats/living-reef.json \
+  --biosphere data/biosphere/living-reef.json \
+  --checkpoint runs/living-reef.json
+```
 
-A separate [mushroom-body research mode](docs/MUSHROOM_PLASTICITY.md) now puts private plasticity on 4,184 measured KC→MBON11 connections inside the full neural graph. It reads actual Kenyon-cell activity and applies correctly normalized recurrent corrections. Controlled modulation changes subsequent MBON responses and persists exactly; the present responses generalize broadly across the tested cues. This mode has not been promoted into the resident worlds or assigned a behavioral reward meaning.
+The local interface lets people manipulate physical objects, offer finite resources, and make light, sound and gesture stimuli. Its inspector shows actual retinal inputs, population readouts, motor actions, remembered goals and physical state. Public GitHub Pages contain recordings, never an undisclosed connection to a private running world.
 
-![The terrarium running full MaleCNS on Metal](docs/assets/terrarium-garden.png)
+Whole-world checkpoints preserve neural and physical state, private memories and learning, RNG, pending actions, chemical pools, constructed topology and the solar clock. An ambiguous distributed mutation pauses the world. Current development deliberately breaks obsolete interfaces and checkpoint formats; old engines belong in Git history rather than parallel compatibility paths.
 
-Optional native vision now joins the personal motor loop. A resident's actual camera captures a pair of views around one five-tick motor action. A fixed model-time delivery boundary makes those delayed features available to its private [visual episodic memory](docs/VISUAL_EPISODES.md), which can contribute bounded action evidence. More than twenty genuine pairs have been retained in the live terrarium; improved visual decisions remain unestablished. The native inference service setup is in [PERCEPTION.md](docs/PERCEPTION.md).
+## Working together
 
-The original terrarium retained the legacy retinal frame because its supplied habitat lacked an explicit selector. The newer learning garden explicitly uses `body-v1`, including complete body rotation and self-occlusion. New world construction now makes that choice explicit; restoration preserves each older world's saved semantics.
+The project is developed through human direction and parallel coding agents. We build substantial coupled capabilities, then examine their behavior in joined worlds. Body competence, memory, development, social interaction and ecology advance together.
 
-For a fresh terrarium, use the terrarium habitat/resource/acoustic JSON files and add `--perception-url http://127.0.0.1:18775` when that service is available. Existing saved lives retain their own organs. Open `/observatory` for native GAM fits and the navigable Weave evidence graph; the scientific archive remains separate from personal memory.
+The initial 2D habitat used a **female FlyWire v783 subset of 6,789 neurons**. It was not MaleCNS. That engine lives in the [compact archive](https://github.com/emberian/chreatures/tree/archive/compact-2d-flywire-v1). Further directions include [inherited bodies](docs/BODY_INHERITANCE.md), [diversifying neural blueprints](docs/CIRCUIT_BLUEPRINT.md), [constructed ecologies](docs/ECOLOGICAL_COMMONS.md) and [social organization](docs/SOCIAL_ECOLOGIES.md).
 
-## Building wide and deep
-
-We are building with parallel agents and human direction. Working commits are intentionally frequent. The priorities are physical possibilities, consequential personal learning, credible biological contribution and a world worth spending time in.
-
-The implementation direction is a Rust simulation core with batched native interfaces, with Python for training and research integration. MuJoCo supplies native physics, and the [world kernels](native/world-kernels/README.md) process contacts and conservative chemical transport. Rust also runs GAM, the Weave adapter and the [local Metal full-graph backend](docs/METAL_BRAIN.md). A complete three-resident request measured 9.55 ms with its Metal SIMD kernel on an M2 Max; the AMD development backend uses tiled full-graph kernels. Existing live processes adopt new numerical execution only at a recorded checkpoint boundary.
-
-Rust now also owns inherited motor inference and developed-tissue bookkeeping. At 2,789 physical parts, the offline profiled Biosphere phase fell from 94.83 to 26.15 ms/tick with bit-exact continuation. The complete six-tick motor path improved from 202 to 158 microseconds for one resident on the M2 Max. These are separate subsystem measurements. Substantial Python simulation orchestration remains; this is an ongoing migration, not a claim that the runtime is already wholly native. [Tissue measurement receipt](data/performance/biosphere-tissue-native-v1.receipt.json), [motor arithmetic and persistence](docs/MOTOR_INHERITANCE.md).
-
-A [trainable gated working-memory baseline](docs/WORKING_MEMORY.md) now supports causal sequence-PPO training and native inherited deployment. Its gates learn what to write and retain; no behavioral improvement is claimed yet. Complementary [sensorimotor skill work](docs/LEARNED_SENSORIMOTOR_SKILLS.md) targets faster learned bodily control from achieved sensory histories. Fresh chemical worlds also support [finite visitor offerings](docs/VISITOR_MATERIALS.md): material leaves an outside reserve, becomes a physical packet, and can enter a resident's gut through mouth contact.
-
-Our maintenance policy favors one current implementation of each mechanism. Superseded production code belongs in Git history or a pinned release; older snapshots receive a one-way data migration where practical. Hardware-specific kernels serve their respective devices, and independent numerical reference equations may remain in research probes. The `pre-native-world-20260905` tag preserves the previous world engine.
-
-A separate [recurrent predictive-state organ](docs/PREDICTIVE_STATE.md) trained on 184,320 aligned transitions from full-connectome developmental worlds. It beat persistence on held-out feature and physiology prediction at the reported horizons. Rust inference maintains private recurrent state and supports [counterfactual queries](docs/FORESIGHT.md). Action discrimination is strongest in neural features and angular motion, and weak for energy and gut contents. Improved planning and long-term regulation remain unestablished.
-
-Useful contributions include better embodied learning, controllable bodies, combinable physical environments, grounded perception, memory mechanisms and experiments that distinguish the proposed explanation from a simpler one. An LLM may become a bounded perceptual or semantic organ; it should not silently supply all behavior while the rest of the organism is decorative.
-
-## Attribution and reuse
-
-Original Chreatures code is licensed under **AGPL-3.0-or-later**. See [LICENSE](LICENSE)
-and [NOTICE.md](NOTICE.md). Vendored code, pretrained models, scientific datasets,
-and derived data retain their separately identified licenses.
-
-- **MaleCNS v1.0:** [Janelia release](https://male-cns.janelia.org/download/), with source hashes, filtering and license attribution in [the local manifest](data/malecns/manifest.json).
-- **FlyWire / published brain model:** [the source ledger](docs/CONNECTOME.md). The compact extracted data retains the conservative **CC BY-NC 4.0** public-release restriction documented there; it is not relicensed by this repository.
-- **GAM:** AGPL-3.0-or-later. **Universal Weave:** Unlicense. **Three.js:** MIT, with its license beside the vendored renderer.
-
-Keep the notices and provenance for each component with reused artifacts.
+Original Chreatures code is **AGPL-3.0-or-later**. [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md) distinguish original code from separately licensed scientific data, pretrained models and vendored libraries. MaleCNS attribution is recorded in [its manifest](data/malecns/manifest.json). The earlier female FlyWire extract retains the restrictions documented in [its source ledger](docs/CONNECTOME.md). GAM is AGPL-3.0-or-later; Universal Weave is Unlicense; Three.js is MIT.
