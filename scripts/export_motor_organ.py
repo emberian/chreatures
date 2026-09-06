@@ -17,7 +17,9 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from chreatures.motor_inheritance import ACTIONS, ARTIFACT_FORMAT, artifact_identity
+from chreatures.motor_inheritance import (
+    ACTIONS, ARTIFACT_FORMAT, ARTIFACT_FORMAT_V2, artifact_identity,
+)
 
 
 def sha256(path: Path) -> str:
@@ -136,6 +138,7 @@ def main() -> int:
         interface["source_sensorium_sha256"] = source_hashes.get("chreatures/sensorium.py", "unknown")
     cohort_hash = None
     cohort_step = None
+    training_profile = None
     if args.cohort_checkpoint:
         cohort_path = args.cohort_checkpoint.resolve()
         cohort_hash = sha256(cohort_path)
@@ -148,16 +151,28 @@ def main() -> int:
         ):
             raise SystemExit("cohort checkpoint graph or port provenance differs")
         worlds = cohort.get("worlds", [])
-        if not worlds or not isinstance(worlds[0].get("spec"), dict):
+        physical_world = worlds[0].get("world", worlds[0]) if worlds else {}
+        if not isinstance(physical_world.get("spec"), dict):
             raise SystemExit("cohort checkpoint does not contain a physical world spec")
-        spec = worlds[0]["spec"]
+        spec = physical_world["spec"]
         spec_hash = hashlib.sha256(
             json.dumps(spec, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
         ).hexdigest()
         if args.physical_spec_sha256 and args.physical_spec_sha256 != spec_hash:
             raise SystemExit("supplied physical-spec hash differs from cohort checkpoint")
         interface["physical_spec_sha256"] = spec_hash
-        interface["physics_model_signature"] = str(worlds[0].get("model_signature", "unknown"))
+        interface["physics_model_signature"] = str(physical_world.get("model_signature", "unknown"))
+        training_profile = cohort.get("training_profile", worlds[0].get("profile"))
+        if training_profile is not None:
+            if not isinstance(training_profile, dict) or set(training_profile) != {"value", "sha256"}:
+                raise SystemExit("cohort checkpoint has an invalid training profile")
+            profile_hash = hashlib.sha256(json.dumps(
+                training_profile["value"], sort_keys=True, separators=(",", ":"), allow_nan=False,
+            ).encode()).hexdigest()
+            if profile_hash != training_profile["sha256"]:
+                raise SystemExit("cohort training profile checksum differs")
+            if run and run.get("training_profile") not in (None, training_profile):
+                raise SystemExit("run and cohort training profiles differ")
         body_spec = spec.get("articulated_body_spec")
         if not args.body_interface and isinstance(body_spec, dict):
             name = body_spec.get("name", "unnamed-articulated-body")
@@ -186,6 +201,7 @@ def main() -> int:
             else (extra.get("step") if isinstance(extra, dict) else None)
         ),
         "training_interface": interface,
+        "training_environment_profile": training_profile,
         "training_design": {
             "lineage": args.training_lineage,
             "objective": args.objective_label,
@@ -195,8 +211,11 @@ def main() -> int:
         },
         "heldout_evaluation": evaluation,
     }
+    artifact_version = 2 if trainer.config.std_profile == "state-conditioned-v2" else 1
     metadata = {
-        "format": ARTIFACT_FORMAT, "version": 1, "actions": list(ACTIONS),
+        "format": ARTIFACT_FORMAT_V2 if artifact_version == 2 else ARTIFACT_FORMAT,
+        "version": artifact_version, "architecture": trainer.config.std_profile,
+        "actions": list(ACTIONS),
         "config": asdict(trainer.config), "updates": trainer.update_count,
         "decisions": trainer.decision_count,
         "training_provenance": provenance,

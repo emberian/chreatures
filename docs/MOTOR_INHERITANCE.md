@@ -83,6 +83,22 @@ and makes the next commit legal.  This three-method seam retains the same
 macro bookkeeping as `tick`; the selected physical action itself becomes the
 action-conditioned context input.
 
+Artifact format v2 adds `std_offset.weight` and `std_offset.bias` while retaining
+the v1 mean, value, predictor, context, and normalizer arrays unchanged.  For a
+decision hidden state `h`, `distribution_log_std(h)` computes:
+
+```text
+clip(log_std + 2*tanh((std_offset.weight @ h + std_offset.bias)/2), -3.5, 0.3)
+```
+
+V1 artifacts use the same method and return their clipped global `log_std`, so
+callers do not need an architecture branch.  Stochastic `tick` samples with the
+state-specific inherited scale.  A contextual or personally plastic motor must
+compute it from the exact hidden state for that decision and freeze the vector
+through candidate selection.  Private variance is a relative offset for the
+baseline proposal; alternative candidate noise remains tied to the immutable
+conditioned inherited scale, independent of private parameters.
+
 ## Export from a training machine
 
 Torch checkpoints use Python serialization and must be treated as trusted
@@ -293,3 +309,32 @@ Training still used the legacy-world-v0 sensorium, analytic odor, short
 diffusion, finite-resource world is a cross-environment transfer.  The artifact
 is an experimental inherited baseline for a new private actor generation, not
 a repair or replacement for an existing resident.
+
+## Provisional embodied conditional-variance artifact
+
+`data/genomes/nursery-embodied-v2-step9695.npz` is an intermediate
+state-conditioned-v2 checkpoint from the current-life embodied stage at step
+9,695, update 93.  It inherited the finite-energy 20k learner and then branched
+through an exact zero-offset variance-head upgrade.  It is retained for
+architecture validation and must not be promoted to existing adult lives;
+sustained regulation success has not been established.
+
+- canonical artifact SHA-256:
+  `f2c9c0d156254a3be0d10fbe217e0b688c29b7dedf732a3673d42fded9b355a1`
+- NPZ file SHA-256:
+  `ceb546e9d9a2ae2495c82e545031114b872c5da80ea4df7e6f9ed6c77b7832f6`
+- learner checkpoint SHA-256:
+  `f53726ba8035d0d835c4ca80bbeca55529879f5feeb660d694f72fe6782385ff`
+- cohort checkpoint SHA-256:
+  `a5cd4a6445bbbdcf7eedc92b7efb4cd0e112fc44d7668938e7eea2212d2d20ef`
+- embodied training profile SHA-256:
+  `0603060b2f2e13b6822b6be8a92c392c7b3faaba7614652df82c39cee1ff34ba`
+
+Twelve recurrent states were compared CPU-only against the actual Torch
+checkpoint.  Maximum absolute errors were `2.98e-8` for policy mean, `1.79e-7`
+for hidden state, `1.19e-7` for conditioned log standard deviation,
+`5.96e-8` for standard deviation, `1.19e-7` for latents formed with identical
+fixed noise, and `2.61e-7` for recurrent context.  All are below `2e-6`.  A
+separate stochastic NumPy snapshot restored private RNG/context and replayed
+23 ticks bit-exactly.  Loading the established v1 nursery-20000 artifact still
+returns its original canonical identity.

@@ -79,6 +79,14 @@ def main() -> int:
     differences = {
         key: float(canonical_result[key] - control_result[key])
         for key in canonical_result
+        if isinstance(canonical_result[key], (int, float))
+    }
+    differences["homeostasis_mean_per_step"] = {
+        key: float(
+            canonical_result["homeostasis_mean_per_step"][key]
+            - control_result["homeostasis_mean_per_step"][key]
+        )
+        for key in canonical_result["homeostasis_mean_per_step"]
     }
     record = {
         "format": "chreatures-connectome-sensitivity-v1",

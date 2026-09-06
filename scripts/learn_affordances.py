@@ -31,10 +31,13 @@ if mp.current_process().name == "MainProcess":
         ACTIONS, MacroRollout, PredictivePPOConfig, PredictivePPOTrainer,
         RunningMoments,
     )
+    from chreatures.homeostasis import FiniteEnergyConfig, FiniteEnergyObjective
+    from chreatures.training_environment import EmbodiedTrainingProfile
     from chreatures.malecns import MaleCNSGraph
     from chreatures.neural_ports import NeuralPortBundle
     from chreatures.remote_brain import RemoteBrain
     from chreatures.fast_circuit import MicrobatchedResidentCircuit, TritonFusedCircuit
+    from chreatures.tiled_circuit import MaleCNSEdgeTiledCircuit
 
 
 HABITAT = ROOT / "data/habitats/hollow-garden.json"
@@ -71,9 +74,30 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--eval-steps", type=int, default=800)
     parser.add_argument("--workers", type=int, default=16)
     parser.add_argument("--seed", type=int, default=20260906)
+    parser.add_argument(
+        "--std-profile", choices=("global-v1", "state-conditioned-v2"),
+        default="global-v1",
+    )
+    parser.add_argument(
+        "--reward-objective", choices=("legacy", "finite-energy-v1"), default="legacy"
+    )
+    parser.add_argument(
+        "--training-profile", choices=("legacy", "current-life-v1", "current-life-v2"),
+        default="legacy",
+    )
+    parser.add_argument("--curriculum-start-stage", type=int, default=0)
+    parser.add_argument(
+        "--physical-backend", choices=("reference", "fast"), default="fast",
+        help="implementation-equivalent physical engine used by current-life-v1 workers",
+    )
+    parser.add_argument(
+        "--allow-physical-backend-transition", action="store_true",
+        help="permit an exact checkpoint state to move between validated physical engines",
+    )
     parser.add_argument("--device", default="cuda")
     parser.add_argument(
-        "--brain-backend", choices=("triton", "microbatch", "reference"), default="triton"
+        "--brain-backend", choices=("tiled", "triton", "microbatch", "reference"),
+        default="tiled",
     )
     parser.add_argument("--microbatch-size", type=int, default=3)
     parser.add_argument("--resume", type=Path)
@@ -96,7 +120,10 @@ def _safe(value: float, high: float, margin: float = 0.35) -> float:
     return float(np.clip(value, margin, high - margin))
 
 
-def affordance_spec(seed: int, episode: int, *, held_out: bool = False) -> dict[str, Any]:
+def affordance_spec(
+    seed: int, episode: int, *, held_out: bool = False,
+    depletion_recovery: bool = False,
+) -> dict[str, Any]:
     """Create adequate-food layouts; positions never enter learner observations."""
     spec = json.loads(HABITAT.read_text())
     rng = np.random.default_rng(seed + episode * 104729 + (80_000_003 if held_out else 0))
@@ -110,8 +137,14 @@ def affordance_spec(seed: int, episode: int, *, held_out: bool = False) -> dict[
         body["position"][1] = _safe(body["position"][1] + rng.uniform(-0.35, 0.35), height)
         body["position"][2] = 0.18
         body["heading"] = float(rng.uniform(-math.pi, math.pi))
-        body["energy"] = float(rng.uniform(0.76, 0.84))
-        body["gut"] = float(rng.uniform(0.08, 0.16))
+        if depletion_recovery:
+            # A benign recovery problem: reserves begin below the comfort
+            # target, but every body is mobile and has nearby adequate food.
+            body["energy"] = float(rng.uniform(0.68, 0.76))
+            body["gut"] = float(rng.uniform(0.04, 0.10))
+        else:
+            body["energy"] = float(rng.uniform(0.76, 0.84))
+            body["gut"] = float(rng.uniform(0.08, 0.16))
         body["fatigue"] = float(rng.uniform(0.02, 0.06))
         bearing_span = math.pi if held_out or episode >= 4 else 0.75
         angle = body["heading"] + float(rng.uniform(-bearing_span, bearing_span))
@@ -141,22 +174,53 @@ def affordance_spec(seed: int, episode: int, *, held_out: bool = False) -> dict[
     return spec
 
 
-def _world_worker(connection, port_spec: dict[str, Any]) -> None:
+def _world_worker(
+    connection, port_spec: dict[str, Any], profile_value: dict[str, Any] | None,
+    physical_backend: str,
+) -> None:
     """Own one MuJoCo instance so native and Python work spans CPU cores."""
     from chreatures.neural_ports import encode_physical_senses
-    from chreatures.physical_batch import FastArticulatedSensoriumWorld as ArticulatedSensoriumWorld
+    if profile_value is None:
+        from chreatures.physical_batch import FastArticulatedSensoriumWorld as ArticulatedSensoriumWorld
+        profile = None
+    else:
+        from chreatures.training_environment import (
+            EmbodiedTrainingProfile, EmbodiedTrainingWorld, embodied_training_spec,
+        )
+        profile = EmbodiedTrainingProfile.from_value(profile_value)
     world = None
     try:
         while True:
             operation, payload = connection.recv()
             if operation == "close":
+                if world is not None and hasattr(world, "close"):
+                    world.close()
                 connection.send((True, None))
                 return
             if operation == "reset":
-                world = ArticulatedSensoriumWorld(seed=payload["seed"], spec=payload["spec"])
+                if world is not None and hasattr(world, "close"):
+                    world.close()
+                if profile is None:
+                    world = ArticulatedSensoriumWorld(seed=payload["seed"], spec=payload["spec"])
+                else:
+                    spec = embodied_training_spec(
+                        payload["seed"], held_out=payload.get("held_out", False),
+                        stage=payload.get("stage", 0),
+                        profile=profile,
+                    )
+                    world = EmbodiedTrainingWorld(
+                        payload["seed"], spec, profile,
+                        physical_backend=physical_backend,
+                    )
                 result = [body.to_dict() for body in world.bodies]
             elif operation == "restore":
-                world = ArticulatedSensoriumWorld.restore(payload)
+                world = (
+                    ArticulatedSensoriumWorld.restore(payload) if profile is None else
+                    EmbodiedTrainingWorld.restore(
+                        payload, expected_profile=profile.sha256,
+                        physical_backend=physical_backend,
+                    )
+                )
                 result = [body.to_dict() for body in world.bodies]
             elif operation == "observe":
                 vectors = [
@@ -166,7 +230,10 @@ def _world_worker(connection, port_spec: dict[str, Any]) -> None:
                 result = (np.stack(vectors), [body.to_dict() for body in world.bodies])
             elif operation == "advance":
                 outcome = world.advance(payload["actions"], payload["dt"])
-                result = (outcome, [body.to_dict() for body in world.bodies])
+                result = (
+                    outcome, [body.to_dict() for body in world.bodies],
+                    copy.deepcopy(world.last_telemetry) if profile is not None else {},
+                )
             elif operation == "snapshot":
                 result = world.snapshot()
             else:
@@ -179,13 +246,20 @@ def _world_worker(connection, port_spec: dict[str, Any]) -> None:
 
 
 class ProcessWorldPool:
-    def __init__(self, count: int, port_spec: dict[str, Any]) -> None:
+    def __init__(
+        self, count: int, port_spec: dict[str, Any],
+        profile_value: dict[str, Any] | None = None,
+        physical_backend: str = "fast",
+    ) -> None:
         context = mp.get_context("spawn")
         self.connections = []
         self.processes = []
         for _ in range(count):
             parent, child = context.Pipe()
-            process = context.Process(target=_world_worker, args=(child, port_spec), daemon=True)
+            process = context.Process(
+                target=_world_worker,
+                args=(child, port_spec, profile_value, physical_backend), daemon=True,
+            )
             process.start()
             child.close()
             self.connections.append(parent)
@@ -243,6 +317,8 @@ class FixedCohortBrain:
             "readout_map": (ports.readout_names, ports.readout_map),
         }
         self.circuit = (
+            MaleCNSEdgeTiledCircuit(graph, batch_size, **kwargs)
+            if backend == "tiled" else
             TritonFusedCircuit(graph, batch_size, **kwargs)
             if backend == "triton" else
             MicrobatchedResidentCircuit(
@@ -338,15 +414,29 @@ class FixedCohortBrain:
 class AffordanceCohort:
     """Independent articulated worlds sharing one full rich-port GPU circuit."""
 
-    def __init__(self, brain: RemoteBrain, ports: NeuralPortBundle, worlds: int, workers: int, seed: int) -> None:
+    def __init__(
+        self, brain: RemoteBrain, ports: NeuralPortBundle, worlds: int,
+        workers: int, seed: int, reward_objective: Any | None = None,
+        training_profile: Any | None = None, physical_backend: str = "fast",
+        curriculum_start_stage: int = 0,
+    ) -> None:
         self.brain = brain
         self.ports = ports
         self.world_count = worlds
         self.seed = seed
+        self.reward_objective = reward_objective
+        self.training_profile = training_profile
+        self.physical_backend = physical_backend
+        self.curriculum_start_stage = int(curriculum_start_stage)
         self.episode = 0
-        self.world_pool = ProcessWorldPool(worlds, ports.spec)
+        self.world_pool = ProcessWorldPool(
+            worlds, ports.spec,
+            training_profile.to_value() if training_profile is not None else None,
+            physical_backend,
+        )
         self.timings = {name: 0.0 for name in ("world_build", "sense_encode", "brain", "physics")}
         self.body_states: list[list[dict[str, Any]]] = []
+        self.last_world_telemetry: list[dict[str, Any]] = []
         self.resident_ids: list[str] = []
         self.reset(0)
 
@@ -356,13 +446,20 @@ class AffordanceCohort:
         if old_ids:
             self.brain.remove_residents(old_ids)
         self.episode = episode
-        payloads = [
-            {
-                "seed": self.seed + episode * 1009 + index,
-                "spec": affordance_spec(self.seed + index * 17, episode, held_out=held_out),
-            }
-            for index in range(self.world_count)
-        ]
+        payloads = []
+        for index in range(self.world_count):
+            world_seed = self.seed + episode * 1009 + index
+            payload = {"seed": world_seed, "held_out": held_out}
+            if self.training_profile is not None:
+                payload["stage"] = (
+                    2 if held_out else min(2, self.curriculum_start_stage + episode)
+                )
+            if self.training_profile is None:
+                payload["spec"] = affordance_spec(
+                    self.seed + index * 17, episode, held_out=held_out,
+                    depletion_recovery=self.reward_objective is not None,
+                )
+            payloads.append(payload)
         self.body_states = self.world_pool.call_all("reset", payloads)
         prefix = "eval" if held_out else "train"
         self.resident_ids = [
@@ -418,6 +515,10 @@ class AffordanceCohort:
         before_energy = np.asarray(
             [body["energy"] for bodies in self.body_states for body in bodies], dtype=np.float32
         )
+        before_physiology = np.asarray([
+            [body["energy"], body["gut"], body["fatigue"]]
+            for bodies in self.body_states for body in bodies
+        ], dtype=np.float32)
         actions_by_world = []
         for world_index, bodies in enumerate(self.body_states):
             actions = {}
@@ -435,10 +536,15 @@ class AffordanceCohort:
         ])
         outcomes = [value[0] for value in advanced]
         self.body_states = [value[1] for value in advanced]
+        self.last_world_telemetry = [value[2] for value in advanced]
         self.timings["physics"] += time.perf_counter() - started
         after_energy = np.asarray(
             [body["energy"] for bodies in self.body_states for body in bodies], dtype=np.float32
         )
+        after_physiology = np.asarray([
+            [body["energy"], body["gut"], body["fatigue"]]
+            for bodies in self.body_states for body in bodies
+        ], dtype=np.float32)
         nutrition, contact, distance, effort = [], [], [], []
         for bodies, result in zip(self.body_states, outcomes, strict=True):
             for body in bodies:
@@ -451,11 +557,22 @@ class AffordanceCohort:
         effort = np.asarray(effort, dtype=np.float32)
         old_drive = (0.85 - before_energy) ** 2
         new_drive = (0.85 - after_energy) ** 2
-        reward = (
-            (old_drive - new_drive) * 12
-            + nutrition * np.maximum(0, 1 - after_energy) * 3
-            - effort * np.float32(0.0002 * dt)
-        ).astype(np.float32)
+        if self.reward_objective is None:
+            reward = (
+                (old_drive - new_drive) * 12
+                + nutrition * np.maximum(0, 1 - after_energy) * 3
+                - effort * np.float32(0.0002 * dt)
+            ).astype(np.float32)
+            homeostasis = {}
+        else:
+            reward, components = self.reward_objective.transition(
+                before_physiology, after_physiology,
+                nutrition=nutrition, effort=effort, dt=dt,
+            )
+            homeostasis = {
+                key: float(np.mean(value)) for key, value in components.items()
+            }
+        reserve = after_physiology[:, 0] + np.float32(0.84) * after_physiology[:, 1]
         return reward, {
             "nutrition": float(nutrition.sum()),
             "nutrition_events": float(np.count_nonzero(nutrition > 0)),
@@ -463,6 +580,30 @@ class AffordanceCohort:
             "distance": float(np.sum(distance)),
             "effort": float(effort.mean()),
             "energy": float(after_energy.mean()),
+            "gut": float(after_physiology[:, 1].mean()),
+            "fatigue": float(after_physiology[:, 2].mean()),
+            "reserve_energy": float(reserve.mean()),
+            "stationary_fraction": float(np.mean([
+                abs(float(body["speed"])) < 1e-3
+                for bodies in self.body_states for body in bodies
+            ])),
+            "homeostasis": homeostasis,
+        }
+
+    def physiology_summary(self) -> dict[str, float]:
+        bodies = [body for values in self.body_states for body in values]
+        energy = np.asarray([body["energy"] for body in bodies], dtype=np.float64)
+        gut = np.asarray([body["gut"] for body in bodies], dtype=np.float64)
+        fatigue = np.asarray([body["fatigue"] for body in bodies], dtype=np.float64)
+        speed = np.asarray([abs(body["speed"]) for body in bodies], dtype=np.float64)
+        reserve = energy + 0.84 * gut
+        return {
+            "energy_mean": float(energy.mean()), "energy_min": float(energy.min()),
+            "gut_mean": float(gut.mean()), "fatigue_mean": float(fatigue.mean()),
+            "fatigue_max": float(fatigue.max()), "reserve_mean": float(reserve.mean()),
+            "depleted_fraction": float(np.mean(energy < 0.05)),
+            "exhausted_fraction": float(np.mean(fatigue > 0.95)),
+            "stationary_fraction": float(np.mean(speed < 1e-3)),
         }
 
     def close(self) -> None:
@@ -490,13 +631,25 @@ def save_checkpoint(
         "bytes": rollout_path.stat().st_size, "sha256": sha256(rollout_path),
     }
     state = {
-        "version": 2, "step": step, "episode": cohort.episode,
+        "version": 5, "step": step, "episode": cohort.episode,
         "episode_step": episode_step, "resident_ids": cohort.resident_ids,
         "graph_sha256": cohort.brain.graph_hash, "port_spec_sha256": cohort.ports.spec_hash,
         "neural": neural, "learner": learner, "rollout": rollout_receipt,
         "worlds": cohort.world_pool.call_all("snapshot"),
         "features": features.tolist(), "physiology": physiology.tolist(),
-        "cohort": {"worlds": cohort.world_count, "seed": cohort.seed},
+        "cohort": {
+            "worlds": cohort.world_count, "seed": cohort.seed,
+            "curriculum_start_stage": cohort.curriculum_start_stage,
+        },
+        "reward_objective": (
+            cohort.reward_objective.config.to_value()
+            if cohort.reward_objective is not None else None
+        ),
+        "training_profile": (
+            cohort.training_profile.to_value()
+            if cohort.training_profile is not None else None
+        ),
+        "physical_backend": cohort.physical_backend,
     }
     path = directory / f"cohort-{tag}.json.gz"
     temporary = path.with_name(path.name + ".tmp")
@@ -512,11 +665,15 @@ def save_checkpoint(
 
 def restore_checkpoint(
     path: Path, brain: RemoteBrain, ports: NeuralPortBundle, workers: int,
+    reward_objective: Any | None, training_profile: Any | None = None,
+    physical_backend: str = "fast", allow_physical_backend_transition: bool = False,
+    target_std_profile: str = "global-v1",
+    curriculum_start_stage: int = 0,
 ) -> tuple[AffordanceCohort, PredictivePPOTrainer, MacroRollout, int, int, np.ndarray, np.ndarray]:
     with gzip.open(path, "rt", encoding="utf-8") as handle:
         state = json.load(handle)
     if (
-        state.get("version") not in (1, 2)
+        state.get("version") not in (1, 2, 3, 4, 5)
         or state.get("graph_sha256") != brain.graph_hash
         or state.get("port_spec_sha256") != ports.spec_hash
     ):
@@ -528,10 +685,40 @@ def restore_checkpoint(
     cohort.ports = ports
     cohort.world_count = int(state["cohort"]["worlds"])
     cohort.seed = int(state["cohort"]["seed"])
+    cohort.reward_objective = reward_objective
+    cohort.training_profile = training_profile
+    cohort.physical_backend = physical_backend
+    cohort.curriculum_start_stage = int(curriculum_start_stage)
+    saved_curriculum_start = int(state["cohort"].get("curriculum_start_stage", 0))
+    if saved_curriculum_start != cohort.curriculum_start_stage:
+        raise ValueError("checkpoint curriculum start stage differs")
+    expected_reward = (
+        reward_objective.config.to_value() if reward_objective is not None else None
+    )
+    if state.get("version") < 3 and reward_objective is not None:
+        raise ValueError("legacy checkpoint cannot exact-resume with a new reward objective")
+    if state.get("version") >= 3 and state.get("reward_objective") != expected_reward:
+        raise ValueError("checkpoint reward objective differs")
+    expected_profile = training_profile.to_value() if training_profile is not None else None
+    if state.get("version") < 4 and training_profile is not None:
+        raise ValueError("legacy checkpoint cannot exact-resume with an embodied profile")
+    if state.get("version") >= 4 and state.get("training_profile") != expected_profile:
+        raise ValueError("checkpoint embodied training profile differs")
+    saved_physical_backend = state.get(
+        "physical_backend", "reference" if expected_profile is not None else "fast"
+    )
+    if saved_physical_backend != physical_backend and not allow_physical_backend_transition:
+        raise ValueError(
+            "checkpoint physical backend differs; exact validated transitions require "
+            "--allow-physical-backend-transition"
+        )
     cohort.episode = int(state["episode"])
-    cohort.world_pool = ProcessWorldPool(cohort.world_count, ports.spec)
+    cohort.world_pool = ProcessWorldPool(
+        cohort.world_count, ports.spec, expected_profile, physical_backend,
+    )
     cohort.timings = {name: 0.0 for name in ("world_build", "sense_encode", "brain", "physics")}
     cohort.body_states = cohort.world_pool.call_all("restore", state["worlds"])
+    cohort.last_world_telemetry = []
     cohort.resident_ids = [str(value) for value in state["resident_ids"]]
     if cohort.resident_ids != brain.resident_ids:
         raise ValueError("checkpoint neural and physical resident order differs")
@@ -540,10 +727,20 @@ def restore_checkpoint(
         learner_path, device=brain.device,
         expected_sha256=state["learner"]["sha256"],
     )
+    if (
+        trainer.config.std_profile == "global-v1"
+        and target_std_profile == "state-conditioned-v2"
+    ):
+        trainer, _ = PredictivePPOTrainer.upgrade_state_conditioned(
+            learner_path, device=brain.device,
+            expected_sha256=state["learner"]["sha256"],
+        )
+    if trainer.config.std_profile != target_std_profile:
+        raise ValueError("checkpoint learner variance architecture differs")
     if trainer.resident_ids != cohort.resident_ids:
         raise ValueError("checkpoint learner residents differ")
     rollout = MacroRollout()
-    if state.get("version") == 2:
+    if state.get("version") >= 2:
         receipt = state["rollout"]
         rollout_path = path.parent / receipt["path"]
         if sha256(rollout_path) != receipt["sha256"]:
@@ -570,8 +767,16 @@ def evaluate(
     brain: RemoteBrain, ports: NeuralPortBundle, genome: Path,
     moments: RunningMoments, *, worlds: int, steps: int, macro_steps: int,
     workers: int, seed: int, silence_features: bool,
-) -> dict[str, float]:
-    cohort = AffordanceCohort(brain, ports, worlds, workers, seed)
+    reward_objective: Any | None = None, training_profile: Any | None = None,
+    telemetry_every: int = 0, physical_backend: str = "fast",
+    curriculum_start_stage: int = 0,
+) -> dict[str, Any]:
+    cohort = AffordanceCohort(
+        brain, ports, worlds, workers, seed, reward_objective=reward_objective,
+        training_profile=training_profile,
+        physical_backend=physical_backend,
+        curriculum_start_stage=curriculum_start_stage,
+    )
     cohort.reset(0, held_out=True)
     config = PredictivePPOConfig(feature_dim=len(ports.readout_names), macro_steps=macro_steps, seed=seed)
     trainer = PredictivePPOTrainer(cohort.resident_ids, config, device=brain.device)
@@ -580,7 +785,10 @@ def evaluate(
     raw, physiology, _ = cohort.observe(0.05)
     normalized = trainer.normalize(raw, update=False)
     totals = {name: 0.0 for name in ("nutrition", "nutrition_events", "contacts", "distance")}
-    efforts, energies, rewards = [], [], []
+    efforts, energies, guts, fatigues, reserves, stationary, rewards = [], [], [], [], [], [], []
+    homeostasis: dict[str, list[float]] = {}
+    trajectory: list[dict[str, Any]] = []
+    physical_step = 0
     try:
         for _ in range(0, steps, macro_steps):
             previous = trainer.act(
@@ -591,11 +799,24 @@ def evaluate(
             for _substep in range(macro_steps):
                 reward, metrics = cohort.advance(previous["action"], 0.05)
                 accumulated += reward
+                physical_step += 1
                 raw, physiology, _ = cohort.observe(0.05)
                 for name in totals:
                     totals[name] += metrics[name]
                 efforts.append(metrics["effort"])
                 energies.append(metrics["energy"])
+                guts.append(metrics["gut"])
+                fatigues.append(metrics["fatigue"])
+                reserves.append(metrics["reserve_energy"])
+                stationary.append(metrics["stationary_fraction"])
+                for name, value in metrics["homeostasis"].items():
+                    homeostasis.setdefault(name, []).append(value)
+                if telemetry_every and physical_step % telemetry_every == 0:
+                    trajectory.append({
+                        "step": physical_step, "model_seconds": physical_step * 0.05,
+                        "cumulative": totals.copy(), "physiology": cohort.physiology_summary(),
+                        "world_components": copy.deepcopy(cohort.last_world_telemetry),
+                    })
             normalized = trainer.normalize(raw, update=False)
             finish_features = np.zeros_like(normalized) if silence_features else normalized
             trainer.finish_transition(
@@ -605,12 +826,22 @@ def evaluate(
             rewards.extend(accumulated.tolist())
     finally:
         cohort.close()
+    final_physiology = cohort.physiology_summary()
     return {
         **totals,
         "effort_mean": float(np.mean(efforts)),
         "energy_final": float(energies[-1]),
+        "gut_final": float(guts[-1]),
+        "fatigue_final": float(fatigues[-1]),
+        "reserve_final": float(reserves[-1]),
+        "stationary_fraction_mean": float(np.mean(stationary)),
+        "final_physiology": final_physiology,
         "reward_total": float(np.sum(rewards)),
         "reward_mean_per_macro_resident": float(np.mean(rewards)),
+        "homeostasis_mean_per_step": {
+            name: float(np.mean(values)) for name, values in homeostasis.items()
+        },
+        "trajectory": trajectory,
     }
 
 
@@ -632,6 +863,43 @@ def main() -> int:
         not args.checkpoint_every or args.first_checkpoint >= args.checkpoint_every
     ):
         raise SystemExit("--first-checkpoint must be smaller than --checkpoint-every")
+    training_profile = None
+    if args.training_profile != "legacy":
+        if args.resume:
+            with gzip.open(args.resume.resolve(), "rt", encoding="utf-8") as handle:
+                carried_profile = json.load(handle).get("training_profile")
+            training_profile = (
+                EmbodiedTrainingProfile.from_value(carried_profile)
+                if carried_profile is not None else EmbodiedTrainingProfile.current()
+            )
+        else:
+            training_profile = (
+                EmbodiedTrainingProfile.current_v2()
+                if args.training_profile == "current-life-v2"
+                else EmbodiedTrainingProfile.current()
+            )
+    if training_profile is not None:
+        profile_version = int(training_profile.component("version"))
+        if profile_version == 1 and args.curriculum_start_stage != 0:
+            raise SystemExit("current-life-v1 requires --curriculum-start-stage 0")
+        if profile_version == 2 and args.curriculum_start_stage not in range(3):
+            raise SystemExit("current-life-v2 curriculum start stage must be 0, 1, or 2")
+        horizons = training_profile.component("horizons")
+        expected = (
+            int(horizons["training_episode_steps"]),
+            int(horizons["heldout_steps"]),
+            int(horizons["checkpoint_every_steps"]),
+        )
+        actual = (args.episode_steps, args.eval_steps, args.checkpoint_every)
+        if actual != expected:
+            raise SystemExit(
+                "current-life-v1 requires episode/eval/checkpoint steps "
+                f"{expected}, received {actual}"
+            )
+        if args.steps < 2 * args.episode_steps:
+            raise SystemExit("current-life-v1 requires at least two full training episodes")
+        if args.reward_objective != "finite-energy-v1":
+            raise SystemExit("current-life-v1 requires --reward-objective finite-energy-v1")
     graph = MaleCNSGraph.load(args.graph, mmap=True)
     port_graph = MaleCNSGraph.load(args.port_graph, mmap=True) if args.port_graph else graph
     if (
@@ -641,9 +909,17 @@ def main() -> int:
         raise SystemExit("port graph and recurrence graph neuron ordering differs")
     ports = NeuralPortBundle.load(args.port_bundle, port_graph)
     config = PredictivePPOConfig(
-        feature_dim=len(ports.readout_names), macro_steps=args.macro_steps, seed=args.seed
+        feature_dim=len(ports.readout_names), macro_steps=args.macro_steps,
+        seed=args.seed, std_profile=args.std_profile,
     )
-    if args.brain_backend in ("triton", "microbatch"):
+    reward_objective = None
+    if args.reward_objective == "finite-energy-v1":
+        objective_config = (
+            FiniteEnergyConfig.from_value(training_profile.component("homeostasis"))
+            if training_profile is not None else FiniteEnergyConfig()
+        )
+        reward_objective = FiniteEnergyObjective(objective_config)
+    if args.brain_backend in ("tiled", "triton", "microbatch"):
         brain = FixedCohortBrain(
             graph, ports, args.worlds * 3, device=args.device,
             backend=args.brain_backend, microbatch_size=args.microbatch_size,
@@ -655,17 +931,36 @@ def main() -> int:
         )
     source_paths = [
         ROOT / "chreatures" / name for name in (
-            "learning.py", "fast_circuit.py", "remote_brain.py", "malecns.py", "neural_ports.py",
-            "physics.py", "articulated.py", "sensorium.py", "physical_batch.py",
+            "learning.py", "fast_circuit.py", "tiled_circuit.py", "remote_brain.py",
+            "malecns.py", "neural_ports.py", "physics.py", "articulated.py",
+            "sensorium.py", "physical_batch.py", "training_environment.py",
+            "homeostasis.py", "fields.py", "ecology.py", "acoustics.py",
         )
     ] + [Path(__file__).resolve(), HABITAT, ROOT / "data/bodies/hexapod.json",
          ROOT / "data/ports/retinal-v1.json"]
+    warm_source_std_profile = None
+    if args.warm_start_learner:
+        warm_value = torch.load(
+            args.warm_start_learner.resolve(), map_location="cpu", weights_only=False
+        )
+        warm_source_std_profile = warm_value.get("config", {}).get("std_profile", "global-v1")
+        del warm_value
     run_record = {
         "format": "chreatures-affordance-run-v1", "started_unix": time.time(),
         "pid": os.getpid(), "argv": [sys.executable, *sys.argv],
         "command": shlex.join([sys.executable, *sys.argv]),
         "graph_sha256": graph.hash, "port_spec_sha256": ports.spec_hash,
         "port_graph_sha256": port_graph.hash,
+        "reward_objective": (
+            reward_objective.config.to_value() if reward_objective is not None
+            else {"format": "legacy-inline-v1"}
+        ),
+        "training_profile": training_profile.to_value() if training_profile is not None else None,
+        "physical_backend": {
+            "engine": args.physical_backend,
+            "transition_authorized": bool(args.allow_physical_backend_transition),
+            "semantics": "implementation-equivalent physical state and dynamics",
+        },
         "port_bundle_sha256": sha256(args.port_bundle),
         "source_sha256": {str(path.relative_to(ROOT)): sha256(path) for path in source_paths},
         "torch": {"version": torch.__version__, "hip": torch.version.hip},
@@ -673,7 +968,14 @@ def main() -> int:
         "warm_start": (
             {"path": str(args.warm_start_learner.resolve()),
              "sha256": sha256(args.warm_start_learner.resolve()),
-             "semantics": "shared model, optimizer and normalization only; new private cohort"}
+             "semantics": "shared model, optimizer and normalization only; new private cohort",
+             "source_std_profile": warm_source_std_profile,
+             "target_std_profile": args.std_profile,
+             "variance_upgrade": (
+                 "global-v1 to zero-offset state-conditioned-v2"
+                 if warm_source_std_profile == "global-v1"
+                 and args.std_profile == "state-conditioned-v2" else None
+             )}
             if args.warm_start_learner else None
         ),
         "resume": (
@@ -682,17 +984,35 @@ def main() -> int:
                  "neural, physical, learner, optimizer and private-state restore; "
                  "legacy pending rollout explicitly discarded"
                  if args.resume_drops_pending_rollout else
-                 "exact neural, physical, learner, optimizer, private-state and rollout restore"
+                 (
+                     "exact neural, physical, private-state and pending-rollout restore; "
+                     "zero-offset state-conditioned variance upgrade preserves old log probabilities"
+                     if args.std_profile == "state-conditioned-v2" else
+                     "exact neural, physical, learner, optimizer, private-state and rollout restore"
+                 )
              ),
              "training_discontinuity": bool(args.resume_drops_pending_rollout)}
             if args.resume else None
+        ),
+        "architecture_transition": (
+            {
+                "from": "global-v1", "to": "state-conditioned-v2",
+                "initial_offset": "exact zero",
+                "old_log_prob_compatibility": "exact at transition",
+                "optimizer": "all inherited moments retained; new head moments zero",
+            }
+            if args.resume and args.std_profile == "state-conditioned-v2" else None
         ),
     }
     (args.output / "run.json").write_text(json.dumps(run_record, indent=2, sort_keys=True) + "\n")
     initial_genome = args.output / "initial-genome.npz"
     if args.resume:
         cohort, trainer, rollout, step, episode_step, raw, physiology = restore_checkpoint(
-            args.resume.resolve(), brain, ports, args.workers
+            args.resume.resolve(), brain, ports, args.workers, reward_objective,
+            training_profile, args.physical_backend,
+            args.allow_physical_backend_transition,
+            args.std_profile,
+            args.curriculum_start_stage,
         )
         if cohort.world_count != args.worlds or trainer.config != config:
             raise SystemExit("resume world or learner configuration differs")
@@ -700,6 +1020,9 @@ def main() -> int:
             raise SystemExit("resume run is missing its fixed initial genome")
         normalized = trainer.normalize(raw, update=False)
         neural = []
+        architecture_comparison = args.output / "architecture-comparison-genome.npz"
+        if args.std_profile == "state-conditioned-v2" and not architecture_comparison.exists():
+            trainer.export_genome(architecture_comparison)
         if args.restore_audit_only:
             receipt = {
                 "format": "chreatures-affordance-restore-audit-v1",
@@ -720,21 +1043,57 @@ def main() -> int:
             return 0
     else:
         rollout = MacroRollout()
-        cohort = AffordanceCohort(brain, ports, args.worlds, args.workers, args.seed)
+        cohort = AffordanceCohort(
+            brain, ports, args.worlds, args.workers, args.seed,
+            reward_objective=reward_objective, training_profile=training_profile,
+            physical_backend=args.physical_backend,
+            curriculum_start_stage=args.curriculum_start_stage,
+        )
         trainer = PredictivePPOTrainer(cohort.resident_ids, config, device=args.device)
         trainer.export_genome(initial_genome)
+        comparison_genome = initial_genome
+        comparison_scope = "fixed random initialization"
         if args.warm_start_learner:
             inherited, _ = PredictivePPOTrainer.restore(
                 args.warm_start_learner.resolve(), device=args.device
             )
+            if (
+                inherited.config.std_profile == "global-v1"
+                and config.std_profile == "state-conditioned-v2"
+            ):
+                inherited, _ = PredictivePPOTrainer.upgrade_state_conditioned(
+                    args.warm_start_learner.resolve(), device=args.device,
+                    expected_sha256=sha256(args.warm_start_learner.resolve()),
+                )
             if inherited.config != config or inherited.resident_ids != cohort.resident_ids:
                 raise SystemExit("warm-start learner configuration or cohort identities differ")
             trainer = inherited
             trainer.reset_private_state()
+            comparison_genome = args.output / "inherited-comparison-genome.npz"
+            trainer.export_genome(comparison_genome)
+            comparison_scope = (
+                "inherited policy after exact zero-offset state-conditioned variance upgrade"
+                if config.std_profile == "state-conditioned-v2" else
+                "inherited policy before this reward-version stage"
+            )
         raw, physiology, neural = cohort.observe(0.05)
         normalized = trainer.normalize(raw, update=True)
         step = 0
         episode_step = 0
+    if args.resume:
+        architecture_comparison = args.output / "architecture-comparison-genome.npz"
+        comparison_genome = (
+            architecture_comparison if architecture_comparison.exists() else
+            args.output / "inherited-comparison-genome.npz"
+            if (args.output / "inherited-comparison-genome.npz").exists()
+            else initial_genome
+        )
+        comparison_scope = (
+            "zero-offset state-conditioned upgrade at architecture branch"
+            if comparison_genome == architecture_comparison else
+            "inherited policy before this reward-version stage"
+            if comparison_genome != initial_genome else "fixed random initialization"
+        )
     process_start_step = step
     started = time.perf_counter()
     stop = False
@@ -744,6 +1103,13 @@ def main() -> int:
     signal.signal(signal.SIGINT, request_stop)
     signal.signal(signal.SIGTERM, request_stop)
     updates, macro_rows, checkpoints = [], [], []
+    training_totals = {
+        name: 0.0 for name in ("nutrition", "nutrition_events", "contacts", "distance")
+    }
+    telemetry_every = (
+        int(training_profile.component("horizons")["telemetry_every_steps"])
+        if training_profile is not None else 0
+    )
     algorithm_seconds = 0.0
     ppo_seconds = 0.0
     regular_checkpoint = (
@@ -763,6 +1129,7 @@ def main() -> int:
             accumulated = np.zeros(len(cohort.resident_ids), dtype=np.float32)
             totals = {name: 0.0 for name in ("nutrition", "nutrition_events", "contacts", "distance")}
             efforts, energies = [], []
+            homeostasis_values: dict[str, list[float]] = {}
             for _ in range(args.macro_steps):
                 reward, metrics = cohort.advance(previous["action"], 0.05)
                 accumulated += reward
@@ -771,8 +1138,30 @@ def main() -> int:
                 episode_step += 1
                 for name in totals:
                     totals[name] += metrics[name]
+                    training_totals[name] += metrics[name]
                 efforts.append(metrics["effort"])
                 energies.append(metrics["energy"])
+                for name, value in metrics["homeostasis"].items():
+                    homeostasis_values.setdefault(name, []).append(value)
+                if telemetry_every and step % telemetry_every == 0:
+                    telemetry = {
+                        "format": "chreatures-embodied-training-telemetry-v1",
+                        "step": step, "episode": cohort.episode,
+                        "episode_step": episode_step,
+                        "model_seconds_total": step * 0.05,
+                        "model_seconds_episode": episode_step * 0.05,
+                        "process_start_step": process_start_step,
+                        "process_cumulative": training_totals.copy(),
+                        "physiology": cohort.physiology_summary(),
+                        "world_components": copy.deepcopy(cohort.last_world_telemetry),
+                    }
+                    with (args.output / "telemetry.jsonl").open("a") as handle:
+                        handle.write(json.dumps(
+                            telemetry, sort_keys=True,
+                            default=lambda value: (
+                                value.tolist() if isinstance(value, np.ndarray) else float(value)
+                            ),
+                        ) + "\n")
             algorithm_started = time.perf_counter()
             normalized_next = trainer.normalize(raw, update=True)
             done = np.full(len(cohort.resident_ids), episode_step >= args.episode_steps)
@@ -792,7 +1181,14 @@ def main() -> int:
                 "prediction_error": float(learning["prediction_error"].mean()),
                 "learning_progress": float(learning["learning_progress"].mean()),
                 **totals, "effort": float(np.mean(efforts)), "energy": float(energies[-1]),
+                "gut": metrics["gut"], "fatigue": metrics["fatigue"],
+                "reserve_energy": metrics["reserve_energy"],
+                "stationary_fraction": metrics["stationary_fraction"],
                 "activity": float(np.mean([item["activity"] for item in neural])),
+                "homeostasis": {
+                    name: float(np.mean(values))
+                    for name, values in homeostasis_values.items()
+                },
             }
             macro_rows.append(row)
             with (args.output / "macros.jsonl").open("a") as handle:
@@ -857,21 +1253,26 @@ def main() -> int:
     training_timings = cohort.timings.copy()
     training_timings.update({"algorithm": algorithm_seconds, "ppo": ppo_seconds})
     cohort.close()
+    evaluation_common = {
+        "worlds": args.eval_worlds, "steps": args.eval_steps,
+        "macro_steps": args.macro_steps, "workers": args.workers,
+        "seed": args.seed + 900_000, "reward_objective": reward_objective,
+        "training_profile": training_profile, "telemetry_every": telemetry_every,
+        "physical_backend": args.physical_backend,
+        "curriculum_start_stage": 2,
+    }
     evaluations = {
-        "fixed_initial": evaluate(
-            brain, ports, initial_genome, trainer.moments, worlds=args.eval_worlds,
-            steps=args.eval_steps, macro_steps=args.macro_steps, workers=args.workers,
-            seed=args.seed + 900_000, silence_features=False,
+        "fixed_comparison": evaluate(
+            brain, ports, comparison_genome, trainer.moments,
+            silence_features=False, **evaluation_common,
         ),
         "learned": evaluate(
-            brain, ports, learned_genome, trainer.moments, worlds=args.eval_worlds,
-            steps=args.eval_steps, macro_steps=args.macro_steps, workers=args.workers,
-            seed=args.seed + 900_000, silence_features=False,
+            brain, ports, learned_genome, trainer.moments,
+            silence_features=False, **evaluation_common,
         ),
         "learned_neural_silenced": evaluate(
-            brain, ports, learned_genome, trainer.moments, worlds=args.eval_worlds,
-            steps=args.eval_steps, macro_steps=args.macro_steps, workers=args.workers,
-            seed=args.seed + 900_000, silence_features=True,
+            brain, ports, learned_genome, trainer.moments,
+            silence_features=True, **evaluation_common,
         ),
     }
     summary = {
@@ -889,10 +1290,13 @@ def main() -> int:
         "config": vars(args) | {"graph": str(args.graph), "port_bundle": str(args.port_bundle), "output": str(args.output), "resume": str(args.resume) if args.resume else None},
         "learner": asdict(config), "learner_update_count": trainer.update_count,
         "updates_this_process": updates, "evaluations": evaluations,
+        "comparison_policy": {"scope": comparison_scope, "path": str(comparison_genome),
+                              "sha256": sha256(comparison_genome)},
         "checkpoints": checkpoints, "initial_genome_sha256": hashlib.sha256(initial_genome.read_bytes()).hexdigest(),
         "learned_genome": learned_receipt, "brain": brain.metadata(),
         "command": shlex.join([sys.executable, *sys.argv]), "pid": os.getpid(),
         "torch": {"version": torch.__version__, "hip": torch.version.hip},
+        "training_profile": training_profile.to_value() if training_profile is not None else None,
         "environment": {name: os.environ[name] for name in ("HSA_OVERRIDE_GFX_VERSION", "PYTORCH_KERNEL_CACHE_PATH") if name in os.environ},
     }
     (args.output / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True, default=str) + "\n")
