@@ -34,7 +34,7 @@ from chreatures.organism_interface import (
     PHYSIOLOGY_NAMES,
     PREVIOUS_DIM,
 )
-from chreatures.population import CandidateGenome, content_sha256
+from chreatures.population import CandidateGenome, canonical_bytes, content_sha256
 from chreatures.sensorimotor_worker_native import DevelopmentalResidentCohort
 from chreatures.training_cohort import (
     OUTCOME_FIELDS,
@@ -66,12 +66,6 @@ CONTROLLER_OUTCOME_FIELDS = (
     "completed_total", "learned_total", "frozen_total", "skipped_total",
     "cancelled_total",
 )
-
-
-def canonical_bytes(value: Any) -> bytes:
-    return json.dumps(
-        value, sort_keys=True, separators=(",", ":"), allow_nan=False
-    ).encode()
 
 
 def canonical_sha256(value: Any) -> str:
