@@ -1,0 +1,324 @@
+{
+  "format": "chreatures-sensorimotor-worker-training-receipt-v2",
+  "status": "research negative control; no promotion",
+  "data": {
+    "content_sha256": "69056d10a285a913501b43bb11aa25ab41f1af559f104f4872c5e2774005894c",
+    "manifest_sha256": "0ec6e7deee036454d6f5ce9396f3e61f99226b805668e5713ed2befb81b6bdf6",
+    "resident_steps": 192000,
+    "dt_seconds": 0.05,
+    "episodes": 2,
+    "worlds": 16,
+    "split_worlds": {
+      "train": 12,
+      "validation": 2,
+      "heldout": 2
+    },
+    "observation_dim": 357,
+    "previous_action_dim": 9,
+    "action_dim": 8
+  },
+  "objective": {
+    "alternate_goal": "different achieved time, same resident/episode and log-horizon bucket; not necessarily reachable",
+    "equal_capacity": true,
+    "goal_updates": 384,
+    "modes": [
+      "goal-conditioned",
+      "goal-free"
+    ],
+    "seeds": [
+      20260908,
+      20260909,
+      20260910
+    ],
+    "selection": "declared validation mean NLL; heldout once after selection",
+    "worker_epochs": 8
+  },
+  "source": {
+    "base_commit": "545ca7a",
+    "data_sha256": "1b705e85ff1a6dd2496def1fae21de7f3155ff2582105365ac982039d1d4f134",
+    "isolated_path": "/home/ember/chreatures/sensorimotor-worker-v2-src",
+    "model_sha256": "201d0962237b8571d61935ecfbc120bdf7bcfade81872165a6705f0c6753e4df",
+    "schema_sha256": "c77da7c2ea22bdf0130c791aeb9320dd4509914c6096e791007b12c0e6603cc4",
+    "trainer_sha256": "05b06d721e2910bfe370b0f8c526f21523310453507ad534f7d3e02f7de29f50"
+  },
+  "stack": {
+    "device": "AMD Radeon 890M",
+    "hip": "7.0.51831",
+    "shared_vlm_services_untouched": true,
+    "torch": "2.10.0+rocm7.0"
+  },
+  "gpu_busy_sampling": {
+    "interval_seconds": 0.2,
+    "max_percent": 96.0,
+    "mean_percent": 74.89066666666666,
+    "median_percent": 93.0,
+    "p95_percent": 96.0,
+    "samples": 375
+  },
+  "summary": {
+    "goal-conditioned": {
+      "elapsed_seconds_mean": 16.535826386262972,
+      "heldout_mean_nll": 2.4986384936006583,
+      "permuted_goal_delta_nll_by_horizon_bucket": [
+        -0.00014841807378664087,
+        8.206785368715642e-05,
+        0.00016861560362693283,
+        3.7226792360790864e-05,
+        0.0004490108782128129
+      ]
+    },
+    "goal-free": {
+      "elapsed_seconds_mean": 16.485087325486045,
+      "heldout_mean_nll": 2.4908506541467905,
+      "permuted_goal_delta_nll_by_horizon_bucket": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "runs": [
+    {
+      "artifact_mode": "goal-conditioned",
+      "seed": 20260908,
+      "selected_epoch": 8,
+      "elapsed_seconds": 16.431948835030198,
+      "heldout_mean_nll": 2.496678142485881,
+      "permuted_goal_delta_nll_by_horizon_bucket": [
+        -0.0003423001617375937,
+        -0.00021143505676905273,
+        -0.0007989379441608723,
+        -0.0002207331829555275,
+        0.0006758032887310943
+      ],
+      "action_persistence_by_axis": [
+        0.4945920626809742,
+        0.4689150059615057,
+        0.29471129279509456,
+        0.6142054164537557,
+        0.5115397717594958,
+        0.5786918753193664,
+        0.5089422585590189,
+        0.286152273888605
+      ],
+      "checkpoint": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-conditioned-seed20260908/worker.pt",
+        "sha256": "d97a7fec61eef2aa2afa130e0d810946d231ca133bc40f74ee859a12fa95fcdc"
+      },
+      "result": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-conditioned-seed20260908/result.json",
+        "sha256": "ce05551d01e07ec7b76d9129f16672a727ca64d827be476b7fc935a9167af05c"
+      }
+    },
+    {
+      "artifact_mode": "goal-free",
+      "seed": 20260908,
+      "selected_epoch": 8,
+      "elapsed_seconds": 16.509859515354037,
+      "heldout_mean_nll": 2.478805593485078,
+      "permuted_goal_delta_nll_by_horizon_bucket": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "action_persistence_by_axis": [
+        0.4945920626809742,
+        0.4689150059615057,
+        0.29471129279509456,
+        0.6142054164537557,
+        0.5115397717594958,
+        0.5786918753193664,
+        0.5089422585590189,
+        0.286152273888605
+      ],
+      "checkpoint": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-free-seed20260908/worker.pt",
+        "sha256": "3523192e87e1d1dfd8139a4ab744a6a28c660dff148a06f4eb8bd1decf3da950"
+      },
+      "result": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-free-seed20260908/result.json",
+        "sha256": "6596db48d712df5afa97ab232fc4e85e79626a16f9b28e549184fdf3df6072f7"
+      }
+    },
+    {
+      "artifact_mode": "goal-conditioned",
+      "seed": 20260909,
+      "selected_epoch": 8,
+      "elapsed_seconds": 16.67529227025807,
+      "heldout_mean_nll": 2.5016389257801066,
+      "permuted_goal_delta_nll_by_horizon_bucket": [
+        5.615074954910853e-05,
+        0.0007358403877058214,
+        6.0073693208414084e-05,
+        0.00040432827882441334,
+        0.00017259047689986972
+      ],
+      "action_persistence_by_axis": [
+        0.4945920626809742,
+        0.4689150059615057,
+        0.29471129279509456,
+        0.6142054164537557,
+        0.5115397717594958,
+        0.5786918753193664,
+        0.5089422585590189,
+        0.286152273888605
+      ],
+      "checkpoint": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-conditioned-seed20260909/worker.pt",
+        "sha256": "68a7b6e09b5042c3c40d1674541124b4326f3214ec9abda460cbbed143a9637d"
+      },
+      "result": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-conditioned-seed20260909/result.json",
+        "sha256": "1af05edd62de2d465ac8db3976d14a8cb963990a4da1b8f699cd1748f13463ac"
+      }
+    },
+    {
+      "artifact_mode": "goal-free",
+      "seed": 20260909,
+      "selected_epoch": 8,
+      "elapsed_seconds": 16.34311820473522,
+      "heldout_mean_nll": 2.5009002138130345,
+      "permuted_goal_delta_nll_by_horizon_bucket": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "action_persistence_by_axis": [
+        0.4945920626809742,
+        0.4689150059615057,
+        0.29471129279509456,
+        0.6142054164537557,
+        0.5115397717594958,
+        0.5786918753193664,
+        0.5089422585590189,
+        0.286152273888605
+      ],
+      "checkpoint": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-free-seed20260909/worker.pt",
+        "sha256": "7234f8442d1faffee9dc5bf933c0ed1c175c6343727ac79226f4a1a536425f62"
+      },
+      "result": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-free-seed20260909/result.json",
+        "sha256": "a9ec1b4f53a1ab100b7976afae2ac5145e2a76e503daf1c7f98c8337f23f8cf3"
+      }
+    },
+    {
+      "artifact_mode": "goal-conditioned",
+      "seed": 20260910,
+      "selected_epoch": 8,
+      "elapsed_seconds": 16.500238053500652,
+      "heldout_mean_nll": 2.497598412535987,
+      "permuted_goal_delta_nll_by_horizon_bucket": [
+        -0.0001591048091714374,
+        -0.0002782017698752994,
+        0.0012447110618332567,
+        -7.191471878651326e-05,
+        0.0004986388690074747
+      ],
+      "action_persistence_by_axis": [
+        0.4945920626809742,
+        0.4689150059615057,
+        0.29471129279509456,
+        0.6142054164537557,
+        0.5115397717594958,
+        0.5786918753193664,
+        0.5089422585590189,
+        0.286152273888605
+      ],
+      "checkpoint": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-conditioned-seed20260910/worker.pt",
+        "sha256": "342829764c1aa7a9a8bd8ca62a739b16cac3a5841a36be05a77f81f0720942c8"
+      },
+      "result": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-conditioned-seed20260910/result.json",
+        "sha256": "293c9d7d5563741381ecfad4e1c3b549b4aee47a745bfe78622dfdacb8fadd8f"
+      }
+    },
+    {
+      "artifact_mode": "goal-free",
+      "seed": 20260910,
+      "selected_epoch": 8,
+      "elapsed_seconds": 16.602284256368876,
+      "heldout_mean_nll": 2.49284615514226,
+      "permuted_goal_delta_nll_by_horizon_bucket": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "action_persistence_by_axis": [
+        0.4945920626809742,
+        0.4689150059615057,
+        0.29471129279509456,
+        0.6142054164537557,
+        0.5115397717594958,
+        0.5786918753193664,
+        0.5089422585590189,
+        0.286152273888605
+      ],
+      "checkpoint": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-free-seed20260910/worker.pt",
+        "sha256": "997b827fc4bcf8a4e04d39e2b1ed29122f4d6f6988d172b38b31391723467b59"
+      },
+      "result": {
+        "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-goal-free-seed20260910/result.json",
+        "sha256": "fbfb469421e494feeeb9a1ea78639ecf1a73c24ac29057b52f07eda94f547d51"
+      }
+    }
+  ],
+  "physical_controls": {
+    "action_persistence_by_axis": [
+      0.4945920626809742,
+      0.4689150059615057,
+      0.29471129279509456,
+      0.6142054164537557,
+      0.5115397717594958,
+      0.5786918753193664,
+      0.5089422585590189,
+      0.286152273888605
+    ],
+    "repeat_last_rmse_by_axis": [
+      0.08578420032657935,
+      0.1157968597741352,
+      0.18981520856603248,
+      0.0591278655774118,
+      0.08047825313817336,
+      0.06425553542682746,
+      0.0863037084233706,
+      0.11027803387551724
+    ],
+    "repeat_last_action_change_rmse_by_axis": [
+      0.0953273247723946,
+      0.1286875165660796,
+      0.2108707623263254,
+      0.06571937542975323,
+      0.08944534596268172,
+      0.07141823067387988,
+      0.09590084376790005,
+      0.1225527614923588
+    ],
+    "interpretation": "Repeat-last beats worker MAP on natural and action-change RMSE; worker improves most stopping strata. No closed-loop behavior claim."
+  },
+  "raw_receipt": {
+    "path": "/home/ember/chreatures/runs/sensorimotor-worker/v2-paired-result.json",
+    "sha256": "a6217a9eb685c509b190184954c417da9e69bd0dade47d964c4dea067d2d4bd4"
+  },
+  "interpretation": [
+    "Goal-conditioned mean heldout NLL is worse than goal-free.",
+    "Same-resident comparable-horizon goal permutation is near zero and sign-inconsistent, so achieved-goal reliance is not established.",
+    "Repeat-last action is a stronger physical MAP rival on natural and action-change strata.",
+    "Worker MAP improves most stopping-axis errors, which requires closed-loop evaluation before any behavioral claim."
+  ],
+  "limits": [
+    "Comparable alternate achieved goals are not asserted reachable.",
+    "Offline NLL and MAP controls do not determine closed-loop physical control.",
+    "No worker MAP mode histogram was recorded by the frozen evaluator; no post-hoc heldout analysis was added."
+  ]
+}

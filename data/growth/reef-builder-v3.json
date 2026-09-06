@@ -1,0 +1,296 @@
+{
+  "version": 3,
+  "name": "reef-builder-v3",
+  "cadence_seconds": 8.0,
+  "initial_delay_seconds": 3.0,
+  "max_buds": 96,
+  "max_shapes_per_batch": 30,
+  "resolution": {
+    "minimum_feature_size": 0.002
+  },
+  "resources": {
+    "names": [
+      "soft_tissue",
+      "tough_tissue"
+    ],
+    "composition": {
+      "branch": [
+        0.22,
+        0.78
+      ],
+      "root": [
+        0.34,
+        0.66
+      ],
+      "leaf": [
+        0.86,
+        0.14
+      ]
+    },
+    "atp_per_biomass": {
+      "branch": 3.4,
+      "root": 2.7,
+      "leaf": 4.1
+    }
+  },
+  "variation": {
+    "length_log_sigma": 0.14,
+    "angle_sigma_degrees": 7.0,
+    "leaf_log_sigma": 0.16
+  },
+  "rules": {
+    "pillar": {
+      "role": "branch",
+      "segment": {
+        "length": 0.18,
+        "radius": 0.018,
+        "density": 510.0,
+        "radius_scale_exponent": 0.5,
+        "minimum_aspect_ratio": 0.0
+      },
+      "activation": {
+        "minimum": {
+          "light": 0.24,
+          "nutrient": 0.28,
+          "support": 0.42
+        },
+        "weights": {
+          "light": 0.42,
+          "nutrient": 0.36,
+          "support": 0.22
+        },
+        "competition_gain": 1.7
+      },
+      "successors": [
+        {
+          "symbol": "pillar",
+          "angle_degrees": 7.0,
+          "azimuth_degrees": 18.0,
+          "generation_phase_degrees": 137.5,
+          "scale": 0.91,
+          "probability": 0.94
+        },
+        {
+          "symbol": "shelf",
+          "angle_degrees": 52.0,
+          "azimuth_degrees": 53.0,
+          "generation_phase_degrees": 137.5,
+          "scale": 0.72,
+          "probability": 0.62
+        },
+        {
+          "symbol": "fork",
+          "angle_degrees": 34.0,
+          "azimuth_degrees": -61.0,
+          "generation_phase_degrees": 99.0,
+          "scale": 0.67,
+          "probability": 0.48
+        }
+      ],
+      "leaf": {
+        "probability": 0.52,
+        "area": 0.01,
+        "aspect": 1.35,
+        "thickness": 0.005,
+        "areal_density": 0.28
+      }
+    },
+    "shelf": {
+      "role": "branch",
+      "segment": {
+        "length": 0.145,
+        "radius": 0.014,
+        "density": 470.0,
+        "radius_scale_exponent": 0.5,
+        "minimum_aspect_ratio": 0.0
+      },
+      "activation": {
+        "minimum": {
+          "light": 0.3,
+          "nutrient": 0.24,
+          "support": 0.34
+        },
+        "weights": {
+          "light": 0.5,
+          "nutrient": 0.31,
+          "support": 0.19
+        },
+        "competition_gain": 1.9
+      },
+      "successors": [
+        {
+          "symbol": "shelf",
+          "angle_degrees": 18.0,
+          "azimuth_degrees": 72.0,
+          "generation_phase_degrees": 137.5,
+          "scale": 0.82,
+          "probability": 0.78
+        },
+        {
+          "symbol": "fork",
+          "angle_degrees": -31.0,
+          "azimuth_degrees": -48.0,
+          "generation_phase_degrees": 111.0,
+          "scale": 0.65,
+          "probability": 0.46
+        }
+      ],
+      "leaf": {
+        "probability": 0.78,
+        "area": 0.013,
+        "aspect": 1.7,
+        "thickness": 0.005,
+        "areal_density": 0.24
+      }
+    },
+    "fork": {
+      "role": "branch",
+      "segment": {
+        "length": 0.12,
+        "radius": 0.011,
+        "density": 450.0,
+        "radius_scale_exponent": 0.5,
+        "minimum_aspect_ratio": 0.0
+      },
+      "activation": {
+        "minimum": {
+          "light": 0.27,
+          "nutrient": 0.27,
+          "support": 0.32
+        },
+        "weights": {
+          "light": 0.45,
+          "nutrient": 0.34,
+          "support": 0.21
+        },
+        "competition_gain": 1.55
+      },
+      "successors": [
+        {
+          "symbol": "fork",
+          "angle_degrees": 29.0,
+          "azimuth_degrees": 67.0,
+          "generation_phase_degrees": 137.5,
+          "scale": 0.78,
+          "probability": 0.72
+        },
+        {
+          "symbol": "shelf",
+          "angle_degrees": -38.0,
+          "azimuth_degrees": -74.0,
+          "generation_phase_degrees": 101.0,
+          "scale": 0.62,
+          "probability": 0.43
+        }
+      ],
+      "leaf": {
+        "probability": 0.7,
+        "area": 0.008,
+        "aspect": 1.45,
+        "thickness": 0.0045,
+        "areal_density": 0.25
+      }
+    },
+    "anchor": {
+      "role": "root",
+      "segment": {
+        "length": 0.11,
+        "radius": 0.016,
+        "density": 560.0,
+        "radius_scale_exponent": 1.0,
+        "minimum_aspect_ratio": 2.5
+      },
+      "activation": {
+        "minimum": {
+          "light": 0.0,
+          "nutrient": 0.34,
+          "support": 0.46
+        },
+        "weights": {
+          "light": 0.0,
+          "nutrient": 0.54,
+          "support": 0.46
+        },
+        "competition_gain": 1.3
+      },
+      "successors": [
+        {
+          "symbol": "anchor",
+          "angle_degrees": 16.0,
+          "azimuth_degrees": 38.0,
+          "generation_phase_degrees": 109.0,
+          "scale": 0.72,
+          "probability": 0.72
+        },
+        {
+          "symbol": "anchor",
+          "angle_degrees": -34.0,
+          "azimuth_degrees": -82.0,
+          "generation_phase_degrees": 137.5,
+          "scale": 0.52,
+          "probability": 0.18
+        }
+      ],
+      "leaf": null
+    }
+  },
+  "axiom": [
+    {
+      "symbol": "pillar",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "forward": [
+        0.08,
+        0.02,
+        0.9966
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "scale": 1.0
+    },
+    {
+      "symbol": "shelf",
+      "position": [
+        0,
+        0,
+        0.08
+      ],
+      "forward": [
+        0.82,
+        0.18,
+        0.54
+      ],
+      "up": [
+        -0.12,
+        0.98,
+        -0.14
+      ],
+      "scale": 0.82
+    },
+    {
+      "symbol": "anchor",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "forward": [
+        0.78,
+        -0.18,
+        -0.6
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "scale": 0.9
+    }
+  ]
+}

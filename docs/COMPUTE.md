@@ -1,13 +1,14 @@
 # Compute hosts
 
 Measured on 2026-09-05. PyTorch uses the `cuda` device API for both ROCm
-hosts. No driver changes or new Python environments are required.
+hosts. No driver changes are required. Use the project-isolated environments
+below; the original hbox `h1-ghost` environment was retired.
 
 ## Recommended environments
 
 | Host | GPU | Python | PyTorch / HIP | Required runtime setting |
 | --- | --- | --- | --- | --- |
-| `hbox` | XFX Radeon RX 6750 XT, Navi 22, 12 GiB VRAM (`1002:73df`, subsystem `1eae:6710`, native `gfx1031`) | `/home/hbox/h1-ghost/venv/bin/python` | 2.9.1+rocm6.3 / 6.3.42134 | `HSA_OVERRIDE_GFX_VERSION=10.3.0` |
+| `hbox` | XFX Radeon RX 6750 XT, Navi 22, 12 GiB VRAM (`1002:73df`, subsystem `1eae:6710`, native `gfx1031`) | `/tank/chreatures/envs/rocm-dev/bin/python` | 2.9.1+rocm6.3 / 6.3.42134 | `HSA_OVERRIDE_GFX_VERSION=10.3.0` |
 | `persvati` | Ryzen AI 9 HX PRO 370 integrated Radeon 890M (`1002:150e`, `gfx1150`) | `/home/ember/kaxsim/.venv7/bin/python` | 2.10.0+rocm7.0 / 7.0.51831 | none |
 
 The hbox wheel can enumerate native `gfx1031`, but kernels fail with
@@ -29,7 +30,7 @@ architecture and fall back to hipBLAS. Prefer the native ROCm 7 environment.
 From the repository root:
 
 ```sh
-scripts/remote_probe.sh hbox /home/hbox/h1-ghost/venv/bin/python
+scripts/remote_probe.sh hbox /tank/chreatures/envs/rocm-dev/bin/python
 scripts/remote_probe.sh persvati /home/ember/kaxsim/.venv7/bin/python
 ```
 
@@ -37,11 +38,11 @@ The wrapper copies `scripts/compute_probe.py` to the host, sets cache paths,
 and emits JSON. Override sizes or timing counts with normal probe options:
 
 ```sh
-scripts/remote_probe.sh hbox /home/hbox/h1-ghost/venv/bin/python \
+scripts/remote_probe.sh hbox /tank/chreatures/envs/rocm-dev/bin/python \
   --matmul-size 4096 --warmup 10 --repetitions 50
 ```
 
-Remote project storage is reserved at:
+Remote project storage and environments are reserved at:
 
 - hbox: `/tank/chreatures/{cache,envs,probes,data}`. Put all new hbox data,
   package caches, environments, and builds under `/tank/chreatures`; `/` is
@@ -90,3 +91,21 @@ Coordinate before starting persistent experiments. Do not interrupt existing
 GPU users. For the planned batched brain update, both `index_add_` and COO
 `torch.sparse.mm` are operational; benchmark the real state shape on both
 hosts before selecting the representation.
+
+## Training world transport
+
+Current training uses one spawned process per three-resident physical world.
+`ProcessWorldPool` keeps fixed numeric arrays in one parent-owned shared-memory
+block: `float32 [world,3,351]` observations, `float32 [world,3,9]` motor and oral
+commands, and fixed body, physiology, and outcome rows. Each worker writes only
+its world row. Hot pipe messages contain an operation and monotonically
+increasing sequence number; the parent reads a cohort only after every row has
+acknowledged that sequence. A worker error closes the entire pool and its shared
+memory, so callers cannot consume a partly updated cohort. World construction,
+snapshot, restore, terminal outcomes, and detailed ecosystem telemetry remain
+rare structured pipe operations.
+
+`ProcessWorldPool.timing_snapshot()` reports hot-call wall time and summed and
+maximum per-world CPU time for observation and advance. Training receipts use
+this measurement together with neural and optimizer timings; it is a whole-path
+measurement rather than a GPU kernel throughput figure.

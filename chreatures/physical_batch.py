@@ -8,13 +8,42 @@ existing world-worker boundary.
 
 from __future__ import annotations
 
-import math
 from typing import Any
 
 import numpy as np
 
+from .native_world import load_world_kernels
 from .physics import MODEL_DT, PhysicsBody
 from .sensorium import ArticulatedSensoriumWorld
+
+
+class NativeActuationCohort:
+    """Persistent native articulated layout with one packed update per tick."""
+
+    def __init__(self, roots, qpos, dofs, sides, phases, controller):
+        self._native = load_world_kernels().ActuationCohort(
+            roots, qpos, dofs, sides, phases, controller
+        )
+
+    def begin_tick(self, dynamic: np.ndarray, grips: np.ndarray) -> None:
+        self._native.begin_tick(dynamic, grips)
+
+    def apply_gait(self, model, data, world_time: float, timestep: float) -> None:
+        self._native.apply_gait(
+            int(model._address), int(data._address), world_time, timestep
+        )
+
+    def apply_grip(self, model, data, world_time: float, timestep: float) -> None:
+        self._native.apply_grip(
+            int(model._address), int(data._address), world_time, timestep
+        )
+
+    def finish_tick(self) -> np.ndarray:
+        return np.asarray(self._native.finish_tick(), dtype=np.float64)
+
+    @staticmethod
+    def identity() -> str:
+        return str(load_world_kernels().ActuationCohort.identity())
 
 
 class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
@@ -134,72 +163,5 @@ class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
                 if current_food == self._fast_food_amounts:
                     return
         super()._sync_public_state()
-
-    def _apply_crawler_forces(
-        self, body: PhysicsBody, action: dict[str, Any], noise: np.ndarray
-    ) -> None:
-        """Vectorized form of the articulated tripod reflex equations."""
-        del noise  # The articulated reference controller also ignores motor noise.
-        controller = self._resident_articulation[body.id]["controller"]
-        forward = float(action.get("forward", action.get("thrust", 0.0)))
-        turn = float(action.get("turn", action.get("yaw", 0.0)))
-        activity = max(abs(forward), abs(turn))
-        strength = (1.0 - 0.72 * body.fatigue) * (0.18 + 0.82 * body.energy)
-        frequency = float(controller["frequency_hz"]) * (0.32 + 0.68 * activity)
-        stance_fraction = float(controller["stance_fraction"])
-        hip_amplitude = math.radians(float(controller["hip_sweep_degrees"]))
-        knee_stance = math.radians(float(controller["knee_stance_degrees"]))
-        knee_swing = math.radians(float(controller["knee_swing_degrees"]))
-        idle_knee = math.radians(float(controller["idle_knee_degrees"]))
-        torque_limit = float(controller["max_joint_torque"]) * strength
-        active_scale = self._active_effort_scale[body.id]
-
-        side_drive = np.clip(
-            forward + self._fast_leg_sides * float(controller["turn_gain"]) * turn,
-            -1.0,
-            1.0,
-        )
-        inactive = (activity < 1e-4) | (np.abs(side_drive) < 1e-4)
-        cycle = np.remainder(self.time * frequency + self._fast_leg_phases, 1.0)
-        stance = cycle < stance_fraction
-        progress = np.where(
-            stance,
-            cycle / stance_fraction,
-            (cycle - stance_fraction) / (1.0 - stance_fraction),
-        )
-        sweep = np.where(stance, 1.0 - 2.0 * progress, -1.0 + 2.0 * progress)
-        stride = 0.30 + 0.70 * np.abs(side_drive)
-        hip = (
-            -self._fast_leg_sides * np.sign(side_drive) * hip_amplitude * stride * sweep
-        )
-        knee = self._fast_leg_sides * np.where(stance, knee_stance, knee_swing)
-        hip[inactive] = 0.0
-        knee[inactive] = self._fast_leg_sides[inactive] * idle_knee
-        targets = np.column_stack((hip, knee)).reshape(-1)
-
-        qpos = self._fast_joint_qpos[body.id]
-        dof = self._fast_joint_dof[body.id]
-        torque = (
-            self._fast_joint_kp[body.id] * (targets - self.data.qpos[qpos])
-            - self._fast_joint_kd[body.id] * self.data.qvel[dof]
-        )
-        self.data.qfrc_applied[dof] = np.clip(torque, -torque_limit, torque_limit) * active_scale
-
-        root = self._body_mj[body.id]
-        rotation = self.data.xmat[root].reshape(3, 3)
-        _, angular = self._velocity(root)
-        # cross(rotation[:, 2], world-up), expanded to avoid allocating and
-        # normalizing temporary axis arrays in every body/substep.
-        correction = np.asarray(
-            [rotation[1, 2], -rotation[0, 2], 0.0], dtype=np.float64
-        ) * float(controller["posture_kp"])
-        correction -= angular * float(controller["posture_kd"])
-        correction[2] = 0.0
-        limit = float(controller["max_posture_torque"])
-        norm = float(np.linalg.norm(correction))
-        if norm > limit:
-            correction *= limit / norm
-        self.data.xfrc_applied[root, 3:6] += correction * active_scale
-
 
 __all__ = ["FastArticulatedSensoriumWorld"]

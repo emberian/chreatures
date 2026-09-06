@@ -1,0 +1,916 @@
+{
+  "version": 1,
+  "name": "chemical-reef-v3",
+  "units": "meters",
+  "size": [
+    12.0,
+    8.0,
+    3.5
+  ],
+  "gravity": [
+    0.0,
+    0.0,
+    -9.81
+  ],
+  "physics_timestep": 0.005,
+  "sensorium": {
+    "frame": "body-v1"
+  },
+  "compiler": {
+    "material_order": [
+      "loam",
+      "limestone",
+      "darkstone",
+      "timber",
+      "leaf",
+      "berry",
+      "mica",
+      "fern",
+      "pip",
+      "chemical-packet-0",
+      "chemical-packet-1",
+      "chemical-packet-2",
+      "chemical-packet-3"
+    ]
+  },
+  "limits": {
+    "entities": 96,
+    "signals": 256,
+    "hand_force": 60.0,
+    "impulse": 4.0,
+    "acoustic_impulse": 10.0,
+    "acoustic_work": 5.0
+  },
+  "materials": {
+    "loam": {
+      "rgba": [
+        0.2,
+        0.29,
+        0.2,
+        1
+      ]
+    },
+    "limestone": {
+      "rgba": [
+        0.69,
+        0.66,
+        0.52,
+        1
+      ]
+    },
+    "darkstone": {
+      "rgba": [
+        0.24,
+        0.29,
+        0.34,
+        1
+      ]
+    },
+    "timber": {
+      "rgba": [
+        0.47,
+        0.29,
+        0.16,
+        1
+      ]
+    },
+    "leaf": {
+      "rgba": [
+        0.18,
+        0.55,
+        0.27,
+        1
+      ]
+    },
+    "berry": {
+      "rgba": [
+        0.88,
+        0.1,
+        0.22,
+        1
+      ]
+    },
+    "mica": {
+      "rgba": [
+        0.94,
+        0.48,
+        0.32,
+        1
+      ]
+    },
+    "fern": {
+      "rgba": [
+        0.32,
+        0.73,
+        0.42,
+        1
+      ]
+    },
+    "pip": {
+      "rgba": [
+        0.32,
+        0.55,
+        0.89,
+        1
+      ]
+    },
+    "chemical-packet-0": {
+      "rgba": [
+        0.65,
+        0.2,
+        0.12,
+        1.0
+      ]
+    },
+    "chemical-packet-1": {
+      "rgba": [
+        0.65,
+        0.2,
+        0.12,
+        1.0
+      ]
+    },
+    "chemical-packet-2": {
+      "rgba": [
+        0.65,
+        0.2,
+        0.12,
+        1.0
+      ]
+    },
+    "chemical-packet-3": {
+      "rgba": [
+        0.65,
+        0.2,
+        0.12,
+        1.0
+      ]
+    }
+  },
+  "physical_materials": {
+    "earth": {
+      "density": 950,
+      "friction": [
+        1.15,
+        0.025,
+        0.004
+      ]
+    },
+    "masonry": {
+      "density": 1800,
+      "friction": [
+        0.95,
+        0.018,
+        0.003
+      ]
+    },
+    "timber": {
+      "density": 560,
+      "friction": [
+        0.82,
+        0.014,
+        0.003
+      ]
+    },
+    "light": {
+      "density": 38,
+      "friction": [
+        0.7,
+        0.012,
+        0.002
+      ]
+    },
+    "body": {
+      "density": 160,
+      "friction": [
+        0.72,
+        0.03,
+        0.006
+      ]
+    }
+  },
+  "body_prototype": {
+    "shape": {
+      "type": "ellipsoid",
+      "size": [
+        0.11,
+        0.075,
+        0.055
+      ]
+    },
+    "physical_material": "body",
+    "radius": 0.1,
+    "traction_force": 10.0,
+    "turn_torque": 0.2,
+    "posture_torque": 0.18,
+    "vertical_force": 30.0
+  },
+  "bodies": [
+    {
+      "id": "mica",
+      "name": "Mica",
+      "position": [
+        0.8,
+        1.4,
+        0.1
+      ],
+      "heading": 0.1,
+      "material": "mica",
+      "energy": 0.8,
+      "gut": 0.1,
+      "fatigue": 0.04,
+      "articulated_traits": {
+        "body_scale": 0.9,
+        "leg_length_scale": 1.13,
+        "antenna_length_scale": 1.22,
+        "frequency_scale": 1.12
+      }
+    },
+    {
+      "id": "fern",
+      "name": "Fern",
+      "position": [
+        5.5,
+        6.6,
+        0.1
+      ],
+      "heading": 5.6,
+      "material": "fern",
+      "energy": 0.76,
+      "gut": 0.16,
+      "fatigue": 0.04,
+      "articulated_traits": {
+        "body_scale": 1.14,
+        "radial_scale": 1.1,
+        "density_scale": 1.12,
+        "torque_scale": 1.08,
+        "frequency_scale": 0.86
+      }
+    },
+    {
+      "id": "pip",
+      "name": "Pip",
+      "position": [
+        10.5,
+        1.4,
+        0.1
+      ],
+      "heading": 3.1,
+      "material": "pip",
+      "energy": 0.82,
+      "gut": 0.08,
+      "fatigue": 0.04,
+      "articulated_traits": {
+        "axial_scale": 1.15,
+        "leg_radius_scale": 0.88,
+        "antenna_spread_scale": 1.3,
+        "friction_scale": 1.18,
+        "sweep_scale": 1.12
+      }
+    }
+  ],
+  "presets": {},
+  "entities": [
+    {
+      "id": "ground",
+      "mobility": "static",
+      "material": "loam",
+      "physical_material": "earth",
+      "position": [
+        6,
+        4,
+        -0.12
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            6,
+            4,
+            0.12
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "rim",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        6,
+        4,
+        0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            6,
+            0.1,
+            0.45
+          ],
+          "position": [
+            0,
+            -3.9,
+            0.33
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            6,
+            0.1,
+            0.45
+          ],
+          "position": [
+            0,
+            3.9,
+            0.33
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.1,
+            3.8,
+            0.45
+          ],
+          "position": [
+            -5.9,
+            0,
+            0.33
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.1,
+            3.8,
+            0.45
+          ],
+          "position": [
+            5.9,
+            0,
+            0.33
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "west-island",
+      "mobility": "static",
+      "material": "limestone",
+      "physical_material": "masonry",
+      "position": [
+        2.6,
+        2.7,
+        0
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            1.35,
+            1.05,
+            0.34
+          ],
+          "position": [
+            0,
+            0,
+            0.25
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.72,
+            0.62,
+            0.16
+          ],
+          "position": [
+            0.25,
+            0.05,
+            0.64
+          ],
+          "quaternion": [
+            0.9914,
+            0,
+            0.1305,
+            0
+          ]
+        },
+        {
+          "type": "capsule",
+          "size": [
+            0.16
+          ],
+          "fromto": [
+            -0.85,
+            -0.55,
+            0.48,
+            -0.25,
+            -0.12,
+            0.9
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "east-island",
+      "mobility": "static",
+      "material": "limestone",
+      "physical_material": "masonry",
+      "position": [
+        9.2,
+        5.3,
+        0
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            1.45,
+            1.12,
+            0.4
+          ],
+          "position": [
+            0,
+            0,
+            0.29
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.82,
+            0.48,
+            0.14
+          ],
+          "position": [
+            -0.18,
+            -0.06,
+            0.79
+          ],
+          "quaternion": [
+            0.9763,
+            0.102,
+            -0.19,
+            0.034
+          ]
+        },
+        {
+          "type": "capsule",
+          "size": [
+            0.18
+          ],
+          "fromto": [
+            0.72,
+            -0.52,
+            0.42,
+            0.18,
+            0.08,
+            1.02
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "central-bridge",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        6.0,
+        4.0,
+        0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            1.75,
+            0.32,
+            0.12
+          ],
+          "position": [
+            0,
+            0,
+            0.82
+          ],
+          "quaternion": [
+            0.9914,
+            0,
+            0.1305,
+            0
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.18,
+            0.22,
+            0.5
+          ],
+          "position": [
+            -1.45,
+            0,
+            0.38
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.18,
+            0.22,
+            0.56
+          ],
+          "position": [
+            1.45,
+            0,
+            0.43
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "crevice-overhang",
+      "mobility": "static",
+      "material": "limestone",
+      "physical_material": "masonry",
+      "position": [
+        6.5,
+        1.7,
+        0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.18,
+            0.9,
+            0.48
+          ],
+          "position": [
+            -0.65,
+            0,
+            0.36
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.18,
+            0.9,
+            0.6
+          ],
+          "position": [
+            0.65,
+            0,
+            0.46
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.82,
+            0.9,
+            0.12
+          ],
+          "position": [
+            0,
+            0,
+            1.02
+          ],
+          "quaternion": [
+            0.9962,
+            0,
+            0.0872,
+            0
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-a-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        4.02,
+        2.7,
+        0.08
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": [],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "reef-a-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        4.02,
+        2.7,
+        0.08
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": [],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "reef-a-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        4.02,
+        2.7,
+        0.08
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": [],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "reef-b-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        7.72,
+        5.3,
+        0.08
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-b-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        7.72,
+        5.3,
+        0.08
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-b-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        7.72,
+        5.3,
+        0.08
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-c-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        5.64,
+        1.7,
+        0.08
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-c-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        5.64,
+        1.7,
+        0.08
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-c-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        5.64,
+        1.7,
+        0.08
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "chemical-packet-0",
+      "mobility": "free",
+      "material": "chemical-packet-0",
+      "physical_material": "light",
+      "position": [
+        1.4,
+        1.4,
+        0.08
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.07
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "chemical-packet-1",
+      "mobility": "free",
+      "material": "chemical-packet-1",
+      "physical_material": "light",
+      "position": [
+        5.4,
+        6.0,
+        0.08
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.07
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "chemical-packet-2",
+      "mobility": "free",
+      "material": "chemical-packet-2",
+      "physical_material": "light",
+      "position": [
+        9.8,
+        1.45,
+        0.08
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.07
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "chemical-packet-3",
+      "mobility": "free",
+      "material": "chemical-packet-3",
+      "physical_material": "light",
+      "position": [
+        6.4,
+        4.4,
+        0.97
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.07
+          ]
+        }
+      ],
+      "components": []
+    }
+  ],
+  "assemblies": []
+}

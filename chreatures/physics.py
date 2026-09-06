@@ -1156,6 +1156,7 @@ class PhysicsWorld:
             self._resonance[entity_id] *= math.exp(-step / 0.7)
 
         motor_noise = {body.id: self.rng.normal(0.0, 1.0, 2) for body in self.bodies}
+        native_actuation = self._begin_resident_actuation(clean)
         substeps = max(1, int(math.ceil(step / float(self.spec["physics_timestep"]))))
         previous_timestep = float(self.model.opt.timestep)
         self.model.opt.timestep = step / substeps
@@ -1163,19 +1164,24 @@ class PhysicsWorld:
             for _ in range(substeps):
                 self.data.xfrc_applied[:] = 0.0
                 self.data.qfrc_applied[:] = 0.0
-                for body in self.bodies:
-                    if self._physiology is None:
-                        self._apply_crawler_forces(body, clean.get(body.id, {}), motor_noise[body.id])
-                    else:
-                        q_before = self.data.qfrc_applied.copy()
-                        x_before = self.data.xfrc_applied.copy()
-                        self._apply_crawler_forces(body, clean.get(body.id, {}), motor_noise[body.id])
-                        mechanical_work[body.id] += self._positive_applied_work(
-                            self.data.qfrc_applied - q_before, self.data.xfrc_applied - x_before,
-                            self.model.opt.timestep,
-                        )
+                if native_actuation:
+                    self._apply_resident_gait(self.model.opt.timestep)
+                else:
+                    for body in self.bodies:
+                        if self._physiology is None:
+                            self._apply_crawler_forces(body, clean.get(body.id, {}), motor_noise[body.id])
+                        else:
+                            q_before = self.data.qfrc_applied.copy()
+                            x_before = self.data.xfrc_applied.copy()
+                            self._apply_crawler_forces(body, clean.get(body.id, {}), motor_noise[body.id])
+                            mechanical_work[body.id] += self._positive_applied_work(
+                                self.data.qfrc_applied - q_before, self.data.xfrc_applied - x_before,
+                                self.model.opt.timestep,
+                            )
                 self._apply_hand_force()
-                if self._physiology is None:
+                if native_actuation:
+                    self._apply_resident_grip(self.model.opt.timestep)
+                elif self._physiology is None:
                     self._apply_grip_forces()
                 else:
                     for body in self.bodies:
@@ -1193,6 +1199,8 @@ class PhysicsWorld:
                 self._excite_hinges()
         finally:
             self.model.opt.timestep = previous_timestep
+        if native_actuation:
+            mechanical_work.update(self._finish_resident_actuation())
         # mj_step advances qpos after computing the kinematic fields used by
         # rendering and sensors. Refresh them so the public pose and checkpoint
         # describe the same instant as the integration state.
@@ -1236,6 +1244,10 @@ class PhysicsWorld:
         self.time = float(self.data.time)
         self._sync_public_state()
         return outcomes
+
+    def _begin_resident_actuation(self, clean: dict[str, dict[str, Any]]) -> bool:
+        """Prepare an optional coarse resident actuator; crawlers stay scalar."""
+        return False
 
     def _positive_applied_work(self, qfrc: np.ndarray, xfrc: np.ndarray, dt: float) -> float:
         power = float(np.dot(qfrc, self.data.qvel))

@@ -32,6 +32,7 @@ pub struct BiosphereTissue {
     members: Vec<Vec<usize>>,
     resources: Vec<f64>,
     totals: Vec<f64>,
+    generation: u64,
 }
 
 #[pymethods]
@@ -85,6 +86,7 @@ impl BiosphereTissue {
             members: vec![Vec::new(); colony_count],
             resources: Vec::new(),
             totals: vec![0.0; colony_count * pools],
+            generation: 0,
         })
     }
 
@@ -101,6 +103,9 @@ impl BiosphereTissue {
         self.members = members;
         self.resources = resources;
         self.totals = totals;
+        self.generation = self.generation.checked_add(1).ok_or_else(|| {
+            PyRuntimeError::new_err("physical tissue binding generation overflow")
+        })?;
         Ok(self.part_ids.len())
     }
 
@@ -234,6 +239,63 @@ impl BiosphereTissue {
 }
 
 impl BiosphereTissue {
+    pub(crate) fn capture_binding(
+        &self,
+        part_ids: &[String],
+        pool_name: &str,
+    ) -> PyResult<(u64, usize, Vec<usize>)> {
+        let pool = *self
+            .pool_indices
+            .get(pool_name)
+            .ok_or_else(|| PyValueError::new_err("unknown capture tissue pool"))?;
+        let lookup: HashMap<&str, usize> = self
+            .part_ids
+            .iter()
+            .enumerate()
+            .map(|(index, name)| (name.as_str(), index))
+            .collect();
+        let mut indices = Vec::with_capacity(part_ids.len());
+        for part_id in part_ids {
+            indices.push(*lookup.get(part_id.as_str()).ok_or_else(|| {
+                PyRuntimeError::new_err("light capture names unbound physical tissue")
+            })?);
+        }
+        Ok((self.generation, pool, indices))
+    }
+
+    pub(crate) fn capture_fractions(
+        &self,
+        generation: u64,
+        indices: &[usize],
+        pool: usize,
+        initial: &[f64],
+        result: &mut Vec<f64>,
+    ) -> PyResult<()> {
+        if generation != self.generation || indices.len() != initial.len() {
+            return Err(PyRuntimeError::new_err(
+                "light capture cache differs from tissue topology",
+            ));
+        }
+        let pools = self.pool_names.len();
+        if pool >= pools || indices.iter().any(|index| *index >= self.part_ids.len()) {
+            return Err(PyRuntimeError::new_err(
+                "invalid cached light capture index",
+            ));
+        }
+        result.clear();
+        result.reserve(indices.len());
+        for (&index, &original) in indices.iter().zip(initial) {
+            if !original.is_finite() || original <= 0.0 {
+                return Err(PyValueError::new_err(
+                    "initial capture tissue must be finite and positive",
+                ));
+            }
+            let fraction = self.resources[index * pools + pool] / original;
+            result.push(fraction.clamp(0.0, 1.0));
+        }
+        Ok(())
+    }
+
     fn parse_parts(
         &self,
         parts: &Bound<'_, PyDict>,

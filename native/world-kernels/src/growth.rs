@@ -18,6 +18,8 @@ type RuleInput = (
     f64,
     f64,
     f64,
+    f64,
+    f64,
     [f64; 3],
     [f64; 3],
     f64,
@@ -79,6 +81,8 @@ struct Rule {
     length: f64,
     radius: f64,
     density: f64,
+    radius_scale_exponent: f64,
+    minimum_aspect_ratio: f64,
     minimum: [f64; 3],
     weights: [f64; 3],
     competition_gain: f64,
@@ -300,6 +304,8 @@ impl GrowthKernel {
                 length,
                 radius,
                 density,
+                radius_scale_exponent,
+                minimum_aspect_ratio,
                 minimum,
                 weights,
                 competition_gain,
@@ -310,6 +316,8 @@ impl GrowthKernel {
                 || !finite_range(*length, 0.001, 10.0)
                 || !finite_range(*radius, 0.0005, 1.0)
                 || !finite_range(*density, 0.001, 30_000.0)
+                || !finite_range(*radius_scale_exponent, 0.25, 2.0)
+                || !finite_range(*minimum_aspect_ratio, 0.0, 100.0)
                 || minimum.iter().any(|item| !finite_range(*item, 0.0, 1.0))
                 || weights.iter().any(|item| !finite_range(*item, 0.0, 1.0))
                 || weights.iter().sum::<f64>() <= 0.0
@@ -366,6 +374,8 @@ impl GrowthKernel {
                 length: *length,
                 radius: *radius,
                 density: *density,
+                radius_scale_exponent: *radius_scale_exponent,
+                minimum_aspect_ratio: *minimum_aspect_ratio,
                 minimum: *minimum,
                 weights: *weights,
                 competition_gain: *competition_gain,
@@ -387,7 +397,7 @@ impl GrowthKernel {
                 .ok_or_else(|| PyValueError::new_err("axiom names an unknown rule"))?;
             if !valid_vector(initial.1)
                 || !finite_range(initial.4, f64::MIN_POSITIVE, 100.0)
-                || normalized_rules[rule].radius * initial.4.sqrt() * genotype[0].sqrt()
+                || scaled_radius(&normalized_rules[rule], initial.4, genotype[0])
                     < minimum_feature_size
             {
                 return Err(PyValueError::new_err("invalid initial bud"));
@@ -561,7 +571,7 @@ impl GrowthKernel {
             let length_noise = (normal(&mut trial_rng) * self.variation[0] * 0.25).exp();
             let length =
                 rule.length * bud.scale * self.genotype[0] * length_noise * (0.55 + 0.45 * vigor);
-            let radius = rule.radius * bud.scale.sqrt() * self.genotype[0].sqrt();
+            let radius = scaled_radius(rule, bud.scale, self.genotype[0]);
             let endpoint = add(bud.position, mul(bud.forward, length));
             let volume = std::f64::consts::PI * radius * radius * length
                 + 4.0 * std::f64::consts::PI * radius.powi(3) / 3.0;
@@ -598,42 +608,48 @@ impl GrowthKernel {
                 }
             }
             let mut trial_children = Vec::new();
-            for successor in &rule.successors {
-                if uniform(&mut trial_rng) > successor.probability {
-                    continue;
+            let aspect_ratio = length / (2.0 * radius);
+            if aspect_ratio + 1.0e-14 >= rule.minimum_aspect_ratio {
+                for successor in &rule.successors {
+                    if uniform(&mut trial_rng) > successor.probability {
+                        continue;
+                    }
+                    let angle_noise = normal(&mut trial_rng) * self.variation[1] * 0.25;
+                    let angle = successor.angle + self.genotype[1] + angle_noise;
+                    let azimuth =
+                        successor.azimuth + successor.generation_phase * f64::from(bud.generation);
+                    let radial = add(mul(bud.right, azimuth.cos()), mul(bud.up, azimuth.sin()));
+                    let child_forward =
+                        normalize(add(mul(bud.forward, angle.cos()), mul(radial, angle.sin())))?;
+                    let preferred_up = if dot(child_forward, bud.up).abs() < 0.95 {
+                        bud.up
+                    } else {
+                        bud.right
+                    };
+                    let child_right = normalize(cross(child_forward, preferred_up))?;
+                    let child_up = normalize(cross(child_right, child_forward))?;
+                    let child_scale = bud.scale * successor.scale;
+                    let child_rule = &self.rules[successor.rule];
+                    let child_radius = scaled_radius(child_rule, child_scale, self.genotype[0]);
+                    if child_radius < self.minimum_feature_size {
+                        self.last_resolution_terminals += 1;
+                        continue;
+                    }
+                    trial_children.push(Bud {
+                        id: next_bud + trial_children.len() as u64,
+                        rule: successor.rule,
+                        generation: bud.generation.saturating_add(1),
+                        scale: child_scale,
+                        position: endpoint,
+                        forward: child_forward,
+                        up: child_up,
+                        right: child_right,
+                    });
                 }
-                let angle_noise = normal(&mut trial_rng) * self.variation[1] * 0.25;
-                let angle = successor.angle + self.genotype[1] + angle_noise;
-                let azimuth =
-                    successor.azimuth + successor.generation_phase * f64::from(bud.generation);
-                let radial = add(mul(bud.right, azimuth.cos()), mul(bud.up, azimuth.sin()));
-                let child_forward =
-                    normalize(add(mul(bud.forward, angle.cos()), mul(radial, angle.sin())))?;
-                let preferred_up = if dot(child_forward, bud.up).abs() < 0.95 {
-                    bud.up
-                } else {
-                    bud.right
-                };
-                let child_right = normalize(cross(child_forward, preferred_up))?;
-                let child_up = normalize(cross(child_right, child_forward))?;
-                let child_scale = bud.scale * successor.scale;
-                let child_radius = self.rules[successor.rule].radius
-                    * child_scale.sqrt()
-                    * self.genotype[0].sqrt();
-                if child_radius < self.minimum_feature_size {
-                    self.last_resolution_terminals += 1;
-                    continue;
-                }
-                trial_children.push(Bud {
-                    id: next_bud + trial_children.len() as u64,
-                    rule: successor.rule,
-                    generation: bud.generation.saturating_add(1),
-                    scale: child_scale,
-                    position: endpoint,
-                    forward: child_forward,
-                    up: child_up,
-                    right: child_right,
-                });
+            } else {
+                // Build the funded terminal segment, but do not perpetuate a
+                // lineage whose realized geometry is already bead-like.
+                self.last_resolution_terminals += 1;
             }
             let shape_count = 1 + trial_leaves.len();
             let resulting_buds = candidate_buds.len() - 1 + trial_children.len();
@@ -848,7 +864,7 @@ impl GrowthKernel {
                 || id == 0
                 || !ids.insert(id)
                 || !finite_range(scale, f64::MIN_POSITIVE, 100.0)
-                || self.rules[rule].radius * scale.sqrt() * self.genotype[0].sqrt()
+                || scaled_radius(&self.rules[rule], scale, self.genotype[0])
                     < self.minimum_feature_size
                 || !valid_vector(position)
                 || !orthonormal(forward, up, right)
@@ -901,6 +917,20 @@ impl GrowthKernel {
             })
             .collect()
     }
+}
+
+fn scaled_radius(rule: &Rule, scale: f64, length_genotype: f64) -> f64 {
+    // The parameter is one power law. Exact specializations retain the prior
+    // square-root trajectory for imported v2 grammars and avoid libm drift at
+    // the two common inherited exponents.
+    let scale_factor = if rule.radius_scale_exponent.to_bits() == 0.5_f64.to_bits() {
+        scale.sqrt()
+    } else if rule.radius_scale_exponent.to_bits() == 1.0_f64.to_bits() {
+        scale
+    } else {
+        scale.powf(rule.radius_scale_exponent)
+    };
+    rule.radius * scale_factor * length_genotype.sqrt()
 }
 
 fn finite_range(value: f64, low: f64, high: f64) -> bool {

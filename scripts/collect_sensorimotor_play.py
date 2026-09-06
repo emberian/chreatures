@@ -22,9 +22,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from chreatures.motor_inheritance import ACTIONS, MotorArtifact, MotorOrgan
+from research.sensorimotor_skills.data import DATASET_FORMAT, DT_SECONDS
 
-FORMAT = "chreatures-sensorimotor-play-dataset-v1"
+FORMAT = DATASET_FORMAT
 SCHEMA = ROOT / "research/sensorimotor_skills/trajectory-schema-v1.json"
+MIN_TRAINING_WORLDS = 6
+MIN_TRAINING_STEPS = 44
 PHYSIOLOGY = (
     "energy", "gut", "fatigue", "speed", "angular_velocity", "support",
 )
@@ -103,10 +106,10 @@ def arguments() -> argparse.Namespace:
         "--chemical-conditions", type=Path,
         default=ROOT / "data/training/chemical-resource-encounters-v1.json",
     )
-    parser.add_argument("--worlds", type=int, default=4)
+    parser.add_argument("--worlds", type=int, default=8)
     parser.add_argument("--episodes", type=int, default=2)
     parser.add_argument("--steps", type=int, default=2000)
-    parser.add_argument("--dt", type=float, default=0.05)
+    parser.add_argument("--dt", type=float, default=DT_SECONDS)
     parser.add_argument("--seed", type=int, default=20260907)
     parser.add_argument("--device", default="cuda")
     parser.add_argument(
@@ -119,6 +122,13 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--exploration-sigma", type=float, default=0.18)
     parser.add_argument("--exploration-timescale", type=float, default=0.35)
     parser.add_argument("--exploration-segment-steps", type=int, default=20)
+    parser.add_argument(
+        "--smoke", action="store_true",
+        help=(
+            "collect a small mechanics check; its manifest is explicitly marked "
+            "not training-ready"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -127,7 +137,18 @@ def validate_arguments(args: argparse.Namespace) -> None:
         raise SystemExit("worlds must be 1..64 and episodes 1..100")
     if not 1 <= args.steps <= 1_000_000:
         raise SystemExit("steps must be 1..1,000,000")
-    if not math.isfinite(args.dt) or args.dt != 0.05:
+    if not args.smoke and args.worlds < MIN_TRAINING_WORLDS:
+        raise SystemExit(
+            f"training collections require at least {MIN_TRAINING_WORLDS} worlds; "
+            "use --smoke only for a non-training mechanics check"
+        )
+    if not args.smoke and args.steps < MIN_TRAINING_STEPS:
+        raise SystemExit(
+            f"training collections require at least {MIN_TRAINING_STEPS} steps "
+            "for complete 40-step future-goal windows; use --smoke only for a "
+            "non-training mechanics check"
+        )
+    if not math.isfinite(args.dt) or args.dt != DT_SECONDS:
         raise SystemExit("collector v1 requires the trained 0.05 s physical interval")
     if (
         not math.isfinite(args.exploration_sigma)
@@ -140,6 +161,28 @@ def validate_arguments(args: argparse.Namespace) -> None:
     output = args.output.resolve()
     if output.exists() and any(output.iterdir()):
         raise SystemExit("output directory must be absent or empty")
+
+
+def training_readiness(args: argparse.Namespace) -> dict[str, Any]:
+    """Describe whether a completed invocation is eligible for worker training."""
+    if args.smoke:
+        ready = False
+        reason = (
+            "explicit --smoke collection validates collection mechanics only and "
+            "must not be used to fit, select, or evaluate a worker"
+        )
+    else:
+        ready = True
+        reason = None
+    return {
+        "ready": ready,
+        "mode": "smoke" if args.smoke else "training",
+        "reason": reason,
+        "minimum_worlds": MIN_TRAINING_WORLDS,
+        "minimum_steps_per_episode": MIN_TRAINING_STEPS,
+        "actual_worlds": args.worlds,
+        "actual_steps_per_episode": args.steps,
+    }
 
 
 def physiology_rows(
@@ -248,6 +291,7 @@ def source_receipts(args: argparse.Namespace) -> dict[str, dict[str, Any]]:
         "chemical_biosphere": args.chemical_biosphere.resolve(),
         "chemical_conditions": args.chemical_conditions.resolve(),
         "collector": Path(__file__).resolve(),
+        "data_boundary": ROOT / "research/sensorimotor_skills/data.py",
         "world_pool_runner": ROOT / "scripts/learn_affordances.py",
         "schema": SCHEMA.resolve(),
         **{f"chreatures/{name}": ROOT / "chreatures" / name for name in causal_modules},
@@ -487,6 +531,7 @@ def main() -> int:
     manifest = {
         "format": FORMAT,
         "version": 1,
+        "training_readiness": training_readiness(args),
         "scope": {
             "worlds": args.worlds, "residents_per_world": 3,
             "episodes": args.episodes, "steps_per_episode": args.steps,

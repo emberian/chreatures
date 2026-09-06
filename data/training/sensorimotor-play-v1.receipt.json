@@ -1,0 +1,307 @@
+{
+  "collection": {
+    "bootstrap_context_limitation": "The inherited organ updates private context with its proposed held macro action; downstream per-tick exploration is delivered physically but is not fed back into that organ context. executed_actions is authoritative.",
+    "brain": {
+      "device": {
+        "name": "AMD Radeon Graphics",
+        "type": "cuda"
+      },
+      "metadata": {
+        "backend": "GPUTarget(backend='hip', arch='gfx1030', warp_size=32)",
+        "batch_size": 48,
+        "canonical_external_order": true,
+        "dtype": "torch.float32",
+        "dynamics": {
+          "gain": 0.92,
+          "substeps": 2,
+          "support_recovery": 0.024,
+          "tau": 0.16
+        },
+        "edge_reduction": "float32 tile tree then serial tile accumulation",
+        "edge_tile": 8,
+        "edges": 25563197,
+        "engine": "fixed-cohort-triton-edge8-csr-v1",
+        "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+        "inputs": 351,
+        "layout": "neuron_major_triton_edge_tiled",
+        "neurons": 165122,
+        "num_warps": 1,
+        "physiology_names": [
+          "activity_mean",
+          "activity_peak",
+          "support_mean"
+        ],
+        "readouts": 384,
+        "resident_tile": 32,
+        "selection_basis": "best complete-path median on RX6750XT B48",
+        "state_shape": [
+          165122,
+          48
+        ],
+        "within_row_edge_order": "grouped in canonical consecutive tiles"
+      }
+    },
+    "exploration": {
+      "format": "chreatures-correlated-motor-play-v1",
+      "segment_modes": "one-quarter smooth locomotor decay to stop, one-quarter inherited-only, one-half bounded Gaussian target; content-independent",
+      "segment_steps": 20,
+      "sigma": 0.18,
+      "timescale_seconds": 0.35
+    },
+    "oral_command_law": "clip((1-gut)*(1.1-energy),0,1)",
+    "seed": 20260907
+  },
+  "content_sha256": "159cb5dae7e09a0edd1f01497dcb0af4fbd3301048139e4c5f48c7eac3e61397",
+  "dataset": {
+    "bytes_without_birth_checkpoints": 339814694,
+    "collection_identity_sha256": "e0bb6152b8dc2c464066b915cafb89da986c2f346a44cf183b853cd14d07bd0a",
+    "manifest_content_sha256": "69056d10a285a913501b43bb11aa25ab41f1af559f104f4872c5e2774005894c",
+    "manifest_file_sha256": "0ec6e7deee036454d6f5ce9396f3e61f99226b805668e5713ed2befb81b6bdf6",
+    "packets": [
+      {
+        "array_dtypes": {
+          "dt_seconds": "<f8",
+          "executed_actions": "<f4",
+          "neural_readouts": "<f4",
+          "oral_command": "<f4",
+          "physiology": "<f4",
+          "reset": "|b1",
+          "source_senses": "<f4"
+        },
+        "array_shapes": {
+          "dt_seconds": [],
+          "executed_actions": [
+            2000,
+            48,
+            8
+          ],
+          "neural_readouts": [
+            2001,
+            48,
+            384
+          ],
+          "oral_command": [
+            2000,
+            48
+          ],
+          "physiology": [
+            2001,
+            48,
+            6
+          ],
+          "reset": [
+            2001,
+            48
+          ],
+          "source_senses": [
+            2001,
+            48,
+            351
+          ]
+        },
+        "bytes": 169796337,
+        "diagnostic_outcomes": {
+          "ingested_mass": 0.135,
+          "mouth_contacts": 3,
+          "nutrition": 0.11739122470619764
+        },
+        "episode": 0,
+        "executed_action_abs_mean": 0.16298893094062805,
+        "file": "episode-000.npz",
+        "oral_command_mean": 0.5973458886146545,
+        "residents": 48,
+        "sha256": "587c5d4d2516b2b5a5c1490d13ebaa8d7fabca98bd394d3dea536a7a7b8dd1be",
+        "stage": 0,
+        "steps": 2000
+      },
+      {
+        "array_dtypes": {
+          "dt_seconds": "<f8",
+          "executed_actions": "<f4",
+          "neural_readouts": "<f4",
+          "oral_command": "<f4",
+          "physiology": "<f4",
+          "reset": "|b1",
+          "source_senses": "<f4"
+        },
+        "array_shapes": {
+          "dt_seconds": [],
+          "executed_actions": [
+            2000,
+            48,
+            8
+          ],
+          "neural_readouts": [
+            2001,
+            48,
+            384
+          ],
+          "oral_command": [
+            2000,
+            48
+          ],
+          "physiology": [
+            2001,
+            48,
+            6
+          ],
+          "reset": [
+            2001,
+            48
+          ],
+          "source_senses": [
+            2001,
+            48,
+            351
+          ]
+        },
+        "bytes": 169895563,
+        "diagnostic_outcomes": {
+          "ingested_mass": 0.0,
+          "mouth_contacts": 0,
+          "nutrition": 0.0
+        },
+        "episode": 1,
+        "executed_action_abs_mean": 0.15729008615016937,
+        "file": "episode-001.npz",
+        "oral_command_mean": 0.5964319705963135,
+        "residents": 48,
+        "sha256": "c7bccecbdeefa503b0a873afe3afcbd7db9bec3a72d2745dcfe14b73bc1e220c",
+        "stage": 1,
+        "steps": 2000
+      }
+    ],
+    "schema_sha256": "c77da7c2ea22bdf0130c791aeb9320dd4509914c6096e791007b12c0e6603cc4"
+  },
+  "format": "chreatures-sensorimotor-play-public-receipt-v1",
+  "identities": {
+    "chemistry_sha256": "fc482774de2dd3c08e92cd9f6bdaf8298c39e41a8ef173e8430b7363841e9928",
+    "collector_commit": "0d9b9dd0e150c998638f1b47d6c5d5830068ff42",
+    "engine_revision": "78edd5604dd857bbcd341e20bc6fe9fd26083cb8",
+    "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "motor_artifact_sha256": "f0d3f9a43e242adc27ed58b7a30f728730013680aad8b80c42607696aac3b5ea",
+    "native_extension_sha256": "cf4ab75a1f7e7f9bedff8b0bb36b2a12f44c3664b42483b7b4c62e75109f9cb4",
+    "native_python_soabi": "cpython-312-x86_64-linux-gnu",
+    "port_bundle_sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2",
+    "port_spec_sha256": "fffb48c65bdb5bc2503ff8ad7c65b4419e12aa9ef5b58b9f36bc910f64dadb6f",
+    "profile_sha256": "909182778ae91b9c390aca016ec70091fdb4a3df36b70cdb0daabc04c978b180",
+    "source_sha256": {
+      "chemical_biosphere": "b12be0bfc3ec407c7ba4a8a68ec1b2687f42db05b35a3342d11d119f61ad5339",
+      "chemical_conditions": "98c0fe5f8c8f8f3c2bd6f0821477c983b3a381d3c7fac5123ba3a6ee81dd2bda",
+      "chemical_habitat": "cb971e564d368e183980e7828e79f85d7182b8e227263879031e4f79050bc984",
+      "chreatures/acoustics.py": "7b1f65304334d23a4d14fe9aa5ba96f48ea63890826b0ce4d7d62edb2c5a5f2d",
+      "chreatures/articulated.py": "9dca3f7cb18bfee51846292881417af417f485d24ae283bf554657a284a6667c",
+      "chreatures/biosphere.py": "6f3af89e4473328e2e75bbdffcfa970e90b413594450e872e8324bafb11126f7",
+      "chreatures/circuit_blueprint.py": "97d924bdd2888ef589c1d6c9cbef32324b8e2e9f1db755475dbd71333250742f",
+      "chreatures/ecological_exchange.py": "b8f29090903419e1e7caab4632514216330f5302409e211509e816d41f3fe224",
+      "chreatures/ecology.py": "2bc2d14b536f78b90b865036d473b714ded585c21982b4622d61596ee3b72824",
+      "chreatures/fast_circuit.py": "1194d3e55f80ffe0682318365d7c26db03b53f34b57a56d048a5efddadb6b50d",
+      "chreatures/fields.py": "571e632b9d8857d6d5779aada4176f66e8c419ef7580ea9c93986a16f3fd419b",
+      "chreatures/growth.py": "3f76ae827dc980582354fcff85e96316b4a36488546e3fee85b4df0a397b9316",
+      "chreatures/homeostasis.py": "3bb8a2a59194c061a448902fe5d97f36335c07833b2b2fbd4c1b44ce6794bbab",
+      "chreatures/learning.py": "adfbffea75d35509091b868c7679c3eb5cd35e7342f05d27745cbb13783fa86f",
+      "chreatures/malecns.py": "d8f801403342bcb6965f2dc75af31a75e565d361a189567da90470f6b466dbb8",
+      "chreatures/material_objects.py": "c907d0917d90c7bf496e31fa8c48984755efa70f3f137e59cbe5d5c6f4f009d0",
+      "chreatures/metabolism.py": "3ed19358f8dfe2f0eaf676b73ebc78fdb0908a3d14c557b6a53539ce96216a41",
+      "chreatures/motor_inheritance.py": "f2a6c8d53a8ee43900dbfa71ac2c387bb467c6983504f3ac50d74bc227e04f2f",
+      "chreatures/native_world.py": "a6c73f844037711643ee59083fbfdee7e2d564faf316496fbebef4cd11347e0b",
+      "chreatures/neural_ports.py": "5fb54dff5974953ee490fee91d130569ff171e56cd96364911bb936ec8812f86",
+      "chreatures/physical_batch.py": "b4d5bd1cdc4002c9bbbe4d7faa1e967638278708b12482012510d52953d60b78",
+      "chreatures/physics.py": "94aa2a570e0f25c461627f0d290d633240e49318a702b2fe313658b61c0d4434",
+      "chreatures/remote_brain.py": "24edd9238a023954e7fbad09959fe42214806425ad57a2d8ef2fa6851b6ec289",
+      "chreatures/sensorium.py": "5cb49c0be3bfc81806f20788477574a5bcafffe3d7b0db7080e193367c2e5beb",
+      "chreatures/somatic.py": "8485383775b0ced9e2aea4b56310afe1893795a77b631b51470606e7abbf51ba",
+      "chreatures/tiled_circuit.py": "1526e6ca583faf69e017258cd6ebe89f42fd7e4d6bc1b550912e4996855ab302",
+      "chreatures/training_environment.py": "6cde6bcc0862219d2b861d935246c08fbabee349c93ff2696e725cd78678ff3f",
+      "collector": "bc22914447a05f54d1f26fb36f66c3e2d582d4e7c03344712d0b936018bcf643",
+      "graph_manifest": "cdc0efe84bb14bc9c452504d769045736cc085d181e840d3c0d2dd1c5c6bfad8",
+      "motor_organ": "daba5662479ffcb94d7e61df7f129a76696499cda62c959219747eb5efa6ff9c",
+      "native/world-kernels/Cargo.lock": "c812f94784ebd687a788e9723489fb678477e45b9ec4794a0d6ddc4e90ea4dbf",
+      "native/world-kernels/Cargo.toml": "cfeeefc300febf7731bdd48f305292166638cb638c25bf3294cec66a80d3c57e",
+      "native/world-kernels/src/biosphere_tissue.rs": "c3c0073e53abdfa2bdba1b7b2ff316694fe82b78e20fd8c304fadf80e25dc58a",
+      "native/world-kernels/src/contact_shim.c": "61d3e38c0fca406aab42b0c3c15262ec9eda08cd65e5cb2a4068a6735476488d",
+      "native/world-kernels/src/contacts.rs": "6e0c3b46fd3165eaac7af674be50b9b8ba59e0c4ef79eb52070ccceefe67fe91",
+      "native/world-kernels/src/growth.rs": "a7071cc5529aaa30fc2a19b8cf1d047ba85f8339d548bfda3b003c36175534b7",
+      "native/world-kernels/src/lib.rs": "2f436a50c9edb3a729480bf40e6d9dd15f5679600c961d4e720c44d06efca04e",
+      "native/world-kernels/src/metabolism.rs": "344d0e8fd32f5e79edde0458b9f3b380f27d2a5841c323cab6dcc63f2fe9b2e1",
+      "native/world-kernels/src/motor_runtime.rs": "ad7895f564bc22feeadea1ecef1ea9543870cf46be1cca4073a3e56e345b5414",
+      "native/world-kernels/src/transport.rs": "c9e8623e88bb8ae21c1994c711b6680076513229110d3d05f3f93d31b17db2c1",
+      "port_bundle": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2",
+      "schema": "c77da7c2ea22bdf0130c791aeb9320dd4509914c6096e791007b12c0e6603cc4",
+      "world_pool_runner": "30c78bf17347e0be4c35155f6effd0d25ebf16bcb2ac1b001a6d4a327b7628f8"
+    },
+    "targeted_source_content_sha256": "dc2a589235b3e7c77aa6d188f8383663af64ffaf9a42c47fa8b88a18a82f2475",
+    "targeted_sources_dirty": true
+  },
+  "outcomes": {
+    "episode_000": {
+      "ingested_mass": 0.135,
+      "mouth_contacts": 3,
+      "nutrition": 0.11739122470619764
+    },
+    "episode_001": {
+      "ingested_mass": 0.0,
+      "mouth_contacts": 0,
+      "nutrition": 0.0
+    },
+    "interpretation": "mouth_contacts counts ingestion-positive physical ticks, not independent meals; outcomes are collection diagnostics, not a learned-skill evaluation"
+  },
+  "performance": {
+    "end_to_end_transitions_per_second": 546.5384781084872,
+    "episode0_birth_to_packet_seconds": 153.260559797287,
+    "episode0_transitions_per_second_including_compression": 626.3842447592273,
+    "identity_published_unix": 1788673137.6076097,
+    "identity_to_manifest_seconds": 351.30188941955566,
+    "manifest_published_unix": 1788673488.9094992,
+    "qualification": "end-to-end collection rate includes startup, native physical worlds, full MaleCNS readouts, birth snapshots, compression, and manifest publication; it is not a GPU-kernel rate",
+    "resource_samples": {
+      "aggregate_cpu_percent_one_sample": 735.4,
+      "logical_cpus": 24,
+      "lowest_host_mem_available_kb": 6393124,
+      "peak_collector_vram_used_bytes": 1700478976,
+      "pre_and_post_existing_service_vram_bytes": 1059332096,
+      "qualification": "scoped point samples across asynchronous CPU physics, GPU sparse circuit, and compression phases"
+    }
+  },
+  "scope": {
+    "dt_seconds": 0.05,
+    "episodes": 2,
+    "excluded_model_columns": [
+      "world coordinates",
+      "headings",
+      "distances",
+      "bearings",
+      "entity identities",
+      "object labels",
+      "body identities"
+    ],
+    "neural_readouts_recorded": true,
+    "observations": 192096,
+    "purpose": "anonymous achieved-history sensorimotor sequence data for learned predictive skills",
+    "residents": 48,
+    "residents_per_world": 3,
+    "steps_per_episode": 2000,
+    "transitions": 192000,
+    "worlds": 16
+  },
+  "validation": {
+    "birth_checkpoints_retained_on_hbox_only": true,
+    "checks": [
+      "manifest canonical hash",
+      "identity canonical hash",
+      "all causal source receipts",
+      "packet bytes and sha256",
+      "exact schema keys shapes dtypes",
+      "all numeric finite",
+      "T+1/T causal alignment",
+      "reset only at episode birth",
+      "bounded actions and oral command"
+    ],
+    "collection_log_sha256": "3f6293439a17ec25108b4038d3d8bfb317c052c8b5aa53d3221f9ceab46076fd",
+    "native_build_receipt_sha256": "f8581599597e0527623694fee7a5282756f10ad5b1b304d0b0f7ea675b3c1c98",
+    "persvati_files_reverified_after_atomic_rename": true,
+    "persvati_transfer_receipt_sha256": "bde0e693090890f320d3ec10e6c637fe8be1c20424989ff68b1626fff4f90008",
+    "validation_receipt_sha256": "7e9852a3f5906a184a20387d046d5ce0554aedcefd263a942be137acae5365db"
+  },
+  "version": 1
+}

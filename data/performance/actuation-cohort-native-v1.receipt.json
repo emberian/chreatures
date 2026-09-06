@@ -1,0 +1,73 @@
+{
+  "active_grip_command": "PYTHONPATH=/tmp/chreatures-actuation-grip-v1:/Users/ember/dev/chreatures /Users/ember/dev/chreatures/.venv/bin/python /tmp/probe_actuation_active_grip.py",
+  "command": "PYTHONPATH=/tmp/chreatures-actuation-v1:/Users/ember/dev/chreatures /Users/ember/dev/chreatures/.venv/bin/python /tmp/probe_actuation_composed.py",
+  "format": "chreatures-actuation-cohort-native-receipt-v1",
+  "inputs": {
+    "biosphere_sha256": "7b0f04396a3b30aa3dba2482aa81d6434659a5d18942dee6d0e8830bde48080f",
+    "habitat_sha256": "76e7405997a4dee974ecfd10ea2e92af66ab8e8ed4406e7c31c35276bd19c169"
+  },
+  "native": {
+    "actuation_rs_sha256": "92cd07ae559e6c7291976b4c530dd97c61c2969f27b6d934eb2be56a3e5e8db4",
+    "actuation_shim_c_sha256": "6676707a7cd1d309561d8e2f79ff455658eb104242f2f4da7cb9837a5511b532",
+    "assay_binary": "/tmp/chreatures-actuation-v1/_world_kernels.cpython-312-darwin.so",
+    "assay_binary_sha256": "de284d6acdca97622d511e40dc69386b21249b015906851bd0d37e0f80b975c7",
+    "frozen_identity_binary": "/tmp/chreatures-actuation-v1-final/_world_kernels.cpython-312-darwin.so",
+    "frozen_identity_binary_sha256": "fb4d984d0ab7c59b50effb4ab987514b37113de3f53fbd01335261cd46821478",
+    "identity": "native-articulated-cohort-v1",
+    "note": "The validated binary removes an uninitialized active-grip branch; the original 24-advance timing did not establish an attachment and is retained only for gait/biology throughput. The joined active-object scenario validates grip dynamics and work exactly.",
+    "validated_binary": "/tmp/chreatures-actuation-grip-v1/_world_kernels.cpython-312-darwin.so",
+    "validated_binary_sha256": "8d938dae5b62f94a5c96c74648db9ecb5d3a6c04056811dd5589bd92af4b4d04"
+  },
+  "raw": "runs/performance/actuation-cohort-native-v1.raw.json",
+  "reference": {
+    "articulated_py_sha256": "9dca3f7cb18bfee51846292881417af417f485d24ae283bf554657a284a6667c",
+    "commit": "78edd5604dd857bbcd341e20bc6fe9fd26083cb8",
+    "kind": "research-only scalar ArticulatedWorld override"
+  },
+  "result": {
+    "active_grip": {
+      "chemical_pools_max_abs": 0.0,
+      "entity": "chemical-packet-0",
+      "native_mechanical_work": 0.2609207854437227,
+      "object_body": 56,
+      "object_position_native": [
+        1.2866593602642324,
+        1.4045381983585736,
+        0.08208795483245775
+      ],
+      "object_position_reference": [
+        1.2866593602642324,
+        1.4045381983585736,
+        0.08208795483245775
+      ],
+      "qpos_max_abs": 0.0,
+      "qvel_max_abs": 0.0,
+      "reference_mechanical_work": 0.2609207854437227,
+      "resident": "mica",
+      "resident_body": 2,
+      "work_abs_difference": 0.0
+    },
+    "differences": {
+      "chemical_pools_max_abs": 0.0,
+      "developed_parts": [
+        0,
+        0
+      ],
+      "qpos_max_abs": 0.0,
+      "qvel_max_abs": 0.0,
+      "world_time_max_abs": 0.0
+    },
+    "native_cohort": 0.09693420799158048,
+    "passed": true,
+    "scalar_reference": 0.2865760420099832,
+    "speedup": 2.9563974158108834
+  },
+  "scope": {
+    "advances": 24,
+    "biosphere": "shared chemistry, mobile physiology, recycling and colony exudation",
+    "dt": 0.05,
+    "heterogeneous_morphology": true,
+    "neural": false,
+    "residents": 3
+  }
+}

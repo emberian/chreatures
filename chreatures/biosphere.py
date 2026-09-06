@@ -22,6 +22,56 @@ from .native_world import load_world_kernels
 
 FORMAT = "chreatures-biosphere-v4"
 KINDS = ("branch", "root", "leaf")
+DEFAULT_LIGHT_SAMPLING = {
+    "frame": "world-v1",
+    "directions": [[0.0, 0.0, 1.0]],
+    "weights": [1.0],
+    "occluded_transmission": 0.08,
+}
+
+
+def _light_sampling(value: Any) -> dict[str, Any]:
+    """Validate one immutable physical radiance sampling profile."""
+    if value is None:
+        return copy.deepcopy(DEFAULT_LIGHT_SAMPLING)
+    if not isinstance(value, dict) or set(value) != {
+        "frame",
+        "directions",
+        "weights",
+        "occluded_transmission",
+    }:
+        raise ValueError("invalid developmental light sampling profile")
+    if value["frame"] != "world-v1":
+        raise ValueError("developmental light rays require the world-v1 frame")
+    directions = value["directions"]
+    weights = value["weights"]
+    if (
+        not isinstance(directions, list)
+        or not 1 <= len(directions) <= 64
+        or not isinstance(weights, list)
+        or len(weights) != len(directions)
+    ):
+        raise ValueError("developmental light ray dimensions differ")
+    for direction in directions:
+        vector = np.asarray(direction, dtype=float)
+        if (
+            vector.shape != (3,)
+            or not np.isfinite(vector).all()
+            or vector[2] < 0.0
+            or np.linalg.norm(vector) <= 1e-12
+        ):
+            raise ValueError("developmental light rays must occupy the upper hemisphere")
+    weight = np.asarray(weights, dtype=float)
+    if not np.isfinite(weight).all() or np.any(weight <= 0.0):
+        raise ValueError("developmental light weights must be finite and positive")
+    transmission = value["occluded_transmission"]
+    if (
+        not isinstance(transmission, (int, float))
+        or not np.isfinite(transmission)
+        or not 0.0 <= transmission <= 1.0
+    ):
+        raise ValueError("developmental light transmission must be in [0, 1]")
+    return copy.deepcopy(value)
 
 
 class Biosphere:
@@ -48,6 +98,7 @@ class Biosphere:
         self.growth: dict[str, GrowthSystem] = {}
         self.parts: dict[str, dict[str, Any]] = {}
         self.active: dict[str, bool] = {}
+        self._light_specs: dict[str, dict[str, Any]] = {}
         used_rows: set[int] = set()
         used_entities: set[str] = set()
         for colony in self.config:
@@ -64,7 +115,7 @@ class Biosphere:
             }
             if (
                 not required <= set(colony)
-                or set(colony) - required - {"genome_sha256"}
+                or set(colony) - required - {"genome_sha256", "light_sampling"}
                 or not isinstance(colony["id"], str)
             ):
                 raise ValueError("invalid developmental colony specification")
@@ -113,6 +164,7 @@ class Biosphere:
                 raise ValueError("growth requests chemistry absent from this web")
             self.growth[name] = growth
             self.active[name] = True
+            self._light_specs[name] = _light_sampling(colony.get("light_sampling"))
             structure_activity = web.enzyme_activity[colony["structure_row"]]
             supported = {"soft_turnover", "tough_turnover"}
             if any(
@@ -136,6 +188,30 @@ class Biosphere:
             [colony["structure_row"] for colony in self.config],
             self.web.chemistry._arrays[0],
         )
+        profiles: list[dict[str, Any]] = []
+        profile_index: dict[bytes, int] = {}
+        self._light_profile_ids: dict[str, int] = {}
+        for name, spec in self._light_specs.items():
+            key = canonical(spec)
+            if key not in profile_index:
+                profile_index[key] = len(profiles)
+                profiles.append(spec)
+            self._light_profile_ids[name] = profile_index[key]
+        directions: list[list[float]] = []
+        weights: list[float] = []
+        offsets = [0]
+        transmission = []
+        for profile in profiles:
+            directions.extend(profile["directions"])
+            weights.extend(profile["weights"])
+            offsets.append(len(directions))
+            transmission.append(profile["occluded_transmission"])
+        self._environment = load_world_kernels().LightEnvironment(
+            len(self.config), directions, weights, offsets, transmission
+        )
+        self._environment_revision = -1
+        self._environment_lights: tuple[np.ndarray, ...] | None = None
+        self._development_light: dict[str, list[tuple[dict[str, Any], float]]] = {}
         if mobiles is not None:
             from .somatic import SomaticPhysiology
 
@@ -208,47 +284,128 @@ class Biosphere:
     def _colony(self, colony_id: str) -> dict[str, Any]:
         return next(colony for colony in self.config if colony["id"] == colony_id)
 
-    def _point(self, colony: Mapping[str, Any], point: Any) -> np.ndarray:
-        body_id = self.world._entity_mj[colony["bindings"]["branch"]]
-        return (
-            self.world.data.xpos[body_id]
-            + self.world.data.xmat[body_id].reshape(3, 3) @ point
+    @staticmethod
+    def _matrix(values: list[Any], columns: int, dtype=float) -> np.ndarray:
+        return np.asarray(values, dtype=dtype).reshape((-1, columns))
+
+    def _bind_environment(self) -> None:
+        """Cache attachment topology; MuJoCo poses and tissue remain live inputs."""
+        bodies: list[int] = []
+        local: list[list[float]] = []
+        world_offset: list[list[float]] = []
+        profiles: list[int] = []
+        colonies: list[int] = []
+        areas: list[float] = []
+        part_ids: list[str | None] = []
+        initial_tissue: list[float] = []
+        for colony_index, colony in enumerate(self.config):
+            profile = self._light_profile_ids[colony["id"]]
+            bodies.append(self.world._entity_mj[colony["bindings"]["branch"]])
+            local.append([0.0, 0.0, 0.025])
+            world_offset.append([0.0, 0.0, 0.0])
+            profiles.append(profile)
+            colonies.append(colony_index)
+            areas.append(float(colony["seed_capture_area"]))
+            part_ids.append(None)
+            initial_tissue.append(0.0)
+            for part_id, part in self.parts.items():
+                if part["colony"] != colony["id"] or part["kind"] != "leaf":
+                    continue
+                shape = part["shape"]
+                original = float(part["initial_resources"].get("soft_tissue", 0.0))
+                if original <= 0.0:
+                    raise ValueError("photosynthetic leaf lacks initial soft tissue")
+                bodies.append(self.world._entity_mj[part["entity"]])
+                local.append(list(map(float, shape["position"])))
+                world_offset.append([0.0, 0.0, max(map(float, shape["size"])) + 1e-4])
+                profiles.append(profile)
+                colonies.append(colony_index)
+                areas.append(float(part["area"]))
+                part_ids.append(part_id)
+                initial_tissue.append(original)
+        self._environment.bind_capture(
+            self._tissue,
+            np.asarray(bodies, dtype=np.int32),
+            self._matrix(local, 3),
+            self._matrix(world_offset, 3),
+            np.asarray(profiles, dtype=np.int32),
+            np.asarray(colonies, dtype=np.int32),
+            np.asarray(areas, dtype=np.float64),
+            part_ids,
+            np.asarray(initial_tissue, dtype=np.float64),
         )
+        light_bodies: list[int] = []
+        light_positions: list[list[float]] = []
+        light_directions: list[list[float]] = []
+        light_intensity: list[float] = []
+        light_radius: list[float] = []
+        for entity in self.world._entities:
+            for component in self.world._components[entity["id"]]:
+                if component.get("type") != "light":
+                    continue
+                direction = np.asarray(
+                    component.get("direction", [0.0, 0.0, -1.0]), dtype=float
+                )
+                direction /= np.linalg.norm(direction)
+                light_bodies.append(self.world._entity_mj[entity["id"]])
+                light_positions.append(
+                    list(map(float, component.get("position", [0.0, 0.0, 0.0])))
+                )
+                light_directions.append(direction.tolist())
+                light_intensity.append(float(component.get("intensity", 1.0)))
+                light_radius.append(float(component.get("radius", 2.0)))
+        self._environment_lights = (
+            np.asarray(light_bodies, dtype=np.int32),
+            self._matrix(light_positions, 3),
+            self._matrix(light_directions, 3),
+            np.asarray(light_intensity, dtype=np.float64),
+            np.asarray(light_radius, dtype=np.float64),
+        )
+        self._environment_revision = self.world.model_revision
 
-    def _illumination(self, point: Any) -> float:
-        p = np.asarray(point, dtype=float)
-        size = np.asarray([self.world.width, self.world.height, self.world.depth])
-        if not np.isfinite(p).all() or np.any(p < 0) or np.any(p > size):
-            return 0.0
-        return float(self.world.sample_environment([p.tolist()])[0]["illumination"])
-
-    def _photon_budget(self, colony: Mapping[str, Any], dt: float) -> float:
-        # Founder photosynthetic surface has an explicit area and attachment.
-        point = self._point(colony, np.asarray([0.0, 0.0, 0.025]))
-        capture = colony["seed_capture_area"] * self._illumination(point)
-        for part in self.parts.values():
-            if part["colony"] != colony["id"] or part["kind"] != "leaf":
+    def _sample_environment(self) -> np.ndarray:
+        if self._environment_revision != self.world.model_revision:
+            self._bind_environment()
+        bud_bodies: list[int] = []
+        bud_local: list[list[float]] = []
+        bud_profiles: list[int] = []
+        ordered: list[tuple[str, dict[str, Any]]] = []
+        for colony in self.config:
+            name = colony["id"]
+            if not self.active[name] or not self.growth[name].is_due:
                 continue
-            shape = part["shape"]
-            # The upper bounding surface avoids self-intersection. The current
-            # effective area is supplied by the grammar, not a radiative solver.
-            center = self._point(colony, np.asarray(shape["position"]))
-            center[2] += max(shape["size"]) + 1e-4
-            original = part["initial_resources"].get("soft_tissue", 0.0)
-            active_fraction = (
-                part["resources"].get("soft_tissue", 0.0) / original
-                if original > 0
-                else 0.0
-            )
-            capture += (
-                part["area"]
-                * max(0.0, min(1.0, active_fraction))
-                * self._illumination(center)
-            )
-        return dt * colony["photon_flux"] * capture
+            body = self.world._entity_mj[colony["bindings"]["branch"]]
+            profile = self._light_profile_ids[name]
+            for bud in self.growth[name].buds():
+                local = np.asarray(bud["position"], dtype=float) + 0.025 * np.asarray(
+                    bud["forward"], dtype=float
+                )
+                bud_bodies.append(body)
+                bud_local.append(local.tolist())
+                bud_profiles.append(profile)
+                ordered.append((name, bud))
+        if self._environment_lights is None:
+            raise RuntimeError("physical light environment is not bound")
+        light = self.world._light
+        capture, bud_light = self._environment.sample(
+            self._tissue,
+            int(self.world.model._address),
+            int(self.world.data._address),
+            np.asarray(bud_bodies, dtype=np.int32),
+            self._matrix(bud_local, 3),
+            np.asarray(bud_profiles, dtype=np.int32),
+            *self._environment_lights,
+            list(map(float, light["position"])),
+            float(light["intensity"]),
+            bool(light["remaining"] > 0.0),
+            [float(self.world.width), float(self.world.height), float(self.world.depth)],
+        )
+        self._development_light = {colony["id"]: [] for colony in self.config}
+        for (name, bud), value in zip(ordered, np.asarray(bud_light), strict=True):
+            self._development_light[name].append((bud, float(value)))
+        return np.asarray(capture, dtype=np.float64)
 
     def _signals(self, colony: Mapping[str, Any]) -> list[dict[str, Any]]:
-        growth = self.growth[colony["id"]]
         mineral = float(
             self.web.pools[
                 colony["body_row"], self.web.chemistry.pools.index("mineral")
@@ -256,11 +413,9 @@ class Biosphere:
         )
         nutrient = mineral / (mineral + colony["mineral_half_saturation"])
         result = []
-        for bud in growth.buds():
+        for bud, light in self._development_light.get(colony["id"], []):
             # Buds are attached by construction; support is structural ancestry,
             # not a claim that static branches have a fitted stress model.
-            local = np.asarray(bud["position"]) + 0.025 * np.asarray(bud["forward"])
-            light = self._illumination(self._point(colony, local))
             result.append(
                 {
                     "bud_id": bud["bud_id"],
@@ -279,11 +434,16 @@ class Biosphere:
         self._check_structure()
         if self.exchange is not None:
             self.exchange.before_reactions(dt)
-        photons = np.zeros(self.web.count, dtype=np.float64)
         for colony in self.config:
             if self.active[colony["id"]]:
-                photons[colony["body_row"]] = self._photon_budget(colony, dt)
                 self.growth[colony["id"]].elapse(dt)
+        capture = self._sample_environment()
+        photons = np.zeros(self.web.count, dtype=np.float64)
+        for colony_index, colony in enumerate(self.config):
+            if self.active[colony["id"]]:
+                photons[colony["body_row"]] = (
+                    dt * colony["photon_flux"] * capture[colony_index]
+                )
         if self.mobility is not None:
             self.mobility.before_reactions(dt)
         ledger = self.web.step(dt, photons, np.zeros(self.web.count))
@@ -352,6 +512,7 @@ class Biosphere:
     def _bind_tissue(self) -> None:
         """Rebind native numeric tissue after a committed topology change."""
         self._tissue.bind(self.parts, self.web.pools)
+        self._bind_environment()
 
     def _check_structure(self) -> None:
         self._tissue.validate(self.web.pools)
