@@ -1192,7 +1192,15 @@ class PhysicsWorld:
                 for geom_id in (first, second):
                     body_id = int(self.model.geom_bodyid[geom_id])
                     linear, angular = self._velocity(body_id)
-                    velocities.append(linear + np.cross(angular, point - self.data.xpos[body_id]))
+                    radius = point - self.data.xpos[body_id]
+                    # This is the fixed three-vector form of
+                    # ``linear + np.cross(angular, radius)``. Avoid NumPy's
+                    # general N-D axis normalization in this per-contact path.
+                    velocities.append(linear + np.asarray([
+                        angular[1] * radius[2] - angular[2] * radius[1],
+                        angular[2] * radius[0] - angular[0] * radius[2],
+                        angular[0] * radius[1] - angular[1] * radius[0],
+                    ]))
                 relative_speed = abs(float(np.dot(velocities[1] - velocities[0], world_normal)))
                 impulse = min(
                     float(self.spec.get("limits", {}).get("acoustic_impulse", 10.0)),
