@@ -117,15 +117,25 @@ class Habitat3D:
                 from .living_motor import LivingMotorOrgan
 
                 motor_type = LivingMotorOrgan
-            private_options = (
-                {"plasticity": self.personal_plasticity} if self.personal_memory else {}
-            )
-            self.motors = {
-                b.id: motor_type(
-                    self.motor_artifact, seed=seed * 1009 + i, **private_options
+            for i, body in enumerate(self.world.bodies):
+                private_seed = seed * 1009 + i
+                options = (
+                    {"plasticity": self.personal_plasticity}
+                    if self.personal_memory
+                    else {}
                 )
-                for i, b in enumerate(self.world.bodies)
-            }
+                if self.personal_plasticity:
+                    from .personal_plasticity import PersonalPlasticityConfig
+
+                    # New lives can learn both motor means and exploration.
+                    # Restore never consults this birth-time default.
+                    options["plasticity_config"] = PersonalPlasticityConfig(
+                        seed=private_seed + 3301,
+                        variance_adaptation="state-log-std-v2",
+                    )
+                self.motors[body.id] = motor_type(
+                    self.motor_artifact, seed=private_seed, **options
+                )
         self.id = str(uuid.uuid4())
         self.tick = 0
         self.paused = False
@@ -325,6 +335,10 @@ class Habitat3D:
                 local_body["support"] = float(response["support"])
                 if self.motors:
                     if self.personal_memory:
+                        maturation = self.motors[body_id].variance_maturation
+                        maturation_queued = (
+                            maturation is not None and maturation["status"] == "queued"
+                        )
                         action = self.motors[body_id].tick(
                             features,
                             local_body,
@@ -339,6 +353,13 @@ class Habitat3D:
                             if self.vision is not None
                             else None,
                         )
+                        if maturation_queued and maturation["status"] == "applied":
+                            self.note(
+                                "development",
+                                f"{body.name} acquired a private capacity to learn action variance.",
+                                resident=body_id,
+                                maturation=copy.deepcopy(maturation),
+                            )
                     else:
                         action = self.motors[body_id].tick(features, local_body, dt)
                 else:
@@ -378,6 +399,7 @@ class Habitat3D:
                 self.resource_state = self.resources.advance(dt)
             resources_done = time.perf_counter()
             if self.field is not None:
+                self.field.sync_dynamic_barriers(self.world.diffusion_barriers())
                 self.field.advance(
                     dt, sources=self.field.sources_from_world(self.world)
                 )
@@ -445,6 +467,41 @@ class Habitat3D:
                 raise ValueError("Bookmark text must be at most 500 characters")
             self.note("observation", text, origin="caregiver")
             return {"bookmarked": True}
+        if op == "mature_variance":
+            if set(command) - {"op", "residents"}:
+                raise ValueError("Unknown variance maturation option")
+            if not self.paused or not self.personal_memory:
+                raise ValueError(
+                    "Variance maturation requires a paused personal-learning world"
+                )
+            ids = command.get("residents", list(self.motors))
+            if (
+                not isinstance(ids, list)
+                or not ids
+                or any(
+                    not isinstance(key, str) or key not in self.motors for key in ids
+                )
+                or len(ids) != len(set(ids))
+            ):
+                raise ValueError("Residents must be distinct members of this world")
+            # Check the complete cohort before queuing any developmental change.
+            for key in ids:
+                motor = self.motors[key]
+                if (
+                    motor.personal_plasticity is None
+                    or motor.variance_maturation is not None
+                    or motor.personal_plasticity.config.variance_adaptation
+                    != "fixed-inherited-v1"
+                ):
+                    raise ValueError(f"Resident {key} cannot queue this maturation")
+            records = {key: self.motors[key].queue_state_log_std_v2() for key in ids}
+            self.note(
+                "development",
+                "Queued private variance learning after each current motor action completes.",
+                residents=ids,
+                maturation=copy.deepcopy(records),
+            )
+            return {"queued": records}
         result = self.world.command(command)
         self.visitor.direct_command(command)
         self.note(

@@ -251,8 +251,7 @@ the same trunk that receives local physiology. A zero-initialized head preserves
 initial stochastic actions and existing optimizer/RNG state exactly at the
 explicit upgrade boundary. The new developmental branch retains all 19 pending
 rollout decisions and continues the existing physical histories. A separate
-private-variance organ is being developed for lifetime learning; the current
-learning-garden residents retain their earlier mean-only private adapter.
+private-variance organ supplies the corresponding lifetime-learning capacity.
 
 An isolated complete-graph assay now joins measured KC→MBON11 plasticity to
 the actual 165,122-neuron Metal circuit. It gathers 3,623 real KC rates and uses
@@ -261,3 +260,20 @@ normalization. Controlled histories produce nonzero recurrent corrections and
 MBON suppression; frozen controls produce none. Complete native and private
 plasticity state replay exactly. The two sensory cues evoke broadly overlapping
 KC patterns, so cue specificity and useful embodied memory remain unestablished.
+
+The learning garden's variance maturation was queued at paused tick 11,427.
+All pre-existing physical, neural, private motor, visual and ecological state
+matched after restart. Each resident completed pending decision 2,285 under
+the old rule, then acquired an exactly zero variance head and trace before
+decision 2,286. Source/target configuration hashes and that credit boundary
+persist in each motor snapshot. The old memories and mean parameters remain;
+later experience can change variance using projected neural features and six
+local bodily values. New opt-in plasticity births start with this capacity.
+
+An actual visitor performance left a block on the learning garden's pressure
+lift. The lift settled at 0.03453 m and the coupled gate rose to 0.33863 m,
+remaining there after the hand released. A separate opt-in chemical membrane
+component now lets hinged/sliding panels alter diffusion-face permeability.
+Its physical probe increased transmitted concentration 158-fold when the gate
+opened and retained all field mass when closing. It models a moving membrane,
+not displacement of fluid. Legacy worlds keep their original chemical rules.

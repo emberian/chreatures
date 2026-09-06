@@ -73,7 +73,7 @@ Use a fresh checkpoint and a separate ordered neural service. The inherited moto
 
 The newer [terrarium](docs/TERRARIUM.md) adds connected terraces, an underdeck, a return ramp, renewable movable food and five acoustic mechanisms. The [visitor panel](docs/VISITOR.md) records and schedules sound, light and physical gestures in model time, including across a checkpoint.
 
-The latest **learning garden** adds a [passive pressure lift and coupled gate](docs/MECHANICAL_ASSEMBLIES.md), an inherited finite-energy policy, and [private lifetime motor plasticity](docs/PERSONAL_PLASTICITY.md). Reed, Tansy and Sorrel have separate actor/value parameters and eligibility traces. Their actual five-tick bodily consequences update their own motor tendencies; contextual and visual evidence use the same versioned physiological objective. For a new world with its own neural service:
+The latest **learning garden** adds a [passive pressure lift and coupled gate](docs/MECHANICAL_ASSEMBLIES.md), an inherited finite-energy policy, and [private lifetime motor plasticity](docs/PERSONAL_PLASTICITY.md). Reed, Tansy and Sorrel have separate motor means, state-dependent exploration, value parameters and eligibility traces. Their actual five-tick bodily consequences update their own motor tendencies; contextual and visual evidence use the same versioned physiological objective. For a new world with its own neural service:
 
 ```sh
 uv run chreatures3d --port 8771 --brain-url http://127.0.0.1:18768 \
@@ -84,6 +84,8 @@ uv run chreatures3d --port 8771 --brain-url http://127.0.0.1:18768 \
   --resources data/ecology/terrarium-orchard.json \
   --acoustics data/components/terrarium-play.json
 ```
+
+To make moving gates also regulate chemical transport, select `data/habitats/counterweight-chemistry.json`. Its opt-in [diffusion barriers](docs/FIELDS.md) change face permeability without deleting chemical mass. A weight left on a lift can therefore alter another resident's passage and sensory environment.
 
 The fresh finite-energy training run improved short held-out bodily return from 0.092 to 0.122; silencing neural features scored -0.961. Those probes lasted only 40 model seconds. Longer observation of the older inherited residents exposed reserve depletion and persistent fatigue. **Sustained feeding and recovery remain unmet capabilities.** New [embodied developmental worlds](docs/EMBODIED_TRAINING.md) use the actual body-frame senses, diffusion and resource ecology, with 1,200-second horizons. The optional [edge-tiled AMD backend](docs/TILED_CIRCUIT.md) cuts a complete B48 device update from 34.1 to 20.5 ms.
 

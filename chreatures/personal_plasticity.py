@@ -16,7 +16,7 @@ from typing import Any, Mapping
 import numpy as np
 
 from .homeostasis import FiniteEnergyConfig, FiniteEnergyObjective, FORMAT as ENERGY_FORMAT
-from .motor_inheritance import ACTIONS
+from .motor_inheritance import ACTIONS, PHYSIOLOGY
 
 
 FORMAT = "chreatures-personal-motor-plasticity-v1"
@@ -24,6 +24,10 @@ DECISION_FORMAT = "chreatures-personal-motor-decision-v1"
 CONSERVATIVE_CREDIT = "executed-match-v1"
 LATENT_PROPOSAL_CREDIT = "latent-proposal-v2"
 CREDIT_ASSIGNMENTS = frozenset((CONSERVATIVE_CREDIT, LATENT_PROPOSAL_CREDIT))
+FIXED_INHERITED_VARIANCE = "fixed-inherited-v1"
+STATE_LOG_STD_VARIANCE = "state-log-std-v2"
+VARIANCE_ADAPTATIONS = frozenset((FIXED_INHERITED_VARIANCE, STATE_LOG_STD_VARIANCE))
+VARIANCE_FEATURE_PROFILE = "projected64-physiology6-bias-v2"
 
 
 def _json(value: Any) -> str:
@@ -64,6 +68,35 @@ def _physiology(value: Mapping[str, Any], name: str) -> dict[str, float]:
     return result
 
 
+def _variance_physiology(
+    value: Mapping[str, Any] | np.ndarray,
+) -> np.ndarray:
+    """Frozen v2 copy of the inherited six-channel local normalization."""
+    if isinstance(value, Mapping):
+        unknown = set(value) - set(PHYSIOLOGY)
+        if unknown:
+            raise ValueError(f"physiology contains nonlocal/unknown fields: {sorted(unknown)}")
+        result = np.asarray([
+            value.get("energy", 0.7),
+            value.get("gut", 0.0),
+            value.get("fatigue", 0.1),
+            math.tanh(float(value.get("speed", 0.0)) / 2.0),
+            math.tanh(float(value.get("angular_velocity", 0.0)) / 4.0),
+            value.get("support", 1.0),
+        ], dtype=np.float32)
+    else:
+        result = _vector(value, len(PHYSIOLOGY), "local physiology")
+    if result.shape != (6,) or not np.isfinite(result).all():
+        raise ValueError("local physiology must contain six finite values")
+    if (
+        np.any(result[[0, 1, 2, 5]] < 0.0)
+        or np.any(result[[0, 1, 2, 5]] > 1.0)
+        or np.any(np.abs(result[[3, 4]]) > 1.0)
+    ):
+        raise ValueError("local physiology is outside its normalized physical bounds")
+    return result
+
+
 @dataclass(frozen=True)
 class PersonalPlasticityConfig:
     """Bounded online actor-critic configuration.
@@ -86,6 +119,12 @@ class PersonalPlasticityConfig:
     weight_clip: float = 2.0
     credit_assignment: str = LATENT_PROPOSAL_CREDIT
     seed: int = 20260907
+    variance_adaptation: str = FIXED_INHERITED_VARIANCE
+    max_log_std_offset: float = 1.5
+    variance_learning_rate: float = 0.009
+    minimum_log_std: float = -5.0
+    maximum_log_std: float = 0.3
+    variance_feature_profile: str = VARIANCE_FEATURE_PROFILE
 
     def __post_init__(self) -> None:
         if self.version != 1 or self.feature_dim < 1 or self.action_dim != len(ACTIONS):
@@ -104,6 +143,44 @@ class PersonalPlasticityConfig:
             raise ValueError("seed must be an integer")
         if self.credit_assignment not in CREDIT_ASSIGNMENTS:
             raise ValueError("unsupported personal plasticity credit assignment")
+        if self.variance_adaptation not in VARIANCE_ADAPTATIONS:
+            raise ValueError("unsupported personal variance adaptation")
+        if self.variance_feature_profile != VARIANCE_FEATURE_PROFILE:
+            raise ValueError("unsupported personal variance feature profile")
+        if self.variance_adaptation == FIXED_INHERITED_VARIANCE and (
+            self.max_log_std_offset != 1.5
+            or self.variance_learning_rate != 0.009
+            or self.minimum_log_std != -5.0
+            or self.maximum_log_std != 0.3
+        ):
+            raise ValueError("inactive fixed variance cannot carry hidden v2 overrides")
+        if (
+            not math.isfinite(self.max_log_std_offset) or self.max_log_std_offset <= 0
+            or not math.isfinite(self.variance_learning_rate)
+            or self.variance_learning_rate <= 0
+            or not math.isfinite(self.minimum_log_std)
+            or not math.isfinite(self.maximum_log_std)
+            or not self.minimum_log_std < -3.5 < self.maximum_log_std
+            or self.maximum_log_std < 0.3
+        ):
+            raise ValueError("invalid personal log-standard-deviation bounds or learning rate")
+
+    def to_value(self) -> dict[str, Any]:
+        """Encode without changing the historical mean-only snapshot schema."""
+        value = asdict(self)
+        if self.variance_adaptation == FIXED_INHERITED_VARIANCE:
+            for name in (
+                "variance_adaptation", "max_log_std_offset", "variance_learning_rate",
+                "minimum_log_std", "maximum_log_std", "variance_feature_profile",
+            ):
+                value.pop(name)
+        return value
+
+    @classmethod
+    def from_value(cls, value: Mapping[str, Any]) -> "PersonalPlasticityConfig":
+        raw = dict(value)
+        raw.setdefault("variance_adaptation", FIXED_INHERITED_VARIANCE)
+        return cls(**raw)
 
 
 @dataclass(frozen=True)
@@ -126,9 +203,36 @@ class MotorDecision:
     credit_assignment: str
     selection_pipeline: str
     proposal_independent_selection: bool
+    inherited_log_std: np.ndarray | None = None
+    log_std_offset: np.ndarray | None = None
+    local_physiology: np.ndarray | None = None
+    variance_feature_profile: str | None = None
 
     def to_value(self) -> dict[str, Any]:
-        return {
+        arrays = {
+            name: _array_value(getattr(self, name))
+            for name in (
+                "feature", "inherited_mean", "adapted_mean", "log_std",
+                "standard_noise", "latent_action", "proposal_action", "physical_action",
+            )
+        }
+        if (
+            self.inherited_log_std is not None
+            or self.log_std_offset is not None
+            or self.local_physiology is not None
+        ):
+            if (
+                self.inherited_log_std is None
+                or self.log_std_offset is None
+                or self.local_physiology is None
+            ):
+                raise ValueError("variance-adapted decision arrays must appear together")
+            arrays.update({
+                "inherited_log_std": _array_value(self.inherited_log_std),
+                "log_std_offset": _array_value(self.log_std_offset),
+                "local_physiology": _array_value(self.local_physiology),
+            })
+        result = {
             "format": DECISION_FORMAT,
             "sequence": int(self.sequence),
             "baseline_value": float(self.baseline_value),
@@ -138,14 +242,11 @@ class MotorDecision:
             "credit_assignment": self.credit_assignment,
             "selection_pipeline": self.selection_pipeline,
             "proposal_independent_selection": self.proposal_independent_selection,
-            "arrays": {
-                name: _array_value(getattr(self, name))
-                for name in (
-                    "feature", "inherited_mean", "adapted_mean", "log_std",
-                    "standard_noise", "latent_action", "proposal_action", "physical_action",
-                )
-            },
+            "arrays": arrays,
         }
+        if self.variance_feature_profile is not None:
+            result["variance_feature_profile"] = self.variance_feature_profile
+        return result
 
     @classmethod
     def from_value(cls, value: Mapping[str, Any]) -> "MotorDecision":
@@ -153,6 +254,17 @@ class MotorDecision:
             if value.get("format") != DECISION_FORMAT:
                 raise ValueError("unsupported personal motor decision")
             arrays = value["arrays"]
+            optional = {}
+            variance_names = {
+                "inherited_log_std", "log_std_offset", "local_physiology",
+            }
+            if variance_names & set(arrays):
+                if not variance_names <= set(arrays):
+                    raise ValueError("incomplete variance-adapted motor decision")
+                optional = {
+                    name: _array_from_value(arrays[name], name).astype(np.float32, copy=False)
+                    for name in variance_names
+                }
             return cls(
                 sequence=int(value["sequence"]),
                 baseline_value=float(value["baseline_value"]),
@@ -162,11 +274,17 @@ class MotorDecision:
                 credit_assignment=str(value["credit_assignment"]),
                 selection_pipeline=str(value["selection_pipeline"]),
                 proposal_independent_selection=bool(value["proposal_independent_selection"]),
+                variance_feature_profile=(
+                    None
+                    if value.get("variance_feature_profile") is None
+                    else str(value["variance_feature_profile"])
+                ),
                 **{name: _array_from_value(arrays[name], name).astype(np.float32, copy=False)
                    for name in (
                        "feature", "inherited_mean", "adapted_mean", "log_std",
                        "standard_noise", "latent_action", "proposal_action", "physical_action",
                    )},
+                **optional,
             )
         except (KeyError, TypeError) as exc:
             raise ValueError("invalid personal motor decision") from exc
@@ -197,17 +315,22 @@ class PersonalMotorPlasticity:
         shape = (self.config.action_dim, width)
         self.actor = np.zeros(shape, dtype=np.float32)
         self.actor_trace = np.zeros(shape, dtype=np.float32)
+        variance_shape = (self.config.action_dim, self.config.feature_dim + 7)
+        self.variance_actor = np.zeros(variance_shape, dtype=np.float32)
+        self.variance_trace = np.zeros(variance_shape, dtype=np.float32)
         self.critic = np.zeros(width, dtype=np.float32)
         self.critic_trace = np.zeros(width, dtype=np.float32)
         self.pending: MotorDecision | None = None
         self.decision_count = 0
         self.update_count = 0
         self.actor_update_count = 0
+        self.variance_update_count = 0
         self.actor_skip_count = 0
         self.reward_sum = 0.0
         self.last_reward: float | None = None
         self.last_td_error: float | None = None
         self.last_offset = np.zeros(self.config.action_dim, dtype=np.float32)
+        self.last_log_std_offset = np.zeros(self.config.action_dim, dtype=np.float32)
         self.last_objective: dict[str, float] | None = None
 
     def _basis(self, feature: Any) -> np.ndarray:
@@ -218,6 +341,24 @@ class PersonalMotorPlasticity:
         return np.concatenate((feature, np.ones(1, dtype=np.float32))) / math.sqrt(
             self.config.feature_dim + 1
         )
+
+    def _variance_basis(
+        self, feature: Any, local_physiology: Mapping[str, Any] | np.ndarray | None,
+    ) -> np.ndarray:
+        """Bound sensory contribution while retaining an effective rest bias."""
+        feature = _vector(feature, self.config.feature_dim, "feature")
+        if np.any(np.abs(feature) > 1.000001):
+            raise ValueError("feature must be a bounded frozen projection in [-1, 1]")
+        physiology = (
+            np.zeros(6, dtype=np.float32)
+            if local_physiology is None
+            else _variance_physiology(local_physiology)
+        )
+        return np.concatenate((
+            feature / math.sqrt(self.config.feature_dim),
+            physiology / math.sqrt(6.0),
+            np.ones(1, dtype=np.float32),
+        )).astype(np.float32)
 
     def mean_offset(self, feature: Any) -> np.ndarray:
         """Return a bounded private offset in inherited pre-tanh units."""
@@ -234,6 +375,43 @@ class PersonalMotorPlasticity:
             return inherited.copy()
         return (inherited + self.mean_offset(feature)).astype(np.float32)
 
+    def log_std_offset(
+        self,
+        feature: Any,
+        local_physiology: Mapping[str, Any] | np.ndarray | None = None,
+    ) -> np.ndarray:
+        """Return the bounded state-dependent variance offset in log units."""
+        if (
+            not self.enabled
+            or self.config.variance_adaptation == FIXED_INHERITED_VARIANCE
+        ):
+            return np.zeros(self.config.action_dim, dtype=np.float32)
+        basis = self._variance_basis(feature, local_physiology)
+        raw = self.variance_actor @ basis
+        return (self.config.max_log_std_offset * np.tanh(raw)).astype(np.float32)
+
+    def adapt_log_std(
+        self,
+        feature: Any,
+        inherited_log_std: Any,
+        local_physiology: Mapping[str, Any] | np.ndarray | None = None,
+    ) -> np.ndarray:
+        """Adapt exploration scale; fixed mode returns the historical clipping."""
+        inherited = np.clip(
+            _vector(inherited_log_std, self.config.action_dim, "inherited log_std"),
+            -3.5, 0.3,
+        ).astype(np.float32)
+        if (
+            not self.enabled
+            or self.config.variance_adaptation == FIXED_INHERITED_VARIANCE
+        ):
+            return inherited
+        return np.clip(
+            inherited + self.log_std_offset(feature, local_physiology),
+            self.config.minimum_log_std,
+            self.config.maximum_log_std,
+        ).astype(np.float32)
+
     @staticmethod
     def physical_action(latent_action: Any) -> np.ndarray:
         latent = _vector(latent_action, len(ACTIONS), "latent_action")
@@ -248,6 +426,7 @@ class PersonalMotorPlasticity:
         log_std: Any,
         *,
         inherited_noise: Any | None = None,
+        local_physiology: Mapping[str, Any] | np.ndarray | None = None,
         deterministic: bool = False,
     ) -> MotorDecision:
         """Sample a proposal without committing it.
@@ -262,6 +441,19 @@ class PersonalMotorPlasticity:
         if np.any(log_std < -8.0) or np.any(log_std > 2.0):
             raise ValueError("log_std is outside the supported range [-8, 2]")
         mean = self.adapt_mean(feature, inherited)
+        inherited_log_std = np.clip(log_std, -3.5, 0.3).astype(np.float32)
+        physiology_vector = (
+            None
+            if self.config.variance_adaptation == FIXED_INHERITED_VARIANCE
+            else (
+                np.zeros(6, dtype=np.float32)
+                if local_physiology is None
+                else _variance_physiology(local_physiology)
+            )
+        )
+        effective_log_std = self.adapt_log_std(
+            feature, inherited_log_std, physiology_vector,
+        )
         if deterministic:
             latent = mean.copy()
             noise = np.zeros(self.config.action_dim, dtype=np.float32)
@@ -271,20 +463,24 @@ class PersonalMotorPlasticity:
                 if inherited_noise is None
                 else _vector(inherited_noise, self.config.action_dim, "inherited_noise")
             )
-            std = np.exp(np.clip(log_std, -3.5, 0.3)).astype(np.float32)
+            std = np.exp(effective_log_std).astype(np.float32)
             latent = (mean + std * noise).astype(np.float32)
         basis = self._basis(feature)
         value = float(self.critic @ basis) if self.enabled else 0.0
-        effective_log_std = np.clip(log_std.astype(np.float64), -3.5, 0.3)
         proposal_log_probability = float(-0.5 * np.sum(
-            noise.astype(np.float64) ** 2 + 2.0 * effective_log_std
+            noise.astype(np.float64) ** 2 + 2.0 * effective_log_std.astype(np.float64)
             + math.log(2.0 * math.pi)
         ))
         physical = self.physical_action(latent)
         return MotorDecision(
             sequence=self.decision_count,
             feature=feature.copy(), inherited_mean=inherited.copy(), adapted_mean=mean,
-            log_std=log_std.copy(), standard_noise=noise.copy(), latent_action=latent,
+            log_std=(
+                log_std.copy()
+                if self.config.variance_adaptation == FIXED_INHERITED_VARIANCE
+                else effective_log_std.copy()
+            ),
+            standard_noise=noise.copy(), latent_action=latent,
             proposal_action=physical.copy(), physical_action=physical,
             baseline_value=value, proposal_log_probability=proposal_log_probability,
             actor_eligible=bool(self.enabled and not deterministic),
@@ -292,6 +488,24 @@ class PersonalMotorPlasticity:
             credit_assignment=self.config.credit_assignment,
             selection_pipeline="direct-proposal-v1",
             proposal_independent_selection=True,
+            inherited_log_std=(
+                None
+                if self.config.variance_adaptation == FIXED_INHERITED_VARIANCE
+                else inherited_log_std.copy()
+            ),
+            log_std_offset=(
+                None
+                if self.config.variance_adaptation == FIXED_INHERITED_VARIANCE
+                else (effective_log_std - inherited_log_std).astype(np.float32)
+            ),
+            local_physiology=(
+                None if physiology_vector is None else physiology_vector.copy()
+            ),
+            variance_feature_profile=(
+                None
+                if self.config.variance_adaptation == FIXED_INHERITED_VARIANCE
+                else self.config.variance_feature_profile
+            ),
         )
 
     def commit(
@@ -350,16 +564,24 @@ class PersonalMotorPlasticity:
         self.pending = MotorDecision.from_value(decision.to_value())
         self.decision_count += 1
         self.last_offset = (decision.adapted_mean - decision.inherited_mean).astype(np.float32)
+        self.last_log_std_offset = (
+            np.zeros(self.config.action_dim, dtype=np.float32)
+            if decision.log_std_offset is None else decision.log_std_offset.copy()
+        )
         return decision.physical_action.copy()
 
     def begin(
         self, feature: Any, inherited_mean: Any, log_std: Any, *,
-        inherited_noise: Any | None = None, deterministic: bool = False,
+        inherited_noise: Any | None = None,
+        local_physiology: Mapping[str, Any] | np.ndarray | None = None,
+        deterministic: bool = False,
     ) -> np.ndarray:
         """Propose and commit one macro action."""
         return self.commit(self.propose(
             feature, inherited_mean, log_std,
-            inherited_noise=inherited_noise, deterministic=deterministic,
+            inherited_noise=inherited_noise,
+            local_physiology=local_physiology,
+            deterministic=deterministic,
         ))
 
     def discard_pending(self) -> None:
@@ -404,7 +626,11 @@ class PersonalMotorPlasticity:
             np.clip(self.critic, -self.config.weight_clip, self.config.weight_clip, out=self.critic)
             critic_changed = True
             if decision.actor_eligible:
-                std = np.exp(np.clip(decision.log_std, -3.5, 0.3)).astype(np.float32)
+                std = np.exp(
+                    decision.log_std
+                    if self.config.variance_adaptation == STATE_LOG_STD_VARIANCE
+                    else np.clip(decision.log_std, -3.5, 0.3)
+                ).astype(np.float32)
                 score_mean = (decision.latent_action - decision.adapted_mean) / np.maximum(std * std, 1e-8)
                 raw = self.actor @ basis
                 derivative = self.config.max_mean_offset * (1.0 - np.tanh(raw) ** 2)
@@ -414,6 +640,46 @@ class PersonalMotorPlasticity:
                 self.actor *= np.float32(1.0 - self.config.actor_learning_rate * self.config.weight_decay)
                 self.actor += np.float32(self.config.actor_learning_rate * clipped_advantage) * actor_trace
                 np.clip(self.actor, -self.config.weight_clip, self.config.weight_clip, out=self.actor)
+                if self.config.variance_adaptation == STATE_LOG_STD_VARIANCE:
+                    if decision.inherited_log_std is None or decision.log_std_offset is None:
+                        raise RuntimeError("variance-adapted proposal lacks its exact scale")
+                    variance_basis = self._variance_basis(
+                        decision.feature, decision.local_physiology,
+                    )
+                    variance_raw = self.variance_actor @ variance_basis
+                    variance_derivative = self.config.max_log_std_offset * (
+                        1.0 - np.tanh(variance_raw) ** 2
+                    )
+                    unclipped = decision.inherited_log_std + (
+                        self.config.max_log_std_offset * np.tanh(variance_raw)
+                    )
+                    active = (
+                        (unclipped > self.config.minimum_log_std)
+                        & (unclipped < self.config.maximum_log_std)
+                    ).astype(np.float32)
+                    score_log_std = decision.standard_noise * decision.standard_noise - 1.0
+                    variance_gradient = np.outer(
+                        score_log_std * variance_derivative * active, variance_basis,
+                    ).astype(np.float32)
+                    self.variance_trace = (
+                        trace_factor * self.variance_trace + variance_gradient
+                    ).astype(np.float32)
+                    variance_trace = self._clipped(
+                        self.variance_trace, self.config.gradient_clip,
+                    )
+                    self.variance_actor *= np.float32(
+                        1.0 - self.config.variance_learning_rate * self.config.weight_decay
+                    )
+                    self.variance_actor += np.float32(
+                        self.config.variance_learning_rate * clipped_advantage
+                    ) * variance_trace
+                    np.clip(
+                        self.variance_actor,
+                        -self.config.weight_clip,
+                        self.config.weight_clip,
+                        out=self.variance_actor,
+                    )
+                    self.variance_update_count += 1
                 actor_changed = True
                 self.actor_update_count += 1
             else:
@@ -421,6 +687,7 @@ class PersonalMotorPlasticity:
                 # chain; a later on-policy reward must not revive old credit
                 # through an action selected by an unknown distribution.
                 self.actor_trace.fill(0.0)
+                self.variance_trace.fill(0.0)
                 self.actor_skip_count += 1
             self.update_count += 1
 
@@ -433,6 +700,10 @@ class PersonalMotorPlasticity:
             "td_error": td_error,
             "updated": critic_changed,
             "actor_updated": actor_changed,
+            "variance_updated": bool(
+                actor_changed
+                and self.config.variance_adaptation == STATE_LOG_STD_VARIANCE
+            ),
             "actor_update_skipped": bool(self.enabled and self.learning and not decision.actor_eligible),
             "action_provenance": decision.provenance,
             "credit_assignment": decision.credit_assignment,
@@ -441,6 +712,7 @@ class PersonalMotorPlasticity:
             "proposal_log_probability": decision.proposal_log_probability,
             "objective": dict(objective),
             "offset": self.mean_offset(next_feature).astype(float).tolist(),
+            "log_std_offset": self.last_log_std_offset.astype(float).tolist(),
         }
 
     @staticmethod
@@ -499,6 +771,26 @@ class PersonalMotorPlasticity:
     def set_enabled(self, value: bool) -> None:
         self.enabled = bool(value)
 
+    def enable_state_log_std_v2(self) -> None:
+        """Explicitly migrate a quiescent mean-only checkpoint to variance v2.
+
+        Existing actor, critic and optimizer state is retained. The new
+        variance adapter and its trace start at exact zero, so the first sample
+        uses the inherited distribution. This operation is never performed by
+        restore or by the default constructor.
+        """
+        if self.config.variance_adaptation != FIXED_INHERITED_VARIANCE:
+            raise RuntimeError("personal variance adaptation is already enabled")
+        if self.pending is not None:
+            raise RuntimeError("cannot migrate variance adaptation with a pending action")
+        self.config = replace(
+            self.config, variance_adaptation=STATE_LOG_STD_VARIANCE,
+        )
+        self.variance_actor.fill(0.0)
+        self.variance_trace.fill(0.0)
+        self.last_log_std_offset.fill(0.0)
+        self.variance_update_count = 0
+
     def view(self) -> dict[str, Any]:
         return {
             "kind": "personal_motor_plasticity",
@@ -508,14 +800,24 @@ class PersonalMotorPlasticity:
             "decision_count": self.decision_count,
             "update_count": self.update_count,
             "actor_update_count": self.actor_update_count,
+            "variance_adaptation": self.config.variance_adaptation,
+            "variance_feature_profile": (
+                self.config.variance_feature_profile
+                if self.config.variance_adaptation == STATE_LOG_STD_VARIANCE
+                else None
+            ),
+            "variance_update_count": self.variance_update_count,
             "actor_skip_count": self.actor_skip_count,
             "pending": self.pending is not None,
             "reward_sum": self.reward_sum,
             "last_reward": self.last_reward,
             "last_td_error": self.last_td_error,
             "last_offset": self.last_offset.astype(float).tolist(),
+            "last_log_std_offset": self.last_log_std_offset.astype(float).tolist(),
             "max_abs_offset": float(np.max(np.abs(self.last_offset))),
+            "max_abs_log_std_offset": float(np.max(np.abs(self.last_log_std_offset))),
             "actor_norm": float(np.linalg.norm(self.actor)),
+            "variance_actor_norm": float(np.linalg.norm(self.variance_actor)),
             "critic_norm": float(np.linalg.norm(self.critic)),
             "objective_format": ENERGY_FORMAT,
             "objective_sha256": self.objective.config.to_value()["sha256"],
@@ -527,7 +829,7 @@ class PersonalMotorPlasticity:
         value: dict[str, Any] = {
             "format": FORMAT,
             "version": 1,
-            "config": asdict(self.config),
+            "config": self.config.to_value(),
             "objective_config": self.objective.config.to_value(),
             "enabled": self.enabled,
             "learning": self.learning,
@@ -547,6 +849,16 @@ class PersonalMotorPlasticity:
                 for name in ("actor", "actor_trace", "critic", "critic_trace", "last_offset")
             },
         }
+        if self.config.variance_adaptation == STATE_LOG_STD_VARIANCE:
+            value.update({
+                "variance_update_count": self.variance_update_count,
+                "variance_arrays": {
+                    name: _array_value(getattr(self, name))
+                    for name in (
+                        "variance_actor", "variance_trace", "last_log_std_offset",
+                    )
+                },
+            })
         value["sha256"] = hashlib.sha256(_json(value).encode()).hexdigest()
         return value
 
@@ -559,7 +871,7 @@ class PersonalMotorPlasticity:
             claimed = clean.pop("sha256")
             if claimed != hashlib.sha256(_json(clean).encode()).hexdigest():
                 raise ValueError("personal plasticity snapshot checksum differs")
-            config = PersonalPlasticityConfig(**value["config"])
+            config = PersonalPlasticityConfig.from_value(value["config"])
             objective_config = FiniteEnergyConfig.from_value(value["objective_config"])
             instance = cls(
                 config, objective_config=objective_config,
@@ -568,6 +880,14 @@ class PersonalMotorPlasticity:
             arrays = value["arrays"]
             for name in ("actor", "actor_trace", "critic", "critic_trace", "last_offset"):
                 setattr(instance, name, _array_from_value(arrays[name], name).astype(np.float32, copy=False))
+            if config.variance_adaptation == STATE_LOG_STD_VARIANCE:
+                variance_arrays = value["variance_arrays"]
+                for name in ("variance_actor", "variance_trace", "last_log_std_offset"):
+                    setattr(
+                        instance, name,
+                        _array_from_value(variance_arrays[name], name).astype(np.float32, copy=False),
+                    )
+                instance.variance_update_count = int(value["variance_update_count"])
             instance.rng.bit_generator.state = value["rng"]
             instance.decision_count = int(value["decision_count"])
             instance.update_count = int(value["update_count"])
@@ -605,10 +925,51 @@ class PersonalMotorPlasticity:
         expected = self.physical_action(decision.latent_action)
         if not np.array_equal(expected, decision.proposal_action):
             raise ValueError("proposal action does not match its sampled latent action")
-        std = np.exp(np.clip(decision.log_std, -3.5, 0.3)).astype(np.float32)
+        std = np.exp(
+            decision.log_std
+            if self.config.variance_adaptation == STATE_LOG_STD_VARIANCE
+            else np.clip(decision.log_std, -3.5, 0.3)
+        ).astype(np.float32)
         sampled = (decision.adapted_mean + std * decision.standard_noise).astype(np.float32)
         if not np.array_equal(sampled, decision.latent_action):
             raise ValueError("proposal latent action does not match its preserved raw noise")
+        if self.config.variance_adaptation == STATE_LOG_STD_VARIANCE:
+            if (
+                decision.inherited_log_std is None
+                or decision.log_std_offset is None
+                or decision.local_physiology is None
+            ):
+                raise ValueError("variance-v2 decision lacks inherited scale provenance")
+            if decision.variance_feature_profile != self.config.variance_feature_profile:
+                raise ValueError("variance-v2 decision feature profile differs")
+            inherited_log_std = _vector(
+                decision.inherited_log_std, self.config.action_dim,
+                "decision inherited_log_std",
+            )
+            log_std_offset = _vector(
+                decision.log_std_offset, self.config.action_dim,
+                "decision log_std_offset",
+            )
+            local_physiology = _vector(
+                decision.local_physiology, 6, "decision local_physiology",
+            )
+            if not np.allclose(
+                decision.log_std, inherited_log_std + log_std_offset,
+                rtol=0.0, atol=2e-7,
+            ):
+                raise ValueError("variance-v2 effective log_std provenance differs")
+            expected_log_std = self.adapt_log_std(
+                decision.feature, inherited_log_std, local_physiology,
+            )
+            if not np.array_equal(expected_log_std, decision.log_std):
+                raise ValueError("variance-v2 scale differs from decision-time adapter")
+        elif (
+            decision.inherited_log_std is not None
+            or decision.log_std_offset is not None
+            or decision.local_physiology is not None
+            or decision.variance_feature_profile is not None
+        ):
+            raise ValueError("fixed-variance decision contains variance-v2 provenance")
         if decision.actor_eligible and not (
             (
                 decision.credit_assignment == LATENT_PROPOSAL_CREDIT
@@ -627,8 +988,11 @@ class PersonalMotorPlasticity:
         expected = {
             "actor": (self.config.action_dim, width),
             "actor_trace": (self.config.action_dim, width),
+            "variance_actor": (self.config.action_dim, self.config.feature_dim + 7),
+            "variance_trace": (self.config.action_dim, self.config.feature_dim + 7),
             "critic": (width,), "critic_trace": (width,),
             "last_offset": (self.config.action_dim,),
+            "last_log_std_offset": (self.config.action_dim,),
         }
         for name, shape in expected.items():
             value = getattr(self, name)
@@ -636,15 +1000,22 @@ class PersonalMotorPlasticity:
                 raise ValueError(f"personal plasticity array {name} differs")
         if np.any(np.abs(self.actor) > self.config.weight_clip + 1e-6) or np.any(
             np.abs(self.critic) > self.config.weight_clip + 1e-6
+        ) or np.any(
+            np.abs(self.variance_actor) > self.config.weight_clip + 1e-6
         ):
             raise ValueError("personal plasticity weights exceed their declared bound")
         if np.any(np.abs(self.last_offset) > self.config.max_mean_offset + 1e-6):
             raise ValueError("personal plasticity offset exceeds its declared bound")
+        if np.any(
+            np.abs(self.last_log_std_offset) > self.config.max_log_std_offset + 1e-6
+        ):
+            raise ValueError("personal log-standard-deviation offset exceeds its bound")
         if (
             self.decision_count < 0 or not 0 <= self.update_count <= self.decision_count
             or not 0 <= self.actor_update_count <= self.update_count
             or not 0 <= self.actor_skip_count <= self.update_count
             or self.actor_update_count + self.actor_skip_count > self.update_count
+            or not 0 <= self.variance_update_count <= self.actor_update_count
         ):
             raise ValueError("personal plasticity counters are invalid")
         if not math.isfinite(self.reward_sum):
@@ -657,6 +1028,7 @@ class PersonalMotorPlasticity:
 
 __all__ = [
     "FORMAT", "DECISION_FORMAT", "CONSERVATIVE_CREDIT", "LATENT_PROPOSAL_CREDIT",
-    "CREDIT_ASSIGNMENTS", "PersonalPlasticityConfig", "MotorDecision",
+    "CREDIT_ASSIGNMENTS", "FIXED_INHERITED_VARIANCE", "STATE_LOG_STD_VARIANCE",
+    "VARIANCE_ADAPTATIONS", "VARIANCE_FEATURE_PROFILE", "PersonalPlasticityConfig", "MotorDecision",
     "PersonalMotorPlasticity",
 ]

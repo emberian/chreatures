@@ -31,6 +31,45 @@ declared limits. This remains ordinary online actor-critic learning; the value
 estimate is not a calibrated forecast and a finite lifetime provides no
 performance guarantee.
 
+## Optional state-conditioned exploration
+
+The original `fixed-inherited-v1` variance remains the default. Its diagonal
+Gaussian standard deviations are immutable for a lifetime, so even an actor
+that learns a zero mean retains a nonzero activity floor. In the current
+physical effort equation that floor can exceed the fatigue recovery threshold.
+Mean adaptation alone therefore cannot express physical rest.
+
+`PersonalPlasticityConfig(variance_adaptation="state-log-std-v2")` enables a
+separate private log-standard-deviation head. Its exact feature profile is
+`projected64-physiology6-bias-v2`: the frozen 64-component inherited projection,
+the six normalized body-local values produced by
+`MotorOrgan.physiology_vector` (energy, gut, fatigue, bounded speed, bounded
+angular velocity, and support), and a bias. No position, object identity, named
+goal, or simulator-wide value enters this head. The mean actor and critic keep
+their original 64-plus-bias inputs.
+The profile freezes that normalization locally: speed is `tanh(speed/2)`,
+angular velocity is `tanh(angular_velocity/4)`, the four bounded body values
+remain in `[0,1]`, sensory projection and physiology groups are divided by
+`sqrt(64)` and `sqrt(6)` respectively, and the bias remains one.
+
+The `8 x 71` variance head begins at exact zero. It adds at most 1.5 log units
+in either direction and clamps the effective log standard deviation to
+`[-5.0, 0.3]`. Its score-function derivative is
+`standard_noise**2 - 1`, multiplied by the bounded head Jacobian and the same
+proposal advantage used by the mean actor. Gradients, traces, and weights use
+the existing bounds. This rule learns from physical consequences; it contains
+no fatigue threshold, rest command, or authored state gate.
+
+When variance-v2 is active, contextual alternatives are still formed as
+`zj = z0 + inherited_sigma*c*epsilon_j`. Their perturbation scale is the
+immutable inherited standard deviation, while only baseline `z0` uses the
+private effective standard deviation. Consequently the downstream candidate
+generator has no additional private-variance path after conditioning on `z0`,
+and the baseline proposal-density score remains valid. Decision provenance
+records inherited and effective log standard deviations, the exact sampled
+noise, decision-time physiology vector, feature-profile version, and the fixed
+alternative-scale contract.
+
 ## Integration boundary
 
 At a motor macro boundary, a caller can use the adapter's private sampler:
@@ -45,7 +84,10 @@ inherited_mean, _, hidden = motor.forward(
     motor.physiology_vector(local_physiology),
 )
 proposal = plasticity.propose(
-    feature64, inherited_mean, motor.artifact.arrays["log_std"]
+    feature64,
+    inherited_mean,
+    motor.artifact.arrays["log_std"],
+    local_physiology=motor.physiology_vector(local_physiology),
 )
 physical_vector = plasticity.commit(proposal)
 # Commit physical_vector through MotorOrgan and retain five actual tick records.
@@ -71,6 +113,35 @@ baseline through personal adaptation, and gives the same latent baseline to
 the contextual refiner. The refiner's other candidates still come from its own
 private RNG. A false `plasticity` option follows the original refiner and motor
 RNG path, and snapshots written before this option restore with it absent.
+Variance adaptation remains a second explicit choice:
+
+```python
+config = PersonalPlasticityConfig(
+    variance_adaptation="state-log-std-v2",
+)
+living = LivingMotorOrgan(
+    artifact,
+    plasticity=True,
+    plasticity_config=config,
+)
+```
+
+No current resident or default new resident is upgraded by this option.
+
+An existing `LivingMotorOrgan` can schedule explicit developmental maturation
+with `queue_state_log_std_v2()`. If an old mean-only proposal is in flight, the
+queue remains inert until all five physical outcomes have been recorded and
+that proposal's actor/critic update has completed. The quiescent boundary then
+calls `enable_state_log_std_v2()` before drawing the next proposal. The first
+variance-v2 sample uses an exact-zero head and therefore matches the inherited
+sample and RNG stream; only its later measured outcome can update variance.
+
+The queue and applied record are stored only after this method is called, so
+untouched snapshots keep their old schema. The record contains canonical
+source and target config hashes, queue/apply macro counters, the old pending
+decision sequence, zero-head checks, and the explicit credit boundary. It is
+visible as `view()["variance_maturation"]`. Shared motor artifacts, old mean
+weights, learned critic/history, and body mechanics remain unchanged.
 
 Opting into plasticity also selects contextual utility
 `finite-energy-v1`. The actor and contextual refiner receive the same
@@ -169,6 +240,42 @@ The compact `view()` reports enabled/frozen state, the versioned credit rule,
 decision, proposal-credit and skip counts, reward/TD diagnostics, recent
 correction, parameter norms, and objective version. It exposes no private
 feature vectors or action history.
+
+Mean-only snapshots retain their previous config, decision, array, and checksum
+schema; missing variance fields restore as `fixed-inherited-v1`. Variance-v2
+snapshots additionally store the 71-input head, eligibility trace, update
+counter, last offset, feature-profile identity, and decision-time body vector.
+`enable_state_log_std_v2()` is the only checkpoint conversion seam. It requires
+no pending action, retains existing mean/critic state, and creates the new head
+and trace at exact zero. Restore never calls it implicitly.
+
+A mid-macro queue check snapshotted and restored an actual articulated run,
+completed the old five-tick action, and applied maturation at macro decision
+one. The old update reported `variance_updated=False`; the next pending
+decision carried `projected64-physiology6-bias-v2`; both new arrays had zero
+nonzero elements; and its action exactly matched an unmigrated control with the
+same motor and refiner RNG states. The post-application snapshot also restored
+exactly.
+
+## Variance checks
+
+A three-million-sample common-random-number check differentiated a composite
+five-candidate selector through the variance bias at zero. Alternatives used
+fixed inherited perturbation scale. The proposal score estimate was
+`-0.4167643 ± 0.0007858`; central finite difference was `-0.4165719`, a
+`0.245` standard-error difference. This checks proposal-density credit through
+candidate selection without treating the executed alternative as Gaussian.
+
+An articulated MuJoCo comparison then drove two identical bodies for 400 real
+0.05-second steps with the same standard-normal draws and zero means. The
+inherited distribution produced mean measured effort `0.32940`, above the
+physics fatigue-recovery threshold `0.27083`, and fatigue rose by `0.11245`.
+Putting the bounded variance head near its learned contraction limit reduced
+all eight log standard deviations by `1.44604`; measured effort fell to
+`0.09055`, and fatigue recovered from `0.20` to `0.0`. This establishes that
+the new action distribution can represent rest in the actual articulated
+mechanics. It does not claim that a particular lifetime will learn the maximum
+contraction or that lower exploration is always beneficial.
 
 ## Measured physical development check
 

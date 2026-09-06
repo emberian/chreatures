@@ -8,6 +8,9 @@ it has no simulator geometry, identity, named-object, or goal interface.
 from __future__ import annotations
 
 import copy
+from dataclasses import replace
+import hashlib
+import json
 import math
 from pathlib import Path
 from typing import Any, Callable, Mapping
@@ -24,6 +27,8 @@ from .contextual_motor import (
 )
 from .motor_inheritance import MotorArtifact, MotorOrgan
 from .personal_plasticity import (
+    FIXED_INHERITED_VARIANCE,
+    STATE_LOG_STD_VARIANCE,
     FORMAT as PLASTICITY_FORMAT,
     PersonalMotorPlasticity,
     PersonalPlasticityConfig,
@@ -37,6 +42,7 @@ LEGACY_PROFILE = "projection-v1"
 RESEARCH_PROFILE = "projection-v2"
 CUSTOM_PROFILE = "custom"
 RELATIONAL_PROFILES = frozenset((LEGACY_PROFILE, RESEARCH_PROFILE, CUSTOM_PROFILE))
+VARIANCE_MATURATION_FORMAT = "chreatures-living-motor-variance-maturation-v1"
 
 
 def _finite(value: Any, name: str) -> float:
@@ -53,6 +59,13 @@ def _vector(value: Any, size: int, name: str) -> np.ndarray:
     if result.shape != (size,) or not np.isfinite(result).all():
         raise ValueError(f"{name} must contain {size} finite values")
     return result
+
+
+def _config_sha256(config: PersonalPlasticityConfig) -> str:
+    encoded = json.dumps(
+        config.to_value(), sort_keys=True, separators=(",", ":"), allow_nan=False,
+    ).encode()
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _profile_memory_config(profile: str) -> ContextMemoryConfig:
@@ -89,6 +102,7 @@ class LivingMotorOrgan:
         relational_profile: str | None = None,
         memory_config: ContextMemoryConfig | None = None,
         refiner_config: ContextualMotorConfig | None = None,
+        plasticity_config: PersonalPlasticityConfig | None = None,
     ) -> None:
         shared = artifact if isinstance(artifact, MotorArtifact) else MotorArtifact.load(artifact)
         projection_dim = int(shared.config["projection_dim"])
@@ -119,6 +133,8 @@ class LivingMotorOrgan:
             or memory_config.outcome_dim != len(MEMORY_OUTCOMES)
         ):
             raise ValueError("memory configuration differs from living motor dimensions")
+        if not plasticity and plasticity_config is not None:
+            raise ValueError("plasticity_config requires plasticity=True")
         if plasticity:
             if refiner_config is None:
                 refiner_config = ContextualMotorConfig(
@@ -138,7 +154,10 @@ class LivingMotorOrgan:
         self.refiner.freeze(frozen)
         self.personal_plasticity = (
             PersonalMotorPlasticity(
-                PersonalPlasticityConfig(seed=private_seed + 3301),
+                (
+                    PersonalPlasticityConfig(seed=private_seed + 3301)
+                    if plasticity_config is None else plasticity_config
+                ),
                 objective_config=refiner_config.finite_energy_config,
                 learning=not frozen,
             )
@@ -148,6 +167,7 @@ class LivingMotorOrgan:
         self.last_record: dict[str, Any] | None = None
         self.last_plasticity_update: dict[str, Any] | None = None
         self.last_actual_correction: float | None = None
+        self.variance_maturation: dict[str, Any] | None = None
         self.metrics: dict[str, int | float] = {
             "ticks": 0,
             "macro_decisions": 0,
@@ -285,6 +305,7 @@ class LivingMotorOrgan:
             inherited_mean,
             log_std,
             inherited_noise=inherited_noise,
+            local_physiology=motor_physiology,
             deterministic=self.motor.deterministic,
         )
         decision = self.refiner.refine_and_commit(
@@ -292,6 +313,14 @@ class LivingMotorOrgan:
             local_physiology, step,
             policy_mean_override=proposal.adapted_mean,
             baseline_latent=proposal.latent_action,
+            # Alternative perturbations remain tied to the immutable inherited
+            # scale. Private variance changes only baseline proposal z0.
+            alternative_log_std=(
+                log_std
+                if self.personal_plasticity.config.variance_adaptation
+                == STATE_LOG_STD_VARIANCE
+                else None
+            ),
             proposal_credit_contract="latent-proposal-downstream-selector-v2",
             candidate_evidence=candidate_evidence,
         )
@@ -350,6 +379,16 @@ class LivingMotorOrgan:
             "raw_standard_noise": personal.standard_noise.astype(float).tolist(),
             "raw_baseline_latent": personal.latent_action.astype(float).tolist(),
         }
+        if personal.variance_feature_profile is not None:
+            decision["provenance"]["personal_plasticity"].update({
+                "variance_adaptation": self.personal_plasticity.config.variance_adaptation,
+                "variance_feature_profile": personal.variance_feature_profile,
+                "inherited_log_std": personal.inherited_log_std.astype(float).tolist(),
+                "effective_log_std": personal.log_std.astype(float).tolist(),
+                "log_std_offset": personal.log_std_offset.astype(float).tolist(),
+                "physiology_vector": personal.local_physiology.astype(float).tolist(),
+                "alternative_noise_scale": "immutable-inherited-log-std",
+            })
         self.refiner.last_decision = copy.deepcopy(decision)
         return decision
 
@@ -380,6 +419,7 @@ class LivingMotorOrgan:
                 raise RuntimeError("pending transition exists at an open motor boundary")
             if previous_physics_outcome is not None:
                 raise ValueError("initial episode tick cannot consume a prior physics outcome")
+            self._apply_queued_variance_maturation(completed_old_pending=False)
             decision = self._refine_and_commit(
                 projected, normalized, raw_neural_features,
                 local_physiology, step, candidate_evidence,
@@ -422,6 +462,9 @@ class LivingMotorOrgan:
             self.last_plasticity_update = self.personal_plasticity.observe(
                 projected, transitions=transitions
             )
+            # A queued anatomy capability begins only after the old proposal's
+            # complete measured consequence and update have been consumed.
+            self._apply_queued_variance_maturation(completed_old_pending=True)
         self.metrics["recorded_transitions"] += 1
         self.metrics["experienced_nutrition"] += float(completed["outcome"]["nutrition"])
         self.metrics["experienced_effort"] += float(completed["outcome"]["effort"])
@@ -452,6 +495,62 @@ class LivingMotorOrgan:
     def clear_memory(self) -> None:
         """Explicitly clear learned context while preserving inherited state."""
         self.refiner.clear(self.memory)
+
+    def queue_state_log_std_v2(self) -> dict[str, Any]:
+        """Queue explicit variance maturation at the next quiescent boundary."""
+        personal = self.personal_plasticity
+        if personal is None:
+            raise RuntimeError("variance maturation requires personal plasticity")
+        if self.variance_maturation is not None:
+            raise RuntimeError("variance maturation was already requested")
+        if personal.config.variance_adaptation != FIXED_INHERITED_VARIANCE:
+            raise RuntimeError("personal variance adaptation is already enabled")
+        target = replace(
+            personal.config, variance_adaptation=STATE_LOG_STD_VARIANCE,
+        )
+        self.variance_maturation = {
+            "format": VARIANCE_MATURATION_FORMAT,
+            "status": "queued",
+            "source": "explicit-runtime-request-v1",
+            "source_config_sha256": _config_sha256(personal.config),
+            "target_config_sha256": _config_sha256(target),
+            "queued_at_macro_decision": int(self.metrics["macro_decisions"]),
+            "old_pending_decision_sequence": (
+                None if personal.pending is None else int(personal.pending.sequence)
+            ),
+            "old_pending_variance_adaptation": personal.config.variance_adaptation,
+        }
+        return copy.deepcopy(self.variance_maturation)
+
+    def _apply_queued_variance_maturation(
+        self, *, completed_old_pending: bool,
+    ) -> None:
+        record = self.variance_maturation
+        if record is None or record["status"] != "queued":
+            return
+        personal = self.personal_plasticity
+        if personal is None or personal.pending is not None:
+            raise RuntimeError("variance maturation requires a quiescent personal motor boundary")
+        if (
+            record["old_pending_decision_sequence"] is not None
+            and not completed_old_pending
+        ):
+            raise RuntimeError(
+                "queued variance maturation cannot bypass its old pending outcome"
+            )
+        if _config_sha256(personal.config) != record["source_config_sha256"]:
+            raise RuntimeError("variance maturation source configuration changed while queued")
+        personal.enable_state_log_std_v2()
+        if _config_sha256(personal.config) != record["target_config_sha256"]:
+            raise RuntimeError("variance maturation target configuration identity differs")
+        record.update({
+            "status": "applied",
+            "applied_at_macro_decision": int(self.metrics["macro_decisions"]),
+            "first_variance_decision_sequence": int(personal.decision_count),
+            "new_head_nonzero_count": int(np.count_nonzero(personal.variance_actor)),
+            "new_trace_nonzero_count": int(np.count_nonzero(personal.variance_trace)),
+            "credit_boundary": "old-pending-observed-before-zero-head-maturation-v1",
+        })
 
     def reset_episode(self) -> None:
         """Discard an incomplete transition and reset inference, not learning."""
@@ -492,6 +591,7 @@ class LivingMotorOrgan:
                 None if self.personal_plasticity is None
                 else self.personal_plasticity.view()
             ),
+            "variance_maturation": copy.deepcopy(self.variance_maturation),
             "last_plasticity_update": copy.deepcopy(self.last_plasticity_update),
             "last_contextual_correction": self.last_actual_correction,
             "last_record": copy.deepcopy(self.last_record),
@@ -542,6 +642,8 @@ class LivingMotorOrgan:
                 "plasticity": self.personal_plasticity.snapshot_value(),
                 "last_plasticity_update": copy.deepcopy(self.last_plasticity_update),
             })
+        if self.variance_maturation is not None:
+            result["variance_maturation"] = copy.deepcopy(self.variance_maturation)
         return result
 
     def snapshot_value(self, *, include_artifact: bool = False) -> dict[str, Any]:
@@ -612,6 +714,9 @@ class LivingMotorOrgan:
             raise ValueError("invalid last living motor record")
         instance.last_record = copy.deepcopy(last_record)
         instance.metrics = instance._restore_metrics(value.get("metrics"))
+        instance.variance_maturation = instance._restore_variance_maturation(
+            value.get("variance_maturation"), instance.personal_plasticity,
+        )
         instance._validate_pending_state()
         if instance.last_actual_correction is not None and abs(instance.last_actual_correction) > (
             instance.refiner.config.max_logit_correction + 1e-7
@@ -631,6 +736,84 @@ class LivingMotorOrgan:
         if int(instance.metrics["recorded_transitions"]) > int(instance.metrics["macro_decisions"]):
             raise ValueError("living motor transition count exceeds decisions")
         return instance
+
+    @staticmethod
+    def _restore_variance_maturation(
+        value: Any,
+        personal: PersonalMotorPlasticity | None,
+    ) -> dict[str, Any] | None:
+        if value is None:
+            return None
+        if not isinstance(value, dict) or personal is None:
+            raise ValueError("invalid variance maturation record")
+        common = {
+            "format", "status", "source", "source_config_sha256",
+            "target_config_sha256", "queued_at_macro_decision",
+            "old_pending_decision_sequence", "old_pending_variance_adaptation",
+        }
+        applied = {
+            "applied_at_macro_decision", "first_variance_decision_sequence",
+            "new_head_nonzero_count", "new_trace_nonzero_count", "credit_boundary",
+        }
+        status = value.get("status")
+        expected = common if status == "queued" else common | applied
+        if (
+            status not in {"queued", "applied"}
+            or set(value) != expected
+            or value.get("format") != VARIANCE_MATURATION_FORMAT
+            or value.get("source") != "explicit-runtime-request-v1"
+            or value.get("old_pending_variance_adaptation") != FIXED_INHERITED_VARIANCE
+        ):
+            raise ValueError("invalid variance maturation record")
+        for name in ("source_config_sha256", "target_config_sha256"):
+            digest = value.get(name)
+            if (
+                not isinstance(digest, str) or len(digest) != 64
+                or any(character not in "0123456789abcdef" for character in digest)
+            ):
+                raise ValueError("invalid variance maturation configuration identity")
+        integer_names = ["queued_at_macro_decision"]
+        if status == "applied":
+            integer_names.extend((
+                "applied_at_macro_decision", "first_variance_decision_sequence",
+                "new_head_nonzero_count", "new_trace_nonzero_count",
+            ))
+        if any(
+            isinstance(value.get(name), bool)
+            or not isinstance(value.get(name), int)
+            or value[name] < 0
+            for name in integer_names
+        ):
+            raise ValueError("invalid variance maturation counters")
+        pending_sequence = value.get("old_pending_decision_sequence")
+        if pending_sequence is not None and (
+            isinstance(pending_sequence, bool)
+            or not isinstance(pending_sequence, int)
+            or pending_sequence < 0
+        ):
+            raise ValueError("invalid pre-maturation pending decision sequence")
+        active_identity = _config_sha256(personal.config)
+        expected_identity = (
+            value["source_config_sha256"]
+            if status == "queued" else value["target_config_sha256"]
+        )
+        expected_mode = (
+            FIXED_INHERITED_VARIANCE
+            if status == "queued" else STATE_LOG_STD_VARIANCE
+        )
+        if (
+            active_identity != expected_identity
+            or personal.config.variance_adaptation != expected_mode
+        ):
+            raise ValueError("variance maturation record differs from personal state")
+        if status == "applied" and (
+            value.get("credit_boundary")
+            != "old-pending-observed-before-zero-head-maturation-v1"
+            or value.get("new_head_nonzero_count") != 0
+            or value.get("new_trace_nonzero_count") != 0
+        ):
+            raise ValueError("variance maturation did not begin from an exact zero head")
+        return copy.deepcopy(value)
 
     @classmethod
     def restore_value(

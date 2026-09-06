@@ -32,6 +32,7 @@ STATE_SPEC = mujoco.mjtState.mjSTATE_INTEGRATION
 _ID = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,95}$")
 _SHAPES = {"box", "sphere", "capsule", "cylinder", "ellipsoid"}
 _MOBILITY = {"static", "free", "hinge", "slide"}
+_NO_DIFFUSION_BARRIERS: tuple[()] = ()
 _MUTABLE_MODEL_FIELDS = (
     "geom_size", "geom_pos", "geom_quat", "geom_rgba", "geom_friction",
     "geom_contype", "geom_conaffinity", "mat_rgba", "light_pos", "light_diffuse",
@@ -168,6 +169,13 @@ class PhysicsWorld:
         self._components = {
             entity["id"]: copy.deepcopy(entity.get("components", [])) for entity in self._entities
         }
+        self._diffusion_barrier_entities = tuple(
+            entity["id"] for entity in self._entities
+            if any(
+                component.get("type") == "diffusion_barrier"
+                for component in self._components[entity["id"]]
+            )
+        )
         self._resonance = {entity["id"]: 0.0 for entity in self._entities}
         for body in self.bodies:
             self._touch[body.id] = [0.0, 0.0]
@@ -229,6 +237,7 @@ class PhysicsWorld:
             _number(body.get("heading", 0.0), "body heading", -1e4, 1e4)
         entity_ids: set[str] = set()
         expanded_entities: list[dict[str, Any]] = []
+        barrier_count = 0
         presets = spec.get("presets", {})
         for raw in spec["entities"]:
             if not isinstance(raw, dict) or not _ID.match(str(raw.get("id", ""))) or raw["id"] in entity_ids or raw["id"] in body_ids:
@@ -282,6 +291,11 @@ class PhysicsWorld:
             components = entity.get("components", [])
             if not isinstance(components, list) or any(not isinstance(c, dict) or not isinstance(c.get("type"), str) for c in components):
                 raise ValueError(f"invalid components on {entity['id']}")
+            if sum(component.get("type") == "diffusion_barrier" for component in components) > 1:
+                raise ValueError("an entity can have only one diffusion_barrier")
+            barrier_count += sum(component.get("type") == "diffusion_barrier" for component in components)
+            if barrier_count > 32:
+                raise ValueError("a habitat can have at most 32 diffusion barriers")
             for component in components:
                 component_type = component["type"]
                 if component_type == "food":
@@ -312,6 +326,33 @@ class PhysicsWorld:
                         raise ValueError("light color cannot be negative")
                     _number(component.get("intensity", 1.0), "light intensity", 0.0, 1.0)
                     _number(component.get("radius", 2.0), "light radius", 0.05, 20.0)
+                elif component_type == "diffusion_barrier":
+                    allowed = {
+                        "type", "version", "shape_indices", "permeability",
+                        "translation_epsilon", "rotation_epsilon",
+                    }
+                    if set(component) != allowed or component.get("version") != 1:
+                        raise ValueError("diffusion_barrier requires the exact version 1 schema")
+                    if entity["mobility"] not in {"hinge", "slide"}:
+                        raise ValueError("diffusion_barrier requires a hinge or slide entity")
+                    indices = component.get("shape_indices")
+                    if (
+                        not isinstance(indices, list) or not 1 <= len(indices) <= 16
+                        or any(isinstance(index, bool) or not isinstance(index, int) for index in indices)
+                        or len(set(indices)) != len(indices)
+                        or any(index < 0 or index >= len(shapes) for index in indices)
+                        or any(shapes[index]["type"] != "box" for index in indices)
+                    ):
+                        raise ValueError("diffusion_barrier shape_indices must select unique box shapes")
+                    _number(component["permeability"], "diffusion barrier permeability", 0.0, 1.0)
+                    _number(
+                        component["translation_epsilon"],
+                        "diffusion barrier translation epsilon", 1e-7, 0.25,
+                    )
+                    _number(
+                        component["rotation_epsilon"],
+                        "diffusion barrier rotation epsilon", 1e-7, 0.5,
+                    )
                 elif component_type == "reservoir":
                     reservoir_id = component.get("id", entity["id"])
                     if not isinstance(reservoir_id, str) or not _ID.match(reservoir_id):
@@ -628,6 +669,49 @@ class PhysicsWorld:
                     "components": components,
                 })
         return result
+
+    def diffusion_barriers(self) -> list[dict[str, Any]] | tuple[()]:
+        """Return poses of explicitly declared moving chemical membranes.
+
+        This is an environment integration hook and is not part of ``sense``.
+        Ordinary dynamic objects do not become field obstacles.
+        """
+        if not self._diffusion_barrier_entities:
+            return _NO_DIFFUSION_BARRIERS
+        result: list[dict[str, Any]] = []
+        for entity_id in self._diffusion_barrier_entities:
+            entity = self._entity(entity_id)
+            component = next(
+                (
+                    value for value in self._components[entity["id"]]
+                    if value.get("type") == "diffusion_barrier"
+                ),
+                None,
+            )
+            if component is None:
+                continue
+            shapes = []
+            for index in component["shape_indices"]:
+                geom_id = mujoco.mj_name2id(
+                    self.model, mujoco.mjtObj.mjOBJ_GEOM,
+                    f"entity:{entity['id']}:geom:{index}",
+                )
+                quaternion = np.empty(4, dtype=float)
+                mujoco.mju_mat2Quat(quaternion, self.data.geom_xmat[geom_id])
+                shapes.append({
+                    "type": "box",
+                    "size": self.model.geom_size[geom_id, :3].astype(float).tolist(),
+                    "position": self.data.geom_xpos[geom_id].astype(float).tolist(),
+                    "quaternion": quaternion.tolist(),
+                })
+            result.append({
+                "id": f"{entity['id']}:diffusion",
+                "permeability": float(component["permeability"]),
+                "translation_epsilon": float(component["translation_epsilon"]),
+                "rotation_epsilon": float(component["rotation_epsilon"]),
+                "shapes": shapes,
+            })
+        return sorted(result, key=lambda value: value["id"])
 
     def ecology_food_amount(self, entity_id: str, value: float | None = None) -> float:
         """Read or safely update the ordinary edible component on an entity."""
@@ -1399,6 +1483,13 @@ class PhysicsWorld:
         self._components = {entity["id"]: copy.deepcopy(entity.get("components", [])) for entity in self._entities}
         for entity_id in self._components.keys() & old_components.keys():
             self._components[entity_id] = old_components[entity_id]
+        self._diffusion_barrier_entities = tuple(
+            entity["id"] for entity in self._entities
+            if any(
+                component.get("type") == "diffusion_barrier"
+                for component in self._components[entity["id"]]
+            )
+        )
         self._resonance = {entity["id"]: old_resonance.get(entity["id"], 0.0) for entity in self._entities}
         self._sync_light_model()
         self._sync_hand_mocap()
@@ -1561,6 +1652,13 @@ class PhysicsWorld:
             for component in components:
                 if component["type"] == "food":
                     _number(component.get("amount"), "food amount", 0.0, 100.0)
+                elif component["type"] == "diffusion_barrier":
+                    authored = next(
+                        value for value in entity.get("components", [])
+                        if value.get("type") == "diffusion_barrier"
+                    )
+                    if component != authored:
+                        raise ValueError("snapshot changed diffusion barrier topology")
         if len(world.signals) > world._signal_limit or len({signal.id for signal in world.signals}) != len(world.signals):
             raise ValueError("invalid signal collection")
         for signal in world.signals:
