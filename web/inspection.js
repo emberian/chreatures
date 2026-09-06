@@ -403,6 +403,7 @@ export class LiveInspection {
     host.replaceChildren();
     const goal = cognition.goal || {};
     const refinement = cognition.consequence_refinement || {};
+    const population = cognition.population_response;
     const rows = [
       ['Stored sensory encounters', cognition.memory_count],
       ['Goal available', goal.valid === undefined ? undefined : goal.valid ? 'yes' : 'warming up'],
@@ -415,6 +416,13 @@ export class LiveInspection {
       ['Selected motor proposal', finite(refinement.selected_candidate) ? refinement.selected_candidate + 1 : undefined],
       ['Proposals outside fitted domain', Array.isArray(refinement.candidate_out_of_domain) ? `${refinement.candidate_out_of_domain.filter(Boolean).length} / ${refinement.candidate_out_of_domain.length}` : undefined],
     ];
+    if (population) {
+      rows.push(
+        ['Population GAM · last action in fitted domain', population.executed_transition_in_domain ? 'yes' : 'no'],
+        ['Population GAM · covered transitions', population.in_domain_total],
+        ['Population GAM · outside-domain transitions', population.out_of_domain_total],
+      );
+    }
     for (const [name, value] of rows) {
       if (value === undefined || value === null || (typeof value === 'number' && !finite(value))) continue;
       host.append(node('dt', '', name), node('dd', '', typeof value === 'number' ? Number.isInteger(value) ? value.toLocaleString() : number(value) : String(value)));

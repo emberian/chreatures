@@ -560,6 +560,23 @@ class Habitat3D:
             state["cancelled_total"] = int(receipts["cancelled_total"][index])
             if completed:
                 state["last_completed_return"] = float(receipts["summed_return"][index])
+            if self.residents.population_response_artifact is not None:
+                self.cognition_state[body.id]["population_response"] = {
+                    "artifact_sha256": str(receipts["population_response_identity"]),
+                    "feature_contract_sha256": str(
+                        receipts["population_feature_contract_identity"]
+                    ),
+                    "executed_transition_in_domain": bool(
+                        receipts["population_response_in_domain"][index]
+                    ),
+                    "in_domain_total": int(
+                        receipts["population_response_in_domain_total"][index]
+                    ),
+                    "out_of_domain_total": int(
+                        receipts["population_response_out_of_domain_total"][index]
+                    ),
+                    "meaning": "fitted-domain coverage of committed actions; not evidence that the model changed the selected action",
+                }
 
     def step(self, steps: int = 1) -> None:
         if type(steps) is not int or steps < 1:
