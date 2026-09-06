@@ -13,6 +13,14 @@ const ACTIONS: usize = 12;
 const TRAITS: usize = 18;
 const EPS: f64 = 1e-12;
 
+fn previous_nonnegative(value: f64) -> f64 {
+    if value > 0.0 {
+        f64::from_bits(value.to_bits() - 1)
+    } else {
+        0.0
+    }
+}
+
 const MAINTENANCE_RATE: usize = 0;
 const ACTIVATION_RATE: usize = 1;
 const FATIGUE_RISE: usize = 2;
@@ -260,7 +268,14 @@ impl SomaticCohort {
             let maintenance = maintenance_requested.min(available[resident]);
             let remaining = (available[resident] - maintenance).max(0.0);
             let activation_requested = dt * traits[ACTIVATION_RATE] * activity;
-            let activation = activation_requested.min(remaining);
+            let mut activation = activation_requested.min(remaining);
+            // The two independently meaningful ledger entries must also form
+            // one representable debit no larger than the ATP snapshot. At the
+            // depleted boundary, subtraction followed by addition can round a
+            // single ULP above `available` even though each partition is valid.
+            if maintenance + activation > available[resident] {
+                activation = previous_nonnegative(activation);
+            }
             payments[resident * 2] = maintenance;
             payments[resident * 2 + 1] = activation;
             scales[resident] = if activation_requested > EPS {

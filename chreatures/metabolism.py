@@ -258,6 +258,13 @@ class MetabolicWeb:
     def pay_work(self, row: int, amount: float) -> None:
         self._native.pay_work(row, float(amount))
 
+    def pay_work_batch(self, rows: Any, amounts: Any) -> None:
+        """Atomically debit one packed cohort after native prevalidation."""
+        self._native.pay_work_batch(
+            np.ascontiguousarray(rows, dtype=np.int64),
+            np.ascontiguousarray(amounts, dtype=np.float64),
+        )
+
     def snapshot(self) -> dict[str, Any]:
         data = bytes(self._native.snapshot())
         return {
