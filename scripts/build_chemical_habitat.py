@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def configure():
+def configure(*, recycling=False):
     birth = json.loads((ROOT / "data/biosphere/reef-founders-v1.json").read_text())
     habitat = json.loads((ROOT / "data/habitats/reef-garden.json").read_text())
     birth["format"] = "chreatures-biosphere-birth-v2"
@@ -130,7 +130,94 @@ def configure():
             }
         )
     birth["material_objects"] = materials
+    if recycling:
+        _add_recycling(habitat, birth)
     return copy.deepcopy(habitat), copy.deepcopy(birth)
+
+
+def _add_recycling(habitat, birth):
+    """Physical shared deposit capacity and chemical root acquisition laws."""
+    habitat["name"] = "recycling-reef"
+    birth["format"] = "chreatures-biosphere-birth-v3"
+    names = [pool["name"] for pool in birth["chemistry"]["pools"]]
+    mass = {
+        pool["name"]: sum(pool["composition"]) for pool in birth["chemistry"]["pools"]
+    }
+    slots = []
+    for index in range(24):
+        name = f"deposit-{index}"
+        slots.append(name)
+        habitat["materials"][name] = {"rgba": [0.3, 0.25, 0.12, 1.0]}
+        habitat["compiler"]["material_order"].append(name)
+        row = len(birth["compartments"])
+        birth["compartments"].append(
+            {"enzymes": {}, "pools": {}, "atp": 0.0, "atp_capacity": 0.0}
+        )
+        birth["material_objects"]["objects"].append(
+            {
+                "entity": name,
+                "row": row,
+                "capacities": dict.fromkeys(names, 0.5),
+                "content_weights": mass.copy(),
+                "remove_when_empty": True,
+                "boundaries": [
+                    {"minimum_content": 0.02, "scale": 1.0},
+                    {"minimum_content": 0.008, "scale": 0.7},
+                    {"minimum_content": 0.0, "scale": 0.45},
+                ],
+                "dormant_template": {
+                    "id": name,
+                    "mobility": "free",
+                    "material": name,
+                    "physical_material": "light",
+                    "position": [0.5, 0.5, 0.1],
+                    "shapes": [{"type": "sphere", "size": [0.05]}],
+                    "components": [],
+                },
+                "surface": {
+                    "rgb_bias": [0.12, 0.08, 0.04],
+                    "rgb_coefficients": {
+                        "mineral": [0.4, 2.0, 0.4],
+                        "reserve": [2.0, 0.4, 0.1],
+                    },
+                    "odor_coefficients": {
+                        "reserve": [2.0, 0.1, 0.0],
+                        "detritus": [0.0, 0.3, 2.0],
+                    },
+                },
+            }
+        )
+    birth["exchange"] = {
+        "format": "chreatures-ecological-exchange-v1",
+        "deposit_slots": slots,
+        "mobiles": [
+            {
+                "id": body["id"],
+                "interval": 2.0,
+                "minimum_mass": 0.0015,
+                "maximum_mass": 0.03,
+                "offset_radii": [-1.7, 0.0, -0.2],
+                "gut_rates": {
+                    "mineral": 0.2,
+                    "inorganic_carbon": 0.2,
+                    "soft_tissue": 0.006,
+                    "tough_tissue": 0.006,
+                    "detritus": 0.04,
+                    "reserve": 0.003,
+                },
+                "body_rates": {"inorganic_carbon": 0.2},
+            }
+            for body in habitat["bodies"]
+        ],
+        "roots": [
+            {
+                "colony": colony["id"],
+                "rates_per_area": {"mineral": 0.8, "inorganic_carbon": 1.2},
+                "capacities": {"mineral": 10.0, "inorganic_carbon": 80.0},
+            }
+            for colony in birth["colonies"]
+        ],
+    }
 
 
 def main():
@@ -138,9 +225,14 @@ def main():
     parser.add_argument(
         "--output", type=Path, default=ROOT / "runs/chemical-reef-birth"
     )
+    parser.add_argument(
+        "--recycling",
+        action="store_true",
+        help="Enable physical egestion and root acquisition",
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
-    habitat, birth = configure()
+    habitat, birth = configure(recycling=args.recycling)
     (args.output / "habitat.json").write_text(json.dumps(habitat, indent=2) + "\n")
     (args.output / "biosphere.json").write_text(json.dumps(birth, indent=2) + "\n")
     print(args.output)

@@ -77,6 +77,81 @@ Single prepared proposals still commit one object at a time. A boundary
 crossing changes topology and invalidates other proposals prepared against the
 prior model revision.
 
+## Dormant deposit slots
+
+An object may opt into reusable physical activation by adding a full
+`dormant_template` entity to its existing material-object entry. At birth its
+web row must be exactly empty and its entity id must be absent from the physical
+world. The template must be a free MuJoCo entity with the same id, without
+`food` or `scent` components. `remove_when_empty` must be true, and `capacities`
+must explicitly name every pool in the shared chemistry, using zero for pools
+the slot cannot hold. Construction compiles the dormant entity without
+adopting it, so malformed geometry fails before the world starts.
+
+```json
+{
+  "entity": "shared-packet-0",
+  "row": 14,
+  "capacities": {
+    "mineral": 0.0,
+    "inorganic_carbon": 0.0,
+    "reserve": 0.3,
+    "soft_tissue": 0.5,
+    "tough_tissue": 0.0,
+    "detritus": 0.2
+  },
+  "remove_when_empty": true,
+  "dormant_template": {
+    "id": "shared-packet-0",
+    "mobility": "free",
+    "material": "packet-0",
+    "physical_material": "light",
+    "position": [0.0, 0.0, 0.1],
+    "shapes": [{"type": "sphere", "size": [0.08]}],
+    "components": []
+  }
+}
+```
+
+The entry also includes the normal `content_weights`, `boundaries`, and
+`surface` fields omitted above.
+
+Authorized egestion or material release uses one atomic batch:
+
+```python
+receipt = materials.deposit_batch([
+    {
+        "entity": "shared-packet-0",
+        "donor_row": gut_row,
+        "resources": released_pools,
+        "position": rear_contact_position,
+    }
+])
+```
+
+An inactive slot requires a finite position inside the habitat. All requests
+targeting that slot in the same batch must give the same position. The position
+is installed in its private base entity only when nonzero material actually
+moves and the physical spawn commits. Later boundary replacements preserve the
+free body's current MuJoCo pose. When the object empties, its geometry is
+removed while its last base pose remains available for exact restore; a later
+deposit may reactivate the slot at a different supplied position. Supplying a
+position for an already active object is rejected before mutation, preventing
+material deposit from becoming a teleport action.
+
+For each slot and pool, `deposit_batch` divides the free capacity fairly among
+simultaneous requests from the same pre-state. It then passes those limited
+requests through native `transfer_batch`, which fairly handles scarcity shared
+by donor rows. Structure rows and other material rows cannot be donors. The
+receipt aligns its M×K arrays with request order and `pools`; it reports
+`moved_resources`, total `blocked_resources`, and the portions blocked by
+receiver capacity and donor scarcity. If all preallocated slots are active or
+full, the rejected chemistry remains in its donor rows.
+
+Direct `sync_geometry()` will not activate an inactive dormant slot after an
+out-of-band web edit because there is no authorized physical position. Such a
+deposit must go through `deposit_batch`.
+
 ## Physical boundaries and cues
 
 Each object declares capacities and a descending list of content boundaries.
@@ -116,13 +191,21 @@ physical entity.
 
 ## Focused physical probe
 
-`scripts/probe_material_objects.py` builds a two-row common-chemistry web and a
+`scripts/probe_material_objects.py` builds a three-row common-chemistry web and a
 real free MuJoCo packet in contact with a resident. It partially transfers the
 packet, checks that its body mass changes by `0.78³`, checkpoints all three
 owners, then has two receivers simultaneously request the remainder. Both get
 equal native scarcity allocations, and one topology batch removes the drained
 packet in both continuations. The probe asserts exact joined continuation and
 zero elemental and stored-energy residual.
+
+`scripts/probe_dormant_materials.py` starts with an empty row and no packet
+geometry. Two donors overfill the same dormant slot; both receive equal
+capacity allocation and the untransferred amounts remain with them. The probe
+then performs a partial withdrawal, removes the fully drained object, and
+reactivates the same slot elsewhere. It rejects an attempted active-object
+teleport atomically and replays the entire depletion and respawn continuation
+from a joined physical/web/material checkpoint.
 
 The sample's full and partial physical masses are approximately `0.0750631` and
 `0.0356214` MuJoCo mass units. These values are physical consequences of the

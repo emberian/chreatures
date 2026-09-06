@@ -83,33 +83,22 @@ class MaterialObjects:
         self._state: dict[str, dict[str, Any]] = {}
         for item in self.config["objects"]:
             entity_id = item["entity"]
-            entity = copy.deepcopy(self._world_entity(entity_id))
-            if entity["mobility"] not in {"free", "static", "hinge", "slide"}:
-                raise ValueError("material entity has unsupported mobility")
-            if any(
-                component.get("type") in {"food", "scent"}
-                for component in entity.get("components", [])
-            ):
-                raise ValueError(
-                    "material entities cannot mirror chemistry in food or scent components"
-                )
-            if item["boundaries"][0]["scale"] != 1.0:
-                raise ValueError("first material boundary must use authored scale 1")
-            first_material = item["boundaries"][0].get("material")
-            if first_material is not None and first_material != entity["material"]:
-                raise ValueError("first material boundary must preserve authored material")
-            material_names = set(self.world.spec.get("materials", {}))
-            if any(
-                boundary.get("material") not in material_names
-                for boundary in item["boundaries"]
-                if "material" in boundary
-            ):
-                raise ValueError("material boundary references an unavailable material")
+            dormant = item.get("dormant_template")
+            entity = copy.deepcopy(
+                dormant if dormant is not None else self._world_entity(entity_id)
+            )
+            self._validate_physical_binding(item, entity, dormant is not None)
             boundary = self._boundary(item, self._web().pools[item["row"]])
-            if boundary != 0:
-                raise ValueError("founder material must occupy the first geometry boundary")
             self._base_entities[entity_id] = entity
-            self._state[entity_id] = {"active": True, "boundary": 0}
+            if dormant is not None:
+                if entity_id in self._existing_ids() or boundary is not None:
+                    raise ValueError("dormant material slot must begin empty and absent")
+                self.world.prepare_topology_batch([{"op": "add", "entity": entity}])
+                self._state[entity_id] = {"active": False, "boundary": None}
+            else:
+                if boundary != 0:
+                    raise ValueError("founder material must occupy the first geometry boundary")
+                self._state[entity_id] = {"active": True, "boundary": 0}
         self.transfer_count = 0
         self.cumulative_withdrawn = [0.0] * len(self._web().chemistry.pools)
         self.cumulative_deposited = [0.0] * len(self._web().chemistry.pools)
@@ -135,6 +124,36 @@ class MaterialObjects:
         except StopIteration as exc:
             raise ValueError(f"material entity {entity_id!r} is absent") from exc
 
+    def _validate_physical_binding(
+        self, item: Mapping[str, Any], entity: Mapping[str, Any], dormant: bool
+    ) -> None:
+        if entity.get("id") != item["entity"]:
+            raise ValueError("material entity and dormant template identities differ")
+        allowed_mobility = {"free"} if dormant else {"free", "static", "hinge", "slide"}
+        if entity.get("mobility") not in allowed_mobility:
+            raise ValueError("material entity has unsupported mobility")
+        if any(
+            component.get("type") in {"food", "scent"}
+            for component in entity.get("components", [])
+        ):
+            raise ValueError(
+                "material entities cannot mirror chemistry in food or scent components"
+            )
+        if item["boundaries"][0]["scale"] != 1.0:
+            raise ValueError("first material boundary must use authored scale 1")
+        first_material = item["boundaries"][0].get("material")
+        if first_material is not None and first_material != entity.get("material"):
+            raise ValueError("first material boundary must preserve authored material")
+        material_names = set(self.world.spec.get("materials", {}))
+        if any(
+            boundary.get("material") not in material_names
+            for boundary in item["boundaries"]
+            if "material" in boundary
+        ):
+            raise ValueError("material boundary references an unavailable material")
+        if dormant and not item["remove_when_empty"]:
+            raise ValueError("dormant material slots must deactivate when empty")
+
     def _normalize_spec(self, value: Any) -> dict[str, Any]:
         if isinstance(value, (str, Path)):
             value = json.loads(Path(value).read_text())
@@ -158,9 +177,12 @@ class MaterialObjects:
         rows: set[int] = set()
         for index, value in enumerate(objects):
             item = _mapping(value, f"material object {index}")
-            if set(item) != {
+            required_item = {
                 "entity", "row", "capacities", "content_weights",
                 "remove_when_empty", "boundaries", "surface",
+            }
+            if not required_item <= set(item) or set(item) - required_item - {
+                "dormant_template"
             }:
                 raise ValueError("invalid material object fields")
             entity = _identifier(item["entity"], "material entity")
@@ -233,7 +255,7 @@ class MaterialObjects:
                     surface["odor_coefficients"], "odor coefficients"
                 ).items()
             }
-            normalized.append({
+            normalized_item = {
                 "entity": entity,
                 "row": row,
                 "capacities": capacities,
@@ -245,7 +267,17 @@ class MaterialObjects:
                     "rgb_coefficients": rgb_coefficients,
                     "odor_coefficients": odor_coefficients,
                 },
-            })
+            }
+            if "dormant_template" in item:
+                template = _mapping(item["dormant_template"], "dormant material template")
+                try:
+                    encoded = canonical(template)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError("dormant material template must be finite JSON") from exc
+                if len(encoded) > 100_000:
+                    raise ValueError("dormant material template exceeds size bound")
+                normalized_item["dormant_template"] = copy.deepcopy(template)
+            normalized.append(normalized_item)
         return {
             "format": FORMAT,
             "chemistry_sha256": chemistry_sha256,
@@ -259,6 +291,7 @@ class MaterialObjects:
             raise ValueError("material and web chemistry identities differ")
         pool_names = set(web.chemistry.pools)
         reserved: set[int] = set()
+        structure_rows: set[int] = set()
         owner = self._web_access if not callable(self._web_access) else None
 
         def collect_rows(value: Any) -> None:
@@ -278,10 +311,16 @@ class MaterialObjects:
                     collect_rows(nested)
 
         collect_rows(getattr(owner, "config", []))
+        for colony in getattr(owner, "config", []):
+            if isinstance(colony, Mapping):
+                row = colony.get("structure_row")
+                if isinstance(row, int) and not isinstance(row, bool):
+                    structure_rows.add(row)
         mobility = getattr(owner, "mobility", None)
         collect_rows(getattr(mobility, "residents", []))
         collect_rows(getattr(mobility, "config", []))
         collect_rows(getattr(owner, "mobiles", []))
+        self._structure_rows = structure_rows
         enzyme_activity = web.enzyme_activity
         atp_capacity = web.atp_capacity
         for item in self.config["objects"]:
@@ -296,6 +335,8 @@ class MaterialObjects:
             )
             if declared - pool_names or referenced - declared:
                 raise ValueError("material specification references unavailable pool capacity")
+            if item.get("dormant_template") is not None and declared != pool_names:
+                raise ValueError("dormant material capacity must cover every chemical pool")
             capacity = np.asarray(
                 [item["capacities"].get(name, 0.0) for name in web.chemistry.pools]
             )
@@ -355,6 +396,16 @@ class MaterialObjects:
     def _expected_entity(self, entity_id: str, boundary_index: int) -> dict[str, Any]:
         item = self._item(entity_id)
         return self._scaled_entity(self._base_entities[entity_id], item["boundaries"][boundary_index])
+
+    def _deposit_position(self, value: Any) -> list[float]:
+        position = _vector(value, 3, "material deposit position", -1e5, 1e5)
+        if not (
+            0.0 <= position[0] <= float(self.world.width)
+            and 0.0 <= position[1] <= float(self.world.height)
+            and 0.0 <= position[2] <= float(self.world.depth)
+        ):
+            raise ValueError("material deposit position is outside habitat")
+        return position
 
     def _existing_ids(self) -> set[str]:
         return {entity["id"] for entity in self.world._entities}
@@ -482,6 +533,12 @@ class MaterialObjects:
         state = self._state[entity_id]
         if not state["active"] and direction != "deposit":
             raise ValueError("material entity is not physically present")
+        if (
+            not state["active"]
+            and direction == "deposit"
+            and item.get("dormant_template") is not None
+        ):
+            raise ValueError("dormant material activation requires positioned deposit_batch")
         web = self._web()
         other_row = self._row(other_row, "transfer compartment")
         object_row = item["row"]
@@ -783,6 +840,219 @@ class MaterialObjects:
         self._check_physical_state()
         return receipt
 
+    def deposit_batch(self, requests: Any) -> dict[str, Any]:
+        """Fairly deposit finite chemistry into active objects or dormant slots.
+
+        Donor access and egestion budgets are established by the caller. An
+        inactive opt-in slot requires a world position; active objects reject
+        positions and retain their physical trajectory.
+        """
+        if not isinstance(requests, list) or len(requests) > self.MAX_BATCH:
+            raise ValueError(f"material batch must contain at most {self.MAX_BATCH} requests")
+        web = self._web()
+        if not requests:
+            return {
+                "direction": "deposit_batch", "requests": [],
+                "pools": list(web.chemistry.pools), "moved_resources": [],
+                "blocked_resources": [], "capacity_blocked_resources": [],
+                "donor_blocked_resources": [], "receiver_limiter": [],
+                "resource_limiter": [], "changes": [],
+                "model_revision": int(self.world.model_revision),
+                "elemental_residual": {
+                    name: 0.0 for name in web.chemistry.elements
+                },
+                "stored_energy_residual": 0.0,
+            }
+
+        material_rows = set(self.donor_rows.values())
+        normalized = []
+        requested = []
+        donors = []
+        receivers = []
+        spawn_positions: dict[str, list[float]] = {}
+        for index, raw in enumerate(requests):
+            request = _mapping(raw, f"material deposit request {index}")
+            required = {"entity", "donor_row", "resources"}
+            if not required <= set(request) or set(request) - required - {"position"}:
+                raise ValueError("invalid material deposit request fields")
+            entity_id = _identifier(request["entity"], "material entity")
+            item = self._item(entity_id)
+            state = self._state[entity_id]
+            donor = self._row(request["donor_row"], "material donor compartment")
+            if donor in material_rows or donor in self._structure_rows:
+                raise ValueError("material deposits cannot debit material or structure rows")
+            vector = self._resource_vector(request["resources"], "batch deposit")
+            if vector.sum() > self.config["max_transfer"]:
+                raise ValueError("batch request exceeds maximum material transfer")
+            if state["active"]:
+                if "position" in request:
+                    raise ValueError("deposit cannot reposition an active material object")
+            else:
+                if item.get("dormant_template") is None or "position" not in request:
+                    raise ValueError("inactive dormant deposit requires a spawn position")
+                position = self._deposit_position(request["position"])
+                previous = spawn_positions.setdefault(entity_id, position)
+                if previous != position:
+                    raise ValueError("one dormant slot cannot receive different spawn positions")
+            resources = {
+                name: float(vector[pool])
+                for pool, name in enumerate(web.chemistry.pools)
+                if vector[pool] > 0.0
+            }
+            entry = {"entity": entity_id, "donor_row": donor, "resources": resources}
+            if "position" in request:
+                entry["position"] = position
+            normalized.append(entry)
+            requested.append(vector)
+            donors.append(donor)
+            receivers.append(item["row"])
+
+        requested_array = np.asarray(requested, dtype=np.float64)
+        receiver_limiter = np.ones_like(requested_array)
+        for item in self.config["objects"]:
+            row = item["row"]
+            edges = [edge for edge, receiver in enumerate(receivers) if receiver == row]
+            if not edges:
+                continue
+            demand = requested_array[edges].sum(axis=0)
+            capacity = np.asarray(
+                [item["capacities"].get(name, 0.0) for name in web.chemistry.pools],
+                dtype=np.float64,
+            )
+            free = np.maximum(0.0, capacity - web.pools[row])
+            if np.any(web.pools[row] > capacity):
+                raise ValueError("material inventory exceeds declared capacity")
+            factors = np.ones_like(free)
+            positive = demand > 0.0
+            factors[positive] = np.minimum(1.0, free[positive] / demand[positive])
+            limited = positive & (factors < 1.0) & (factors > 0.0)
+            factors[limited] = np.nextafter(factors[limited], 0.0)
+            receiver_limiter[edges] = factors
+        capacity_limited = requested_array * receiver_limiter
+        effective = [
+            {
+                name: float(row[pool])
+                for pool, name in enumerate(web.chemistry.pools)
+                if row[pool] > 0.0
+            }
+            for row in capacity_limited
+        ]
+
+        stage = MetabolicWeb.restore(web.snapshot())
+        staged = stage.transfer_batch(
+            donors, receivers, effective, [0.0] * len(normalized)
+        )
+        moved = np.asarray(staged["moved_resources"], dtype=np.float64)
+        if moved.shape != requested_array.shape:
+            raise RuntimeError("native material deposit returned an invalid shape")
+        for item in self.config["objects"]:
+            capacity = np.asarray(
+                [item["capacities"].get(name, 0.0) for name in web.chemistry.pools]
+            )
+            if np.any(stage.pools[item["row"]] > capacity):
+                raise RuntimeError("staged material deposit exceeded receiver capacity")
+
+        changes = []
+        operations = []
+        mass_before = {}
+        new_bases: dict[str, dict[str, Any]] = {}
+        requested_entities = set(item["entity"] for item in normalized)
+        for item in self.config["objects"]:
+            entity_id = item["entity"]
+            if entity_id not in requested_entities:
+                continue
+            state = self._state[entity_id]
+            boundary = self._boundary(item, stage.pools[item["row"]])
+            if boundary == state["boundary"]:
+                continue
+            mass_before[entity_id] = self._physical_mass(entity_id)
+            if state["boundary"] is None and boundary is not None:
+                base = copy.deepcopy(self._base_entities[entity_id])
+                base["position"] = spawn_positions[entity_id]
+                new_bases[entity_id] = base
+                operations.append({
+                    "op": "add",
+                    "entity": self._scaled_entity(base, item["boundaries"][boundary]),
+                })
+            else:
+                operation = self._topology_operation(
+                    entity_id, state["boundary"], boundary
+                )
+                if operation is not None:
+                    operations.append(operation)
+            change = {
+                "entity": entity_id,
+                "boundary_before": state["boundary"],
+                "boundary_after": boundary,
+            }
+            if entity_id in new_bases:
+                change["spawn_position"] = spawn_positions[entity_id]
+            changes.append(change)
+        transaction = self.world.prepare_topology_batch(operations) if operations else None
+
+        before = web.snapshot()
+        totals_before = web.totals()
+        try:
+            applied = web.transfer_batch(
+                donors, receivers, effective, [0.0] * len(normalized)
+            )
+            applied_moved = np.asarray(applied["moved_resources"], dtype=np.float64)
+            if not np.array_equal(applied_moved, moved):
+                raise RuntimeError("staged and authoritative material deposits differ")
+            totals_after = web.totals()
+            elemental_residual = {
+                name: totals_after["elements"][name] - amount
+                for name, amount in totals_before["elements"].items()
+            }
+            energy_residual = totals_after["stored_energy"] - totals_before["stored_energy"]
+            if max(map(abs, elemental_residual.values()), default=0.0) > 1e-10 or abs(
+                energy_residual
+            ) > 1e-10:
+                raise RuntimeError("native material deposit violated chemical conservation")
+            if transaction is not None:
+                transaction.commit()
+        except Exception:
+            self._restore_native(web, before)
+            raise
+
+        for change in changes:
+            entity_id = change["entity"]
+            if entity_id in new_bases:
+                self._base_entities[entity_id] = new_bases[entity_id]
+            self._state[entity_id] = {
+                "active": change["boundary_after"] is not None,
+                "boundary": change["boundary_after"],
+            }
+            change["physical_mass_before"] = mass_before[entity_id]
+            change["physical_mass_after"] = self._physical_mass(entity_id)
+        moved_total = moved.sum(axis=0)
+        self.cumulative_deposited = (
+            np.asarray(self.cumulative_deposited, dtype=np.float64) + moved_total
+        ).tolist()
+        self.transfer_count += int(np.count_nonzero(np.any(moved > 0.0, axis=1)))
+        capacity_blocked = requested_array - capacity_limited
+        donor_blocked = capacity_limited - moved
+        receipt = {
+            "direction": "deposit_batch",
+            "requests": copy.deepcopy(normalized),
+            "pools": list(web.chemistry.pools),
+            "moved_resources": moved.tolist(),
+            "blocked_resources": (requested_array - moved).tolist(),
+            "capacity_blocked_resources": capacity_blocked.tolist(),
+            "donor_blocked_resources": donor_blocked.tolist(),
+            "receiver_limiter": receiver_limiter.tolist(),
+            "resource_limiter": np.asarray(
+                applied["resource_limiter"], dtype=np.float64
+            ).tolist(),
+            "changes": changes,
+            "model_revision": int(self.world.model_revision),
+            "elemental_residual": elemental_residual,
+            "stored_energy_residual": energy_residual,
+        }
+        self.last_receipt = copy.deepcopy(receipt)
+        self._check_physical_state()
+        return receipt
+
     def sync_geometry(self) -> list[dict[str, Any]]:
         """Apply boundary changes caused by other operations on the shared web."""
         web = self._web()
@@ -797,6 +1067,12 @@ class MaterialObjects:
             if np.any(web.pools[item["row"]] > capacity):
                 raise ValueError("material inventory exceeds declared capacity")
             boundary = self._boundary(item, web.pools[item["row"]])
+            if (
+                state["boundary"] is None
+                and boundary is not None
+                and item.get("dormant_template") is not None
+            ):
+                raise ValueError("dormant material activation requires positioned deposit_batch")
             operation = self._topology_operation(entity_id, state["boundary"], boundary)
             if operation is not None:
                 operations.append(operation)

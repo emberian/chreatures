@@ -28,8 +28,9 @@ effect. The growth grammar separately declares a 2 mm physical feature floor.
 Tissue turnover updates the chemical stocks associated with each built part.
 Dead material retains its scaffold until an explicit removal. `release_parts`
 removes selected colliders and transfers their remaining material into a named
-compartment. It is currently an experimental intervention; a mobile organism
-does not yet perform this acquisition autonomously.
+compartment. The same transfer machinery now supports acquisition when a mobile
+mouth physically contacts a sufficiently small part with ingestion enabled.
+Learned harvesting has not been established.
 
 ## Reproduce the non-neural experiment
 
@@ -59,7 +60,7 @@ acts through physical shading rather than a separate fitted competition model.
 Start a separate ordered neural service and use a fresh checkpoint:
 
 ```console
-uv run chreatures3d --port 8772 --brain-url http://127.0.0.1:18772 \
+uv run chreatures --port 8772 --brain-url http://127.0.0.1:18772 \
   --checkpoint runs/reef-garden.json \
   --habitat data/habitats/reef-garden.json \
   --biosphere data/biosphere/reef-founders-v1.json \
@@ -80,8 +81,14 @@ in the same web. `resident_physiology_coupled` then reports true. See
 mouth contact, digestion and absorption, and [MATERIAL_OBJECTS.md](MATERIAL_OBJECTS.md)
 for finite shared stores and geometry boundaries.
 
-No environmental mineral uptake, embodied reproduction, autonomous predation,
-full mass-to-inertia coupling or whole-world resource conservation is claimed.
+Fresh birth-v3 worlds can additionally enable [physical recycling](ECOLOGICAL_EXCHANGE.md):
+mobile material leaves through body-local outlets into finite free deposits,
+and constructed roots acquire configured resources under actual physical contact.
+The native chemical ledger spans all these compartments. The current snapshot
+format is v3; v1/v2 data import with exchange disabled.
+
+Embodied reproduction, autonomous predation, full mass-to-inertia coupling
+and conservation of every physical object in the world remain unimplemented.
 `whole_food_web` remains false. Odor transport currently carries sensory tracers,
 separate from the conserved material pools. The older birth/snapshot formats
 have a one-way data import into the current owner, preserving their uncoupled

@@ -1,0 +1,141 @@
+{
+  "format": "chreatures-ecological-exchange-assay-v1",
+  "scope": "Supplied quiet actions; endogenous deposits then a recorded positional intervention. No learned foraging or cooperation claim.",
+  "wall_seconds": 1.8621365829967544,
+  "egested_before_intervention": {
+    "mica": [
+      0.003468096057627659,
+      0.007309390768685511,
+      0.0,
+      8.922854674789892e-05,
+      0.0,
+      0.0
+    ],
+    "fern": [
+      0.003468096057627659,
+      0.007309390768685511,
+      0.0,
+      8.922854674789892e-05,
+      0.0,
+      0.0
+    ],
+    "pip": [
+      0.003468096057627659,
+      0.007309390768685511,
+      0.0,
+      8.922854674789892e-05,
+      0.0,
+      0.0
+    ]
+  },
+  "pools": [
+    "mineral",
+    "inorganic_carbon",
+    "reserve",
+    "soft_tissue",
+    "tough_tissue",
+    "detritus"
+  ],
+  "trials": [
+    {
+      "location": "contact",
+      "initial_root_material_contacts": 1,
+      "acquired_after_one_tick": {
+        "colony-a": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "colony-b": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "colony-c": [
+          0.0004548671064071331,
+          0.0006823006596106993,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "same_runtime_continuation_exact": true,
+      "accounting": {
+        "elements": {
+          "carbon_equivalent": 295.25600000000003,
+          "mineral_equivalent": 29.094
+        },
+        "stored_energy": 207.39952942899507,
+        "elemental_residual": {
+          "carbon_equivalent": 1.1368683772161603e-13,
+          "mineral_equivalent": 0.0
+        },
+        "captured_photons": 0.31522642131784107,
+        "heat": 0.388129612936073,
+        "exported_work": 2.0139673793867683,
+        "energy_residual": 1.2034817586936697e-13
+      }
+    },
+    {
+      "location": "separated",
+      "initial_root_material_contacts": 0,
+      "acquired_after_one_tick": {
+        "colony-a": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "colony-b": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "colony-c": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "same_runtime_continuation_exact": true,
+      "accounting": {
+        "elements": {
+          "carbon_equivalent": 295.25600000000003,
+          "mineral_equivalent": 29.094
+        },
+        "stored_energy": 207.39952943439383,
+        "elemental_residual": {
+          "carbon_equivalent": 1.1368683772161603e-13,
+          "mineral_equivalent": 0.0
+        },
+        "captured_photons": 0.31522642131784107,
+        "heat": 0.38812960753724773,
+        "exported_work": 2.0139673793867683,
+        "energy_residual": 5.551115123125783e-14
+      }
+    }
+  ],
+  "sources": {
+    "chreatures/ecological_exchange.py": "7d68824f37271e0cac8d1f016625f807f4bf47b4201dd136a823408207d8bb19",
+    "chreatures/material_objects.py": "0304e13996472f7acea92e49f8a3fe5f95790f98c6a8236411331c17d7335884",
+    "chreatures/biosphere.py": "6304e745d0a3d9a36d8c616ed8d142d5bfadf237b70d8e7a629af1ee14ddffbc",
+    "chreatures/somatic.py": "683f698501e6c2394d8006ebebafc9d888876f413d68c51fe0ebfca4507d695f",
+    "scripts/build_chemical_habitat.py": "4337092a445633f51ad4043b2183422499c497c16b50b1144e394a6d4d89314c",
+    "scripts/probe_ecological_exchange.py": "beaa8d453ef72d94577df08128424bdaad98d844128c5264a294494bc18a3177"
+  }
+}
