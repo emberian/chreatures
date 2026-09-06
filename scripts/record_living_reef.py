@@ -493,6 +493,7 @@ def extract_frame(
                 key: finite(cognition["sampled_proposal"][key], f"proposal {key}")
                 for key in action_names
             },
+            "population_response": cognition.get("population_response"),
             "consequence_refinement": {
                 "candidate_scores": [
                     finite(value, "candidate consequence score")
