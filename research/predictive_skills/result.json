@@ -1,0 +1,28 @@
+{
+  "format": "chreatures-predictive-skills-public-result-v1",
+  "status": "rejected; research only",
+  "dataset_manifest_sha256": "3612615b9a90ee5341c3d6760ef5d241ea8b94d52ef8f7b23b24223463820375",
+  "training": {
+    "ensemble_members": 3,
+    "updates_per_member": 96,
+    "elapsed_seconds": 127.6316973567009,
+    "remote_weights": "/home/ember/chreatures/runs/predictive-skills/h16-ensemble-v1"
+  },
+  "heldout_feature_rmse": {
+    "h1": {"candidate": 0.5266070559925775, "persistence": 0.5835692155847969, "incumbent_v3": 0.4990178740992337},
+    "h8": {"candidate": 0.560278533280326, "persistence": 0.5801555829476904, "incumbent_v3": 0.5366230698195557},
+    "h16": {"candidate": 0.5642716589331238, "persistence": 0.5858168171327934}
+  },
+  "action_discrimination": {
+    "shifted_action_feature_mse_increase_h1": 0.002384779188368047,
+    "shifted_action_feature_mse_increase_h16": 0.012184605046204444,
+    "gut_result": "resident-shifted action MSE was slightly lower than matched at H1, H4, H8, and H16"
+  },
+  "limitations": [
+    "candidate did not beat incumbent v3 feature RMSE at shared horizons",
+    "scalar physiology predates common chemistry",
+    "offline results do not establish behavioral improvement"
+  ],
+  "raw_training_receipt_sha256": "c0b6579539aea12557bc5432411e25dc39e48f6e7bb753d16a929fbdca513a22",
+  "raw_evaluation_receipt_sha256": "5b6b87725685fb5ce3b387c3e41ca2db44457cf6bef79fc4a0a1affc2d7b4062"
+}
