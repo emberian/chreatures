@@ -21,10 +21,30 @@ import numpy as np
 
 
 FORMAT = "chreatures-living-reef-public-recording-v1"
-ACTION_NAMES = (
-    "thrust", "yaw", "gaze_pitch", "grip",
-    "signal_low", "signal_mid", "signal_high", "posture",
+V4_ACTION_NAMES = (
+    "thrust", "yaw", "gaze_pitch", "posture", "grip",
+    "signal_low", "signal_mid", "signal_high", "eat", "release", "secrete",
+    "allocate",
 )
+V4_PHYSIOLOGY_NAMES = (
+    "energy", "gut", "fatigue", "speed", "turn", "neural_support",
+    "structural_integrity", "development_fraction", "gland_fill", "brood_fill",
+    "reproductive_maturity", "exchange_load",
+)
+BODY_STATE_FIELDS = {
+    "energy": ("body", "energy", "native reserve"),
+    "gut": ("body", "gut", "native fill"),
+    "fatigue": ("body", "fatigue", "native load"),
+    "speed": ("body", "speed", "m/s unsigned world speed"),
+    "angular_velocity_z": ("body", "angular_velocity", "rad/s world z"),
+    "neural_support": ("neural", "support", "native support"),
+    "structural_integrity": ("body", "structural_integrity", "fraction"),
+    "development_fraction": ("body", "development_fraction", "fraction"),
+    "gland_fill": ("body", "gland_fill", "native fill"),
+    "brood_fill": ("body", "brood_fill", "native fill"),
+    "reproductive_maturity": ("body", "reproductive_maturity", "fraction"),
+    "exchange_load": ("body", "exchange_load", "native load"),
+}
 PERIPHERAL_SHAPE = (8, 32, 4)
 FOVEAL_SHAPE = (24, 32, 4)
 
@@ -217,6 +237,29 @@ def hash_fields(value: Any, prefix: str = "") -> dict[str, str]:
     return result
 
 
+def organism_contract(state: Mapping[str, Any]) -> dict[str, Any]:
+    """Resolve the published controller boundary without guessing from array sizes."""
+    controller = state.get("resident_controller", {})
+    contract = controller.get("observation_contract")
+    if isinstance(contract, Mapping) and contract.get("format") == "chreatures-organism-interface-v4":
+        actions = tuple(contract.get("actions", ()))
+        physiology = tuple(contract.get("physiology", ()))
+        if actions != V4_ACTION_NAMES or physiology != V4_PHYSIOLOGY_NAMES:
+            raise ValueError("host v4 organism interface differs from the exact public contract")
+        return {"format": contract["format"], "actions": actions, "physiology": physiology}
+    raise ValueError("host does not publish the current v4 organism interface")
+
+
+def body_state_values(
+    body: Mapping[str, Any], neural: Mapping[str, Any], label: str,
+) -> dict[str, float]:
+    result = {}
+    for name, (owner, key, _unit) in BODY_STATE_FIELDS.items():
+        source = neural if owner == "neural" else body
+        result[name] = finite(source[key], f"{label} body state {name}")
+    return result
+
+
 def identity(state: Mapping[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     anatomy = state.get("anatomy", {})
     controller = state.get("resident_controller", {})
@@ -271,6 +314,7 @@ def identity(state: Mapping[str, Any], args: argparse.Namespace) -> dict[str, An
 def extract_frame(
     state: Mapping[str, Any], selected_id: str, body_ids: list[str],
     entity_indices: dict[str, int], previous: Mapping[str, Any] | None,
+    contract: Mapping[str, Any],
 ) -> tuple[dict[str, Any], list[str]]:
     bodies = state["bodies"]
     entities = state["entities"]
@@ -288,9 +332,11 @@ def extract_frame(
     if not isinstance(retina_pose, Mapping):
         raise ValueError("host view lacks the selected retina physical pose")
     selected = by_body[selected_id]
+    action_names = tuple(contract["actions"])
+    committed_names = action_names
     action = cognition.get("executed_action", {})
-    if set(action) != set(ACTION_NAMES) | {"oral"}:
-        raise ValueError("host has not published the committed action-plus-oral schema")
+    if set(action) != set(committed_names):
+        raise ValueError("host committed action differs from its organism interface")
     goal = cognition["goal"]
     consequence = cognition.get("consequence_refinement")
     sensory_forecast = cognition.get("sensory_forecast")
@@ -323,12 +369,15 @@ def extract_frame(
                         state["cognition"][body_id]["executed_action"][key],
                         f"resident action {key}",
                     )
-                    for key in (*ACTION_NAMES, "oral")
+                    for key in committed_names
                 },
                 "metabolism": {
                     key: finite(by_body[body_id][key], f"resident metabolism {key}")
                     for key in ("energy", "gut", "fatigue")
                 },
+                "recorded_body_state": body_state_values(
+                    by_body[body_id], state["neural"][body_id], f"resident {index}",
+                ),
                 "outcome": {
                     key: finite(
                         outcomes.get(body_id, {}).get(key, 0.0),
@@ -442,7 +491,7 @@ def extract_frame(
             },
             "sampled_proposal": {
                 key: finite(cognition["sampled_proposal"][key], f"proposal {key}")
-                for key in ACTION_NAMES
+                for key in action_names
             },
             "consequence_refinement": {
                 "candidate_scores": [
@@ -475,12 +524,15 @@ def extract_frame(
             },
             "committed_action": {
                 key: finite(action[key], f"action {key}")
-                for key in (*ACTION_NAMES, "oral")
+                for key in committed_names
             },
             "metabolism": {
                 key: finite(selected[key], f"metabolism {key}")
                 for key in ("energy", "gut", "fatigue")
             },
+            "recorded_body_state": body_state_values(
+                selected, neural, "selected resident",
+            ),
             "outcome": {
                 key: finite(outcomes.get(selected_id, {}).get(key, 0.0), f"outcome {key}")
                 for key in (
@@ -545,6 +597,7 @@ def main() -> int:
     }
     selected_id = body_ids[args.resident_index]
     provenance = identity(initial, args)
+    contract = organism_contract(initial)
     start_tick = int(initial["tick"]) + args.stride_ticks
     target_tick = start_tick
     deadline = time.monotonic() + args.timeout_seconds
@@ -583,7 +636,7 @@ def main() -> int:
                     state, sort_keys=True, separators=(",", ":"), allow_nan=False,
                 ) + "\n")
             frame, reasons = extract_frame(
-                state, selected_id, body_ids, entity_indices, previous,
+                state, selected_id, body_ids, entity_indices, previous, contract,
             )
             frames.append(frame)
             novel = [reason for reason in reasons if reason not in seen_phenomena]
@@ -698,6 +751,18 @@ def main() -> int:
             ),
         },
         "provenance": provenance,
+        "organism_interface": {
+            "format": contract["format"],
+            "action_order": list(contract["actions"]),
+            "host_physiology_order": list(contract["physiology"]),
+        },
+        "recorded_body_state": {
+            "timing": "post-physics host view at frame model_time; not the normalized pre-action controller input",
+            "fields": [
+                {"name": name, "unit": definition[2]}
+                for name, definition in BODY_STATE_FIELDS.items()
+            ],
+        },
         "private_raw_receipt": raw_receipt,
         "geometry": {
             "dimension": int(initial["dimension"]),

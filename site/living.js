@@ -16,6 +16,8 @@ const ui = {
   decisionGoal: $('#decision-goal'), decisionChoice: $('#decision-choice'), proposal: $('#proposal-values'),
   candidates: $('#candidates'), correction: $('#private-correction'), privateUpdates: $('#private-updates'),
   goalErrorScale: $('#goal-error-scale'),
+  proposalContract: $('#proposal-contract'), actionContract: $('#action-contract'),
+  physiology: $('#physiology-values'), physiologyContract: $('#physiology-contract'), evidenceLink: $('#recording-evidence-link'),
 };
 
 let renderer, scene, camera, controls, worldRoot, signalPoints, physicalSun, ambientFill;
@@ -44,6 +46,8 @@ function validate(data) {
   if (data.geometry_encoding !== GEOMETRY_ENCODING) throw new Error(`Expected ${GEOMETRY_ENCODING}`);
   if (!Array.isArray(data.frames) || data.frames.length < 2) throw new Error('Recording has no frame sequence');
   if (!data.geometry || !Array.isArray(data.geometry.bounds)) throw new Error('Recording has no geometry bounds');
+  const actionOrder=data.organism_interface?.action_order||ACTIONS,proposalOrder=data.organism_interface?.format==='chreatures-organism-interface-v4'?actionOrder:ACTOR_ACTIONS;
+  if(!Array.isArray(actionOrder)||!actionOrder.length||!Array.isArray(proposalOrder))throw new Error('Recording action contract is invalid');
   for (const [index, frame] of data.frames.entries()) {
     if (!Number.isFinite(frame.model_time) || !Number.isInteger(frame.tick)) throw new Error(`Frame ${index} time is invalid`);
     if (!Array.isArray(frame.bodies) || !Array.isArray(frame.entities) || !frame.selected) throw new Error(`Frame ${index} is incomplete`);
@@ -55,7 +59,7 @@ function validate(data) {
       if(!Array.isArray(value)||value.length!==4)throw new Error(`Frame ${index} ${label} must have four candidates`);
     }
     if(!Array.isArray(refinement.selected_private_correction)||refinement.selected_private_correction.length!==3)throw new Error(`Frame ${index} private correction is invalid`);
-    if(!ACTOR_ACTIONS.every(name=>Number.isFinite(selected.sampled_proposal[name])))throw new Error(`Frame ${index} actor proposal is invalid`);
+    if(!proposalOrder.every(name=>Number.isFinite(selected.sampled_proposal[name]))||!actionOrder.every(name=>Number.isFinite(selected.committed_action[name])))throw new Error(`Frame ${index} action contract is invalid`);
     if(!Number.isInteger(refinement.selected_candidate)||refinement.selected_candidate<0||refinement.selected_candidate>3)throw new Error(`Frame ${index} selected candidate is invalid`);
   }
   return data;
@@ -309,7 +313,8 @@ function paintReadouts(blob) {
 }
 
 function makeActionBars() {
-  ui.actions.replaceChildren(...ACTIONS.map((name) => {
+  const names=recording.organism_interface?.action_order||ACTIONS;ui.actionContract.textContent=`${names.length} committed channels`;
+  ui.actions.replaceChildren(...names.map((name) => {
     const item=document.createElement('div'); item.className='action'; item.dataset.action=name;
     item.innerHTML=`<div class="action-label"><span>${name.replaceAll('_',' ')}</span><span>0.00</span></div><div class="bar"><i></i></div>`;
     return item;
@@ -317,7 +322,8 @@ function makeActionBars() {
 }
 
 function makeDecisionDisplay(){
-  ui.proposal.replaceChildren(...ACTOR_ACTIONS.map(name=>{
+  const names=recording.organism_interface?.format==='chreatures-organism-interface-v4'?recording.organism_interface.action_order:ACTOR_ACTIONS;ui.proposalContract.textContent=`Actor proposal · ${names.length} channels`;
+  ui.proposal.replaceChildren(...names.map(name=>{
     const item=document.createElement('div');item.className='proposal-value';item.dataset.action=name;
     item.innerHTML=`<span>${name.replaceAll('_',' ')}</span><span>0.000</span>`;return item;
   }));
@@ -375,6 +381,8 @@ function paintHistory(frameIndex) {
   context.strokeStyle='#f1eddf66'; context.lineWidth=1; context.beginPath(); context.moveTo(x,0); context.lineTo(x,height); context.stroke();
 }
 
+function paintPhysiology(selected){const values=selected.recorded_body_state||selected.metabolism,names=recording.recorded_body_state?.fields?.map(field=>field.name)||Object.keys(values);ui.physiologyContract.textContent=`${names.length} post-physics channels`;ui.physiology.replaceChildren(...names.map(name=>{const row=document.createElement('div'),label=document.createElement('span'),value=document.createElement('b'),unit=recording.recorded_body_state?.fields?.find(field=>field.name===name)?.unit;label.textContent=name.replaceAll('_',' ');value.textContent=`${formatNative(values[name])}${unit?` · ${unit}`:''}`;row.append(label,value);return row}))}
+
 function updateInstruments(index) {
   const frame=recording.frames[index], selected=frame.selected;
   ui.time.textContent=`model time ${frame.model_time.toFixed(3)} s`;
@@ -388,6 +396,7 @@ function updateInstruments(index) {
   ui.goalTime.textContent=selected.goal.valid?`${selected.goal.recorded_time.toFixed(3)} s`:'no valid record';
   ui.goalLeft.textContent=selected.goal.valid?`${selected.goal.commit_remaining_ticks} ticks`:'—';
   paintActions(selected.committed_action);
+  paintPhysiology(selected);
   paintDecision(selected);
   paintHistory(index);
   for(const button of ui.moments.querySelectorAll('button')) button.setAttribute('aria-current',String(Number(button.dataset.frame)===index));
@@ -479,7 +488,10 @@ for(const button of document.querySelectorAll('[data-camera]'))button.addEventLi
 });
 
 initThree();
-fetch('./assets/living-reef-recording.json')
+const recordingKey=new URLSearchParams(location.search).get('recording');
+const recordingAsset=recordingKey==='regional-wave'?'./assets/regional-wave-recording.json':'./assets/living-reef-recording.json';
+if(recordingKey==='regional-wave'){document.title='Regional world recording — Chreatures';ui.evidenceLink.textContent='Population atlas →';ui.evidenceLink.href='population.html'}
+fetch(recordingAsset)
   .then(response=>{if(!response.ok)throw new Error(`HTTP ${response.status}`);return response.json();})
   .then(loadRecording)
   .catch(reason=>fail('The recorded reef is being prepared. This observatory will open when its public recording arrives.',reason));
