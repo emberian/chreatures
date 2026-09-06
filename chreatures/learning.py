@@ -43,6 +43,8 @@ class PredictivePPOConfig:
     max_grad_norm: float = 0.8
     seed: int = 20260905
     std_profile: str = "global-v1"
+    context_profile: str = "reservoir-v1"
+    sequence_length: int = 32
 
 
 class RunningMoments:
@@ -101,6 +103,10 @@ class PredictiveActorCritic(nn.Module):
         self.config = config
         if config.std_profile not in {"global-v1", "state-conditioned-v2"}:
             raise ValueError("std_profile must be global-v1 or state-conditioned-v2")
+        if config.context_profile not in {"reservoir-v1", "gated-v1"}:
+            raise ValueError("unknown working-context architecture")
+        if config.sequence_length < 2:
+            raise ValueError("sequence_length must be at least two decisions")
         torch.manual_seed(config.seed)
         self.feature_encoder = nn.Sequential(
             nn.Linear(config.feature_dim, config.hidden_dim),
@@ -139,9 +145,23 @@ class PredictiveActorCritic(nn.Module):
         radius = torch.linalg.matrix_norm(context_recur, ord=2)
         context_recur *= 0.72 / radius.clamp_min(1e-6)
         self.register_buffer("projection", projection)
-        self.register_buffer("context_feature", context_feature)
-        self.register_buffer("context_action", context_action)
-        self.register_buffer("context_recur", context_recur)
+        for name, value in (
+            ("context_feature", context_feature), ("context_action", context_action),
+            ("context_recur", context_recur),
+        ):
+            if config.context_profile == "gated-v1":
+                self.register_parameter(name, nn.Parameter(value))
+            else:
+                self.register_buffer(name, value)
+        if config.context_profile == "gated-v1":
+            self.context_gate_feature = nn.Parameter(torch.zeros_like(context_feature))
+            self.context_gate_action = nn.Parameter(torch.zeros_like(context_action))
+            self.context_gate_recur = nn.Parameter(torch.zeros_like(context_recur))
+            # Initial retention spans several physical timescales; experience
+            # learns what to write and retain. No state or behavior labels.
+            timescales = torch.logspace(math.log10(0.5), math.log10(32.0), config.context_dim)
+            fraction = -torch.expm1(-float(config.macro_steps * 0.05) / timescales)
+            self.context_gate_bias = nn.Parameter(torch.logit(fraction))
         nn.init.orthogonal_(self.policy_mean.weight, gain=0.01)
         nn.init.zeros_(self.policy_mean.bias)
         nn.init.orthogonal_(self.value.weight, gain=1.0)
@@ -185,11 +205,42 @@ class PredictiveActorCritic(nn.Module):
         self, context: torch.Tensor, next_features: torch.Tensor, action: torch.Tensor
     ) -> torch.Tensor:
         projected = self.projected(next_features)
-        return torch.tanh(
+        candidate = torch.tanh(
             projected @ self.context_feature.T
             + action @ self.context_action.T
             + context @ self.context_recur.T
         )
+        if self.config.context_profile == "reservoir-v1":
+            return candidate
+        gate = torch.sigmoid(
+            projected @ self.context_gate_feature.T
+            + action @ self.context_gate_action.T
+            + context @ self.context_gate_recur.T
+            + self.context_gate_bias
+        )
+        return context + gate * (candidate - context)
+
+    def sequence(
+        self, features: torch.Tensor, physiology: torch.Tensor,
+        initial_context: torch.Tensor, actions: torch.Tensor, done: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Replay causal histories with gradients through working memory.
+
+        The recorded context at a chunk boundary is detached. Within a chunk,
+        the next observation enters memory only before the next decision.
+        Done resets each resident independently; there is no cross-life credit.
+        """
+        context = initial_context.detach()
+        means, values, hidden_states = [], [], []
+        for index in range(len(features)):
+            mean, value, hidden = self(features[index], physiology[index], context)
+            means.append(mean)
+            values.append(value)
+            hidden_states.append(hidden)
+            if index + 1 < len(features):
+                context = self.next_context(context, features[index + 1], actions[index])
+                context = context * (~done[index].bool()).unsqueeze(-1)
+        return torch.stack(means), torch.stack(values), torch.stack(hidden_states)
 
 
 class MacroRollout:
@@ -228,7 +279,7 @@ class MacroRollout:
 class PredictivePPOTrainer:
     """Owns shared learned parameters and private per-resident context state."""
 
-    VERSION = 2
+    VERSION = 3
 
     def __init__(
         self,
@@ -346,6 +397,51 @@ class PredictivePPOTrainer:
         context = torch.as_tensor(self.context, device=self.device)
         return self.model(features, body, context)[1].cpu().numpy()
 
+    def _optimization_batches(
+        self, data: dict[str, np.ndarray], advantages: np.ndarray, returns: np.ndarray,
+    ):
+        """Keep time and resident identity intact while learning memory."""
+        steps, residents = data["reward"].shape
+        if self.config.context_profile == "reservoir-v1":
+            flat = {name: value.reshape((-1, *value.shape[2:])) for name, value in data.items()}
+            order = self.rng.permutation(steps * residents)
+            for start in range(0, len(order), self.config.minibatch_size):
+                indices = order[start:start + self.config.minibatch_size]
+                tensors = {name: torch.as_tensor(value[indices], device=self.device)
+                           for name, value in flat.items()}
+                outputs = self.model(tensors["features"], tensors["physiology"], tensors["context"])
+                yield tensors, outputs, (
+                    torch.as_tensor(advantages.reshape(-1)[indices], device=self.device),
+                    torch.as_tensor(returns.reshape(-1)[indices], device=self.device),
+                )
+            return
+        length = min(self.config.sequence_length, steps)
+        chunks = [(resident, start) for resident in range(residents)
+                  for start in range(0, steps, length)]
+        order = self.rng.permutation(len(chunks))
+        batch_chunks = max(1, self.config.minibatch_size // length)
+        for offset in range(0, len(chunks), batch_chunks):
+            selected = [chunks[index] for index in order[offset:offset + batch_chunks]]
+            resident_indices = np.asarray([item[0] for item in selected])
+            starts = np.asarray([item[1] for item in selected])
+            time_indices = starts[None, :] + np.arange(length)[:, None]
+            valid = time_indices < steps
+            clipped = np.minimum(time_indices, steps - 1)
+            tensors = {name: torch.as_tensor(value[clipped, resident_indices], device=self.device)
+                       for name, value in data.items()}
+            initial = torch.as_tensor(data["context"][starts, resident_indices], device=self.device)
+            outputs = self.model.sequence(
+                tensors["features"], tensors["physiology"], initial,
+                tensors["action"], tensors["done"],
+            )
+            mask = torch.as_tensor(valid, device=self.device)
+            yield {name: value[mask] for name, value in tensors.items()}, tuple(
+                value[mask] for value in outputs
+            ), (
+                torch.as_tensor(advantages[clipped, resident_indices], device=self.device)[mask],
+                torch.as_tensor(returns[clipped, resident_indices], device=self.device)[mask],
+            )
+
     def update(self, rollout: MacroRollout, bootstrap_value: np.ndarray, macro_dt: float) -> dict[str, float]:
         data = rollout.arrays()
         rewards = data["reward"].astype(np.float32)
@@ -366,36 +462,23 @@ class PredictivePPOTrainer:
             advantages[index] = gae
             next_value = values[index]
         returns = advantages + values
-        flat = {
-            name: value.reshape((-1, *value.shape[2:]))
-            for name, value in data.items()
-            if name not in {"reward", "done"}
-        }
         flat_advantages = advantages.reshape(-1)
         flat_returns = returns.reshape(-1)
         flat_advantages = (
             flat_advantages - flat_advantages.mean()
         ) / max(float(flat_advantages.std()), 1e-6)
         count = len(flat_advantages)
+        normalized_advantages = flat_advantages.reshape(advantages.shape)
         metrics = {name: [] for name in (
             "policy_loss", "value_loss", "prediction_loss", "entropy",
             "approx_kl", "clip_fraction",
         )}
         for _ in range(self.config.epochs):
-            order = self.rng.permutation(count)
-            for start in range(0, count, self.config.minibatch_size):
-                indices = order[start : start + self.config.minibatch_size]
-                tensor = lambda name: torch.as_tensor(flat[name][indices], device=self.device)
-                features = tensor("features")
-                physiology = tensor("physiology")
-                context = tensor("context")
-                latent = tensor("latent")
-                action = tensor("action")
-                old_log_prob = tensor("log_prob")
-                target = tensor("prediction_target")
-                advantage = torch.as_tensor(flat_advantages[indices], device=self.device)
-                return_value = torch.as_tensor(flat_returns[indices], device=self.device)
-                mean, value, hidden = self.model(features, physiology, context)
+            for tensors, (mean, value, hidden), (advantage, return_value) in self._optimization_batches(
+                data, normalized_advantages, returns
+            ):
+                latent, action = tensors["latent"], tensors["action"]
+                old_log_prob, target = tensors["log_prob"], tensors["prediction_target"]
                 distribution = self.model.distribution(mean, hidden)
                 log_prob = self.model.squashed_log_prob(distribution, latent)
                 ratio = torch.exp(log_prob - old_log_prob)
@@ -449,7 +532,7 @@ class PredictivePPOTrainer:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         value = {
-            "version": 1 if self.config.std_profile == "global-v1" else self.VERSION,
+            "version": self._genome_version(),
             "architecture": self.config.std_profile,
             "config": asdict(self.config),
             "resident_ids": self.resident_ids,
@@ -485,9 +568,15 @@ class PredictivePPOTrainer:
         if expected_sha256 is not None and digest != expected_sha256:
             raise ValueError("learner checkpoint checksum differs")
         value = torch.load(path, map_location=device, weights_only=False)
-        if value.get("version") not in {1, cls.VERSION}:
+        if value.get("version") not in {1, 2, cls.VERSION}:
             raise ValueError("unsupported learner checkpoint")
         restored_config = PredictivePPOConfig(**value["config"])
+        expected_version = (
+            3 if restored_config.context_profile == "gated-v1" else
+            2 if restored_config.std_profile == "state-conditioned-v2" else 1
+        )
+        if value["version"] != expected_version:
+            raise ValueError("learner checkpoint version differs from context architecture")
         architecture = value.get("architecture", restored_config.std_profile)
         if architecture != restored_config.std_profile:
             raise ValueError("learner checkpoint architecture differs from config")
@@ -552,6 +641,34 @@ class PredictivePPOTrainer:
             torch.cuda.set_rng_state(device_rng.cpu(), upgraded.device)
         return upgraded, extra
 
+    def _genome_version(self) -> int:
+        if self.config.context_profile == "gated-v1":
+            return 3
+        return 1 if self.config.std_profile == "global-v1" else 2
+
+    def inherit_model(self, inherited: "PredictivePPOTrainer") -> None:
+        """Transfer shared capacities into a fresh developmental cohort.
+
+        New context dynamics are an architectural change. Their optimizer
+        starts fresh and the parent's private working state is not inherited.
+        """
+        source, target = inherited.config, self.config
+        for key in ("feature_dim", "physiology_dim", "context_dim", "projection_dim", "hidden_dim", "std_profile"):
+            if getattr(source, key) != getattr(target, key):
+                raise ValueError(f"inherited motor dimensions/variance differ: {key}")
+        allowed = {("reservoir-v1", "gated-v1"), (target.context_profile, target.context_profile)}
+        if (source.context_profile, target.context_profile) not in allowed:
+            raise ValueError("unsupported developmental context transfer")
+        missing, unexpected = self.model.load_state_dict(inherited.model.state_dict(), strict=False)
+        expected_missing = {
+            "context_gate_feature", "context_gate_action", "context_gate_recur", "context_gate_bias"
+        } if source.context_profile != target.context_profile else set()
+        if set(missing) != expected_missing or unexpected:
+            raise ValueError("inherited motor state differs outside the declared gate")
+        self.moments = RunningMoments.restore(inherited.moments.snapshot())
+        self.update_count = inherited.update_count
+        self.decision_count = inherited.decision_count
+
     def export_genome(self, path: str | Path) -> dict[str, Any]:
         """Write shared learned arrays only; exclude resident context and memory."""
         path = Path(path)
@@ -560,7 +677,7 @@ class PredictivePPOTrainer:
             name: value.detach().cpu().numpy()
             for name, value in self.model.state_dict().items()
         }
-        genome_version = 1 if self.config.std_profile == "global-v1" else 2
+        genome_version = self._genome_version()
         metadata = {
             "format": f"chreatures-predictive-ppo-genome-v{genome_version}",
             "version": genome_version,
@@ -569,7 +686,7 @@ class PredictivePPOTrainer:
             "actions": list(ACTIONS),
             "updates": self.update_count,
             "decisions": self.decision_count,
-            "scope": "shared policy, value, predictor and fixed feature/context transforms only",
+            "scope": "shared policy, value, predictor and context mechanism; no personal state",
         }
         arrays["metadata"] = np.asarray(json.dumps(metadata, sort_keys=True))
         np.savez_compressed(path, **arrays)
@@ -583,13 +700,13 @@ class PredictivePPOTrainer:
         """Load shared arrays while retaining private context and normalizers."""
         with np.load(path, allow_pickle=False) as value:
             metadata = json.loads(str(value["metadata"]))
-            expected_format = ("chreatures-predictive-ppo-genome-v1"
-                               if self.config.std_profile == "global-v1"
-                               else "chreatures-predictive-ppo-genome-v2")
+            expected_format = f"chreatures-predictive-ppo-genome-v{self._genome_version()}"
             if metadata.get("format") != expected_format or metadata.get("actions") != list(ACTIONS):
                 raise ValueError("incompatible predictive PPO genome")
             if metadata.get("architecture", self.config.std_profile) != self.config.std_profile:
                 raise ValueError("predictive PPO genome architecture differs")
+            if metadata.get("config", {}).get("context_profile", "reservoir-v1") != self.config.context_profile:
+                raise ValueError("predictive PPO genome working context differs")
             state = self.model.state_dict()
             restored = {}
             for name, target in state.items():

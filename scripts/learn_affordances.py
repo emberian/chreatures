@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping
 import copy
 from dataclasses import asdict
 import gzip
 import hashlib
+import importlib.metadata
 import importlib.util
 import json
 import math
@@ -52,6 +54,149 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def canonical_sha256(value: Any) -> str:
+    encoded = json.dumps(
+        value, sort_keys=True, separators=(",", ":"), allow_nan=False,
+    ).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def package_version(name: str) -> str | None:
+    """Return an installed distribution version without making it mandatory."""
+    try:
+        return importlib.metadata.version(name)
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
+
+def atomic_json(path: Path, value: Mapping[str, Any]) -> dict[str, Any]:
+    """Durably publish one JSON artifact without exposing a partial file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    with temporary.open("w", encoding="utf-8") as handle:
+        json.dump(value, handle, indent=2, sort_keys=True, allow_nan=False)
+        handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+    return {
+        "path": str(path), "bytes": path.stat().st_size, "sha256": sha256(path),
+    }
+
+
+def stable_checkpoint_identity(receipt: Mapping[str, Any]) -> dict[str, Any]:
+    """Content identity for a checkpoint, independent of host paths."""
+    return {
+        "step": int(receipt["step"]),
+        "cohort_sha256": str(receipt["cohort_sha256"]),
+        "learner_sha256": str(receipt["learner"]["sha256"]),
+        "neural_sha256": str(receipt["neural"]["sha256"]),
+        "rollout_sha256": str(receipt["rollout"]["sha256"]),
+        "rollout_length": int(receipt["rollout"]["length"]),
+    }
+
+
+def stable_native_identity(receipt: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """Keep native implementation identity while excluding machine-local paths."""
+    if receipt is None:
+        return None
+    return {
+        key: copy.deepcopy(receipt[key])
+        for key in ("bytes", "sha256", "python_soabi", "cache_tag")
+        if key in receipt
+    }
+
+
+def stable_brain_identity(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    """Remove allocation and resident state from neural semantic metadata."""
+    value = copy.deepcopy(dict(metadata))
+    value.pop("residents", None)
+    device = value.pop("device", {})
+    stable_device = {
+        key: copy.deepcopy(device[key])
+        for key in ("type", "name", "gcn_arch_name")
+        if key in device
+    }
+    return {"metadata": value, "device": stable_device}
+
+
+def existing_checkpoint_receipt(path: Path) -> dict[str, Any]:
+    """Verify and describe an existing cohort checkpoint without rewriting it."""
+    path = path.resolve()
+    with gzip.open(path, "rt", encoding="utf-8") as handle:
+        state = json.load(handle)
+    parent = path.parent
+    learner = copy.deepcopy(state["learner"])
+    recorded_learner_path = Path(learner["path"])
+    local_learner_path = parent / recorded_learner_path.name
+    learner_path = (
+        local_learner_path if local_learner_path.is_file() else recorded_learner_path
+    )
+    neural = copy.deepcopy(state["neural"])
+    neural_path = parent / f"{neural['name']}.npz"
+    rollout = copy.deepcopy(state["rollout"])
+    rollout_path = parent / Path(rollout["path"]).name
+    for artifact, artifact_path, label in (
+        (learner, learner_path, "learner"),
+        (neural, neural_path, "neural"),
+        (rollout, rollout_path, "rollout"),
+    ):
+        if not artifact_path.is_file() or sha256(artifact_path) != artifact["sha256"]:
+            raise ValueError(f"existing checkpoint {label} checksum differs")
+        if int(artifact["bytes"]) != artifact_path.stat().st_size:
+            raise ValueError(f"existing checkpoint {label} size differs")
+    return {
+        "step": int(state["step"]), "cohort": path.name,
+        "cohort_bytes": path.stat().st_size, "cohort_sha256": sha256(path),
+        "neural": neural, "learner": learner, "rollout": rollout,
+    }
+
+
+def completed_training_receipt(output: Path, step: int) -> dict[str, Any]:
+    """Recover cumulative training timing for an evaluation-only final resume."""
+    path = output / "updates.jsonl"
+    if not path.is_file():
+        raise ValueError("final-step resume is missing updates.jsonl")
+    last: dict[str, Any] | None = None
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                last = json.loads(line)
+    if last is None or int(last.get("step", -1)) != step:
+        raise ValueError("final-step resume has no completed update at its checkpoint step")
+    timings = last.get("timing_cumulative_seconds")
+    if not isinstance(timings, dict):
+        raise ValueError("final-step update is missing cumulative timing")
+    return {
+        "elapsed_seconds": float(last["elapsed_seconds"]),
+        "timing_cumulative_seconds": {
+            str(name): float(seconds) for name, seconds in timings.items()
+        },
+    }
+
+
+def existing_genome_receipt(path: Path, trainer: Any) -> dict[str, Any]:
+    """Verify a previously exported final genome against restored model state."""
+    path = path.resolve()
+    with np.load(path, allow_pickle=False) as value:
+        metadata = json.loads(str(value["metadata"]))
+        for name, tensor in trainer.model.state_dict().items():
+            if name not in value.files or not np.array_equal(
+                np.asarray(value[name]), tensor.detach().cpu().numpy()
+            ):
+                raise ValueError(f"existing final genome differs: {name}")
+    if (
+        metadata.get("config") != asdict(trainer.config)
+        or int(metadata.get("updates", -1)) != trainer.update_count
+        or int(metadata.get("decisions", -1)) != trainer.decision_count
+    ):
+        raise ValueError("existing final genome metadata differs")
+    return {
+        "path": str(path), "bytes": path.stat().st_size,
+        "sha256": sha256(path), "metadata": metadata,
+    }
 
 
 def native_extension_receipt() -> dict[str, Any]:
@@ -102,6 +247,11 @@ def arguments() -> argparse.Namespace:
         "--std-profile", choices=("global-v1", "state-conditioned-v2"),
         default="global-v1",
     )
+    parser.add_argument(
+        "--context-profile", choices=("reservoir-v1", "gated-v1"),
+        default="reservoir-v1",
+    )
+    parser.add_argument("--sequence-length", type=int, default=32)
     parser.add_argument(
         "--reward-objective", choices=("legacy", "finite-energy-v1"), default="legacy"
     )
@@ -768,6 +918,7 @@ def restore_checkpoint(
     reward_objective: Any | None, training_profile: Any | None = None,
     physical_backend: str = "fast", allow_physical_backend_transition: bool = False,
     target_std_profile: str = "global-v1",
+    target_context_profile: str = "reservoir-v1",
     curriculum_start_stage: int = 0,
 ) -> tuple[AffordanceCohort, PredictivePPOTrainer, MacroRollout, int, int, np.ndarray, np.ndarray]:
     with gzip.open(path, "rt", encoding="utf-8") as handle:
@@ -835,16 +986,10 @@ def restore_checkpoint(
         learner_path, device=brain.device,
         expected_sha256=state["learner"]["sha256"],
     )
-    if (
-        trainer.config.std_profile == "global-v1"
-        and target_std_profile == "state-conditioned-v2"
-    ):
-        trainer, _ = PredictivePPOTrainer.upgrade_state_conditioned(
-            learner_path, device=brain.device,
-            expected_sha256=state["learner"]["sha256"],
-        )
     if trainer.config.std_profile != target_std_profile:
-        raise ValueError("checkpoint learner variance architecture differs")
+        raise ValueError("exact resume cannot change learner variance architecture")
+    if trainer.config.context_profile != target_context_profile:
+        raise ValueError("exact resume cannot change working-context architecture")
     if trainer.resident_ids != cohort.resident_ids:
         raise ValueError("checkpoint learner residents differ")
     rollout = MacroRollout()
@@ -969,12 +1114,49 @@ def evaluate(
     }
 
 
+def persisted_evaluation(
+    output: Path, name: str, identity: Mapping[str, Any],
+    brain: RemoteBrain, ports: NeuralPortBundle, genome: Path,
+    moments: RunningMoments, **kwargs: Any,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Run once and atomically retain a completed held-out condition."""
+    if not name or any(character not in "abcdefghijklmnopqrstuvwxyz0123456789_" for character in name):
+        raise ValueError("evaluation condition name is unsafe")
+    expected = copy.deepcopy(dict(identity))
+    path = output / "evaluations" / f"{name}.json"
+    if path.exists():
+        receipt = json.loads(path.read_text())
+        if (
+            receipt.get("format") != "chreatures-affordance-evaluation-v1"
+            or receipt.get("version") != 1
+            or receipt.get("name") != name
+            or receipt.get("identity") != expected
+            or not isinstance(receipt.get("result"), dict)
+        ):
+            raise ValueError(f"persisted evaluation identity differs: {name}")
+        return copy.deepcopy(receipt["result"]), {
+            "path": str(path), "bytes": path.stat().st_size,
+            "sha256": sha256(path), "reused": True,
+        }
+    result = evaluate(brain, ports, genome, moments, **kwargs)
+    artifact = {
+        "format": "chreatures-affordance-evaluation-v1", "version": 1,
+        "name": name, "completed_unix": time.time(),
+        "identity": expected, "result": result,
+    }
+    receipt = atomic_json(path, artifact)
+    receipt["reused"] = False
+    return result, receipt
+
+
 def main() -> int:
     args = arguments()
     if not 1 <= args.worlds <= 16 or not 1 <= args.eval_worlds <= args.worlds:
         raise SystemExit("world counts must satisfy 1 <= eval <= train <= 16")
     if args.steps % args.macro_steps or args.episode_steps % args.macro_steps or args.eval_steps % args.macro_steps:
         raise SystemExit("step counts must be divisible by macro steps")
+    if args.sequence_length < 2:
+        raise SystemExit("--sequence-length must be at least 2")
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=True)
     if args.resume and args.warm_start_learner:
@@ -1076,6 +1258,7 @@ def main() -> int:
     config = PredictivePPOConfig(
         feature_dim=len(ports.readout_names), macro_steps=args.macro_steps,
         seed=args.seed, std_profile=args.std_profile,
+        context_profile=args.context_profile, sequence_length=args.sequence_length,
     )
     reward_objective = None
     if args.reward_objective == "finite-energy-v1":
@@ -1106,13 +1289,18 @@ def main() -> int:
     ] + [Path(__file__).resolve(), HABITAT, ROOT / "data/bodies/hexapod.json",
          ROOT / "data/ports/retinal-v1.json"]
     warm_source_std_profile = None
+    warm_source_context_profile = None
     if args.warm_start_learner:
         warm_value = torch.load(
             args.warm_start_learner.resolve(), map_location="cpu", weights_only=False
         )
         warm_source_std_profile = warm_value.get("config", {}).get("std_profile", "global-v1")
+        warm_source_context_profile = warm_value.get("config", {}).get(
+            "context_profile", "reservoir-v1"
+        )
         del warm_value
     resume_source_std_profile = None
+    resume_source_context_profile = None
     if args.resume:
         with gzip.open(args.resume.resolve(), "rt", encoding="utf-8") as handle:
             resume_state = json.load(handle)
@@ -1122,6 +1310,9 @@ def main() -> int:
         resume_value = torch.load(learner_path, map_location="cpu", weights_only=False)
         resume_source_std_profile = resume_value.get("config", {}).get(
             "std_profile", "global-v1"
+        )
+        resume_source_context_profile = resume_value.get("config", {}).get(
+            "context_profile", "reservoir-v1"
         )
         del resume_value
     run_record = {
@@ -1143,6 +1334,13 @@ def main() -> int:
         },
         "port_bundle_sha256": sha256(args.port_bundle),
         "source_sha256": {str(path.relative_to(ROOT)): sha256(path) for path in source_paths},
+        "libraries": {
+            "python": sys.version.split()[0],
+            "python_soabi": sysconfig.get_config_var("SOABI"),
+            "numpy": np.__version__,
+            "torch": torch.__version__, "torch_hip": torch.version.hip,
+            "triton": package_version("triton"),
+        },
         "torch": {"version": torch.__version__, "hip": torch.version.hip},
         "device": brain.metadata()["device"],
         "native_world_kernels": (
@@ -1153,9 +1351,13 @@ def main() -> int:
         "warm_start": (
             {"path": str(args.warm_start_learner.resolve()),
              "sha256": sha256(args.warm_start_learner.resolve()),
-             "semantics": "shared model, optimizer and normalization only; new private cohort",
+             "semantics": "shared model and normalization only; new private cohort",
              "source_std_profile": warm_source_std_profile,
              "target_std_profile": args.std_profile,
+             "source_context_profile": warm_source_context_profile,
+             "target_context_profile": args.context_profile,
+             "optimizer": "fresh for every target-architecture parameter",
+             "private_context": "reset",
              "variance_upgrade": (
                  "global-v1 to zero-offset state-conditioned-v2"
                  if warm_source_std_profile == "global-v1"
@@ -1165,33 +1367,34 @@ def main() -> int:
         ),
         "resume": (
             {"path": str(args.resume.resolve()), "sha256": sha256(args.resume.resolve()),
+             "source_std_profile": resume_source_std_profile,
+             "target_std_profile": args.std_profile,
+             "source_context_profile": resume_source_context_profile,
+             "target_context_profile": args.context_profile,
              "semantics": (
                  "neural, physical, learner, optimizer and private-state restore; "
                  "legacy pending rollout explicitly discarded"
                  if args.resume_drops_pending_rollout else
-                 (
-                     "exact neural, physical, private-state and pending-rollout restore; "
-                    "zero-offset state-conditioned variance upgrade preserves old log probabilities"
-                    if resume_source_std_profile == "global-v1"
-                    and args.std_profile == "state-conditioned-v2" else
-                    "exact neural, physical, learner, optimizer, private-state and rollout restore"
-                 )
+                 "exact neural, physical, learner, optimizer, private-state and rollout restore"
              ),
              "training_discontinuity": bool(args.resume_drops_pending_rollout)}
             if args.resume else None
         ),
         "architecture_transition": (
             {
-                "from": "global-v1", "to": "state-conditioned-v2",
-                "initial_offset": "exact zero",
-                "old_log_prob_compatibility": "exact at transition",
-                "optimizer": "all inherited moments retained; new head moments zero",
+                "source_std_profile": warm_source_std_profile,
+                "target_std_profile": args.std_profile,
+                "source_context_profile": warm_source_context_profile,
+                "target_context_profile": args.context_profile,
+                "semantics": "fresh descendant model inheritance; no private state",
+                "optimizer": "fresh",
             }
-            if args.resume and resume_source_std_profile == "global-v1"
-            and args.std_profile == "state-conditioned-v2" else None
+            if args.warm_start_learner and (
+                warm_source_std_profile != args.std_profile
+                or warm_source_context_profile != args.context_profile
+            ) else None
         ),
     }
-    (args.output / "run.json").write_text(json.dumps(run_record, indent=2, sort_keys=True) + "\n")
     initial_genome = args.output / "initial-genome.npz"
     if args.resume:
         cohort, trainer, rollout, step, episode_step, raw, physiology = restore_checkpoint(
@@ -1199,6 +1402,7 @@ def main() -> int:
             training_profile, args.physical_backend,
             args.allow_physical_backend_transition,
             args.std_profile,
+            args.context_profile,
             args.curriculum_start_stage,
         )
         if cohort.world_count != args.worlds or trainer.config != config:
@@ -1207,9 +1411,6 @@ def main() -> int:
             raise SystemExit("resume run is missing its fixed initial genome")
         normalized = trainer.normalize(raw, update=False)
         neural = []
-        architecture_comparison = args.output / "architecture-comparison-genome.npz"
-        if args.std_profile == "state-conditioned-v2" and not architecture_comparison.exists():
-            trainer.export_genome(architecture_comparison)
         if args.restore_audit_only:
             receipt = {
                 "format": "chreatures-affordance-restore-audit-v1",
@@ -1252,17 +1453,14 @@ def main() -> int:
                     args.warm_start_learner.resolve(), device=args.device,
                     expected_sha256=sha256(args.warm_start_learner.resolve()),
                 )
-            if inherited.config != config or inherited.resident_ids != cohort.resident_ids:
-                cohort.close()
-                raise SystemExit("warm-start learner configuration or cohort identities differ")
-            trainer = inherited
+            trainer.inherit_model(inherited)
             trainer.reset_private_state()
             comparison_genome = args.output / "inherited-comparison-genome.npz"
             trainer.export_genome(comparison_genome)
             comparison_scope = (
-                "inherited policy after exact zero-offset state-conditioned variance upgrade"
-                if config.std_profile == "state-conditioned-v2" else
-                "inherited policy before this reward-version stage"
+                "initial gated descendant after declared shared-model inheritance"
+                if config.context_profile == "gated-v1" else
+                "initial descendant after declared shared-model inheritance"
             )
         raw, physiology, neural = cohort.observe(0.05)
         normalized = trainer.normalize(raw, update=True)
@@ -1288,6 +1486,14 @@ def main() -> int:
             raise SystemExit("explicit comparison genome does not exist")
         comparison_scope = "explicit immutable transferred-policy comparison"
     process_start_step = step
+    if step > args.steps:
+        cohort.close()
+        raise SystemExit("resume checkpoint is beyond requested --steps")
+    evaluation_only_resume = bool(args.resume and step == args.steps)
+    run_record_path = args.output / (
+        "evaluation-resume.json" if evaluation_only_resume else "run.json"
+    )
+    atomic_json(run_record_path, run_record)
     started = time.perf_counter()
     stop = False
     def request_stop(_signum, _frame):
@@ -1295,7 +1501,10 @@ def main() -> int:
         stop = True
     signal.signal(signal.SIGINT, request_stop)
     signal.signal(signal.SIGTERM, request_stop)
-    updates, macro_rows, checkpoints = [], [], []
+    updates, macro_rows = [], []
+    checkpoints = (
+        [existing_checkpoint_receipt(args.resume)] if evaluation_only_resume else []
+    )
     training_totals = {
         name: 0.0 for name in (
             "nutrition", "nutrition_events", "absorbed", "ingested_mass",
@@ -1449,15 +1658,24 @@ def main() -> int:
         cohort.close()
         return 130
     learned_genome = args.output / "learned-genome.npz"
-    learned_receipt = trainer.export_genome(learned_genome)
+    learned_receipt = (
+        existing_genome_receipt(learned_genome, trainer)
+        if evaluation_only_resume and learned_genome.is_file()
+        else trainer.export_genome(learned_genome)
+    )
     if not checkpoints or checkpoints[-1]["step"] != step:
         checkpoints.append(save_checkpoint(
             args.output, cohort, trainer, rollout, step, episode_step, raw, physiology
         ))
 
-    training_elapsed = time.perf_counter() - started
-    training_timings = cohort.timings.copy()
-    training_timings.update({"algorithm": algorithm_seconds, "ppo": ppo_seconds})
+    if evaluation_only_resume:
+        completed_training = completed_training_receipt(args.output, step)
+        training_elapsed = completed_training["elapsed_seconds"]
+        training_timings = completed_training["timing_cumulative_seconds"]
+    else:
+        training_elapsed = time.perf_counter() - started
+        training_timings = cohort.timings.copy()
+        training_timings.update({"algorithm": algorithm_seconds, "ppo": ppo_seconds})
     training_terminal_outcomes = copy.deepcopy(cohort.terminal_outcomes)
     if cohort.episode_steps_advanced:
         training_terminal_outcomes.append({
@@ -1476,28 +1694,85 @@ def main() -> int:
         "curriculum_start_stage": 2,
         "std_profile": args.std_profile,
     }
-    evaluations = {
-        "fixed_comparison": evaluate(
-            brain, ports, comparison_genome, trainer.moments,
-            silence_features=False, **evaluation_common,
+    brain_identity = stable_brain_identity(brain.metadata())
+    evaluation_base_identity = {
+        "graph_sha256": graph.hash,
+        "port_spec_sha256": ports.spec_hash,
+        "port_bundle_sha256": sha256(args.port_bundle),
+        "training_profile_sha256": (
+            training_profile.sha256 if training_profile is not None else None
         ),
-        "learned": evaluate(
-            brain, ports, learned_genome, trainer.moments,
-            silence_features=False, **evaluation_common,
-        ),
-        "learned_neural_silenced": evaluate(
-            brain, ports, learned_genome, trainer.moments,
-            silence_features=True, **evaluation_common,
-        ),
+        "reward_objective_sha256": canonical_sha256(run_record["reward_objective"]),
+        "normalizer_sha256": canonical_sha256(trainer.moments.snapshot()),
+        "source_sha256": copy.deepcopy(run_record["source_sha256"]),
+        "training_checkpoint": stable_checkpoint_identity(checkpoints[-1]),
+        "training_step": step,
+        "learner_architecture": {
+            "std_profile": trainer.config.std_profile,
+            "config": asdict(trainer.config),
+        },
+        "neural": {
+            "requested_backend": args.brain_backend,
+            "microbatch_size": (
+                args.microbatch_size if args.brain_backend == "microbatch" else None
+            ),
+            **brain_identity,
+        },
+        "runtime": {
+            "libraries": copy.deepcopy(run_record["libraries"]),
+            "native_world_kernels": stable_native_identity(
+                run_record["native_world_kernels"]
+            ),
+            "hsa_override_gfx_version": os.environ.get("HSA_OVERRIDE_GFX_VERSION"),
+        },
+        "evaluation": {
+            "worlds": args.eval_worlds, "physical_steps": args.eval_steps,
+            "macro_steps": args.macro_steps, "seed": args.seed + 900_000,
+            "curriculum_stage": 2, "held_out": True,
+            "deterministic_policy": True,
+            "physical_backend": args.physical_backend,
+        },
     }
+    evaluations: dict[str, Any] = {}
+    evaluation_receipts: dict[str, Any] = {}
+
+    def run_evaluation_condition(
+        name: str, genome: Path, *, silence_features: bool,
+        ingestion_enabled: bool = True,
+    ) -> None:
+        identity = copy.deepcopy(evaluation_base_identity)
+        identity.update({
+            "condition": {
+                "name": name, "silence_neural_features": silence_features,
+                "ingestion_enabled": ingestion_enabled,
+            },
+            "policy_genome_sha256": sha256(genome),
+        })
+        result, receipt = persisted_evaluation(
+            args.output, name, identity, brain, ports, genome, trainer.moments,
+            silence_features=silence_features,
+            ingestion_enabled=ingestion_enabled,
+            **evaluation_common,
+        )
+        evaluations[name] = result
+        evaluation_receipts[name] = receipt
+
+    run_evaluation_condition(
+        "fixed_comparison", comparison_genome, silence_features=False,
+    )
+    run_evaluation_condition("learned", learned_genome, silence_features=False)
+    run_evaluation_condition(
+        "learned_neural_silenced", learned_genome, silence_features=True,
+    )
     if training_profile is not None and int(training_profile.component("version")) in (3, 4):
-        evaluations["fixed_comparison_ingestion_disabled"] = evaluate(
-            brain, ports, comparison_genome, trainer.moments,
-            silence_features=False, ingestion_enabled=False, **evaluation_common,
+        run_evaluation_condition(
+            "fixed_comparison_ingestion_disabled", comparison_genome,
+            silence_features=False, ingestion_enabled=False,
         )
     summary = {
         "format": "chreatures-affordance-learning-v1",
         "completed": True, "steps": step,
+        "evaluation_only_resume": evaluation_only_resume,
         "process_start_step": process_start_step,
         "steps_advanced": step - process_start_step,
         "resident_steps_advanced": (step - process_start_step) * args.worlds * 3,
@@ -1510,6 +1785,7 @@ def main() -> int:
         "config": vars(args) | {"graph": str(args.graph), "port_bundle": str(args.port_bundle), "output": str(args.output), "resume": str(args.resume) if args.resume else None},
         "learner": asdict(config), "learner_update_count": trainer.update_count,
         "updates_this_process": updates, "evaluations": evaluations,
+        "evaluation_receipts": evaluation_receipts,
         "comparison_policy": {"scope": comparison_scope, "path": str(comparison_genome),
                               "sha256": sha256(comparison_genome)},
         "checkpoints": checkpoints, "initial_genome_sha256": hashlib.sha256(initial_genome.read_bytes()).hexdigest(),

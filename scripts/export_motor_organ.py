@@ -18,7 +18,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from chreatures.motor_inheritance import (
-    ACTIONS, ARTIFACT_FORMAT, ARTIFACT_FORMAT_V2, artifact_identity,
+    ACTIONS, ARTIFACT_FORMAT, ARTIFACT_FORMAT_V2, ARTIFACT_FORMAT_V3,
+    artifact_identity,
 )
 
 
@@ -211,10 +212,22 @@ def main() -> int:
         },
         "heldout_evaluation": evaluation,
     }
-    artifact_version = 2 if trainer.config.std_profile == "state-conditioned-v2" else 1
+    context_profile = getattr(trainer.config, "context_profile", "reservoir-v1")
+    if context_profile == "gated-v1":
+        artifact_version = 3
+        artifact_format = ARTIFACT_FORMAT_V3
+        architecture = "gated-v1"
+    elif trainer.config.std_profile == "state-conditioned-v2":
+        artifact_version = 2
+        artifact_format = ARTIFACT_FORMAT_V2
+        architecture = trainer.config.std_profile
+    else:
+        artifact_version = 1
+        artifact_format = ARTIFACT_FORMAT
+        architecture = trainer.config.std_profile
     metadata = {
-        "format": ARTIFACT_FORMAT_V2 if artifact_version == 2 else ARTIFACT_FORMAT,
-        "version": artifact_version, "architecture": trainer.config.std_profile,
+        "format": artifact_format,
+        "version": artifact_version, "architecture": architecture,
         "actions": list(ACTIONS),
         "config": asdict(trainer.config), "updates": trainer.update_count,
         "decisions": trainer.decision_count,
