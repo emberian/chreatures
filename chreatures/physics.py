@@ -23,6 +23,7 @@ import mujoco
 import numpy as np
 
 from .mechanics import assembly_view, equality_xml, normalize_assemblies
+from .native_world import NativeContactBatch
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -165,6 +166,7 @@ class PhysicsWorld:
         self._acoustics: Any | None = None
         self._light = {"position": [6.0, 4.0, 3.0], "intensity": 0.0, "remaining": 0.0, "color": [1.0, 0.94, 0.78]}
         self._compile_model()
+        self._native_contacts = NativeContactBatch(max(256, int(self.model.nconmax)))
         self.bodies = self._make_bodies()
         self._components = {
             entity["id"]: copy.deepcopy(entity.get("components", [])) for entity in self._entities
@@ -1264,44 +1266,28 @@ class PhysicsWorld:
         self.data.xfrc_applied[mj_body, :3] += force
 
     def _collect_contacts(self, contacted_entities: dict[str, set[str]]) -> None:
+        (
+            first_ids, second_ids, points, normals, relative_speeds, impulses, impact_work,
+            contact_force_norm,
+        ) = self._native_contacts.evaluate(
+            self.model, self.data, self.model.opt.timestep,
+            float(self.spec.get("limits", {}).get("acoustic_impulse", 10.0)),
+            float(self.spec.get("limits", {}).get("acoustic_work", 5.0)),
+        )
         for index in range(self.data.ncon):
-            contact = self.data.contact[index]
-            first, second = int(contact.geom1), int(contact.geom2)
-            world_normal = np.asarray(contact.frame[:3], dtype=float)
+            first, second = int(first_ids[index]), int(second_ids[index])
+            point = points[index]
+            world_normal = normals[index]
             if self._acoustics is not None:
-                force = np.zeros(6, dtype=float)
-                mujoco.mj_contactForce(self.model, self.data, index, force)
-                point = np.asarray(contact.pos, dtype=float)
-                velocities = []
-                for geom_id in (first, second):
-                    body_id = int(self.model.geom_bodyid[geom_id])
-                    linear, angular = self._velocity(body_id)
-                    radius = point - self.data.xpos[body_id]
-                    # This is the fixed three-vector form of
-                    # ``linear + np.cross(angular, radius)``. Avoid NumPy's
-                    # general N-D axis normalization in this per-contact path.
-                    velocities.append(linear + np.asarray([
-                        angular[1] * radius[2] - angular[2] * radius[1],
-                        angular[2] * radius[0] - angular[0] * radius[2],
-                        angular[0] * radius[1] - angular[1] * radius[0],
-                    ]))
-                relative_speed = abs(float(np.dot(velocities[1] - velocities[0], world_normal)))
-                impulse = min(
-                    float(self.spec.get("limits", {}).get("acoustic_impulse", 10.0)),
-                    abs(float(force[0])) * float(self.model.opt.timestep),
-                )
-                impact_work = min(
-                    float(self.spec.get("limits", {}).get("acoustic_work", 5.0)),
-                    0.5 * impulse * relative_speed,
-                )
                 for entity_id in {
                     value for value in (self._geom_entity.get(first), self._geom_entity.get(second))
                     if value is not None
                 }:
                     self._acoustics.ingest_contact({
                         "entity": entity_id, "position": point.astype(float).tolist(),
-                        "normal_impulse": impulse, "relative_normal_speed": relative_speed,
-                        "impact_work": impact_work,
+                        "normal_impulse": float(impulses[index]),
+                        "relative_normal_speed": float(relative_speeds[index]),
+                        "impact_work": float(impact_work[index]),
                     })
             participants: list[tuple[str, int, np.ndarray]] = []
             if first in self._geom_resident:
@@ -1314,14 +1300,11 @@ class PhysicsWorld:
                     contacted_entities[resident_id].add(entity_id)
                 body = self._body(resident_id)
                 mj_body = self._body_mj[resident_id]
-                point = np.asarray(contact.pos, dtype=float)
                 # Ground-like support is used for traction but excluded from the
                 # bilateral obstacle touch channel.
                 if abs(float(normal[2])) > 0.72 and point[2] < body.z:
                     continue
-                force = np.zeros(6, dtype=float)
-                mujoco.mj_contactForce(self.model, self.data, index, force)
-                strength = min(1.0, 0.18 + float(np.linalg.norm(force[:3])) / 3.0)
+                strength = min(1.0, 0.18 + float(contact_force_norm[index]) / 3.0)
                 rotation = self.data.xmat[mj_body].reshape(3, 3)
                 delta = point - self.data.xpos[mj_body]
                 side = 1 if float(np.dot(delta, rotation[:, 1])) >= 0 else 0

@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from types import MethodType
 
 import mujoco
 import numpy as np
@@ -7,11 +8,15 @@ import numpy as np
 from chreatures.acoustics import Acoustics
 from chreatures.ecology import Ecology
 from chreatures.fields import FieldEnvironment
-from chreatures.physical_batch import FastArticulatedSensoriumWorld
+from chreatures.physical_batch import (
+    FastArticulatedSensoriumWorld,
+)
+from chreatures.physics import PhysicsWorld
 from chreatures.sensorium import ArticulatedSensoriumWorld
 from chreatures.training_environment import (
     EmbodiedTrainingProfile, EmbodiedTrainingWorld, embodied_training_spec,
 )
+from tests._reference_contacts import collect_contacts as reference_collect_contacts
 
 
 ROOT = Path(__file__).parents[1]
@@ -160,3 +165,48 @@ def test_embodied_training_world_fast_backend_is_exact_across_restore():
     assert {body.id: reference_restored.sense(body.id) for body in reference_restored.bodies} == {
         body.id: fast_restored.sense(body.id) for body in fast_restored.bodies
     }
+
+
+def test_native_contact_batch_preserves_full_acoustic_world_state():
+    reference = _stack(FastArticulatedSensoriumWorld)
+    native = _stack(FastArticulatedSensoriumWorld)
+    reference[0]._collect_contacts = MethodType(reference_collect_contacts, reference[0])
+
+    for index in range(12):
+        assert _step(reference, index) == _step(native, index)
+        _assert_parity(reference, native)
+
+    assert native[0].data.ncon > 0
+
+
+def test_native_contact_batch_preserves_generic_nonacoustic_world_state():
+    reference = PhysicsWorld(seed=271)
+    native = PhysicsWorld(seed=271)
+    reference._collect_contacts = MethodType(reference_collect_contacts, reference)
+    for index in range(8):
+        actions = {
+            body.id: {"forward": float(np.sin(index * 0.2)), "turn": -0.35}
+            for body in reference.bodies
+        }
+        assert reference.advance(actions, 0.05) == native.advance(actions, 0.05)
+        np.testing.assert_array_equal(reference.data.qpos, native.data.qpos)
+        np.testing.assert_array_equal(reference.data.qvel, native.data.qvel)
+        assert {body.id: reference.sense(body.id) for body in reference.bodies} == {
+            body.id: native.sense(body.id) for body in native.bodies
+        }
+
+
+def test_native_contact_batch_empty_shapes_are_stable():
+    spec = json.loads((ROOT / "data/habitats/hollow-garden.json").read_text())
+    spec["gravity"] = [0.0, 0.0, 0.0]
+    spec["entities"] = [entity for entity in spec["entities"] if entity["id"] == "ground"]
+    for index, body in enumerate(spec["bodies"]):
+        body["position"] = [1.0 + index * 2.0, 1.0, 2.0]
+    world = PhysicsWorld(seed=272, spec=spec)
+    assert world.data.ncon == 0
+    arrays = world._native_contacts.evaluate(
+        world.model, world.data, world.model.opt.timestep, 10.0, 5.0
+    )
+    assert tuple(value.shape for value in arrays) == (
+        (0,), (0,), (0, 3), (0, 3), (0,), (0,), (0,), (0,),
+    )

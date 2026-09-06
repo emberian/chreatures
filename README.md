@@ -46,7 +46,7 @@ This compact **2D reference uses a female FlyWire v783 subset of 6,789 neurons**
 
 The full graph is downloaded separately; large arrays and checkpoints do not belong in Git. The neural service can use PyTorch on AMD or the local Rust/Metal backend on Apple Silicon. The habitat/browser can run separately from it.
 
-1. Follow [MaleCNS acquisition](docs/MALECNS.md), then choose the [persistent accelerator service](docs/REMOTE_BRAIN.md) or the [local Apple Metal backend](docs/METAL_BRAIN.md). Both use the [rich retinal port setup](docs/NEURAL_PORTS.md).
+1. Build the required [native world kernels](native/world-kernels/README.md) with `uv run python native/world-kernels/build_extension.py`. Then follow [MaleCNS acquisition](docs/MALECNS.md) and choose the [persistent accelerator service](docs/REMOTE_BRAIN.md) or the [local Apple Metal backend](docs/METAL_BRAIN.md). Both use the [rich retinal port setup](docs/NEURAL_PORTS.md).
 2. Reach that service over localhost or an SSH forward, then run:
 
 ```sh
@@ -103,7 +103,11 @@ For a fresh terrarium, use the terrarium habitat/resource/acoustic JSON files an
 
 We are building with parallel agents and human direction. Working commits are intentionally frequent. The priorities are physical possibilities, consequential personal learning, credible biological contribution and a world worth spending time in.
 
-Python currently connects the scientific ecosystem; MuJoCo and PyTorch do the heavy numerical work. Rust is present through GAM, the Weave adapter and the [local Metal full-graph backend](docs/METAL_BRAIN.md). A complete three-resident request, including 351 sensory inputs and 384 readouts, measured 9.55 ms with its SIMD kernel on an M2 Max. The active terrarium now uses that kernel and vectorized physical execution after an explicit checkpoint migration that preserved every neural state byte. Saved numerical backends and the complete Metal data artifact are authenticated. We choose implementation languages by the work they improve.
+The implementation direction is a Rust simulation core with batched native interfaces, with Python for training and research integration. MuJoCo supplies native physics, and the [world kernels](native/world-kernels/README.md) process contacts and conservative chemical transport. Rust also runs GAM, the Weave adapter and the [local Metal full-graph backend](docs/METAL_BRAIN.md). A complete three-resident request measured 9.55 ms with its Metal SIMD kernel on an M2 Max; the AMD development backend uses tiled full-graph kernels. Existing live processes adopt new numerical execution only at a recorded checkpoint boundary.
+
+We retain one current implementation of each mechanism. Superseded production code belongs in Git history or a pinned release; older snapshots receive a one-way data migration where practical. Independent numerical reference equations may remain in research probes. The `pre-native-world-20260905` tag preserves the previous world engine.
+
+A separate [trainable recurrent predictive-state organ](docs/PREDICTIVE_STATE.md) learns multi-step sensory consequences from actual action histories and exports weights for native inference. It has run on a short real rollout; long-history training and policy integration remain work in progress. An auxiliary prediction loss alone is not a planning capability.
 
 Useful contributions include better embodied learning, controllable bodies, combinable physical environments, grounded perception, memory mechanisms and experiments that distinguish the proposed explanation from a simpler one. An LLM may become a bounded perceptual or semantic organ; it should not silently supply all behavior while the rest of the organism is decorative.
 

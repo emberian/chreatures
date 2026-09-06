@@ -75,8 +75,8 @@ class FieldEnvironment:
     Concentration units are mass per cubic meter.
     """
 
-    VERSION = 2
-    LEGACY_VERSION = 1
+    VERSION = 3
+    TRANSPORT = "rust-face-v1"
 
     def __init__(
         self,
@@ -123,8 +123,7 @@ class FieldEnvironment:
         self.time = 0.0
         self.rng = np.random.default_rng(int(self.config["seed"]))
         self._source_positions: dict[str, list[float]] = {}
-        # Kept absent for legacy fields so their transport arithmetic and
-        # snapshot payload remain exactly version 1.
+        # Worlds without moving membranes allocate no barrier raster.
         self._dynamic_barriers: DynamicFaceBarriers | None = None
         self.last_sources: list[dict[str, Any]] = []
         self.last_sinks: list[dict[str, Any]] = []
@@ -138,6 +137,16 @@ class FieldEnvironment:
             "last_cfl": 0.0,
         }
         self._apply_permeability_zones(self.config.get("permeability_zones", []))
+        try:
+            from _world_kernels import TransportSolver
+        except ImportError as exc:
+            raise RuntimeError(
+                "3D fields require the native world kernels: run "
+                "python native/world-kernels/build_extension.py with this interpreter"
+            ) from exc
+        self._native_transport = TransportSolver(
+            self.shape_xyz, len(self.channels), self.spacing.tolist(), self.diffusion.tolist()
+        )
 
     @classmethod
     def from_world(cls, world: Any, config: dict[str, Any] | None = None) -> "FieldEnvironment":
@@ -165,8 +174,8 @@ class FieldEnvironment:
     def sync_dynamic_barriers(self, barriers: Any) -> bool:
         """Synchronize declared membrane poses at a physical step boundary.
 
-        Empty input on a legacy field is a constant-time no-op. Once a field
-        has version-2 barrier topology, that topology cannot change in place.
+        Empty input without membranes is a constant-time no-op. Once a field
+        has barrier topology, that topology cannot change in place.
         """
         if isinstance(barriers, tuple):
             if barriers:
@@ -482,46 +491,10 @@ class FieldEnvironment:
         }
 
     def _transport(self, dt: float, flow: np.ndarray) -> None:
-        current = self.concentration
-        change = np.zeros_like(current)
-        # concentration axes are channel,z,y,x. Flow components are x,y,z.
-        for flow_component, axis, spacing in ((0, 3, self.dx), (1, 2, self.dy), (2, 1, self.dz)):
-            left_slice = [slice(None)] * 4
-            right_slice = [slice(None)] * 4
-            left_slice[axis] = slice(None, -1)
-            right_slice[axis] = slice(1, None)
-            left_slice = tuple(left_slice)
-            right_slice = tuple(right_slice)
-            scalar_axis = axis - 1
-            p_left = [slice(None)] * 3
-            p_right = [slice(None)] * 3
-            p_left[scalar_axis] = slice(None, -1)
-            p_right[scalar_axis] = slice(1, None)
-            p_left = tuple(p_left)
-            p_right = tuple(p_right)
-            face_permeability = np.minimum(self.permeability[p_left], self.permeability[p_right])
-            face_permeability *= (~self.solid[p_left]) & (~self.solid[p_right])
-            if self._dynamic_barriers is not None:
-                face_permeability *= self._dynamic_barriers.faces[flow_component]
-            left = current[left_slice]
-            right = current[right_slice]
-            diffusive_rate = (
-                self.diffusion[:, None, None, None]
-                * face_permeability[None, ...]
-                * (left - right)
-                / (spacing * spacing)
-            )
-            face_velocity = 0.5 * (flow[flow_component][p_left] + flow[flow_component][p_right])
-            upwind = np.where(face_velocity[None, ...] >= 0.0, left, right)
-            advective_rate = face_permeability[None, ...] * face_velocity[None, ...] * upwind / spacing
-            net_to_right = diffusive_rate + advective_rate
-            change[left_slice] -= net_to_right
-            change[right_slice] += net_to_right
-        self.concentration += dt * change
-        minimum = float(np.min(self.concentration, initial=0.0))
-        if minimum < -1e-10:
-            raise FloatingPointError(f"negative concentration {minimum:g}; CFL guard was insufficient")
-        np.maximum(self.concentration, 0.0, out=self.concentration)
+        self._native_transport.step(
+            dt, self.concentration, flow, self.permeability, self.solid,
+            None if self._dynamic_barriers is None else tuple(self._dynamic_barriers.faces),
+        )
 
     def _kernel(self, position: np.ndarray, spread: float) -> tuple[tuple[np.ndarray, np.ndarray, np.ndarray], np.ndarray]:
         if spread <= 0.0:
@@ -673,7 +646,8 @@ class FieldEnvironment:
 
     def snapshot(self) -> dict[str, Any]:
         snapshot = {
-            "version": self.LEGACY_VERSION if self._dynamic_barriers is None else self.VERSION,
+            "version": self.VERSION,
+            "transport": self.TRANSPORT,
             "size": self.size.tolist(),
             "config": copy.deepcopy(self.config),
             "time": self.time,
@@ -693,9 +667,17 @@ class FieldEnvironment:
 
     @classmethod
     def restore(cls, snapshot: dict[str, Any]) -> "FieldEnvironment":
-        if not isinstance(snapshot, dict) or snapshot.get("version") not in {cls.LEGACY_VERSION, cls.VERSION}:
+        if not isinstance(snapshot, dict) or snapshot.get("version") not in {1, 2, cls.VERSION}:
             raise ValueError("unsupported field snapshot")
-        version = snapshot["version"]
+        # One-way data import, not an older execution engine. The archived
+        # NumPy face equation matches the current Rust kernel bit for bit in
+        # the independent transport and composed-field probes.
+        if snapshot["version"] in {1, 2}:
+            if snapshot["version"] == 2 and "dynamic_barriers" not in snapshot:
+                raise ValueError("version 2 field snapshot requires dynamic barriers")
+            snapshot = {**snapshot, "version": cls.VERSION, "transport": cls.TRANSPORT}
+        if snapshot.get("transport") != cls.TRANSPORT:
+            raise ValueError("field snapshot transport implementation differs")
         environment = cls(
             size=snapshot["size"],
             config=snapshot["config"],
@@ -729,9 +711,7 @@ class FieldEnvironment:
             environment.rng.bit_generator.state = copy.deepcopy(snapshot["rng_state"])
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError("invalid field RNG state") from exc
-        if version == cls.VERSION:
-            if "dynamic_barriers" not in snapshot:
-                raise ValueError("version 2 field snapshot requires dynamic barriers")
+        if "dynamic_barriers" in snapshot:
             environment._dynamic_barriers = DynamicFaceBarriers.restore(
                 environment.size, environment.shape_xyz, snapshot["dynamic_barriers"],
             )

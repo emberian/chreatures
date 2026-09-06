@@ -182,11 +182,22 @@ array shapes, finiteness, nonnegative concentration, and RNG compatibility.
 The arrays use float64 so a same-runtime continuation preserves both transport
 state and mass accounting exactly.
 
-Fields without declared moving membranes retain the original version-1
-snapshot payload and arithmetic path. A field with membranes writes version 2,
-including the normalized barrier topology, last synchronized poses, exact face
-factors, and raster update count. Restore verifies that saved factors are the
-ones implied by the saved poses before accepting them.
+Current fields use the Rust finite-volume kernel and write version-3 snapshots
+with the `rust-face-v1` transport identity. Older version-1/2 snapshots are
+imported as data into this one current engine. The old NumPy equation is retained
+only in `scripts/probe_native_transport.py` as an independent reference. Fields
+with membranes also save normalized topology, synchronized poses, exact face
+factors, and raster update count. Restore verifies those factors against the
+saved poses.
+
+Build the required extension with the same interpreter used for the world:
+`python native/world-kernels/build_extension.py`. Each field owns reusable Rust
+flux/change buffers, and a single native call processes every channel and face
+in each substep. Sources, sinks and the mass ledger still use the surrounding
+Python/NumPy layer. The migration probe covers random permeability, solids,
+advection, diffusion, moving sources, sinks, membranes, mass conservation and
+exact restored continuation. The native and reference concentration arrays
+matched bit for bit in the executed 48×32×14 three-channel cases.
 
 A focused check operated the chemistry variant with the finite-mass transport
 block. The coupled slide gate moved from `0.000 m` to `0.339 m`. After the same
