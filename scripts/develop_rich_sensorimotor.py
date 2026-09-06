@@ -40,7 +40,12 @@ from research.sensorimotor_skills.rich_online import (
     sample_worker_actions,
 )
 from research.sensorimotor_skills.rich_data import RichNormalizer
-from chreatures.resident_contract import BOOTSTRAP_FORMAT, DEVELOPMENT_FORMAT
+from chreatures.resident_contract import (
+    BOOTSTRAP_FORMAT,
+    DEVELOPMENT_FORMAT,
+    TORCH_POPULATION_PLAN_FORMAT,
+    TORCH_POPULATION_PLAN_VERSION,
+)
 from research.sensorimotor_skills.rich_model import (
     RICH_CHANNEL_NAMES_SHA256,
     RICH_PROFILE_SHA256,
@@ -172,9 +177,8 @@ def load_candidate_plan(args, graph_hash, port_spec_hash, profile_hash, bootstra
     path = args.candidate_genomes.resolve()
     value = json.loads(path.read_text())
     if (
-        value.get("format")
-        != "chreatures-torch-population-training-candidates-v2"
-        or value.get("version") != 2
+        value.get("format") != TORCH_POPULATION_PLAN_FORMAT
+        or value.get("version") != TORCH_POPULATION_PLAN_VERSION
         or value.get("content_sha256")
         != hashlib.sha256(
             canonical_bytes(
@@ -566,7 +570,7 @@ def main() -> int:
         WorldTrainingPool,
         load_training_graph,
     )
-    from chreatures.training_environment import EmbodiedTrainingProfile
+    from chreatures.training_environment import EmbodiedTrainingProfile, PROFILE_VERSION
 
     (
         encoder,
@@ -585,7 +589,7 @@ def main() -> int:
         args.nursery_family_config,
         args.nursery_family_schedule,
     )
-    if int(profile.component("version")) != 6:
+    if int(profile.component("version")) != PROFILE_VERSION:
         raise ValueError("constructed environment profile version differs")
     objective = FiniteEnergyObjective(
         FiniteEnergyConfig.from_value(profile.component("homeostasis"))
@@ -635,7 +639,7 @@ def main() -> int:
         args,
         str(graph.hash),
         ports.spec_hash,
-        profile.to_value()["sha256"],
+        profile.sha256,
         bootstrap_hash,
     )
     count = args.worlds * args.residents_per_world

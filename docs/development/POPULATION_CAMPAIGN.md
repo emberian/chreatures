@@ -9,7 +9,7 @@ parent selection, transfer eligibility, archive cells, and retention remain in
 ## Inputs and initialization
 
 `init` accepts an encoded `EmbodiedTrainingProfile.to_value()` at profile
-version 6 and a file-executed population-v5 controller NPZ. It strictly requires
+version 7 and a file-executed population-v5 controller NPZ. It strictly requires
 format `chreatures-native-developmental-resident-population-v5`, metadata
 version 5, and execution `developmental-resident-native-population-v5`. It
 verifies the profile, every registered native environment record, the controller
@@ -20,9 +20,27 @@ contract: 4,459 observations, 12 physiology fields, and 12 actions. The exact
 encoded profile is copied into the campaign directory. The controller remains
 an external content-addressed file because its bytes can be large.
 
+Profile v7 separates semantic identity from transport location.
+`profile.sha256` authenticates the physical configuration and every source
+asset SHA-256, while `to_value()["locators"]` carries the absolute paths used by
+that host. Rebinding locators through `EmbodiedTrainingProfile.from_value(...,
+locators=...)` requires the exact same logical keys and verifies every relocated
+file before use. Campaign manifests retain the encoded profile file hash and
+source path separately from the semantic profile hash.
+
+The compact relocation receipt at
+`data/training/profile-v7-relocation.receipt.json` records all 37 source hashes,
+the two distinct locator-manifest identities, and the exact regenerated
+environment outputs. Reproduce it without retaining the copied source tree:
+
+```bash
+.venv/bin/python scripts/probe_profile_relocation.py \
+  --expect data/training/profile-v7-relocation.receipt.json
+```
+
 ```bash
 .venv/bin/python scripts/population_campaign.py init \
-  --profile /tank/chreatures/campaign-inputs/profile-v6.json \
+  --profile /tank/chreatures/campaign-inputs/profile-v7.json \
   --controller /tank/chreatures/campaign-inputs/developmental-resident-population-v5.npz \
   --seed 20260917 \
   --output /tank/chreatures/runs/population/wave-001
@@ -92,3 +110,32 @@ retained genomes that have not yet been evaluated in any registered environment
 are assigned once to every environment. Native mutation/recombination fills the
 remaining resident slots. This makes cross-environment direct evaluation precede
 any later fine-tuning eligibility without moving selection into Python.
+
+## Separate Torch training lineage
+
+`build_population_training_plan.py` constructs a matched Torch
+training cohort without asking or modifying the native archive. It authenticates
+the semantic identity of the trainer-generated profile-v7 envelope, the v5
+bootstrap and safe identity receipt, and a
+prior matched-cohort plan whose physical and neural loci are copied exactly.
+Controller/profile bindings are rebased, parents remain empty, and adapter rows
+are balanced across the cohort dimensions carried by those authenticated inputs.
+Profile host locators do not enter candidate or plan identity. The result
+describes an engineered matched research cohort rather than offspring or
+continued individuals.
+
+```bash
+.venv/bin/python scripts/build_population_training_plan.py \
+  --profile /path/to/encoded-profile.json \
+  --bootstrap /path/to/rich-worker-population-v5-cold.pt \
+  --bootstrap-identity /path/to/rich-worker-population-v5-cold.identity.json \
+  --port-bundle /path/to/retinal-v2-maps.npz \
+  --source-plan /path/to/prior-matched-candidates32.json \
+  --source-freeze SOURCE_REVISION \
+  --output /path/to/torch-population-v5-candidates32.json \
+  --receipt /path/to/torch-population-v5-candidates32.receipt.json
+```
+
+Both output paths must be absent. Publication is atomic. The compact receipt
+pins the plan, source plan, recipe, controller, profile, all candidate hashes,
+and adapter-row counts. Private state and optimizer state begin fresh.
