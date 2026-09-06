@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {OrbitControls} from './vendor/three/OrbitControls.js';
+import {habitatView} from './habitat-view.js';
 
 const FORMAT = 'chreatures-living-reef-public-recording-v1';
 const GEOMETRY_ENCODING = 'entity-replacement-delta-v1';
@@ -20,7 +21,7 @@ const ui = {
   physiology: $('#physiology-values'), physiologyContract: $('#physiology-contract'), evidenceLink: $('#recording-evidence-link'),
 };
 
-let renderer, scene, camera, controls, worldRoot, signalPoints, physicalSun, ambientFill;
+let renderer, scene, camera, controls, worldRoot, signalPoints, physicalSun, ambientFill, inspectionLights;
 let recording = null, cursor = 0, playing = false, lastClock = performance.now(), cameraMode = 'orbit';
 let pools = new Map();
 const dummy = new THREE.Object3D(), tint = new THREE.Color(), qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
@@ -92,7 +93,7 @@ function initThree() {
   renderer.toneMappingExposure = 1.08;
   renderer.setClearColor('#10251d');
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2('#10251d', .027);
+  scene.fog = new THREE.FogExp2('#10251d', .008);
   camera = new THREE.PerspectiveCamera(40, 1, .015, 180);
   camera.up.set(0, 0, 1);
   camera.position.set(11, -12, 8);
@@ -104,12 +105,19 @@ function initThree() {
   controls.maxPolarAngle = Math.PI * .51;
   controls.target.set(4, 4, .5);
   ambientFill = new THREE.HemisphereLight('#ddd9bf', '#142c23', 0);
+  ambientFill.position.set(0, 0, 1);
   scene.add(ambientFill);
   physicalSun = new THREE.DirectionalLight('#fff0c7', 0);
   scene.add(physicalSun);
-  const fill = new THREE.DirectionalLight('#7ca89c', 1.1);
-  fill.position.set(8, 10, 5);
-  scene.add(fill);
+  inspectionLights = new THREE.Group();
+  const sky = new THREE.HemisphereLight('#f6efda', '#7b9188', 1.8);
+  sky.position.set(0, 0, 1);
+  const key = new THREE.DirectionalLight('#fff0cf', 2.4);
+  key.position.set(-8, -10, 18);
+  const fill = new THREE.DirectionalLight('#b7d5dc', .8);
+  fill.position.set(10, 12, 10);
+  inspectionLights.add(sky, key, fill);
+  scene.add(inspectionLights);
   worldRoot = new THREE.Group();
   scene.add(worldRoot);
   const resize = () => {
@@ -117,6 +125,7 @@ function initThree() {
     renderer.setSize(width, height, false);
     camera.aspect = width / Math.max(1, height);
     camera.updateProjectionMatrix();
+    if (recording && cameraMode === 'orbit') frameHabitat();
   };
   new ResizeObserver(resize).observe(canvas);
   resize();
@@ -161,22 +170,33 @@ function makePools(data) {
   for (const [kind, keySet] of Object.entries(keys)) {
     if (!geometries[kind]) continue;
     const shapeKeys=[...keySet].sort(), count=shapeKeys.length;
-    const material = new THREE.MeshStandardMaterial({roughness: .84, metalness: .02, vertexColors: true});
+    // setColorAt supplies instance colours. These primitive meshes have no
+    // vertex colour attribute; USE_COLOR would multiply them by a missing input.
+    const material = new THREE.MeshStandardMaterial({roughness: .84, metalness: .02});
     const mesh = new THREE.InstancedMesh(geometries[kind](), material, count);
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled = false;
     worldRoot.add(mesh);
     pools.set(kind, {mesh, count, keys:shapeKeys});
   }
-  const bounds = data.geometry.bounds;
   const signalGeometry = new THREE.BufferGeometry();
   signalGeometry.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(3 * 256), 3));
   signalGeometry.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(3 * 256), 3));
   signalGeometry.setDrawRange(0, 0);
   signalPoints = new THREE.Points(signalGeometry, new THREE.PointsMaterial({size:.09, vertexColors:true, transparent:true, opacity:.8, depthWrite:false}));
   worldRoot.add(signalPoints);
-  controls.target.set(bounds[0] / 2, bounds[1] / 2, Math.max(.4, bounds[2] * .15));
-  camera.position.set(bounds[0] * .86, -bounds[1] * .5, Math.max(4, bounds[2] * 1.3));
+  frameHabitat();
+}
+
+function frameHabitat() {
+  const view = habitatView(recording.geometry.bounds, camera.fov, camera.aspect);
+  camera.up.set(0, 0, 1);
+  controls.target.fromArray(view.target);
+  camera.position.fromArray(view.position);
+  camera.far = Math.max(180, view.distance * 5);
+  controls.maxDistance = view.distance * 3;
+  camera.updateProjectionMatrix();
+  controls.update();
 }
 
 function qFromWxyz(value, target = new THREE.Quaternion()) {
@@ -235,7 +255,7 @@ function updateLighting(a,b,alpha){
     return [...(directional.length?directional:lights)].sort((x,y)=>y.intensity-x.intensity)[0];
   };
   const left=brightest(a),right=brightest(b);
-  if(!left&&!right){physicalSun.intensity=0;return;}
+  if(!left&&!right){physicalSun.intensity=0;ambientFill.intensity=0;return;}
   const av=left||right,bv=right||left;
   physicalSun.color.setRGB(
     THREE.MathUtils.lerp(av.color[0],bv.color[0],alpha),
@@ -487,7 +507,12 @@ ui.scrubber.addEventListener('input',()=>{playing=false;ui.play.textContent='▶
 for(const button of document.querySelectorAll('[data-camera]'))button.addEventListener('click',()=>{
   cameraMode=button.dataset.camera;
   if(cameraMode!=='body')camera.up.set(0,0,1);
+  if(cameraMode==='orbit'&&recording)frameHabitat();
   for(const other of document.querySelectorAll('[data-camera]'))other.setAttribute('aria-pressed',String(other===button));
+});
+$('#inspection-light').addEventListener('click',event=>{
+  inspectionLights.visible=!inspectionLights.visible;
+  event.currentTarget.setAttribute('aria-pressed',String(inspectionLights.visible));
 });
 
 initThree();
