@@ -107,11 +107,15 @@ def arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--training-profile",
-        choices=("legacy", "current-life-v1", "current-life-v2", "chemical-nursery-v3"),
+        choices=(
+            "legacy", "current-life-v1", "current-life-v2",
+            "chemical-nursery-v3", "chemical-encounters-v4",
+        ),
         default="legacy",
     )
     parser.add_argument("--chemical-habitat", type=Path)
     parser.add_argument("--chemical-biosphere", type=Path)
+    parser.add_argument("--chemical-conditions", type=Path)
     parser.add_argument("--curriculum-start-stage", type=int, default=0)
     parser.add_argument(
         "--physical-backend", choices=("reference", "fast"), default="fast",
@@ -592,6 +596,7 @@ class AffordanceCohort:
             for bodies in self.body_states for body in bodies
         ], dtype=np.float32)
         actions_by_world = []
+        eat_requests = []
         for world_index, bodies in enumerate(self.body_states):
             actions = {}
             for body_index, body in enumerate(bodies):
@@ -603,6 +608,7 @@ class AffordanceCohort:
                     float(np.clip((1 - body["gut"]) * (1.1 - body["energy"]), 0, 1))
                     if self.ingestion_enabled else 0.0
                 )
+                eat_requests.append(action["eat"])
                 actions[body["id"]] = action
             actions_by_world.append(actions)
         started = time.perf_counter()
@@ -621,15 +627,21 @@ class AffordanceCohort:
             [body["energy"], body["gut"], body["fatigue"]]
             for bodies in self.body_states for body in bodies
         ], dtype=np.float32)
-        nutrition, contact, distance, effort = [], [], [], []
+        nutrition, ingested, mouth_contacts, contact, distance, effort = [], [], [], [], [], []
         for bodies, result in zip(self.body_states, outcomes, strict=True):
             for body in bodies:
                 value = result[body["id"]]
                 nutrition.append(value["nutrition"])
+                ingested.append(value.get("ingested_mass", 0.0))
+                mouth_contacts.append(value.get("mouth_material_contacts", 0))
                 contact.append(value["contact"])
                 distance.append(value["distance"])
                 effort.append(value["effort"])
         nutrition = np.asarray(nutrition, dtype=np.float32)
+        ingested = np.asarray(ingested, dtype=np.float32)
+        mouth_contacts = np.asarray(mouth_contacts, dtype=np.int64)
+        eat_requests = np.asarray(eat_requests, dtype=np.float32)
+        contact = np.asarray(contact, dtype=np.float32)
         effort = np.asarray(effort, dtype=np.float32)
         old_drive = (0.85 - before_energy) ** 2
         new_drive = (0.85 - after_energy) ** 2
@@ -652,7 +664,16 @@ class AffordanceCohort:
         return reward, {
             "nutrition": float(nutrition.sum()),
             "nutrition_events": float(np.count_nonzero(nutrition > 0)),
-            "contacts": float(np.count_nonzero(np.asarray(contact) > 0)),
+            "absorbed": float(nutrition.sum()),
+            "ingested_mass": float(ingested.sum()),
+            "ingestion_events": float(np.count_nonzero(ingested > 0)),
+            "mouth_material_contacts": float(mouth_contacts.sum()),
+            "eat_request_steps": float(np.count_nonzero(eat_requests > 0)),
+            "eat_request_mean": float(eat_requests.mean()),
+            "contact_while_eating": float(np.count_nonzero(
+                (contact > 0) & (eat_requests > 0)
+            )),
+            "contacts": float(np.count_nonzero(contact > 0)),
             "distance": float(np.sum(distance)),
             "effort": float(effort.mean()),
             "energy": float(after_energy.mean()),
@@ -877,7 +898,11 @@ def evaluate(
     trainer.moments = RunningMoments.restore(moments.snapshot())
     raw, physiology, _ = cohort.observe(0.05)
     normalized = trainer.normalize(raw, update=False)
-    totals = {name: 0.0 for name in ("nutrition", "nutrition_events", "contacts", "distance")}
+    totals = {name: 0.0 for name in (
+        "nutrition", "nutrition_events", "absorbed", "ingested_mass",
+        "ingestion_events", "mouth_material_contacts", "eat_request_steps",
+        "contact_while_eating", "contacts", "distance",
+    )}
     efforts, energies, guts, fatigues, reserves, stationary, rewards = [], [], [], [], [], [], []
     homeostasis: dict[str, list[float]] = {}
     trajectory: list[dict[str, Any]] = []
@@ -963,10 +988,11 @@ def main() -> int:
     ):
         raise SystemExit("--first-checkpoint must be smaller than --checkpoint-every")
     training_profile = None
-    if args.training_profile != "chemical-nursery-v3" and (
+    if args.training_profile not in ("chemical-nursery-v3", "chemical-encounters-v4") and (
         args.chemical_habitat is not None or args.chemical_biosphere is not None
+        or args.chemical_conditions is not None
     ):
-        raise SystemExit("chemical config paths require --training-profile chemical-nursery-v3")
+        raise SystemExit("chemical config paths require a chemical training profile")
     if args.training_profile != "legacy":
         if args.resume:
             with gzip.open(args.resume.resolve(), "rt", encoding="utf-8") as handle:
@@ -976,14 +1002,26 @@ def main() -> int:
                 if carried_profile is not None else EmbodiedTrainingProfile.current()
             )
         else:
-            if args.training_profile == "chemical-nursery-v3":
+            if args.training_profile in ("chemical-nursery-v3", "chemical-encounters-v4"):
                 if args.chemical_habitat is None or args.chemical_biosphere is None:
                     raise SystemExit(
-                        "fresh chemical nursery requires --chemical-habitat and --chemical-biosphere"
+                        "fresh chemical profile requires --chemical-habitat and --chemical-biosphere"
                     )
-                training_profile = EmbodiedTrainingProfile.chemical_nursery(
-                    args.chemical_habitat, args.chemical_biosphere
-                )
+                if args.training_profile == "chemical-encounters-v4":
+                    if args.chemical_conditions is None:
+                        raise SystemExit(
+                            "fresh chemical encounters require --chemical-conditions"
+                        )
+                    training_profile = EmbodiedTrainingProfile.chemical_encounters(
+                        args.chemical_habitat, args.chemical_biosphere,
+                        args.chemical_conditions,
+                    )
+                else:
+                    if args.chemical_conditions is not None:
+                        raise SystemExit("chemical nursery v3 does not accept encounter conditions")
+                    training_profile = EmbodiedTrainingProfile.chemical_nursery(
+                        args.chemical_habitat, args.chemical_biosphere
+                    )
             else:
                 training_profile = (
                     EmbodiedTrainingProfile.current_v2()
@@ -996,6 +1034,7 @@ def main() -> int:
             "current-life-v1": 1,
             "current-life-v2": 2,
             "chemical-nursery-v3": 3,
+            "chemical-encounters-v4": 4,
         }[args.training_profile]
         if profile_version != requested_version:
             raise SystemExit(
@@ -1008,6 +1047,8 @@ def main() -> int:
             raise SystemExit("current-life-v2 curriculum start stage must be 0, 1, or 2")
         if profile_version == 3 and args.curriculum_start_stage != 0:
             raise SystemExit("chemical-nursery-v3 requires --curriculum-start-stage 0")
+        if profile_version == 4 and args.curriculum_start_stage not in range(3):
+            raise SystemExit("chemical-encounters-v4 start stage must be 0, 1, or 2")
         horizons = training_profile.component("horizons")
         expected = (
             int(horizons["training_episode_steps"]),
@@ -1107,7 +1148,7 @@ def main() -> int:
         "native_world_kernels": (
             native_extension_receipt()
             if training_profile is not None
-            and int(training_profile.component("version")) == 3 else None
+            and int(training_profile.component("version")) in (3, 4) else None
         ),
         "warm_start": (
             {"path": str(args.warm_start_learner.resolve()),
@@ -1256,7 +1297,11 @@ def main() -> int:
     signal.signal(signal.SIGTERM, request_stop)
     updates, macro_rows, checkpoints = [], [], []
     training_totals = {
-        name: 0.0 for name in ("nutrition", "nutrition_events", "contacts", "distance")
+        name: 0.0 for name in (
+            "nutrition", "nutrition_events", "absorbed", "ingested_mass",
+            "ingestion_events", "mouth_material_contacts", "eat_request_steps",
+            "contact_while_eating", "contacts", "distance",
+        )
     }
     telemetry_every = (
         int(training_profile.component("horizons")["telemetry_every_steps"])
@@ -1279,7 +1324,7 @@ def main() -> int:
             previous = trainer.act(normalized, physiology)
             algorithm_seconds += time.perf_counter() - algorithm_started
             accumulated = np.zeros(len(cohort.resident_ids), dtype=np.float32)
-            totals = {name: 0.0 for name in ("nutrition", "nutrition_events", "contacts", "distance")}
+            totals = {name: 0.0 for name in training_totals}
             efforts, energies = [], []
             homeostasis_values: dict[str, list[float]] = {}
             for _ in range(args.macro_steps):
@@ -1337,6 +1382,15 @@ def main() -> int:
                 "reserve_energy": metrics["reserve_energy"],
                 "stationary_fraction": metrics["stationary_fraction"],
                 "activity": float(np.mean([item["activity"] for item in neural])),
+                "executed_action": {
+                    name: {
+                        "mean": float(previous["action"][:, index].mean()),
+                        "abs_mean": float(np.abs(previous["action"][:, index]).mean()),
+                        "std": float(previous["action"][:, index].std()),
+                    }
+                    for index, name in enumerate(ACTIONS)
+                },
+                "eat_request_mean": float(metrics["eat_request_mean"]),
                 "homeostasis": {
                     name: float(np.mean(values))
                     for name, values in homeostasis_values.items()
@@ -1436,7 +1490,7 @@ def main() -> int:
             silence_features=True, **evaluation_common,
         ),
     }
-    if training_profile is not None and int(training_profile.component("version")) == 3:
+    if training_profile is not None and int(training_profile.component("version")) in (3, 4):
         evaluations["fixed_comparison_ingestion_disabled"] = evaluate(
             brain, ports, comparison_genome, trainer.moments,
             silence_features=False, ingestion_enabled=False, **evaluation_common,

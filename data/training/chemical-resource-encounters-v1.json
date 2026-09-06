@@ -1,0 +1,45 @@
+{
+  "format": "chreatures-chemical-resource-encounter-conditions-v1",
+  "version": 1,
+  "name": "finite-packet-body-local-curriculum-v1",
+  "resource_abundance": {
+    "nearby_packet_count": 4,
+    "packet_stock_scale": 1.0
+  },
+  "initial_chemistry": {
+    "body_atp_fraction": 0.7,
+    "body_reserve_fraction": 0.5,
+    "gut_pool_fraction": 0.0
+  },
+  "placement": {
+    "maximum_build_attempts": 32,
+    "boundary_margin_m": 0.2,
+    "vertical_reach_m": 0.25,
+    "surface_clearance_m": 0.002,
+    "training_schedule": [
+      {
+        "radius_m": [0.24, 0.36],
+        "bearing_half_span_rad": 0.7
+      },
+      {
+        "radius_m": [0.28, 0.55],
+        "bearing_half_span_rad": 1.5707963267948966
+      },
+      {
+        "radius_m": [0.32, 0.9],
+        "bearing_half_span_rad": 3.141592653589793
+      }
+    ],
+    "heldout": {
+      "radius_m": [0.3, 0.95],
+      "bearing_half_span_rad": 3.141592653589793
+    }
+  },
+  "horizons": {
+    "training_episode_steps": 5000,
+    "heldout_steps": 5000,
+    "telemetry_every_steps": 500,
+    "checkpoint_every_steps": 5000,
+    "dt_seconds": 0.05
+  }
+}
