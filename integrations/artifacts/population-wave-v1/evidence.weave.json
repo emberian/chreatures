@@ -542,7 +542,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "ba2dbe9708a65225ca673158790dfe48ce91e47c69d0018b18e217a7772bdc36",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:ba2dbe9708a65225ca673158790dfe48ce91e47c69d0018b18e217a7772bdc36:failed": "evaluated_candidate"
@@ -776,7 +776,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -853,7 +853,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "b3a7b0d12f218cfb02feda139a63a5233044dae6ca06deb49bf0b1c14f8f30f1"
           },
           "id": "evaluation:05d5d726a8c72df661ad92212d83c74c3ef1c3556406d078a9a6a8b23a238069:failed",
@@ -865,7 +865,7 @@
             "life-checkpoint:44f99f26e5c4f8bc538d4703dbfe7714b425019777616e15cc90b9656ba0f8d9:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -967,7 +967,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "2171bd6013b2a6b16175f8cd64efab179fd3a15c0d6b02ec8dac212b7c80fc0b",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:2171bd6013b2a6b16175f8cd64efab179fd3a15c0d6b02ec8dac212b7c80fc0b:failed": "evaluated_candidate"
@@ -1439,7 +1439,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -1516,7 +1516,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "7334d958f1e5407733bb753ee7e99c4a31c7464fc1c220f5f43280b710b95191"
           },
           "id": "evaluation:2f0bd79a88dbb30a17215082617fc82fccd0158e7055a865151d285915660dd9:failed",
@@ -1528,7 +1528,7 @@
             "life-checkpoint:779ae61bbf3cee2539d54ead0c21c7cb7751107afa05ebdac5ec487477727613:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -1630,7 +1630,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "0594dfed20e9b8606adea532c8d571fc5c54c62d8e8d7f1f94137f2bc71c01ea",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:0594dfed20e9b8606adea532c8d571fc5c54c62d8e8d7f1f94137f2bc71c01ea:failed": "evaluated_candidate"
@@ -2159,7 +2159,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -2236,7 +2236,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "db8ab48f183ec9a2dd38d21f8fe831eba336eae69dae64b889a060f1185930f1"
           },
           "id": "evaluation:2b2e89893604e656f510fa681c02eeeff46a404861312a3d0c0387a6d83704c8:failed",
@@ -2248,7 +2248,7 @@
             "life-checkpoint:558f5aaf1302bf7f753e9e80a6655d30574a169daf68de8161216e54a36b96d2:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -2897,7 +2897,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "05d5d726a8c72df661ad92212d83c74c3ef1c3556406d078a9a6a8b23a238069",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:05d5d726a8c72df661ad92212d83c74c3ef1c3556406d078a9a6a8b23a238069:failed": "evaluated_candidate"
@@ -2942,7 +2942,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -3019,7 +3019,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "60da3ca8f7afb67f520400bf516bc22b6b58ef6f31f2794be364e9ff710bb3c0"
           },
           "id": "evaluation:44d5c383ac31019d2c71d5f3945a4ed6e961c585bf1f636e440d043414577ab8:failed",
@@ -3031,7 +3031,7 @@
             "life-checkpoint:22a4a208d394b369c0967991e28f0c589aff604164a68bfd5f92de8d2b60275e:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -3123,7 +3123,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -3200,7 +3200,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "97766bcd3acad041e84974b2fd1e8f644a625c161581ff05815e56a7d3db73b9"
           },
           "id": "evaluation:449a3eaa8bb7edb8dc5d4141144c192e55576fdbd15f461d6244e317af4b76a7:failed",
@@ -3212,7 +3212,7 @@
             "life-checkpoint:3e147e02d31d3729a46cbbf9562790e4e34ccd115219214017746a4f55a46e2e:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -3654,7 +3654,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -3731,7 +3731,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "55d426c86b382a6b72bd7e9d2af48289e329084382ef64041a3027d7193d5e53"
           },
           "id": "evaluation:71ca4f3a1c8360d02e9fb515b649a7f590b5e94ce6cba714c80a547a7017b6cd:failed",
@@ -3743,7 +3743,7 @@
             "life-checkpoint:c12415f03e1c5133b102e1f7159cf1a7fefb9912ca99c2376fdb9b25b4ff1835:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -3835,7 +3835,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -3912,7 +3912,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "e0de968fc10fd45f22f8bdda55bbae2d698cb094c54acc3c89e0898398c5b48c"
           },
           "id": "evaluation:43ed6b242a5df6272176316629892cd3ae9c69fa1a38e5165a709a9f2a5575c3:failed",
@@ -3924,7 +3924,7 @@
             "life-checkpoint:3ec80987b5ad2cf210aa17ab2ebc8af73d46e8876e145611ee8e2ae14a12d417:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -4191,7 +4191,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -4268,7 +4268,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "6432b50c13f42f00371f69202ceacbc2f9eb36bae74d41d4033f9a24bcca4a0a"
           },
           "id": "evaluation:3a6a391d5f104dacf11823eaa998f66c68c09763ca191b3d411617d6c57a04e6:failed",
@@ -4280,7 +4280,7 @@
             "life-checkpoint:986dbb3c6828fc36c5f28f6584ab76fb9f39d8b0346d64d4fe76e292c6b4250f:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -4421,7 +4421,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -4498,7 +4498,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "0129f39249d864c49d72a14e318805e98352fb07581c17af93b6182a1cf67e87"
           },
           "id": "evaluation:d588c0164ebaa4376c07adc259cf6ad878d658cec4dc7b3dbcf0328ca82d0a6f:failed",
@@ -4510,7 +4510,7 @@
             "life-checkpoint:f113ac8fdb0ffc9d3e02ff51bcdfb22460f378efb907c79e7d1c6d759f6d2c31:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -4737,7 +4737,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -4814,7 +4814,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "3a8c130e181af8a7fedd670f56b458320ba4e5d8a1cceb1fd9233a949bc6d190"
           },
           "id": "evaluation:65124df8be501cd8dee3a34578fd125dbf2d02ccdc20a3805617bb595c5c7746:failed",
@@ -4826,7 +4826,7 @@
             "life-checkpoint:95070edd6d85b4aa6022b2b8f69d6ea7e4f19adec8d5e0be3f9f68fb9e53de5d:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -4865,7 +4865,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "71ca4f3a1c8360d02e9fb515b649a7f590b5e94ce6cba714c80a547a7017b6cd",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:71ca4f3a1c8360d02e9fb515b649a7f590b5e94ce6cba714c80a547a7017b6cd:failed": "evaluated_candidate"
@@ -4979,7 +4979,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "16aa09e216710f7822ac3c4d7e9dca85ea15fd38710f031f610702b3d09f04e3",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:16aa09e216710f7822ac3c4d7e9dca85ea15fd38710f031f610702b3d09f04e3:failed": "evaluated_candidate"
@@ -5904,7 +5904,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "2b2e89893604e656f510fa681c02eeeff46a404861312a3d0c0387a6d83704c8",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:2b2e89893604e656f510fa681c02eeeff46a404861312a3d0c0387a6d83704c8:failed": "evaluated_candidate"
@@ -6215,7 +6215,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -6292,7 +6292,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "babd120c26997df619f9325ecf15168047a185f2ed120c9d7d88cce2d375b579"
           },
           "id": "evaluation:401d20fed324e32da13c69303ae0d20d39fafef0c79dfb4cd90ed78ce94beb54:failed",
@@ -6304,7 +6304,7 @@
             "life-checkpoint:08bf815ff8bd3eeb6bda4ac031ea2dbba60e86583e6ad7534d064fdafbb440f2:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -6342,7 +6342,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "43ed6b242a5df6272176316629892cd3ae9c69fa1a38e5165a709a9f2a5575c3",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:43ed6b242a5df6272176316629892cd3ae9c69fa1a38e5165a709a9f2a5575c3:failed": "evaluated_candidate"
@@ -6537,7 +6537,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -6614,7 +6614,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "07ddabc7b4be4737ebb03140b3e86e8e8f9624e014b958881546ddb4ce72b237"
           },
           "id": "evaluation:23abb357180ebb9cbdcfc57573caded48176b5f2b00200cde19b6f85d3333ee8:failed",
@@ -6626,7 +6626,7 @@
             "life-checkpoint:079f2a9050acb43f6d8430ba288f875ae5089afbd1a4018948f1414f4e0aa1f8:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -6664,7 +6664,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "f69353d8ecaba5c26f1ed88bbbf615cbfebb71f6db6fd48c141028d724b6f6da",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:f69353d8ecaba5c26f1ed88bbbf615cbfebb71f6db6fd48c141028d724b6f6da:failed": "evaluated_candidate"
@@ -6895,7 +6895,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -6972,7 +6972,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "d65433b54fc9634c68faa090054855f09bbd401f261ae27327be32da42120858"
           },
           "id": "evaluation:8a2a4c32950c23194424fd0c1cfa23c7f6fcbdf94545e6fa6762483b0ac1dbc5:failed",
@@ -6984,7 +6984,7 @@
             "life-checkpoint:9c17e7b12c970f20798314853019d86139fc65ef60ff250ea418c57ccf39e515:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -7022,7 +7022,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "48e109c936a4399b4129ab9617830fb0a26642e12a8caf02ac243160be412e91",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:48e109c936a4399b4129ab9617830fb0a26642e12a8caf02ac243160be412e91:failed": "evaluated_candidate"
@@ -7141,7 +7141,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "53157e54684c0a60954c61799982d5d3f6f0343dd48223be96b36dc37e440fe1",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:53157e54684c0a60954c61799982d5d3f6f0343dd48223be96b36dc37e440fe1:completed": "evaluated_candidate"
@@ -8179,7 +8179,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "65124df8be501cd8dee3a34578fd125dbf2d02ccdc20a3805617bb595c5c7746",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:65124df8be501cd8dee3a34578fd125dbf2d02ccdc20a3805617bb595c5c7746:failed": "evaluated_candidate"
@@ -8896,7 +8896,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "5b232227ef0e45663e4704708c77cf431f4add140749b6b5027d1aaf75167713",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:5b232227ef0e45663e4704708c77cf431f4add140749b6b5027d1aaf75167713:failed": "evaluated_candidate"
@@ -10952,7 +10952,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -11029,7 +11029,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "17845b4b2421a1308260bdacc95a67aab47326af26c4b7101b12b788a81a3ec9"
           },
           "id": "evaluation:66f850fccdac82a434de964472d0ef3f41d74d2c8deabd92dc9616e2543281de:failed",
@@ -11041,7 +11041,7 @@
             "life-checkpoint:07f946d570f41d682f070900a5f7e7f1e7b4b0f0837c07c6418c32ed69b6ecbd:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -11133,7 +11133,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -11210,7 +11210,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "a649ceaf63706a9a34dcd1bf823a515a9b23dd06154c5295dfa83f7b94931e85"
           },
           "id": "evaluation:402411a7145e463d3442224dd1b1d7c9401eb10359d8f8d084b7a398c89b2aa9:failed",
@@ -11222,7 +11222,7 @@
             "life-checkpoint:25d23a0dff92a53eba76164fd4f3a6e681a5154db78501d906420eabaa81512a:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -11454,7 +11454,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "5c661ede52c715d0d51cb3c6429852c1e631afb9942aeb90d27c631b6e9f1e19",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:5c661ede52c715d0d51cb3c6429852c1e631afb9942aeb90d27c631b6e9f1e19:failed": "evaluated_candidate"
@@ -11758,7 +11758,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -11835,7 +11835,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "b30d45fff4f3552528d29cffaae423e62fd0d827f88a8bf1117a6d840b9b89f8"
           },
           "id": "evaluation:2171bd6013b2a6b16175f8cd64efab179fd3a15c0d6b02ec8dac212b7c80fc0b:failed",
@@ -11847,7 +11847,7 @@
             "life-checkpoint:8d6364f118cbbf82f9ae5876d60a9842c861080d6804cd6e8c76bf7ee30080db:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -12878,7 +12878,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "44d5c383ac31019d2c71d5f3945a4ed6e961c585bf1f636e440d043414577ab8",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:44d5c383ac31019d2c71d5f3945a4ed6e961c585bf1f636e440d043414577ab8:failed": "evaluated_candidate"
@@ -13429,7 +13429,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -13506,7 +13506,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "a392568b62dec22aa3c172a44c397a0a4e63379f278b50ef300521f371e859e5"
           },
           "id": "evaluation:f44aa351676e730fe999fa1ff9a778709828b440300610b20cd26cd241929341:failed",
@@ -13518,7 +13518,7 @@
             "life-checkpoint:5c16aed611e3fcbe1a814840c44afbb959e702231fec5fdee1b9587fb698575c:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -13955,7 +13955,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "0cd6b50234b7c70bfae744c4fbb8dec8f54094c8174332db9b3c8b61865a6c7a",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:0cd6b50234b7c70bfae744c4fbb8dec8f54094c8174332db9b3c8b61865a6c7a:completed": "evaluated_candidate"
@@ -13997,7 +13997,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -14074,7 +14074,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "ca229494feeaa79be8cc7935de015f5fa83e4dccf0944c742434b20b50384708"
           },
           "id": "evaluation:782c509f197dd59a22191daf565b91bc4ca154a44ef55181e3d1026787a99c13:failed",
@@ -14086,7 +14086,7 @@
             "life-checkpoint:8ebd25bda450f97f00983ccbf7bf6183853f1f7fde587e75ed6ce79cff1ffcb4:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -14398,7 +14398,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "105203573af556dce3be7564210d4b0a7fbbbb8d7fd60245bb73f9a049a9b76e",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:105203573af556dce3be7564210d4b0a7fbbbb8d7fd60245bb73f9a049a9b76e:completed": "evaluated_candidate"
@@ -15255,7 +15255,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "5f1ac4361f1bb72970246eea0571d008e546ba48fe43150755281da6fdceb993",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:5f1ac4361f1bb72970246eea0571d008e546ba48fe43150755281da6fdceb993:failed": "evaluated_candidate"
@@ -15628,7 +15628,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "51e8dcddfa3bdccf9ba2cd3d59fdfad4970d43619e3c8cf1cb6d65a72edbd9e0",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:51e8dcddfa3bdccf9ba2cd3d59fdfad4970d43619e3c8cf1cb6d65a72edbd9e0:failed": "evaluated_candidate"
@@ -15805,7 +15805,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "f44aa351676e730fe999fa1ff9a778709828b440300610b20cd26cd241929341",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:f44aa351676e730fe999fa1ff9a778709828b440300610b20cd26cd241929341:failed": "evaluated_candidate"
@@ -16444,7 +16444,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "5caf751c4db90721eba41b433a1e12a4bc9ab0726321d491ae1b4d230207aad5",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:5caf751c4db90721eba41b433a1e12a4bc9ab0726321d491ae1b4d230207aad5:failed": "evaluated_candidate"
@@ -16838,7 +16838,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -16915,7 +16915,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "fc33a02236765eee1e1a66e43d5f424bc6ebb3eedc095e8bdea3b630dff96661"
           },
           "id": "evaluation:edbc519bb933b48fbd95522bbb35bb3269dd06ace2da9be21a8e01dc99ec20f1:failed",
@@ -16927,7 +16927,7 @@
             "life-checkpoint:ea7f93b9e47900e7698e34e4134f3493f7a345c62b974f9cf0e519aaff077ad4:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -17291,7 +17291,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "06f5eff1eb38223ef925e594e673ed7dacdbf139316faf12b77ccd6e8f7a416e",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:06f5eff1eb38223ef925e594e673ed7dacdbf139316faf12b77ccd6e8f7a416e:completed": "evaluated_candidate"
@@ -17399,7 +17399,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -17476,7 +17476,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "a5a37d68e78117a969230047089e294e6ef5196f57769b369b6abe66ad7d3f8d"
           },
           "id": "evaluation:8c5409e82bf55202599a13b20e7b65a2b78daf54cb2411ace565710915992aaf:failed",
@@ -17488,7 +17488,7 @@
             "life-checkpoint:1a6f065d8c4503e857adc12c4703d64fa8d4bf01bbddaff7c1f0568af52d8ba2:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -17526,7 +17526,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "6c341319a44fe1d5ddd15772c1be075ebe513f7d9f446d33f95926cb6c12dce6",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:6c341319a44fe1d5ddd15772c1be075ebe513f7d9f446d33f95926cb6c12dce6:failed": "evaluated_candidate"
@@ -17725,7 +17725,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "bf59adeef6fd7f258404ba7ff832ad4848dfa6d2af61ddf9b2514e64f9db8d82",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:bf59adeef6fd7f258404ba7ff832ad4848dfa6d2af61ddf9b2514e64f9db8d82:completed": "evaluated_candidate"
@@ -17844,7 +17844,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "c8b68f7ab6c50ea9101ccdf627776d09c51dad219ad92e4cd9bac461ee787331",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:c8b68f7ab6c50ea9101ccdf627776d09c51dad219ad92e4cd9bac461ee787331:completed": "evaluated_candidate"
@@ -17959,7 +17959,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "e2f0a2309a6d0e2db05973da1f4ade060d48e9d7aa379f65a5b516414ebe1d3b",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:e2f0a2309a6d0e2db05973da1f4ade060d48e9d7aa379f65a5b516414ebe1d3b:failed": "evaluated_candidate"
@@ -18015,7 +18015,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "52293dce70ca5192f3f637bea7b01345034fdef55a962b8f92ef9d63df2d8aff",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:52293dce70ca5192f3f637bea7b01345034fdef55a962b8f92ef9d63df2d8aff:completed": "evaluated_candidate"
@@ -18067,7 +18067,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "e50b423a215539582cf3b28dc24d8e90027b6ea498c689d2418f85f0346e4465",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:e50b423a215539582cf3b28dc24d8e90027b6ea498c689d2418f85f0346e4465:failed": "evaluated_candidate"
@@ -18475,7 +18475,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -18552,7 +18552,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "86efedfc76795194949906cc6f7e752a6067011cbe167fbe502baad5afaea392"
           },
           "id": "evaluation:e50b423a215539582cf3b28dc24d8e90027b6ea498c689d2418f85f0346e4465:failed",
@@ -18564,7 +18564,7 @@
             "life-checkpoint:859fecee74ff1f79d41ea4c5496f27feb34d29aa70d8c03d163bb167f2660082:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -18602,7 +18602,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "b16151eaf64c8ee521a02cb1c7bfdbd7ae3c1db8c21deb224ed8f4ea405f81fd",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:b16151eaf64c8ee521a02cb1c7bfdbd7ae3c1db8c21deb224ed8f4ea405f81fd:failed": "evaluated_candidate"
@@ -18958,7 +18958,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "8578c59b55b849b48f4eda66b080d29eb4d7e13d74ac14e3b32bd9aff962d68a",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:8578c59b55b849b48f4eda66b080d29eb4d7e13d74ac14e3b32bd9aff962d68a:failed": "evaluated_candidate"
@@ -19077,7 +19077,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "9cc679606dc320d9fe34a9391e24cb076e0553d0fb43a8bd1da7b37f46015be4",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:9cc679606dc320d9fe34a9391e24cb076e0553d0fb43a8bd1da7b37f46015be4:completed": "evaluated_candidate"
@@ -19548,7 +19548,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -19625,7 +19625,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "6367942e8c16937f3fc2bcfb0a2d4835779770a0d5632a1dcf10ead5db75a3dc"
           },
           "id": "evaluation:51e8dcddfa3bdccf9ba2cd3d59fdfad4970d43619e3c8cf1cb6d65a72edbd9e0:failed",
@@ -19637,7 +19637,7 @@
             "life-checkpoint:24b68336632a7ab1652da1249cf7dd7a72c27c6a63bacc0a1684b2a54309e6ed:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -19669,7 +19669,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -19746,7 +19746,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "9c4686d98ba706fced2752c4a85b34cb7fd3fdc8b92aa4483bc6291924500bea"
           },
           "id": "evaluation:53edb27ed160888a901b90d93966cfb676c8b32101ebceb0a3b09d1d5c28193c:failed",
@@ -19758,7 +19758,7 @@
             "life-checkpoint:5900641f645a750e611567eb235866a7fa5f5b8e5d2b89d978ce6c85b491d35c:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -19839,7 +19839,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -19916,7 +19916,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "76a1c4f8a0691b0627f6fcc886e381cb9d1156b7ebd69b28890cf7f11ce76beb"
           },
           "id": "evaluation:33ffe1b88d00ceddab9ac6863f237747c3e95785ab98908341b7f5f27e005cc3:failed",
@@ -19928,7 +19928,7 @@
             "life-checkpoint:53d214e9d3b92feda7a236565f5c266bebb7ab5e00323d7063879001d5a043db:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -20331,7 +20331,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "782c509f197dd59a22191daf565b91bc4ca154a44ef55181e3d1026787a99c13",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:782c509f197dd59a22191daf565b91bc4ca154a44ef55181e3d1026787a99c13:failed": "evaluated_candidate"
@@ -20439,7 +20439,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -20516,7 +20516,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "63c8c87a1eb9773df3b73d792f905282008beb1406e3412c1eaa77e063bf16ac"
           },
           "id": "evaluation:fa9777f2f357978ac0a83e076e876bcd422a1e65e55c11882570f7e7c509f4d8:failed",
@@ -20528,7 +20528,7 @@
             "life-checkpoint:2bc621e18bccd606c1aa820c873263deb4fa01fdfacb7c2442ad6b5dcc21a2bc:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -20969,7 +20969,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "80411a07c837cece27a4d37b07e8e12089b2760864010f065ae7008220e55eb7",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:80411a07c837cece27a4d37b07e8e12089b2760864010f065ae7008220e55eb7:failed": "evaluated_candidate"
@@ -21273,7 +21273,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -21350,7 +21350,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "4f285857a457a34721e59e2eb1c816a5c64adf607529b8ae05884c497a83cfe3"
           },
           "id": "evaluation:80411a07c837cece27a4d37b07e8e12089b2760864010f065ae7008220e55eb7:failed",
@@ -21362,7 +21362,7 @@
             "life-checkpoint:ae704d37fd9e1a0d32d4ee8261054288e3e49024cd088285cc4206fc968dd13b:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -21649,7 +21649,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -21726,7 +21726,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "64c0f56e8b73901cf94c76b96b15670de6a4b34cbed9046c065a8951d4312d6d"
           },
           "id": "evaluation:5b232227ef0e45663e4704708c77cf431f4add140749b6b5027d1aaf75167713:failed",
@@ -21738,7 +21738,7 @@
             "life-checkpoint:af5d68130954da79f70a96f5d654340fbf33d7f0582c98f03d0e084c21c3c4e8:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -22083,7 +22083,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "fa9777f2f357978ac0a83e076e876bcd422a1e65e55c11882570f7e7c509f4d8",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:fa9777f2f357978ac0a83e076e876bcd422a1e65e55c11882570f7e7c509f4d8:failed": "evaluated_candidate"
@@ -22567,7 +22567,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -22644,7 +22644,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "176ed31f0dd40a6e54a18330e0d3c28f5c02fa8f42e154b18fb874ec91df4678"
           },
           "id": "evaluation:b00876c17d64f8b0f84dd23bbeff9bcb1b4f2f5643ebd76528f85ed3ed54b1c0:failed",
@@ -22656,7 +22656,7 @@
             "life-checkpoint:00d284781c97d955920e49fa3e27ba6c5d023b9f8142e3f33c3d084fdf1df4a4:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -22694,7 +22694,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "449a3eaa8bb7edb8dc5d4141144c192e55576fdbd15f461d6244e317af4b76a7",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:449a3eaa8bb7edb8dc5d4141144c192e55576fdbd15f461d6244e317af4b76a7:failed": "evaluated_candidate"
@@ -23564,7 +23564,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -23641,7 +23641,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "2e0a468ac4129c5bd286310f90792d46c202038091161de4bed61f8182f93b35"
           },
           "id": "evaluation:223f122d9d9bc743abb36880b08e9e0e6e4e2c0d3d003aefd88e932cda93e66e:failed",
@@ -23653,7 +23653,7 @@
             "life-checkpoint:a1c242cafa1db00671ae54ef562930f5f13d0a2584b75d2d9bd736a2ae2ace38:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -23891,7 +23891,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -23968,7 +23968,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "bfb83283fd94a644aef9440c0274bce5f5cf1f9f73628b074f973f1304823c2b"
           },
           "id": "evaluation:8578c59b55b849b48f4eda66b080d29eb4d7e13d74ac14e3b32bd9aff962d68a:failed",
@@ -23980,7 +23980,7 @@
             "life-checkpoint:1a8e191ed5441b9b8a85b0f79aa93caf4aeb15df0968066178b8afe169823eb3:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -24285,7 +24285,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -24362,7 +24362,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "2bcb469c3d34e38c3cab4e7d027ab67e977fa7a7eacd195427c90fd0263cb79a"
           },
           "id": "evaluation:c4c7e545633631aff1f9de5cd98cc214eb9918f4405af261e1cd45d1d092926c:failed",
@@ -24374,7 +24374,7 @@
             "life-checkpoint:d3785289f8000b11b353f143460877dcc46e989fbd7540d814e8cd5bbbab20fb:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -24763,7 +24763,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "55ca9cd82b7c305f4ba38211e09f3ea99eafeaed47ca8e1c58fd240432dde048",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:55ca9cd82b7c305f4ba38211e09f3ea99eafeaed47ca8e1c58fd240432dde048:failed": "evaluated_candidate"
@@ -25499,7 +25499,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -25576,7 +25576,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "47df01949f225aaf34e290e692cb4da787f4854844045357a390c21b04583a94"
           },
           "id": "evaluation:37e18e26a87b7b5d08baa7c08f8a930e3f507ed12fe30d8e7d3b536682182caa:failed",
@@ -25588,7 +25588,7 @@
             "life-checkpoint:41af89e6b8a9067bfecc0913f6f3a0947abc4941bfa5d077fb90b4b1adb0abf3:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -26231,7 +26231,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "99512c790eaa7dab2efca6c8f4ec7c0129e4ba78f66d08d29eb4695cedb7e5da",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:99512c790eaa7dab2efca6c8f4ec7c0129e4ba78f66d08d29eb4695cedb7e5da:failed": "evaluated_candidate"
@@ -26408,7 +26408,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "7b380d98d9dfc2e6ad1402f2ba7d3b332f2ccd0fcd9f6d40f09426aec951d251",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:7b380d98d9dfc2e6ad1402f2ba7d3b332f2ccd0fcd9f6d40f09426aec951d251:failed": "evaluated_candidate"
@@ -27598,7 +27598,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "74ae4fffe64246193fc49912b26da5e6856c4b466c490cf05221db9888ab0773",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:74ae4fffe64246193fc49912b26da5e6856c4b466c490cf05221db9888ab0773:failed": "evaluated_candidate"
@@ -28009,7 +28009,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -28086,7 +28086,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "f50f70c15eda68556d0735f1cc5c7c749b04f2a7bbafecfdece54111cb7c6931"
           },
           "id": "evaluation:5caf751c4db90721eba41b433a1e12a4bc9ab0726321d491ae1b4d230207aad5:failed",
@@ -28098,7 +28098,7 @@
             "life-checkpoint:07cd75cd305bbe3982ca9d8866733159840544aa83530da8d6140cf40e617978:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -28256,7 +28256,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -28333,7 +28333,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "dc51e5e428226e8bb9d284550c38d2610b47b7c5bc8b5d5bc4ecf178b5cce59e"
           },
           "id": "evaluation:0594dfed20e9b8606adea532c8d571fc5c54c62d8e8d7f1f94137f2bc71c01ea:failed",
@@ -28345,7 +28345,7 @@
             "life-checkpoint:f58bdd9d7936186000dcf028e5e046dda420548314e4d4d408a42c68644af69b:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -28713,7 +28713,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -28790,7 +28790,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "94ae97e4a4336fb1b89e2c847a66c9f794448acb58feb01c8d8477ba94f927e4"
           },
           "id": "evaluation:74ae4fffe64246193fc49912b26da5e6856c4b466c490cf05221db9888ab0773:failed",
@@ -28802,7 +28802,7 @@
             "life-checkpoint:8184be1799e62e38b4b150316a1c72a785f49202b82d4aebe524bd89c8d8cd81:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -29514,7 +29514,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -29591,7 +29591,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "7af0a794e6eebb9ecba7c725fb54f30a06c525e1dfa3bdefd1c108df7c22c926"
           },
           "id": "evaluation:16b1273bf2b19112b83e904228fda03a59bc128fd1928cbbd6d3937cbe56d351:failed",
@@ -29603,7 +29603,7 @@
             "life-checkpoint:1993832dedf68f415d462530269da3b4312cc9a7eafc0dfe92a34b41a3a94f09:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -30298,7 +30298,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -30375,7 +30375,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "c7132645293275f124cf645046ea12b858bb79c02a2096b4c4951fe4fdad5913"
           },
           "id": "evaluation:b3c646468a420a9511b21e49474ba15f3a0b4a518476ba0f166c9c197a9a544b:failed",
@@ -30387,7 +30387,7 @@
             "life-checkpoint:ab8fb543113335107b5a2d1df4625030d82183c02cc80669bb551096e6692bdf:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -30610,7 +30610,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -30687,7 +30687,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "56ed29a3dde5533958a25a1d0179752b423e7023aa2b0a43e697a1016945495d"
           },
           "id": "evaluation:36453b51faafe412191d7b4ff73b33281e264bc303aaf40bc33ea20dc4571c7e:failed",
@@ -30699,7 +30699,7 @@
             "life-checkpoint:59e837f23f43d00ed5867a7ae770b6bebb6854be01998a3144904574ff34f91c:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -30737,7 +30737,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "3a6a391d5f104dacf11823eaa998f66c68c09763ca191b3d411617d6c57a04e6",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:3a6a391d5f104dacf11823eaa998f66c68c09763ca191b3d411617d6c57a04e6:failed": "evaluated_candidate"
@@ -30788,7 +30788,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "402411a7145e463d3442224dd1b1d7c9401eb10359d8f8d084b7a398c89b2aa9",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:402411a7145e463d3442224dd1b1d7c9401eb10359d8f8d084b7a398c89b2aa9:failed": "evaluated_candidate"
@@ -30893,7 +30893,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -30970,7 +30970,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "763912039b039f69300b6c6b37b530e427ff4e8ec4ee81d2fe0fc914abdd7f7c"
           },
           "id": "evaluation:f758765426e99e3a68e7421ec87946c23f0ae5fcd64d318d46ac5e2c0c9cb87c:failed",
@@ -30982,7 +30982,7 @@
             "life-checkpoint:8efbeaeb74190db88fdd795bb4a35f3f3eba1698765de62abeb25d33a6d3b05f:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -31021,7 +31021,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "64bc8bd5df3a14e36c7cf0d204536aa4eef15c949f7ff794867fc47c41d7283f",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:64bc8bd5df3a14e36c7cf0d204536aa4eef15c949f7ff794867fc47c41d7283f:failed": "evaluated_candidate"
@@ -31642,7 +31642,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "3ede3828b0bc1010429488560459504912499d49f073bf26da1a3393db007360",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:3ede3828b0bc1010429488560459504912499d49f073bf26da1a3393db007360:completed": "evaluated_candidate"
@@ -31774,7 +31774,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -31851,7 +31851,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "3794981b9ac60afd00e42202d8a6cc3e3400b9b1ba56cf02296a873d963c31a0"
           },
           "id": "evaluation:ae969fd6d87ce05f56bcd72b78539b6a6e8fca7c89f6eb9a0b97df6db7118b96:failed",
@@ -31863,7 +31863,7 @@
             "life-checkpoint:43042e65bdf32fb2f2a1ccdc9a1d5fa94535fc2336ca1d0b67fd1d0cd3cc2a1d:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -31902,7 +31902,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "33ffe1b88d00ceddab9ac6863f237747c3e95785ab98908341b7f5f27e005cc3",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:33ffe1b88d00ceddab9ac6863f237747c3e95785ab98908341b7f5f27e005cc3:failed": "evaluated_candidate"
@@ -32017,7 +32017,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "8c5409e82bf55202599a13b20e7b65a2b78daf54cb2411ace565710915992aaf",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:8c5409e82bf55202599a13b20e7b65a2b78daf54cb2411ace565710915992aaf:failed": "evaluated_candidate"
@@ -32180,7 +32180,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "d588c0164ebaa4376c07adc259cf6ad878d658cec4dc7b3dbcf0328ca82d0a6f",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:d588c0164ebaa4376c07adc259cf6ad878d658cec4dc7b3dbcf0328ca82d0a6f:failed": "evaluated_candidate"
@@ -32625,7 +32625,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "ae969fd6d87ce05f56bcd72b78539b6a6e8fca7c89f6eb9a0b97df6db7118b96",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:ae969fd6d87ce05f56bcd72b78539b6a6e8fca7c89f6eb9a0b97df6db7118b96:failed": "evaluated_candidate"
@@ -32779,7 +32779,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -32856,7 +32856,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "8ed87316513b23b2dc11512e520528bd0bb43a8c00aab91cbededb975018b405"
           },
           "id": "evaluation:6c341319a44fe1d5ddd15772c1be075ebe513f7d9f446d33f95926cb6c12dce6:failed",
@@ -32868,7 +32868,7 @@
             "life-checkpoint:993857bce135ca7087ede8eda5837fef71fdca6f63159989471768fc421a0fde:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -33313,7 +33313,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "868259f4305ba2e3d058b78506813afb4755aef7378ad3685860b5f63b428a9c",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:868259f4305ba2e3d058b78506813afb4755aef7378ad3685860b5f63b428a9c:failed": "evaluated_candidate"
@@ -33365,7 +33365,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "1db551306689be8cc71a0c7f2298bb72c4d3f197f606515b3c6c5231cfa56a31",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:1db551306689be8cc71a0c7f2298bb72c4d3f197f606515b3c6c5231cfa56a31:failed": "evaluated_candidate"
@@ -33407,7 +33407,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -33484,7 +33484,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "33e9fc1bded9e299e6c975731ecad8cb86233ca27169aab31d883dcfd25708eb"
           },
           "id": "evaluation:99512c790eaa7dab2efca6c8f4ec7c0129e4ba78f66d08d29eb4695cedb7e5da:failed",
@@ -33496,7 +33496,7 @@
             "life-checkpoint:2965d7fb37ac212ade828ab6c13a70a29761fb33ea619cfda2c7ad1f0825ffdc:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -33844,7 +33844,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "c6f4b91384508b9f9a2562fb9ff6504e8023379b8de6ae3dec90c4524b260c24",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:c6f4b91384508b9f9a2562fb9ff6504e8023379b8de6ae3dec90c4524b260c24:completed": "evaluated_candidate"
@@ -34440,7 +34440,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "dbf01fd69dfd98267fbddc1bb45f0e73888f1d91ea2c79d92e1d73457fd690c6",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:dbf01fd69dfd98267fbddc1bb45f0e73888f1d91ea2c79d92e1d73457fd690c6:completed": "evaluated_candidate"
@@ -34812,7 +34812,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "e6c31cb5a3c1a239c73f04a08bea5013e93ecd21e8fdb8aa1389702e8b0bf0c6",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:e6c31cb5a3c1a239c73f04a08bea5013e93ecd21e8fdb8aa1389702e8b0bf0c6:failed": "evaluated_candidate"
@@ -34868,7 +34868,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "da94edab79deeaf58c6e8d9558556bb574c2000a592b1a88fc695fe424a5d8ce",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:da94edab79deeaf58c6e8d9558556bb574c2000a592b1a88fc695fe424a5d8ce:completed": "evaluated_candidate"
@@ -35925,7 +35925,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -36002,7 +36002,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "b87c5f90b2d48b22faad90a78bb16738cb90c40a7476a609647a1ebdaba547a1"
           },
           "id": "evaluation:5f1ac4361f1bb72970246eea0571d008e546ba48fe43150755281da6fdceb993:failed",
@@ -36014,7 +36014,7 @@
             "life-checkpoint:903b1147df0eecdf87ac32cc28224b9bbc42297cc7bb726053095dd0840bbf8d:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -36298,7 +36298,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -36375,7 +36375,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "47f2700937cc48ebbbd3e6c2d75f56a2b5ce8a9f068c2f87383984a76d156470"
           },
           "id": "evaluation:868259f4305ba2e3d058b78506813afb4755aef7378ad3685860b5f63b428a9c:failed",
@@ -36387,7 +36387,7 @@
             "life-checkpoint:45517f66d9c48865b989e7db35992511a44b8bace02a38b0ad5a13cb299e4193:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -36419,7 +36419,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -36496,7 +36496,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "9a9892a6e063161be5fafb36e8123f632c16b0a605f36c418095508d9c5379ec"
           },
           "id": "evaluation:6571573f682fab569242e3c924c64be4303c97b63a3645aafc00fa4f07a3aa30:failed",
@@ -36508,7 +36508,7 @@
             "life-checkpoint:c900913c67a52990eeb184ad116396bc476659dbe5edc917affe60eff09b2b60:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -36540,7 +36540,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -36617,7 +36617,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "b15482e927ddc9c8b8dc546d22cdba60ab8b62a25d754dc2ed4478ff85be53a2"
           },
           "id": "evaluation:30312e60c577cc75f9adf41349f94e215aaf9cc63370630a58412c7e152246bd:failed",
@@ -36629,7 +36629,7 @@
             "life-checkpoint:e2fc83b0eb85a749785e8efee7ceefc7bf9894b74f482ab1c2ecdfac74a2cffc:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -37137,7 +37137,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -37214,7 +37214,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "d39c028d84317539e6a4080eceed8d54e2e7e1b8e0fcb4eabdbbfbfb05255912"
           },
           "id": "evaluation:48e109c936a4399b4129ab9617830fb0a26642e12a8caf02ac243160be412e91:failed",
@@ -37226,7 +37226,7 @@
             "life-checkpoint:7fcc9322123f45bbf4f435a920e251ca82b1a751f782ec5c30c448937318825b:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -37363,7 +37363,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "23abb357180ebb9cbdcfc57573caded48176b5f2b00200cde19b6f85d3333ee8",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:23abb357180ebb9cbdcfc57573caded48176b5f2b00200cde19b6f85d3333ee8:failed": "evaluated_candidate"
@@ -38373,7 +38373,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "807a00535a8ce1fc1014c5a51b6703c4cb5c4cc1db52424af8038460fb9d5963",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:807a00535a8ce1fc1014c5a51b6703c4cb5c4cc1db52424af8038460fb9d5963:failed": "evaluated_candidate"
@@ -38744,7 +38744,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "d9227230de881a8e57d71083c3dbeeec00771c4a5f3dc38d1e0db70ddac3de68",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:d9227230de881a8e57d71083c3dbeeec00771c4a5f3dc38d1e0db70ddac3de68:failed": "evaluated_candidate"
@@ -38921,7 +38921,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "16b1273bf2b19112b83e904228fda03a59bc128fd1928cbbd6d3937cbe56d351",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:16b1273bf2b19112b83e904228fda03a59bc128fd1928cbbd6d3937cbe56d351:failed": "evaluated_candidate"
@@ -39026,7 +39026,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -39103,7 +39103,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "cd9cc69c679ceae7d5c490a30a6e226de72161f4cd1f92a2a33359cb6aebd551"
           },
           "id": "evaluation:f69353d8ecaba5c26f1ed88bbbf615cbfebb71f6db6fd48c141028d724b6f6da:failed",
@@ -39115,7 +39115,7 @@
             "life-checkpoint:3773f259f8488aa2b7e9769612e7452a79c85809ce29ce16734291b4a8beb149:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -39819,7 +39819,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "b3c646468a420a9511b21e49474ba15f3a0b4a518476ba0f166c9c197a9a544b",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:b3c646468a420a9511b21e49474ba15f3a0b4a518476ba0f166c9c197a9a544b:failed": "evaluated_candidate"
@@ -41277,7 +41277,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -41354,7 +41354,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "8aa23cc33d7db0d5abf8fa802524df81df62d2de7eca877194a76dbdba54f3e7"
           },
           "id": "evaluation:5c661ede52c715d0d51cb3c6429852c1e631afb9942aeb90d27c631b6e9f1e19:failed",
@@ -41366,7 +41366,7 @@
             "life-checkpoint:f8ae8f8545581b20e80289328c325087360dfe54bb8a5c3ea0c495e49d4d3424:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -41409,7 +41409,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "b237a9cbf85ed7959b177215d1277e8e611a81738bef8140237c2548c6d0fae7",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:b237a9cbf85ed7959b177215d1277e8e611a81738bef8140237c2548c6d0fae7:completed": "evaluated_candidate"
@@ -41587,7 +41587,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "53edb27ed160888a901b90d93966cfb676c8b32101ebceb0a3b09d1d5c28193c",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:53edb27ed160888a901b90d93966cfb676c8b32101ebceb0a3b09d1d5c28193c:failed": "evaluated_candidate"
@@ -41926,7 +41926,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "a34ac916a9bf428d9aabbe3a166b66c22c6607c8cad604e150147e91929dbb9a",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:a34ac916a9bf428d9aabbe3a166b66c22c6607c8cad604e150147e91929dbb9a:completed": "evaluated_candidate"
@@ -41971,7 +41971,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -42048,7 +42048,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "9a01831660f6f19da5c19b2b4f0854c0afe41dbd8d0206b7b6027e067709114e"
           },
           "id": "evaluation:e6c31cb5a3c1a239c73f04a08bea5013e93ecd21e8fdb8aa1389702e8b0bf0c6:failed",
@@ -42060,7 +42060,7 @@
             "life-checkpoint:6a6054cd5e769afa817a22e1e53fcb629bf1a57f6d56e5378a4c563fc4bb8d7d:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -42305,7 +42305,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -42382,7 +42382,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "65b2dd04ea347401a055f5c4bcc63a3c81c1ec21268791cc0a502cfa4fe3eaf3"
           },
           "id": "evaluation:64bc8bd5df3a14e36c7cf0d204536aa4eef15c949f7ff794867fc47c41d7283f:failed",
@@ -42394,7 +42394,7 @@
             "life-checkpoint:20f3bf29053cf1c769f6f9a4dd55b4af3a4418898cbe544536f756c63a6b835c:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -42423,7 +42423,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -42500,7 +42500,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "6171a921ee91daa5969550b1dcc761693f0607c2d1bedaf753086b1ef6d9ea13"
           },
           "id": "evaluation:9757d4826b0fab8530f138e7b1df71995fb4546847588a3562169beacb3a09ae:failed",
@@ -42512,7 +42512,7 @@
             "life-checkpoint:acab58fb2c1a83d77f8324b04051775a2ea83b4df21f129b708b36177c471ab3:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -43481,7 +43481,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -43558,7 +43558,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "09887d24cd32fcd3046a1fd4e96ce2cadfa1be5aa538dbc505b6fed907893f75"
           },
           "id": "evaluation:7b380d98d9dfc2e6ad1402f2ba7d3b332f2ccd0fcd9f6d40f09426aec951d251:failed",
@@ -43570,7 +43570,7 @@
             "life-checkpoint:38592e2132f000564230bff870b9a257e1ea15bb8c99ee10807b8484f423486f:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -43602,7 +43602,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -43679,7 +43679,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "a6d48e3e849ee623d409525488f44d41b7158fabe681fbf01668496d9cca86db"
           },
           "id": "evaluation:d9227230de881a8e57d71083c3dbeeec00771c4a5f3dc38d1e0db70ddac3de68:failed",
@@ -43691,7 +43691,7 @@
             "life-checkpoint:8c2aa84181bcf10e448475bb09a60754498d930e50b827aa5e6d6ca676ebe32a:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -43730,7 +43730,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "edbc519bb933b48fbd95522bbb35bb3269dd06ace2da9be21a8e01dc99ec20f1",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:edbc519bb933b48fbd95522bbb35bb3269dd06ace2da9be21a8e01dc99ec20f1:failed": "evaluated_candidate"
@@ -44176,7 +44176,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "b00876c17d64f8b0f84dd23bbeff9bcb1b4f2f5643ebd76528f85ed3ed54b1c0",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:b00876c17d64f8b0f84dd23bbeff9bcb1b4f2f5643ebd76528f85ed3ed54b1c0:failed": "evaluated_candidate"
@@ -44673,7 +44673,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "2f0bd79a88dbb30a17215082617fc82fccd0158e7055a865151d285915660dd9",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:2f0bd79a88dbb30a17215082617fc82fccd0158e7055a865151d285915660dd9:failed": "evaluated_candidate"
@@ -44729,7 +44729,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "b2b4f3e573f495bd42fcf7338321be39fe62f67a4afa4a059088c620ae4287b2",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:b2b4f3e573f495bd42fcf7338321be39fe62f67a4afa4a059088c620ae4287b2:completed": "evaluated_candidate"
@@ -45134,7 +45134,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "223f122d9d9bc743abb36880b08e9e0e6e4e2c0d3d003aefd88e932cda93e66e",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:223f122d9d9bc743abb36880b08e9e0e6e4e2c0d3d003aefd88e932cda93e66e:failed": "evaluated_candidate"
@@ -45179,7 +45179,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -45256,7 +45256,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "7e155791d1e420abf4cb620286d5f79cdd875583794eca76769eb955ce9b7499"
           },
           "id": "evaluation:1db551306689be8cc71a0c7f2298bb72c4d3f197f606515b3c6c5231cfa56a31:failed",
@@ -45268,7 +45268,7 @@
             "life-checkpoint:2cc95860d32ca444438eea907a07c1cc187be93370e3326f47324bd94e6009b0:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -45306,7 +45306,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "5d0163ea4ad969b10ec20cb8053f39b10e3ec2d7316dd92af264dcd374c58dcf",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:5d0163ea4ad969b10ec20cb8053f39b10e3ec2d7316dd92af264dcd374c58dcf:failed": "evaluated_candidate"
@@ -45348,7 +45348,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -45425,7 +45425,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "e513de9dbbfe73c3fabc9cf97e63137892743ea7c3c272812012132e698acdc5"
           },
           "id": "evaluation:16aa09e216710f7822ac3c4d7e9dca85ea15fd38710f031f610702b3d09f04e3:failed",
@@ -45437,7 +45437,7 @@
             "life-checkpoint:3d75a3383c6bc6d5f8191bb14cb695b8929fdb9af047c319fa95db4f5623226d:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -45581,7 +45581,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -45658,7 +45658,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "4593880e5e3f65edf88d5078616162dfe98274eabff4653b0de5be93118fe8f4"
           },
           "id": "evaluation:807a00535a8ce1fc1014c5a51b6703c4cb5c4cc1db52424af8038460fb9d5963:failed",
@@ -45670,7 +45670,7 @@
             "life-checkpoint:c46193cab956ceba80422785245c95a84c51847e0e7ce1ba86653f1c37f82ab1:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -45995,7 +45995,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "9757d4826b0fab8530f138e7b1df71995fb4546847588a3562169beacb3a09ae",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:9757d4826b0fab8530f138e7b1df71995fb4546847588a3562169beacb3a09ae:failed": "evaluated_candidate"
@@ -46109,7 +46109,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "36453b51faafe412191d7b4ff73b33281e264bc303aaf40bc33ea20dc4571c7e",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:36453b51faafe412191d7b4ff73b33281e264bc303aaf40bc33ea20dc4571c7e:failed": "evaluated_candidate"
@@ -46349,7 +46349,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "7e935e2c04a50b794db2d7ebb3c156db47e816ec422cecec9daf21f995a0940c",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:7e935e2c04a50b794db2d7ebb3c156db47e816ec422cecec9daf21f995a0940c:failed": "evaluated_candidate"
@@ -46606,7 +46606,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "725288b00ea8ffaf2fdd7c13ecc4def6df7050168e194f537faddb188f7fc0c8",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:725288b00ea8ffaf2fdd7c13ecc4def6df7050168e194f537faddb188f7fc0c8:failed": "evaluated_candidate"
@@ -46900,7 +46900,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -46977,7 +46977,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "972e3ca9ad6c00c5c266c061e901c6735025ecb31f6d76b77bbe5f195afa3a67"
           },
           "id": "evaluation:7e935e2c04a50b794db2d7ebb3c156db47e816ec422cecec9daf21f995a0940c:failed",
@@ -46989,7 +46989,7 @@
             "life-checkpoint:e8f3501b1cd2eb62982dcc54e57279a28589fa03e758c2e25496320ce80c482c:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -48296,7 +48296,7 @@
             "decision": "retained",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "fa695175263a687c74f07c448420669f8edd53c7790c05550c14bd1f80dc0241",
-            "failure_retained": false,
+            "infrastructure_failure_retained": false,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:fa695175263a687c74f07c448420669f8edd53c7790c05550c14bd1f80dc0241:completed": "evaluated_candidate"
@@ -48410,7 +48410,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "37e18e26a87b7b5d08baa7c08f8a930e3f507ed12fe30d8e7d3b536682182caa",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:37e18e26a87b7b5d08baa7c08f8a930e3f507ed12fe30d8e7d3b536682182caa:failed": "evaluated_candidate"
@@ -48937,7 +48937,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -49014,7 +49014,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "13235e6a01d1b98b84bc63b549b5f38168225eebdb9be55ac1507c79e58453b0"
           },
           "id": "evaluation:e2f0a2309a6d0e2db05973da1f4ade060d48e9d7aa379f65a5b516414ebe1d3b:failed",
@@ -49026,7 +49026,7 @@
             "life-checkpoint:54de991dda2f437985834ac0b80ead5ead074db112d7b04bc54536b23bbf80f5:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -49065,7 +49065,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "30312e60c577cc75f9adf41349f94e215aaf9cc63370630a58412c7e152246bd",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:30312e60c577cc75f9adf41349f94e215aaf9cc63370630a58412c7e152246bd:failed": "evaluated_candidate"
@@ -49180,7 +49180,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "6571573f682fab569242e3c924c64be4303c97b63a3645aafc00fa4f07a3aa30",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:6571573f682fab569242e3c924c64be4303c97b63a3645aafc00fa4f07a3aa30:failed": "evaluated_candidate"
@@ -50158,7 +50158,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -50235,7 +50235,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "1fe453fe352b7436cc280611ecc8a8d8e9518056a766c24576b414551cd632ea"
           },
           "id": "evaluation:5d0163ea4ad969b10ec20cb8053f39b10e3ec2d7316dd92af264dcd374c58dcf:failed",
@@ -50247,7 +50247,7 @@
             "life-checkpoint:a007374f27c4b28577ff662baf9ba0bbdecff1424812643d52750811a7a0bcff:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -50348,7 +50348,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "f758765426e99e3a68e7421ec87946c23f0ae5fcd64d318d46ac5e2c0c9cb87c",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:f758765426e99e3a68e7421ec87946c23f0ae5fcd64d318d46ac5e2c0c9cb87c:failed": "evaluated_candidate"
@@ -50584,7 +50584,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -50661,7 +50661,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "16f9f9f1c9bbebc4b25fdcfd468a527e15c8d7fcec3a45ec08cabdb9a9404411"
           },
           "id": "evaluation:ba2dbe9708a65225ca673158790dfe48ce91e47c69d0018b18e217a7772bdc36:failed",
@@ -50673,7 +50673,7 @@
             "life-checkpoint:c439417765ced07958054a1c7bc60e06bbfd164fe153bfe7d14e91074ad517df:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -51152,7 +51152,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "c4c7e545633631aff1f9de5cd98cc214eb9918f4405af261e1cd45d1d092926c",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:c4c7e545633631aff1f9de5cd98cc214eb9918f4405af261e1cd45d1d092926c:failed": "evaluated_candidate"
@@ -51315,7 +51315,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "401d20fed324e32da13c69303ae0d20d39fafef0c79dfb4cd90ed78ce94beb54",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:401d20fed324e32da13c69303ae0d20d39fafef0c79dfb4cd90ed78ce94beb54:failed": "evaluated_candidate"
@@ -51726,7 +51726,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -51803,7 +51803,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "6f596f25bf38fba9ec61d303fd04f1e82162eeb1a230a0499700a003d011b005"
           },
           "id": "evaluation:725288b00ea8ffaf2fdd7c13ecc4def6df7050168e194f537faddb188f7fc0c8:failed",
@@ -51815,7 +51815,7 @@
             "life-checkpoint:b18d8c7f852abca2f2fa8b465ae6bbc50cf15a4a3bb59f811163c367132a6cfc:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340
@@ -53098,7 +53098,7 @@
           "value": 9967
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -53175,7 +53175,7 @@
             },
             "physical_output_sha256": "dedfb40adf9f894a3369bbbe45e7ad718891ce28101dfc3298f8da85dd6a7456",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "d928ceeb74e71d7ad2a63c2198d50b5dd9592a6fcc911bc797e5303c3c73bf6f"
           },
           "id": "evaluation:55ca9cd82b7c305f4ba38211e09f3ea99eafeaed47ca8e1c58fd240432dde048:failed",
@@ -53187,7 +53187,7 @@
             "life-checkpoint:7d0c6954ffc33e18d44bcba65fca077c08ace025f313fca12732c18ad753c661:9600:a2aff19d99ebbfc4171f04fb909f671df4e6ef7ebc7d942e78c72afdc03c5a1d"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 9967
@@ -53735,7 +53735,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "66f850fccdac82a434de964472d0ef3f41d74d2c8deabd92dc9616e2543281de",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:66f850fccdac82a434de964472d0ef3f41d74d2c8deabd92dc9616e2543281de:failed": "evaluated_candidate"
@@ -54234,7 +54234,7 @@
             "decision": "rejected",
             "descriptor_epoch_id": "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909",
             "evaluation_id": "8a2a4c32950c23194424fd0c1cfa23c7f6fcbdf94545e6fa6762483b0ac1dbc5",
-            "failure_retained": true,
+            "infrastructure_failure_retained": true,
             "parent_roles": {
               "descriptor-epoch:e10c99c571da39d5d5a60a1118e49117f0b189969db269adce521dca9501d909": "descriptor_epoch",
               "evaluation:8a2a4c32950c23194424fd0c1cfa23c7f6fcbdf94545e6fa6762483b0ac1dbc5:failed": "evaluated_candidate"
@@ -54543,7 +54543,7 @@
           "value": 10340
         },
         "record_type": "evaluation_failed",
-        "text": "Retained failed physical population evaluation.",
+        "text": "Retained infrastructure failure; no ecological metrics.",
         "artifact_uri": null,
         "blob_refs": [
           {
@@ -54620,7 +54620,7 @@
             },
             "physical_output_sha256": "9db99f2405cba97279670736cbe378f83fc5b88b97d2722ab169c6f29bb8771a",
             "probe_panel_sha256": "de888518cd9ca09bb18fa4492f05f5f4412dac7989bc120345b576e67fe944ee",
-            "status": "failed",
+            "status": "infrastructure-failure",
             "trajectory_sha256": "1976968a1312fc4de4e0bcbd08c0eccc1208a6caba74df074c72234324c3963f"
           },
           "id": "evaluation:b16151eaf64c8ee521a02cb1c7bfdbd7ae3c1db8c21deb224ed8f4ea405f81fd:failed",
@@ -54632,7 +54632,7 @@
             "life-checkpoint:1fe52fb57b2631a64f8797175f1ec8e7636bd965d3fc8259bf206e1e2c53f757:9600:2e3ab9f612406b6e51f00664d9e8656fbd26a62aa52d46613ea55ae189bb1280"
           ],
           "record_type": "evaluation_failed",
-          "text": "Retained failed physical population evaluation.",
+          "text": "Retained infrastructure failure; no ecological metrics.",
           "time": {
             "domain": "evaluation_tick",
             "value": 10340

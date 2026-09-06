@@ -1,0 +1,127 @@
+{
+  "content_sha256": "a22fbe5520041b3a9051efa594a70003412495ca9534f2d4b89ea0855fc8acc4",
+  "format": "chreatures-population-evidence-schema-projection-v1",
+  "invariants": {
+    "applied_batches_unchanged": true,
+    "blob_references_unchanged": true,
+    "blob_refs_sha256": "579e74a6105b2e8512a30e8cf6278f7f8dfbd9d8ec99b09061fbed59cdf24ef7",
+    "parent_edge_count": 1483,
+    "parent_graph_sha256": "3b4e1d0f670be2ec9e08651d097a53c49daf30da1fc52b6d753f1f541965dc9b",
+    "parents_and_roles_unchanged": true,
+    "raw_run_status_unchanged": true,
+    "record_count": 629,
+    "record_count_unchanged": true,
+    "record_ids_sha256": "a3bc5724cebc2d6b83c38a3331dfde6870c5dd2a07af249f47fb40e8466e5c63",
+    "record_ids_unchanged": true
+  },
+  "notes": [
+    "Raw evaluator result/failure files and immutable source batches retain their originally recorded status and bytes.",
+    "The 64 records describe one cohort-level engine failure projected across its planned life evaluations; they are not 64 independent biological death claims.",
+    "Stable evidence record IDs deliberately remain unchanged so existing citations and parent edges continue to resolve."
+  ],
+  "projection_rules": [
+    {
+      "changes": {
+        "fields.status": {
+          "from": "failed",
+          "to": "infrastructure-failure"
+        },
+        "text": {
+          "from": "Retained failed physical population evaluation.",
+          "to": "Retained infrastructure failure; no ecological metrics."
+        }
+      },
+      "meaning": "The authenticated cohort engine failure is classified as infrastructure failure. It is not an organism-terminal outcome and carries no ecological quality claim.",
+      "record_count": 64,
+      "record_ids_sha256": "8f48787a5a73ba1bf9c2f4f8ea2f90ef83528f5ed8f3feb6f698ffd34232a98e",
+      "record_type": "evaluation_failed"
+    },
+    {
+      "changes": {
+        "fields.failure_retained": {
+          "to": "fields.infrastructure_failure_retained",
+          "value_unchanged": true
+        }
+      },
+      "meaning": "Current schema terminology for the same rejected-decision diagnostic.",
+      "record_count": 80,
+      "record_ids_sha256": "3655df92cceedba60a2fde1a406ee6f1940a005a462271cecb621bad3b9e8f49",
+      "record_type": "archive_decision"
+    }
+  ],
+  "result": {
+    "ledger": {
+      "path": "integrations/artifacts/population-wave-v1/evidence.json",
+      "records_sha256": "24a28d2ffe96a2f7f1e018d3049c187614decd5a5d6f72356156c3c9cc615e02",
+      "sha256": "dae4b0a077df25f0ce4b27b64d132b86316a5b818983336480ffe2f536fbbdd0"
+    },
+    "native": {
+      "edge_count": 1483,
+      "integration": "native-universal-weave-dag",
+      "library": {
+        "name": "universal-weave",
+        "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+        "version": "0.5.0"
+      },
+      "multi_parent_nodes": 338,
+      "node_count": 629,
+      "node_id_contract": "lowercase first-128-bit SHA-256 of source_id",
+      "reload_equal": true,
+      "validated_after_reload": true
+    },
+    "weave": {
+      "path": "integrations/artifacts/population-wave-v1/evidence.weave.json",
+      "sha256": "316924a64da1f7dcd40dee10bfffd3ee03cdb4568787fa4ce2a9cbcfef49a256"
+    },
+    "weave_receipt": {
+      "path": "integrations/artifacts/population-wave-v1/evidence.weave-receipt.json",
+      "sha256": "fbed9e2f192d3683342f4f51fc1ebd08945289c62dde42eb2d8fb1e4b4a3fbf9"
+    },
+    "weave_request": {
+      "path": "integrations/artifacts/population-wave-v1/evidence.weave-request.json",
+      "sha256": "b38f65f0aea05f6efdf308d946e094d3f994635a6794ba111224fd37e4fa731e"
+    }
+  },
+  "scope": "one-way derived evidence-schema projection; source run artifacts and batch blobs are unchanged",
+  "source": {
+    "ledger": {
+      "git_revision": "4af1b6fed7d45cde9d27c25a85849edb9e8e9366",
+      "path": "integrations/artifacts/population-wave-v1/evidence.json",
+      "records_sha256": "ba3d3d2a03397ed6745ad98a5eb7cdec322f2ea5bb952a87410b57970082cbe1",
+      "sha256": "b61d7ea1904879cc78f38487b2c832a5807966923c9a6eefea0ae759db5d6547"
+    },
+    "source_batches": [
+      {
+        "bytes": 804958,
+        "path": "integrations/artifacts/population-wave-v1/source-batch-0000.json",
+        "sha256": "65f67352b57a3c79245fe3d46412f6e2e0a279c7341bab1968e380b1929e66a7"
+      },
+      {
+        "bytes": 287132,
+        "path": "integrations/artifacts/population-wave-v1/source-batch-0001.json",
+        "sha256": "e0fb294f382bcf5b2cb28270942ff03cf2219c6f5c8c67e06a8111f270506cd5"
+      },
+      {
+        "bytes": 220097,
+        "path": "integrations/artifacts/population-wave-v1/source-batch-0002.json",
+        "sha256": "cea1c05b24c0a252704452967e9cef9630e8d551e9ceac0fe7b074c802519627"
+      },
+      {
+        "bytes": 28722,
+        "path": "integrations/artifacts/population-wave-v1/source-batch-0003-gam.json",
+        "sha256": "c1e744e6f4f0683af345fd5065acb8a1d59e27d1b9f9dfaab755e9eab7efab92"
+      },
+      {
+        "bytes": 12149,
+        "path": "integrations/artifacts/population-wave-v1/source-batch-0004-gam-complete-b2.json",
+        "sha256": "26c422897c87312522839e1fc4d02c397a4fae79d5f3c9144c5840def76e9169"
+      }
+    ],
+    "weave": {
+      "git_revision": "4af1b6fed7d45cde9d27c25a85849edb9e8e9366",
+      "path": "integrations/artifacts/population-wave-v1/evidence.weave.json",
+      "sha256": "befcd2f858b0a23e8670b6d404817c6b470de1b1e8b93d40945237f647ed0f3d"
+    }
+  },
+  "source_revision": "4af1b6fed7d45cde9d27c25a85849edb9e8e9366"
+}

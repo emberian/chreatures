@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import argparse
-import copy
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
 import sys
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping
 
 import numpy as np
 
@@ -21,6 +20,7 @@ from chreatures.population import (
     PopulationSearch,
     canonical_bytes,
     current_parameter_recipe,
+    response_bank_identity,
 )
 from chreatures.training_environment import EmbodiedTrainingProfile
 from chreatures.resident_contract import (
@@ -113,6 +113,7 @@ def init_command(args: argparse.Namespace) -> None:
     profile_raw = load_json(args.profile)
     profile = EmbodiedTrainingProfile.from_value(profile_raw)
     controller, metadata = controller_identity(args.controller)
+    population_response = response_bank_identity(args.population_response_artifact)
     sources = profile.component("sources")
     developmental_base = valid_sha(
         sources["biosphere_birth"]["sha256"], "biosphere birth"
@@ -218,6 +219,7 @@ def init_command(args: argparse.Namespace) -> None:
             "sha256": profile.sha256,
         },
         "controller": controller,
+        "population_response": population_response,
         "organism_interface_sha256": interface_sha,
         "search_state": "search.json",
         "search_config_sha256": value_sha256(search_config),
@@ -288,8 +290,8 @@ def plan_command(args: argparse.Namespace) -> None:
     root = args.output.resolve()
     value, search = campaign(root)
     search.validate()
-    if not 1 <= args.worlds_per_batch <= 4 or not 1 <= args.candidate_waves <= 1024:
-        raise SystemExit("worlds-per-batch must be 1..4 and candidate-waves 1..1024")
+    if not 1 <= args.worlds_per_batch <= 64 or not 1 <= args.candidate_waves <= 1024:
+        raise SystemExit("worlds-per-batch must be 1..64 and candidate-waves 1..1024")
     if value["plans"] and any(item["status"] != "ingested" for item in value["plans"]):
         raise SystemExit("prior campaign plan is not fully ingested")
     state = search.snapshot_value()
@@ -554,6 +556,16 @@ def ingest_command(args: argparse.Namespace) -> None:
         print(json.dumps({"status": "already-ingested", "source_sha256": source_sha}))
         return
     document = load_json(source)
+    evaluation_identity = load_json(source.parent / "identity.json")
+    identity_sha = evaluation_identity.get("sha256")
+    if (
+        identity_sha != value_sha256({key: item for key, item in evaluation_identity.items() if key != "sha256"})
+        or document.get("evaluation_identity_sha256") != identity_sha
+        or evaluation_identity["population_response"] != value["population_response"]
+        or evaluation_identity.get("resident_artifact", {}).get("file_sha256") != value["controller"]["file_sha256"]
+        or evaluation_identity.get("profile_sha256") != value["profile"]["sha256"]
+    ):
+        raise ValueError("evaluation protocol differs from the campaign controller, profile or response bank")
     status = document.get("status")
     if (
         document.get("format") == "chreatures-population-episode-evaluation-v1"
@@ -680,6 +692,8 @@ def arguments() -> argparse.Namespace:
     init = sub.add_parser("init")
     init.add_argument("--profile", type=Path, required=True)
     init.add_argument("--controller", type=Path, required=True)
+    init.add_argument("--population-response-artifact", type=Path,
+                      help="pin the shared GAM bank for every evaluation in this campaign")
     init.add_argument("--seed", type=int, required=True)
     init.add_argument("--output", type=Path, required=True)
     plan = sub.add_parser("plan")

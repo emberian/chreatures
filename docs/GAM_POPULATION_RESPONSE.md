@@ -89,13 +89,18 @@ effort. Final held-out transition RMSEs are `1.445e-5`, `1.675e-4`, and
 The three-law joint domain covers 95.85% of all rows and 95.93% of final
 holdout rows.
 
-History means enter all three fitted laws. Candidate action scores still vary:
-state and history contributions cancel when hypothetical candidates share one
-context, while thrust contributes to every law and yaw, posture, and grip
-contribute to fatigue and effort. The executed-action latent component standard
-deviations are `0.0201`, `0.0359`, and `0.6970`, respectively. These measured
-associations permit bounded proposal tilts; they do not establish action
-causality.
+History means enter all three fitted laws. Candidate action scores still vary.
+For candidates sharing one context, the state and history terms are common only
+on each additive law's latent scale. Rust then applies the law-specific
+signed-tanh or capped-softplus transform before combining and centering candidate
+scores. Consequently, the common latent offset can change the physical-scale
+response difference produced by an action term. Thrust contributes to every law;
+yaw, posture, and grip also contribute to fatigue and effort. The
+executed-action latent component standard deviations are `0.0201`, `0.0359`,
+and `0.6970`, respectively. These measured associations permit bounded proposal
+tilts; they do not establish action causality. The supplementary score-semantics
+correction receipt preserves the original authenticated fit artifacts while
+clarifying this latent-versus-transformed distinction.
 
 The observed candidate/environment support artifact deliberately emits no
 challenge scores. Each candidate appeared in one environment with no

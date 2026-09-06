@@ -1,6 +1,6 @@
 # Reproducible population birth export
 
-`scripts/export_population_birth.py` creates a current population-v5 cold birth
+`scripts/export_population_birth.py` creates a current population-v6 cold birth
 without starting or mutating a brain or world service. It selects one world from
 an authenticated campaign assignment, regenerates the profile-pinned base habitat
 and biosphere through the existing family generator, and compiles the selected
@@ -22,12 +22,13 @@ operator will place the compact NPZ files on the neural service host; copying
 those files is deliberately an operator step.
 
 The current controller NPZ is also an explicit external input. The command
-strictly requires format `chreatures-native-developmental-resident-population-v5`,
-metadata version 5, and execution
-`developmental-resident-native-population-v5`. Controller-internal v5 is
+strictly requires format `chreatures-native-developmental-resident-population-v6`,
+metadata version 6, and execution
+`developmental-resident-native-population-v6`. Native execution v6 is
 independent of the body-facing organism-interface v4 contract, which remains
 4,459 observations, 12 physiology fields, and 12 actions. New controller weights
-should be exported from their current training checkpoint with
+are exported from current v5 inherited policy weights together with an
+authenticated recurrent-v3 predictor using
 `scripts/export_developmental_resident.py`. There is no implicit controller
 conversion or bundled downloadable controller in this workflow.
 
@@ -42,7 +43,7 @@ python scripts/export_population_birth.py \
   --profile /tank/chreatures/campaigns/v1/campaign/profile.json \
   --assignments /tank/chreatures/campaigns/v1/campaign/plans/plan-0000/batch-0000.json \
   --world-index 0 \
-  --resident-artifact data/genomes/developmental-resident-population-v5.npz \
+  --resident-artifact /path/to/developmental-resident-reciprocal-v6.npz \
   --graph /tank/chreatures/data/malecns/derived \
   --port-bundle /tank/chreatures/data/ports/retinal-v2-maps.npz \
   --neural-recipe data/ports/neural-variant-canonical-v1.json \

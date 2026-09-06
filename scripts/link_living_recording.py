@@ -7,7 +7,11 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sys
 from typing import Any, Mapping
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 from chreatures.population_evidence import (
     BATCH_FORMAT,
@@ -23,7 +27,7 @@ from chreatures.population_evidence import (
 )
 
 
-LINK_FORMAT = "chreatures-living-recording-evidence-link-v1"
+LINK_FORMAT = "chreatures-living-recording-evidence-link-v2"
 
 
 def _bindings(value: Mapping[str, Any]) -> dict[int, str]:
@@ -50,10 +54,33 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     if link.get("campaign_id") != ledger.get("campaign_id"):
         raise PopulationEvidenceError("recording link and ledger campaign differ")
     recording = read_json(args.recording)
+    if link.get("recording_content_sha256") != recording.get("content_sha256"):
+        raise PopulationEvidenceError("recording link names a different recording")
+    birth_batch_id = link.get("birth_batch_id")
+    if not isinstance(birth_batch_id, str) or birth_batch_id not in ledger.get(
+        "applied_batches", []
+    ):
+        raise PopulationEvidenceError(
+            "recording link birth batch is not applied to the ledger"
+        )
     laws = link.get("associated_law_fit_record_ids", [])
     event_laws = link.get("event_law_fit_record_ids", {})
     if not isinstance(laws, list) or not isinstance(event_laws, Mapping):
         raise PopulationEvidenceError("recording link law-fit references are invalid")
+    bindings = _bindings(link)
+    by_id = {record["id"]: record for record in ledger.get("records", [])}
+    environment_id = str(link.get("environment_record_id", ""))
+    for body, record_id in bindings.items():
+        life = by_id.get(record_id)
+        if life is None or life.get("record_type") != "birth":
+            raise PopulationEvidenceError(
+                f"public body {body} must bind to its explicit research birth"
+            )
+        roles = life.get("fields", {}).get("parent_roles", {})
+        if roles.get(environment_id) != "environment":
+            raise PopulationEvidenceError(
+                f"public body {body} birth belongs to a different environment"
+            )
     records = recording_evidence_records(
         recording,
         recording_artifact=local_blob(
@@ -62,8 +89,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             media_type="application/json",
         ),
         campaign_record_id=str(link.get("campaign_record_id", "")),
-        environment_record_id=str(link.get("environment_record_id", "")),
-        body_life_record_ids=_bindings(link),
+        environment_record_id=environment_id,
+        body_life_record_ids=bindings,
         associated_law_fit_record_ids=laws,
         event_law_fit_record_ids=event_laws,
     )
@@ -101,6 +128,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "recording_file_sha256": sha256_file(args.recording),
             "recording_content_sha256": recording["content_sha256"],
             "link_file_sha256": sha256_file(args.link),
+            "birth_batch_id": birth_batch_id,
         },
     }
     if args.output.exists():

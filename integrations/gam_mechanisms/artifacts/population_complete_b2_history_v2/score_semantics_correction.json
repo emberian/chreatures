@@ -1,0 +1,21 @@
+{
+  "format": "chreatures-population-gam-score-semantics-correction-v1",
+  "status": "supplementary interpretation correction; fitted bank and source evidence unchanged",
+  "bank_sha256": "4d535c586c899609a51c14792b6dda6a50c66dc84e2b763c1a99a74842947b92",
+  "original_support_report_sha256": "ebaafb1d7668a726000b39919db03de13143b0654aa462ed00a27d85cac813e0",
+  "surface_sha256": "47003d9aeff592748ea2c473027d1576d42dc74a6aaae9a521f7f0cbf5a2388f",
+  "correction": "The support report field state_history_terms_cancel_when_candidates_share_context applies only to the additive latent predictor. Rust transforms each law prediction with signed tanh or capped softplus before weighted candidate scoring and centering. A common state/history latent offset can therefore modulate the physical-scale difference between candidate actions.",
+  "runtime_order": [
+    "sum intercept, state, history, and candidate-action smooth terms in latent space",
+    "apply the response law's bounded nonlinear transform",
+    "combine transformed responses with configured weights and scales",
+    "center across in-domain candidates and apply the bounded score tanh"
+  ],
+  "surface_check": {
+    "description": "physical-response difference between maximum-domain and minimum-domain thrust across the 25 state/history grid columns; descriptive fitted surface only",
+    "energy_state_delta_difference_range": [0.0, 4.836846510840786e-07],
+    "fatigue_state_delta_difference_range": [-5.474381451189196e-05, -1.532623854216819e-13],
+    "effort_difference_range": [-0.00637291270425272, -0.0063727352557017]
+  },
+  "claims": "No coefficient, domain, calibration, fitted artifact, or causal claim is changed."
+}

@@ -19,6 +19,7 @@ from urllib.request import Request, urlopen
 import numpy as np
 
 
+ROOT = Path(__file__).resolve().parents[1]
 FORMAT = "chreatures-living-reef-public-recording-v2"
 V4_ACTION_NAMES = (
     "thrust", "yaw", "gaze_pitch", "posture", "grip",
@@ -111,6 +112,10 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--url", required=True, help="Read-only Habitat3D base URL")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
+        "--binding-output", type=Path, required=True,
+        help="Private body-index binding receipt outside every public asset tree",
+    )
+    parser.add_argument(
         "--raw-output", type=Path,
         help="Private gzip JSONL of exact accepted host views",
     )
@@ -123,8 +128,12 @@ def arguments() -> argparse.Namespace:
         "--strict-ticks", action="store_true",
         help="Fail instead of accepting a later real tick when polling skips a target",
     )
-    parser.add_argument("--source-revision", required=True)
-    parser.add_argument("--source-content-sha256", required=True)
+    parser.add_argument("--world-source-revision", required=True)
+    parser.add_argument("--world-source-content-sha256", required=True)
+    parser.add_argument(
+        "--capture-tool-revision", required=True,
+        help="Revision containing this separately frozen recorder source",
+    )
     parser.add_argument("--profile-sha256", required=True)
     parser.add_argument("--expected-graph-sha256")
     parser.add_argument("--expected-resident-artifact-sha256")
@@ -137,16 +146,32 @@ def validate_arguments(args: argparse.Namespace) -> None:
         raise SystemExit("--url must be an HTTP(S) base URL without credentials")
     if args.output.exists():
         raise SystemExit("output must not already exist")
+    if args.binding_output.exists():
+        raise SystemExit("binding output must not already exist")
+    binding_path = args.binding_output.resolve()
+    for public_root in (ROOT / "site", ROOT / "docs" / "assets"):
+        try:
+            binding_path.relative_to(public_root.resolve())
+        except ValueError:
+            continue
+        raise SystemExit("binding output must be outside public asset trees")
     if args.raw_output is not None and args.raw_output.exists():
         raise SystemExit("raw output must not already exist")
+    outputs = [args.output.resolve(), args.binding_output.resolve()]
+    if args.raw_output is not None:
+        outputs.append(args.raw_output.resolve())
+    if len(outputs) != len(set(outputs)):
+        raise SystemExit("recording, binding and raw outputs must be distinct")
     if not 0 <= args.resident_index < 64:
         raise SystemExit("resident index must be in 0..63")
     if not 2 <= args.frames <= 10_000 or not 1 <= args.stride_ticks <= 1_000:
         raise SystemExit("invalid frame count or tick stride")
     if not 0.001 <= args.poll_seconds <= 1.0 or not 1 <= args.timeout_seconds <= 86_400:
         raise SystemExit("invalid polling interval or timeout")
+    if not args.world_source_revision.strip() or not args.capture_tool_revision.strip():
+        raise SystemExit("world and capture-tool revisions must be nonempty")
     for label, value in (
-        ("source content", args.source_content_sha256),
+        ("world source content", args.world_source_content_sha256),
         ("profile", args.profile_sha256),
     ):
         if len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
@@ -380,6 +405,25 @@ def public_event_value(
     raise ValueError("evidence event metadata contains a non-JSON value")
 
 
+def public_event_source(
+    value: Mapping[str, Any],
+    body_indices: Mapping[str, int],
+    entity_indices: Mapping[str, int],
+) -> dict[str, Any]:
+    """Sanitize mechanism provenance without publishing opaque runtime IDs."""
+    source = dict(value)
+    for key in ("signal_id", "offer_id"):
+        opaque = source.pop(key, None)
+        if opaque is not None:
+            if not isinstance(opaque, str) or not opaque:
+                raise ValueError(f"evidence event source {key} is invalid")
+            source[f"{key}_sha256"] = sha256_bytes(opaque.encode())
+    result = public_event_value(source, body_indices, entity_indices)
+    if not isinstance(result, dict):
+        raise ValueError("evidence event source must remain an object")
+    return result
+
+
 def evidence_events(
     state: Mapping[str, Any],
     body_indices: Mapping[str, int],
@@ -496,7 +540,7 @@ def evidence_events(
         source_receipt = source.get("source", {})
         if not isinstance(source_receipt, Mapping):
             raise ValueError(f"evidence event {event_id} source must be an object")
-        public_source = public_event_value(
+        public_source = public_event_source(
             source_receipt, body_indices, entity_indices
         )
         previous_sha256 = str(source.get("previous_sha256", ""))
@@ -638,11 +682,16 @@ def identity(state: Mapping[str, Any], args: argparse.Namespace) -> dict[str, An
     }
     controller_public["observation_contract"] = controller.get("observation_contract")
     return {
-        "source_revision": args.source_revision,
-        "source_content_sha256": args.source_content_sha256,
-        "source_content_semantics": (
-            "caller-pinned source archive or the identical engine_identity.sha256"
+        "world_source_revision": args.world_source_revision,
+        "world_source_content_sha256": args.world_source_content_sha256,
+        "world_source_content_semantics": (
+            "caller-pinned immutable world source archive or its declared content identity"
         ),
+        "capture_tool": {
+            "name": "record_living_reef.py",
+            "revision": args.capture_tool_revision,
+            "file_sha256": sha256(Path(__file__).resolve()),
+        },
         "engine_identity": compact_engine,
         "physical_profile_sha256": args.profile_sha256,
         "graph_sha256": graph,
@@ -1297,6 +1346,49 @@ def main() -> int:
             public_head_sha256=public_event_head,
         )
 
+    first_observed_tick = {
+        body: min(
+            frame["tick"]
+            for frame in frames
+            if any(detail["body"] == body for detail in frame["resident_details"])
+        )
+        for body in body_indices.values()
+    }
+    private_binding = {
+        "format": "chreatures-living-recording-private-binding-v1",
+        "source_world_id": str(initial["id"]),
+        "world_source_revision": args.world_source_revision,
+        "world_source_content_sha256": args.world_source_content_sha256,
+        "capture_tool_revision": provenance["capture_tool"]["revision"],
+        "capture_tool_file_sha256": provenance["capture_tool"]["file_sha256"],
+        "physical_profile_sha256": args.profile_sha256,
+        "graph_sha256": provenance["graph_sha256"],
+        "resident_artifact_sha256": provenance["resident_artifact_sha256"],
+        "engine_identity_sha256": provenance["engine_identity"]["sha256"],
+        "bodies": [
+            {
+                "public_body": public_index,
+                "source_body_id": source_id,
+                "first_observed_tick": first_observed_tick[public_index],
+            }
+            for source_id, public_index in sorted(
+                body_indices.items(), key=lambda item: item[1]
+            )
+        ],
+    }
+    private_binding["content_sha256"] = sha256_bytes(
+        canonical_bytes(private_binding)
+    )
+    atomic_json(args.binding_output, private_binding)
+    binding_receipt = {
+        "format": private_binding["format"],
+        "content_sha256": private_binding["content_sha256"],
+        "file_sha256": sha256(args.binding_output),
+        "bytes": args.binding_output.stat().st_size,
+        "body_count": len(body_indices),
+        "scope": "private source-ID binding; excluded from public site assets",
+    }
+
     encode_entity_deltas(frames)
     result = {
         "format": FORMAT,
@@ -1349,6 +1441,7 @@ def main() -> int:
             ],
         },
         "private_raw_receipt": raw_receipt,
+        "private_binding_receipt": binding_receipt,
         "geometry": {
             "dimension": int(initial["dimension"]),
             "bounds": [
@@ -1377,6 +1470,8 @@ def main() -> int:
         "output": str(args.output), "frames": len(frames),
         "moments": len(moments), "content_sha256": result["content_sha256"],
         "file_sha256": sha256(args.output),
+        "private_binding_output": str(args.binding_output),
+        "private_binding_content_sha256": private_binding["content_sha256"],
     }, sort_keys=True))
     return 0
 

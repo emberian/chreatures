@@ -34,7 +34,7 @@ from chreatures.organism_interface import (
     PHYSIOLOGY_NAMES,
     PREVIOUS_DIM,
 )
-from chreatures.population import CandidateGenome, canonical_bytes, content_sha256
+from chreatures.population import CandidateGenome, canonical_bytes, content_sha256, response_bank_identity
 from chreatures.sensorimotor_worker_native import DevelopmentalResidentCohort
 from chreatures.training_cohort import (
     OUTCOME_FIELDS,
@@ -143,6 +143,8 @@ def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", type=Path, required=True)
     parser.add_argument("--resident-artifact", type=Path, required=True)
+    parser.add_argument("--population-response-artifact", type=Path,
+                        help="immutable shared GAM response bank; omission is an explicit bank-free condition")
     parser.add_argument("--graph", type=Path, required=True)
     parser.add_argument("--port-bundle", type=Path, required=True)
     parser.add_argument("--neural-recipe", type=Path, required=True)
@@ -805,6 +807,7 @@ def main() -> int:
     from chreatures.training_environment import EmbodiedTrainingProfile
 
     profile_value = json.loads(args.profile.read_text(encoding="utf-8"))
+    population_response = response_bank_identity(args.population_response_artifact)
     profile = EmbodiedTrainingProfile.from_value(profile_value)
     assignment_value, worlds, residents_per_world = load_assignments(args.assignments)
     assignment_file_sha256 = file_sha256(args.assignments)
@@ -842,6 +845,7 @@ def main() -> int:
         "profile_file": {"path": str(args.profile.resolve()), "sha256": file_sha256(args.profile)},
         "profile_sha256": profile.sha256,
         "resident_artifact": artifact_identity,
+        "population_response": population_response,
         "developmental_base_sha256": developmental_base_sha256,
         "graph": {"path": str(args.graph.resolve()), "sha256": str(graph.hash)},
         "ports": {
@@ -956,6 +960,7 @@ def main() -> int:
             controller = DevelopmentalResidentCohort.restore_value(
                 json.loads((checkpoint_root / "controller.json").read_text(encoding="utf-8")),
                 args.resident_artifact,
+                population_response_artifact=args.population_response_artifact,
             )
             if controller.candidate_adapters != adapters:
                 raise RuntimeError("restored controller candidate order differs")
@@ -995,6 +1000,7 @@ def main() -> int:
                 goal_seed=int(canonical_sha256({"identity": identity["sha256"], "stream": "goal"})[:16], 16),
                 action_seed=int(canonical_sha256({"identity": identity["sha256"], "stream": "action"})[:16], 16),
                 candidate_adapters=adapters,
+                population_response_artifact=args.population_response_artifact,
             )
             observation, neural, _circuit, physiology, bodies = observe(pool, brain)
             previous = np.zeros((count, PREVIOUS_DIM), dtype=np.float32)

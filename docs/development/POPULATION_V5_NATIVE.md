@@ -4,7 +4,10 @@ The population-v5 controller adds a shared physiology adapter to the worker's
 pre-GRU affine and separate active/magnitude heads for the four new rectified
 actuators. The retained reference exercises both additions with nonzero weights.
 
-Run the compact reference against the exact external fixture and M2 binary:
+This is a historical v5 mechanics receipt. The current runtime is v6; the v5
+probe remains in [its frozen source revision](https://github.com/emberian/chreatures/blob/9ad2139a229887dc7302901ea793c6964128ad08/scripts/probe_native_population_v5.py)
+and must be replayed with that experiment's original v5 wrapper/source and exact
+external fixture and M2 binary. It is not a current-runtime acceptance command:
 
 ```sh
 artifact=/tank/chreatures/scratch/v5-body-actuator-export-check/output/\

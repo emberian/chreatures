@@ -41,7 +41,8 @@ environment outputs. Reproduce it without retaining the copied source tree:
 ```bash
 .venv/bin/python scripts/population_campaign.py init \
   --profile /tank/chreatures/campaign-inputs/profile-v7.json \
-  --controller /tank/chreatures/campaign-inputs/developmental-resident-population-v5.npz \
+  --controller /tank/chreatures/campaign-inputs/developmental-resident-reciprocal-v6.npz \
+  --population-response-artifact /tank/chreatures/campaign-inputs/population_response_bank.json \
   --seed 20260917 \
   --output /tank/chreatures/runs/population/wave-001
 ```
@@ -61,8 +62,11 @@ profile, immutable configuration identities, and coordinator progress.
 ```
 
 One candidate wave asks for exactly one resident population for every pinned
-environment. The resulting worlds are chunked to at most four physical worlds
-per evaluator invocation. Each assignment contains only the native environment
+environment. The resulting worlds are chunked according to `--worlds-per-batch`
+(1–64), so larger hosts can advance more independent worlds in parallel. This
+controls physical processes, not residents per world; choose it against actual
+CPU and shared-memory capacity. The full native ask remains limited to 4,096
+candidate/environment assignments. Each assignment contains only the native environment
 SHA/selector/seed and full authenticated candidate genomes. The environment SHA
 is also its `world_id`; assignment-file identity makes repeated physical lives
 distinct.
@@ -76,6 +80,13 @@ by the native 4096-candidate ask limit.
 Evaluator launch is intentionally separate. Use the copied campaign profile,
 the original controller whose file SHA is pinned in `campaign.json`, and one
 generated `plans/plan-NNNN/batch-NNNN.json` assignment.
+
+Pass the same `--population-response-artifact /path/to/population_response_bank.json`
+to campaign `init` and to `evaluate_population.py` to use the shared three-law GAM
+bank. Both boundaries pin its exact bytes and feature contract. Omission is a
+separate bank-free condition. Ingestion authenticates the evaluator's sibling
+`identity.json` and rejects a different bank, controller or profile; response
+models cannot silently change midway through a search campaign.
 
 ## Ingestion
 
