@@ -4,9 +4,7 @@
 //! x, y, z; subtract every outgoing face, then add every incoming face.
 //! No fast-math reassociation or fused multiply-add is requested.
 
-use numpy::{
-    PyReadonlyArray3, PyReadonlyArray4, PyReadwriteArray4, PyUntypedArrayMethods,
-};
+use numpy::{PyReadonlyArray3, PyReadonlyArray4, PyReadwriteArray4, PyUntypedArrayMethods};
 use pyo3::exceptions::{PyFloatingPointError, PyValueError};
 use pyo3::prelude::*;
 
@@ -168,13 +166,24 @@ impl TransportSolver {
                             // for channels*cells at construction. Removing these
                             // redundant inner bounds checks allows vectorization.
                             unsafe {
-                                let mut p = permeability.get_unchecked(i).min(*permeability.get_unchecked(j))
-                                    * if !solid.get_unchecked(i) && !solid.get_unchecked(j) { 1.0 } else { 0.0 };
-                                if let Some(faces) = barriers { p *= faces[axis].get_unchecked(face); }
+                                let mut p = permeability
+                                    .get_unchecked(i)
+                                    .min(*permeability.get_unchecked(j))
+                                    * if !solid.get_unchecked(i) && !solid.get_unchecked(j) {
+                                        1.0
+                                    } else {
+                                        0.0
+                                    };
+                                if let Some(faces) = barriers {
+                                    p *= faces[axis].get_unchecked(face);
+                                }
                                 let left = *current.get_unchecked(offset + i);
                                 let right = *current.get_unchecked(offset + j);
-                                let diffusive = diffusion * p * (left - right) / (spacing * spacing);
-                                let velocity = 0.5 * (flow.get_unchecked(axis * cells + i) + flow.get_unchecked(axis * cells + j));
+                                let diffusive =
+                                    diffusion * p * (left - right) / (spacing * spacing);
+                                let velocity = 0.5
+                                    * (flow.get_unchecked(axis * cells + i)
+                                        + flow.get_unchecked(axis * cells + j));
                                 let upwind = if velocity >= 0.0 { left } else { right };
                                 let advective = p * velocity * upwind / spacing;
                                 *self.flux.get_unchecked_mut(offset + i) = diffusive + advective;

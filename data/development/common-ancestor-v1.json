@@ -1,0 +1,97 @@
+{
+  "allocation": {
+    "enzyme_activity_budget": 4.0,
+    "fractions": {
+      "digestion": 0.25,
+      "geometry": 0.22,
+      "photosynthesis": 0.26,
+      "structure": 0.27
+    },
+    "geometry_reference_fraction": 0.22
+  },
+  "ancestry": {
+    "founder_sha256": null,
+    "mutation": null,
+    "parent_sha256": null
+  },
+  "format": "chreatures-developmental-genome-v1",
+  "generation": 0,
+  "growth": {
+    "leaf_area": 1.0,
+    "leaf_thickness": 1.0,
+    "length": 1.0,
+    "radius": 1.0
+  },
+  "metabolism": {
+    "allocated_expression": {
+      "digestion": {
+        "gut/detritus_digestion": 0.25,
+        "gut/soft_digestion": 0.5,
+        "gut/tough_digestion": 0.25
+      },
+      "photosynthesis": {
+        "soma/carbon_fixation": 1.0
+      },
+      "structure": {
+        "soma/soft_growth": 0.55,
+        "soma/tough_growth": 0.45
+      }
+    },
+    "housekeeping_ceiling": 1.0,
+    "housekeeping_expression": {
+      "allocated_structure/soft_turnover": 0.15,
+      "allocated_structure/tough_turnover": 0.08,
+      "gut/respiration": 0.55,
+      "soma/respiration": 0.65
+    }
+  },
+  "name": "common-ancestor-v1",
+  "neural": {
+    "input_gain_loci": [
+      {
+        "gain": 1.02,
+        "name": "odor/L/0"
+      },
+      {
+        "gain": 1.02,
+        "name": "odor/R/0"
+      },
+      {
+        "gain": 0.98,
+        "name": "contact/count"
+      },
+      {
+        "gain": 1.01,
+        "name": "shade"
+      }
+    ],
+    "readout_gain_loci": [
+      {
+        "gain": 0.99,
+        "name": "readout/visual/other"
+      },
+      {
+        "gain": 1.01,
+        "name": "readout/mushroom_body/other"
+      },
+      {
+        "gain": 1.02,
+        "name": "readout/navigation/other"
+      },
+      {
+        "gain": 0.98,
+        "name": "readout/efferent/other"
+      }
+    ]
+  },
+  "sha256": "c4fdc0e72d0cc59292d9c0855daefa186c18db5793f2353ad02aeeab737dfc23",
+  "sources": {
+    "chemistry_file_sha256": "006bcb89b9e9af4562c19b0e08ab0ebf82daa1cdcbc236276f88988b054ba9e9",
+    "chemistry_sha256": "fc482774de2dd3c08e92cd9f6bdaf8298c39e41a8ef173e8430b7363841e9928",
+    "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "growth_grammar_file_sha256": "b07394eade1a57828b35daa7be2d24dd501a39f9f5bffe9adc8126233f0720bc",
+    "growth_grammar_sha256": "e907380d2e400b7861d5de67cdb7f30f4c26eb5fb63a219ab70581384f1a33c6",
+    "port_bundle_sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2",
+    "port_spec_sha256": "fffb48c65bdb5bc2503ff8ad7c65b4419e12aa9ef5b58b9f36bc910f64dadb6f"
+  }
+}
