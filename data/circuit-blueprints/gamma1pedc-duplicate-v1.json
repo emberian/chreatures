@@ -1,0 +1,36 @@
+{
+  "description": "Synthetic developmental duplication of the measured bilateral gamma1pedc KC-MBON11-PPL101 motif, with measured incoming and outgoing boundary edges cloned bidirectionally.",
+  "edits": {
+    "add": [],
+    "remove": [],
+    "reweight": []
+  },
+  "model_boundary": {
+    "measured": "Ancestral neuron annotations and every copied edge's direction and integer MaleCNS v1.0 synapse count.",
+    "synthetic": "The existence of duplicate neurons, their cloned boundary projections, inherited port routing, and any future explicit edits. This is an executable developmental hypothesis, not observed fly anatomy."
+  },
+  "modules": [
+    {
+      "boundary": "bidirectional",
+      "copies": 1,
+      "name": "gamma1pedc_kc_mbon11_ppl101",
+      "ports": "inherit",
+      "selector": {
+        "fields": [
+          "kc_body_ids",
+          "mbon_body_ids",
+          "dan_body_ids"
+        ],
+        "npz": "data/mushroom/gamma1pedc-kc-mbon11-v1.npz",
+        "sha256": "27bbc1adde8efe26d9f62e8e5674d4a3c9e787ab200b498f89ddc19c9101bdff"
+      }
+    }
+  ],
+  "name": "gamma1pedc-duplicate-v1",
+  "parent": {
+    "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "port_bundle_sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2",
+    "port_spec_sha256": "fffb48c65bdb5bc2503ff8ad7c65b4419e12aa9ef5b58b9f36bc910f64dadb6f"
+  },
+  "schema_version": 1
+}

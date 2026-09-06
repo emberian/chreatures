@@ -28,8 +28,12 @@ class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
         """Cache immutable model addresses and controller scalars as arrays."""
         layout = self.articulation_spec["legs"]["layout"]
         self._fast_leg_names = tuple(str(leg["name"]) for leg in layout)
-        self._fast_leg_sides = np.asarray([int(leg["side"]) for leg in layout], dtype=np.float64)
-        self._fast_leg_phases = np.asarray([float(leg["phase"]) for leg in layout], dtype=np.float64)
+        self._fast_leg_sides = np.asarray(
+            [int(leg["side"]) for leg in layout], dtype=np.float64
+        )
+        self._fast_leg_phases = np.asarray(
+            [float(leg["phase"]) for leg in layout], dtype=np.float64
+        )
         self._fast_joint_qpos: dict[str, np.ndarray] = {}
         self._fast_joint_dof: dict[str, np.ndarray] = {}
         for body in self.bodies:
@@ -39,20 +43,31 @@ class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
                 for kind in ("hip", "knee")
             ]
             self._fast_joint_qpos[body.id] = np.asarray(
-                [self.model.jnt_qposadr[joint_id] for joint_id in joint_ids], dtype=np.int32
+                [self.model.jnt_qposadr[joint_id] for joint_id in joint_ids],
+                dtype=np.int32,
             )
             self._fast_joint_dof[body.id] = np.asarray(
-                [self.model.jnt_dofadr[joint_id] for joint_id in joint_ids], dtype=np.int32
+                [self.model.jnt_dofadr[joint_id] for joint_id in joint_ids],
+                dtype=np.int32,
             )
-        controller = self.articulation_spec["controller"]
-        self._fast_joint_kp = np.tile(
-            np.asarray([float(controller["hip_kp"]), float(controller["knee_kp"])], dtype=np.float64),
-            len(layout),
-        )
-        self._fast_joint_kd = np.tile(
-            np.asarray([float(controller["hip_kd"]), float(controller["knee_kd"])], dtype=np.float64),
-            len(layout),
-        )
+        self._fast_joint_kp = {}
+        self._fast_joint_kd = {}
+        for body in self.bodies:
+            controller = self._resident_articulation[body.id]["controller"]
+            self._fast_joint_kp[body.id] = np.tile(
+                np.asarray(
+                    [float(controller["hip_kp"]), float(controller["knee_kp"])],
+                    dtype=np.float64,
+                ),
+                len(layout),
+            )
+            self._fast_joint_kd[body.id] = np.tile(
+                np.asarray(
+                    [float(controller["hip_kd"]), float(controller["knee_kd"])],
+                    dtype=np.float64,
+                ),
+                len(layout),
+            )
         self._fast_sense_illumination: dict[str, float] | None = None
         self._fast_advance_syncs = -1
         self._fast_food_amounts: tuple[float, ...] = ()
@@ -125,7 +140,7 @@ class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
     ) -> None:
         """Vectorized form of the articulated tripod reflex equations."""
         del noise  # The articulated reference controller also ignores motor noise.
-        controller = self.articulation_spec["controller"]
+        controller = self._resident_articulation[body.id]["controller"]
         forward = float(action.get("forward", action.get("thrust", 0.0)))
         turn = float(action.get("turn", action.get("yaw", 0.0)))
         activity = max(abs(forward), abs(turn))
@@ -153,7 +168,9 @@ class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
         )
         sweep = np.where(stance, 1.0 - 2.0 * progress, -1.0 + 2.0 * progress)
         stride = 0.30 + 0.70 * np.abs(side_drive)
-        hip = -self._fast_leg_sides * np.sign(side_drive) * hip_amplitude * stride * sweep
+        hip = (
+            -self._fast_leg_sides * np.sign(side_drive) * hip_amplitude * stride * sweep
+        )
         knee = self._fast_leg_sides * np.where(stance, knee_stance, knee_swing)
         hip[inactive] = 0.0
         knee[inactive] = self._fast_leg_sides[inactive] * idle_knee
@@ -161,7 +178,10 @@ class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
 
         qpos = self._fast_joint_qpos[body.id]
         dof = self._fast_joint_dof[body.id]
-        torque = self._fast_joint_kp * (targets - self.data.qpos[qpos]) - self._fast_joint_kd * self.data.qvel[dof]
+        torque = (
+            self._fast_joint_kp[body.id] * (targets - self.data.qpos[qpos])
+            - self._fast_joint_kd[body.id] * self.data.qvel[dof]
+        )
         self.data.qfrc_applied[dof] = np.clip(torque, -torque_limit, torque_limit)
 
         root = self._body_mj[body.id]
