@@ -303,6 +303,7 @@ const POPULATION_TYPES: &[&str] = &[
     "transfer_trial",
     "population_snapshot",
     "gam_fit_attempt",
+    "interpretation_correction",
     "embodied_recording",
     "organism_transfer",
     "development_event",
@@ -506,6 +507,9 @@ fn role_rule(
         ("population_snapshot", "archive_decision") => Some((&["archive_decision"], 0, None)),
         ("gam_fit_attempt", "source_evaluation") => {
             Some((&["evaluation_completed", "evaluation_failed"], 1, None))
+        }
+        ("interpretation_correction", "corrected_record") => {
+            Some((&["gam_fit_attempt"], 1, Some(1)))
         }
         ("embodied_recording", "campaign") => Some((&["population_run"], 1, Some(1))),
         ("embodied_recording", "observed_environment") => {
@@ -1060,6 +1064,46 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                     }
                 } else {
                     require_blob_role(record, "gam_law")?;
+                }
+            }
+            "interpretation_correction" => {
+                require_blob_role(record, "correction_receipt")?;
+                let correction = required_sha256(record, "correction_sha256")?;
+                let bank = required_sha256(record, "bank_sha256")?;
+                let support = required_sha256(record, "original_support_report_sha256")?;
+                let surface = required_sha256(record, "surface_sha256")?;
+                if record.id != format!("interpretation-correction:{correction}") {
+                    return Err(format!(
+                        "interpretation correction {} is not keyed by its receipt",
+                        record.id
+                    )
+                    .into());
+                }
+                let parent = population_parent_for_role(record, "corrected_record")?;
+                if required_string(by_id[parent.as_str()], "status")? != "completed"
+                    || bank != required_sha256(by_id[parent.as_str()], "bank_sha256")?
+                    || support != required_sha256(by_id[parent.as_str()], "support_report_sha256")?
+                    || surface != required_sha256(by_id[parent.as_str()], "surface_sha256")?
+                    || required_string(record, "status")?
+                        != "supplementary-interpretation-correction"
+                {
+                    return Err(format!(
+                        "interpretation correction {} differs from its completed fit",
+                        record.id
+                    )
+                    .into());
+                }
+                let blob = record
+                    .blob_refs
+                    .iter()
+                    .find(|blob| blob.role == "correction_receipt")
+                    .expect("required correction blob exists");
+                if blob.sha256 != correction {
+                    return Err(format!(
+                        "interpretation correction {} receipt identity differs",
+                        record.id
+                    )
+                    .into());
                 }
             }
             "population_snapshot" => {

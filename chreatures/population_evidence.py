@@ -7,7 +7,7 @@ to an organism.  Large state remains in content-addressed blobs.
 
 from __future__ import annotations
 
-from collections import Counter, defaultdict
+from collections import Counter
 from copy import deepcopy
 import hashlib
 import json
@@ -35,6 +35,7 @@ RECORD_TYPES = frozenset(
         "transfer_trial",
         "population_snapshot",
         "gam_fit_attempt",
+        "interpretation_correction",
         "embodied_recording",
         "organism_transfer",
         "development_event",
@@ -120,6 +121,9 @@ _ROLE_RULES: dict[str, dict[str, tuple[frozenset[str], int, int | None]]] = {
             None,
         ),
     },
+    "interpretation_correction": {
+        "corrected_record": (frozenset({"gam_fit_attempt"}), 1, 1),
+    },
     "embodied_recording": {
         "campaign": (frozenset({"population_run"}), 1, 1),
         "observed_environment": (frozenset({"environment_candidate"}), 1, 1),
@@ -183,6 +187,7 @@ _REQUIRED_BLOBS = {
     "evaluation_failed": frozenset({"evaluation_result", "evaluation_trace"}),
     "population_snapshot": frozenset({"population_search_state"}),
     "gam_fit_attempt": frozenset({"gam_fit_report"}),
+    "interpretation_correction": frozenset({"correction_receipt"}),
     "embodied_recording": frozenset({"public_recording"}),
 }
 
@@ -210,6 +215,12 @@ _HASH_FIELDS = {
     "life_checkpoint": ("checkpoint_sha256",),
     "evaluation_completed": ("trajectory_sha256",),
     "evaluation_failed": ("trajectory_sha256",),
+    "interpretation_correction": (
+        "correction_sha256",
+        "bank_sha256",
+        "original_support_report_sha256",
+        "surface_sha256",
+    ),
     "embodied_recording": ("recording_sha256", "recording_content_sha256"),
     "organism_transfer": (
         "public_event_sha256", "source_event_sha256", "recording_content_sha256",
@@ -1445,6 +1456,35 @@ def _validate_type_fields(
             raise PopulationEvidenceError(f"{record_id} failed fit cannot mint a law")
         if status == "failed" and not str(fields.get("failure", "")).strip():
             raise PopulationEvidenceError(f"{record_id} failed fit lacks failure evidence")
+    elif record_type == "interpretation_correction":
+        correction_sha = _hash(fields, "correction_sha256", record_id)
+        if record_id != f"interpretation-correction:{correction_sha}":
+            raise PopulationEvidenceError(
+                f"{record_id} is not keyed by its correction receipt"
+            )
+        correction_blob = next(
+            blob for blob in record["blob_refs"]
+            if blob["role"] == "correction_receipt"
+        )
+        if correction_blob["sha256"] != correction_sha:
+            raise PopulationEvidenceError(
+                f"{record_id} correction receipt identity differs"
+            )
+        parent = by_id[_single_parent(record, "corrected_record")]
+        if parent["fields"].get("status") != "completed" or any(
+            fields.get(field) != parent["fields"].get(parent_field)
+            for field, parent_field in (
+                ("bank_sha256", "bank_sha256"),
+                ("original_support_report_sha256", "support_report_sha256"),
+                ("surface_sha256", "surface_sha256"),
+            )
+        ):
+            raise PopulationEvidenceError(
+                f"{record_id} differs from its completed fitted-law parent"
+            )
+        if fields.get("status") != "supplementary-interpretation-correction":
+            raise PopulationEvidenceError(f"{record_id} has invalid correction status")
+        _string(fields, "claims", record_id)
     elif record_type == "embodied_recording":
         content_sha256 = _hash(fields, "recording_content_sha256", record_id)
         recording_sha256 = _hash(fields, "recording_sha256", record_id)
