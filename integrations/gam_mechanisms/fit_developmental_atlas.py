@@ -77,16 +77,29 @@ def deployed_predictions(bank: dict, raw: np.ndarray) -> np.ndarray:
     return result
 
 
-def prepare(run: Path, bank_path: Path, compact_path: Path) -> dict:
+def prepare(run: Path, bank_path: Path, compact_path: Path, *,
+            allow_interrupted: bool = False, source_revision: str | None = None) -> dict:
     identity_path, result_path = run / "identity.json", run / "result.json"
-    if not identity_path.exists() or not result_path.exists():
-        raise RuntimeError("rich run is incomplete: identity.json and final result.json are required")
-    identity, result = json.loads(identity_path.read_text()), json.loads(result_path.read_text())
+    if not identity_path.exists():
+        raise RuntimeError("rich run lacks identity.json")
+    identity = json.loads(identity_path.read_text())
+    result = json.loads(result_path.read_text()) if result_path.exists() else None
     if identity.get("telemetry", {}).get("format") != TELEMETRY_FORMAT:
         raise RuntimeError("rich telemetry format differs")
     expected_steps = int(identity.get("arguments", {}).get("steps", -1))
-    if expected_steps < 1 or int(result.get("physical_steps", -2)) != expected_steps:
-        raise RuntimeError("rich result does not receipt the configured completed physical steps")
+    updates_path = run / "updates.jsonl"
+    if result is None:
+        if not allow_interrupted or not source_revision or not updates_path.exists():
+            raise RuntimeError("interrupted run requires explicit allowance, source revision, and updates.jsonl")
+        updates = [json.loads(line) for line in updates_path.read_text().splitlines() if line.strip()]
+        if not updates:
+            raise RuntimeError("interrupted rich run has no completed update receipt")
+        last_update = updates[-1]
+        observed_steps = int(last_update["physical_steps"])
+    else:
+        if expected_steps < 1 or int(result.get("physical_steps", -2)) != expected_steps:
+            raise RuntimeError("rich result does not receipt the configured completed physical steps")
+        last_update, observed_steps = None, expected_steps
     if identity["telemetry"].get("outcome_order") != ["nutrition", "contact", "distance",
             "effort", "mechanical_work", "ingested_mass", "mouth_material_contacts",
             "homeostatic_reward"]:
@@ -143,15 +156,30 @@ def prepare(run: Path, bank_path: Path, compact_path: Path) -> dict:
     x, y = np.concatenate(rows), np.concatenate(targets)
     residual_valid = np.concatenate(residual_valid_rows)
     episode, world = np.concatenate(episode_rows), np.concatenate(world_rows)
+    maximum_tick = int(max(np.load(packet)["tick"].max() for packet in packets))
+    if maximum_tick + 1 != observed_steps:
+        raise RuntimeError(f"telemetry ends at tick {maximum_tick}, receipt declares {observed_steps} steps")
     if not np.isfinite(x).all() or not np.isfinite(y).all():
         raise RuntimeError("non-finite rich telemetry cannot enter an atlas")
+    observation = {"kind": "completed-run" if result is not None else "bounded-interrupted-run",
+                   "configured_steps": expected_steps, "observed_steps": observed_steps,
+                   "maximum_tick": maximum_tick, "source_revision": source_revision,
+                   "identity_sha256": sha256(identity_path),
+                   "updates_sha256": sha256(updates_path) if updates_path.exists() else None,
+                   "result_sha256": sha256(result_path) if result_path.exists() else None,
+                   "last_completed_update": last_update,
+                   "graph_sha256": identity.get("graph_sha256"),
+                   "rich_profile_sha256": identity.get("rich_profile_sha256"),
+                   "port_bundle_sha256": identity.get("port_bundle_sha256"),
+                   "bootstrap_sha256": identity.get("bootstrap_sha256")}
     compact_path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(compact_path, features=x, targets=y, episode=episode,
                         world_slot=world, residual_valid=residual_valid,
-                        source_sha256=np.asarray(source_hashes))
+                        source_sha256=np.asarray(source_hashes),
+                        observation_receipt=np.asarray(json.dumps(observation, sort_keys=True)))
     return {"rows": len(x), "episodes": int(np.unique(episode).size),
             "worlds_per_episode": int(np.unique(world).size), "packets": len(packets),
-            "identity_sha256": sha256(identity_path), "result_sha256": sha256(result_path),
+            "observation_receipt": observation,
             "deployed_bank_sha256": sha256(bank_path), "compact_sha256": sha256(compact_path),
             "body_law_in_domain_rows": int(residual_valid.sum())}
 
@@ -170,20 +198,34 @@ def fit(compact_path: Path, output: Path) -> dict:
     data = np.load(compact_path)
     x, y, episode, world = data["features"].astype(float), data["targets"].astype(float), data["episode"], data["world_slot"]
     residual_valid = data["residual_valid"].astype(bool)
-    test = episode % 5 == 0
-    validation = (~test) & ((episode * 131 + world) % 5 == 0)
-    train = ~(test | validation)
-    if min(np.unique(episode).size, np.unique(episode[test]).size, np.unique(world[validation]).size) < 1:
-        raise RuntimeError("need complete episode and world units for train/validation/test")
+    if np.unique(episode).size >= 5:
+        test = episode % 5 == 0
+        validation = (~test) & ((episode * 131 + world) % 5 == 0)
+        train = ~(test | validation)
+        split_label = "complete held-out episodes plus complete validation worlds"
+    else:
+        heldout_world = int(np.max(world))
+        test = world == heldout_world
+        validation = np.zeros(len(world), dtype=bool)
+        train = ~test
+        split_label = f"single observed episode: worlds 0..{heldout_world - 1} train; complete world {heldout_world} held out"
+    if not train.any() or not test.any():
+        raise RuntimeError("need at least one complete training and held-out physical unit")
     mean, scale = x[train].mean(0), x[train].std(0); scale[scale < 1e-9] = 1
     z = (x - mean) / scale
     names, indices = list(FEATURES), {name: i for i, name in enumerate(FEATURES)}
     output.mkdir(parents=True, exist_ok=True)
     report = {"schema": "chreatures-developmental-gam-atlas-v1", "status": "descriptive conditional prediction; no causal claim",
               "source": {"gamfit_version": GAMFIT_VERSION, "gam_source_commit": GAMFIT_COMMIT,
-                         "telemetry_sha256": data["source_sha256"].tolist()}, "models": {},
-              "rows": {"train": int(train.sum()), "validation_worlds": int(validation.sum()), "held_out_episodes": int(test.sum())},
-              "units": {"episodes_total": int(np.unique(episode).size), "episodes_held_out": int(np.unique(episode[test]).size),
+                         "telemetry_sha256": data["source_sha256"].tolist(),
+                         "observation_receipt": json.loads(str(data["observation_receipt"]))},
+              "models": {},
+              "split": split_label,
+              "rows": {"train": int(train.sum()), "validation_worlds": int(validation.sum()), "held_out": int(test.sum())},
+              "units": {"episodes_total": int(np.unique(episode).size),
+                        "episodes_held_out": int(np.unique(episode[test]).size) if np.unique(episode).size >= 5 else 0,
+                        "training_worlds": int(np.unique(world[train]).size),
+                        "held_out_worlds": int(np.unique(world[test]).size),
                         "validation_episode_worlds": int(np.unique(np.column_stack((episode[validation], world[validation])), axis=0).shape[0])},
               "feature_normalization": {name: {"mean": float(mean[i]), "scale": float(scale[i])} for i, name in enumerate(names)}}
     started = time.perf_counter()
@@ -191,13 +233,22 @@ def fit(compact_path: Path, output: Path) -> dict:
         eligible = residual_valid if name == "body_law_residual" else np.ones(len(x), dtype=bool)
         target_train, target_validation, target_test = train & eligible, validation & eligible, test & eligible
         train_rows = _rows(z, np.flatnonzero(target_train), names, y[:, target_index])
-        gamfit.validate_formula(train_rows, formula)
-        # All three recorded responses are continuous. Declare this explicitly so
-        # nonnegative effort/residual columns are not guessed as count families.
-        model = gamfit.fit(train_rows, formula, family="gaussian")
+        try:
+            gamfit.validate_formula(train_rows, formula)
+            # All three recorded responses are continuous. Declare this explicitly so
+            # nonnegative effort/residual columns are not guessed as count families.
+            model = gamfit.fit(train_rows, formula, family="gaussian")
+        except Exception as exc:
+            report["models"][name] = {"status": "native fit failed; no model minted",
+                                      "unit": unit, "formula": formula,
+                                      "train_rows": int(target_train.sum()),
+                                      "error": f"{type(exc).__name__}: {exc}"[:4000]}
+            continue
         model_path = output / f"{name}.gam"; model.save(model_path)
         metrics = {}
-        for split_name, mask in (("validation_worlds", target_validation), ("held_out_episodes", target_test)):
+        for split_name, mask in (("validation_worlds", target_validation), ("held_out", target_test)):
+            if not mask.any():
+                continue
             observed = y[mask, target_index]
             predicted = np.asarray(model.predict(_rows(z, np.flatnonzero(mask), names)), dtype=float)
             baseline = np.full(len(observed), y[target_train, target_index].mean())
@@ -210,7 +261,7 @@ def fit(compact_path: Path, output: Path) -> dict:
             grid = [dict(baseline_row, **{first: float(a), second: float(b)}) for b in gy for a in gx]
             surfaces.append({"axes": [first, second], "x_standardized": gx.tolist(), "y_standardized": gy.tolist(),
                              "prediction": np.asarray(model.predict(grid), dtype=float).reshape(25, 25).tolist()})
-        report["models"][name] = {"unit": unit, "formula": formula, "model_file": model_path.name,
+        report["models"][name] = {"status": "fitted native GAM", "unit": unit, "formula": formula, "model_file": model_path.name,
                                   "model_sha256": sha256(model_path), "metrics": metrics, "surfaces": surfaces}
     report["fit_seconds"] = time.perf_counter() - started
     (output / "developmental_atlas.json").write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n")
@@ -223,8 +274,13 @@ def main() -> None:
     parser.add_argument("--deployed-bank", type=Path, default=Path(__file__).with_name("artifacts") / "body_consequence_laws.json")
     parser.add_argument("--compact", type=Path, required=True)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--allow-interrupted", action="store_true")
+    parser.add_argument("--source-revision")
     args = parser.parse_args()
-    if args.run: print(json.dumps(prepare(args.run, args.deployed_bank, args.compact), indent=2, sort_keys=True))
+    if args.run:
+        print(json.dumps(prepare(args.run, args.deployed_bank, args.compact,
+            allow_interrupted=args.allow_interrupted,
+            source_revision=args.source_revision), indent=2, sort_keys=True))
     if args.output: print(json.dumps(fit(args.compact, args.output), indent=2, sort_keys=True))
 
 

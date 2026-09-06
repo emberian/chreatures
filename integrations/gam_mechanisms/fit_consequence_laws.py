@@ -82,7 +82,12 @@ def fit(compact_path: Path, output_dir: Path) -> dict:
         raise RuntimeError(f"requires native gamfit {GAMFIT_VERSION}")
     data = np.load(compact_path)
     x, y, units = data["features"].astype(float), data["outcomes"].astype(float), data["world_unit"]
-    test = units % 4 == 0
+    if "world_slot" in data.files:
+        test = data["world_slot"] == int(data.get("heldout_world_slot", 3))
+        split_description = "complete physical world slot 3 held out across every episode"
+    else:
+        test = units % 4 == 0
+        split_description = "complete physical worlds with world_unit modulo 4 equal to zero held out"
     train = ~test
     means = x[train].mean(axis=0)
     scales = x[train].std(axis=0)
@@ -141,11 +146,13 @@ def fit(compact_path: Path, output_dir: Path) -> dict:
             "conservative_residual_bound": residual_bound,
             "target_training_standard_deviation": float(y[train, outcome_index].std()),
         }
+    source_contract = json.loads(str(data["source_contract"])) if "source_contract" in data.files else {}
     artifact = {
         "schema": "chreatures-gam-consequence-law-bank-v1",
         "source": {"model_library": "SauersML/gam", "model_version": GAMFIT_VERSION,
                    "model_source_commit": GAMFIT_SOURCE_COMMIT,
-                   "telemetry_sha256": data["source_sha256"].tolist()},
+                   "telemetry_sha256": data["source_sha256"].tolist(),
+                   "contract": source_contract},
         "features": [{"name": name, "unit": unit, "mean": float(means[i]),
                       "scale": float(scales[i]), "minimum": float(lower[i]),
                       "maximum": float(upper[i])} for i, (name, unit) in enumerate(FEATURES)],
@@ -161,12 +168,14 @@ def fit(compact_path: Path, output_dir: Path) -> dict:
         "prediction_rows": {"train": int(train.sum()), "held_out": int(test.sum())},
         "independent_world_units": {"train": int(np.unique(units[train]).size),
                                     "held_out": int(np.unique(units[test]).size)},
-        "split": "complete physical worlds with world_unit modulo 4 equal to zero held out",
+        "split": split_description,
         "artifact": {"path": artifact_path.name, "bytes": artifact_path.stat().st_size,
                      "sha256": sha256(artifact_path)}, "metrics": metrics,
         "limitations": [
             "The fits estimate conditional responses in experienced exploratory behavior, not interventions or causes.",
-            "The source is the completed fresh-world sensorimotor-play collection used to bootstrap development; the later online run retained only aggregate update telemetry.",
+            ("The source is a completed rich-play collection and the artifact is a successor candidate for new births."
+             if source_contract else
+             "The source is the completed fresh-world sensorimotor-play collection used to bootstrap development; the later online run retained only aggregate update telemetry."),
             "Resident/world grouping is used only for evaluation splitting and is absent from runtime features.",
             "Grid inference is a measured piecewise-linear approximation of additive native GAM predictions.",
         ],

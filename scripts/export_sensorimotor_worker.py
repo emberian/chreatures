@@ -21,6 +21,10 @@ RICH_PROFILE_SHA256 = "c71380718ba5535dbaebdeaf8aa2e88cc45cf218312a03e13507877f0
 RICH_CHANNEL_NAMES_SHA256 = (
     "b4c6b328116d820143e16ee922ccffd7b950dbe008efc580ad93056e01349bfa"
 )
+DEFAULT_CONSEQUENCE_LAWS = Path(
+    "integrations/gam_mechanisms/artifacts/rich_body_laws_v2/"
+    "body_consequence_laws.json"
+)
 MANAGER_ORDER = (
     "manager.query.0.weight",
     "manager.query.0.bias",
@@ -388,7 +392,9 @@ def main() -> None:
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--trusted-checkpoint", action="store_true")
-    parser.add_argument("--consequence-laws", type=Path, required=True)
+    parser.add_argument(
+        "--consequence-laws", type=Path, default=DEFAULT_CONSEQUENCE_LAWS
+    )
     parser.add_argument("--predictor", type=Path, required=True)
     args = parser.parse_args()
     if not args.trusted_checkpoint:
