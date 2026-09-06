@@ -51,3 +51,24 @@ The benchmark includes process spawn and model construction in wall time, so it
 is conservative for long-lived training workers. It uses four workers to avoid
 starving the active 16-worker run; a stage-boundary 16-worker receipt remains the
 right final integration measurement.
+
+## Native retinal transduction
+
+The batched sensorium still spent Python time interpreting every result from
+`mj_multiRay`: 80 hit IDs and distances were walked one at a time, each hit
+looked up its current material colour, and four receptor values were appended to
+nested lists. `transduce_retina` in the native world kernels now performs that
+single numerical operation as one batch. MuJoCo still determines every hit and
+occlusion. The native code reads the live material and geom colour arrays on
+every sample, so a chemical surface cue remains visible immediately even when
+the model topology has not changed. The public 5x16x4 nested-list observation
+and the 351-channel encoder boundary are unchanged.
+
+[`sensorium-native-v1.receipt.json`](../data/performance/sensorium-native-v1.receipt.json)
+records a focused 2026-09-06 laptop run of 1,200 three-resident batches. Both
+the legacy and body-relative retinal frames, including an intervening material
+colour mutation, matched the retired Python calculation with zero retinal and
+encoded-channel error. The complete `PhysicsWorld.sense` plus 351-channel encode
+path increased from 632 to 936 resident samples/s (1.482x). This is a focused
+sensor measurement; it excludes physics advance, field transport, neural work,
+and runtime communication.

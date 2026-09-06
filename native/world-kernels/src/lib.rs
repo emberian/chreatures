@@ -5,6 +5,7 @@ mod contacts;
 mod growth;
 mod metabolism;
 mod motor_runtime;
+mod sensorium;
 mod transport;
 
 #[pymodule]
@@ -15,5 +16,6 @@ fn _world_kernels(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<metabolism::MetabolicCohort>()?;
     module.add_class::<motor_runtime::MotorRuntime>()?;
     module.add_class::<transport::TransportSolver>()?;
+    module.add_function(wrap_pyfunction!(sensorium::transduce_retina, module)?)?;
     Ok(())
 }
