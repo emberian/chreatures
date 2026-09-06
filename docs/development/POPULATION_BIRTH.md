@@ -1,6 +1,6 @@
 # Reproducible population birth export
 
-`scripts/export_population_birth.py` creates a current population-v4 cold birth
+`scripts/export_population_birth.py` creates a current population-v5 cold birth
 without starting or mutating a brain or world service. It selects one world from
 an authenticated campaign assignment, regenerates the profile-pinned base habitat
 and biosphere through the existing family generator, and compiles the selected
@@ -21,20 +21,28 @@ The bulk graph remains external. `--service-phenotype-root` records where the
 operator will place the compact NPZ files on the neural service host; copying
 those files is deliberately an operator step.
 
-The current v4 controller NPZ is also an explicit external input. The cold
-conversion that produced the campaign's `92a1f264...6356` artifact was retained
-with its research export receipt; this command authenticates those bytes and the
-candidate controller pins but does not recreate the controller. New controller
-weights should be exported from their current training checkpoint with
-`scripts/export_developmental_resident.py`. There is no implicit v3 conversion
-or bundled downloadable controller in this workflow.
+The current controller NPZ is also an explicit external input. The command
+strictly requires format `chreatures-native-developmental-resident-population-v5`,
+metadata version 5, and execution
+`developmental-resident-native-population-v5`. Controller-internal v5 is
+independent of the body-facing organism-interface v4 contract, which remains
+4,459 observations, 12 physiology fields, and 12 actions. New controller weights
+should be exported from their current training checkpoint with
+`scripts/export_developmental_resident.py`. There is no implicit controller
+conversion or bundled downloadable controller in this workflow.
+
+The prior population-v4 controller artifact
+`92a1f264e91dd0d3ce156e7e289837d82c1770bf50afb92ef785dfcb66fd6356`
+remains historical evidence in Git source revision
+`74831ab5fe912c24b57e252e2c8263940657e7a6`. It records the frozen earlier
+campaign and is not accepted by the current export command.
 
 ```sh
 python scripts/export_population_birth.py \
   --profile /tank/chreatures/campaigns/v1/campaign/profile.json \
   --assignments /tank/chreatures/campaigns/v1/campaign/plans/plan-0000/batch-0000.json \
   --world-index 0 \
-  --resident-artifact data/genomes/developmental-resident-population-v4.npz \
+  --resident-artifact data/genomes/developmental-resident-population-v5.npz \
   --graph /tank/chreatures/data/malecns/derived \
   --port-bundle /tank/chreatures/data/ports/retinal-v2-maps.npz \
   --neural-recipe data/ports/neural-variant-canonical-v1.json \

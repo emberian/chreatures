@@ -37,7 +37,7 @@ const PHYSIOLOGY: usize = 12;
 const RESERVOIR: usize = 128;
 const SIGNED: [usize; 4] = [0, 1, 2, 3];
 const POSITIVE: [usize; 8] = [4, 5, 6, 7, 8, 9, 10, 11];
-const FORMAT: &str = "chreatures-developmental-resident-native-population-v4";
+const FORMAT: &str = "chreatures-developmental-resident-native-population-v5";
 const CANDIDATES: usize = 4;
 const TILT: f64 = 0.5;
 
@@ -63,6 +63,9 @@ struct Core {
     manager0: Linear,
     manager2: Linear,
     query_gain: f32,
+    physiology_adapter: Linear,
+    new_actuator_active: Linear,
+    new_actuator_positive: Linear,
 }
 
 #[pyclass(skip_from_py_object)]
@@ -94,6 +97,8 @@ pub(crate) struct DevelopmentalResidentCohort {
     recent_code_cursor: Vec<usize>,
     recent_code_count: Vec<usize>,
     observation_input: Vec<f32>,
+    physiology_input: Vec<f32>,
+    physiology_delta: Vec<f32>,
     encoded: Vec<f32>,
     gx: Vec<f32>,
     gh: Vec<f32>,
@@ -109,6 +114,8 @@ pub(crate) struct DevelopmentalResidentCohort {
     signed_logits: Vec<f32>,
     active_logits: Vec<f32>,
     positive_logits: Vec<f32>,
+    new_active_logits: Vec<f32>,
+    new_positive_logits: Vec<f32>,
     law: LawBank,
     population_response: Option<PopulationResponseBank>,
     population_history: Option<PopulationHistory>,
@@ -287,6 +294,8 @@ impl DevelopmentalResidentCohort {
         self.recent_code_cursor.resize(new_batch, 0);
         self.recent_code_count.resize(new_batch, 0);
         resize_f32!(observation_input, 256 + PREVIOUS);
+        resize_f32!(physiology_input, PHYSIOLOGY);
+        resize_f32!(physiology_delta, HIDDEN);
         resize_f32!(encoded, HIDDEN);
         resize_f32!(gx, 3 * HIDDEN);
         resize_f32!(gh, 3 * HIDDEN);
@@ -302,6 +311,8 @@ impl DevelopmentalResidentCohort {
         resize_f32!(signed_logits, 4 * 65);
         resize_f32!(active_logits, 8);
         resize_f32!(positive_logits, 8 * 32);
+        resize_f32!(new_active_logits, 4);
+        resize_f32!(new_positive_logits, 4 * 32);
         resize_f32!(pending_action, PREVIOUS);
         resize_f32!(pending_physiology, PHYSIOLOGY);
         resize_f32!(pending_population_history, 4);
@@ -723,6 +734,9 @@ impl DevelopmentalResidentCohort {
                 .copy_from_slice(&self.frame_code[row * 256..(row + 1) * 256]);
             self.observation_input[offset + 256..offset + 256 + PREVIOUS]
                 .copy_from_slice(&previous[row * PREVIOUS..(row + 1) * PREVIOUS]);
+            self.physiology_input[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY].copy_from_slice(
+                &self.normalized[row * OBS + RICH + 351..row * OBS + RICH + 351 + PHYSIOLOGY],
+            );
         }
         gemm_into(
             &self.observation_input,
@@ -731,6 +745,16 @@ impl DevelopmentalResidentCohort {
             &self.core.observation,
             &mut self.encoded,
         );
+        gemm_into(
+            &self.physiology_input,
+            self.batch,
+            PHYSIOLOGY,
+            &self.core.physiology_adapter,
+            &mut self.physiology_delta,
+        );
+        for (encoded, delta) in self.encoded.iter_mut().zip(&self.physiology_delta) {
+            *encoded += *delta;
+        }
         tanh_all(&mut self.encoded);
         self.core.history.step_into(
             &self.encoded,
@@ -939,6 +963,31 @@ impl DevelopmentalResidentCohort {
             &self.core.positive,
             &mut self.positive_logits,
         );
+        gemm_into(
+            &self.policy_hidden,
+            self.batch,
+            POLICY,
+            &self.core.new_actuator_active,
+            &mut self.new_active_logits,
+        );
+        gemm_into(
+            &self.policy_hidden,
+            self.batch,
+            POLICY,
+            &self.core.new_actuator_positive,
+            &mut self.new_positive_logits,
+        );
+        for row in 0..self.batch {
+            for head in 0..4 {
+                self.active_logits[row * 8 + 4 + head] += self.new_active_logits[row * 4 + head];
+                let destination = (row * 8 + 4 + head) * 32;
+                let source = (row * 4 + head) * 32;
+                for bin in 0..32 {
+                    self.positive_logits[destination + bin] +=
+                        self.new_positive_logits[source + bin];
+                }
+            }
+        }
         let mut result = vec![0.0; self.batch * CANDIDATES * ACTIONS];
         for row in 0..self.batch {
             let rng = &mut self.action_rng[row * 4..(row + 1) * 4];
@@ -1429,9 +1478,11 @@ impl DevelopmentalResidentCohort {
         population_feature_contract_identity: Option<&str>,
         predictor_packed: PyReadonlyArray1<'_, f32>,
         forecast_goal_rms: f32,
+        physiology_adapter_packed: PyReadonlyArray1<'_, f32>,
         policy_adapter_packed: PyReadonlyArray1<'_, f32>,
         policy_adapter_count: usize,
         policy_adapter_rank: usize,
+        new_actuator_packed: PyReadonlyArray1<'_, f32>,
         policy_adapter_index: PyReadonlyArray1<'_, u16>,
         candidate_sha256: Vec<String>,
         loci_sha256: Vec<String>,
@@ -1501,6 +1552,12 @@ impl DevelopmentalResidentCohort {
             return Err(PyValueError::new_err("forecast goal RMS differs"));
         }
         let predictor = PredictiveSensoryEnsemble::from_flat(predictor_packed.as_slice()?)?;
+        let physiology_adapter = physiology_adapter_packed.as_slice()?;
+        if physiology_adapter.len() != HIDDEN * PHYSIOLOGY
+            || physiology_adapter.iter().any(|value| !value.is_finite())
+        {
+            return Err(PyValueError::new_err("physiology adapter weights differ"));
+        }
         if policy_adapter_count == 0 || policy_adapter_rank == 0 || policy_adapter_rank > 256 {
             return Err(PyValueError::new_err(
                 "population policy adapter dimensions differ",
@@ -1573,6 +1630,15 @@ impl DevelopmentalResidentCohort {
         if scale.iter().any(|x| *x <= 0.0) {
             return Err(PyValueError::new_err("developmental normalizer differs"));
         }
+        let mut actuator_cursor = 0;
+        let actuator_flat = new_actuator_packed.as_slice()?;
+        let new_actuator_active = linear(actuator_flat, &mut actuator_cursor, 4, POLICY)?;
+        let new_actuator_positive = linear(actuator_flat, &mut actuator_cursor, 4 * 32, POLICY)?;
+        if actuator_cursor != actuator_flat.len() {
+            return Err(PyValueError::new_err(
+                "new actuator weight pack has trailing values",
+            ));
+        }
         let core = Core {
             mean,
             scale,
@@ -1596,6 +1662,14 @@ impl DevelopmentalResidentCohort {
             query_gain: *flat
                 .get(c)
                 .ok_or_else(|| PyValueError::new_err("manager gain missing"))?,
+            physiology_adapter: Linear {
+                out: HIDDEN,
+                input: PHYSIOLOGY,
+                weight: physiology_adapter.to_vec(),
+                bias: vec![0.0; HIDDEN],
+            },
+            new_actuator_active,
+            new_actuator_positive,
         };
         c += 1;
         if c != flat.len() {
@@ -1637,6 +1711,8 @@ impl DevelopmentalResidentCohort {
             recent_code_cursor: vec![0; batch],
             recent_code_count: vec![0; batch],
             observation_input: vec![0.0; batch * (256 + PREVIOUS)],
+            physiology_input: vec![0.0; batch * PHYSIOLOGY],
+            physiology_delta: vec![0.0; batch * HIDDEN],
             encoded: vec![0.0; batch * HIDDEN],
             gx: vec![0.0; batch * 3 * HIDDEN],
             gh: vec![0.0; batch * 3 * HIDDEN],
@@ -1652,6 +1728,8 @@ impl DevelopmentalResidentCohort {
             signed_logits: vec![0.0; batch * 4 * 65],
             active_logits: vec![0.0; batch * 8],
             positive_logits: vec![0.0; batch * 8 * 32],
+            new_active_logits: vec![0.0; batch * 4],
+            new_positive_logits: vec![0.0; batch * 4 * 32],
             law,
             population_response,
             population_history,

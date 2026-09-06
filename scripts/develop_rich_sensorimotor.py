@@ -41,6 +41,7 @@ from research.sensorimotor_skills.rich_online import (
     sample_worker_actions,
 )
 from research.sensorimotor_skills.rich_data import RichNormalizer
+from chreatures.resident_contract import BOOTSTRAP_FORMAT, DEVELOPMENT_FORMAT
 from research.sensorimotor_skills.rich_model import (
     RICH_CHANNEL_NAMES_SHA256,
     RICH_PROFILE_SHA256,
@@ -49,7 +50,7 @@ from research.sensorimotor_skills.rich_model import (
     cold_inherit_v3_model,
 )
 
-FORMAT = "chreatures-rich-online-sensorimotor-development-v4"
+FORMAT = DEVELOPMENT_FORMAT
 
 
 def sha256(path: Path) -> str:
@@ -89,6 +90,7 @@ def arguments() -> argparse.Namespace:
         default=ROOT / "data/ports/neural-variant-canonical-v1.json",
     )
     parser.add_argument("--cold-inherit-v3", action="store_true")
+    parser.add_argument("--new-axis-active-probability", type=float, default=0.05)
     parser.add_argument("--initialize-from-development", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--graph", type=Path, required=True)
@@ -155,6 +157,8 @@ def validate(args: argparse.Namespace) -> None:
         raise SystemExit("candidate adapter rank must be 1..32")
     if not 0 <= args.candidate_variation_scale <= 0.1:
         raise SystemExit("candidate variation scale must be in [0,0.1]")
+    if not 0 < args.new_axis_active_probability <= 0.5:
+        raise SystemExit("new-axis active probability must be in (0,0.5]")
     if not 0 <= args.goal_progress_coefficient <= 1:
         raise SystemExit("goal progress coefficient must be in [0,1]")
     if args.output.exists() and any(args.output.iterdir()):
@@ -240,7 +244,13 @@ class GoalAdapter:
         return self.model.state_dict()
 
 
-def load_bootstrap(path: Path, device: torch.device, *, cold_inherit_v3: bool):
+def load_bootstrap(
+    path: Path,
+    device: torch.device,
+    *,
+    cold_inherit_v3: bool,
+    new_axis_active_probability: float,
+):
     with torch.serialization.safe_globals([torch.torch_version.TorchVersion]):
         value = torch.load(path, map_location=device, weights_only=True)
     source_format = value.get("format")
@@ -254,7 +264,7 @@ def load_bootstrap(path: Path, device: torch.device, *, cold_inherit_v3: bool):
         )
     if source_format not in {
         *inherited_formats,
-        "chreatures-rich-sensorimotor-bootstrap-v4",
+        BOOTSTRAP_FORMAT,
     }:
         raise ValueError("rich bootstrap format differs")
     identity = value["identity"]
@@ -262,7 +272,13 @@ def load_bootstrap(path: Path, device: torch.device, *, cold_inherit_v3: bool):
     inherited_manager = None
     inherited_adapters = None
     if cold_inherit_v3:
-        model.load_state_dict(cold_inherit_v3_model(value["model"]), strict=True)
+        model.load_state_dict(
+            cold_inherit_v3_model(
+                value["model"],
+                new_axis_active_probability=new_axis_active_probability,
+            ),
+            strict=True,
+        )
         normalizer = RichNormalizer.cold_inherit_v3(identity["normalizer"])
         identity = copy.deepcopy(identity)
         identity["cold_inheritance"] = {
@@ -270,6 +286,8 @@ def load_bootstrap(path: Path, device: torch.device, *, cold_inherit_v3: bool):
             "source_sha256": sha256(path),
             "new_action_axes": ["eat", "release", "secrete", "allocate"],
             "new_physiology_columns": 6,
+            "new_axis_active_probability": new_axis_active_probability,
+            "new_axis_positive_magnitudes": "uniform-32-bin",
         }
         if "goal_manager" in value:
             inherited_manager = cold_inherit_v3_manager(value["goal_manager"])
@@ -604,6 +622,7 @@ def main() -> int:
         args.bootstrap_worker.resolve(),
         device,
         cold_inherit_v3=args.cold_inherit_v3,
+        new_axis_active_probability=args.new_axis_active_probability,
     )
     profile = EmbodiedTrainingProfile.nursery_family(
         args.chemical_habitat,
@@ -711,6 +730,11 @@ def main() -> int:
         )
     if args.candidate_count > 1:
         worker.requires_grad_(False)
+        # The candidate population shares a frozen inherited controller, while
+        # retaining one explicit body-local learning path into the fast GRU.
+        worker.physiology_adapter.requires_grad_(True)
+        worker.new_actuator_active.requires_grad_(True)
+        worker.new_actuator_positive.requires_grad_(True)
     optimizer = torch.optim.AdamW(
         [
             *[
@@ -769,6 +793,12 @@ def main() -> int:
     identity = {
         "format": FORMAT,
         "controller_mode": "rich-achieved-goal",
+        "shared_trainable_organs": {
+            "scope": "inherited base artifact; not private lifetime state",
+            "physiology_adapter": "normalized physiology12 to pre-GRU128",
+            "new_actuator_projection": "policy hidden256 to rectified axes4:8",
+            "achieved_goal_geometry": "frozen",
+        },
         "normalizer": normalizer.to_value(),
         "rich_profile_sha256": RICH_PROFILE_SHA256,
         "rich_channel_names_sha256": RICH_CHANNEL_NAMES_SHA256,

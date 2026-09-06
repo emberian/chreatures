@@ -22,6 +22,11 @@ from chreatures.neural_ports import NeuralPortBundle
 from chreatures.population import CandidateGenome, canonical_bytes, content_sha256
 from chreatures.resident_birth import FORMAT as BIRTH_FORMAT, validate_manifest, verify_controller
 from chreatures.training_cohort import load_training_graph
+from chreatures.resident_contract import (
+    NATIVE_EXECUTION,
+    NATIVE_POPULATION_FORMAT,
+    NATIVE_POPULATION_VERSION,
+)
 
 FORMAT = "chreatures-population-birth-export-v1"
 
@@ -47,10 +52,12 @@ def atomic_json(path: Path, value: object) -> None:
 def artifact_metadata(path: Path) -> dict[str, object]:
     with np.load(path, allow_pickle=False) as archive:
         metadata = json.loads(str(archive["metadata"].item()))
-    if metadata.get("format") != "chreatures-native-developmental-resident-population-v4":
-        raise ValueError("resident artifact is not the current population v4 format")
-    if metadata.get("version") != 4:
+    if metadata.get("format") != NATIVE_POPULATION_FORMAT:
+        raise ValueError("resident artifact is not the current population format")
+    if metadata.get("version") != NATIVE_POPULATION_VERSION:
         raise ValueError("resident artifact version differs")
+    if metadata.get("execution") != NATIVE_EXECUTION:
+        raise ValueError("resident artifact execution differs")
     return metadata
 
 
