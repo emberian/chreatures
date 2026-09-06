@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 import hashlib
 import json
 import os
@@ -21,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 from research.sensorimotor_skills.rich_data import RichNormalizer, RichPlayDataset
 from research.sensorimotor_skills.rich_model import RichSensorimotorModel
 from research.sensorimotor_skills.rich_prediction import (
-    ACTION_ORAL_DIM,
+    ACTION_DIM,
     ACTION_SUFFIX_FORMAT,
     ACTION_SUFFIX_HORIZONS,
     ACTION_SUFFIX_OUTPUT_DIM,
@@ -37,6 +38,7 @@ from research.sensorimotor_skills.rich_prediction import (
     OUTPUT_DIM,
     OUTPUT_SEGMENTS,
     PHYSIOLOGY_DELTA_SCALE_FLOOR,
+    PHYSIOLOGY_DIM,
     ActionSuffixConsequenceEnsemble,
     RichConsequenceEnsemble,
     artifact_identity,
@@ -51,10 +53,25 @@ from research.sensorimotor_skills.rich_prediction import (
     suffix_ensemble_summary,
     tensor_bundle_sha256,
 )
+from chreatures.organism_interface import ACTION_NAMES, PHYSIOLOGY_NAMES
 
-BOOTSTRAP_FORMAT = "chreatures-rich-sensorimotor-bootstrap-v1"
+BOOTSTRAP_FORMAT = "chreatures-rich-sensorimotor-bootstrap-v4"
 TRAIN_WORLDS = (0, 1, 2)
 VALIDATION_WORLDS = (3,)
+PHYSIOLOGY_BOUNDS = (
+    (0.0, 1.0),
+    (0.0, 1.0),
+    (0.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (0.0, 1.0),
+    (0.0, 1.0),
+    (0.0, 1.0),
+    (0.0, 1.0),
+    (0.0, 1.0),
+    (0.0, 1.0),
+    (0.0, 1.0),
+)
 
 
 def sha256(path: Path) -> str:
@@ -123,10 +140,17 @@ def load_bootstrap(path: Path, device: torch.device):
     if value.get("format") != BOOTSTRAP_FORMAT:
         raise ValueError("rich bootstrap format differs")
     model = RichSensorimotorModel().to(device)
+    identity = value.get("identity")
+    if (
+        not isinstance(identity, dict)
+        or identity.get("format") != BOOTSTRAP_FORMAT
+        or identity.get("config") != asdict(model.config)
+    ):
+        raise ValueError("rich bootstrap identity or current model dimensions differ")
     model.load_state_dict(value["model"], strict=True)
     model.eval().requires_grad_(False)
-    normalizer = RichNormalizer.from_value(value["identity"]["normalizer"])
-    return model, normalizer, value["identity"], expected
+    normalizer = RichNormalizer.from_value(identity["normalizer"])
+    return model, normalizer, identity, expected
 
 
 @torch.inference_mode()
@@ -155,13 +179,7 @@ def transition_rows(episode, encoded, columns) -> tuple[np.ndarray, np.ndarray]:
         axis=1,
     )
     previous = episode.previous[selected_time, selected_column]
-    candidate = np.concatenate(
-        (
-            episode.actions[selected_time, selected_column],
-            episode.oral[selected_time, selected_column, None],
-        ),
-        axis=1,
-    )
+    candidate = episode.actions[selected_time, selected_column]
     x = np.ascontiguousarray(
         np.concatenate(
             (frames, episode.neural[selected_time, selected_column], previous, candidate),
@@ -169,7 +187,7 @@ def transition_rows(episode, encoded, columns) -> tuple[np.ndarray, np.ndarray]:
         ),
         dtype=np.float32,
     )
-    physiology = episode.observation[..., 4447:]
+    physiology = episode.observation[..., -PHYSIOLOGY_DIM:]
     y = np.ascontiguousarray(
         np.concatenate(
             (
@@ -281,7 +299,7 @@ def predict(
         stop = min(start + batch_size, len(x))
         batch = np.array(x[start:stop], copy=True)
         if candidate_override is not None:
-            batch[:, INPUT_SEGMENTS["candidate_action_plus_oral"][0] :] = candidate_override[
+            batch[:, INPUT_SEGMENTS["candidate_action"][0] :] = candidate_override[
                 start:stop
             ]
         value, was_clipped = normalized_input(
@@ -301,7 +319,7 @@ def errors(prediction, observed, target_scale) -> dict[str, Any]:
     groups = {
         "visual_code_delta": (0, 128),
         "body_code_delta": (128, 256),
-        "physiology_delta": (256, 262),
+        "physiology_delta": (256, 256 + PHYSIOLOGY_DIM),
     }
     result = {}
     for name, (start, stop) in groups.items():
@@ -397,16 +415,7 @@ def suffix_transition_rows(episode, encoded, columns, horizon):
         axis=1,
     )
     suffix = np.concatenate(
-        [
-            np.concatenate(
-                (
-                    episode.actions[selected_time + offset, selected_column],
-                    episode.oral[selected_time + offset, selected_column, None],
-                ),
-                axis=1,
-            )
-            for offset in range(horizon)
-        ],
+        [episode.actions[selected_time + offset, selected_column] for offset in range(horizon)],
         axis=1,
     )
     x = np.ascontiguousarray(
@@ -429,7 +438,7 @@ def suffix_transition_rows(episode, encoded, columns, horizon):
         ],
         axis=1,
     )
-    physiology = episode.observation[..., 4447:]
+    physiology = episode.observation[..., -PHYSIOLOGY_DIM:]
     y = np.ascontiguousarray(
         np.concatenate(
             (
@@ -456,7 +465,9 @@ def zero_current_window_prediction(x):
     current = frames[:, -1:, :]
     deltas = (frames - current).reshape(-1, 1024)
     return np.ascontiguousarray(
-        np.concatenate((deltas, np.zeros((len(x), 6), dtype=np.float32)), axis=1),
+        np.concatenate(
+            (deltas, np.zeros((len(x), PHYSIOLOGY_DIM), dtype=np.float32)), axis=1
+        ),
         dtype=np.float32,
     )
 
@@ -551,7 +562,7 @@ def predict_suffix(
     target_mean_t = torch.as_tensor(target_mean, device=device)
     target_scale_t = torch.as_tensor(target_scale, device=device)
     suffix_start = action_suffix_input_segments(horizon)[
-        "executed_action_oral_suffix_t_through_t_plus_h_minus_1"
+        "executed_action_suffix_t_through_t_plus_h_minus_1"
     ][0]
     for start in range(0, len(x), batch_size):
         stop = min(start + batch_size, len(x))
@@ -586,7 +597,7 @@ def suffix_errors(prediction, observed, target_scale):
         "future_window_code_delta": np.arange(1024),
         "future_window_visual_code_delta": visual_indices,
         "future_window_body_code_delta": body_indices,
-        "future_physiology_delta": np.arange(1024, 1030),
+        "future_physiology_delta": np.arange(1024, 1024 + PHYSIOLOGY_DIM),
     }
     result = {}
     for name, indices in groups.items():
@@ -650,12 +661,11 @@ def suffix_goal_calibration(
 
 def suffix_plan_coverage(x, input_mean, input_scale, horizon):
     start = action_suffix_input_segments(horizon)[
-        "executed_action_oral_suffix_t_through_t_plus_h_minus_1"
+        "executed_action_suffix_t_through_t_plus_h_minus_1"
     ][0]
-    suffix = x[:, start:].reshape(-1, horizon, ACTION_ORAL_DIM)
+    suffix = x[:, start:].reshape(-1, horizon, ACTION_DIM)
     exact_constant = np.max(np.abs(suffix - suffix[:, :1]), axis=(1, 2)) <= 1e-7
-    motor_stop = np.max(np.abs(suffix[:, :, :8]), axis=(1, 2)) <= 0.05
-    action_oral_stop = np.max(np.abs(suffix), axis=(1, 2)) <= 0.05
+    action_stop = np.max(np.abs(suffix), axis=(1, 2)) <= 0.05
 
     def domain(values):
         candidate = np.array(x, copy=True)
@@ -678,12 +688,11 @@ def suffix_plan_coverage(x, input_mean, input_scale, horizon):
         "actual_suffix": {
             **domain(suffix),
             "exact_constant_fraction": float(exact_constant.mean()),
-            "motor_stop_le_0.05_fraction": float(motor_stop.mean()),
-            "action_plus_oral_stop_le_0.05_fraction": float(action_oral_stop.mean()),
-            "motor_stop_rows": int(motor_stop.sum()),
+            "action_stop_le_0.05_fraction": float(action_stop.mean()),
+            "action_stop_rows": int(action_stop.sum()),
         },
-        "candidate_constant_zero_action_plus_oral": domain(zero_plan),
-        "candidate_repeat_first_observed_action_plus_oral": domain(repeated_first),
+        "candidate_constant_zero_action": domain(zero_plan),
+        "candidate_repeat_first_observed_action": domain(repeated_first),
         "interpretation": (
             "input-domain diagnostics only; a future constant-plan controller would execute "
             "the first action and replan, but no such controller is implemented"
@@ -693,15 +702,15 @@ def suffix_plan_coverage(x, input_mean, input_scale, horizon):
 
 def suffix_strata(x, y, prediction, zero, target_scale, horizon):
     start = action_suffix_input_segments(horizon)[
-        "executed_action_oral_suffix_t_through_t_plus_h_minus_1"
+        "executed_action_suffix_t_through_t_plus_h_minus_1"
     ][0]
-    suffix = x[:, start:].reshape(-1, horizon, ACTION_ORAL_DIM)
+    suffix = x[:, start:].reshape(-1, horizon, ACTION_DIM)
     exact_constant = np.max(np.abs(suffix - suffix[:, :1]), axis=(1, 2)) <= 1e-7
-    motor_stop = np.max(np.abs(suffix[:, :, :8]), axis=(1, 2)) <= 0.05
+    action_stop = np.max(np.abs(suffix), axis=(1, 2)) <= 0.05
     result = {}
     for name, mask in (
         ("actual_exact_constant_suffix", exact_constant),
-        ("actual_motor_stop_suffix_le_0.05", motor_stop),
+        ("actual_action_stop_suffix_le_0.05", action_stop),
         ("actual_variable_suffix", ~exact_constant),
     ):
         result[name] = {
@@ -747,7 +756,7 @@ def run_suffix_horizon(
     target_floor = np.concatenate(
         (
             np.full(1024, CODE_DELTA_SCALE_FLOOR, dtype=np.float32),
-            np.full(6, PHYSIOLOGY_DELTA_SCALE_FLOOR, dtype=np.float32),
+            np.full(PHYSIOLOGY_DIM, PHYSIOLOGY_DELTA_SCALE_FLOOR, dtype=np.float32),
         )
     )
     target_mean, target_scale = moments(train_y, target_floor)
@@ -792,7 +801,7 @@ def run_suffix_horizon(
     )
     zero_prediction = zero_current_window_prediction(validation_x)
     suffix_start = action_suffix_input_segments(horizon)[
-        "executed_action_oral_suffix_t_through_t_plus_h_minus_1"
+        "executed_action_suffix_t_through_t_plus_h_minus_1"
     ][0]
     rng = np.random.default_rng(training_seed + 991)
     permuted_suffix = validation_x[rng.permutation(len(validation_x)), suffix_start:]
@@ -823,7 +832,7 @@ def run_suffix_horizon(
         device,
     )
     report = {
-        "format": "chreatures-rich-action-suffix-fit-report-v1",
+        "format": "chreatures-rich-action-suffix-fit-report-v2",
         "status": (
             "experimental descriptive action-suffix forecast; no runtime, causal, "
             "welfare, or calibrated-uncertainty claim"
@@ -926,7 +935,7 @@ def run_suffix_horizon(
     normalizer_value = observation_normalizer.to_value()
     metadata = {
         "format": ACTION_SUFFIX_FORMAT,
-        "version": 1,
+        "version": 2,
         "experimental": True,
         "horizon_ticks": horizon,
         "horizon_seconds": horizon * dataset.dt_seconds,
@@ -946,8 +955,9 @@ def run_suffix_horizon(
         "input": {
             "dimension": action_suffix_input_dim(horizon),
             "segments": action_suffix_input_segments(horizon),
+            "action_order": list(ACTION_NAMES),
             "suffix_semantics": (
-                "actual executed action and oral command for every tick t through t+H-1"
+                "actual 12-axis executed action for every tick t through t+H-1"
             ),
             "normalization": (
                 "train-world mean and population standard deviation, floor 0.02, clamp [-8,8]"
@@ -990,7 +1000,7 @@ def run_suffix_horizon(
                     ROOT / "research/sensorimotor_skills/rich_prediction.py",
                     ROOT / "research/sensorimotor_skills/rich_model.py",
                     ROOT / "research/sensorimotor_skills/rich_data.py",
-                    ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v2.json",
+                    ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v3.json",
                 )
             },
         },
@@ -1130,7 +1140,7 @@ def run_suffix_experiments(
         results.append(result)
         print(json.dumps({"completed_horizon": result}, sort_keys=True), flush=True)
     suite = {
-        "format": "chreatures-rich-action-suffix-experiment-suite-v1",
+        "format": "chreatures-rich-action-suffix-experiment-suite-v2",
         "status": "completed experimental Torch fits; no runtime integration",
         "horizons": list(args.suffix_horizons),
         "results": results,
@@ -1199,7 +1209,7 @@ def main() -> int:
     output_floor = np.concatenate(
         (
             np.full(256, CODE_DELTA_SCALE_FLOOR, dtype=np.float32),
-            np.full(6, PHYSIOLOGY_DELTA_SCALE_FLOOR, dtype=np.float32),
+            np.full(PHYSIOLOGY_DIM, PHYSIOLOGY_DELTA_SCALE_FLOOR, dtype=np.float32),
         )
     )
     target_mean, target_scale = moments(train_y, output_floor)
@@ -1230,7 +1240,7 @@ def main() -> int:
         1e-8,
     ).astype(np.float32)
     rng = np.random.default_rng(args.seed + 991)
-    candidate_start = INPUT_SEGMENTS["candidate_action_plus_oral"][0]
+    candidate_start = INPUT_SEGMENTS["candidate_action"][0]
     permuted_candidate = validation_x[
         rng.permutation(len(validation_x)), candidate_start:
     ]
@@ -1239,8 +1249,13 @@ def main() -> int:
         args.batch_size, device, candidate_override=permuted_candidate,
     )
 
+    previous_start, previous_stop = INPUT_SEGMENTS["previous_executed_action"]
     action_change = np.mean(
-        np.abs(validation_x[:, candidate_start:] - validation_x[:, 1408:1417]), axis=1
+        np.abs(
+            validation_x[:, candidate_start:]
+            - validation_x[:, previous_start:previous_stop]
+        ),
+        axis=1,
     )
     strata = {}
     for name, mask in (
@@ -1250,7 +1265,9 @@ def main() -> int:
     ):
         strata[name] = {
             "rows": int(mask.sum()),
-            "action_change_mean_abs_9": float(action_change[mask].mean()) if mask.any() else None,
+            "action_change_mean_abs_12": float(action_change[mask].mean())
+            if mask.any()
+            else None,
             "model": errors(validation_prediction[mask], validation_y[mask], target_scale)
             if mask.any()
             else None,
@@ -1263,7 +1280,7 @@ def main() -> int:
         model, validation_x, validation_y, validation_prediction, args.batch_size, device
     )
     report = {
-        "format": "chreatures-rich-consequence-fit-report-v1",
+        "format": "chreatures-rich-consequence-fit-report-v2",
         "status": "descriptive reserved-world prediction; no causal, welfare, or calibrated-uncertainty claim",
         "split": {
             "train_worlds": list(TRAIN_WORLDS),
@@ -1318,7 +1335,7 @@ def main() -> int:
     normalizer_value = observation_normalizer.to_value()
     metadata = {
         "format": FORMAT,
-        "version": 1,
+        "version": 2,
         "architecture": {
             "members": MEMBERS,
             "layers": [[INPUT_DIM, 256, "tanh"], [256, 256, "tanh"], [256, OUTPUT_DIM, "linear"]],
@@ -1328,6 +1345,14 @@ def main() -> int:
         "input": {
             "dimension": INPUT_DIM,
             "segments": INPUT_SEGMENTS,
+            "action_order": list(ACTION_NAMES),
+            "timing": {
+                "dt_seconds": dataset.dt_seconds,
+                "frame_history_offsets": [-3, -2, -1, 0],
+                "previous_action_tick": "t-1",
+                "candidate_action_tick": "t",
+                "target_observation_tick": "t+1",
+            },
             "normalization": "train-world mean and population standard deviation, floor 0.02, clamp [-8,8]",
             "clipped_candidate_selection_tilt": 0.0,
         },
@@ -1337,7 +1362,8 @@ def main() -> int:
             "frame_code_segments": FRAME_CODE_SEGMENTS,
             "normalization": "train-world delta mean and population standard deviation; code floor 1e-3, physiology floor 1e-4",
             "physiology_forecast": "raw physiology[t] + predicted raw delta; do not clamp, return validity separately",
-            "physiology_bounds": [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0], [-1.0, 1.0], [-1.0, 1.0], [0.0, 1.0]],
+            "physiology_order": list(PHYSIOLOGY_NAMES),
+            "physiology_bounds": [list(bounds) for bounds in PHYSIOLOGY_BOUNDS],
             "validity": "input row was not clipped and every raw predicted next-physiology coordinate is finite and within physiology_bounds",
         },
         "source": {
@@ -1358,7 +1384,7 @@ def main() -> int:
                     ROOT / "research/sensorimotor_skills/rich_prediction.py",
                     ROOT / "research/sensorimotor_skills/rich_model.py",
                     ROOT / "research/sensorimotor_skills/rich_data.py",
-                    ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v2.json",
+                    ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v3.json",
                 )
             },
         },

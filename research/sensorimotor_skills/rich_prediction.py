@@ -1,4 +1,4 @@
-"""Action-conditioned one-tick prediction over the frozen rich sensory code."""
+"""Action-conditioned prediction over the current rich-v3 trajectory contract."""
 
 from __future__ import annotations
 
@@ -11,15 +11,15 @@ import numpy as np
 import torch
 from torch import nn
 
-FORMAT = "chreatures-rich-consequence-ensemble-v1"
-ACTION_SUFFIX_FORMAT = "chreatures-rich-action-suffix-consequence-ensemble-v1"
+from chreatures.organism_interface import ACTION_DIM, PHYSIOLOGY_DIM
+
+FORMAT = "chreatures-rich-consequence-ensemble-v2"
+ACTION_SUFFIX_FORMAT = "chreatures-rich-action-suffix-consequence-ensemble-v2"
 ACTION_SUFFIX_HORIZONS = (5, 20)
 FRAME_CODE_DIM = 256
 FRAME_WINDOW = 4
 NEURAL_DIM = 384
-ACTION_ORAL_DIM = 9
-PHYSIOLOGY_DIM = 6
-INPUT_DIM = FRAME_WINDOW * FRAME_CODE_DIM + NEURAL_DIM + 2 * ACTION_ORAL_DIM
+INPUT_DIM = FRAME_WINDOW * FRAME_CODE_DIM + NEURAL_DIM + 2 * ACTION_DIM
 OUTPUT_DIM = FRAME_CODE_DIM + PHYSIOLOGY_DIM
 ACTION_SUFFIX_OUTPUT_DIM = FRAME_WINDOW * FRAME_CODE_DIM + PHYSIOLOGY_DIM
 MEMBERS = 3
@@ -31,12 +31,12 @@ NORMALIZED_INPUT_CLIP = 8.0
 INPUT_SEGMENTS = {
     "frame_codes_t_minus_3_through_t": [0, 1024],
     "neural_readouts_t": [1024, 1408],
-    "previous_action_plus_oral": [1408, 1417],
-    "candidate_action_plus_oral": [1417, 1426],
+    "previous_executed_action": [1408, 1420],
+    "candidate_action": [1420, 1432],
 }
 OUTPUT_SEGMENTS = {
     "next_frame_code_delta": [0, 256],
-    "next_raw_physiology_delta": [256, 262],
+    "next_raw_physiology_delta": [256, 268],
 }
 FRAME_CODE_SEGMENTS = {"visual": [0, 128], "body": [128, 256]}
 
@@ -44,7 +44,7 @@ FRAME_CODE_SEGMENTS = {"visual": [0, 128], "body": [128, 256]}
 def action_suffix_input_dim(horizon: int) -> int:
     if horizon not in ACTION_SUFFIX_HORIZONS:
         raise ValueError(f"action suffix horizon must be one of {ACTION_SUFFIX_HORIZONS}")
-    return FRAME_WINDOW * FRAME_CODE_DIM + NEURAL_DIM + ACTION_ORAL_DIM * (1 + horizon)
+    return FRAME_WINDOW * FRAME_CODE_DIM + NEURAL_DIM + ACTION_DIM * (1 + horizon)
 
 
 def action_suffix_input_segments(horizon: int) -> dict[str, list[int]]:
@@ -52,14 +52,14 @@ def action_suffix_input_segments(horizon: int) -> dict[str, list[int]]:
     return {
         "frame_codes_t_minus_3_through_t": [0, 1024],
         "neural_readouts_t": [1024, 1408],
-        "previous_action_plus_oral": [1408, 1417],
-        "executed_action_oral_suffix_t_through_t_plus_h_minus_1": [1417, dimension],
+        "previous_executed_action": [1408, 1420],
+        "executed_action_suffix_t_through_t_plus_h_minus_1": [1420, dimension],
     }
 
 
 ACTION_SUFFIX_OUTPUT_SEGMENTS = {
     "future_four_frame_code_deltas_from_current": [0, 1024],
-    "future_raw_physiology_delta": [1024, 1030],
+    "future_raw_physiology_delta": [1024, 1036],
 }
 
 
@@ -72,7 +72,7 @@ class RichPredictionConfig:
     frame_code_dim: int = FRAME_CODE_DIM
     frame_window: int = FRAME_WINDOW
     neural_dim: int = NEURAL_DIM
-    action_oral_dim: int = ACTION_ORAL_DIM
+    action_dim: int = ACTION_DIM
     physiology_dim: int = PHYSIOLOGY_DIM
 
     def __post_init__(self) -> None:
@@ -84,7 +84,7 @@ class RichPredictionConfig:
             FRAME_CODE_DIM,
             FRAME_WINDOW,
             NEURAL_DIM,
-            ACTION_ORAL_DIM,
+            ACTION_DIM,
             PHYSIOLOGY_DIM,
         ):
             raise ValueError("rich consequence ensemble dimensions are fixed")
@@ -116,7 +116,7 @@ class RichConsequenceEnsemble(nn.Module):
         self.members = nn.ModuleList(RichConsequenceMember() for _ in range(MEMBERS))
 
     def forward(self, value: torch.Tensor) -> torch.Tensor:
-        """Return member predictions as ``[...,3,262]`` normalized targets."""
+        """Return member predictions as ``[...,3,268]`` normalized targets."""
         return torch.stack([member(value) for member in self.members], dim=-2)
 
 
@@ -128,7 +128,7 @@ class ActionSuffixPredictionConfig:
     frame_code_dim: int = FRAME_CODE_DIM
     frame_window: int = FRAME_WINDOW
     neural_dim: int = NEURAL_DIM
-    action_oral_dim: int = ACTION_ORAL_DIM
+    action_dim: int = ACTION_DIM
     physiology_dim: int = PHYSIOLOGY_DIM
 
     def __post_init__(self) -> None:
@@ -139,7 +139,7 @@ class ActionSuffixPredictionConfig:
             FRAME_CODE_DIM,
             FRAME_WINDOW,
             NEURAL_DIM,
-            ACTION_ORAL_DIM,
+            ACTION_DIM,
             PHYSIOLOGY_DIM,
         ):
             raise ValueError("action suffix consequence dimensions are fixed")
@@ -305,7 +305,7 @@ def artifact_identity(metadata: Mapping[str, Any], arrays: Mapping[str, np.ndarr
 
 
 __all__ = [
-    "ACTION_ORAL_DIM",
+    "ACTION_DIM",
     "ACTION_SUFFIX_FORMAT",
     "ACTION_SUFFIX_HORIZONS",
     "ACTION_SUFFIX_OUTPUT_DIM",
