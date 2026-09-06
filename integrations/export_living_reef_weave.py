@@ -23,7 +23,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 WEAVE_DIR = ROOT / "integrations" / "weave"
 DEFAULT_OUTPUT = ROOT / "integrations" / "artifacts" / "living-reef-biography"
-CHECKPOINT_FORMAT = "chreatures-developmental-habitat-checkpoint-v1"
+CHECKPOINT_FORMAT = "chreatures-developmental-habitat-checkpoint-v2"
 RESIDENT_FORMAT = "chreatures-native-developmental-resident-rich-v1"
 PREDICTOR_FORMAT = "chreatures-rich-consequence-ensemble-v1"
 PREDICTOR_RECEIPT_FORMAT = "chreatures-rich-consequence-fit-report-v1"
@@ -62,7 +62,9 @@ def npz_metadata(path: Path, expected_format: str) -> dict[str, Any]:
             raise ValueError(f"{path} has no metadata")
         value = json.loads(str(payload["metadata"].item()))
     if value.get("format") != expected_format:
-        raise ValueError(f"{path} has format {value.get('format')!r}, expected {expected_format}")
+        raise ValueError(
+            f"{path} has format {value.get('format')!r}, expected {expected_format}"
+        )
     return value
 
 
@@ -119,7 +121,9 @@ def record(
     }
 
 
-def capture_checkpoint(path: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+def capture_checkpoint(
+    path: Path,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     # Read once: the live process replaces this file periodically.  This binds
     # every summary and the file hash below to one coherent byte sequence.
     data = path.read_bytes()
@@ -143,9 +147,13 @@ def capture_checkpoint(path: Path) -> tuple[dict[str, Any], dict[str, Any], dict
 
 
 def journal_tick(item: dict[str, Any], habitat_id: str) -> int:
-    match = re.fullmatch(re.escape(habitat_id) + r":([0-9]+):([0-9]+)", str(item.get("id")))
+    match = re.fullmatch(
+        re.escape(habitat_id) + r":([0-9]+):([0-9]+)", str(item.get("id"))
+    )
     if match is None:
-        raise ValueError(f"journal event has an unrecognized host id: {item.get('id')!r}")
+        raise ValueError(
+            f"journal event has an unrecognized host id: {item.get('id')!r}"
+        )
     return int(match.group(1))
 
 
@@ -173,7 +181,9 @@ def interval_records(
         selected_bytes = canonical(selected)
         selected_sha = digest_bytes(selected_bytes)
         event_ticks = [journal_tick(item, habitat_id) for item in selected]
-        resident_counts = Counter(str(item.get("resident", "unspecified")) for item in selected)
+        resident_counts = Counter(
+            str(item.get("resident", "unspecified")) for item in selected
+        )
         kind_counts = Counter(str(item.get("kind", "episode")) for item in selected)
         unique_ids = len({str(item["id"]) for item in selected})
         interval_id = (
@@ -210,12 +220,17 @@ def interval_records(
             )
         )
         previous = interval_id
-    return records, previous, {
-        "events": len(events),
-        "intervals": len(records),
-        "unique_host_ids": len({str(item["id"]) for _, _, item in events}),
-        "host_id_reuses": len(events) - len({str(item["id"]) for _, _, item in events}),
-    }
+    return (
+        records,
+        previous,
+        {
+            "events": len(events),
+            "intervals": len(records),
+            "unique_host_ids": len({str(item["id"]) for _, _, item in events}),
+            "host_id_reuses": len(events)
+            - len({str(item["id"]) for _, _, item in events}),
+        },
+    )
 
 
 def gam_records(
@@ -228,7 +243,9 @@ def gam_records(
     native = read_json(native_evaluation_path)
     law_blob = local_blob(law_path, "native_gam_law_bank", "application/json")
     fit_blob = local_blob(fit_path, "gam_fit_report", "application/json")
-    native_blob = local_blob(native_evaluation_path, "gam_native_evaluation", "application/json")
+    native_blob = local_blob(
+        native_evaluation_path, "gam_native_evaluation", "application/json"
+    )
     if laws.get("schema") != LAW_FORMAT:
         raise ValueError("GAM law bank has the wrong schema")
     if fit.get("artifact", {}).get("sha256") != law_blob["sha256"]:
@@ -272,7 +289,9 @@ def gam_records(
                 fields={
                     "evidence_scope": "research_fit",
                     "metrics": metrics.get(name),
-                    "conservative_residual_bound": law.get("conservative_residual_bound"),
+                    "conservative_residual_bound": law.get(
+                        "conservative_residual_bound"
+                    ),
                     "term_count": len(law.get("terms", [])),
                 },
             )
@@ -294,7 +313,11 @@ def gam_records(
             },
         )
     )
-    return records, bank_id, {"law_bank": law_blob, "fit_report": fit_blob, "native": native_blob}
+    return (
+        records,
+        bank_id,
+        {"law_bank": law_blob, "fit_report": fit_blob, "native": native_blob},
+    )
 
 
 def predictor_records(
@@ -306,9 +329,15 @@ def predictor_records(
     receipt = read_json(receipt_path)
     if receipt.get("format") != PREDICTOR_RECEIPT_FORMAT:
         raise ValueError("predictor receipt has the wrong format")
-    artifact_blob = local_blob(artifact_path, "rich_consequence_predictor", "application/x-npz")
-    receipt_blob = local_blob(receipt_path, "rich_consequence_fit_receipt", "application/json")
-    reference_blob = local_blob(reference_path, "predictor_float32_reference", "application/x-npz")
+    artifact_blob = local_blob(
+        artifact_path, "rich_consequence_predictor", "application/x-npz"
+    )
+    receipt_blob = local_blob(
+        receipt_path, "rich_consequence_fit_receipt", "application/json"
+    )
+    reference_blob = local_blob(
+        reference_path, "predictor_float32_reference", "application/x-npz"
+    )
     receipt_artifact = receipt.get("artifact", {})
     if receipt_artifact.get("sha256") != artifact_blob["sha256"]:
         raise ValueError("predictor receipt does not authenticate the artifact file")
@@ -374,11 +403,19 @@ def predictor_records(
                 "evidence_scope": "forecast_fit",
                 "artifact_identity": metadata["artifact_identity"],
                 "training": metadata["training"],
-                "validation_scaled_rmse": receipt["metrics"]["validation"]["all_outputs_train_scale_rmse"],
-                "zero_delta_scaled_rmse": receipt["metrics"]["validation_zero_delta"]["all_outputs_train_scale_rmse"],
-                "action_permuted_scaled_rmse": receipt["metrics"]["validation_action_permuted"]["all_outputs_train_scale_rmse"],
+                "validation_scaled_rmse": receipt["metrics"]["validation"][
+                    "all_outputs_train_scale_rmse"
+                ],
+                "zero_delta_scaled_rmse": receipt["metrics"]["validation_zero_delta"][
+                    "all_outputs_train_scale_rmse"
+                ],
+                "action_permuted_scaled_rmse": receipt["metrics"][
+                    "validation_action_permuted"
+                ]["all_outputs_train_scale_rmse"],
                 "goal_space_rms": receipt["goal_space_calibration"]["overall_rms"],
-                "goal_space_zero_delta_rms": receipt["goal_space_calibration"]["zero_delta_overall_rms"],
+                "goal_space_zero_delta_rms": receipt["goal_space_calibration"][
+                    "zero_delta_overall_rms"
+                ],
                 "fit_seconds": receipt["elapsed_seconds"],
                 "status": receipt["status"],
             },
@@ -398,24 +435,43 @@ def predictor_records(
             },
         ),
     ]
-    return records, {"artifact": artifact_blob, "receipt": receipt_blob, "reference": reference_blob}
+    return records, {
+        "artifact": artifact_blob,
+        "receipt": receipt_blob,
+        "reference": reference_blob,
+    }
 
 
 def build_request(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
     envelope, state, checkpoint_blob = capture_checkpoint(args.checkpoint)
     resident = npz_metadata(args.resident_artifact, RESIDENT_FORMAT)
-    resident_blob = local_blob(args.resident_artifact, "native_update20_resident", "application/x-npz")
+    resident_blob = local_blob(
+        args.resident_artifact, "native_update20_resident", "application/x-npz"
+    )
     deployment = read_json(args.deployment_manifest)
-    deployment_blob = local_blob(args.deployment_manifest, "frozen_deployment_manifest", "application/json")
+    deployment_blob = local_blob(
+        args.deployment_manifest, "frozen_deployment_manifest", "application/json"
+    )
     if args.checkpoint.parent.parent != args.deployment_manifest.parent:
-        raise ValueError("checkpoint and deployment manifest are not in the same frozen deployment")
+        raise ValueError(
+            "checkpoint and deployment manifest are not in the same frozen deployment"
+        )
     model_identity = state.get("resident_controller", {}).get("model_identity", {})
     if model_identity.get("file_sha256") != resident_blob["sha256"]:
-        raise ValueError("checkpoint resident file hash differs from update-20 artifact")
+        raise ValueError(
+            "checkpoint resident file hash differs from update-20 artifact"
+        )
     if model_identity.get("artifact_sha256") != resident.get("artifact_sha256"):
-        raise ValueError("checkpoint resident internal identity differs from update-20 artifact")
-    if deployment.get("files", {}).get("models/resident.npz") != resident_blob["sha256"]:
-        raise ValueError("deployment manifest resident hash differs from update-20 artifact")
+        raise ValueError(
+            "checkpoint resident internal identity differs from update-20 artifact"
+        )
+    if (
+        deployment.get("files", {}).get("models/resident.npz")
+        != resident_blob["sha256"]
+    ):
+        raise ValueError(
+            "deployment manifest resident hash differs from update-20 artifact"
+        )
     if deployment.get("source_revision") != "215647bde626994af3b18fd6adc97a5d0c72574b":
         raise ValueError("unexpected frozen deployment revision")
 
@@ -434,7 +490,9 @@ def build_request(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, A
     training_sha = str(checkpoint.get("sha256", ""))
     training_id = f"online-update20:{training_sha}"
     resident_id = f"native-resident:{resident['artifact_sha256']}"
-    deployment_id = f"deployment:{deployment['source_revision']}:{deployment_blob['sha256']}"
+    deployment_id = (
+        f"deployment:{deployment['source_revision']}:{deployment_blob['sha256']}"
+    )
     life_id = f"research-birth:{state['id']}:{deployment_blob['sha256']}"
     evidence: list[dict[str, Any]] = gam + [
         record(
@@ -490,7 +548,9 @@ def build_request(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, A
                 "source_revision": deployment["source_revision"],
                 "source_archive_sha256": deployment["source_archive_sha256"],
                 "native_file_sha256": {
-                    key: value for key, value in deployment["files"].items() if key.startswith("_")
+                    key: value
+                    for key, value in deployment["files"].items()
+                    if key.startswith("_")
                 },
                 "deployment_semantics": deployment["semantics"],
             },
@@ -554,11 +614,17 @@ def build_request(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, A
             "fatigue": body["fatigue"],
             "gut": body["gut"],
             "history_samples": len(state.get("history", {}).get(body["id"], [])),
-            "achieved_memory_count": state.get("cognition_state", {}).get(body["id"], {}).get("memory_count"),
+            "achieved_memory_count": state.get("cognition_state", {})
+            .get(body["id"], {})
+            .get("memory_count"),
         }
         for body in bodies
     ]
-    personal = state.get("resident_controller", {}).get("native", {}).get("personal_consequences")
+    personal = (
+        state.get("resident_controller", {})
+        .get("native", {})
+        .get("personal_consequences")
+    )
     personal = json.loads(personal) if isinstance(personal, str) else personal
     personal_summary = []
     if isinstance(personal, dict):
@@ -602,8 +668,12 @@ def build_request(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, A
                 "resident_count": len(body_summary),
                 "resident_state_summary": body_summary,
                 "achieved_goal_selection_count": len(goal_ids),
-                "goal_memory_capacity": state["resident_controller"]["native"]["goal_memory"]["capacity"],
-                "goal_observation_dimension": state["resident_controller"]["native"]["goal_memory"]["observation_dim"],
+                "goal_memory_capacity": state["resident_controller"]["native"][
+                    "goal_memory"
+                ]["capacity"],
+                "goal_observation_dimension": state["resident_controller"]["native"][
+                    "goal_memory"
+                ]["observation_dim"],
                 "private_goal_keys_windows_rng_published": False,
                 "private_gam_adaptation_summary": personal_summary,
                 "gam_private_update_claim": "none observed in this checkpoint; all recorded candidates were out of inherited fit domain",
@@ -612,7 +682,9 @@ def build_request(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, A
                     "config_sha256": state.get("biosphere", {}).get("config_sha256"),
                     "part_count": len(state.get("biosphere", {}).get("parts", {})),
                 },
-                "engine_identity_sha256": state.get("engine_identity", {}).get("sha256"),
+                "engine_identity_sha256": state.get("engine_identity", {}).get(
+                    "sha256"
+                ),
                 "checkpoint_file_published": False,
             },
         )
@@ -661,13 +733,42 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--deployment-manifest", type=Path, required=True)
-    parser.add_argument("--resident-artifact", type=Path, default=ROOT / "data/genomes/developmental-resident-rich-update20.npz")
-    parser.add_argument("--gam-law-bank", type=Path, default=ROOT / "integrations/gam_mechanisms/artifacts/body_consequence_laws.json")
-    parser.add_argument("--gam-fit-report", type=Path, default=ROOT / "integrations/gam_mechanisms/artifacts/fit_report.json")
-    parser.add_argument("--gam-native-evaluation", type=Path, default=ROOT / "integrations/gam_mechanisms/artifacts/native_evaluation.json")
-    parser.add_argument("--predictor-artifact", type=Path, default=ROOT / "data/genomes/rich-consequence-ensemble-v1.npz")
-    parser.add_argument("--predictor-receipt", type=Path, default=ROOT / "data/training/rich-consequence-v1.receipt.json")
-    parser.add_argument("--predictor-reference", type=Path, default=ROOT / "data/training/rich-consequence-v1.native-reference.npz")
+    parser.add_argument(
+        "--resident-artifact",
+        type=Path,
+        default=ROOT / "data/genomes/developmental-resident-rich-update20.npz",
+    )
+    parser.add_argument(
+        "--gam-law-bank",
+        type=Path,
+        default=ROOT
+        / "integrations/gam_mechanisms/artifacts/body_consequence_laws.json",
+    )
+    parser.add_argument(
+        "--gam-fit-report",
+        type=Path,
+        default=ROOT / "integrations/gam_mechanisms/artifacts/fit_report.json",
+    )
+    parser.add_argument(
+        "--gam-native-evaluation",
+        type=Path,
+        default=ROOT / "integrations/gam_mechanisms/artifacts/native_evaluation.json",
+    )
+    parser.add_argument(
+        "--predictor-artifact",
+        type=Path,
+        default=ROOT / "data/genomes/rich-consequence-ensemble-v1.npz",
+    )
+    parser.add_argument(
+        "--predictor-receipt",
+        type=Path,
+        default=ROOT / "data/training/rich-consequence-v1.receipt.json",
+    )
+    parser.add_argument(
+        "--predictor-reference",
+        type=Path,
+        default=ROOT / "data/training/rich-consequence-v1.native-reference.npz",
+    )
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
@@ -686,9 +787,15 @@ def main() -> None:
     write_json(request_path, request)
     completed = subprocess.run(
         [
-            "cargo", "run", "--locked", "--quiet", "--",
-            "--input", os.path.relpath(request_path, WEAVE_DIR),
-            "--output", os.path.relpath(weave_path, WEAVE_DIR),
+            "cargo",
+            "run",
+            "--locked",
+            "--quiet",
+            "--",
+            "--input",
+            os.path.relpath(request_path, WEAVE_DIR),
+            "--output",
+            os.path.relpath(weave_path, WEAVE_DIR),
         ],
         cwd=WEAVE_DIR,
         check=True,

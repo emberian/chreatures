@@ -35,7 +35,7 @@ ACTION_NAMES = (
     "signal_high",
     "posture",
 )
-CHECKPOINT_FORMAT = "chreatures-developmental-habitat-checkpoint-v1"
+CHECKPOINT_FORMAT = "chreatures-developmental-habitat-checkpoint-v2"
 INTERRUPTED_FORMAT = "chreatures-developmental-habitat-interrupted-v1"
 
 
@@ -61,7 +61,9 @@ def _finite_row(value: Any, shape: tuple[int, ...], name: str) -> np.ndarray:
 def _neural_model_identity(metadata: dict[str, Any]) -> dict[str, Any]:
     # Occupancy belongs to the neural snapshot, not to the executable model.
     # Metadata is read before creating a new cohort and after it exists on reload.
-    return copy.deepcopy({key: value for key, value in metadata.items() if key != "residents"})
+    return copy.deepcopy(
+        {key: value for key, value in metadata.items() if key != "residents"}
+    )
 
 
 class Habitat3D:
@@ -176,6 +178,7 @@ class Habitat3D:
         self.last_senses: dict[str, Any] = {}
         self.sensed_at = 0.0
         self.journal = deque(maxlen=256)
+        self.journal_sequence = 0
         self.history = {body.id: deque(maxlen=360) for body in self.world.bodies}
         self.timings = deque(maxlen=120)
         self.phase_timings = deque(maxlen=120)
@@ -205,11 +208,12 @@ class Habitat3D:
 
         trained_neural = self.residents.neural_contract
         remote_ports = self.neural.metadata["brain"].get("ports", {})
-        if (
-            trained_neural["graph_sha256"] != self.neural.graph["sha256"]
-            or trained_neural["port_spec_sha256"] != remote_ports.get("spec_hash")
-        ):
-            raise ValueError("Resident artifact was trained with a different graph or neural port")
+        if trained_neural["graph_sha256"] != self.neural.graph[
+            "sha256"
+        ] or trained_neural["port_spec_sha256"] != remote_ports.get("spec_hash"):
+            raise ValueError(
+                "Resident artifact was trained with a different graph or neural port"
+            )
         expected = {
             "format": "chreatures-rich-sensorimotor-observation-v1",
             "observation_dim": 4453,
@@ -281,13 +285,16 @@ class Habitat3D:
         return sensed
 
     def note(self, kind: str, text: str, **fields: Any) -> None:
+        self.journal_sequence += 1
         self.journal.append(
             {
-                "id": f"{self.id}:{self.tick}:{len(self.journal)}",
+                **fields,
+                "id": f"{self.id}:{self.journal_sequence}",
+                "sequence": self.journal_sequence,
+                "tick": self.tick,
                 "time": self.world.time,
                 "kind": kind,
                 "text": text,
-                **fields,
             }
         )
 
@@ -395,6 +402,22 @@ class Habitat3D:
                         result["personal_consequence_updates"][index]
                     ),
                     "meaning": "predicted body component of the remembered sensory goal",
+                },
+                "sensory_forecast": {
+                    "candidate_progress": result["forecast_progress"][index]
+                    .astype(float)
+                    .tolist(),
+                    "candidate_disagreement": result["forecast_disagreement"][index]
+                    .astype(float)
+                    .tolist(),
+                    "candidate_input_clipped": result["forecast_input_clipped"][index]
+                    .astype(bool)
+                    .tolist(),
+                    "candidate_logit_tilt": result["forecast_tilt"][index]
+                    .astype(float)
+                    .tolist(),
+                    "empirical_goal_error_scale": float(result["forecast_goal_rms"]),
+                    "meaning": "one-step predicted progress toward an achieved sensory goal; disagreement is not calibrated confidence",
                 },
                 "model_identity": copy.deepcopy(self.residents.model_identity),
             }
@@ -739,7 +762,7 @@ class Habitat3D:
         if self.pending_step is not None:
             raise RuntimeError("Cannot checkpoint an incomplete distributed tick")
         state = {
-            "version": 1,
+            "version": 2,
             "kind": "chreatures-developmental-habitat",
             "id": self.id,
             "tick": self.tick,
@@ -776,6 +799,7 @@ class Habitat3D:
             "reset_rows": self.reset_rows.astype(bool).tolist(),
             "cognition_state": self.cognition_state,
             "journal": list(self.journal),
+            "journal_sequence": self.journal_sequence,
             "history": {key: list(value) for key, value in self.history.items()},
         }
         if self.visitor_materials is not None:
@@ -827,10 +851,29 @@ class Habitat3D:
         ).hexdigest() != envelope.get("sha256"):
             raise ValueError("3D checkpoint checksum mismatch")
         if (
-            value.get("version") != 1
+            value.get("version") != 2
             or value.get("kind") != "chreatures-developmental-habitat"
         ):
             raise ValueError("Unsupported developmental habitat state")
+        journal_sequence = value.get("journal_sequence")
+        journal = value.get("journal")
+        if (
+            type(journal_sequence) is not int
+            or journal_sequence < 0
+            or not isinstance(journal, list)
+            or len(journal) > 256
+        ):
+            raise ValueError("Invalid saved journal sequence")
+        previous_sequence = -1
+        for event in journal:
+            sequence = event.get("sequence")
+            if (
+                type(sequence) is not int
+                or not previous_sequence < sequence <= journal_sequence
+                or event.get("id") != f"{value['id']}:{sequence}"
+            ):
+                raise ValueError("Saved journal identities differ from their sequence")
+            previous_sequence = sequence
         if resident_artifact is None:
             raise ValueError(
                 "A current --resident-artifact is required to restore this life"
@@ -885,7 +928,10 @@ class Habitat3D:
         instance.sensed_at = float(value["sensed_at"])
         instance.neural = NeuralClient(brain_url or value["brain_url"])
         instance._validate_neural_interface()
-        if _neural_model_identity(instance.neural.metadata["brain"]) != value["neural_identity"]:
+        if (
+            _neural_model_identity(instance.neural.metadata["brain"])
+            != value["neural_identity"]
+        ):
             raise ValueError(
                 "Remote neural graph, sources, or ports differ from this life"
             )
@@ -931,6 +977,7 @@ class Habitat3D:
             body_id: value["remote_ids"][body_id] for body_id in expected_ids
         }
         instance.journal = deque(value["journal"], maxlen=256)
+        instance.journal_sequence = journal_sequence
         instance.history = {
             body_id: deque(value["history"][body_id], maxlen=360)
             for body_id in expected_ids

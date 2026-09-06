@@ -5,6 +5,9 @@ use crate::goal_memory::{
     random_u64, splitmix64, unit_f64, AchievedGoalMemoryCohort, SelectionArrays,
 };
 use crate::personal_consequences::{ConsequenceConfig, ConsequenceTarget, PersonalConsequences};
+use crate::predictive_sensory::{
+    PredictiveSensoryEnsemble, INPUT as PREDICTOR_INPUT, MEMBERS as PREDICTOR_MEMBERS,
+};
 use crate::{gemm_into, gru, linear, take, tanh_all, Gru, Linear};
 use numpy::{
     ndarray::{Array1, Array2, Array3},
@@ -106,6 +109,12 @@ pub(crate) struct DevelopmentalResidentCohort {
     selected_candidate: Vec<i32>,
     selected_correction: Vec<f32>,
     personal_updates: Vec<u64>,
+    forecast_progress: Vec<f32>,
+    forecast_disagreement: Vec<f32>,
+    forecast_clipped: Vec<bool>,
+    forecast_tilt: Vec<f32>,
+    predictor: PredictiveSensoryEnsemble,
+    forecast_goal_rms: f32,
 }
 
 fn categorical(logits: &[f32], state: &mut [u64]) -> usize {
@@ -549,11 +558,78 @@ impl DevelopmentalResidentCohort {
         selection: &SelectionArrays,
         physiology: &[f32],
         neural: &[f32],
+        previous: &[f32],
+        current_key: &[f32],
         ticks: &[u64],
         reset: &[bool],
     ) -> PyResult<(Vec<f32>, Vec<f32>)> {
         let mut actions = vec![0.0; self.batch * ACTIONS];
         let mut oral = vec![0.0; self.batch];
+        let rows = self.batch * CANDIDATES;
+        let mut predictor_input = vec![0.0; rows * PREDICTOR_INPUT];
+        for row in 0..self.batch {
+            for k in 0..CANDIDATES {
+                let dst = (row * CANDIDATES + k) * PREDICTOR_INPUT;
+                for frame in 0..WINDOW {
+                    let slot = (self.recent_code_cursor[row] + frame) % WINDOW;
+                    let src = (row * WINDOW + slot) * 256;
+                    predictor_input[dst + frame * 256..dst + (frame + 1) * 256]
+                        .copy_from_slice(&self.recent_codes[src..src + 256]);
+                }
+                predictor_input[dst + 1024..dst + 1408]
+                    .copy_from_slice(&neural[row * NEURAL..(row + 1) * NEURAL]);
+                predictor_input[dst + 1408..dst + 1417]
+                    .copy_from_slice(&previous[row * PREVIOUS..(row + 1) * PREVIOUS]);
+                predictor_input[dst + 1417..dst + 1425].copy_from_slice(
+                    &candidates
+                        [(row * CANDIDATES + k) * ACTIONS..(row * CANDIDATES + k + 1) * ACTIONS],
+                );
+                let p: &[f32] = &physiology[row * 6..(row + 1) * 6];
+                predictor_input[dst + 1425] = ((1.0 - p[1]) * (1.1 - p[0])).clamp(0.0, 1.0);
+            }
+        }
+        let (member_delta, _, _, forecast_clipped) =
+            self.predictor.forecast_into(&predictor_input, rows);
+        let forecast_rows = rows * PREDICTOR_MEMBERS;
+        let mut forecast_windows = vec![0.0; forecast_rows * 1024];
+        for row in 0..self.batch {
+            for k in 0..CANDIDATES {
+                for m in 0..PREDICTOR_MEMBERS {
+                    let outrow = (row * CANDIDATES + k) * PREDICTOR_MEMBERS + m;
+                    for frame in 0..3 {
+                        let slot = (self.recent_code_cursor[row] + frame + 1) % WINDOW;
+                        let src = (row * WINDOW + slot) * 256;
+                        forecast_windows
+                            [outrow * 1024 + frame * 256..outrow * 1024 + (frame + 1) * 256]
+                            .copy_from_slice(&self.recent_codes[src..src + 256]);
+                    }
+                    let current =
+                        (row * WINDOW + (self.recent_code_cursor[row] + WINDOW - 1) % WINDOW) * 256;
+                    let delta = ((row * CANDIDATES + k) * PREDICTOR_MEMBERS + m) * 262;
+                    for j in 0..256 {
+                        forecast_windows[outrow * 1024 + 768 + j] =
+                            self.recent_codes[current + j] + member_delta[delta + j];
+                    }
+                }
+            }
+        }
+        let mut fm = Vec::new();
+        gemm_into(
+            &forecast_windows,
+            forecast_rows,
+            1024,
+            &self.core.goal0,
+            &mut fm,
+        );
+        tanh_all(&mut fm);
+        let mut forecast_keys = Vec::new();
+        gemm_into(
+            &fm,
+            forecast_rows,
+            256,
+            &self.core.goal2,
+            &mut forecast_keys,
+        );
         for row in 0..self.batch {
             if reset[row] {
                 self.consequences
@@ -581,6 +657,9 @@ impl DevelopmentalResidentCohort {
             let mut features_all = Vec::with_capacity(CANDIDATES);
             let mut corrections_all = Vec::with_capacity(CANDIDATES);
             let mut scores = [0.0f64; CANDIDATES];
+            let mut forecast_progress = [0.0f32; CANDIDATES];
+            let mut forecast_disagreement = [0.0f32; CANDIDATES];
+            let mut forecast_valid = [false; CANDIDATES];
             for k in 0..CANDIDATES {
                 let action: &[f32; 8] = candidates
                     [(row * CANDIDATES + k) * ACTIONS..(row * CANDIDATES + k + 1) * ACTIONS]
@@ -650,6 +729,86 @@ impl DevelopmentalResidentCohort {
                     } else {
                         (TILT * (scores[k] - mean).tanh()) as f32
                     };
+                if selection.valid[row]
+                    && self.recent_code_count[row] == WINDOW
+                    && !forecast_clipped[row * CANDIDATES + k]
+                {
+                    let target = &selection.key[row * 64..(row + 1) * 64];
+                    let current = (current_key[row * 64..(row + 1) * 64]
+                        .iter()
+                        .zip(target)
+                        .map(|(a, b)| (a - b).powi(2))
+                        .sum::<f32>()
+                        / 64.0)
+                        .sqrt();
+                    let mut distances = [0.0f32; PREDICTOR_MEMBERS];
+                    for m in 0..PREDICTOR_MEMBERS {
+                        let fk = &forecast_keys[((row * CANDIDATES + k) * PREDICTOR_MEMBERS + m)
+                            * 64
+                            ..((row * CANDIDATES + k) * PREDICTOR_MEMBERS + m + 1) * 64];
+                        distances[m] = (fk
+                            .iter()
+                            .zip(target)
+                            .map(|(a, b)| (a - b).powi(2))
+                            .sum::<f32>()
+                            / 64.0)
+                            .sqrt();
+                    }
+                    let progress =
+                        current - distances.iter().sum::<f32>() / PREDICTOR_MEMBERS as f32;
+                    let mean_key = (0..64)
+                        .map(|j| {
+                            (0..PREDICTOR_MEMBERS)
+                                .map(|m| {
+                                    forecast_keys
+                                        [((row * CANDIDATES + k) * PREDICTOR_MEMBERS + m) * 64 + j]
+                                })
+                                .sum::<f32>()
+                                / PREDICTOR_MEMBERS as f32
+                        })
+                        .collect::<Vec<_>>();
+                    let mut spread = 0.0f32;
+                    for m in 0..PREDICTOR_MEMBERS {
+                        for j in 0..64 {
+                            let v = forecast_keys
+                                [((row * CANDIDATES + k) * PREDICTOR_MEMBERS + m) * 64 + j]
+                                - mean_key[j];
+                            spread += v * v;
+                        }
+                    }
+                    let disagreement = (spread / (PREDICTOR_MEMBERS * 64) as f32).sqrt();
+                    forecast_progress[k] = progress;
+                    forecast_disagreement[k] = disagreement;
+                    forecast_valid[k] = true;
+                }
+            }
+            let valid_count = forecast_valid.iter().filter(|x| **x).count();
+            if valid_count > 0 {
+                let center = forecast_progress
+                    .iter()
+                    .zip(forecast_valid)
+                    .filter(|(_, v)| *v)
+                    .map(|(p, _)| *p)
+                    .sum::<f32>()
+                    / valid_count as f32;
+                for k in 0..CANDIDATES {
+                    if forecast_valid[k] {
+                        let tilt = 0.25
+                            * ((forecast_progress[k] - center) / self.forecast_goal_rms).tanh()
+                            / (1.0 + forecast_disagreement[k] / self.forecast_goal_rms);
+                        self.candidate_scores[row * CANDIDATES + k] += tilt;
+                        self.forecast_tilt[row * CANDIDATES + k] = tilt;
+                    }
+                }
+            }
+            for k in 0..CANDIDATES {
+                self.forecast_progress[row * CANDIDATES + k] = forecast_progress[k];
+                self.forecast_disagreement[row * CANDIDATES + k] = forecast_disagreement[k];
+                self.forecast_clipped[row * CANDIDATES + k] =
+                    forecast_clipped[row * CANDIDATES + k];
+                if !forecast_valid[k] {
+                    self.forecast_tilt[row * CANDIDATES + k] = 0.0;
+                }
             }
             let chosen = if self.sample {
                 categorical(
@@ -704,6 +863,8 @@ impl DevelopmentalResidentCohort {
         learning_rate: f64,
         error_decay: f64,
         innovation_limit: f64,
+        predictor_packed: PyReadonlyArray1<'_, f32>,
+        forecast_goal_rms: f32,
     ) -> PyResult<Self> {
         if batch == 0
             || batch > 256
@@ -742,6 +903,10 @@ impl DevelopmentalResidentCohort {
         };
         let consequences =
             PersonalConsequences::new(batch, config).map_err(PyValueError::new_err)?;
+        if !forecast_goal_rms.is_finite() || forecast_goal_rms < 1e-4 {
+            return Err(PyValueError::new_err("forecast goal RMS differs"));
+        }
+        let predictor = PredictiveSensoryEnsemble::from_flat(predictor_packed.as_slice()?)?;
         if flat.iter().any(|x| !x.is_finite()) {
             return Err(PyValueError::new_err(
                 "developmental weights must be finite",
@@ -842,6 +1007,12 @@ impl DevelopmentalResidentCohort {
             selected_candidate: vec![-1; batch],
             selected_correction: vec![0.0; batch * 3],
             personal_updates: vec![0; batch],
+            forecast_progress: vec![0.0; batch * CANDIDATES],
+            forecast_disagreement: vec![0.0; batch * CANDIDATES],
+            forecast_clipped: vec![false; batch * CANDIDATES],
+            forecast_tilt: vec![0.0; batch * CANDIDATES],
+            predictor,
+            forecast_goal_rms,
         })
     }
 
@@ -901,7 +1072,8 @@ impl DevelopmentalResidentCohort {
             let inserted = self.memory.remember_inner(&keys, &valid)?;
             let selection = self.manager_selection(n, p, t)?;
             let candidates = self.policy_actions(&selection.key, &selection.remaining);
-            let (actions, oral) = self.refine_candidates(&candidates, &selection, p, n, t, rst)?;
+            let (actions, oral) =
+                self.refine_candidates(&candidates, &selection, p, n, a, &keys, t, rst)?;
             Ok((inserted, selection, actions, oral))
         })?;
         let out = PyDict::new(py);
@@ -938,6 +1110,31 @@ impl DevelopmentalResidentCohort {
             "personal_consequence_updates",
             Array1::from_vec(self.personal_updates.clone()).into_pyarray(py),
         )?;
+        out.set_item(
+            "forecast_progress",
+            Array2::from_shape_vec((self.batch, CANDIDATES), self.forecast_progress.clone())
+                .unwrap()
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "forecast_disagreement",
+            Array2::from_shape_vec((self.batch, CANDIDATES), self.forecast_disagreement.clone())
+                .unwrap()
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "forecast_input_clipped",
+            Array2::from_shape_vec((self.batch, CANDIDATES), self.forecast_clipped.clone())
+                .unwrap()
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "forecast_tilt",
+            Array2::from_shape_vec((self.batch, CANDIDATES), self.forecast_tilt.clone())
+                .unwrap()
+                .into_pyarray(py),
+        )?;
+        out.set_item("forecast_goal_rms", self.forecast_goal_rms)?;
         out.set_item(
             "actual_previous_action",
             Array2::from_shape_vec((self.batch, ACTIONS), self.previous_action.clone())
