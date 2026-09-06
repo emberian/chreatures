@@ -1,0 +1,103 @@
+{
+  "format": "chreatures-biosphere-grown-receipt-v1",
+  "measured_at_local": "2026-09-06T00:25:28-04:00",
+  "scope": "Paired cProfile measurement of neutral PhysicsWorld.advance plus Biosphere.advance from an isolated copy of a grown recycling checkpoint. Habitat3D, neural state, rendering, fields, and live services were not loaded or contacted.",
+  "provenance": {
+    "repository_commit": "499646c94cceb67ddcc490cf6452ddfda50837b5",
+    "copied_checkpoint": "/tmp/chreatures-recycling-profile.json",
+    "copied_checkpoint_sha256": "ed44d698df5d8412fd1ad32ddb55ce497d1ab2260d8ae1c06bd728580167acf2",
+    "source_checkpoint": "runs/recycling-garden.json",
+    "result_artifact": "/tmp/chreatures-biosphere-grown-profile.json",
+    "research_probe": "/tmp/paired_bio_grown.py",
+    "research_probe_sha256": "64dd76568f2b6911e4e9dbcc28fe3dd9f7f6019578bdf448bc5a0a118b7717fb",
+    "research_reference": "The reference branch monkeypatched the exact prior Biosphere _develop, _check_structure, and _distribute_turnover implementations in the isolated process. It was never production selectable.",
+    "restore_boundary": "The probe called physical_world_type(body_mode, physics_backend).restore(state.world) and Biosphere.restore only. It did not call Habitat3D.load."
+  },
+  "host": {
+    "platform": "Darwin-25.6.0-arm64",
+    "processor": "Apple M2 Max",
+    "python": "3.12.14",
+    "mujoco": "3.12.0",
+    "numpy": "2.5.2"
+  },
+  "parameters": {
+    "checkpoint_tick": 4999,
+    "world_seed": 7,
+    "body_mode": "articulated",
+    "physics_backend": "vectorized",
+    "initial_parts": 2328,
+    "initial_model_revision": 144,
+    "steps": 12,
+    "dt_seconds": 0.05,
+    "actions": "neutral",
+    "warmup_steps": 0
+  },
+  "paired_profile": {
+    "reference": {
+      "physics_seconds": 0.12367087500024354,
+      "biosphere_seconds": 2.1015021249913843,
+      "combined_seconds": 2.225172999991628,
+      "biosphere_milliseconds_per_tick": 175.12517708261535,
+      "combined_milliseconds_per_tick": 185.43108333263567,
+      "function_calls": 9064551,
+      "cumulative_seconds": {
+        "_develop": 1.5658422520000002,
+        "_check_structure": 0.203830917,
+        "_distribute_turnover": 0.21844212300000002
+      }
+    },
+    "optimized": {
+      "physics_seconds": 0.12127270700148074,
+      "biosphere_seconds": 0.2364768339903094,
+      "combined_seconds": 0.35774954099179013,
+      "biosphere_milliseconds_per_tick": 19.706402832525782,
+      "combined_milliseconds_per_tick": 29.812461749315844,
+      "function_calls": 596631,
+      "cumulative_seconds": {
+        "_develop": 0.000045001,
+        "_part_resource_matrix": 0.069561251,
+        "_check_structure": 0.084507709,
+        "_distribute_turnover": 0.026332501
+      }
+    },
+    "biosphere_phase_speedup": 8.886714565357815,
+    "measured_physics_plus_biosphere_speedup": 6.219918532453666,
+    "profiled_function_call_reduction_fraction": 0.9341797514294972,
+    "final_parts_reference": 2328,
+    "final_parts_optimized": 2328,
+    "final_model_revision_reference": 144,
+    "final_model_revision_optimized": 144,
+    "full_world_and_biosphere_snapshots_exact": true
+  },
+  "post_review_validation": {
+    "validated_at_local": "2026-09-06T00:29:24-04:00",
+    "purpose": "Exercise the empty founder state and successful lazy development commit, which the grown no-proposal timing did not cover.",
+    "fixture": "Fresh non-neural chreatures-biosphere-birth-v1 configuration from scripts/probe_biosphere.py with bodies removed and exchange absent.",
+    "seconds_before_restore": 3.5,
+    "dt_seconds": 0.05,
+    "development_events": 3,
+    "physical_parts": 12,
+    "model_revision": 1,
+    "canonical_restore_exact": true,
+    "continuation_steps": 4,
+    "continuation_exact": true,
+    "assay": "/tmp/check_birth_lazy.py",
+    "assay_sha256": "526ca03a4f0ea8254e2ca6a4baa7257cbe94e7e680c0c925ce3d4ccbb05e9163",
+    "validated_biosphere_sha256": "3c2923917301df06745bdb25ff8d518dc2e2793e54d5948da91e2c7e8e5c4597"
+  },
+  "interpretation": {
+    "supported_claim": "At 2,328 persisted parts, lazy development staging and reuse of one insertion-ordered validated part-resource matrix reduced Biosphere.advance cost while producing exact full world and chemistry snapshots over the paired continuation.",
+    "development_boundary": "No growth proposal committed during these 12 steps; the measured _develop improvement is the common no-proposal path. The optimized proposal path still stages a shallow mapping only after resource validation and appends new immutable records transactionally.",
+    "whole_runtime_speedup_claim": false,
+    "reason": "The 6.22x figure covers only neutral physics plus Biosphere phases under cProfile. It excludes neural inference, fields, rendering, server work, and other Habitat3D phases, so it is not a whole-runtime or live-world speedup."
+  },
+  "sources": {
+    "chreatures/biosphere.py.reference": "240559bb8b4939dbf4971a5d4c01fbd9ab830774fad57dcb97bad69d8031467b",
+    "chreatures/biosphere.py.optimized_at_timing": "f9f9a57f33b883787c73317e822ac358d616a8df790ddeb4970750295daf6650",
+    "chreatures/biosphere.py.post_review": "3c2923917301df06745bdb25ff8d518dc2e2793e54d5948da91e2c7e8e5c4597",
+    "chreatures/physical_batch.py": "b4d5bd1cdc4002c9bbbe4d7faa1e967638278708b12482012510d52953d60b78",
+    "chreatures/material_objects.py": "c907d0917d90c7bf496e31fa8c48984755efa70f3f137e59cbe5d5c6f4f009d0",
+    "chreatures/ecological_exchange.py": "321e179e2eb4e7062a2fa918c02bbbc1bde05ecd6e3be1a8e384393db483b1bd",
+    "scripts/probe_grown_biosphere.py": "004791a61cac9799de36f411fb0962b0cf168a8c393248bf2a0f440dbad29a66"
+  }
+}
