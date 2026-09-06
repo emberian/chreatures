@@ -21,8 +21,10 @@ from .sensorium import ArticulatedSensoriumWorld, BODY_FRAME
 
 PROFILE_FORMAT = "chreatures-embodied-training-profile-v1"
 PROFILE_FORMAT_V2 = "chreatures-embodied-training-profile-v2"
+PROFILE_FORMAT_V3 = "chreatures-embodied-chemical-nursery-profile-v3"
 SNAPSHOT_FORMAT = "chreatures-embodied-training-world-v1"
 SNAPSHOT_FORMAT_V2 = "chreatures-embodied-training-world-v2"
+SNAPSHOT_FORMAT_V3 = "chreatures-embodied-training-world-v3"
 ROOT = Path(__file__).resolve().parents[1]
 PHYSICAL_BACKENDS = {
     "reference": ArticulatedSensoriumWorld,
@@ -43,12 +45,16 @@ class EmbodiedTrainingProfile:
 
     def __init__(self, value: Mapping[str, Any]) -> None:
         raw = copy.deepcopy(dict(value))
-        expected = {
+        legacy_expected = {
             "format", "version", "name", "sensorium", "body", "fields",
             "resources", "acoustics", "homeostasis", "variation", "horizons", "sources",
         }
+        chemical_expected = legacy_expected | {"habitat", "biosphere", "physiology"}
         identity = (raw.get("format"), raw.get("version"))
-        if set(raw) != expected or identity not in ((PROFILE_FORMAT, 1), (PROFILE_FORMAT_V2, 2)):
+        expected = chemical_expected if identity == (PROFILE_FORMAT_V3, 3) else legacy_expected
+        if set(raw) != expected or identity not in (
+            (PROFILE_FORMAT, 1), (PROFILE_FORMAT_V2, 2), (PROFILE_FORMAT_V3, 3)
+        ):
             raise ValueError("unsupported embodied training profile")
         if raw["sensorium"] != {"frame": BODY_FRAME} or raw["body"] != "articulated":
             raise ValueError("embodied training v1 requires body-v1 articulated sensing")
@@ -57,8 +63,23 @@ class EmbodiedTrainingProfile:
         # Constructing these validators catches malformed embedded configs
         # without retaining mutable simulation state.
         FiniteEnergyConfig.from_value(raw["homeostasis"])
-        if not all(isinstance(raw[key], dict) for key in ("fields", "resources", "acoustics", "variation", "horizons", "sources")):
+        mappings = ("fields", "acoustics", "variation", "horizons", "sources")
+        if not all(isinstance(raw[key], dict) for key in mappings):
             raise ValueError("embodied training profile components must be mappings")
+        if raw["version"] < 3 and not isinstance(raw["resources"], dict):
+            raise ValueError("legacy embodied profiles require ecology resources")
+        if raw["version"] == 3:
+            if raw["resources"] is not None or not all(
+                isinstance(raw[key], dict) for key in ("habitat", "biosphere", "physiology")
+            ):
+                raise ValueError("chemical nursery requires a biosphere and no scalar ecology")
+            if raw["physiology"] != {
+                "energy": "normalized usable ATP plus 0.72 reserve against capacity",
+                "gut": "normalized conserved chemical mass against gut capacity",
+                "fatigue": "bounded actuator fatigue state",
+                "transfer_baseline": "old-policy input range only; not calibrated to prior physiology",
+            }:
+                raise ValueError("chemical nursery physiology semantics differ")
 
     @classmethod
     def current(cls) -> "EmbodiedTrainingProfile":
@@ -154,6 +175,74 @@ class EmbodiedTrainingProfile:
         return cls.current().with_full_bearings(training_half_span=math.pi)
 
     @classmethod
+    def chemical_nursery(
+        cls, habitat: str | Path, biosphere: str | Path,
+    ) -> "EmbodiedTrainingProfile":
+        """Bind one fresh common-chemistry birth to the existing worker world."""
+        habitat_path = Path(habitat).resolve()
+        biosphere_path = Path(biosphere).resolve()
+        habitat_value = json.loads(habitat_path.read_text())
+        biosphere_value = json.loads(biosphere_path.read_text())
+        size = habitat_value.get("size")
+        if not isinstance(size, list) or len(size) != 3:
+            raise ValueError("chemical nursery habitat needs a three-dimensional size")
+        field_config = FieldEnvironment(size=tuple(size)).config
+        source_paths = {
+            "habitat": habitat_path, "biosphere_birth": biosphere_path,
+            "physics": ROOT / "chreatures/physics.py",
+            "articulated": ROOT / "chreatures/articulated.py",
+            "sensorium": ROOT / "chreatures/sensorium.py",
+            "physical_batch": ROOT / "chreatures/physical_batch.py",
+            "fields": ROOT / "chreatures/fields.py",
+            "acoustics_module": ROOT / "chreatures/acoustics.py",
+            "biosphere_module": ROOT / "chreatures/biosphere.py",
+            "somatic": ROOT / "chreatures/somatic.py",
+            "material_objects": ROOT / "chreatures/material_objects.py",
+            "metabolism": ROOT / "chreatures/metabolism.py",
+            "growth": ROOT / "chreatures/growth.py",
+            "training_environment": ROOT / "chreatures/training_environment.py",
+            "native_cargo_lock": ROOT / "native/world-kernels/Cargo.lock",
+            "native_cargo_manifest": ROOT / "native/world-kernels/Cargo.toml",
+            "native_build": ROOT / "native/world-kernels/build.rs",
+            "native_lib": ROOT / "native/world-kernels/src/lib.rs",
+            "native_contacts": ROOT / "native/world-kernels/src/contacts.rs",
+            "native_growth": ROOT / "native/world-kernels/src/growth.rs",
+            "native_metabolism": ROOT / "native/world-kernels/src/metabolism.rs",
+            "native_transport": ROOT / "native/world-kernels/src/transport.rs",
+            "native_contact_shim": ROOT / "native/world-kernels/src/contact_shim.c",
+        }
+        return cls({
+            "format": PROFILE_FORMAT_V3, "version": 3,
+            "name": "common-chemistry-mobile-nursery-v3",
+            "sensorium": {"frame": BODY_FRAME}, "body": "articulated",
+            "habitat": habitat_value, "biosphere": biosphere_value,
+            "fields": field_config, "resources": None,
+            "acoustics": {"version": 1, "include_authored": True, "emitters": []},
+            "homeostasis": FiniteEnergyConfig().to_value(),
+            "physiology": {
+                "energy": "normalized usable ATP plus 0.72 reserve against capacity",
+                "gut": "normalized conserved chemical mass against gut capacity",
+                "fatigue": "bounded actuator fatigue state",
+                "transfer_baseline": "old-policy input range only; not calibrated to prior physiology",
+            },
+            "variation": {
+                "version": 3, "heldout_seed_offset": 80_000_003,
+                "body_heading_span_rad": math.pi,
+                "fatigue_range": [0.02, 0.08],
+            },
+            "horizons": {
+                "training_episode_steps": 1_200, "heldout_steps": 1_200,
+                "telemetry_every_steps": 120, "checkpoint_every_steps": 600,
+                "dt_seconds": 0.05,
+                "rationale": "60 s exercises physical, somatic, metabolic and developmental boundaries",
+            },
+            "sources": {
+                name: {"path": str(path), "sha256": _sha(path)}
+                for name, path in source_paths.items()
+            },
+        })
+
+    @classmethod
     def from_value(cls, encoded: Mapping[str, Any]) -> "EmbodiedTrainingProfile":
         if not isinstance(encoded, Mapping) or set(encoded) != {"value", "sha256"}:
             raise ValueError("invalid encoded embodied training profile")
@@ -178,12 +267,14 @@ def embodied_training_spec(
 ) -> dict[str, Any]:
     """Create a varied physical world; geometry never enters policy inputs."""
     profile = profile or EmbodiedTrainingProfile.current()
-    spec = copy.deepcopy(dict(base_spec)) if base_spec is not None else json.loads(
-        (ROOT / profile.component("sources")["habitat"]["path"]).read_text()
+    profile_version = int(profile.component("version"))
+    spec = (
+        copy.deepcopy(dict(base_spec)) if base_spec is not None
+        else profile.component("habitat") if profile_version == 3
+        else json.loads((ROOT / profile.component("sources")["habitat"]["path"]).read_text())
     )
     spec["sensorium"] = profile.component("sensorium")
     variation = profile.component("variation")
-    profile_version = int(profile.component("version"))
     if isinstance(stage, bool) or not isinstance(stage, (int, np.integer)):
         raise ValueError("training stage must be an integer")
     stage = int(stage)
@@ -191,6 +282,24 @@ def embodied_training_spec(
         raise ValueError("profile v1 has no staged bearing curriculum")
     chosen_seed = int(seed) + (int(variation["heldout_seed_offset"]) if held_out else 0)
     rng = np.random.default_rng(chosen_seed)
+    if profile_version == 3:
+        if stage != 0:
+            raise ValueError("chemical nursery v3 has no staged curriculum")
+        low, high = map(float, variation["fatigue_range"])
+        for body in spec["bodies"]:
+            body["heading"] = float(rng.uniform(
+                -variation["body_heading_span_rad"], variation["body_heading_span_rad"]
+            ))
+            body["fatigue"] = float(rng.uniform(low, high))
+        spec["name"] = (
+            "common-chemistry-mobile-heldout" if held_out
+            else "common-chemistry-mobile-training"
+        )
+        spec["training_profile_sha256"] = profile.sha256
+        spec["training_variant"] = {
+            "seed": chosen_seed, "held_out": bool(held_out), "stage": 0,
+        }
+        return spec
     width, height = map(float, spec["size"][:2])
     by_id = {entity["id"]: entity for entity in spec["entities"]}
 
@@ -280,10 +389,23 @@ class EmbodiedTrainingWorld:
             self.stage not in range(3) or "food_bearing_half_span_rad" not in variant
         ):
             raise ValueError("profile-v2 world spec omits its curriculum stage")
+        if self.profile_version == 3 and self.stage != 0:
+            raise ValueError("chemical nursery v3 has no staged curriculum")
         self.physical_backend = physical_backend
         self.world = PHYSICAL_BACKENDS[physical_backend](seed=self.seed, spec=copy.deepcopy(spec))
         self.field = FieldEnvironment.from_world(self.world, profile.component("fields"))
-        self.resources = Ecology(self.world, profile.component("resources"), seed=self.seed ^ 0xEC0106)
+        self.resources = None
+        self.biosphere = None
+        if self.profile_version == 3:
+            from .biosphere import Biosphere
+
+            self.biosphere = Biosphere.from_config(
+                self.world, profile.component("biosphere")
+            )
+        else:
+            self.resources = Ecology(
+                self.world, profile.component("resources"), seed=self.seed ^ 0xEC0106
+            )
         self.acoustics = Acoustics(self.world, profile.component("acoustics"))
         self.objective = FiniteEnergyObjective(
             FiniteEnergyConfig.from_value(profile.component("homeostasis"))
@@ -310,9 +432,14 @@ class EmbodiedTrainingWorld:
         }
         outcomes = self.world.advance(actions, dt)
         acoustic = self.acoustics.advance(dt)
-        resources = self.resources.advance(dt)
+        resources = self.resources.advance(dt) if self.resources is not None else None
+        biosphere = self.biosphere.advance(dt) if self.biosphere is not None else None
+        static = self.field.sync_static_geometry(self.world)
         self.field.sync_dynamic_barriers(self.world.diffusion_barriers())
-        field = self.field.advance(dt, sources=self.field.sources_from_world(self.world))
+        sources = self.field.sources_from_world(self.world)
+        if self.biosphere is not None:
+            sources.extend(self.biosphere.field_sources())
+        field = self.field.advance(dt, sources=sources)
         rewards = []
         for body in self.bodies:
             outcome = outcomes[body.id]
@@ -333,20 +460,71 @@ class EmbodiedTrainingWorld:
             "homeostatic_reward_sum": float(sum(rewards)),
             "field": copy.deepcopy(field),
             "resources": copy.deepcopy(resources),
+            "biosphere": copy.deepcopy(biosphere),
+            "static_field_sync": copy.deepcopy(static),
             "acoustics": copy.deepcopy(acoustic),
+            "physiology_semantics": (
+                self.profile.component("physiology")
+                if self.profile_version == 3 else {
+                    "energy": "legacy scalar body reserve readout",
+                    "gut": "legacy scalar gut fill readout",
+                    "fatigue": "bounded actuator fatigue state",
+                }
+            ),
         }
         return outcomes
+
+    def terminal_outcomes(self) -> dict[str, Any]:
+        """Return bounded episode-end outcomes without world-state coordinates."""
+        residents: dict[str, Any] = {}
+        mobile = (
+            self.biosphere.mobility.view()
+            if self.biosphere is not None and self.biosphere.mobility is not None
+            else None
+        )
+        for body in self.bodies:
+            value = {
+                "energy": float(body.energy), "gut": float(body.gut),
+                "fatigue": float(body.fatigue), "speed": float(body.speed),
+            }
+            if mobile is not None:
+                value.update(copy.deepcopy(mobile["residents"][body.id]))
+            residents[body.id] = value
+        return {
+            "format": "chreatures-embodied-terminal-outcomes-v1",
+            "time": float(self.world.time), "profile_sha256": self.profile.sha256,
+            "physiology_semantics": (
+                self.profile.component("physiology")
+                if self.profile_version == 3 else {
+                    "energy": "legacy scalar body reserve readout",
+                    "gut": "legacy scalar gut fill readout",
+                    "fatigue": "bounded actuator fatigue state",
+                }
+            ),
+            "residents": residents,
+            "biosphere_accounting": (
+                self.biosphere.accounting() if self.biosphere is not None else None
+            ),
+        }
 
     def snapshot(self) -> dict[str, Any]:
         value = {
             "format": SNAPSHOT_FORMAT, "version": 1,
             "seed": self.seed, "profile": self.profile.to_value(),
             "world": self.world.snapshot(), "field": self.field.snapshot(),
-            "resources": self.resources.snapshot(), "acoustics": self.acoustics.snapshot(),
+            "resources": (
+                self.resources.snapshot() if self.resources is not None else None
+            ),
+            "acoustics": self.acoustics.snapshot(),
             "last_telemetry": copy.deepcopy(self.last_telemetry),
         }
         if self.profile_version == 2:
             value.update({"format": SNAPSHOT_FORMAT_V2, "version": 2, "stage": self.stage})
+        elif self.profile_version == 3:
+            value.update({
+                "format": SNAPSHOT_FORMAT_V3, "version": 3, "stage": 0,
+                "biosphere": self.biosphere.snapshot(),
+            })
         return value
 
     @classmethod
@@ -356,7 +534,9 @@ class EmbodiedTrainingWorld:
         *, physical_backend: str = "reference",
     ) -> "EmbodiedTrainingWorld":
         identity = (snapshot.get("format"), snapshot.get("version"))
-        if identity not in ((SNAPSHOT_FORMAT, 1), (SNAPSHOT_FORMAT_V2, 2)):
+        if identity not in (
+            (SNAPSHOT_FORMAT, 1), (SNAPSHOT_FORMAT_V2, 2), (SNAPSHOT_FORMAT_V3, 3)
+        ):
             raise ValueError("unsupported embodied training world snapshot")
         profile = EmbodiedTrainingProfile.from_value(snapshot["profile"])
         if int(profile.component("version")) != int(snapshot["version"]):
@@ -373,6 +553,8 @@ class EmbodiedTrainingWorld:
         instance.stage = int(snapshot.get("stage", 0))
         if instance.profile_version == 2 and instance.stage not in range(3):
             raise ValueError("invalid restored curriculum stage")
+        if instance.profile_version == 3 and instance.stage != 0:
+            raise ValueError("invalid restored chemical nursery stage")
         instance.physical_backend = physical_backend
         instance.world = PHYSICAL_BACKENDS[physical_backend].restore(snapshot["world"])
         if instance.world.spec.get("training_profile_sha256") != profile.sha256:
@@ -382,13 +564,28 @@ class EmbodiedTrainingWorld:
         ) != instance.stage:
             raise ValueError("restored physical world curriculum stage differs")
         instance.field = FieldEnvironment.restore(snapshot["field"])
-        instance.resources = Ecology.restore(instance.world, snapshot["resources"])
+        instance.resources = None
+        instance.biosphere = None
+        if instance.profile_version == 3:
+            if snapshot.get("resources") is not None or not isinstance(
+                snapshot.get("biosphere"), Mapping
+            ):
+                raise ValueError("chemical nursery snapshot composition differs")
+            from .biosphere import Biosphere
+
+            instance.biosphere = Biosphere.restore(instance.world, snapshot["biosphere"])
+        else:
+            instance.resources = Ecology.restore(instance.world, snapshot["resources"])
         instance.acoustics = Acoustics.restore(instance.world, snapshot["acoustics"])
         instance.objective = FiniteEnergyObjective(
             FiniteEnergyConfig.from_value(profile.component("homeostasis"))
         )
         instance.last_telemetry = copy.deepcopy(snapshot.get("last_telemetry", {}))
-        times = (instance.world.time, instance.field.time, instance.resources.time, instance.acoustics.time)
+        times = [instance.world.time, instance.field.time, instance.acoustics.time]
+        times.append(
+            instance.biosphere.web.time
+            if instance.biosphere is not None else instance.resources.time
+        )
         if max(times) - min(times) > 1e-9:
             raise ValueError("restored embodied environment clocks differ")
         return instance
