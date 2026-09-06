@@ -21,8 +21,9 @@ A resident's current control loop combines:
 - **Body-bound vision:** 1,024 native collision rays, divided between an 8×32 peripheral field and a 24×32 central field. Each supplies RGB and proximity. Bodies, constructed surfaces and movable objects can occlude them.
 - **Measured recurrence:** 351 sensory channels enter the full connectome; 384 named population readouts reach the resident's goal selector. These are population summaries, not recordings of 384 individual neurons.
 - **Spatial perception and working memory:** a native convolutional visual front, body-state encoder and persistent private GRU process 4,453 sensory and physiological values at each 50 ms physical tick.
-- **Experienced goals:** each individual retains a private reservoir of four-frame sensory encounters. A learned manager selects among those memories; the motor controller attempts to approach the selected sensory state.
+- **Experienced goals:** each individual retains a private reservoir of four-frame sensory encounters. A learned manager selects among those memories; the motor controller attempts to approach the selected sensory state. The current Rust controller also learns private, physiology-dependent goal preferences from the actual bodily return of completed attempts.
 - **Personal consequence learning:** inherited GAM predictions and private bounded residual learning estimate movement, energy-cost and fatigue consequences of motor proposals. Actual delivered actions and their subsequent physical outcomes supply the updates.
+- **Action-conditioned forecasts:** an inherited three-member neural ensemble predicts the next sensory change under candidate actions. Its contribution to goal-directed action selection is bounded; predicted states never enter the resident’s experienced-memory reservoir.
 
 The oral command currently follows an engineered physiological law. Remembered goals are previously experienced states, not guarantees of present reachability. Useful navigation, durable learned habits and reciprocal interaction are still being developed.
 
@@ -36,13 +37,13 @@ Both upstream libraries have executed against actual project data. Their artifac
 
 ## What has run
 
-The earlier joined neural/controller experiment completed **245,760 resident transitions** and **160 PPO updates** in four three-resident chemical worlds on an AMD RX 6750 XT. It trained a continuous worker and a slower achieved-goal manager alongside the full MaleCNS circuit. These are execution and training results; they do not establish improved physical skill. [Recorded run](research/sensorimotor_skills/ONLINE_DEVELOPMENT.md).
+The completed rich developmental lineage ran **491,520 resident transitions and 160 additional PPO updates** in four six-resident worlds on an AMD RX 6750 XT, at **224.76 resident transitions per wall second**. It inherited 40 earlier updates. Ninety of 96 resident episodes included mouth-material contact, and the run transferred 28.35 units of conserved material into bodies. Every episode still lost energy. These are actual physical outcomes, without a matched baseline establishing improvement. [Full-transition analysis](docs/RICH_DEVELOPMENT_ANALYSIS.md).
 
-GAM consequence models were fitted to **192,000 recorded physical transitions**, holding out complete physical worlds. Native interpolation, operating-domain checks and artifact loading have run. The larger rich-world collection has now completed **196,608 transitions** across six bodies in four worlds, including raw retinal observations, full-circuit readouts, delivered actions and physical outcomes. The new private learner, rich visual controller and their complete stochastic snapshots have executed in isolation; learned current-life deployment is the next integration step.
+The **196,608-transition rich play corpus** includes raw retinal observations, full-circuit readouts, delivered actions and physical outcomes. Native GAM fits on that corpus supply the current consequence bank. A separate learned sensory ensemble supplies the installed one-step forecasts; longer action-suffix predictors have also been fitted and remain research artifacts. [Fitted mechanisms](docs/GAM_MECHANISMS.md).
 
-The new reef's physical and chemical runs have exercised growth, exudation, recycling, acoustic contacts and changing solar exposure. The coupled collection exposed and fixed two integration defects: construction invalidating a cached retinal model, and physical emitters crossing the finite chemical grid boundary. Outside-domain emission is now accounted separately rather than placed in an unrelated boundary cell.
+The [public observatory](https://emberian.github.io/chreatures/) replays 240 actual frames from the predictive courtyard: body-bound retinal inputs, remembered goals, candidate actions, forecast contributions, GAM updates and delivered controls. That life later paused on a physical-source error during an incomplete tick; its last complete checkpoint remains preserved. The published segment precedes the failure. A previous saved reef life ended with depleted reserves. Neither recording establishes sustained regulation or reciprocal social behavior.
 
-Earlier results, including unsuccessful behavioral comparisons, remain in the research records. A good action-likelihood fit is not treated as evidence that a requested goal can be achieved with the body.
+Current training uses native-generated **courtyards, tiered shelves and braided passages** with disjoint training and held-out layout seeds, physical ramps, underpasses, finite resources and growing colonies. Its current collector executes the Rust resident controller, including private consequence and goal learning, and records actual actions. The superseded Python controllers and training entry points have been removed; their research records retain Git references. [Nursery families](docs/NURSERY_FAMILIES.md).
 
 ## Build and run
 
@@ -56,7 +57,7 @@ uv run python native/cognitive-core/build_extension.py
 
 Acquire the [MaleCNS graph](docs/MALECNS.md), build the current [retinal-v2 port bundle](docs/NEURAL_PORTS.md), and start a dedicated [AMD neural service](docs/REMOTE_BRAIN.md) or [Apple Metal service](docs/METAL_BRAIN.md) with sufficient cohort capacity. New worlds require the **same graph and port identities** as the resident artifact. Existing frozen lives keep their loaded engine and service.
 
-The current resident artifact is exported from a self-contained rich developmental training checkpoint, including the fitted GAM law bank:
+The repository includes `data/genomes/developmental-resident-rich-grandchild-update160-v3.npz`, exported from the completed developmental checkpoint. It contains the trained shared controller, frozen visual representation, fitted GAM bank and sensory predictor; private state begins separately at birth. To export another checkpoint:
 
 ```sh
 python scripts/export_sensorimotor_worker.py --help
@@ -65,14 +66,16 @@ python scripts/export_sensorimotor_worker.py --help
 Then start a fresh world using that artifact:
 
 ```sh
-uv run chreatures --port 8777 \
-  --brain-url http://127.0.0.1:18777 \
-  --resident-artifact /path/to/rich-developmental-resident.npz \
+uv run chreatures --port 8790 \
+  --brain-url http://127.0.0.1:18790 \
+  --resident-artifact data/genomes/developmental-resident-rich-grandchild-update160-v3.npz \
   --habitat data/habitats/living-reef.json \
   --biosphere data/biosphere/living-reef.json \
   --visitor-materials data/visitors/living-reef.json \
-  --checkpoint runs/living-reef.json
+  --checkpoint runs/new-reef.json
 ```
+
+Use a fresh checkpoint path and a dedicated empty neural service for a new birth. The example ports are placeholders; choose unused local ports.
 
 The local interface lets people manipulate physical objects, offer finite resources, and make light, sound and gesture stimuli. Its inspector shows actual retinal inputs, population readouts, motor actions, remembered goals and physical state. Public GitHub Pages contain recordings, never an undisclosed connection to a private running world.
 
