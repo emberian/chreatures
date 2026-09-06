@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """Build the cognitive-core extension for this Python interpreter."""
 
-import argparse, os, shutil, subprocess, sys, sysconfig
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import sysconfig
+import tempfile
 from pathlib import Path
 
 
@@ -15,9 +22,12 @@ def main():
     env = os.environ.copy()
     env["PYO3_PYTHON"] = str(Path(sys.executable).resolve())
     subprocess.run(["cargo", "build", "--release"], cwd=crate, env=env, check=True)
+    metadata = json.loads(subprocess.check_output(
+        ["cargo", "metadata", "--format-version", "1", "--no-deps"],
+        cwd=crate, env=env, text=True,
+    ))
     source = (
-        crate
-        / "target"
+        Path(metadata["target_directory"])
         / "release"
         / (
             "lib_cognitive_core.dylib"
@@ -29,7 +39,15 @@ def main():
     destination = a.output_dir / (
         "_cognitive_core" + sysconfig.get_config_var("EXT_SUFFIX")
     )
-    shutil.copy2(source, destination)
+    descriptor, staging_name = tempfile.mkstemp(prefix=".cognitive-core-", dir=a.output_dir)
+    os.close(descriptor)
+    staging = Path(staging_name)
+    try:
+        shutil.copy2(source, staging)
+        # Preserve code pages mapped by existing lives on the old inode.
+        os.replace(staging, destination)
+    finally:
+        staging.unlink(missing_ok=True)
     print(destination)
 
 

@@ -15,6 +15,7 @@ from typing import Any
 import numpy as np
 
 from .checkpoint import canonical, write_envelope
+from .engine_identity import current_engine_identity
 from .neural_client import NeuralClient
 from .sensorimotor_worker_native import DevelopmentalResidentCohort
 from .visitor_events import VisitorPerformances
@@ -80,6 +81,7 @@ class Habitat3D:
 
         if resident_artifact is None:
             raise ValueError("A current --resident-artifact is required for a new life")
+        self.engine_identity = current_engine_identity()
         if body_mode not in {"crawler", "articulated"}:
             raise ValueError("Unknown body model")
         if ecology not in {"analytic", "diffusion"}:
@@ -123,8 +125,11 @@ class Habitat3D:
             self.visitor_materials = VisitorMaterialSupply(
                 self.biosphere, visitor_materials
             )
-        self.acoustics = (
-            Acoustics(self.world, acoustics) if acoustics is not None else None
+        self.acoustics = Acoustics(
+            self.world,
+            acoustics
+            if acoustics is not None
+            else {"version": 1, "include_authored": True, "emitters": []},
         )
         self.acoustic_state = None
 
@@ -192,6 +197,13 @@ class Habitat3D:
     def _validate_resident_interface(self) -> None:
         from .sensorium import RICH_CHANNEL_NAMES_SHA256, RICH_PROFILE_SHA256
 
+        trained_neural = self.residents.neural_contract
+        remote_ports = self.neural.metadata["brain"].get("ports", {})
+        if (
+            trained_neural["graph_sha256"] != self.neural.graph["sha256"]
+            or trained_neural["port_spec_sha256"] != remote_ports.get("spec_hash")
+        ):
+            raise ValueError("Resident artifact was trained with a different graph or neural port")
         expected = {
             "format": "chreatures-rich-sensorimotor-observation-v1",
             "observation_dim": 4453,
@@ -656,11 +668,13 @@ class Habitat3D:
                 },
                 "resident_controller": {
                     **copy.deepcopy(self.residents.model_identity),
+                    "neural_contract": copy.deepcopy(self.residents.neural_contract),
                     "observation_contract": copy.deepcopy(
                         self.residents.observation_contract
                     ),
                     "rich_retina_available": hasattr(self.world, "rich_retina_batch"),
                 },
+                "engine_identity": copy.deepcopy(self.engine_identity),
                 "performance": {
                     "step_ms": sum(self.timings) / max(1, len(self.timings)),
                     "dt": MODEL_DT,
@@ -692,6 +706,10 @@ class Habitat3D:
             "active_colonies": sum(self.biosphere.active.values()),
             "parts": report.get("parts", len(self.biosphere.parts)),
             "captured_photons": report.get("captured_photons", 0.0),
+            "illumination": copy.deepcopy(report.get("illumination", {})),
+            "illumination_sha256": self.biosphere.illumination_sha256,
+            "mobile_phototrophy": copy.deepcopy(report.get("mobile_phototrophy", [])),
+            "mobile_phototrophy_sha256": self.biosphere.mobile_photo_sha256,
             "accounting": copy.deepcopy(
                 report.get("accounting", self.biosphere.accounting())
             ),
@@ -725,6 +743,7 @@ class Habitat3D:
             "world": self.world.snapshot(),
             "body_mode": self.body_mode,
             "physics_backend": self.physics_backend,
+            "engine_identity": copy.deepcopy(self.engine_identity),
             "execution_migrations": self.execution_migrations,
             "field": self.field.snapshot() if self.field is not None else None,
             "resources": self.resources.snapshot()
@@ -811,6 +830,12 @@ class Habitat3D:
                 "A current --resident-artifact is required to restore this life"
             )
         instance = cls.__new__(cls)
+        instance.engine_identity = current_engine_identity()
+        if value.get("engine_identity") != instance.engine_identity:
+            raise ValueError(
+                "This life requires its pinned source, native binaries and runtime; "
+                "restore it from its deployment directory"
+            )
         instance.body_mode = value["body_mode"]
         instance.physics_backend = value["physics_backend"]
         instance.execution_migrations = copy.deepcopy(value["execution_migrations"])

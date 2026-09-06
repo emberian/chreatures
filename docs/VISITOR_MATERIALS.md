@@ -36,6 +36,27 @@ outside-to-habitat boundary as `initial source - current source`; the transfer
 receipt reports its elemental composition and chemical energy. Later packet,
 gut, body, deposit, and root transactions continue to use the same web.
 
+The current Living Reef birth includes two finite choices in
+`data/visitors/living-reef.json`: reserve fruit and a fibrous pulp with mineral,
+reserve, tough tissue, and detritus. Each choice owns two dormant ordinary
+`MaterialObjects` slots. These four slots are disjoint from mobile egestion and
+colony exudation slots. The two inert source compartments and four empty slot
+compartments are part of the shared web at birth; an offering transfers existing
+inventory and creates no recurring source.
+
+Enable this supply only when creating the fresh world:
+
+```sh
+uv run chreatures \
+  --habitat data/habitats/living-reef.json \
+  --biosphere data/biosphere/living-reef.json \
+  --visitor-materials data/visitors/living-reef.json \
+  --resident-artifact /path/to/rich-developmental-resident.npz
+```
+
+The whole-world checkpoint then owns the remaining depot inventory and active
+offering slots. Restoring that checkpoint does not reread the launch file.
+
 Choice and slot names are environment-side bindings. Resident observations do
 not receive either name. They receive the packet's physical rays and contacts,
 plus color and odor computed from its current chemical pools through the usual

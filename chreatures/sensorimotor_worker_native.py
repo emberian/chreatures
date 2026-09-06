@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import copy
 import base64
+import copy
 import hashlib
 import importlib
 import json
@@ -173,6 +173,17 @@ class DevelopmentalResidentCohort:
             "file_sha256": file_hash, "mode": "rich-achieved-goal",
             "execution": metadata["execution"],
         }
+        trained = metadata.get("training_identity", {})
+        self.neural_contract = {
+            name: trained.get(name)
+            for name in ("graph_sha256", "port_spec_sha256", "port_bundle_sha256")
+        }
+        if any(
+            not isinstance(value, str) or len(value) != 64
+            or any(char not in "0123456789abcdef" for char in value)
+            for value in self.neural_contract.values()
+        ):
+            raise ValueError("developmental artifact lacks its trained neural substrate")
         self.observation_contract = copy.deepcopy(metadata.get("observation_contract"))
         if self.observation_contract != {
             "format": "chreatures-rich-sensorimotor-observation-v1",
@@ -244,7 +255,7 @@ class DevelopmentalResidentCohort:
         }
 
     @classmethod
-    def restore_value(cls, value: dict[str, Any], artifact: str | Path) -> "DevelopmentalResidentCohort":
+    def restore_value(cls, value: dict[str, Any], artifact: str | Path) -> DevelopmentalResidentCohort:
         if not isinstance(value, dict) or value.get("format") != "chreatures-developmental-resident-rich-snapshot-v2" or value.get("version") != 2:
             raise ValueError("unsupported developmental resident snapshot")
         instance = cls(artifact, int(value["batch_size"]), action_mode=value["action_mode"], goal_seed=0, action_seed=0)
