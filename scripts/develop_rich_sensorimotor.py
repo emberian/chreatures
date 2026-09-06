@@ -793,7 +793,10 @@ def main() -> int:
             "candidate_sha256s": [
                 item["sha256"] for item in candidate_plan["candidates"]
             ],
-            "applied_genome_loci": ["controller.policy_adapter_index"],
+            "applied_genome_loci": [
+                "controller.policy_adapter_index",
+                "controller.action_logit_temperature_offset.*",
+            ],
             "physical_genome_loci": "applied by WorldTrainingPool reset",
             "neural_phenotype_sha256s": [item.sha256 for item in phenotypes],
             "neural_recipe_path": str(args.neural_recipe.resolve()),
