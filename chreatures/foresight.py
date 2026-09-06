@@ -355,14 +355,21 @@ class ResidentForesight:
         branch_valid = valid.all(axis=0) & np.isfinite(physical).all(axis=(0, 2))
         branch_valid &= np.all((physical >= 0) & (physical <= 1), axis=(0, 2))
         branch_valid &= np.isfinite(scale[..., :3]).all(axis=(0, 2)) & np.all(scale[..., :3] >= 0, axis=(0, 2))
+        branch_valid &= np.isfinite(support).all(axis=0)
+        branch_valid &= np.all((support >= 0) & (support <= 1), axis=0)
         branch_scores = np.full(shape[1], np.nan, dtype=np.float64)
         initial = self.objective.potential(self.last_observed_physiology[:3])["potential_energy"]
-        potential = self.objective.potential(physical)["potential_energy"]
         for branch in np.flatnonzero(branch_valid):
+            # Validate and score only this already accepted physical branch.
+            # Invalid forecasts remain rejected rather than being clipped into
+            # the objective's admissible state domain.
+            potential = self.objective.potential(
+                physical[:, branch, :]
+            )["potential_energy"]
             previous = float(initial)
             total = 0.0
             for step in range(self.config.horizon):
-                current = float(potential[step, branch])
+                current = float(potential[step])
                 total += self.config.discount**step * (current - previous)
                 previous = current
             branch_scores[branch] = self.homeostasis.reward_per_energy * total
@@ -379,14 +386,25 @@ class ResidentForesight:
         )
         support_view = support.reshape(self.config.horizon, candidate_count, self.config.branches)
         for index in range(candidate_count):
-            valid_count = int(np.isfinite(matrix[index]).sum())
+            candidate_valid = np.isfinite(matrix[index])
+            valid_count = int(candidate_valid.sum())
+            if valid_count:
+                residual_mean = phys_scale[:, index, candidate_valid, :].mean(
+                    axis=(0, 1)
+                ).astype(float).tolist()
+                support_mean = float(
+                    support_view[:, index, candidate_valid].mean()
+                )
+            else:
+                residual_mean = [None, None, None]
+                support_mean = None
             diagnostics.append({
                 "forecast_score": None if not np.isfinite(scores[index]) else float(scores[index]),
                 "valid_branches": valid_count,
                 "branches": self.config.branches,
                 "best_branch": None if best[index] < 0 else int(best[index]),
-                "physiology_residual_scale_mean": phys_scale[:, index].mean(axis=(0, 1)).astype(float).tolist(),
-                "horizon_support_mean": float(support_view[:, index].mean()),
+                "physiology_residual_scale_mean": residual_mean,
+                "horizon_support_mean": support_mean,
                 "residual_scale_status": "learned conditional residual scale; heuristic, not calibrated confidence",
                 "forecast_status": self.status,
                 "model_artifact_sha256": self.experienced.model_identity["artifact_sha256"],
