@@ -30,13 +30,13 @@
     {"name":"gaze_pitch","unit":"executed action encoding","source":"executed_actions12[2]"},
     {"name":"posture","unit":"executed action encoding","source":"executed_actions12[3]"},
     {"name":"grip","unit":"executed nonnegative action encoding","source":"executed_actions12[4]"},
-    {"name":"signal_a","unit":"executed nonnegative action encoding","source":"executed_actions12[5]"},
-    {"name":"signal_b","unit":"executed nonnegative action encoding","source":"executed_actions12[6]"},
-    {"name":"eat","unit":"executed nonnegative action encoding","source":"executed_actions12[7]"},
-    {"name":"release","unit":"executed nonnegative action encoding","source":"executed_actions12[8]"},
-    {"name":"secrete","unit":"executed nonnegative action encoding","source":"executed_actions12[9]"},
-    {"name":"allocate_structure","unit":"executed nonnegative action encoding","source":"executed_actions12[10]"},
-    {"name":"allocate_reproduction","unit":"executed nonnegative action encoding","source":"executed_actions12[11]"}
+    {"name":"signal_low","unit":"executed nonnegative action encoding","source":"executed_actions12[5]"},
+    {"name":"signal_mid","unit":"executed nonnegative action encoding","source":"executed_actions12[6]"},
+    {"name":"signal_high","unit":"executed nonnegative action encoding","source":"executed_actions12[7]"},
+    {"name":"eat","unit":"executed nonnegative action encoding","source":"executed_actions12[8]"},
+    {"name":"release","unit":"executed nonnegative action encoding","source":"executed_actions12[9]"},
+    {"name":"secrete","unit":"executed nonnegative action encoding","source":"executed_actions12[10]"},
+    {"name":"allocate","unit":"executed nonnegative action encoding","source":"executed_actions12[11]"}
   ],
   "fit_only_audit_units": [
     "lineage_unit",

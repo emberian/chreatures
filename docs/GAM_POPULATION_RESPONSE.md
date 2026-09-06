@@ -10,4 +10,14 @@ The frozen v1 input order is in `integrations/gam_mechanisms/population_feature_
 
 There is no calibrated population response artifact yet. Existing physical corpora record the old physiology6 transition contract and do not measure the new ATP allocation, funded actuation, integrity/development/gland/brood changes, or circuit plasticity targets. Mapping those rows into the new response laws would fabricate targets. The completed 491,520-transition grandchild corpus remains useful evidence for its measured effort and body-law residual GAMs, documented in `GAM_GRANDCHILD_ATLAS.md`, but those models are not population response mechanisms.
 
+The population evaluator can now record the required row-level evidence with `--gam-trace-chunk-steps 128`. Trace chunks flush before every coherent checkpoint and contain pre/post physiology12, executed action12, outcome8, and measured organ-flow3 arrays. After a completed evaluation, the staged commands are:
+
+```text
+python integrations/gam_mechanisms/prepare_population_response_rows.py --evaluation RUN --output RUN/population-gam-rows.npz
+python integrations/gam_mechanisms/make_population_response_schema.py --rows RUN/population-gam-rows.npz --feature-contract integrations/gam_mechanisms/population_feature_contract_v1.json --heldout-lineage LINEAGE_SHA --heldout-environment ENVIRONMENT_SHA --output RUN/population-gam-fit-schema.json
+python integrations/gam_mechanisms/fit_population_response.py --data RUN/population-gam-rows.npz --schema RUN/population-gam-fit-schema.json --feature-contract integrations/gam_mechanisms/population_feature_contract_v1.json --output RUN/population-gam-fit
+```
+
+The row preparer rejects incomplete or overlapping traces and derives the four 64-tick causal histories from pre-action physiology. The schema maker labels outputs as observed one-step associations under executed actions. It does not call them causal effects.
+
 The next population collection must record pre-state physiology12, the exact executed action12, bounded history summaries, post-state physiology12, and the somatic debits/transfers supplied by the body mechanism. Candidate, lineage, episode, world, and environment keys must cover each complete physical unit. Allocation targets should be measured funded transfers divided by a declared available budget; recovery targets should be measured post-minus-pre changes with time units; plasticity targets require an actual circuit-side update signal. Until those fields exist, the fitting recipe must produce no bank.
