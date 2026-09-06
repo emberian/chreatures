@@ -23,11 +23,12 @@ The implementation follows the native Transformers
 [`AutoProcessor` / `AutoModelForImageTextToText` flow](https://huggingface.co/docs/transformers/en/model_doc/smolvlm),
 including `apply_chat_template`, `generate`, and `get_image_features`.
 
-The snapshot is on hbox at
-`/tank/chreatures/models/SmolVLM2-500M-Video-Instruct`. The service requires a
-local revision marker that exactly matches the commit above and uses
-`local_files_only=True`; it cannot silently fetch or move to another model at
-startup.
+The deployed snapshot is on persvati at
+`/home/ember/chreatures/models/SmolVLM2-500M-Video-Instruct`; the original hbox
+copy is at `/tank/chreatures/models/SmolVLM2-500M-Video-Instruct`. The service
+requires a local revision marker that exactly matches the commit above and
+uses `local_files_only=True`; it cannot silently fetch or move to another
+model at startup.
 
 | Artifact | Measured value |
 | --- | --- |
@@ -163,23 +164,24 @@ Other explicit states are `unavailable`, `error`, and
 semantic observation. Source sequence, simulation time, capture time,
 provenance, model identity, and inference latency are echoed in each response.
 
-## Deploy v3 after an explicit memory boundary
+## Persistent v3 deployment
 
-The measured v3 target is persvati's AMD Radeon 890M with PyTorch 2.10.0 for
-ROCm 7.0 and Transformers 4.57.1. Start it from a synchronized v3 source
-directory only after the runtime has opened a new visual-memory lineage:
+The v3 service is idle on persvati at `127.0.0.1:8776`. It uses the AMD Radeon
+890M, PyTorch 2.10.0 for ROCm 7.0, and Transformers 4.57.1. Its source is a
+read-only copy of commit `600ebe9162dd3d1406ed0dcd62bed8d04459698b`.
+The preserved launch command is:
 
 ```sh
-PYTHONPATH=/home/ember/chreatures/envs/perception-packages:/home/ember/chreatures/perception-v3-src \
+PYTHONPATH=/home/ember/chreatures/envs/perception-packages:/home/ember/chreatures/releases/perception-body-fov-v3-6ac486ea \
 HF_HOME=/home/ember/chreatures/cache/huggingface \
 /home/ember/kaxsim/.venv7/bin/python \
-  /home/ember/chreatures/perception-v3-src/scripts/serve_perception.py \
+  /home/ember/chreatures/releases/perception-body-fov-v3-6ac486ea/scripts/serve_perception.py \
   --backend smolvlm2 \
   --model-path /home/ember/chreatures/models/SmolVLM2-500M-Video-Instruct \
   --device cuda --max-new-tokens 128 --embed-cache-entries 4 \
   --max-workers 1 --max-pending 1 \
   --bind 127.0.0.1 --port 8776 \
-  --pid-file /home/ember/chreatures/runs/perception/perception-v3.pid
+  --pid-file /home/ember/chreatures/runs/perception/v3-service/perception.pid
 ```
 
 Tunnel the loopback service when the habitat runs elsewhere:
@@ -189,9 +191,27 @@ ssh -N -L 18776:127.0.0.1:8776 persvati
 curl http://127.0.0.1:18776/v1/health
 ```
 
-This is a deployment recipe, not a claim that v3 has replaced the live v1
-process. Port 8775 remains the archived encoder for lives already using its
-feature coordinate system.
+The private service record is
+`/home/ember/chreatures/runs/perception/v3-service/SERVICE_MANIFEST.json`
+(SHA-256
+`2d6e47cf5ea1311d78e4454387650b6c7ce2030ba27de558e125574d80b11565`).
+The same directory contains the command, PID, log, genuine request and
+response, and focused validation record. Directory mode is `0700` and its
+files are `0600`. Port 8775 remains the archived encoder for lives already
+using its feature coordinate system. A runtime must open a new v3
+visual-memory lineage before it begins using port 8776.
+
+The deployment check submitted Fern's genuine tick-200/tick-205 body-camera
+pair as a cache miss. The service returned two 960-dimensional features with
+one native row per view, the expected model revision and v3 pooling contract,
+and service completion timestamp `1788656028.4641116`. Native latency was
+0.759 seconds and client wall time was 0.766 seconds. The response SHA-256 is
+`8e05ad95dfcb27af6ae43c709dbdbd98b05e44a66184d09e7aeaae4393c90787`;
+its feature hashes are
+`55bf488c4f98f5605a507511c16d392f0ac7803157a77d5f3acf75b82a550644`
+and
+`bea309487ded6bfeaa819c8bbfbb0687ac89bcac0cb95d648ce1fa4e76861966`.
+No resident memory or running world was changed.
 
 ## Measured body-FOV performance
 
