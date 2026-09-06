@@ -1,0 +1,77 @@
+{
+  "failed_horizons": [],
+  "format": "chreatures-rich-action-suffix-experiment-suite-v1",
+  "horizons": [
+    5,
+    20
+  ],
+  "results": [
+    {
+      "artifact": {
+        "artifact_identity": "ce4e9725fc9de990147405c00924a2eebc41fe36e1ba14aed56de3164129e8be",
+        "bytes": 9856842,
+        "file": "rich-action-suffix-h005-ensemble.npz",
+        "sha256": "d9fcb262bb25ad97e4c3f9139c73a5efc58a9999a2ce3530d07cd9421da86a33"
+      },
+      "elapsed_seconds": 53.15270327869803,
+      "failed_models": [],
+      "fit_report_sha256": "4312314cebeef5e10e336d895c72b4309f4cf500f555247221c5fe11c0bf7f48",
+      "format": "chreatures-rich-action-suffix-consequence-ensemble-v1",
+      "horizon_ticks": 5,
+      "identity_sha256": "8b05b4e252677d2362cce5e5dca088bc55db5a297226d390684544a9ed993507",
+      "reference": {
+        "bytes": 86039,
+        "file": "rich-action-suffix-h005-reference.npz",
+        "rows": [
+          0,
+          24528,
+          49055
+        ],
+        "sha256": "a55c3d98bfd9ac46e2e643e700ade6d63ecb0d3d7224722cfeda7cbe653babb8",
+        "source": "actual reserved-world validation rows"
+      },
+      "status": "experimental descriptive action-suffix forecast; no runtime, causal, welfare, or calibrated-uncertainty claim",
+      "validation": {
+        "empirical_model_error_scale": 0.23692493543310822,
+        "goal_space_action_suffix_permuted_rms": 0.5380341341040866,
+        "goal_space_model_rms": 0.23692493543310822,
+        "goal_space_zero_current_window_rms": 0.5098621011359745,
+        "raw_input_8_sigma_clip_row_fraction": 0.0
+      }
+    },
+    {
+      "artifact": {
+        "artifact_identity": "247d5a436b16da439745d6af95a6abe6bbb5ca42169e9ff0db6338a93d9927a3",
+        "bytes": 10244494,
+        "file": "rich-action-suffix-h020-ensemble.npz",
+        "sha256": "b2e23be61718f088ce9d98a21ee36abdd2e1a66a9ec231032b6dbb02652f73e1"
+      },
+      "elapsed_seconds": 50.5413560308516,
+      "failed_models": [],
+      "fit_report_sha256": "c5c0611f723065698f91fa94966ca035137458c21a2658b2f6790f3908a7ab0c",
+      "format": "chreatures-rich-action-suffix-consequence-ensemble-v1",
+      "horizon_ticks": 20,
+      "identity_sha256": "e588b9919d907be98c6e90408bfe38adcf3df73168fd86929681d35fec4c7f81",
+      "reference": {
+        "bytes": 86965,
+        "file": "rich-action-suffix-h020-reference.npz",
+        "rows": [
+          0,
+          24438,
+          48875
+        ],
+        "sha256": "7286a2dd1b2f34018006f789ac1ff10766cfe48cc4d58f0ad381f2d815dd5b2b",
+        "source": "actual reserved-world validation rows"
+      },
+      "status": "experimental descriptive action-suffix forecast; no runtime, causal, welfare, or calibrated-uncertainty claim",
+      "validation": {
+        "empirical_model_error_scale": 0.29184428916701793,
+        "goal_space_action_suffix_permuted_rms": 0.5660208297681049,
+        "goal_space_model_rms": 0.29184428916701793,
+        "goal_space_zero_current_window_rms": 0.5350134327918427,
+        "raw_input_8_sigma_clip_row_fraction": 0.0
+      }
+    }
+  ],
+  "status": "completed experimental Torch fits; no runtime integration"
+}
