@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from chreatures.biosphere import Biosphere
+from chreatures.checkpoint import canonical
 from chreatures.developmental_genome import DevelopmentalGenome
 from chreatures.fields import FieldEnvironment
 from chreatures.growth import GrowthSystem
@@ -136,6 +137,8 @@ def run(seconds: float, output: Path):
         "biosphere": sphere.snapshot(),
     }
     (output / "grown-checkpoint.json").write_text(json.dumps(checkpoint) + "\n")
+    # Exercise the real canonical JSON boundary, which sorts dictionary keys.
+    checkpoint = json.loads(canonical(checkpoint))
     restored_world = PhysicsWorld.restore(checkpoint["world"])
     restored_field = FieldEnvironment.restore(checkpoint["field"])
     restored = Biosphere.restore(restored_world, checkpoint["biosphere"])

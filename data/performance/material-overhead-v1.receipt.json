@@ -1,0 +1,65 @@
+{
+  "format": "chreatures-material-overhead-receipt-v1",
+  "measured_at_local": "2026-09-06T00:01:26-04:00",
+  "scope": "Fresh local research process using FastArticulatedSensoriumWorld, Biosphere, MaterialObjects, and EcologicalExchange. No neural controller and no live service were used.",
+  "provenance": {
+    "original_script": "/tmp/paired_material_profile3.py",
+    "original_script_sha256": "f700433b0bc5399b26a9a864e394f07b655cc37a5a996fe976d2a9163f29d887",
+    "original_text_receipt": "/tmp/chreatures-material-profile-final.txt",
+    "original_text_receipt_sha256": "ba734503ded143da0a2fd2869c07aa0ab9d70881f743feb084369719ecf32457",
+    "source_state": "MaterialObjects performance edits were present. Biosphere was still the source before the insertion-order snapshot fix; that fix began after this measurement.",
+    "research_reference": "The comparison branch locally emulated the prior unconditional MaterialObjects scans and geometry reconstruction. It was never a production-selectable backend."
+  },
+  "host": {
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "processor": "Apple M2 Max",
+    "python": "3.12.14"
+  },
+  "parameters": {
+    "seed": 381,
+    "dt_seconds": 0.05,
+    "warmup_steps": 80,
+    "profile_steps": 120,
+    "isolated_material_iterations": 2000,
+    "developed_parts_after_warmup": 12,
+    "configured_deposit_slots": 24,
+    "active_deposit_slots_after_warmup": 6
+  },
+  "paired_profile": {
+    "research_reference_wall_seconds": 5.592889749997994,
+    "optimized_wall_seconds": 6.086307750003471,
+    "research_reference_function_calls": 2784480,
+    "optimized_function_calls": 2402529,
+    "research_reference_cumulative_seconds": {
+      "_check_physical_state": 0.296837124,
+      "sync_geometry": 0.440862087,
+      "surface_cues": 0.118417664
+    },
+    "optimized_cumulative_seconds": {
+      "_check_physical_state": 0.002481044,
+      "sync_geometry": 0.006485658,
+      "surface_cues": 0.017611127
+    },
+    "full_world_and_biosphere_snapshots_exact": true
+  },
+  "isolated_recurring_calls": {
+    "research_reference_seconds": 2.434814208994794,
+    "optimized_seconds": 0.06580258299800334,
+    "speedup": 37.00180293938726,
+    "returned_cues_and_material_snapshot_exact": true
+  },
+  "interpretation": {
+    "supported_claim": "The exact inventory, cue, and physical-validation fast paths substantially reduce recurring MaterialObjects overhead in this scene.",
+    "whole_world_speedup_claim": false,
+    "reason": "Whole-world wall time was noisy on a shared host and slower in this paired run; physics and real topology compilation dominate. The measurement does not establish an end-to-end speedup."
+  },
+  "sources": {
+    "chreatures/material_objects.py": "c907d0917d90c7bf496e31fa8c48984755efa70f3f137e59cbe5d5c6f4f009d0",
+    "chreatures/biosphere.py": "6304e745d0a3d9a36d8c616ed8d142d5bfadf237b70d8e7a629af1ee14ddffbc",
+    "chreatures/ecological_exchange.py": "321e179e2eb4e7062a2fa918c02bbbc1bde05ecd6e3be1a8e384393db483b1bd",
+    "chreatures/physical_batch.py": "b4d5bd1cdc4002c9bbbe4d7faa1e967638278708b12482012510d52953d60b78",
+    "scripts/build_chemical_habitat.py": "4337092a445633f51ad4043b2183422499c497c16b50b1144e394a6d4d89314c",
+    "/tmp/chreatures-material-kernels/_world_kernels.cpython-312-darwin.so": "1a066d620c2690c0631b5ec4062ea54604046c318616203260b716a6486136ea"
+  }
+}
