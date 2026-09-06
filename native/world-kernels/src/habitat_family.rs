@@ -35,6 +35,18 @@ struct Limits {
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
+struct CatchmentSpec {
+    id: String,
+    surface_height_m: f64,
+    half_size_m: [f64; 2],
+    thickness_m: f64,
+    wall_height_m: f64,
+    material: String,
+    physical_material: String,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct NodeSpec {
     position_m: [f64; 3],
     half_size_m: [f64; 2],
@@ -75,6 +87,7 @@ struct Config {
     terrain_entity_ids: Vec<String>,
     variation: Variation,
     limits: Limits,
+    catchment: CatchmentSpec,
     families: Vec<FamilySpec>,
     training_variants: Vec<TrainingVariant>,
 }
@@ -204,6 +217,20 @@ fn validate_config(config: &Config) -> PyResult<()> {
         || !(0.03..=0.15).contains(&config.limits.platform_thickness_m)
         || !finite(config.limits.minimum_spawn_clearance_m)
         || !(0.35..=2.0).contains(&config.limits.minimum_spawn_clearance_m)
+        || !identifier(&config.catchment.id)
+        || !finite(config.catchment.surface_height_m)
+        || !(-2.0..=-0.2).contains(&config.catchment.surface_height_m)
+        || config
+            .catchment
+            .half_size_m
+            .iter()
+            .any(|value| !finite(*value) || !(8.0..=20.0).contains(value))
+        || !finite(config.catchment.thickness_m)
+        || !(0.03..=0.2).contains(&config.catchment.thickness_m)
+        || !finite(config.catchment.wall_height_m)
+        || !(0.2..=2.0).contains(&config.catchment.wall_height_m)
+        || !identifier(&config.catchment.material)
+        || !identifier(&config.catchment.physical_material)
     {
         return Err(PyValueError::new_err(
             "invalid nursery-family configuration",
@@ -531,6 +558,7 @@ impl HabitatFamily {
         let existing: HashSet<String> = entities.iter().filter_map(id).map(str::to_owned).collect();
         if existing.len() != entities.len()
             || terrain.iter().any(|name| !existing.contains(*name))
+            || existing.contains(&self.config.catchment.id)
             || (0..nodes.len())
                 .any(|index| existing.contains(&format!("family-platform-{index:02}")))
             || (0..family.edges.len())
@@ -541,6 +569,82 @@ impl HabitatFamily {
             ));
         }
         entities.retain(|entity| id(entity).is_none_or(|name| !terrain.contains(name)));
+        entities.push(json!({
+            "id": self.config.catchment.id,
+            "mobility": "static",
+            "material": self.config.catchment.material,
+            "physical_material": self.config.catchment.physical_material,
+            "position": [6.0, 4.0, 0.0],
+            "shapes": [
+                {
+                    "type": "box",
+                    "size": [
+                        self.config.catchment.half_size_m[0],
+                        self.config.catchment.half_size_m[1],
+                        self.config.catchment.thickness_m * 0.5
+                    ],
+                    "position": [
+                        0.0,
+                        0.0,
+                        self.config.catchment.surface_height_m
+                            - self.config.catchment.thickness_m * 0.5
+                    ]
+                },
+                {
+                    "type": "box",
+                    "size": [
+                        self.config.catchment.thickness_m * 0.5,
+                        self.config.catchment.half_size_m[1],
+                        self.config.catchment.wall_height_m * 0.5
+                    ],
+                    "position": [
+                        -self.config.catchment.half_size_m[0], 0.0,
+                        self.config.catchment.surface_height_m
+                            + self.config.catchment.wall_height_m * 0.5
+                    ]
+                },
+                {
+                    "type": "box",
+                    "size": [
+                        self.config.catchment.thickness_m * 0.5,
+                        self.config.catchment.half_size_m[1],
+                        self.config.catchment.wall_height_m * 0.5
+                    ],
+                    "position": [
+                        self.config.catchment.half_size_m[0], 0.0,
+                        self.config.catchment.surface_height_m
+                            + self.config.catchment.wall_height_m * 0.5
+                    ]
+                },
+                {
+                    "type": "box",
+                    "size": [
+                        self.config.catchment.half_size_m[0],
+                        self.config.catchment.thickness_m * 0.5,
+                        self.config.catchment.wall_height_m * 0.5
+                    ],
+                    "position": [
+                        0.0, -self.config.catchment.half_size_m[1],
+                        self.config.catchment.surface_height_m
+                            + self.config.catchment.wall_height_m * 0.5
+                    ]
+                },
+                {
+                    "type": "box",
+                    "size": [
+                        self.config.catchment.half_size_m[0],
+                        self.config.catchment.thickness_m * 0.5,
+                        self.config.catchment.wall_height_m * 0.5
+                    ],
+                    "position": [
+                        0.0, self.config.catchment.half_size_m[1],
+                        self.config.catchment.surface_height_m
+                            + self.config.catchment.wall_height_m * 0.5
+                    ]
+                }
+            ],
+            "components": []
+        }));
         let materials = ["terracotta", "limestone", "darkstone"];
         for (index, node) in nodes.iter().enumerate() {
             entities.push(platform_entity(

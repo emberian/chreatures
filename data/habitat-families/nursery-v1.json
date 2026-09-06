@@ -22,6 +22,15 @@
     "platform_thickness_m": 0.08,
     "minimum_spawn_clearance_m": 0.62
   },
+  "catchment": {
+    "id": "family-catchment",
+    "surface_height_m": -0.65,
+    "half_size_m": [20.0, 20.0],
+    "thickness_m": 0.08,
+    "wall_height_m": 1.0,
+    "material": "darkstone",
+    "physical_material": "masonry"
+  },
   "families": [
     {
       "id": "courtyard-ring",
