@@ -655,3 +655,17 @@ source, model, native binaries, generated world and restoration scope.
 The original 10am autonomous window passed during the usage interruption.
 After the user's plan refresh, this batch was completed; no additional long
 paired training sweep was started.
+
+
+The native v3 family collection then completed cleanly on hbox: 196,608
+transitions in two episodes across four six-resident worlds, at 204.79 resident
+transitions per wall second. Both complete packets and all end checkpoints
+passed the actual rich dataset loader. Residents completed 19,584 goal attempts;
+19,453 updated their private associations, and 131 correctly skipped credit
+because their reservoir slot had been replaced. Twenty-four unfinished attempts
+remain in each episode's terminal private snapshot. Physical acquisition totaled
+17.532 units of material, with negative aggregate physiological reward. This
+collection uses frozen source `762cc60`, before the subsequent physical catchment
+repair, and makes no matched controller-benefit claim. The
+[collection receipt](../data/training/rich-family-v5-v1.receipt.json) preserves
+the exact sources, model, native binaries, data and private-state totals.

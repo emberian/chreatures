@@ -1,0 +1,172 @@
+{
+  "content_sha256": "73235f725be75231185288593df5b55bd553e065a6ba7d7f9773ce78e415f4e3",
+  "controller": {
+    "artifact_sha256": "f4c6da1c10f75c465d6e04714a9986f2e5698aebe652904c34646ef2921521f4",
+    "execution": "developmental-resident-native-rich-predictive-personal-goals-v3",
+    "file_sha256": "c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5",
+    "path": "data/genomes/developmental-resident-rich-grandchild-update160-v3.npz"
+  },
+  "dataset": {
+    "bulk_path": "/tank/chreatures/runs/collections/rich-family-v5-v1-seed20260916",
+    "collection_identity_sha256": "4e9086b5f82c10fec5d699581f12c7deea48644d174cc889bd0e10e885c05bdb",
+    "loader_verification": {
+      "authenticated_all_packet_receipts": true,
+      "episodes": 2,
+      "loader": "research.sensorimotor_skills.rich_data.RichPlayDataset",
+      "residents_per_world": 6,
+      "steps_per_episode": 4096,
+      "worlds": 4
+    },
+    "manifest_content_sha256": "d7479ec2aa17ed1dd12c18766829c0f0304fc0fe1d64e021731167e50a863abd",
+    "manifest_file_sha256": "f1d7e6feca84a6df6f718ef4a576f6e879fba968c1f695f9c7a4832e904ca870",
+    "packets": [
+      {
+        "bytes": 480644354,
+        "episode": 0,
+        "sha256": "6208f6edd0022e6b90aac4e768474029906e89ad4474feb44101c2332119042e"
+      },
+      {
+        "bytes": 490027109,
+        "episode": 1,
+        "sha256": "e2adeacaddd9623f45e3691f62255c1628b04fd8c73e9e468a22eb353b0270f5"
+      }
+    ]
+  },
+  "end_checkpoints": [
+    {
+      "episode": 0,
+      "neural_sha256": "9d730f106f0852a5b03bd5e86ceb4587287297f69ff440f967a3eee97f7f35e7",
+      "private_sha256": "6ef0f795b200ac845e3ae2a06ea9806eaf9b1369fdba9600430c24d0b06b6e63",
+      "worlds_sha256": "31463faed364e68cff007a5f7f28abdaee506c683fffa2848d217550f35f8e24"
+    },
+    {
+      "episode": 1,
+      "neural_sha256": "660a7be16234567dd59fcedf0ea311eb6514bbb2ea2b170368d5ab80dbfefd8c",
+      "private_sha256": "267149783958c34e9f31393c843b82f4947a307c8f1401811b88d12979edba60",
+      "worlds_sha256": "cf91618609eba4a2f1b7a45308b98a05d9afea01236fd22cf6442e7aa010b213"
+    }
+  ],
+  "format": "chreatures-rich-family-v5-collection-receipt-v1",
+  "neural_substrate": {
+    "backend": "fixed-cohort-triton-edge8-csr-v1",
+    "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "port_bundle_sha256": "933b871fdd11dafa8c43afceb9862101984bf0950592af84631a4d7aa9bebe53",
+    "port_spec_sha256": "a3182cc5c546fac164774e56cfcf3d4f185c2feab5a994fe3d2a37cc8604302e"
+  },
+  "observation": {
+    "neural_readouts_shape_per_episode": [
+      4097,
+      24,
+      384
+    ],
+    "order": [
+      "rich_body_v1_4096",
+      "canonical_channels_351",
+      "physiology_6"
+    ],
+    "rich_channel_names_sha256": "b4c6b328116d820143e16ee922ccffd7b950dbe008efc580ad93056e01349bfa",
+    "rich_profile_sha256": "c71380718ba5535dbaebdeaf8aa2e88cc45cf218312a03e13507877f02a5554e",
+    "schema_sha256": "0e0083664f6df18b15c408808a7ca772e64aa334dab1fd971e21cb39b5a70b51",
+    "shape_per_episode": [
+      4097,
+      24,
+      4453
+    ]
+  },
+  "physical_outcomes": {
+    "order": [
+      "nutrition",
+      "contact",
+      "distance",
+      "effort",
+      "mechanical_work",
+      "ingested_mass",
+      "mouth_material_contacts",
+      "homeostatic_reward"
+    ],
+    "positive_transition_rows": [
+      196194,
+      53252,
+      196608,
+      196608,
+      196494,
+      1323,
+      1321,
+      964
+    ],
+    "qualification": "positive rows are transition observations; they are not independent meals or capabilities",
+    "sums": [
+      4.727631105791325,
+      41454.80707292259,
+      544.4418650918292,
+      41777.61074326138,
+      7739.997908978251,
+      17.532023466890678,
+      1322.0,
+      -118.6263660923587
+    ]
+  },
+  "private_goal_updates": {
+    "episode_0": {
+      "cancelled": 0,
+      "completed": 9792,
+      "frozen": 0,
+      "learned": 9726,
+      "pending_at_terminal": 24,
+      "skipped_replaced": 66
+    },
+    "episode_1": {
+      "cancelled": 0,
+      "completed": 9792,
+      "frozen": 0,
+      "learned": 9727,
+      "pending_at_terminal": 24,
+      "skipped_replaced": 65
+    },
+    "qualification": "counts are per-resident ten-tick association events from terminal native snapshots; each episode starts a fresh family lifecycle"
+  },
+  "scope": {
+    "dt_seconds": 0.05,
+    "episodes": 2,
+    "heldout_world_slots": [
+      3
+    ],
+    "resident_transitions": 196608,
+    "residents_per_world": 6,
+    "seed": 20260916,
+    "steps_per_episode": 4096,
+    "train_world_slots": [
+      0,
+      1,
+      2
+    ],
+    "worlds": 4
+  },
+  "source": {
+    "cognitive_extension_sha256": "e66355ed6e7d151425d5828eefb669016172dda14a153e11502426703252a0e8",
+    "collector_sha256": "be6663d07efea163d367fee979d5848cc966cad457b302c222635022d32ebe87",
+    "git_revision": "762cc606f55b7ef660386ed5465a774c2140496f",
+    "native_resident_wrapper_sha256": "5b171c952b43af3b56568a221f1f1825ee1b05e0206e509265e6cc45f17c27bf",
+    "targeted_sources_dirty": false,
+    "training_cohort_sha256": "46d2f57fb85a30399f888325eeed2c33b1c02f145da7d92740d66c7637c70e03",
+    "world_extension_sha256": "044bae3bc3c72c918360400c5469bf8c0648b5fe145e6fc3f617c4e070edd95f"
+  },
+  "status": "completed authenticated current-only native family collection; observational corpus, no learned-behavior claim",
+  "supervision": {
+    "ended_utc": "2026-09-06T18:10:41Z",
+    "exit_code": 0,
+    "started_utc": "2026-09-06T17:54:30Z"
+  },
+  "timing": {
+    "elapsed_seconds": 960.0632590260357,
+    "parent_advance_seconds": 500.6696104872972,
+    "parent_advance_wall_fraction": 0.521496480341531,
+    "parent_observe_seconds": 142.5684237368405,
+    "parent_observe_wall_fraction": 0.14849898941187814,
+    "qualification": "single joined collection under concurrent host/GPU load; not an isolated kernel benchmark",
+    "remaining_neural_control_compression_manifest_seconds": 316.825224801898,
+    "remaining_wall_fraction": 0.3300045302465909,
+    "resident_transitions_per_second": 204.78650563032144
+  },
+  "version": 1
+}
