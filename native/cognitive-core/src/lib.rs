@@ -10,6 +10,7 @@ mod developmental;
 pub mod gam_law;
 mod goal_memory;
 pub mod personal_consequences;
+pub mod personal_goals;
 mod predictive_sensory;
 
 #[derive(Clone)]
