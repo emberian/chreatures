@@ -1,0 +1,122 @@
+{
+  "format": "chreatures-nursery-family-v1",
+  "habitat_template_sha256": "70d3659059564ee3ba75ccca91fe82cfc81d6c28ac2626141def38ec302628e7",
+  "biosphere_template_sha256": "5c002b387cc3406ef02430c880f44a405adf22a8a7d4a611e6ff5de94cebf92a",
+  "terrain_entity_ids": [
+    "west-rise",
+    "middle-terrace",
+    "upper-rise",
+    "upper-terrace",
+    "garden-return",
+    "echo-arch",
+    "garden-screen"
+  ],
+  "variation": {
+    "horizontal_jitter_m": 0.1,
+    "elevation_jitter_m": 0.025
+  },
+  "limits": {
+    "minimum_ramp_width_m": 0.72,
+    "maximum_rise_over_run": 0.32,
+    "minimum_underpass_clearance_m": 0.45,
+    "platform_thickness_m": 0.08,
+    "minimum_spawn_clearance_m": 0.62
+  },
+  "families": [
+    {
+      "id": "courtyard-ring",
+      "nodes": [
+        {"position_m": [1.3, 2.0, 0.12], "half_size_m": [0.72, 0.7]},
+        {"position_m": [4.0, 1.65, 0.35], "half_size_m": [0.82, 0.7]},
+        {"position_m": [7.0, 1.7, 0.72], "half_size_m": [0.82, 0.72]},
+        {"position_m": [10.3, 2.0, 0.4], "half_size_m": [0.72, 0.72]},
+        {"position_m": [10.3, 5.8, 0.14], "half_size_m": [0.72, 0.72]},
+        {"position_m": [7.2, 6.0, 0.58], "half_size_m": [0.82, 0.72]},
+        {"position_m": [4.0, 5.9, 0.32], "half_size_m": [0.82, 0.72]},
+        {"position_m": [1.3, 5.7, 0.12], "half_size_m": [0.72, 0.72]}
+      ],
+      "edges": [
+        {"nodes": [0, 1], "width_m": 0.86},
+        {"nodes": [1, 2], "width_m": 0.82},
+        {"nodes": [2, 3], "width_m": 0.8},
+        {"nodes": [3, 4], "width_m": 0.88},
+        {"nodes": [4, 5], "width_m": 0.82},
+        {"nodes": [5, 6], "width_m": 0.8},
+        {"nodes": [6, 7], "width_m": 0.86},
+        {"nodes": [7, 0], "width_m": 0.9},
+        {"nodes": [1, 6], "width_m": 0.76},
+        {"nodes": [2, 5], "width_m": 0.74}
+      ],
+      "underpass_nodes": [2, 5],
+      "canopy_nodes": [1, 4, 6],
+      "landmark_nodes": [0, 3, 5],
+      "gate_node": 3
+    },
+    {
+      "id": "tiered-shelf",
+      "nodes": [
+        {"position_m": [1.2, 2.0, 0.12], "half_size_m": [0.68, 0.72]},
+        {"position_m": [4.0, 2.0, 0.36], "half_size_m": [0.82, 0.72]},
+        {"position_m": [7.0, 2.0, 0.66], "half_size_m": [0.82, 0.72]},
+        {"position_m": [10.35, 2.0, 0.96], "half_size_m": [0.74, 0.72]},
+        {"position_m": [10.35, 5.8, 0.9], "half_size_m": [0.74, 0.72]},
+        {"position_m": [7.0, 5.8, 0.64], "half_size_m": [0.82, 0.72]},
+        {"position_m": [4.0, 5.8, 0.34], "half_size_m": [0.82, 0.72]},
+        {"position_m": [1.2, 5.8, 0.12], "half_size_m": [0.68, 0.72]}
+      ],
+      "edges": [
+        {"nodes": [0, 1], "width_m": 0.9},
+        {"nodes": [1, 2], "width_m": 0.84},
+        {"nodes": [2, 3], "width_m": 0.8},
+        {"nodes": [7, 6], "width_m": 0.9},
+        {"nodes": [6, 5], "width_m": 0.84},
+        {"nodes": [5, 4], "width_m": 0.8},
+        {"nodes": [0, 7], "width_m": 0.82},
+        {"nodes": [1, 6], "width_m": 0.76},
+        {"nodes": [2, 5], "width_m": 0.76},
+        {"nodes": [3, 4], "width_m": 0.82}
+      ],
+      "underpass_nodes": [2, 3, 4, 5],
+      "canopy_nodes": [0, 4, 6],
+      "landmark_nodes": [1, 3, 7],
+      "gate_node": 5
+    },
+    {
+      "id": "braided-passages",
+      "nodes": [
+        {"position_m": [1.2, 2.0, 0.12], "half_size_m": [0.68, 0.7]},
+        {"position_m": [3.8, 5.7, 0.38], "half_size_m": [0.78, 0.72]},
+        {"position_m": [6.4, 2.0, 0.68], "half_size_m": [0.78, 0.72]},
+        {"position_m": [9.0, 5.7, 0.42], "half_size_m": [0.78, 0.72]},
+        {"position_m": [10.55, 2.0, 0.18], "half_size_m": [0.68, 0.7]},
+        {"position_m": [8.0, 2.0, 0.6], "half_size_m": [0.72, 0.7]},
+        {"position_m": [5.3, 5.7, 0.74], "half_size_m": [0.74, 0.72]},
+        {"position_m": [2.4, 2.0, 0.34], "half_size_m": [0.7, 0.7]}
+      ],
+      "edges": [
+        {"nodes": [0, 1], "width_m": 0.82},
+        {"nodes": [1, 2], "width_m": 0.8},
+        {"nodes": [2, 3], "width_m": 0.78},
+        {"nodes": [3, 4], "width_m": 0.82},
+        {"nodes": [4, 5], "width_m": 0.78},
+        {"nodes": [5, 6], "width_m": 0.8},
+        {"nodes": [6, 7], "width_m": 0.82},
+        {"nodes": [7, 0], "width_m": 0.78},
+        {"nodes": [1, 6], "width_m": 0.74},
+        {"nodes": [2, 5], "width_m": 0.74}
+      ],
+      "underpass_nodes": [2, 5, 6],
+      "canopy_nodes": [1, 4, 7],
+      "landmark_nodes": [0, 3, 6],
+      "gate_node": 2
+    }
+  ],
+  "training_variants": [
+    {"family": "courtyard-ring", "seed": 20260911},
+    {"family": "tiered-shelf", "seed": 20260912},
+    {"family": "braided-passages", "seed": 20260913},
+    {"family": "courtyard-ring", "seed": 20260914},
+    {"family": "tiered-shelf", "seed": 20260915},
+    {"family": "braided-passages", "seed": 20260916}
+  ]
+}
