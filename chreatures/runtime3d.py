@@ -58,6 +58,12 @@ def _finite_row(value: Any, shape: tuple[int, ...], name: str) -> np.ndarray:
     return row
 
 
+def _neural_model_identity(metadata: dict[str, Any]) -> dict[str, Any]:
+    # Occupancy belongs to the neural snapshot, not to the executable model.
+    # Metadata is read before creating a new cohort and after it exists on reload.
+    return copy.deepcopy({key: value for key, value in metadata.items() if key != "residents"})
+
+
 class Habitat3D:
     """A synchronous cohort: senses -> connectome -> native cognition -> physics."""
 
@@ -760,7 +766,7 @@ class Habitat3D:
             "visitor": self.visitor.snapshot(),
             "last_senses": self._public_senses() if self.last_senses else {},
             "sensed_at": self.sensed_at,
-            "neural_identity": copy.deepcopy(self.neural.metadata["brain"]),
+            "neural_identity": _neural_model_identity(self.neural.metadata["brain"]),
             "remote_ids": self.remote_ids,
             "brain_url": self.neural.url,
             "neural_state": self.neural_state,
@@ -879,7 +885,7 @@ class Habitat3D:
         instance.sensed_at = float(value["sensed_at"])
         instance.neural = NeuralClient(brain_url or value["brain_url"])
         instance._validate_neural_interface()
-        if instance.neural.metadata["brain"] != value["neural_identity"]:
+        if _neural_model_identity(instance.neural.metadata["brain"]) != value["neural_identity"]:
             raise ValueError(
                 "Remote neural graph, sources, or ports differ from this life"
             )
