@@ -19,7 +19,7 @@ import numpy as np
 from .growth import GrowthSystem
 from .metabolism import Chemistry, MetabolicWeb, canonical
 
-FORMAT = "chreatures-biosphere-v1"
+FORMAT = "chreatures-biosphere-v2"
 KINDS = ("branch", "root", "leaf")
 
 
@@ -32,7 +32,14 @@ class Biosphere:
     accounting here covers additional developed tissue, not that scaffold.
     """
 
-    def __init__(self, world: Any, web: MetabolicWeb, colonies: list[dict[str, Any]]):
+    def __init__(
+        self,
+        world: Any,
+        web: MetabolicWeb,
+        colonies: list[dict[str, Any]],
+        *,
+        mobiles=None,
+    ):
         self.world = world
         self.web = web
         self.config = copy.deepcopy(colonies)
@@ -105,9 +112,7 @@ class Biosphere:
                 raise ValueError("growth requests chemistry absent from this web")
             self.growth[name] = growth
             self.active[name] = True
-            structure_activity = np.asarray(web._native.enzyme_activity)[
-                colony["structure_row"]
-            ]
+            structure_activity = web.enzyme_activity[colony["structure_row"]]
             supported = {"soft_turnover", "tough_turnover"}
             if any(
                 rate != 0 and reaction not in supported
@@ -121,21 +126,36 @@ class Biosphere:
         self.initial_totals = web.totals()
         self.initial_ledger = self._ledger().tolist()
         self.last_report: dict[str, Any] = {}
+        self.mobility = None
+        self.materials = None
+        if mobiles is not None:
+            from .somatic import SomaticPhysiology
+
+            self.mobility = SomaticPhysiology(self, mobiles)
+            world.bind_physiology(self.mobility)
 
     @classmethod
     def from_config(cls, world: Any, config: Any) -> Biosphere:
         if isinstance(config, (str, Path)):
             config = json.loads(Path(config).read_text())
-        if not isinstance(config, dict) or set(config) != {
+        if not isinstance(config, dict):
+            raise TypeError("biosphere birth configuration must be an object")
+        config = copy.deepcopy(config)
+        # One-way data import: old saved colonies have no mobile coupling.
+        if config.get("format") == "chreatures-biosphere-birth-v1":
+            config["format"] = "chreatures-biosphere-birth-v2"
+            config["mobiles"] = None
+            config["material_objects"] = None
+        if config.get("format") != "chreatures-biosphere-birth-v2" or set(config) != {
             "format",
             "chemistry",
             "compartments",
             "bulk",
             "colonies",
+            "mobiles",
+            "material_objects",
         }:
             raise ValueError("invalid biosphere birth configuration")
-        if config["format"] != "chreatures-biosphere-birth-v1":
-            raise ValueError("unsupported biosphere birth configuration")
         compartments = config["compartments"]
         if not isinstance(compartments, list) or not compartments:
             raise ValueError("biosphere requires physical material compartments")
@@ -153,7 +173,16 @@ class Biosphere:
             [row["atp_capacity"] for row in compartments],
             bulk=config["bulk"],
         )
-        instance = cls(world, web, config["colonies"])
+        instance = cls(world, web, config["colonies"], mobiles=config["mobiles"])
+        if instance.mobility is not None:
+            instance.mobility.sync_bodies()
+        if config["material_objects"] is not None:
+            from .material_objects import MaterialObjects
+
+            instance.materials = MaterialObjects(
+                world, instance, config["material_objects"]
+            )
+            instance._sync_material_cues()
         instance._check_structure()
         return instance
 
@@ -237,9 +266,16 @@ class Biosphere:
             if self.active[colony["id"]]:
                 photons[colony["body_row"]] = self._photon_budget(colony, dt)
                 self.growth[colony["id"]].elapse(dt)
+        if self.mobility is not None:
+            self.mobility.before_reactions(dt)
         ledger = self.web.step(dt, photons, np.zeros(self.web.count))
+        if self.mobility is not None:
+            self.mobility.after_reactions(dt)
         self._distribute_turnover(ledger)
         reports = self._develop()
+        if self.materials is not None:
+            self.materials.sync_geometry()
+            self._sync_material_cues()
         self.last_report = {
             "time": self.web.time,
             "captured_photons": float(ledger["photon_used"].sum()),
@@ -248,6 +284,49 @@ class Biosphere:
             "accounting": self.accounting(),
         }
         return copy.deepcopy(self.last_report)
+
+    def _sync_material_cues(self) -> None:
+        # Cues transduce present chemistry into sensed light/tracer emission.
+        # The odor fields remain signal tracers, not conserved nutrient pools.
+        import mujoco
+
+        for cue in self.materials.surface_cues():
+            entity = self.world._entity(cue["entity"])
+            material = mujoco.mj_name2id(
+                self.world.model,
+                mujoco.mjtObj.mjOBJ_MATERIAL,
+                f"mat:{entity['material']}",
+            )
+            if material < 0:
+                raise ValueError("chemical surface requires an authored material")
+            users = np.flatnonzero(self.world.model.geom_matid == material)
+            if any(
+                self.world._geom_entity.get(int(geom)) != entity["id"] for geom in users
+            ):
+                raise ValueError(
+                    "chemical surface color requires its own physical material"
+                )
+            self.world.model.mat_rgba[material, :3] = cue["rgb"]
+
+    def field_sources(self) -> list[dict[str, Any]]:
+        if self.materials is None:
+            return []
+        sources = []
+        for cue in self.materials.surface_cues():
+            body = self.world._entity_mj[cue["entity"]]
+            position = self.world.data.xpos[body].astype(float).tolist()
+            for channel, strength in enumerate(cue["odor"]):
+                if strength > 0:
+                    sources.append(
+                        {
+                            "key": f"chemical-surface:{cue['entity']}:{channel}",
+                            "position": position,
+                            "channel": channel,
+                            "rate": 0.018 * strength,
+                            "spread": 0.04,
+                        }
+                    )
+        return sources
 
     def _check_structure(self) -> None:
         for colony in self.config:
@@ -429,18 +508,25 @@ class Biosphere:
         This is an explicit intervention seam. A future consumer must establish
         physical access before calling it; it is not a remote feeding action.
         """
-        if (
-            not part_ids
-            or len(set(part_ids)) != len(part_ids)
-            or any(key not in self.parts for key in part_ids)
-        ):
+        if not part_ids or len(set(part_ids)) != len(part_ids):
             raise ValueError("release requires distinct existing parts")
-        if receiver is not None and (
-            isinstance(receiver, bool)
-            or not isinstance(receiver, int)
-            or not 0 <= receiver < self.web.count
-        ):
-            raise ValueError("invalid receiving compartment")
+        receipt = self.transfer_parts(dict.fromkeys(part_ids, receiver))
+        receipt["receiver"] = receiver
+        return receipt
+
+    def transfer_parts(self, receivers: Mapping[str, int | None]) -> dict[str, Any]:
+        """Remove a physically selected set in one topology/material transaction."""
+        part_ids = list(receivers)
+        if not part_ids or any(key not in self.parts for key in part_ids):
+            raise ValueError("transfer requires existing physical parts")
+        for key, receiver in receivers.items():
+            if receiver is not None and (
+                isinstance(receiver, bool)
+                or not isinstance(receiver, int)
+                or not 0 <= receiver < self.web.count
+                or receiver in {c["structure_row"] for c in self.config}
+            ):
+                raise ValueError("invalid receiving compartment")
         removed = set(part_ids)
         entities = {self.parts[key]["entity"] for key in removed}
         operations = []
@@ -472,7 +558,9 @@ class Biosphere:
             for key in part_ids:
                 part = self.parts[key]
                 colony = self._colony(part["colony"])
-                self.web.transfer(colony["structure_row"], receiver, part["resources"])
+                self.web.transfer(
+                    colony["structure_row"], receivers[key], part["resources"]
+                )
                 totals += self.web.chemistry.resources(part["resources"])
             transaction.commit()
         except Exception:
@@ -481,7 +569,7 @@ class Biosphere:
         self.parts = next_parts
         return {
             "parts": part_ids,
-            "receiver": receiver,
+            "receivers": dict(receivers),
             "resources": dict(zip(self.web.chemistry.pools, totals.tolist())),
         }
 
@@ -526,13 +614,28 @@ class Biosphere:
             "initial_totals": copy.deepcopy(self.initial_totals),
             "initial_ledger": self.initial_ledger.copy(),
             "last_report": copy.deepcopy(self.last_report),
+            "material_objects": self.materials.snapshot()
+            if self.materials is not None
+            else None,
+            "mobility": self.mobility.snapshot() if self.mobility is not None else None,
         }
 
     @classmethod
     def restore(cls, world: Any, snapshot: Mapping[str, Any]) -> Biosphere:
+        snapshot = copy.deepcopy(snapshot)
+        if snapshot.get("format") == "chreatures-biosphere-v1":
+            snapshot["format"] = FORMAT
+            snapshot["mobility"] = None
+            snapshot["material_objects"] = None
         if snapshot.get("format") != FORMAT:
             raise ValueError("unsupported biosphere snapshot")
-        instance = cls(world, MetabolicWeb.restore(snapshot["web"]), snapshot["config"])
+        mobile_state = snapshot["mobility"]
+        instance = cls(
+            world,
+            MetabolicWeb.restore(snapshot["web"]),
+            snapshot["config"],
+            mobiles=mobile_state["config"] if mobile_state is not None else None,
+        )
         if instance.config_sha256 != snapshot["config_sha256"]:
             raise ValueError("developmental colony configuration differs")
         if set(snapshot["growth"]) != set(instance.growth) or set(
@@ -556,6 +659,14 @@ class Biosphere:
         instance.initial_ledger = copy.deepcopy(snapshot["initial_ledger"])
         instance.last_report = copy.deepcopy(snapshot["last_report"])
         instance._check_structure()
+        if instance.mobility is not None:
+            instance.mobility.restore_state(mobile_state)
+        if snapshot["material_objects"] is not None:
+            from .material_objects import MaterialObjects
+
+            instance.materials = MaterialObjects.restore(
+                world, instance, snapshot["material_objects"]
+            )
         return instance
 
 

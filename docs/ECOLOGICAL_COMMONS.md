@@ -2,9 +2,9 @@
 
 The target is an evolving ecology. The current native substrate joins common
 chemistry, resource-funded development, constructed physical geometry and
-chemical transport. Mobile residents can have different inherited bodies, but
-their existing feeding and physiological system is not yet joined to the
-colonies’ common chemistry. There is no developed population lifecycle yet.
+chemical transport. Fresh mobile residents can have different inherited bodies and private
+body/gut compartments in the same chemistry as the colonies. Existing saved
+worlds retain their original physiological semantics. There is no developed population lifecycle yet.
 More training cannot create missing mechanisms of reproduction or exchange.
 
 The substrate combines implemented mechanisms with remaining lifecycle work:
@@ -121,3 +121,15 @@ selection, reproduction or self-sustaining coexistence. See
 [BIOSPHERE.md](BIOSPHERE.md) for the command, evidence scope and integration
 limits. The public [recording](https://emberian.github.io/chreatures/reef.html)
 contains only selected geometry from this experiment.
+
+
+## Mobile acquisition and private physiology
+
+The current common owner couples physical mouth contact to material transfer,
+private gut reactions to absorption, and ATP expenditure to active force and
+signal capacity. Actual positive applied mechanical work is recorded separately
+from the supplied activation-energy law. A paired physical experiment consumed
+0.008 abstract material units at the mouth and absorbed 0.005613 reserve units;
+side-contact and no-eating controls consumed and absorbed zero. All scenarios
+restored and continued exactly. These were supplied actions and founding
+positions, not learned foraging. Details: [SOMATIC_PHYSIOLOGY.md](SOMATIC_PHYSIOLOGY.md).

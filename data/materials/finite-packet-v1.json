@@ -1,0 +1,36 @@
+{
+  "format": "chreatures-material-objects-v1",
+  "chemistry_sha256": "fc482774de2dd3c08e92cd9f6bdaf8298c39e41a8ef173e8430b7363841e9928",
+  "max_transfer": 1.0,
+  "objects": [
+    {
+      "entity": "material-packet",
+      "row": 0,
+      "capacities": {
+        "soft_tissue": 0.8,
+        "detritus": 0.2
+      },
+      "content_weights": {
+        "soft_tissue": 1.0,
+        "detritus": 1.0
+      },
+      "remove_when_empty": true,
+      "boundaries": [
+        {"minimum_content": 0.7, "scale": 1.0},
+        {"minimum_content": 0.3, "scale": 0.78},
+        {"minimum_content": 0.0, "scale": 0.55}
+      ],
+      "surface": {
+        "rgb_bias": [0.06, 0.03, 0.02],
+        "rgb_coefficients": {
+          "soft_tissue": [0.9, 0.18, 0.12],
+          "detritus": [0.22, 0.16, 0.08]
+        },
+        "odor_coefficients": {
+          "soft_tissue": [1.3, 0.08, 0.0],
+          "detritus": [0.0, 0.55, 0.12]
+        }
+      }
+    }
+  ]
+}

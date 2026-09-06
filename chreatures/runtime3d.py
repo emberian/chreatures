@@ -415,6 +415,7 @@ class Habitat3D:
                 self.field.sync_dynamic_barriers(self.world.diffusion_barriers())
                 self.field.advance(
                     dt, sources=self.field.sources_from_world(self.world)
+                    + (self.biosphere.field_sources() if self.biosphere is not None else [])
                 )
             fields_done = time.perf_counter()
             self.phase_timings.append(
@@ -598,7 +599,8 @@ class Habitat3D:
             ),
             "developments": copy.deepcopy(developments[-16:]),
             "developments_truncated": max(0, len(developments) - 16),
-            "resident_physiology_coupled": False,
+            "resident_physiology_coupled": self.biosphere.mobility is not None,
+            "mobile_physiology": self.biosphere.mobility.view() if self.biosphere.mobility is not None else None,
             "whole_food_web": False,
         }
 
