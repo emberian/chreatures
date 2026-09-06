@@ -82,6 +82,12 @@ def atomic_npz(path: Path, arrays: dict[str, np.ndarray]) -> None:
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bootstrap-worker", type=Path, required=True)
+    parser.add_argument("--candidate-genomes", type=Path, required=True)
+    parser.add_argument(
+        "--neural-recipe",
+        type=Path,
+        default=ROOT / "data/ports/neural-variant-canonical-v1.json",
+    )
     parser.add_argument("--cold-inherit-v3", action="store_true")
     parser.add_argument("--initialize-from-development", type=Path)
     parser.add_argument("--output", type=Path, required=True)
@@ -158,6 +164,69 @@ def validate(args: argparse.Namespace) -> None:
         and not args.initialize_from_development.is_file()
     ):
         raise SystemExit("development initialization checkpoint does not exist")
+    if not args.candidate_genomes.is_file():
+        raise SystemExit("candidate genome plan does not exist")
+
+
+def load_candidate_plan(args, graph_hash, port_spec_hash, profile_hash, bootstrap_hash):
+    from chreatures.population import CandidateGenome, canonical_bytes
+
+    path = args.candidate_genomes.resolve()
+    value = json.loads(path.read_text())
+    if (
+        value.get("format")
+        != "chreatures-torch-population-training-candidates-v1"
+        or value.get("version") != 1
+        or value.get("content_sha256")
+        != hashlib.sha256(
+            canonical_bytes(
+                {key: item for key, item in value.items() if key != "content_sha256"}
+            )
+        ).hexdigest()
+    ):
+        raise ValueError("candidate training plan identity differs")
+    count = args.worlds * args.residents_per_world
+    candidates = [CandidateGenome(item) for item in value.get("candidates", ())]
+    mapping = value.get("mapping")
+    training = value.get("training", {})
+    if (
+        len(candidates) != count
+        or not isinstance(mapping, list)
+        or len(mapping) != count
+        or value.get("controller_file_sha256") != bootstrap_hash
+        or value.get("profile_sha256") != profile_hash
+        or value.get("graph_sha256") != graph_hash
+        or value.get("port_spec_sha256") != port_spec_hash
+        or value.get("worlds") != args.worlds
+        or value.get("residents_per_world") != args.residents_per_world
+        or value.get("policy_adapter_count") != args.candidate_count
+        or value.get("policy_adapter_rank") != args.candidate_adapter_rank
+        or training.get("physical_steps") != args.steps
+        or training.get("rollout_steps") != args.rollout_steps
+        or training.get("episode_steps") != args.episode_steps
+        or training.get("ppo_epochs") != args.ppo_epochs
+        or training.get("updates") != args.steps // args.rollout_steps
+    ):
+        raise ValueError("candidate training plan substrate or schedule differs")
+    adapter_indices = []
+    for resident, (entry, candidate) in enumerate(
+        zip(mapping, candidates, strict=True)
+    ):
+        adapter = candidate.controller_adapter()
+        if (
+            entry.get("resident_index") != resident
+            or entry.get("candidate_sha256") != candidate.to_value()["sha256"]
+            or entry.get("policy_adapter_index") != adapter["policy_adapter_index"]
+        ):
+            raise ValueError("candidate training assignment differs")
+        adapter_indices.append(adapter["policy_adapter_index"])
+    if sorted(adapter_indices) != [
+        index
+        for index in range(args.candidate_count)
+        for _ in range(count // args.candidate_count)
+    ]:
+        raise ValueError("candidate adapter rows are not balanced")
+    return value, candidates, np.asarray(adapter_indices, dtype=np.int64), path
 
 
 class GoalAdapter:
@@ -412,12 +481,28 @@ def policy_terms(worker, logits, action):
     return log_probability, entropy
 
 
-def reset_worlds(pool, brain, worlds: int, residents: int, seed: int, episode: int):
+def apply_candidate_temperatures(logits, offsets):
+    """Apply inherited per-axis log-temperature offsets to policy factors."""
+    scale = torch.exp(-offsets)
+    return {
+        "signed": logits["signed"] * scale[..., :4, None],
+        "active": logits["active"] * scale[..., 4:],
+        "positive": logits["positive"] * scale[..., 4:, None],
+    }
+
+
+def reset_worlds(
+    pool, brain, worlds: int, residents: int, seed: int, episode: int, candidates
+):
     bodies = pool.reset(
         [
             {
                 "seed": seed + episode * 1009 + index,
                 "held_out": False,
+                "candidates": [
+                    item.to_value()
+                    for item in candidates[index * residents : (index + 1) * residents]
+                ],
             }
             for index in range(worlds)
         ],
@@ -562,7 +647,33 @@ def main() -> int:
         raise ValueError(
             "current nursery-family transport differs from the active rich interfaces"
         )
+    bootstrap_hash = sha256(args.bootstrap_worker.resolve())
+    (
+        candidate_plan,
+        candidates,
+        adapter_assignment,
+        candidate_plan_path,
+    ) = load_candidate_plan(
+        args,
+        str(graph.hash),
+        ports.spec_hash,
+        profile.to_value()["sha256"],
+        bootstrap_hash,
+    )
     count = args.worlds * args.residents_per_world
+    from chreatures.neural_genotype import (
+        NeuralVariantRecipe,
+        compile_population_phenotypes,
+    )
+
+    phenotypes = compile_population_phenotypes(
+        candidates,
+        NeuralVariantRecipe.load(args.neural_recipe),
+        graph,
+        ports,
+        sha256(args.port_bundle.resolve()),
+        bootstrap_hash,
+    )
     brain = TrainingCohortBrain(
         graph,
         ports,
@@ -570,6 +681,7 @@ def main() -> int:
         device=args.device,
         backend=args.brain_backend,
     )
+    brain.bind_phenotypes(phenotypes)
     pool = WorldTrainingPool(
         args.worlds,
         dict(ports.spec),
@@ -675,6 +787,22 @@ def main() -> int:
             "candidate_assignment": "resident_index_mod_candidate_count",
             "shared_base_trainable": args.candidate_count == 1,
             "private_state_at_birth": "zero",
+            "candidate_plan_path": str(candidate_plan_path),
+            "candidate_plan_file_sha256": sha256(candidate_plan_path),
+            "candidate_plan_content_sha256": candidate_plan["content_sha256"],
+            "candidate_sha256s": [
+                item["sha256"] for item in candidate_plan["candidates"]
+            ],
+            "applied_genome_loci": ["controller.policy_adapter_index"],
+            "physical_genome_loci": "applied by WorldTrainingPool reset",
+            "neural_phenotype_sha256s": [item.sha256 for item in phenotypes],
+            "neural_recipe_path": str(args.neural_recipe.resolve()),
+            "neural_recipe_file_sha256": sha256(args.neural_recipe.resolve()),
+            "unsupported_torch_controller_loci": [
+                "controller.action_gain.*",
+                "controller.recurrent_gain",
+                "controller.learning_rate_gain",
+            ],
         },
         "telemetry": {
             "format": "chreatures-rich-development-transition-telemetry-v1",
@@ -702,13 +830,31 @@ def main() -> int:
     }
     atomic_json(args.output / "identity.json", identity)
     episode = 0
-    reset_worlds(pool, brain, args.worlds, args.residents_per_world, args.seed, episode)
+    reset_worlds(
+        pool,
+        brain,
+        args.worlds,
+        args.residents_per_world,
+        args.seed,
+        episode,
+        candidates,
+    )
     observation, physical, neural, bodies, raw_observation = observe(
         pool, brain, normalizer
     )
     previous = np.zeros((count, ACTION_DIM), dtype=np.float32)
     candidate_index = torch.as_tensor(
-        np.arange(count, dtype=np.int64) % args.candidate_count, device=device
+        adapter_assignment, device=device
+    )
+    candidate_temperature = torch.as_tensor(
+        np.asarray(
+            [
+                item.controller_adapter()["action_logit_temperature_offset"]
+                for item in candidates
+            ],
+            dtype=np.float32,
+        ),
+        device=device,
     )
     hidden = torch.zeros((1, count, 128), device=device)
     current_code = goals.record(observation, encoder, device)
@@ -839,6 +985,9 @@ def main() -> int:
                         adapters,
                         candidate_index,
                     )
+                    logits = apply_candidate_temperatures(
+                        logits, candidate_temperature
+                    )
                     private_uniforms = np.stack(
                         [rng.random(20, dtype=np.float32) for rng in goals.rng]
                     )
@@ -929,6 +1078,7 @@ def main() -> int:
                         args.residents_per_world,
                         args.seed,
                         episode,
+                        candidates,
                     )
                     goals.reset()
                     observation, physical, neural, bodies, raw_observation = observe(
@@ -1000,6 +1150,10 @@ def main() -> int:
                     torch.as_tensor(batch["previous"], device=device),
                     adapters,
                     candidate_index.expand(args.rollout_steps, -1),
+                )
+                logits = apply_candidate_temperatures(
+                    logits,
+                    candidate_temperature.expand(args.rollout_steps, -1, -1),
                 )
                 new_logp, entropy = policy_terms(
                     worker,
