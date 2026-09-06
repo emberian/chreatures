@@ -19,7 +19,7 @@ import numpy as np
 from .growth import GrowthSystem
 from .metabolism import Chemistry, MetabolicWeb, canonical
 
-FORMAT = "chreatures-biosphere-v2"
+FORMAT = "chreatures-biosphere-v3"
 KINDS = ("branch", "root", "leaf")
 
 
@@ -128,6 +128,7 @@ class Biosphere:
         self.last_report: dict[str, Any] = {}
         self.mobility = None
         self.materials = None
+        self.exchange = None
         if mobiles is not None:
             from .somatic import SomaticPhysiology
 
@@ -146,7 +147,10 @@ class Biosphere:
             config["format"] = "chreatures-biosphere-birth-v2"
             config["mobiles"] = None
             config["material_objects"] = None
-        if config.get("format") != "chreatures-biosphere-birth-v2" or set(config) != {
+        if config.get("format") == "chreatures-biosphere-birth-v2":
+            config["format"] = "chreatures-biosphere-birth-v3"
+            config["exchange"] = None
+        if config.get("format") != "chreatures-biosphere-birth-v3" or set(config) != {
             "format",
             "chemistry",
             "compartments",
@@ -154,6 +158,7 @@ class Biosphere:
             "colonies",
             "mobiles",
             "material_objects",
+            "exchange",
         }:
             raise ValueError("invalid biosphere birth configuration")
         compartments = config["compartments"]
@@ -183,6 +188,10 @@ class Biosphere:
                 world, instance, config["material_objects"]
             )
             instance._sync_material_cues()
+        if config["exchange"] is not None:
+            from .ecological_exchange import EcologicalExchange
+
+            instance.exchange = EcologicalExchange(instance, config["exchange"])
         instance._check_structure()
         return instance
 
@@ -261,6 +270,8 @@ class Biosphere:
         if not np.isfinite(dt) or not 0 < dt <= 1.0:
             raise ValueError("biosphere step must be in (0, 1] seconds")
         self._check_structure()
+        if self.exchange is not None:
+            self.exchange.before_reactions(dt)
         photons = np.zeros(self.web.count, dtype=np.float64)
         for colony in self.config:
             if self.active[colony["id"]]:
@@ -271,6 +282,8 @@ class Biosphere:
         ledger = self.web.step(dt, photons, np.zeros(self.web.count))
         if self.mobility is not None:
             self.mobility.after_reactions(dt)
+        if self.exchange is not None:
+            self.exchange.after_reactions(dt)
         self._distribute_turnover(ledger)
         reports = self._develop()
         if self.materials is not None:
@@ -282,6 +295,7 @@ class Biosphere:
             "developments": reports,
             "parts": len(self.parts),
             "accounting": self.accounting(),
+            "exchange": self.exchange.view() if self.exchange is not None else None,
         }
         return copy.deepcopy(self.last_report)
 
@@ -618,15 +632,19 @@ class Biosphere:
             if self.materials is not None
             else None,
             "mobility": self.mobility.snapshot() if self.mobility is not None else None,
+            "exchange": self.exchange.snapshot() if self.exchange is not None else None,
         }
 
     @classmethod
     def restore(cls, world: Any, snapshot: Mapping[str, Any]) -> Biosphere:
         snapshot = copy.deepcopy(snapshot)
         if snapshot.get("format") == "chreatures-biosphere-v1":
-            snapshot["format"] = FORMAT
+            snapshot["format"] = "chreatures-biosphere-v2"
             snapshot["mobility"] = None
             snapshot["material_objects"] = None
+        if snapshot.get("format") == "chreatures-biosphere-v2":
+            snapshot["format"] = FORMAT
+            snapshot["exchange"] = None
         if snapshot.get("format") != FORMAT:
             raise ValueError("unsupported biosphere snapshot")
         mobile_state = snapshot["mobility"]
@@ -666,6 +684,12 @@ class Biosphere:
 
             instance.materials = MaterialObjects.restore(
                 world, instance, snapshot["material_objects"]
+            )
+        if snapshot["exchange"] is not None:
+            from .ecological_exchange import EcologicalExchange
+
+            instance.exchange = EcologicalExchange.restore(
+                instance, snapshot["exchange"]
             )
         return instance
 
