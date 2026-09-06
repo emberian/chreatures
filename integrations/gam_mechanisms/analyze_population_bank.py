@@ -24,7 +24,7 @@ def main():
                 z=(x[:,i]-f['mean'])/f['scale']; vals=np.interp(z,term['knots'],term['values']);action_component+=vals
                 action_spans.append({'feature':f['name'],'latent_span_over_fitted_domain':float(max(term['values'])-min(term['values']))})
         law_masks[law['name']]=ok
-        sensitivity[law['name']]={'action_terms':action_spans,'executed_action_component_std_latent':float(action_component.std()),'candidate_varying':bool(action_spans and action_component.std()>1e-12),'state_history_terms_cancel_when_candidates_share_context':True}
+        sensitivity[law['name']]={'action_terms':action_spans,'executed_action_component_std_latent':float(action_component.std()),'candidate_varying':bool(action_spans and action_component.std()>1e-12),'shared_state_history_terms_are_common_on_latent_scale_only':True,'nonlinear_response_transform_can_modulate_physical_action_differences':True}
     union=np.logical_and.reduce(list(law_masks.values()))
     stat=lambda mask,scope:{'rows':int(scope.sum()),'in_domain_rows':int((mask&scope).sum()),'fraction':float(mask[scope].mean())}
     out={'format':'chreatures-population-gam-support-report-v1','bank_sha256':sha(a.bank),'data_sha256':sha(a.data),'schema_sha256':sha(a.schema),'runtime_contract':'all inputs finite; range rejection only on each law smooth features; bank requires every scored law in domain','coverage':{k:stat(union,v) for k,v in scopes.items()},'per_law_all':{k:stat(v,scopes['all']) for k,v in law_masks.items()},'action_sensitivity':sensitivity,'interpretation':'descriptive support under executed actions; action terms permit candidate-varying scores but are not causal effects'}

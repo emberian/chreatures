@@ -151,6 +151,23 @@ def content_sha256(value: Mapping[str, Any], *, identity_field: str = "sha256") 
     return hashlib.sha256(canonical_bytes(body)).hexdigest()
 
 
+def response_bank_identity(path: str | Path | None) -> dict[str, str] | None:
+    """Authenticate the optional shared response mechanism for an entire campaign."""
+    if path is None:
+        return None
+    raw = Path(path).expanduser().resolve().read_bytes()
+    value = json.loads(raw)
+    if not isinstance(value, dict) or value.get("schema") != "chreatures-population-response-bank-v1":
+        raise ValueError("population response bank schema differs")
+    feature = value.get("feature_contract_sha256")
+    if not isinstance(feature, str):
+        raise ValueError("population response bank lacks its feature contract")
+    return {
+        "file_sha256": hashlib.sha256(raw).hexdigest(),
+        "feature_contract_sha256": _digest(feature, "response feature contract"),
+    }
+
+
 def _digest(value: str, name: str) -> str:
     if len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
         raise ValueError(f"{name} must be a lowercase SHA-256")
@@ -484,4 +501,5 @@ __all__ = [
     "ACTION_ORDER", "CandidateGenome", "PopulationSearch", "content_sha256",
     "current_parameter_recipe",
     "compose_population_birth",
+    "response_bank_identity",
 ]
