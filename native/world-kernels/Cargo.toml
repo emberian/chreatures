@@ -11,6 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 numpy = "0.28"
 pyo3 = { version = "0.28.3", features = ["extension-module"] }
+sha2 = "0.10"
 
 [build-dependencies]
 cc = "1.4.5"

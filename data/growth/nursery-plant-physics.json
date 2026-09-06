@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "grammar": "data/growth/nursery-plant.json",
+  "bindings": {
+    "branch": "nursery-plant-branches",
+    "root": "nursery-plant-roots",
+    "leaf": "nursery-plant-leaves"
+  },
+  "entities": [
+    {
+      "id": "nursery-plant-branches",
+      "mobility": "static",
+      "material": "wood",
+      "physical_material": "light",
+      "position": [
+        6.5,
+        3.0,
+        0.02
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "nursery-plant-roots",
+      "mobility": "static",
+      "material": "wood",
+      "physical_material": "light",
+      "position": [
+        6.5,
+        3.0,
+        0.02
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "nursery-plant-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        6.5,
+        3.0,
+        0.02
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    }
+  ]
+}

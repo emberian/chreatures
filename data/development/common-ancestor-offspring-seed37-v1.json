@@ -1,0 +1,101 @@
+{
+  "allocation": {
+    "enzyme_activity_budget": 4.0,
+    "fractions": {
+      "digestion": 0.24369612731298068,
+      "geometry": 0.23638660574838127,
+      "photosynthesis": 0.2745668780670551,
+      "structure": 0.24535038887158306
+    },
+    "geometry_reference_fraction": 0.22
+  },
+  "ancestry": {
+    "founder_sha256": "c4fdc0e72d0cc59292d9c0855daefa186c18db5793f2353ad02aeeab737dfc23",
+    "mutation": {
+      "operator": "bounded-related-offspring-v1",
+      "scale": 0.08,
+      "seed": 37
+    },
+    "parent_sha256": "c4fdc0e72d0cc59292d9c0855daefa186c18db5793f2353ad02aeeab737dfc23"
+  },
+  "format": "chreatures-developmental-genome-v1",
+  "generation": 1,
+  "growth": {
+    "leaf_area": 0.8984082666581975,
+    "leaf_thickness": 1.0,
+    "length": 0.9714552915964364,
+    "radius": 1.0568282281792019
+  },
+  "metabolism": {
+    "allocated_expression": {
+      "digestion": {
+        "gut/detritus_digestion": 0.264603326909462,
+        "gut/soft_digestion": 0.5104910807634817,
+        "gut/tough_digestion": 0.2136145504760536
+      },
+      "photosynthesis": {
+        "soma/carbon_fixation": 0.9999988693110148
+      },
+      "structure": {
+        "soma/soft_growth": 0.5621177112331397,
+        "soma/tough_growth": 0.47973075944587634
+      }
+    },
+    "housekeeping_ceiling": 1.0,
+    "housekeeping_expression": {
+      "allocated_structure/soft_turnover": 0.1353843107374578,
+      "allocated_structure/tough_turnover": 0.08590276002238398,
+      "gut/respiration": 0.5720444862207402,
+      "soma/respiration": 0.6503168062709959
+    }
+  },
+  "name": "related-offspring-g1-0000000000000025",
+  "neural": {
+    "input_gain_loci": [
+      {
+        "gain": 1.0960901912600483,
+        "name": "odor/L/0"
+      },
+      {
+        "gain": 0.9425698292036939,
+        "name": "odor/R/0"
+      },
+      {
+        "gain": 0.972025239689185,
+        "name": "contact/count"
+      },
+      {
+        "gain": 1.007181867968773,
+        "name": "shade"
+      }
+    ],
+    "readout_gain_loci": [
+      {
+        "gain": 0.9762471306223226,
+        "name": "readout/visual/other"
+      },
+      {
+        "gain": 1.0893977107931476,
+        "name": "readout/mushroom_body/other"
+      },
+      {
+        "gain": 0.9980730979500149,
+        "name": "readout/navigation/other"
+      },
+      {
+        "gain": 0.9745263147293147,
+        "name": "readout/efferent/other"
+      }
+    ]
+  },
+  "sha256": "400b385034e94f808aae8f0c18b056a52e6f819fa3c82033cd5f187673d9eb5f",
+  "sources": {
+    "chemistry_file_sha256": "006bcb89b9e9af4562c19b0e08ab0ebf82daa1cdcbc236276f88988b054ba9e9",
+    "chemistry_sha256": "fc482774de2dd3c08e92cd9f6bdaf8298c39e41a8ef173e8430b7363841e9928",
+    "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "growth_grammar_file_sha256": "b07394eade1a57828b35daa7be2d24dd501a39f9f5bffe9adc8126233f0720bc",
+    "growth_grammar_sha256": "e907380d2e400b7861d5de67cdb7f30f4c26eb5fb63a219ab70581384f1a33c6",
+    "port_bundle_sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2",
+    "port_spec_sha256": "fffb48c65bdb5bc2503ff8ad7c65b4419e12aa9ef5b58b9f36bc910f64dadb6f"
+  }
+}
