@@ -185,7 +185,8 @@ def fit(data_path: Path, schema_path: Path, feature_contract_path: Path, output:
         "laws": laws}
     bank = {"schema": "chreatures-population-response-bank-v1",
         "feature_contract_sha256": schema["feature_contract_sha256"], "fitted": fitted,
-        "responses": response_rules, "budgets": schema.get("budgets", [])}
+        "responses": response_rules, "budgets": schema.get("budgets", []),
+        "candidate_score": schema.get("candidate_score")}
     bank_path = output / "population_response_bank.json"
     bank_path.write_text(json.dumps(bank, separators=(",", ":"), allow_nan=False) + "\n")
     report = {"format": "chreatures-population-response-fit-report-v1",

@@ -29,7 +29,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from chreatures.homeostasis import FiniteEnergyConfig, FiniteEnergyObjective
-from chreatures.organism_interface import ACTION_DIM, ACTION_NAMES, PHYSIOLOGY_DIM
+from chreatures.organism_interface import (
+    ACTION_DIM,
+    ACTION_NAMES,
+    MAX_RESIDENTS,
+    PHYSIOLOGY_DIM,
+)
 from research.sensorimotor_skills.rich_online import (
     SlowGoalManager,
     cold_inherit_v3_manager,
@@ -95,7 +100,7 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--nursery-family-config", type=Path, required=True)
     parser.add_argument("--nursery-family-schedule", type=Path, required=True)
     parser.add_argument("--worlds", type=int, default=4)
-    parser.add_argument("--residents-per-world", type=int, default=6)
+    parser.add_argument("--residents-per-world", type=int, default=8)
     parser.add_argument("--steps", type=int, default=20_480)
     parser.add_argument("--episode-steps", type=int, default=2_048)
     parser.add_argument("--rollout-steps", type=int, default=128)
@@ -125,10 +130,13 @@ def arguments() -> argparse.Namespace:
 def validate(args: argparse.Namespace) -> None:
     if (
         not 1 <= args.worlds <= 16
-        or args.residents_per_world != 6
+        or not 1 <= args.residents_per_world <= MAX_RESIDENTS
         or args.steps < args.rollout_steps
     ):
-        raise SystemExit("worlds must be 1..16 and steps at least one rollout")
+        raise SystemExit(
+            "worlds must be 1..16, residents within the interface capacity, "
+            "and steps at least one rollout"
+        )
     if args.steps % args.rollout_steps or args.episode_steps % args.rollout_steps:
         raise SystemExit("steps and episode steps must be divisible by rollout steps")
     if args.episode_steps < args.rollout_steps or not 1 <= args.ppo_epochs <= 16:

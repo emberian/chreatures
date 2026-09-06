@@ -44,18 +44,26 @@ def main() -> None:
         if not fit_rows.any() or fit_rows.all():
             raise ValueError("held-out lineage/environment split is empty")
         responses = []
+        score_scales = {}
         for column, (law, mechanism, unit, kind) in enumerate(TARGETS):
             extent = max(float(np.max(np.abs(target[fit_rows, column]))) * 1.05, 1e-6)
             transform = ({"kind": kind, "magnitude": extent} if kind == "signed_tanh"
                          else {"kind": kind, "ceiling": extent})
             responses.append({"law": law, "mechanism": mechanism, "unit": unit,
                               "transform": transform})
+            score_scales[mechanism] = max(float(np.std(target[fit_rows, column])), 1e-6)
     schema = {
         "format": "chreatures-population-response-fit-v1",
         "feature_contract_sha256": digest(args.feature_contract),
         "features": contract["features"],
         "responses": responses,
         "budgets": [],
+        "candidate_score": {"maximum_tilt": 0.25, "terms": [
+            {"mechanism":"expected_energy_state_delta", "weight":1.0, "scale":score_scales["expected_energy_state_delta"]},
+            {"mechanism":"expected_fatigue_state_delta", "weight":-1.0, "scale":score_scales["expected_fatigue_state_delta"]},
+            {"mechanism":"expected_effort", "weight":-0.5, "scale":score_scales["expected_effort"]},
+            {"mechanism":"expected_ingested_mass", "weight":0.5, "scale":score_scales["expected_ingested_mass"]},
+        ]},
         "basis_size": 9,
         "split": {"heldout_lineages": args.heldout_lineage,
                   "heldout_environments": args.heldout_environment,

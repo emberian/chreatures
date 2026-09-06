@@ -32,11 +32,13 @@ def history_features(pre: np.ndarray) -> np.ndarray:
          np.cumsum(pre[:, :, [0, 2]], axis=0, dtype=np.float64)], axis=0,
     )
     for tick in range(ticks):
-        start = max(0, tick - HISTORY_WINDOW + 1)
-        count = tick - start + 1
-        result[tick, :, :2] = (cumulative[tick + 1] - cumulative[start]) / count
-        result[tick, :, 2] = pre[tick, :, 6] - pre[start, :, 6]
-        result[tick, :, 3] = pre[tick, :, 7] - pre[start, :, 7]
+        count = min(tick, HISTORY_WINDOW)
+        if count == 0:
+            continue
+        start = tick - count
+        result[tick, :, :2] = (cumulative[tick] - cumulative[start]) / count
+        result[tick, :, 2] = pre[tick - 1, :, 6] - pre[start, :, 6]
+        result[tick, :, 3] = pre[tick - 1, :, 7] - pre[start, :, 7]
     return result
 
 

@@ -244,6 +244,82 @@ def _extension():
         raise RuntimeError("native cognitive core is unavailable") from exc
 
 
+def _candidate_arrays(adapters, count, population, organism_sha256):
+    from .population import canonical_bytes as population_canonical
+
+    required = {
+        "candidate_sha256",
+        "loci_sha256",
+        "policy_adapter_index",
+        "population_adapter_bank_sha256",
+        "policy_adapter_count",
+        "policy_adapter_rank",
+        "organism_interface_sha256",
+        "recurrent_gain",
+        "learning_rate_gain",
+        "action_gain",
+        "action_logit_temperature_offset",
+    }
+    if not isinstance(adapters, list) or len(adapters) != count:
+        raise ValueError("candidate adapters must contain one row per resident")
+    candidate_sha256 = []
+    loci_sha256 = []
+    recurrent_gain = np.empty(count, dtype=np.float32)
+    learning_rate_gain = np.empty(count, dtype=np.float32)
+    action_gain = np.empty((count, ACTION_DIM), dtype=np.float32)
+    temperature = np.empty((count, ACTION_DIM), dtype=np.float32)
+    indices = np.empty(count, dtype=np.uint16)
+    for row, adapter in enumerate(adapters):
+        if not isinstance(adapter, dict) or set(adapter) != required:
+            raise ValueError("candidate adapter fields differ")
+        for name in ("candidate_sha256", "loci_sha256"):
+            digest = adapter[name]
+            if (
+                not isinstance(digest, str)
+                or len(digest) != 64
+                or any(char not in "0123456789abcdef" for char in digest)
+            ):
+                raise ValueError(f"invalid candidate adapter {name}")
+        if (
+            adapter["population_adapter_bank_sha256"] != population["identity"]
+            or adapter["policy_adapter_count"] != population["count"]
+            or adapter["policy_adapter_rank"] != population["rank"]
+            or adapter["organism_interface_sha256"] != organism_sha256
+        ):
+            raise ValueError("candidate adapter immutable contract differs")
+        identity_body = {
+            name: adapter[name]
+            for name in required - {"candidate_sha256", "loci_sha256"}
+        }
+        if (
+            hashlib.sha256(population_canonical(identity_body)).hexdigest()
+            != adapter["loci_sha256"]
+        ):
+            raise ValueError("candidate controller loci identity differs")
+        adapter_index = adapter["policy_adapter_index"]
+        if (
+            type(adapter_index) is not int
+            or not 0 <= adapter_index < population["count"]
+        ):
+            raise ValueError("candidate policy adapter index differs")
+        candidate_sha256.append(adapter["candidate_sha256"])
+        loci_sha256.append(adapter["loci_sha256"])
+        indices[row] = adapter_index
+        recurrent_gain[row] = adapter["recurrent_gain"]
+        learning_rate_gain[row] = adapter["learning_rate_gain"]
+        action_gain[row] = adapter["action_gain"]
+        temperature[row] = adapter["action_logit_temperature_offset"]
+    return (
+        candidate_sha256,
+        loci_sha256,
+        indices,
+        recurrent_gain,
+        learning_rate_gain,
+        action_gain,
+        temperature,
+    )
+
+
 def _encode(value: Any) -> Any:
     if isinstance(value, np.ndarray):
         array = np.ascontiguousarray(value)
@@ -437,45 +513,21 @@ class DevelopmentalResidentCohort:
                 or not 0 <= seed < 2**64
             ):
                 raise ValueError(f"{name} must be an unsigned 64-bit integer")
-        if not isinstance(candidate_adapters, list) or len(candidate_adapters) != batch_size:
-            raise ValueError("candidate adapters must contain one row per resident")
-        candidate_sha256 = []
-        loci_sha256 = []
-        recurrent_gain = np.empty(batch_size, dtype=np.float32)
-        learning_rate_gain = np.empty(batch_size, dtype=np.float32)
-        action_gain = np.empty((batch_size, ACTION_DIM), dtype=np.float32)
-        temperature = np.empty((batch_size, ACTION_DIM), dtype=np.float32)
-        required = {
-            "candidate_sha256",
-            "loci_sha256",
-            "recurrent_gain",
-            "learning_rate_gain",
-            "action_gain",
-            "action_logit_temperature_offset",
-            "policy_adapter_index",
-        }
-        for row, adapter in enumerate(candidate_adapters):
-            if not isinstance(adapter, dict) or set(adapter) != required:
-                raise ValueError("candidate adapter fields differ")
-            for name in ("candidate_sha256", "loci_sha256"):
-                digest = adapter[name]
-                if (
-                    not isinstance(digest, str)
-                    or len(digest) != 64
-                    or any(char not in "0123456789abcdef" for char in digest)
-                ):
-                    raise ValueError(f"invalid candidate adapter {name}")
-            candidate_sha256.append(adapter["candidate_sha256"])
-            loci_sha256.append(adapter["loci_sha256"])
-            recurrent_gain[row] = adapter["recurrent_gain"]
-            learning_rate_gain[row] = adapter["learning_rate_gain"]
-            action_gain[row] = adapter["action_gain"]
-            temperature[row] = adapter["action_logit_temperature_offset"]
-            if (
-                type(adapter["policy_adapter_index"]) is not int
-                or not 0 <= adapter["policy_adapter_index"] < adapter_count
-            ):
-                raise ValueError("candidate policy adapter index differs")
+        organism_sha256 = hashlib.sha256(_canonical(identity())).hexdigest()
+        (
+            candidate_sha256,
+            loci_sha256,
+            policy_adapter_index,
+            recurrent_gain,
+            learning_rate_gain,
+            action_gain,
+            temperature,
+        ) = _candidate_arrays(
+            candidate_adapters,
+            batch_size,
+            population_adapters,
+            organism_sha256,
+        )
         packed = np.ascontiguousarray(
             np.concatenate(
                 [arrays[name].reshape(-1) for name in RICH_DEVELOPMENTAL_ORDER]
@@ -496,6 +548,8 @@ class DevelopmentalResidentCohort:
         self.batch_size = batch_size
         self.action_mode = action_mode
         self._policy_adapter_count = adapter_count
+        self._population_adapters = copy.deepcopy(population_adapters)
+        self._organism_interface_sha256 = organism_sha256
         self.candidate_adapters = copy.deepcopy(candidate_adapters)
         self.model_identity = {
             "format": DEVELOPMENTAL_FORMAT,
@@ -539,15 +593,15 @@ class DevelopmentalResidentCohort:
             refinement["learning_rate"],
             refinement["error_decay"],
             refinement["innovation_limit"],
+            None,
+            None,
+            None,
             predictor_packed,
             goal_rms,
             policy_adapter_packed,
             adapter_count,
             adapter_rank,
-            np.asarray(
-                [adapter["policy_adapter_index"] for adapter in candidate_adapters],
-                dtype=np.uint16,
-            ),
+            policy_adapter_index,
             candidate_sha256,
             loci_sha256,
             recurrent_gain,
@@ -591,48 +645,20 @@ class DevelopmentalResidentCohort:
             for value in (*goal_seeds.tolist(), *action_seeds.tolist())
         ):
             raise ValueError("hatch seeds must be unsigned 64-bit integers")
-        required = {
-            "candidate_sha256",
-            "loci_sha256",
-            "recurrent_gain",
-            "learning_rate_gain",
-            "action_gain",
-            "action_logit_temperature_offset",
-            "policy_adapter_index",
-        }
-        recurrent = np.empty(count, dtype=np.float32)
-        learning = np.empty(count, dtype=np.float32)
-        gains = np.empty((count, ACTION_DIM), dtype=np.float32)
-        temperatures = np.empty((count, ACTION_DIM), dtype=np.float32)
-        indices = np.empty(count, dtype=np.uint16)
-        candidate_hashes = []
-        loci_hashes = []
-        for index, adapter in enumerate(candidate_adapters):
-            if not isinstance(adapter, dict) or set(adapter) != required:
-                raise ValueError("candidate adapter fields differ")
-            for name, target in (
-                ("candidate_sha256", candidate_hashes),
-                ("loci_sha256", loci_hashes),
-            ):
-                digest = adapter[name]
-                if (
-                    not isinstance(digest, str)
-                    or len(digest) != 64
-                    or any(char not in "0123456789abcdef" for char in digest)
-                ):
-                    raise ValueError(f"invalid candidate adapter {name}")
-                target.append(digest)
-            adapter_index = adapter["policy_adapter_index"]
-            if (
-                type(adapter_index) is not int
-                or not 0 <= adapter_index < self._policy_adapter_count
-            ):
-                raise ValueError("candidate policy adapter index differs")
-            indices[index] = adapter_index
-            recurrent[index] = adapter["recurrent_gain"]
-            learning[index] = adapter["learning_rate_gain"]
-            gains[index] = adapter["action_gain"]
-            temperatures[index] = adapter["action_logit_temperature_offset"]
+        (
+            candidate_hashes,
+            loci_hashes,
+            indices,
+            recurrent,
+            learning,
+            gains,
+            temperatures,
+        ) = _candidate_arrays(
+            candidate_adapters,
+            count,
+            self._population_adapters,
+            self._organism_interface_sha256,
+        )
         self._native.hatch_slots(
             np.asarray(row_values, dtype=np.uint16),
             np.ascontiguousarray(goal_seeds, dtype=np.uint64),
@@ -666,56 +692,19 @@ class DevelopmentalResidentCohort:
                 or not 0 <= seed < 2**64
             ):
                 raise ValueError(f"{name} must be an unsigned 64-bit integer")
-        required = {
-            "candidate_sha256",
-            "loci_sha256",
-            "recurrent_gain",
-            "learning_rate_gain",
-            "action_gain",
-            "action_logit_temperature_offset",
-            "policy_adapter_index",
-        }
-        for adapter in new_candidate_adapters:
-            if not isinstance(adapter, dict) or set(adapter) != required:
-                raise ValueError("candidate adapter fields differ")
-            for name in ("candidate_sha256", "loci_sha256"):
-                digest = adapter[name]
-                if (
-                    not isinstance(digest, str)
-                    or len(digest) != 64
-                    or any(char not in "0123456789abcdef" for char in digest)
-                ):
-                    raise ValueError(f"invalid candidate adapter {name}")
-            adapter_index = adapter["policy_adapter_index"]
-            if (
-                type(adapter_index) is not int
-                or not 0 <= adapter_index < self._policy_adapter_count
-            ):
-                raise ValueError("candidate policy adapter index differs")
-        candidate_hashes = [value["candidate_sha256"] for value in new_candidate_adapters]
-        loci_hashes = [value["loci_sha256"] for value in new_candidate_adapters]
-        indices = np.asarray(
-            [value["policy_adapter_index"] for value in new_candidate_adapters],
-            dtype=np.uint16,
-        )
-        recurrent = np.asarray(
-            [value["recurrent_gain"] for value in new_candidate_adapters],
-            dtype=np.float32,
-        )
-        learning = np.asarray(
-            [value["learning_rate_gain"] for value in new_candidate_adapters],
-            dtype=np.float32,
-        )
-        gains = np.asarray(
-            [value["action_gain"] for value in new_candidate_adapters],
-            dtype=np.float32,
-        )
-        temperatures = np.asarray(
-            [
-                value["action_logit_temperature_offset"]
-                for value in new_candidate_adapters
-            ],
-            dtype=np.float32,
+        (
+            candidate_hashes,
+            loci_hashes,
+            indices,
+            recurrent,
+            learning,
+            gains,
+            temperatures,
+        ) = _candidate_arrays(
+            new_candidate_adapters,
+            len(new_candidate_adapters),
+            self._population_adapters,
+            self._organism_interface_sha256,
         )
         expanded_native = self._native.expanded(
             goal_seed,
@@ -733,6 +722,8 @@ class DevelopmentalResidentCohort:
         result.batch_size = self.batch_size + len(new_candidate_adapters)
         result.action_mode = self.action_mode
         result._policy_adapter_count = self._policy_adapter_count
+        result._population_adapters = copy.deepcopy(self._population_adapters)
+        result._organism_interface_sha256 = self._organism_interface_sha256
         result.candidate_adapters = copy.deepcopy(
             self.candidate_adapters + new_candidate_adapters
         )
