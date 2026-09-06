@@ -22,18 +22,10 @@ from .native_world import load_world_kernels
 
 FORMAT = "chreatures-biosphere-v4"
 KINDS = ("branch", "root", "leaf")
-DEFAULT_LIGHT_SAMPLING = {
-    "frame": "world-v1",
-    "directions": [[0.0, 0.0, 1.0]],
-    "weights": [1.0],
-    "occluded_transmission": 0.08,
-}
 
 
 def _light_sampling(value: Any) -> dict[str, Any]:
     """Validate one immutable physical radiance sampling profile."""
-    if value is None:
-        return copy.deepcopy(DEFAULT_LIGHT_SAMPLING)
     if not isinstance(value, dict) or set(value) != {
         "frame",
         "directions",
@@ -112,10 +104,11 @@ class Biosphere:
                 "seed_capture_area",
                 "photon_flux",
                 "mineral_half_saturation",
+                "light_sampling",
             }
             if (
                 not required <= set(colony)
-                or set(colony) - required - {"genome_sha256", "light_sampling"}
+                or set(colony) - required - {"genome_sha256"}
                 or not isinstance(colony["id"], str)
             ):
                 raise ValueError("invalid developmental colony specification")
@@ -164,7 +157,7 @@ class Biosphere:
                 raise ValueError("growth requests chemistry absent from this web")
             self.growth[name] = growth
             self.active[name] = True
-            self._light_specs[name] = _light_sampling(colony.get("light_sampling"))
+            self._light_specs[name] = _light_sampling(colony["light_sampling"])
             structure_activity = web.enzyme_activity[colony["structure_row"]]
             supported = {"soft_turnover", "tough_turnover"}
             if any(
@@ -225,14 +218,6 @@ class Biosphere:
         if not isinstance(config, dict):
             raise TypeError("biosphere birth configuration must be an object")
         config = copy.deepcopy(config)
-        # One-way data import: old saved colonies have no mobile coupling.
-        if config.get("format") == "chreatures-biosphere-birth-v1":
-            config["format"] = "chreatures-biosphere-birth-v2"
-            config["mobiles"] = None
-            config["material_objects"] = None
-        if config.get("format") == "chreatures-biosphere-birth-v2":
-            config["format"] = "chreatures-biosphere-birth-v3"
-            config["exchange"] = None
         if config.get("format") != "chreatures-biosphere-birth-v3" or set(config) != {
             "format",
             "chemistry",
@@ -777,19 +762,6 @@ class Biosphere:
     @classmethod
     def restore(cls, world: Any, snapshot: Mapping[str, Any]) -> Biosphere:
         snapshot = copy.deepcopy(snapshot)
-        if snapshot.get("format") == "chreatures-biosphere-v1":
-            snapshot["format"] = "chreatures-biosphere-v2"
-            snapshot["mobility"] = None
-            snapshot["material_objects"] = None
-        if snapshot.get("format") == "chreatures-biosphere-v2":
-            snapshot["format"] = "chreatures-biosphere-v3"
-            snapshot["exchange"] = None
-        if snapshot.get("format") == "chreatures-biosphere-v3":
-            snapshot["format"] = FORMAT
-            # Older artifacts did not retain pre-serialization insertion order.
-            # Preserve their available document order, as the old loader did;
-            # do not invent an allegedly exact historical continuation.
-            snapshot["part_order"] = list(snapshot["parts"])
         if snapshot.get("format") != FORMAT:
             raise ValueError("unsupported biosphere snapshot")
         mobile_state = snapshot["mobility"]

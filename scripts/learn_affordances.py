@@ -49,6 +49,13 @@ if mp.current_process().name == "MainProcess":
 HABITAT = ROOT / "data/habitats/hollow-garden.json"
 
 RESIDENTS_PER_WORLD = 3
+RICH_OBSERVATION_CHANNELS = 4096
+RICH_SENSORIUM_PROFILE_SHA256 = (
+    "c71380718ba5535dbaebdeaf8aa2e88cc45cf218312a03e13507877f02a5554e"
+)
+RICH_CHANNEL_NAMES_SHA256 = (
+    "b4c6b328116d820143e16ee922ccffd7b950dbe008efc580ad93056e01349bfa"
+)
 ACTION_FIELDS = (
     "thrust", "yaw", "gaze_pitch", "grip",
     "signal_low", "signal_mid", "signal_high", "posture", "eat",
@@ -384,22 +391,27 @@ def affordance_spec(
     return spec
 
 
-def _shared_array_layout(worlds: int, channels: int) -> tuple[dict[str, dict[str, Any]], int]:
+def _shared_array_layout(
+    worlds: int, channels: int, residents_per_world: int,
+) -> tuple[dict[str, dict[str, Any]], int]:
     """Lay out one cache-line-aligned fixed cohort block."""
     definitions = (
-        ("observations", np.dtype("<f4"), (worlds, RESIDENTS_PER_WORLD, channels)),
+        ("observations", np.dtype("<f4"), (worlds, residents_per_world, channels)),
+        ("rich_observations", np.dtype("<f4"), (
+            worlds, residents_per_world, RICH_OBSERVATION_CHANNELS,
+        )),
         ("bodies", np.dtype("<f8"), (
-            worlds, RESIDENTS_PER_WORLD,
+            worlds, residents_per_world,
             len(BODY_SCALARS) + sum(size for _name, size in BODY_VECTORS),
         )),
         ("actions", np.dtype("<f4"), (
-            worlds, RESIDENTS_PER_WORLD, len(ACTION_FIELDS),
+            worlds, residents_per_world, len(ACTION_FIELDS),
         )),
         ("outcomes", np.dtype("<f8"), (
-            worlds, RESIDENTS_PER_WORLD, len(OUTCOME_FIELDS),
+            worlds, residents_per_world, len(OUTCOME_FIELDS),
         )),
         ("homeostasis", np.dtype("<f8"), (
-            worlds, RESIDENTS_PER_WORLD, len(HOMEOSTASIS_FIELDS),
+            worlds, residents_per_world, len(HOMEOSTASIS_FIELDS),
         )),
         ("intervals", np.dtype("<f8"), (worlds,)),
         ("completed", np.dtype("<i8"), (worlds,)),
@@ -426,11 +438,11 @@ def _shared_array_views(
     }
 
 
-def _body_values(bodies: list[Any]) -> np.ndarray:
-    if len(bodies) != RESIDENTS_PER_WORLD:
-        raise ValueError("shared world transport requires exactly three residents")
+def _body_values(bodies: list[Any], residents_per_world: int) -> np.ndarray:
+    if len(bodies) != residents_per_world:
+        raise ValueError("shared world body count differs from its fixed cohort row")
     rows = np.empty(
-        (RESIDENTS_PER_WORLD, len(BODY_SCALARS) + sum(
+        (residents_per_world, len(BODY_SCALARS) + sum(
             size for _name, size in BODY_VECTORS
         )), dtype=np.float64,
     )
@@ -474,10 +486,12 @@ def _write_outcomes(
 
 
 class SharedWorldCohort:
-    """Parent-owned fixed buffers with disjoint three-resident world chunks."""
+    """Parent-owned fixed buffers with disjoint resident cohort chunks."""
 
-    def __init__(self, worlds: int, channels: int) -> None:
-        self.layout, size = _shared_array_layout(worlds, channels)
+    def __init__(self, worlds: int, channels: int, residents_per_world: int) -> None:
+        self.layout, size = _shared_array_layout(
+            worlds, channels, residents_per_world,
+        )
         self.memory = shared_memory.SharedMemory(create=True, size=size)
         self.arrays = _shared_array_views(self.memory, self.layout)
         for array in self.arrays.values():
@@ -498,6 +512,15 @@ def _world_worker(
 ) -> None:
     """Own one MuJoCo instance so native and Python work spans CPU cores."""
     from chreatures.neural_ports import encode_physical_senses
+    from chreatures.sensorium import (
+        RICH_CHANNEL_NAMES_SHA256 as ACTIVE_RICH_CHANNEL_NAMES_SHA256,
+        RICH_PROFILE_SHA256 as ACTIVE_RICH_PROFILE_SHA256,
+    )
+    if (
+        ACTIVE_RICH_PROFILE_SHA256 != RICH_SENSORIUM_PROFILE_SHA256
+        or ACTIVE_RICH_CHANNEL_NAMES_SHA256 != RICH_CHANNEL_NAMES_SHA256
+    ):
+        raise RuntimeError("shared transport rich sensorium identity differs")
     if profile_value is None:
         from chreatures.physical_batch import FastArticulatedSensoriumWorld as ArticulatedSensoriumWorld
         profile = None
@@ -527,6 +550,10 @@ def _world_worker(
                 sequence = int(payload)
                 if world is None:
                     raise RuntimeError("world must be reset before observation")
+                physical_world = getattr(world, "world", world)
+                rich = np.asarray(
+                    physical_world.rich_retina_batch(refresh=True), dtype=np.float32,
+                )
                 vectors = [
                     encode_physical_senses(world.sense(body.id), port_spec)[1]
                     for body in world.bodies
@@ -535,8 +562,18 @@ def _world_worker(
                 expected = shared["observations"][world_index].shape
                 if observations.shape != expected or not np.isfinite(observations).all():
                     raise ValueError("encoded shared observations have the wrong shape")
+                rich_expected = shared["rich_observations"][world_index].shape
+                if (
+                    rich.shape != rich_expected or not rich.flags.c_contiguous
+                    or not np.isfinite(rich).all()
+                    or np.any((rich < 0.0) | (rich > 1.0))
+                ):
+                    raise ValueError("native rich observations have the wrong layout")
                 shared["observations"][world_index] = observations
-                shared["bodies"][world_index] = _body_values(world.bodies)
+                shared["rich_observations"][world_index] = rich
+                shared["bodies"][world_index] = _body_values(
+                    world.bodies, shared["bodies"].shape[1],
+                )
                 shared["worker_seconds"][world_index, 0] += time.perf_counter() - started
                 shared["completed"][world_index] = sequence
                 connection.send((True, sequence))
@@ -557,7 +594,9 @@ def _world_worker(
                     for row, body in enumerate(world.bodies)
                 }
                 outcome = world.advance(actions, float(shared["intervals"][world_index]))
-                shared["bodies"][world_index] = _body_values(world.bodies)
+                shared["bodies"][world_index] = _body_values(
+                    world.bodies, shared["bodies"].shape[1],
+                )
                 _write_outcomes(
                     shared["outcomes"][world_index],
                     shared["homeostasis"][world_index], outcome, world.bodies,
@@ -642,13 +681,15 @@ class ProcessWorldPool:
         self, count: int, port_spec: dict[str, Any],
         profile_value: dict[str, Any] | None = None,
         physical_backend: str = "fast",
+        residents_per_world: int = RESIDENTS_PER_WORLD,
     ) -> None:
         context = mp.get_context("spawn")
         channels = int(port_spec["physical_inputs"]["count"])
         ordered_names = port_spec["physical_inputs"]["ordered_names"]
-        if channels != len(ordered_names) or count <= 0:
+        if channels != len(ordered_names) or count <= 0 or residents_per_world <= 0:
             raise ValueError("invalid fixed world cohort dimensions")
-        self.shared = SharedWorldCohort(count, channels)
+        self.residents_per_world = int(residents_per_world)
+        self.shared = SharedWorldCohort(count, channels, self.residents_per_world)
         self._sequence = 0
         self._closed = False
         self._hot_calls = {"observe": 0, "advance": 0}
@@ -790,10 +831,13 @@ class ProcessWorldPool:
             "format": "chreatures-shared-world-transport-timing-v1",
             "buffer_bytes": int(self.shared.memory.size),
             "worlds": len(self.connections),
-            "residents_per_world": RESIDENTS_PER_WORLD,
+            "residents_per_world": self.residents_per_world,
             "observation_channels": int(
                 self.shared.arrays["observations"].shape[-1]
             ),
+            "rich_observation_channels": RICH_OBSERVATION_CHANNELS,
+            "rich_sensorium_profile_sha256": RICH_SENSORIUM_PROFILE_SHA256,
+            "rich_channel_names_sha256": RICH_CHANNEL_NAMES_SHA256,
             "numeric_layout": {
                 name: {
                     "shape": list(array.shape), "dtype": array.dtype.str,
@@ -811,6 +855,25 @@ class ProcessWorldPool:
             },
         }
 
+    def observe_arrays(
+        self,
+    ) -> tuple[np.ndarray, np.ndarray, list[list[dict[str, Any]]]]:
+        """Return rich and canonical cohort arrays after one complete barrier."""
+        if self._closed:
+            raise RuntimeError("world worker pool is closed")
+        started = time.perf_counter()
+        self._barrier("observe_shared")
+        rich = self.shared.arrays["rich_observations"].copy().reshape(
+            -1, RICH_OBSERVATION_CHANNELS,
+        )
+        observations = self.shared.arrays["observations"].copy().reshape(
+            -1, self.shared.arrays["observations"].shape[-1],
+        )
+        bodies = self._bodies()
+        self._hot_calls["observe"] += 1
+        self._hot_wall_seconds["observe"] += time.perf_counter() - started
+        return rich, observations, bodies
+
     def call_all(self, operation: str, payloads: list[Any] | None = None) -> list[Any]:
         payloads = payloads if payloads is not None else [None] * len(self.connections)
         if len(payloads) != len(self.connections):
@@ -818,12 +881,10 @@ class ProcessWorldPool:
         if operation == "observe":
             if any(payload is not None for payload in payloads):
                 raise ValueError("observe does not accept payloads")
-            started = time.perf_counter()
-            self._barrier("observe_shared")
-            observations = self.shared.arrays["observations"].copy()
-            bodies = self._bodies()
-            self._hot_calls["observe"] += 1
-            self._hot_wall_seconds["observe"] += time.perf_counter() - started
+            _rich, observations, bodies = self.observe_arrays()
+            observations = observations.reshape(
+                len(bodies), self.residents_per_world, observations.shape[-1],
+            )
             return [(observations[index], bodies[index]) for index in range(len(bodies))]
         if operation == "advance":
             if self._body_templates is None:

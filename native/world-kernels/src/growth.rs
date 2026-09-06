@@ -920,16 +920,8 @@ impl GrowthKernel {
 }
 
 fn scaled_radius(rule: &Rule, scale: f64, length_genotype: f64) -> f64 {
-    // The parameter is one power law. Exact specializations retain the prior
-    // square-root trajectory for imported v2 grammars and avoid libm drift at
-    // the two common inherited exponents.
-    let scale_factor = if rule.radius_scale_exponent.to_bits() == 0.5_f64.to_bits() {
-        scale.sqrt()
-    } else if rule.radius_scale_exponent.to_bits() == 1.0_f64.to_bits() {
-        scale
-    } else {
-        scale.powf(rule.radius_scale_exponent)
-    };
+    // One inherited power law controls radius throughout development.
+    let scale_factor = scale.powf(rule.radius_scale_exponent);
     rule.radius * scale_factor * length_genotype.sqrt()
 }
 

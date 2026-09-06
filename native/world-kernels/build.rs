@@ -13,6 +13,7 @@ fn main() {
             "src/contact_shim.c",
             "src/actuation_shim.c",
             "src/environment_shim.c",
+            "src/sensorium_shim.c",
         ])
         .include(include)
         .flag_if_supported("-O3")
@@ -42,6 +43,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/contact_shim.c");
     println!("cargo:rerun-if-changed=src/actuation_shim.c");
     println!("cargo:rerun-if-changed=src/environment_shim.c");
+    println!("cargo:rerun-if-changed=src/sensorium_shim.c");
     println!("cargo:rerun-if-env-changed=MUJOCO_INCLUDE_DIR");
     println!("cargo:rerun-if-env-changed=MUJOCO_LIB_DIR");
 }

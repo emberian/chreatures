@@ -74,26 +74,23 @@ part stocks and geometry correspondence. Existing saved worlds retain their
 own habitat/body specifications; current source changes do not reconstruct an
 already living resident.
 
-Existing saved reef residents retain their separate physiological system. Fresh
-birth-v2 worlds can bind every mobile resident to private body/gut compartments
-in the same web. `resident_physiology_coupled` then reports true. See
+Current birth-v3 worlds bind every mobile resident to private body/gut
+compartments in the same web. `resident_physiology_coupled` then reports true. See
 [SOMATIC_PHYSIOLOGY.md](SOMATIC_PHYSIOLOGY.md) for funded activation, physical
 mouth contact, digestion and absorption, and [MATERIAL_OBJECTS.md](MATERIAL_OBJECTS.md)
 for finite shared stores and geometry boundaries.
 
-Fresh birth-v3 worlds can additionally enable [physical recycling](ECOLOGICAL_EXCHANGE.md):
+Birth-v3 worlds can additionally enable [physical recycling](ECOLOGICAL_EXCHANGE.md):
 mobile material leaves through body-local outlets into finite free deposits,
 and constructed roots acquire configured resources under actual physical contact.
 The native chemical ledger spans all these compartments. The current snapshot
 format is v4. It explicitly preserves developmental part iteration order because
-floating-point tissue and illumination reductions depend on that order. Earlier
-v1/v2 data import with exchange disabled; v3 imports retain the order available
-in their saved document. Those earlier artifacts did not record the order before
-canonical JSON serialization, so exact recovery of that lost order is not claimed.
+floating-point tissue and illumination reductions depend on that order. Current
+source accepts only birth-v3 and snapshot-v4 documents; older processes remain
+responsible for artifacts they already loaded.
 
 Embodied reproduction, autonomous predation, full mass-to-inertia coupling
 and conservation of every physical object in the world remain unimplemented.
 `whole_food_web` remains false. Odor transport currently carries sensory tracers,
-separate from the conserved material pools. The older birth/snapshot formats
-have a one-way data import into the current owner, preserving their uncoupled
-physiological semantics. Existing live processes have not been upgraded.
+separate from the conserved material pools. Existing live processes have not
+been upgraded.

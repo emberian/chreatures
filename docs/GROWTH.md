@@ -118,13 +118,14 @@ waypoint, structure ID, or grammar symbol.
 
 ## Resolution and terminal growth
 
-Grammar schema version 2 requires `resolution.minimum_feature_size`. The
-current grammars declare `0.002 m`, exactly the minimum radius or half-extent
-accepted by `PhysicsWorld`. A successor whose target-rule capsule radius would
-fall below that resolution is a terminal outcome and is not stored as another
-bud. A sampled leaf is emitted only when all three half-extents meet the same
-resolution. No geometry or biomass is clamped: omitted leaves are excluded
-from requested biomass, resources, and ATP.
+The current grammar schema is version 3. Every segment declares its radius
+scale exponent and minimum length-to-diameter aspect, while
+`resolution.minimum_feature_size` sets the smallest radius or half-extent that
+can become physical geometry. A successor outside either boundary is a terminal
+outcome and is not stored as another bud. A sampled leaf is emitted only when
+all three half-extents meet the same resolution. No geometry or biomass is
+clamped: omitted leaves are excluded from requested biomass, resources, and
+ATP. Earlier grammar schemas are not imported by the current process.
 
 Every stored bud therefore produces a valid capsule radius and remains valid
 under snapshot restore. Restore accepts any finite positive scale satisfying

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Collect anonymous 20 Hz achieved-history control data in fresh chemical worlds."""
+"""Collect rich 20 Hz achieved-history control data in fresh chemical worlds."""
 
 from __future__ import annotations
 
@@ -22,11 +22,24 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from chreatures.motor_inheritance import ACTIONS, MotorArtifact, MotorOrgan
-from research.sensorimotor_skills.data import DATASET_FORMAT, DT_SECONDS
+from research.sensorimotor_skills.data import DT_SECONDS
 
-FORMAT = DATASET_FORMAT
-SCHEMA = ROOT / "research/sensorimotor_skills/trajectory-schema-v1.json"
-MIN_TRAINING_WORLDS = 6
+FORMAT = "chreatures-sensorimotor-play-rich-v2"
+SCHEMA = ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v2.json"
+RICH_PROFILE_SHA256 = (
+    "c71380718ba5535dbaebdeaf8aa2e88cc45cf218312a03e13507877f02a5554e"
+)
+RICH_CHANNEL_NAMES_SHA256 = (
+    "b4c6b328116d820143e16ee922ccffd7b950dbe008efc580ad93056e01349bfa"
+)
+RICH_OBSERVATION_ORDER = (
+    "rich_body_v1_4096", "canonical_channels_351", "physiology_6",
+)
+TRANSITION_OUTCOMES = (
+    "nutrition", "contact", "distance", "effort", "mechanical_work",
+    "ingested_mass", "mouth_material_contacts", "homeostatic_reward",
+)
+MIN_TRAINING_WORLDS = 2
 MIN_TRAINING_STEPS = 44
 PHYSIOLOGY = (
     "energy", "gut", "fatigue", "speed", "angular_velocity", "support",
@@ -96,15 +109,11 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--motor-organ", type=Path, required=True)
     parser.add_argument(
         "--chemical-habitat", type=Path,
-        default=ROOT / "data/habitats/chemical-reef.json",
+        default=ROOT / "data/habitats/living-reef.json",
     )
     parser.add_argument(
         "--chemical-biosphere", type=Path,
-        default=ROOT / "data/biosphere/chemical-reef-v1.json",
-    )
-    parser.add_argument(
-        "--chemical-conditions", type=Path,
-        default=ROOT / "data/training/chemical-resource-encounters-v1.json",
+        default=ROOT / "data/biosphere/living-reef.json",
     )
     parser.add_argument("--worlds", type=int, default=8)
     parser.add_argument("--episodes", type=int, default=2)
@@ -149,7 +158,7 @@ def validate_arguments(args: argparse.Namespace) -> None:
             "non-training mechanics check"
         )
     if not math.isfinite(args.dt) or args.dt != DT_SECONDS:
-        raise SystemExit("collector v1 requires the trained 0.05 s physical interval")
+        raise SystemExit("rich collector v2 requires the 0.05 s physical interval")
     if (
         not math.isfinite(args.exploration_sigma)
         or not 0 <= args.exploration_sigma <= 0.5
@@ -200,6 +209,21 @@ def physiology_rows(
             ))
             index += 1
     return np.asarray(rows, dtype=np.float32)
+
+
+def transition_outcome_rows(
+    body_states: list[list[dict[str, Any]]],
+    outcomes: list[Mapping[str, Mapping[str, Any]]],
+) -> np.ndarray:
+    rows = []
+    for bodies, world_outcomes in zip(body_states, outcomes, strict=True):
+        for body in bodies:
+            outcome = world_outcomes[str(body["id"])]
+            rows.append([float(outcome.get(name, 0.0)) for name in TRANSITION_OUTCOMES])
+    result = np.ascontiguousarray(rows, dtype=np.float32)
+    if result.shape != (sum(map(len, body_states)), len(TRANSITION_OUTCOMES)):
+        raise RuntimeError("transition outcome cohort has the wrong shape")
+    return result
 
 
 class CorrelatedMotorPlay:
@@ -265,12 +289,18 @@ class CorrelatedMotorPlay:
 
 def observe(
     pool: ProcessWorldPool, brain: FixedCohortBrain, dt: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[list[dict[str, Any]]]]:
-    result = pool.call_all("observe")
-    senses = np.concatenate([item[0] for item in result]).astype(np.float32, copy=False)
-    bodies = [item[1] for item in result]
+) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[list[dict[str, Any]]],
+]:
+    rich, senses, bodies = pool.observe_arrays()
     features, circuit, _ = brain.step_channels(senses, dt)
-    return senses, physiology_rows(bodies, circuit), features, bodies
+    physiology = physiology_rows(bodies, circuit)
+    observation = np.ascontiguousarray(
+        np.concatenate((rich, senses, physiology), axis=1), dtype=np.float32,
+    )
+    if observation.shape != (len(senses), 4453):
+        raise RuntimeError("rich collector observation has the wrong dimensions")
+    return observation, senses, physiology, features, bodies
 
 
 def source_receipts(args: argparse.Namespace) -> dict[str, dict[str, Any]]:
@@ -289,7 +319,6 @@ def source_receipts(args: argparse.Namespace) -> dict[str, dict[str, Any]]:
         "motor_organ": args.motor_organ.resolve(),
         "chemical_habitat": args.chemical_habitat.resolve(),
         "chemical_biosphere": args.chemical_biosphere.resolve(),
-        "chemical_conditions": args.chemical_conditions.resolve(),
         "collector": Path(__file__).resolve(),
         "data_boundary": ROOT / "research/sensorimotor_skills/data.py",
         "world_pool_runner": ROOT / "scripts/learn_affordances.py",
@@ -339,6 +368,11 @@ def main() -> int:
     # Torch-free deployment laptop. These imports are required only in the
     # explicitly selected full-graph collection environment.
     from chreatures.neural_ports import NeuralPortBundle
+    from chreatures.sensorium import (
+        RICH_CHANNEL_NAMES_SHA256 as ACTIVE_RICH_CHANNEL_NAMES_SHA256,
+        RICH_PROFILE_SHA256 as ACTIVE_RICH_PROFILE_SHA256,
+        profile_identity,
+    )
     from chreatures.training_environment import EmbodiedTrainingProfile
     from scripts.learn_affordances import (
         FixedCohortBrain,
@@ -348,33 +382,82 @@ def main() -> int:
         stable_brain_identity,
     )
 
-    profile = EmbodiedTrainingProfile.chemical_encounters(
-        args.chemical_habitat, args.chemical_biosphere, args.chemical_conditions,
+    profile = EmbodiedTrainingProfile.chemical_nursery(
+        args.chemical_habitat, args.chemical_biosphere,
     )
+    if (
+        ACTIVE_RICH_PROFILE_SHA256 != RICH_PROFILE_SHA256
+        or ACTIVE_RICH_CHANNEL_NAMES_SHA256 != RICH_CHANNEL_NAMES_SHA256
+        or profile.component("sensorium") != profile_identity()
+    ):
+        raise SystemExit("rich collector sensorium identity differs")
     graph = load_graph(args.graph)
     ports = NeuralPortBundle.load(args.port_bundle, graph)
     if len(ports.input_names) != 351 or len(ports.readout_names) != 384:
-        raise SystemExit("collector v1 requires the pinned 351-input/384-readout ports")
+        raise SystemExit("rich collector v2 requires the pinned 351-input/384-readout ports")
     artifact = MotorArtifact.load(args.motor_organ)
     if int(artifact.config["feature_dim"]) != len(ports.readout_names):
         raise SystemExit("motor organ and neural readout dimensions differ")
     if int(artifact.config["macro_steps"]) != 5:
-        raise SystemExit("collector v1 requires the inherited five-tick macro policy")
+        raise SystemExit("rich collector v2 requires the inherited five-tick macro policy")
     provenance = artifact.metadata["training_provenance"]
     if provenance["graph_sha256"] != str(graph.hash):
         raise SystemExit("motor organ and recurrence graph identities differ")
-    if provenance["port_spec_sha256"] != ports.spec_hash:
-        raise SystemExit("motor organ and port specification identities differ")
-    if provenance.get("port_bundle_sha256") != sha256(args.port_bundle.resolve()):
-        raise SystemExit("motor organ and port bundle identities differ")
+    motor_port_transfer = None
+    if (
+        provenance["port_spec_sha256"] != ports.spec_hash
+        or provenance.get("port_bundle_sha256") != sha256(args.port_bundle.resolve())
+    ):
+        source_path = ROOT / "data/ports/retinal-v1-maps.npz"
+        source = NeuralPortBundle.load(source_path, graph)
+        target_document = json.loads(
+            (ROOT / "data/ports/retinal-v2.json").read_text(encoding="utf-8")
+        )
+        derivation = target_document["built_artifact"]["mapping_derivation"]
+        matrices_equal = all(
+            np.array_equal(left, right)
+            for left, right in (
+                (source.input_map.indptr, ports.input_map.indptr),
+                (source.input_map.indices, ports.input_map.indices),
+                (source.input_map.data, ports.input_map.data),
+                (source.readout_map.indptr, ports.readout_map.indptr),
+                (source.readout_map.indices, ports.readout_map.indices),
+                (source.readout_map.data, ports.readout_map.data),
+            )
+        )
+        if (
+            source.spec_hash != provenance["port_spec_sha256"]
+            or sha256(source_path) != provenance.get("port_bundle_sha256")
+            or derivation.get("source_bundle_sha256") != sha256(source_path)
+            or derivation.get("matrix_equality_required") is not True
+            or source.input_names != ports.input_names
+            or source.readout_names != ports.readout_names
+            or not matrices_equal
+        ):
+            raise SystemExit("motor organ retinal-v1 to retinal-v2 transfer is not exact")
+        motor_port_transfer = {
+            "semantics": (
+                "retinal-v1 inherited motor policy drives byte-identical sparse "
+                "maps under retinal-v2 physical source semantics"
+            ),
+            "source_port_spec_sha256": source.spec_hash,
+            "source_port_bundle_sha256": sha256(source_path),
+            "target_port_spec_sha256": ports.spec_hash,
+            "target_port_bundle_sha256": sha256(args.port_bundle.resolve()),
+            "sparse_matrices_equal": True,
+        }
 
-    count = args.worlds * 3
+    residents_per_world = len(profile.component("habitat")["bodies"])
+    if residents_per_world <= 0:
+        raise SystemExit("rich collector habitat has no residents")
+    count = args.worlds * residents_per_world
     brain = FixedCohortBrain(
         graph, ports, count, device=args.device, backend=args.brain_backend,
         microbatch_size=args.microbatch_size,
     )
     pool = ProcessWorldPool(
         args.worlds, dict(ports.spec), profile.to_value(), args.physical_backend,
+        residents_per_world=residents_per_world,
     )
     sources = source_receipts(args)
     software = {
@@ -389,7 +472,7 @@ def main() -> int:
         except Exception:  # package inventory is diagnostic, never a dependency probe
             software[package] = None
     collection_identity = {
-        "format": "chreatures-sensorimotor-play-collection-identity-v1",
+        "format": "chreatures-sensorimotor-play-rich-collection-identity-v2",
         "git": git_identity(sources),
         "sources": sources,
         "software": software,
@@ -399,6 +482,10 @@ def main() -> int:
         "port_bundle_sha256": sha256(args.port_bundle.resolve()),
         "motor_artifact_sha256": artifact.sha256,
         "profile_sha256": profile.sha256,
+        "rich_profile_sha256": RICH_PROFILE_SHA256,
+        "rich_channel_names_sha256": RICH_CHANNEL_NAMES_SHA256,
+        "observation_order": list(RICH_OBSERVATION_ORDER),
+        "motor_port_transfer": motor_port_transfer,
     }
     collection_identity["sha256"] = canonical_sha256(collection_identity)
     identity_receipt = atomic_json(output / "identity.json", collection_identity)
@@ -406,16 +493,19 @@ def main() -> int:
     births = []
     try:
         for episode in range(args.episodes):
-            stage = min(2, episode)
+            # The Living Reef profile preserves its complete birth-v3 material
+            # exchange and has no feeder-placement curriculum.
+            stage = 0
             seeds = [args.seed + episode * 1009 + index for index in range(args.worlds)]
             body_states = pool.call_all("reset", [
                 {"seed": seed, "held_out": False, "stage": stage} for seed in seeds
             ])
-            if any(len(bodies) != 3 for bodies in body_states):
-                raise RuntimeError("collector v1 requires three residents per world")
+            if any(len(bodies) != residents_per_world for bodies in body_states):
+                raise RuntimeError("rich collector world resident count differs")
             partition_keys = [
                 f"episode-{episode:03d}/world-{world:03d}/resident-{resident:02d}"
-                for world in range(args.worlds) for resident in range(3)
+                for world in range(args.worlds)
+                for resident in range(residents_per_world)
             ]
             if brain.resident_ids:
                 brain.remove_residents(brain.resident_ids)
@@ -457,12 +547,15 @@ def main() -> int:
             })
             births.append({"episode": episode, **birth_index})
 
-            source_rows, physiology, neural, body_states = observe(pool, brain, args.dt)
+            observation, source_rows, physiology, neural, body_states = observe(
+                pool, brain, args.dt,
+            )
+            observation_sequence = [observation]
             source_sequence = [source_rows]
-            physiology_sequence = [physiology]
             neural_sequence = [neural]
             action_sequence = []
             oral_sequence = []
+            outcome_sequence = []
             reset_sequence = [np.ones(count, dtype=np.bool_)]
             aggregate = {"nutrition": 0.0, "ingested_mass": 0.0, "mouth_contacts": 0}
             for step in range(args.steps):
@@ -479,7 +572,7 @@ def main() -> int:
                 for world in range(args.worlds):
                     actions = {}
                     for resident, body in enumerate(body_states[world]):
-                        index = world * 3 + resident
+                        index = world * residents_per_world + resident
                         action = dict(zip(
                             ACTIONS, executed[index].astype(float).tolist(), strict=True,
                         ))
@@ -492,8 +585,13 @@ def main() -> int:
                 advanced = pool.call_all("advance", [
                     {"actions": actions, "dt": args.dt} for actions in actions_by_world
                 ])
-                for outcomes, _bodies, _telemetry in advanced:
-                    for outcome in outcomes.values():
+                advanced_outcomes = [item[0] for item in advanced]
+                advanced_bodies = [item[1] for item in advanced]
+                outcome_sequence.append(transition_outcome_rows(
+                    advanced_bodies, advanced_outcomes,
+                ))
+                for world_outcomes in advanced_outcomes:
+                    for outcome in world_outcomes.values():
                         aggregate["nutrition"] += float(outcome["nutrition"])
                         aggregate["ingested_mass"] += float(outcome.get("ingested_mass", 0.0))
                         aggregate["mouth_contacts"] += int(
@@ -501,20 +599,33 @@ def main() -> int:
                         )
                 action_sequence.append(executed)
                 oral_sequence.append(oral)
-                source_rows, physiology, neural, body_states = observe(pool, brain, args.dt)
+                observation, source_rows, physiology, neural, body_states = observe(
+                    pool, brain, args.dt,
+                )
+                observation_sequence.append(observation)
                 source_sequence.append(source_rows)
-                physiology_sequence.append(physiology)
                 neural_sequence.append(neural)
                 reset_sequence.append(np.zeros(count, dtype=np.bool_))
 
             arrays = {
-                "source_senses": np.stack(source_sequence).astype(np.float32),
-                "physiology": np.stack(physiology_sequence).astype(np.float32),
+                "observation": np.ascontiguousarray(
+                    np.stack(observation_sequence), dtype=np.float32,
+                ),
+                "canonical_channels": np.ascontiguousarray(
+                    np.stack(source_sequence), dtype=np.float32,
+                ),
                 "executed_actions": np.stack(action_sequence).astype(np.float32),
                 "oral_command": np.stack(oral_sequence).astype(np.float32),
+                "transition_outcomes": np.ascontiguousarray(
+                    np.stack(outcome_sequence), dtype=np.float32,
+                ),
                 "reset": np.stack(reset_sequence).astype(np.bool_),
                 "dt_seconds": np.asarray(args.dt, dtype=np.float64),
             }
+            if not np.array_equal(
+                arrays["canonical_channels"], arrays["observation"][..., 4096:4447],
+            ):
+                raise RuntimeError("canonical diagnostic differs from rich observation")
             if args.record_neural_readouts:
                 arrays["neural_readouts"] = np.stack(neural_sequence).astype(np.float32)
             packet = atomic_npz(output / f"episode-{episode:03d}.npz", arrays)
@@ -530,19 +641,31 @@ def main() -> int:
     native = native_extension_receipt()
     manifest = {
         "format": FORMAT,
-        "version": 1,
+        "version": 2,
         "training_readiness": training_readiness(args),
         "scope": {
-            "worlds": args.worlds, "residents_per_world": 3,
+            "worlds": args.worlds, "residents_per_world": residents_per_world,
             "episodes": args.episodes, "steps_per_episode": args.steps,
             "dt_seconds": args.dt,
+            "transition_outcome_order": list(TRANSITION_OUTCOMES),
             "model_columns_exclude": [
                 "world coordinates", "headings", "distances", "bearings",
                 "entity identities", "object labels", "body identities",
             ],
         },
-        "schema": {"path": str(SCHEMA.relative_to(ROOT)), "sha256": sha256(SCHEMA)},
+        "schema": {
+            "path": str(SCHEMA.relative_to(ROOT)),
+            "bytes": SCHEMA.stat().st_size,
+            "sha256": sha256(SCHEMA),
+        },
         "profile": profile.to_value(),
+        "rich_sensorium": {
+            "profile_sha256": RICH_PROFILE_SHA256,
+            "channel_names_sha256": RICH_CHANNEL_NAMES_SHA256,
+            "observation_order": list(RICH_OBSERVATION_ORDER),
+        },
+        "transition_outcome_order": list(TRANSITION_OUTCOMES),
+        "motor_port_transfer": motor_port_transfer,
         "motor_artifact_sha256": artifact.sha256,
         "graph_sha256": str(graph.hash),
         "port_spec_sha256": ports.spec_hash,

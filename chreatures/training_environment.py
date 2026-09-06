@@ -16,7 +16,7 @@ from .ecology import Ecology
 from .fields import FieldEnvironment
 from .homeostasis import FiniteEnergyConfig, FiniteEnergyObjective
 from .physical_batch import FastArticulatedSensoriumWorld
-from .sensorium import ArticulatedSensoriumWorld, BODY_FRAME
+from .sensorium import ArticulatedSensoriumWorld, profile_identity
 
 
 PROFILE_FORMAT = "chreatures-embodied-training-profile-v1"
@@ -64,8 +64,8 @@ class EmbodiedTrainingProfile:
             (PROFILE_FORMAT_V3, 3), (PROFILE_FORMAT_V4, 4),
         ):
             raise ValueError("unsupported embodied training profile")
-        if raw["sensorium"] != {"frame": BODY_FRAME} or raw["body"] != "articulated":
-            raise ValueError("embodied training v1 requires body-v1 articulated sensing")
+        if raw["sensorium"] != profile_identity() or raw["body"] != "articulated":
+            raise ValueError("embodied training requires the current rich body sensorium")
         self._value = raw
         self.sha256 = hashlib.sha256(_canonical(raw)).hexdigest()
         # Constructing these validators catches malformed embedded configs
@@ -169,6 +169,13 @@ class EmbodiedTrainingProfile:
             "physics": ROOT / "chreatures/physics.py",
             "articulated": ROOT / "chreatures/articulated.py",
             "sensorium": ROOT / "chreatures/sensorium.py",
+            "sensorium_profile": ROOT / "data/sensorium/rich-body-v1.json",
+            "native_cargo_lock": ROOT / "native/world-kernels/Cargo.lock",
+            "native_cargo_manifest": ROOT / "native/world-kernels/Cargo.toml",
+            "native_build": ROOT / "native/world-kernels/build.rs",
+            "native_lib": ROOT / "native/world-kernels/src/lib.rs",
+            "native_sensorium": ROOT / "native/world-kernels/src/sensorium.rs",
+            "native_sensorium_shim": ROOT / "native/world-kernels/src/sensorium_shim.c",
             "fields": ROOT / "chreatures/fields.py",
             "ecology": ROOT / "chreatures/ecology.py",
             "acoustics_module": ROOT / "chreatures/acoustics.py",
@@ -178,8 +185,8 @@ class EmbodiedTrainingProfile:
         return cls({
             "format": PROFILE_FORMAT,
             "version": 1,
-            "name": "current-life-body-v1-diffusion-terrarium-v1",
-            "sensorium": {"frame": BODY_FRAME},
+            "name": "current-life-rich-body-v1-diffusion-terrarium-v1",
+            "sensorium": profile_identity(),
             "body": "articulated",
             "fields": field_config,
             "resources": json.loads(resources.read_text()),
@@ -267,6 +274,7 @@ class EmbodiedTrainingProfile:
             "physics": ROOT / "chreatures/physics.py",
             "articulated": ROOT / "chreatures/articulated.py",
             "sensorium": ROOT / "chreatures/sensorium.py",
+            "sensorium_profile": ROOT / "data/sensorium/rich-body-v1.json",
             "physical_batch": ROOT / "chreatures/physical_batch.py",
             "fields": ROOT / "chreatures/fields.py",
             "acoustics_module": ROOT / "chreatures/acoustics.py",
@@ -283,13 +291,15 @@ class EmbodiedTrainingProfile:
             "native_contacts": ROOT / "native/world-kernels/src/contacts.rs",
             "native_growth": ROOT / "native/world-kernels/src/growth.rs",
             "native_metabolism": ROOT / "native/world-kernels/src/metabolism.rs",
+            "native_sensorium": ROOT / "native/world-kernels/src/sensorium.rs",
+            "native_sensorium_shim": ROOT / "native/world-kernels/src/sensorium_shim.c",
             "native_transport": ROOT / "native/world-kernels/src/transport.rs",
             "native_contact_shim": ROOT / "native/world-kernels/src/contact_shim.c",
         }
         return cls({
             "format": PROFILE_FORMAT_V3, "version": 3,
             "name": "common-chemistry-mobile-nursery-v3",
-            "sensorium": {"frame": BODY_FRAME}, "body": "articulated",
+            "sensorium": profile_identity(), "body": "articulated",
             "habitat": habitat_value, "biosphere": biosphere_value,
             "fields": field_config, "resources": None,
             "acoustics": {"version": 1, "include_authored": True, "emitters": []},
