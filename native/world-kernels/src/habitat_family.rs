@@ -799,12 +799,13 @@ impl HabitatFamily {
         });
         let mut habitat_output = serde_json::to_string_pretty(&habitat)
             .map_err(|error| PyValueError::new_err(error.to_string()))?;
-        let mut biosphere_output = serde_json::to_string_pretty(&biosphere)
-            .map_err(|error| PyValueError::new_err(error.to_string()))?;
+        // The biosphere is an immutable source template. Preserve its exact
+        // decimal spellings so build-time layout generation cannot shift a
+        // chemical coefficient by a serialization round trip.
+        let biosphere_output = biosphere_json;
         let mut analyst_output = serde_json::to_string_pretty(&analyst)
             .map_err(|error| PyValueError::new_err(error.to_string()))?;
         habitat_output.push('\n');
-        biosphere_output.push('\n');
         analyst_output.push('\n');
         Ok((habitat_output, biosphere_output, analyst_output))
     }

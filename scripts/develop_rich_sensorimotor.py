@@ -97,6 +97,13 @@ def arguments() -> argparse.Namespace:
         type=Path,
         default=ROOT / "data/biosphere/living-reef.json",
     )
+    parser.add_argument(
+        "--environment-profile",
+        choices=("chemical-nursery-v3", "nursery-family-v5"),
+        required=True,
+    )
+    parser.add_argument("--nursery-family-config", type=Path)
+    parser.add_argument("--nursery-family-schedule", type=Path)
     parser.add_argument("--worlds", type=int, default=4)
     parser.add_argument("--residents-per-world", type=int, default=6)
     parser.add_argument("--steps", type=int, default=20_480)
@@ -139,6 +146,19 @@ def validate(args: argparse.Namespace) -> None:
         raise SystemExit("goal progress coefficient must be in [0,1]")
     if args.output.exists() and any(args.output.iterdir()):
         raise SystemExit("output must be absent or empty")
+    family_paths_present = (
+        args.nursery_family_config is not None
+        or args.nursery_family_schedule is not None
+    )
+    if args.environment_profile == "nursery-family-v5" and (
+        args.nursery_family_config is None
+        or args.nursery_family_schedule is None
+    ):
+        raise SystemExit(
+            "nursery-family-v5 requires both family config and schedule paths"
+        )
+    if args.environment_profile != "nursery-family-v5" and family_paths_present:
+        raise SystemExit("nursery family paths require nursery-family-v5")
     if args.initialize_from_development is not None and not args.initialize_from_development.is_file():
         raise SystemExit("development initialization checkpoint does not exist")
 
@@ -398,8 +418,8 @@ def reset_worlds(pool, brain, worlds: int, residents: int, seed: int, episode: i
             {
                 "seed": seed + episode * 1009 + index,
                 "held_out": False,
-                # This runner constructs chemical-nursery profile v3, whose
-                # exchange ecology has no staged feeder-placement curriculum.
+                # Current chemical environments use finite exchange ecology;
+                # neither has a staged feeder-placement curriculum.
                 "stage": 0,
             }
             for index in range(worlds)
@@ -491,9 +511,23 @@ def main() -> int:
         args.bootstrap_worker.resolve(),
         device,
     )
-    profile = EmbodiedTrainingProfile.chemical_nursery(
-        args.chemical_habitat, args.chemical_biosphere
+    profile = (
+        EmbodiedTrainingProfile.nursery_family(
+            args.chemical_habitat,
+            args.chemical_biosphere,
+            args.nursery_family_config,
+            args.nursery_family_schedule,
+        )
+        if args.environment_profile == "nursery-family-v5"
+        else EmbodiedTrainingProfile.chemical_nursery(
+            args.chemical_habitat, args.chemical_biosphere
+        )
     )
+    expected_profile_version = (
+        5 if args.environment_profile == "nursery-family-v5" else 3
+    )
+    if int(profile.component("version")) != expected_profile_version:
+        raise ValueError("constructed environment profile version differs")
     objective = FiniteEnergyObjective(
         FiniteEnergyConfig.from_value(profile.component("homeostasis"))
     )
@@ -501,6 +535,34 @@ def main() -> int:
     ports = NeuralPortBundle.load(args.port_bundle, graph)
     if len(ports.input_names) != 351:
         raise ValueError("development v1 requires the pinned 351 sensory channels")
+    profile_residents = len(profile.component("habitat")["bodies"])
+    if profile_residents != args.residents_per_world:
+        raise ValueError("profile resident count differs from the requested cohort")
+    if int(profile.component("version")) == 5:
+        declared_transport = profile.component("family")["transport"]
+        actual_transport = {
+            "residents": profile_residents,
+            "rich": 4096,
+            "physical": len(ports.input_names),
+            "physiology": 6,
+            "controller": worker.config.observation_dim,
+            "readouts": len(ports.readout_names),
+        }
+        expected_transport = {
+            "residents": 6,
+            "rich": 4096,
+            "physical": 351,
+            "physiology": 6,
+            "controller": 4453,
+            "readouts": 384,
+        }
+        if (
+            declared_transport != expected_transport
+            or actual_transport != expected_transport
+        ):
+            raise ValueError(
+                "nursery-family-v5 transport differs from the active rich interfaces"
+            )
     count = args.worlds * args.residents_per_world
     brain = FixedCohortBrain(
         graph,

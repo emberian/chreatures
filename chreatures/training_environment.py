@@ -23,10 +23,12 @@ PROFILE_FORMAT = "chreatures-embodied-training-profile-v1"
 PROFILE_FORMAT_V2 = "chreatures-embodied-training-profile-v2"
 PROFILE_FORMAT_V3 = "chreatures-embodied-chemical-nursery-profile-v3"
 PROFILE_FORMAT_V4 = "chreatures-embodied-chemical-encounter-profile-v4"
+PROFILE_FORMAT_V5 = "chreatures-embodied-nursery-family-profile-v5"
 SNAPSHOT_FORMAT = "chreatures-embodied-training-world-v1"
 SNAPSHOT_FORMAT_V2 = "chreatures-embodied-training-world-v2"
 SNAPSHOT_FORMAT_V3 = "chreatures-embodied-training-world-v3"
 SNAPSHOT_FORMAT_V4 = "chreatures-embodied-training-world-v4"
+SNAPSHOT_FORMAT_V5 = "chreatures-embodied-training-world-v5"
 BIOSPHERE_BIRTH_FORMAT = "chreatures-biosphere-birth-v5"
 BIOSPHERE_SNAPSHOT_FORMAT = "chreatures-biosphere-v6"
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,6 +46,18 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _text_sha(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
+def _valid_sha(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
 class EmbodiedTrainingProfile:
     """Immutable-by-copy environment contract selected explicitly by a runner."""
 
@@ -55,15 +69,18 @@ class EmbodiedTrainingProfile:
         }
         chemical_expected = legacy_expected | {"habitat", "biosphere", "physiology"}
         encounter_expected = chemical_expected | {"conditions"}
+        family_expected = chemical_expected | {"family"}
         identity = (raw.get("format"), raw.get("version"))
         expected = (
-            encounter_expected if identity == (PROFILE_FORMAT_V4, 4)
+            family_expected if identity == (PROFILE_FORMAT_V5, 5)
+            else encounter_expected if identity == (PROFILE_FORMAT_V4, 4)
             else chemical_expected if identity == (PROFILE_FORMAT_V3, 3)
             else legacy_expected
         )
         if set(raw) != expected or identity not in (
             (PROFILE_FORMAT, 1), (PROFILE_FORMAT_V2, 2),
             (PROFILE_FORMAT_V3, 3), (PROFILE_FORMAT_V4, 4),
+            (PROFILE_FORMAT_V5, 5),
         ):
             raise ValueError("unsupported embodied training profile")
         if raw["sensorium"] != profile_identity() or raw["body"] != "articulated":
@@ -78,7 +95,7 @@ class EmbodiedTrainingProfile:
             raise ValueError("embodied training profile components must be mappings")
         if raw["version"] < 3 and not isinstance(raw["resources"], dict):
             raise ValueError("legacy embodied profiles require ecology resources")
-        if raw["version"] in (3, 4):
+        if raw["version"] in (3, 4, 5):
             if raw["resources"] is not None or not all(
                 isinstance(raw[key], dict) for key in ("habitat", "biosphere", "physiology")
             ):
@@ -106,6 +123,8 @@ class EmbodiedTrainingProfile:
                 raise ValueError("chemical nursery physiology semantics differ")
         if raw["version"] == 4:
             self._validate_encounter_conditions(raw["conditions"])
+        if raw["version"] == 5:
+            self._validate_family_identity(raw["family"])
 
     @staticmethod
     def _validate_encounter_conditions(value: Any) -> None:
@@ -171,6 +190,102 @@ class EmbodiedTrainingProfile:
             float(horizons[key]) <= 0 for key in required_horizons
         ):
             raise ValueError("invalid chemical encounter horizons")
+
+    @staticmethod
+    def _validate_family_schedule(value: Any) -> None:
+        if (
+            not isinstance(value, dict)
+            or set(value) != {"format", "version", "selector", "training", "heldout"}
+            or value.get("format") != "chreatures-nursery-family-schedule-v1"
+            or value.get("version") != 1
+            or value.get("selector") != "world-seed-modulo-split-v1"
+        ):
+            raise ValueError("invalid nursery-family schedule")
+        seen: set[tuple[str, int]] = set()
+        for split in ("training", "heldout"):
+            variants = value[split]
+            if not isinstance(variants, list) or not 3 <= len(variants) <= 64:
+                raise ValueError("nursery-family splits require 3..64 variants")
+            for variant in variants:
+                if (
+                    not isinstance(variant, dict)
+                    or set(variant) != {"family", "seed"}
+                    or not isinstance(variant["family"], str)
+                    or not variant["family"]
+                    or isinstance(variant["seed"], bool)
+                    or not isinstance(variant["seed"], int)
+                    or not 0 <= variant["seed"] < 2**64
+                    or (variant["family"], variant["seed"]) in seen
+                ):
+                    raise ValueError("invalid or duplicate nursery-family variant")
+                seen.add((variant["family"], variant["seed"]))
+
+    @staticmethod
+    def _validate_family_identity(value: Any) -> None:
+        if (
+            not isinstance(value, dict)
+            or set(value) != {
+                "format", "selector", "generator_config", "schedule", "transport",
+                "variants",
+            }
+            or value.get("format") != "chreatures-nursery-family-training-identity-v1"
+            or value.get("selector") != "world-seed-modulo-split-v1"
+        ):
+            raise ValueError("invalid nursery-family training identity")
+        for key in ("generator_config", "schedule"):
+            source = value[key]
+            if (
+                not isinstance(source, dict)
+                or set(source) != {"path", "sha256"}
+                or not isinstance(source["path"], str)
+                or not source["path"]
+                or not _valid_sha(source["sha256"])
+            ):
+                raise ValueError("invalid nursery-family identity source")
+        if value["transport"] != {
+            "residents": 6,
+            "rich": 4096,
+            "physical": 351,
+            "physiology": 6,
+            "controller": 4453,
+            "readouts": 384,
+        }:
+            raise ValueError("nursery-family transport contract differs")
+        variants = value["variants"]
+        if not isinstance(variants, list) or len(variants) < 6:
+            raise ValueError("nursery-family identity omits scheduled artifacts")
+        seen: set[tuple[str, str, int]] = set()
+        for variant in variants:
+            expected = {
+                "split", "index", "family", "seed", "habitat_sha256",
+                "biosphere_sha256", "analyst_sha256",
+            }
+            identity = (
+                variant.get("split"), variant.get("family"), variant.get("seed")
+            ) if isinstance(variant, dict) else None
+            if (
+                not isinstance(variant, dict)
+                or set(variant) != expected
+                or variant["split"] not in {"training", "heldout"}
+                or isinstance(variant["index"], bool)
+                or not isinstance(variant["index"], int)
+                or variant["index"] < 0
+                or not isinstance(variant["family"], str)
+                or not variant["family"]
+                or isinstance(variant["seed"], bool)
+                or not isinstance(variant["seed"], int)
+                or not 0 <= variant["seed"] < 2**64
+                or not all(_valid_sha(variant[key]) for key in (
+                    "habitat_sha256", "biosphere_sha256", "analyst_sha256",
+                ))
+                or identity in seen
+            ):
+                raise ValueError("invalid nursery-family artifact identity")
+            seen.add(identity)
+        for split in ("training", "heldout"):
+            indices = [item["index"] for item in variants if item["split"] == split]
+            if len(indices) < 3 or indices != list(range(len(indices))):
+                raise ValueError("nursery-family split indices are not contiguous")
 
     @classmethod
     def current(cls) -> "EmbodiedTrainingProfile":
@@ -428,6 +543,135 @@ class EmbodiedTrainingProfile:
         return cls(value)
 
     @classmethod
+    def nursery_family(
+        cls,
+        habitat: str | Path,
+        biosphere: str | Path,
+        family_config: str | Path,
+        schedule: str | Path,
+    ) -> "EmbodiedTrainingProfile":
+        """Pin generated nursery artifacts for cold episode construction."""
+        habitat_path = Path(habitat).resolve()
+        biosphere_path = Path(biosphere).resolve()
+        config_path = Path(family_config).resolve()
+        schedule_path = Path(schedule).resolve()
+        habitat_text = habitat_path.read_text()
+        biosphere_text = biosphere_path.read_text()
+        config_text = config_path.read_text()
+        schedule_value = json.loads(schedule_path.read_text())
+        cls._validate_family_schedule(schedule_value)
+        port_path = ROOT / "data/ports/retinal-v2.json"
+        port = json.loads(port_path.read_text())
+        if (
+            port.get("physical_inputs", {}).get("count") != 351
+            or port.get("readouts", {}).get("count") != 384
+        ):
+            raise ValueError("nursery-family retinal port dimensions differ")
+
+        from .native_world import load_world_kernels
+
+        native_type = getattr(load_world_kernels(), "HabitatFamily", None)
+        if native_type is None:
+            raise RuntimeError("native world kernels omit HabitatFamily")
+        generator = native_type(config_text, _text_sha(config_text))
+        allowed = set(generator.families())
+        declared_training = [
+            (str(variant["family"]), int(variant["seed"]))
+            for variant in schedule_value["training"]
+        ]
+        if declared_training != list(generator.training_variants()):
+            raise ValueError(
+                "nursery training schedule differs from the generator manifest"
+            )
+        artifacts = []
+        for split in ("training", "heldout"):
+            for index, variant in enumerate(schedule_value[split]):
+                family = str(variant["family"])
+                seed = int(variant["seed"])
+                if family not in allowed:
+                    raise ValueError("nursery schedule names an unknown family")
+                generated_habitat, generated_biosphere, analyst = generator.generate(
+                    habitat_text, biosphere_text, seed, family,
+                )
+                # Biology and inherited resident traits are fixed across the
+                # family. Only the physical arrangement varies.
+                if json.loads(generated_biosphere) != json.loads(biosphere_text):
+                    raise ValueError("nursery generator changed the pinned biosphere")
+                generated = json.loads(generated_habitat)
+                if len(generated.get("bodies", [])) != 6:
+                    raise ValueError("nursery family must retain six resident bodies")
+                metadata = json.loads(analyst)
+                if metadata.get("runtime_visible") is not False:
+                    raise ValueError("nursery analyst topology is not private")
+                artifacts.append({
+                    "split": split, "index": index, "family": family, "seed": seed,
+                    "habitat_sha256": _text_sha(generated_habitat),
+                    "biosphere_sha256": _text_sha(generated_biosphere),
+                    "analyst_sha256": _text_sha(analyst),
+                })
+
+        base = cls.chemical_nursery(habitat_path, biosphere_path)
+        value = copy.deepcopy(base._value)
+        value.update({
+            "format": PROFILE_FORMAT_V5,
+            "version": 5,
+            "name": "common-chemistry-native-nursery-family-v5",
+            "family": {
+                "format": "chreatures-nursery-family-training-identity-v1",
+                "selector": schedule_value["selector"],
+                "generator_config": {
+                    "path": str(config_path), "sha256": _sha(config_path),
+                },
+                "schedule": {
+                    "path": str(schedule_path), "sha256": _sha(schedule_path),
+                },
+                "transport": {
+                    "residents": 6,
+                    "rich": 4096,
+                    "physical": 351,
+                    "physiology": 6,
+                    "controller": 4453,
+                    "readouts": 384,
+                },
+                "variants": artifacts,
+            },
+            "variation": {
+                "version": 5, "heldout_seed_offset": 80_000_003,
+                "body_heading_span_rad": math.pi,
+                "fatigue_range": [0.02, 0.08],
+            },
+            "horizons": {
+                "training_episode_steps": 1_200, "heldout_steps": 1_200,
+                "telemetry_every_steps": 120, "checkpoint_every_steps": 600,
+                "dt_seconds": 0.05,
+                "rationale": (
+                    "60 s cold episodes rotate connected nursery structures while "
+                    "retaining finite chemistry and physical encounters"
+                ),
+            },
+        })
+        value["sources"].update({
+            "nursery_family_config": {
+                "path": str(config_path), "sha256": _sha(config_path),
+            },
+            "nursery_family_schedule": {
+                "path": str(schedule_path), "sha256": _sha(schedule_path),
+            },
+            "native_habitat_family": {
+                "path": str(ROOT / "native/world-kernels/src/habitat_family.rs"),
+                "sha256": _sha(ROOT / "native/world-kernels/src/habitat_family.rs"),
+            },
+            "retinal_port_spec": {
+                "path": str(port_path), "sha256": _sha(port_path),
+            },
+        })
+        compiler = ROOT / "chreatures/training_environment.py"
+        value["sources"]["training_environment"] = {
+            "path": str(compiler), "sha256": _sha(compiler),
+        }
+        return cls(value)
+
+    @classmethod
     def from_value(cls, encoded: Mapping[str, Any]) -> "EmbodiedTrainingProfile":
         if not isinstance(encoded, Mapping) or set(encoded) != {"value", "sha256"}:
             raise ValueError("invalid encoded embodied training profile")
@@ -444,6 +688,87 @@ class EmbodiedTrainingProfile:
         return str(self._value["name"])
 
 
+def _generated_family_spec(
+    profile: EmbodiedTrainingProfile, chosen_seed: int, held_out: bool,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Regenerate and verify one declared cold-episode artifact."""
+    identity = profile.component("family")
+    split = "heldout" if held_out else "training"
+    variants = [item for item in identity["variants"] if item["split"] == split]
+    selected = variants[chosen_seed % len(variants)]
+    sources = profile.component("sources")
+    habitat_path = Path(sources["habitat"]["path"])
+    biosphere_path = Path(sources["biosphere_birth"]["path"])
+    config_path = Path(identity["generator_config"]["path"])
+    schedule_path = Path(identity["schedule"]["path"])
+    for path, expected in (
+        (habitat_path, sources["habitat"]["sha256"]),
+        (biosphere_path, sources["biosphere_birth"]["sha256"]),
+        (config_path, identity["generator_config"]["sha256"]),
+        (schedule_path, identity["schedule"]["sha256"]),
+    ):
+        if _sha(path) != expected:
+            raise ValueError("nursery-family cold source checksum differs")
+    habitat_text = habitat_path.read_text()
+    biosphere_text = biosphere_path.read_text()
+    config_text = config_path.read_text()
+    from .native_world import load_world_kernels
+
+    generator = load_world_kernels().HabitatFamily(
+        config_text, identity["generator_config"]["sha256"],
+    )
+    habitat_output, biosphere_output, analyst_output = generator.generate(
+        habitat_text, biosphere_text, selected["seed"], selected["family"],
+    )
+    actual = {
+        "habitat_sha256": _text_sha(habitat_output),
+        "biosphere_sha256": _text_sha(biosphere_output),
+        "analyst_sha256": _text_sha(analyst_output),
+    }
+    if any(actual[key] != selected[key] for key in actual):
+        raise ValueError("generated nursery artifact differs from training identity")
+    if json.loads(biosphere_output) != profile.component("biosphere"):
+        raise ValueError("generated nursery biosphere differs from training profile")
+    variant = {
+        "selector": identity["selector"],
+        "split": split,
+        "split_index": selected["index"],
+        "family": selected["family"],
+        "family_seed": selected["seed"],
+        "family_output_sha256": actual,
+    }
+    return json.loads(habitat_output), variant
+
+
+def _validate_selected_family(
+    profile: EmbodiedTrainingProfile, variant: Mapping[str, Any],
+) -> None:
+    expected = {
+        "seed", "held_out", "stage", "selector", "split", "split_index",
+        "family", "family_seed", "family_output_sha256",
+    }
+    family = profile.component("family")
+    if (
+        not isinstance(variant, Mapping)
+        or set(variant) != expected
+        or variant["selector"] != family["selector"]
+        or variant["split"] != ("heldout" if variant["held_out"] else "training")
+    ):
+        raise ValueError("nursery-family world omits its artifact identity")
+    matched = next((item for item in family["variants"] if (
+        item["split"] == variant["split"]
+        and item["index"] == variant["split_index"]
+        and item["family"] == variant["family"]
+        and item["seed"] == variant["family_seed"]
+    )), None)
+    if matched is None or variant["family_output_sha256"] != {
+        key: matched[key] for key in (
+            "habitat_sha256", "biosphere_sha256", "analyst_sha256",
+        )
+    }:
+        raise ValueError("nursery-family world artifact differs from profile")
+
+
 def embodied_training_spec(
     seed: int, *, held_out: bool = False,
     stage: int = 0,
@@ -453,25 +778,35 @@ def embodied_training_spec(
     """Create a varied physical world; geometry never enters policy inputs."""
     profile = profile or EmbodiedTrainingProfile.current()
     profile_version = int(profile.component("version"))
-    spec = (
-        copy.deepcopy(dict(base_spec)) if base_spec is not None
-        else profile.component("habitat") if profile_version in (3, 4)
-        else json.loads((ROOT / profile.component("sources")["habitat"]["path"]).read_text())
-    )
-    spec["sensorium"] = profile.component("sensorium")
     variation = profile.component("variation")
+    chosen_seed = int(seed) + (int(variation["heldout_seed_offset"]) if held_out else 0)
+    family_variant = None
+    if base_spec is not None:
+        if profile_version == 5:
+            raise ValueError("nursery-family worlds require native cold generation")
+        spec = copy.deepcopy(dict(base_spec))
+    elif profile_version == 5:
+        spec, family_variant = _generated_family_spec(profile, chosen_seed, held_out)
+    elif profile_version in (3, 4):
+        spec = profile.component("habitat")
+    else:
+        spec = json.loads(
+            (ROOT / profile.component("sources")["habitat"]["path"]).read_text()
+        )
+    spec["sensorium"] = profile.component("sensorium")
     if isinstance(stage, bool) or not isinstance(stage, (int, np.integer)):
         raise ValueError("training stage must be an integer")
     stage = int(stage)
     if profile_version == 1 and stage != 0:
         raise ValueError("profile v1 has no staged bearing curriculum")
-    chosen_seed = int(seed) + (int(variation["heldout_seed_offset"]) if held_out else 0)
     rng = np.random.default_rng(chosen_seed)
-    if profile_version in (3, 4):
+    if profile_version in (3, 4, 5):
         if profile_version == 3 and stage != 0:
             raise ValueError("chemical nursery v3 has no staged curriculum")
         if profile_version == 4 and stage not in range(3):
             raise ValueError("chemical encounter profile stage must be 0, 1, or 2")
+        if profile_version == 5 and stage != 0:
+            raise ValueError("nursery-family profile requires stage 0")
         low, high = map(float, variation["fatigue_range"])
         for body in spec["bodies"]:
             body["heading"] = float(rng.uniform(
@@ -479,7 +814,9 @@ def embodied_training_spec(
             ))
             body["fatigue"] = float(rng.uniform(low, high))
         spec["name"] = (
-            "common-chemistry-encounter-heldout" if held_out and profile_version == 4
+            "native-nursery-family-heldout" if held_out and profile_version == 5
+            else "native-nursery-family-training" if profile_version == 5
+            else "common-chemistry-encounter-heldout" if held_out and profile_version == 4
             else "common-chemistry-encounter-training" if profile_version == 4
             else "common-chemistry-mobile-heldout" if held_out
             else "common-chemistry-mobile-training"
@@ -488,6 +825,8 @@ def embodied_training_spec(
         spec["training_variant"] = {
             "seed": chosen_seed, "held_out": bool(held_out), "stage": stage,
         }
+        if family_variant is not None:
+            spec["training_variant"].update(family_variant)
         if profile_version == 4:
             conditions = profile.component("conditions")
             distribution = (
@@ -594,6 +933,10 @@ class EmbodiedTrainingWorld:
             self.stage not in range(3) or "placement_distribution" not in variant
         ):
             raise ValueError("chemical encounter world omits its placement stage")
+        if self.profile_version == 5:
+            if self.stage != 0:
+                raise ValueError("nursery-family world requires stage 0")
+            _validate_selected_family(profile, variant)
         self.physical_backend = physical_backend
         if self.profile_version == 4:
             self.world = self._build_encounter_world(copy.deepcopy(spec))
@@ -601,10 +944,14 @@ class EmbodiedTrainingWorld:
             self.world = PHYSICAL_BACKENDS[physical_backend](
                 seed=self.seed, spec=copy.deepcopy(spec)
             )
+        if self.profile_version == 5 and len(self.world.bodies) != profile.component(
+            "family"
+        )["transport"]["residents"]:
+            raise ValueError("nursery-family physical resident count differs")
         self.field = FieldEnvironment.from_world(self.world, profile.component("fields"))
         self.resources = None
         self.biosphere = None
-        if self.profile_version in (3, 4):
+        if self.profile_version in (3, 4, 5):
             from .biosphere import Biosphere
 
             self.biosphere = Biosphere.from_config(
@@ -786,6 +1133,10 @@ class EmbodiedTrainingWorld:
             rewards.append(float(reward))
         self.last_telemetry = {
             "time": float(self.world.time), "profile_sha256": self.profile.sha256,
+            "family_variant": (
+                copy.deepcopy(self.world.spec["training_variant"])
+                if self.profile_version == 5 else None
+            ),
             "nutrition": float(sum(item["nutrition"] for item in outcomes.values())),
             "absorbed": float(sum(item["nutrition"] for item in outcomes.values())),
             "ingested_mass": float(sum(
@@ -809,7 +1160,7 @@ class EmbodiedTrainingWorld:
             "acoustics": copy.deepcopy(acoustic),
             "physiology_semantics": (
                 self.profile.component("physiology")
-                if self.profile_version in (3, 4) else {
+                if self.profile_version in (3, 4, 5) else {
                     "energy": "legacy scalar body reserve readout",
                     "gut": "legacy scalar gut fill readout",
                     "fatigue": "bounded actuator fatigue state",
@@ -837,9 +1188,13 @@ class EmbodiedTrainingWorld:
         return {
             "format": "chreatures-embodied-terminal-outcomes-v1",
             "time": float(self.world.time), "profile_sha256": self.profile.sha256,
+            "family_variant": (
+                copy.deepcopy(self.world.spec["training_variant"])
+                if self.profile_version == 5 else None
+            ),
             "physiology_semantics": (
                 self.profile.component("physiology")
-                if self.profile_version in (3, 4) else {
+                if self.profile_version in (3, 4, 5) else {
                     "energy": "legacy scalar body reserve readout",
                     "gut": "legacy scalar gut fill readout",
                     "fatigue": "bounded actuator fatigue state",
@@ -853,7 +1208,7 @@ class EmbodiedTrainingWorld:
 
     def snapshot(self) -> dict[str, Any]:
         biosphere_snapshot = None
-        if self.profile_version in (3, 4):
+        if self.profile_version in (3, 4, 5):
             biosphere_snapshot = self.biosphere.snapshot()
             if biosphere_snapshot.get("format") != BIOSPHERE_SNAPSHOT_FORMAT:
                 raise RuntimeError(
@@ -881,6 +1236,14 @@ class EmbodiedTrainingWorld:
                 "format": SNAPSHOT_FORMAT_V4, "version": 4, "stage": self.stage,
                 "biosphere": biosphere_snapshot,
             })
+        elif self.profile_version == 5:
+            value.update({
+                "format": SNAPSHOT_FORMAT_V5, "version": 5, "stage": 0,
+                "biosphere": biosphere_snapshot,
+                "family_variant": copy.deepcopy(
+                    self.world.spec["training_variant"]
+                ),
+            })
         return value
 
     @classmethod
@@ -893,6 +1256,7 @@ class EmbodiedTrainingWorld:
         if identity not in (
             (SNAPSHOT_FORMAT, 1), (SNAPSHOT_FORMAT_V2, 2),
             (SNAPSHOT_FORMAT_V3, 3), (SNAPSHOT_FORMAT_V4, 4),
+            (SNAPSHOT_FORMAT_V5, 5),
         ):
             raise ValueError("unsupported embodied training world snapshot")
         profile = EmbodiedTrainingProfile.from_value(snapshot["profile"])
@@ -914,6 +1278,8 @@ class EmbodiedTrainingWorld:
             raise ValueError("invalid restored chemical nursery stage")
         if instance.profile_version == 4 and instance.stage not in range(3):
             raise ValueError("invalid restored chemical encounter stage")
+        if instance.profile_version == 5 and instance.stage != 0:
+            raise ValueError("invalid restored nursery-family stage")
         instance.physical_backend = physical_backend
         instance.world = PHYSICAL_BACKENDS[physical_backend].restore(snapshot["world"])
         if instance.world.spec.get("training_profile_sha256") != profile.sha256:
@@ -926,10 +1292,18 @@ class EmbodiedTrainingWorld:
             "training_variant", {}
         ).get("conditions_sha256") != profile.component("variation")["conditions_sha256"]:
             raise ValueError("restored physical world encounter conditions differ")
+        if instance.profile_version == 5 and snapshot.get(
+            "family_variant"
+        ) != instance.world.spec.get("training_variant"):
+            raise ValueError("restored nursery-family identity differs")
+        if instance.profile_version == 5:
+            _validate_selected_family(
+                profile, instance.world.spec.get("training_variant", {})
+            )
         instance.field = FieldEnvironment.restore(snapshot["field"])
         instance.resources = None
         instance.biosphere = None
-        if instance.profile_version in (3, 4):
+        if instance.profile_version in (3, 4, 5):
             if snapshot.get("resources") is not None or not isinstance(
                 snapshot.get("biosphere"), Mapping
             ) or snapshot["biosphere"].get("format") != BIOSPHERE_SNAPSHOT_FORMAT:
