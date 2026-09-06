@@ -36,8 +36,8 @@ def build_backend(args: argparse.Namespace):
         return SmolVLMBackend(
             args.model_path,
             device=args.device,
-            dtype=args.dtype,
             max_new_tokens=args.max_new_tokens,
+            embed_cache_entries=args.embed_cache_entries,
         )
     except Exception as error:
         return UnavailableBackend(
@@ -141,10 +141,8 @@ def main() -> None:
     parser.add_argument("--backend", choices=("off", "smolvlm2"), default="off")
     parser.add_argument("--model-path", type=Path)
     parser.add_argument("--device", default="cpu")
-    parser.add_argument(
-        "--dtype", choices=("float32", "float16", "bfloat16"), default="float32"
-    )
     parser.add_argument("--max-new-tokens", type=int, default=256)
+    parser.add_argument("--embed-cache-entries", type=int, default=4)
     parser.add_argument("--max-workers", type=int, default=1)
     parser.add_argument("--max-pending", type=int, default=1)
     parser.add_argument("--request-timeout", type=float, default=180.0)
@@ -160,6 +158,8 @@ def main() -> None:
         parser.error("max-new-tokens must be in 16..512")
     if args.request_timeout <= 0:
         parser.error("request-timeout must be positive")
+    if not 0 <= args.embed_cache_entries <= 64:
+        parser.error("embed-cache-entries must be in 0..64")
 
     backend = build_backend(args)
     perception = PerceptionService(

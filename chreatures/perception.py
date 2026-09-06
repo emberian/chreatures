@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+from collections import OrderedDict
+import copy
 import hashlib
 import io
 import json
@@ -20,7 +22,9 @@ from typing import Any, Protocol
 
 MODEL_REPOSITORY = "HuggingFaceTB/SmolVLM2-500M-Video-Instruct"
 MODEL_REVISION = "7b375e1b73b11138ff12fe22c8f2822d8fe03467"
-DENSE_POOLING_VERSION = "smolvlm2-native-tiles-mean-v1"
+DENSE_POOLING_VERSION = "smolvlm2-body-fov-single-tile-mean-fp16-eager-v3"
+DENSE_FEATURE_KIND = "smolvlm_body_fov_single_tile_fp16_eager_feature"
+DENSE_POOLING_OPERATION = "mean native tokens from one 512-pixel body-FOV tile"
 MAX_FRAMES = 4
 MAX_FRAME_BYTES = 1_500_000
 MAX_TOTAL_FRAME_BYTES = 4_000_000
@@ -283,8 +287,8 @@ class SmolVLMBackend:
         model_path: str | Path,
         *,
         device: str = "cpu",
-        dtype: str = "float32",
         max_new_tokens: int = 256,
+        embed_cache_entries: int = 4,
     ):
         from PIL import Image
         import torch
@@ -295,18 +299,28 @@ class SmolVLMBackend:
         self.torch = torch
         self.model_path = str(model_path)
         self.device = device
-        self.dtype_name = dtype
         self.max_new_tokens = max_new_tokens
+        if not isinstance(embed_cache_entries, int) or isinstance(
+            embed_cache_entries, bool
+        ) or not 0 <= embed_cache_entries <= 64:
+            raise ValueError("embed_cache_entries must be in 0..64")
+        self.embed_cache_entries = embed_cache_entries
+        self._embed_cache: OrderedDict[
+            tuple[str, ...], dict[str, Any]
+        ] = OrderedDict()
+        self._embed_cache_hits = 0
+        self._embed_cache_misses = 0
+        self._embed_cache_lock = threading.RLock()
         self.torch_version = torch.__version__
         self.transformers_version = transformers.__version__
-        torch_dtype = getattr(torch, dtype)
         self.processor = AutoProcessor.from_pretrained(
             self.model_path, local_files_only=True
         )
         self.model = AutoModelForImageTextToText.from_pretrained(
             self.model_path,
             local_files_only=True,
-            dtype=torch_dtype,
+            dtype=torch.float16,
+            attn_implementation="eager",
         ).to(device)
         self.model.eval()
         self._model_metadata = self._read_model_metadata()
@@ -343,11 +357,15 @@ class SmolVLMBackend:
             "revision": MODEL_REVISION,
             "model_path": str(Path(self.model_path).resolve()),
             "device": self.device,
-            "dtype": self.dtype_name,
+            "dtype": "float16",
+            "attention_implementation": "eager",
+            "release_cuda_cache_after_request": True,
             "torch_version": self.torch_version,
             "transformers_version": self.transformers_version,
             "dense_feature": "mean of native modality-projected image tokens",
+            "embed_image_splitting": False,
             "embed_pooling_version": DENSE_POOLING_VERSION,
+            "embed_cache": self._embed_cache_metadata(),
             **self._model_metadata,
         }
 
@@ -364,12 +382,63 @@ class SmolVLMBackend:
             images.append(image.convert("RGB"))
         return images
 
+    def _embed_cache_metadata(self) -> dict[str, int | str]:
+        with self._embed_cache_lock:
+            return {
+                "version": "exact-cohort-sha256-lru-v1",
+                "capacity": self.embed_cache_entries,
+                "entries": len(self._embed_cache),
+                "hits": self._embed_cache_hits,
+                "misses": self._embed_cache_misses,
+            }
+
+    def _cached_embed(self, key: tuple[str, ...]) -> dict[str, Any] | None:
+        with self._embed_cache_lock:
+            cached = self._embed_cache.get(key)
+            if cached is None:
+                self._embed_cache_misses += 1
+                return None
+            self._embed_cache.move_to_end(key)
+            self._embed_cache_hits += 1
+            return copy.deepcopy(cached)
+
+    def _retain_embed(self, key: tuple[str, ...], value: dict[str, Any]) -> None:
+        if self.embed_cache_entries == 0:
+            return
+        with self._embed_cache_lock:
+            self._embed_cache[key] = copy.deepcopy(value)
+            self._embed_cache.move_to_end(key)
+            while len(self._embed_cache) > self.embed_cache_entries:
+                self._embed_cache.popitem(last=False)
+
     def embed(self, request: EmbedRequest) -> dict[str, Any]:
+        cache_key = tuple(row.frame_sha256 for row in request.observations)
+        cached = self._cached_embed(cache_key) if self.embed_cache_entries else None
+        if cached is not None:
+            feature_rows = cached.pop("features")
+            return {
+                **cached,
+                "observations": [
+                    {
+                        "source": observation.source(),
+                        "frame_sha256": observation.frame_sha256,
+                        "feature": feature,
+                    }
+                    for observation, feature in zip(
+                        request.observations, feature_rows
+                    )
+                ],
+                "cache": {"status": "hit", "key": "ordered-frame-sha256"},
+            }
         images = self._decode_frames(row.frame for row in request.observations)
         try:
-            inputs = self.processor.image_processor(images=images, return_tensors="pt")
+            inputs = self.processor.image_processor(
+                images=images,
+                return_tensors="pt",
+                do_image_splitting=False,
+            )
             pixel_values = inputs["pixel_values"].to(
-                device=self.device, dtype=getattr(self.torch, self.dtype_name)
+                device=self.device, dtype=self.torch.float16
             )
             mask = inputs.get("pixel_attention_mask")
             if mask is not None:
@@ -397,7 +466,7 @@ class SmolVLMBackend:
                     "source": observation.source(),
                     "frame_sha256": observation.frame_sha256,
                     "feature": {
-                        "kind": "smolvlm_native_image_feature",
+                        "kind": DENSE_FEATURE_KIND,
                         "dimension": int(little_endian.size),
                         "dtype": "float32-le",
                         "sha256": hashlib.sha256(little_endian.tobytes()).hexdigest(),
@@ -410,21 +479,31 @@ class SmolVLMBackend:
             # Keep immutable model weights resident but return temporary batch
             # tiles and attention workspaces to the shared ROCm device.
             self.torch.cuda.empty_cache()
-        return {
+        result = {
             "status": "ok",
             "pooling": {
                 "version": DENSE_POOLING_VERSION,
                 "native_api": "get_image_features",
                 "native_rows_per_view": rows_per_view,
-                "operation": (
-                    "mean token rows, then mean native global/adaptive tiles "
-                    "per source frame"
-                ),
+                "operation": DENSE_POOLING_OPERATION,
                 "dimension": int(vectors.shape[1]),
                 "dtype": "float32-le",
             },
             "observations": results,
+            "cache": {"status": "miss", "key": "ordered-frame-sha256"},
         }
+        self._retain_embed(
+            cache_key,
+            {
+                "status": result["status"],
+                "pooling": copy.deepcopy(result["pooling"]),
+                "features": [
+                    copy.deepcopy(observation["feature"])
+                    for observation in result["observations"]
+                ],
+            },
+        )
+        return result
 
     def infer(self, request: PerceptionRequest) -> dict[str, Any]:
         images = self._images(request)
@@ -661,14 +740,17 @@ class PerceptionService:
         self.latest_sequence: dict[str, int] = {}
 
     def metadata(self) -> dict[str, Any]:
+        backend = self.backend.metadata()
         return {
-            **self.backend.metadata(),
+            **backend,
             "max_frames": MAX_FRAMES,
             "max_frame_bytes": MAX_FRAME_BYTES,
             "max_total_frame_bytes": MAX_TOTAL_FRAME_BYTES,
             "embed": {
                 "endpoint": "/v1/embed",
-                "pooling_version": DENSE_POOLING_VERSION,
+                "pooling_version": backend.get(
+                    "embed_pooling_version", DENSE_POOLING_VERSION
+                ),
                 "generated_labels": False,
             },
         }

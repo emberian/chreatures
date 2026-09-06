@@ -130,13 +130,20 @@ ticks from one sensor may be batched together.
 }
 ```
 
-SmolVLM produces a global row plus adaptive tile rows for these images. Pooling
-contract `smolvlm2-native-tiles-mean-v1` first averages native token rows and
-then averages the rows belonging to each input image. The response contains one
-960-dimensional `float32-le` vector per source frame, with SHA-256 over its
-exact little-endian bytes. It also identifies the model revision, native API,
-tile count, completion timestamp, and inference latency. It emits no generated
-labels or affordances.
+The production encoder gives each body-camera frame one native 512-pixel image
+tile and calls `get_image_features` with fixed `float16` weights and eager
+attention. Pooling contract
+`smolvlm2-body-fov-single-tile-mean-fp16-eager-v3` averages the native token
+rows for that tile. The response contains one 960-dimensional `float32-le`
+vector per source frame, with SHA-256 over its exact little-endian bytes. It
+also identifies the model revision, native API, row count, completion
+timestamp, and inference latency. It emits no generated labels or affordances.
+
+The dtype, attention implementation, and image splitting policy are part of
+the feature identity and are fixed in production code. They are deliberately
+absent from the service command line. The only embedding performance setting
+is the bounded exact-cohort SHA-256 cache; a hit is useful for a retry or pure
+checkpoint replay and never stands in for inference on a new frame.
 
 The embedding service uses the same single model worker as `/v1/perceive`. The
 persvati deployment admits one cohort total, so a simultaneous request receives
@@ -156,34 +163,100 @@ Other explicit states are `unavailable`, `error`, and
 semantic observation. Source sequence, simulation time, capture time,
 provenance, model identity, and inference latency are echoed in each response.
 
-## Deploy on hbox
+## Deploy v3 after an explicit memory boundary
 
-The backend has its own environment at `/tank/chreatures/envs/perception` and
-does not modify the MaleCNS process environment. The pinned runtime packages
-are PyTorch 2.9.1 for ROCm 6.3, torchvision 0.24.1, Transformers 4.57.1, and
-Pillow 11.3.0. Start it from a synchronized project source directory:
+The measured v3 target is persvati's AMD Radeon 890M with PyTorch 2.10.0 for
+ROCm 7.0 and Transformers 4.57.1. Start it from a synchronized v3 source
+directory only after the runtime has opened a new visual-memory lineage:
 
 ```sh
-HSA_OVERRIDE_GFX_VERSION=10.3.0 \
-PYTHONPATH=/tank/chreatures/perception-src \
-PYTORCH_KERNEL_CACHE_PATH=/tank/chreatures/cache/perception-pytorch \
-HF_HOME=/tank/chreatures/cache/huggingface \
-/tank/chreatures/envs/perception/bin/python \
-  /tank/chreatures/perception-src/scripts/serve_perception.py \
+PYTHONPATH=/home/ember/chreatures/envs/perception-packages:/home/ember/chreatures/perception-v3-src \
+HF_HOME=/home/ember/chreatures/cache/huggingface \
+/home/ember/kaxsim/.venv7/bin/python \
+  /home/ember/chreatures/perception-v3-src/scripts/serve_perception.py \
   --backend smolvlm2 \
-  --model-path /tank/chreatures/models/SmolVLM2-500M-Video-Instruct \
-  --device cuda --dtype float16 --max-new-tokens 128 \
+  --model-path /home/ember/chreatures/models/SmolVLM2-500M-Video-Instruct \
+  --device cuda --max-new-tokens 128 --embed-cache-entries 4 \
   --max-workers 1 --max-pending 1 \
-  --bind 127.0.0.1 --port 8775 \
-  --pid-file /tank/chreatures/runs/perception/perception.pid
+  --bind 127.0.0.1 --port 8776 \
+  --pid-file /home/ember/chreatures/runs/perception/perception-v3.pid
 ```
 
 Tunnel the loopback service when the habitat runs elsewhere:
 
 ```sh
-ssh -N -L 18775:127.0.0.1:8775 hbox
-curl http://127.0.0.1:18775/v1/health
+ssh -N -L 18776:127.0.0.1:8776 persvati
+curl http://127.0.0.1:18776/v1/health
 ```
+
+This is a deployment recipe, not a claim that v3 has replaced the live v1
+process. Port 8775 remains the archived encoder for lives already using its
+feature coordinate system.
+
+## Measured body-FOV performance
+
+The performance run used the two genuine 256×192 Fern body-camera frames from
+`runs/native-vision-first-life.json`, captured at ticks 200 and 205. It ran the
+pinned model on persvati's AMD Radeon 890M; no generated labels were involved.
+
+| Native path | Median pair latency | Peak allocation | Result |
+| --- | ---: | ---: | --- |
+| v1 adaptive split tiles, fp16 | 4.593 s warmed | — | archived |
+| one tile, float32, SDPA | 1.792 s | 2.465 GB | rejected |
+| one tile, bfloat16, SDPA | 0.451 s | 1.440 GB | rejected |
+| one tile, float16, SDPA | 0.449 s | 1.440 GB | superseded |
+| one tile, float16, eager | 0.306 s | 1.440 GB | selected v3 |
+
+The old processor expanded two frames to 26 tiles (`[1,26,3,512,512]`). The
+selected path produces two tiles (`[1,2,3,512,512]`), reducing the estimated
+vision work from 5.559 to 0.428 TFLOPs per pair. Eager attention then improved
+the single-tile median by 1.47×, for a measured 15.03× speedup over warmed v1.
+All model parameters remained on `cuda:0`; the old 4.6-second latency was the
+native forward, not CPU parameter offload.
+
+This is a new representation. V1-to-v3 same-frame cosine was 0.9752 and 0.9731
+for the two images, with RMS differences 0.728 and 0.764. Eager versus SDPA
+within the selected single-tile path was much closer (cosine above
+0.99999991), but it still changed exact bytes, so eager is named in v3's
+pooling version. The selected feature hashes were
+`55bf488c4f98f5605a507511c16d392f0ac7803157a77d5f3acf75b82a550644`
+and
+`bea309487ded6bfeaa819c8bbfbb0687ac89bcac0cb95d648ce1fa4e76861966`.
+
+An isolated HTTP service on port 8776 measured a cold cache miss at 0.827
+seconds wall time and an exact replay hit at 2.56 ms; it was stopped after the
+check. AOTriton changed hashes and did not beat the controlled warmed baseline.
+Float32, bfloat16, naive channels-last, and the direct all-real-tile bypass
+were rejected from production. `torch.compile` was not run because compilation
+did not fit the bounded shared-GPU window.
+
+The complete machine-readable report is
+`runs/perception/performance-v1/report.json` (10,646 bytes, SHA-256
+`0397ed17647a266767e0ba6fe3b6ec3156613c510d10b888be06d9a87c4fed58`).
+
+## Archived v1 and memory migration
+
+The executable v1 release is pinned by local Git tag
+`perception-native-tiles-v1` at commit
+`a59f276619362509f8284b5ecdf943b66b707051`. An immutable copy on persvati is
+`/home/ember/chreatures/releases/perception-native-tiles-v1-a59f276`; its
+`MANIFEST.json` records model and source hashes and `RUN_COMMAND.txt` preserves
+the complete launch command. Archived source hashes are:
+
+| Source | SHA-256 |
+| --- | --- |
+| `chreatures/perception.py` | `a511dcfc7f1e985fe5a5c0c8015664d26695fa09246f158b244bc2102898cae7` |
+| `scripts/serve_perception.py` | `0dbde8b4cf3ad68a96442e91b6f42228006bc45bf2984f0ece0e5a5ea79c6c35` |
+
+The live loopback process at persvati port 8775 still serves
+`smolvlm2-native-tiles-mean-v1` for existing lives. Its source directory was
+not modified and the service remained healthy after the archive was made.
+
+Old visual episodes retain their original 960 values, vector hashes, image
+hashes, model revision, and v1 pooling version as historical provenance. They
+must not be compared directly with v3 vectors or silently re-encoded. Runtime
+migration requires an explicit checkpoint boundary and a new v3 memory
+lineage; archived v1 features remain readable data, while new captures use v3.
 
 ## Measured external-image check
 
@@ -198,8 +271,8 @@ field-of-view copy remain on hbox:
 | `/tank/chreatures/runs/perception/external-bee.jpg` | 5,373,297 bytes / `8b21ba78250f852ca5990063866b1ace6432521d0251bde7f8de783b22c99a6d` |
 | `/tank/chreatures/runs/perception/external-bee-fov.jpg` | 768×512, 69,333 bytes / `b0068eb645b74aec38752ef9f8dd6b3ee1288e2f82a8d7ce737eb142afbd14e6` |
 
-The native dense-feature path completed in 7.89 seconds and returned 960
-dimensions; the values hashed to
+This check used the archived v1 split-tile encoder. Its native dense-feature
+path completed in 7.89 seconds and returned 960 dimensions; the values hashed to
 `372e27c4f359d99b97aa4e6c55ad66b7e18a736e855c86de36439f2c3d16eaac`
 after canonical JSON encoding. The initial compact-JSON semantic prompt did
 not reliably produce valid JSON from this 500M model, so those attempts were
@@ -324,8 +397,9 @@ The batch check restored `runs/hollow-garden.json` at tick 38,891, checkpoint
 SHA-256
 `c4ae4ee680e1f2c8aa889d2ee16c58837b6f855d942201f39ca999cca964e7dc`,
 and rendered Mica, Fern, and Pip from their saved MuJoCo body cameras. The
-recorded three-frame cohort completed in 8.42 seconds wall time, with 8.33
-seconds in the service. The vectors were:
+recorded three-frame cohort used the archived v1 split-tile encoder and
+completed in 8.42 seconds wall time, with 8.33 seconds in the service. The
+vectors were:
 
 | View | PNG SHA-256 | Native feature SHA-256 |
 | --- | --- | --- |
@@ -346,7 +420,7 @@ bytes with SHA-256
 `restore-check.json` hashes to
 `5cb548c41eabd3084af71f71ff0312a3a8067d0d41a2d84ffb8533ae160b85dd`.
 
-The persistent service is on persvati at `127.0.0.1:8775`, with its PID in
+The archived v1 service is on persvati at `127.0.0.1:8775`, with its PID in
 `/home/ember/chreatures/runs/perception/perception.pid`. After explicit cache
 release following a batch, idle measurements were 301,105,152 bytes VRAM and
 1,698,226,176 bytes shared GTT, with zero GPU busy.
