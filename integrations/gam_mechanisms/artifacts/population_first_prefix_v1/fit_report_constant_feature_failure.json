@@ -1,0 +1,39 @@
+{
+  "format": "chreatures-population-response-fit-report-v1",
+  "models": {
+    "allocation_mass": {
+      "error": "GamError: smooth term over 'structural_integrity' has only one unique value in the training data \u2014 a smooth on a constant column is degenerate and would only fit the response mean. Remove `structural_integrity` from the smooth, drop the term, or check the data.",
+      "status": "native fit failed; no law minted"
+    },
+    "contact": {
+      "error": "GamError: smooth term over 'structural_integrity' has only one unique value in the training data \u2014 a smooth on a constant column is degenerate and would only fit the response mean. Remove `structural_integrity` from the smooth, drop the term, or check the data.",
+      "status": "native fit failed; no law minted"
+    },
+    "effort": {
+      "error": "GamError: smooth term over 'structural_integrity' has only one unique value in the training data \u2014 a smooth on a constant column is degenerate and would only fit the response mean. Remove `structural_integrity` from the smooth, drop the term, or check the data.",
+      "status": "native fit failed; no law minted"
+    },
+    "energy_state_delta": {
+      "error": "GamError: smooth term over 'structural_integrity' has only one unique value in the training data \u2014 a smooth on a constant column is degenerate and would only fit the response mean. Remove `structural_integrity` from the smooth, drop the term, or check the data.",
+      "status": "native fit failed; no law minted"
+    },
+    "fatigue_state_delta": {
+      "error": "GamError: smooth term over 'structural_integrity' has only one unique value in the training data \u2014 a smooth on a constant column is degenerate and would only fit the response mean. Remove `structural_integrity` from the smooth, drop the term, or check the data.",
+      "status": "native fit failed; no law minted"
+    },
+    "ingested_mass": {
+      "error": "GamError: smooth term over 'structural_integrity' has only one unique value in the training data \u2014 a smooth on a constant column is degenerate and would only fit the response mean. Remove `structural_integrity` from the smooth, drop the term, or check the data.",
+      "status": "native fit failed; no law minted"
+    },
+    "release_mass": {
+      "error": "GamError: smooth term over 'structural_integrity' has only one unique value in the training data \u2014 a smooth on a constant column is degenerate and would only fit the response mean. Remove `structural_integrity` from the smooth, drop the term, or check the data.",
+      "status": "native fit failed; no law minted"
+    },
+    "secretion_mass": {
+      "error": "GamError: smooth term over 'structural_integrity' has only one unique value in the training data \u2014 a smooth on a constant column is degenerate and would only fit the response mean. Remove `structural_integrity` from the smooth, drop the term, or check the data.",
+      "status": "native fit failed; no law minted"
+    }
+  },
+  "source_data_sha256": "de0bc12990033013d19880d5bcee85f83ab4071a0b530ecb61acc00cc1945fea",
+  "status": "failed; no bank minted"
+}

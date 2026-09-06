@@ -18,6 +18,10 @@ TARGETS = (
     ("secretion_mass", "expected_secretion_mass", "elemental-equivalent mass per 50 ms", "positive_softplus"),
     ("allocation_mass", "expected_allocation_mass", "elemental-equivalent mass per 50 ms", "positive_softplus"),
 )
+SMOOTH_FEATURES = {
+    "energy_state_delta": ["energy", "gut", "fatigue", "thrust", "eat", "allocate"],
+    "effort": ["fatigue", "speed", "thrust", "yaw", "posture", "grip"],
+}
 
 
 def digest(path: Path) -> str:
@@ -33,9 +37,14 @@ def main() -> None:
     parser.add_argument("--heldout-environment", action="append", required=True)
     parser.add_argument("--target", action="append", choices=[x[0] for x in TARGETS],
                         help="explicit supported-law subset; default attempts all measured targets")
+    parser.add_argument("--training-tick-stride", type=int, default=1)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    if not 1 <= args.training_tick_stride <= 64:
+        raise ValueError("training tick stride must be in 1..64")
     contract = json.loads(args.feature_contract.read_text())
+    receipt_path = args.rows.with_suffix(".receipt.json")
+    rows_receipt = json.loads(receipt_path.read_text())
     with np.load(args.rows, allow_pickle=False) as rows:
         target = np.asarray(rows["targets"], dtype=float)
         if target.ndim != 2 or target.shape[1] != len(TARGETS) or not np.isfinite(target).all():
@@ -46,6 +55,9 @@ def main() -> None:
         fit_rows = ~(np.isin(lineage, args.heldout_lineage)
                      | np.isin(candidate, args.heldout_candidate)
                      | np.isin(environment, args.heldout_environment))
+        fit_rows &= (np.asarray(rows["tick_unit"], dtype=np.uint64)
+                     % args.training_tick_stride == 0)
+        fit_rows &= np.asarray(rows["world_unit"], dtype=np.int64) % 5 != 0
         if not fit_rows.any() or fit_rows.all():
             raise ValueError("held-out lineage/environment split is empty")
         selected = set(args.target or [x[0] for x in TARGETS])
@@ -58,7 +70,9 @@ def main() -> None:
             transform = ({"kind": kind, "magnitude": extent} if kind == "signed_tanh"
                          else {"kind": kind, "ceiling": extent})
             responses.append({"law": law, "mechanism": mechanism, "unit": unit,
-                              "target_column": column, "transform": transform})
+                              "target_column": column, "transform": transform,
+                              "smooth_features": SMOOTH_FEATURES.get(law,
+                                  [item["name"] for item in contract["features"]])})
             score_scales[mechanism] = max(float(np.std(target[fit_rows, column])), 1e-6)
     schema = {
         "format": "chreatures-population-response-fit-v1",
@@ -71,6 +85,7 @@ def main() -> None:
             {"mechanism":"expected_effort", "weight":-0.5, "scale":score_scales["expected_effort"]},
         ]} if {"energy_state_delta", "effort"}.issubset(selected) else None,
         "basis_size": 9,
+        "training_tick_stride": args.training_tick_stride,
         "split": {"heldout_lineages": args.heldout_lineage,
                   "heldout_candidates": args.heldout_candidate,
                   "heldout_environments": args.heldout_environment,
@@ -80,7 +95,16 @@ def main() -> None:
             "dt_seconds": 0.05,
             "history_window_ticks": 64,
             "target_semantics": "observed one-step associations under executed actions; not causal effects",
+            "training_sampling":"target-blind tick modulo stride equals zero within every fit life",
             "rows_sha256": digest(args.rows),
+            "rows_receipt_sha256": digest(receipt_path),
+            "source_status": rows_receipt["source_status"],
+            "trace_feature_contract_sha256": rows_receipt["trace_feature_contract_sha256"],
+            "fit_feature_contract_sha256": rows_receipt["fit_feature_contract_sha256"],
+            "feature_identity_mapping": rows_receipt["feature_identity_mapping"],
+            "censored_after_complete_trace_tick": rows_receipt["censored_after_complete_trace_tick"],
+            "planned_physical_ticks": rows_receipt["planned_physical_ticks"],
+            "terminal_content_sha256": rows_receipt["terminal_content_sha256"],
         },
     }
     args.output.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n")
