@@ -11,12 +11,12 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from .runtime import Habitat
 from .brain import ROOT
+from .runtime import Habitat
 from .world import MODEL_DT
 
 log = logging.getLogger("chreatures")
@@ -31,6 +31,7 @@ def create_app(
     body_mode="articulated",
     ecology="diffusion",
     resources=None,
+    biosphere=None,
     acoustics=None,
     motor_genome=None,
     personal_memory=False,
@@ -60,6 +61,7 @@ def create_app(
                         body_mode=body_mode,
                         ecology=ecology,
                         resources=resources,
+                        biosphere=biosphere,
                         acoustics=acoustics,
                         motor_genome=motor_genome,
                         personal_memory=personal_memory,
@@ -315,10 +317,16 @@ def main(default_dimension=2):
         help="Chemical ecology for new worlds; saved worlds retain their original model",
     )
     parser.add_argument("--checkpoint", type=Path)
-    parser.add_argument(
+    environment_group = parser.add_mutually_exclusive_group()
+    environment_group.add_argument(
         "--resources",
         type=Path,
         help="Finite resource growth configuration for new 3D worlds; saved worlds preserve their ecology",
+    )
+    environment_group.add_argument(
+        "--biosphere",
+        type=Path,
+        help="Native metabolic and developmental configuration for new 3D research worlds",
     )
     parser.add_argument(
         "--acoustics",
@@ -364,6 +372,7 @@ def main(default_dimension=2):
             body_mode=args.body,
             ecology=args.ecology,
             resources=args.resources,
+            biosphere=args.biosphere,
             acoustics=args.acoustics,
             motor_genome=args.motor_genome,
             personal_memory=args.personal_memory,

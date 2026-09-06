@@ -7,14 +7,14 @@ contains physical integration state plus every personal cognitive parameter.
 
 from __future__ import annotations
 
-from collections import deque
 import copy
 import hashlib
 import json
 import os
-from pathlib import Path
 import time
 import uuid
+from collections import deque
+from pathlib import Path
 
 import numpy as np
 
@@ -25,7 +25,7 @@ from .visitor_events import VisitorPerformances
 
 
 def physical_world_type(body_mode, execution):
-    from .sensorium import SensoriumWorld, ArticulatedSensoriumWorld
+    from .sensorium import ArticulatedSensoriumWorld, SensoriumWorld
 
     if execution == "vectorized" and body_mode == "articulated":
         from .physical_batch import FastArticulatedSensoriumWorld
@@ -45,6 +45,7 @@ class Habitat3D:
         body_mode="articulated",
         ecology="diffusion",
         resources=None,
+        biosphere=None,
         acoustics=None,
         motor_genome=None,
         personal_memory=False,
@@ -52,10 +53,9 @@ class Habitat3D:
         physics_backend=None,
         personal_plasticity=False,
     ):
-        from .sensorium import SensoriumWorld, ArticulatedSensoriumWorld
-        from .fields import FieldEnvironment
-        from .ecology import Ecology
         from .acoustics import Acoustics
+        from .ecology import Ecology
+        from .fields import FieldEnvironment
 
         if body_mode not in ("crawler", "articulated") or ecology not in (
             "analytic",
@@ -71,6 +71,10 @@ class Habitat3D:
         if personal_plasticity and not personal_memory:
             raise ValueError(
                 "Personal motor plasticity requires a personal memory organ"
+            )
+        if resources is not None and biosphere is not None:
+            raise ValueError(
+                "Legacy resources and the developmental biosphere are mutually exclusive"
             )
         self.personal_memory = bool(personal_memory)
         self.personal_plasticity = bool(personal_plasticity)
@@ -98,6 +102,11 @@ class Habitat3D:
             Ecology(self.world, resources, seed=seed) if resources is not None else None
         )
         self.resource_state = None
+        self.biosphere = None
+        if biosphere is not None:
+            from .biosphere import Biosphere
+
+            self.biosphere = Biosphere.from_config(self.world, biosphere)
         self.acoustics = (
             Acoustics(self.world, acoustics) if acoustics is not None else None
         )
@@ -398,7 +407,11 @@ class Habitat3D:
             if self.resources is not None:
                 self.resource_state = self.resources.advance(dt)
             resources_done = time.perf_counter()
+            if self.biosphere is not None:
+                self.biosphere.advance(dt)
+            biosphere_done = time.perf_counter()
             if self.field is not None:
+                self.field.sync_static_geometry(self.world)
                 self.field.sync_dynamic_barriers(self.world.diffusion_barriers())
                 self.field.advance(
                     dt, sources=self.field.sources_from_world(self.world)
@@ -412,7 +425,8 @@ class Habitat3D:
                     "physics": (physics_done - cognition_done) * 1000,
                     "acoustics": (acoustics_done - physics_done) * 1000,
                     "resources": (resources_done - acoustics_done) * 1000,
-                    "fields": (fields_done - resources_done) * 1000,
+                    "biosphere": (biosphere_done - resources_done) * 1000,
+                    "fields": (fields_done - biosphere_done) * 1000,
                 }
             )
             self.tick += 1
@@ -533,6 +547,7 @@ class Habitat3D:
                 if self.field is not None
                 else {"kind": "analytic"},
                 "resources": copy.deepcopy(self.resource_state),
+                "biosphere": self._biosphere_view(),
                 "acoustics": copy.deepcopy(self.acoustic_state),
                 "visitor": self.visitor.view(self.tick, self.paused),
                 "vision": self.vision.view(self.tick)
@@ -565,6 +580,28 @@ class Habitat3D:
         )
         return view
 
+    def _biosphere_view(self):
+        if self.biosphere is None:
+            return None
+        report = self.biosphere.last_report
+        developments = report.get("developments", [])
+        return {
+            "kind": "native-metabolism-development-v1",
+            "config_sha256": self.biosphere.config_sha256,
+            "time": report.get("time", self.biosphere.web.time),
+            "colonies": len(self.biosphere.config),
+            "active_colonies": sum(self.biosphere.active.values()),
+            "parts": report.get("parts", len(self.biosphere.parts)),
+            "captured_photons": report.get("captured_photons", 0.0),
+            "accounting": copy.deepcopy(
+                report.get("accounting", self.biosphere.accounting())
+            ),
+            "developments": copy.deepcopy(developments[-16:]),
+            "developments_truncated": max(0, len(developments) - 16),
+            "resident_physiology_coupled": False,
+            "whole_food_web": False,
+        }
+
     def save(self, path):
         if self.pending_step is not None:
             raise RuntimeError("Cannot checkpoint an incomplete distributed tick")
@@ -588,6 +625,9 @@ class Habitat3D:
             if self.resources is not None
             else None,
             "resource_state": self.resource_state,
+            "biosphere": self.biosphere.snapshot()
+            if self.biosphere is not None
+            else None,
             "acoustics": self.acoustics.snapshot()
             if self.acoustics is not None
             else None,
@@ -640,10 +680,9 @@ class Habitat3D:
 
     @classmethod
     def load(cls, path, brain_url=None):
-        from .sensorium import SensoriumWorld, ArticulatedSensoriumWorld
-        from .fields import FieldEnvironment
-        from .ecology import Ecology
         from .acoustics import Acoustics
+        from .ecology import Ecology
+        from .fields import FieldEnvironment
 
         envelope = json.loads(Path(path).read_text())
         if envelope.get("format") != "chreatures-3d-checkpoint-v1":
@@ -672,12 +711,21 @@ class Habitat3D:
             if value.get("field") is not None
             else None
         )
+        if value.get("resources") is not None and value.get("biosphere") is not None:
+            raise ValueError(
+                "Saved world contains both legacy resources and a developmental biosphere"
+            )
         instance.resources = (
             Ecology.restore(instance.world, value["resources"])
             if value.get("resources") is not None
             else None
         )
         instance.resource_state = copy.deepcopy(value.get("resource_state"))
+        instance.biosphere = None
+        if value.get("biosphere") is not None:
+            from .biosphere import Biosphere
+
+            instance.biosphere = Biosphere.restore(instance.world, value["biosphere"])
         instance.acoustics = (
             Acoustics.restore(instance.world, value["acoustics"])
             if value.get("acoustics") is not None
