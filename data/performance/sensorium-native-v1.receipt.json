@@ -1,0 +1,42 @@
+{
+  "audit": {
+    "body-v1": {
+      "encoded_351_max_abs_error": 0.0,
+      "mutable_material_max_abs_error": 0.0,
+      "residents": 3,
+      "retina_max_abs_error": 0.0
+    },
+    "legacy-world-v0": {
+      "encoded_351_max_abs_error": 0.0,
+      "mutable_material_max_abs_error": 0.0,
+      "residents": 3,
+      "retina_max_abs_error": 0.0
+    }
+  },
+  "format": "chreatures-native-sensorium-v1",
+  "host": {
+    "mujoco": "3.12.0",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "python": "3.12.14"
+  },
+  "maximum_encoded_351_abs_error": 0.0,
+  "maximum_retina_abs_error": 0.0,
+  "native_module": "/private/tmp/chreatures-sensorium-native-v3/_world_kernels.cpython-312-darwin.so",
+  "scope": "complete PhysicsWorld.sense plus 351-channel encode; no physics advance or whole-runtime claim",
+  "source_sha256": {
+    "chreatures/neural_ports.py": "5fb54dff5974953ee490fee91d130569ff171e56cd96364911bb936ec8812f86",
+    "chreatures/sensorium.py": "7f6c846594ffb722d2bc9f5889fc1c991b03349057971d9f40446f12dd3849b8",
+    "native/world-kernels/src/sensorium.rs": "4fa91eedcaf8c87c9db75ffd5da1ca6a0275acecb42b95553e3bcef2f78a5277",
+    "native_module": "eba2ed8151fb235cd00672a406527960fcdc20bbed036ebbdb78c5b4901c0f57"
+  },
+  "timing": {
+    "complete_sense_encode_speedup": 1.4822108432655985,
+    "measured_batches_per_path": 1200,
+    "native_resident_senses_per_second": 936.1256848517268,
+    "native_seconds": 3.845637459002319,
+    "reference_resident_senses_per_second": 631.5739013143772,
+    "reference_seconds": 5.7000455410016,
+    "residents_per_batch": 3,
+    "warmup_batches_per_path": 50
+  }
+}

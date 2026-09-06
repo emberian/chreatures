@@ -14,6 +14,7 @@ import mujoco
 import numpy as np
 
 from .articulated import ArticulatedWorld
+from .native_world import load_world_kernels
 from .physics import PhysicsBody, PhysicsWorld
 
 
@@ -136,24 +137,23 @@ def native_retina(world: PhysicsWorld, body: PhysicsBody) -> list[list[list[floa
         RETINA_MAX_RANGE,
     )
 
-    illumination = world._illumination(body)
-    result: list[list[list[float]]] = []
-    for band in range(len(RETINA_PITCH_OFFSETS)):
-        rows = []
-        for column in range(len(RETINA_YAW_OFFSETS)):
-            index = band * len(RETINA_YAW_OFFSETS) + column
-            distance, geom_id = float(distances[index]), int(geom_ids[index])
-            # mj_multiRay's cutoff is a broad-phase optimization and can still
-            # report a farther exact hit. Preserve the public 3.2 m threshold.
-            if distance < 0.0 or distance > RETINA_MAX_RANGE or geom_id < 0:
-                rows.append([0.0, 0.0, 0.0, 0.0])
-            else:
-                rgb = world._geom_rgb(geom_id)
-                rows.append([
-                    min(1.0, channel * (0.45 + 0.55 * illumination)) for channel in rgb
-                ] + [max(0.0, 1.0 - distance / RETINA_MAX_RANGE)])
-        result.append(rows)
-    return result
+    native = load_world_kernels()
+    transducer = getattr(native, "transduce_retina", None)
+    if transducer is None:
+        raise RuntimeError(
+            "installed _world_kernels predates native retinal transduction; "
+            "rebuild native/world-kernels"
+        )
+    result = transducer(
+        distances,
+        geom_ids,
+        world.model.geom_matid,
+        world.model.mat_rgba,
+        world.model.geom_rgba,
+        world._illumination(body),
+        RETINA_MAX_RANGE,
+    )
+    return result.tolist()
 
 
 class BatchedRaySensoriumMixin:
