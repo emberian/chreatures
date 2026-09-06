@@ -36,7 +36,8 @@ _MOBILITY = {"static", "free", "hinge", "slide"}
 _NO_DIFFUSION_BARRIERS: tuple[()] = ()
 _MUTABLE_MODEL_FIELDS = (
     "geom_size", "geom_pos", "geom_quat", "geom_rgba", "geom_friction",
-    "geom_contype", "geom_conaffinity", "mat_rgba", "light_pos", "light_diffuse",
+    "geom_contype", "geom_conaffinity", "mat_rgba", "light_pos", "light_dir",
+    "light_diffuse",
     "body_mass", "body_inertia", "eq_solref", "eq_solimp",
 )
 
@@ -359,6 +360,12 @@ class PhysicsWorld:
                         raise ValueError("light color cannot be negative")
                     _number(component.get("intensity", 1.0), "light intensity", 0.0, 1.0)
                     _number(component.get("radius", 2.0), "light radius", 0.05, 20.0)
+                    if not isinstance(component.get("directional", False), bool):
+                        raise ValueError("light directional flag must be boolean")
+                    _number(
+                        component.get("ambient_intensity", 0.0),
+                        "light ambient intensity", 0.0, 1.0,
+                    )
                 elif component_type == "diffusion_barrier":
                     allowed = {
                         "type", "version", "shape_indices", "permeability",
@@ -544,7 +551,8 @@ class PhysicsWorld:
             color = np.asarray(component.get("color", [1.0, 1.0, 1.0]), dtype=float) * intensity
             direction = np.asarray(component.get("direction", [0, 0, -1]), dtype=float)
             direction /= np.linalg.norm(direction)
-            pieces.append(f'<light {self._attrs({"name": f"entity:{entity_id}:light:{index}", "mode": "fixed", "pos": component.get("position", [0, 0, 0]), "dir": direction, "diffuse": color, "specular": color * 0.15, "directional": "false", "castshadow": "true", "cutoff": 70, "exponent": 1.0})}/>')
+            directional = bool(component.get("directional", False))
+            pieces.append(f'<light {self._attrs({"name": f"entity:{entity_id}:light:{index}", "mode": "fixed", "pos": component.get("position", [0, 0, 0]), "dir": direction, "diffuse": color, "specular": np.zeros(3) if directional else color * 0.15, "directional": str(directional).lower(), "castshadow": "true", "cutoff": 70, "exponent": 1.0})}/>')
         pieces.append("</body>")
         return "".join(pieces)
 
@@ -1017,14 +1025,28 @@ class PhysicsWorld:
                     "color": list(map(float, component.get("color", [1, 1, 1]))),
                     "intensity": float(component.get("intensity", 1.0)),
                     "radius": float(component.get("radius", 2.0)),
+                    "directional": bool(component.get("directional", False)),
+                    "ambient_intensity": float(component.get("ambient_intensity", 0.0)),
                 })
         return result
 
     def _environment_at(self, point: np.ndarray, exclude_body: int = -1) -> dict[str, float]:
         upward_distance, upward_geom = self._ray(point + np.array([0.0, 0.0, 1e-4]), np.array([0.0, 0.0, 1.0]), exclude_body)
         sky_exposure = 1.0 if upward_geom < 0 or upward_distance < 0.0 else 0.08
-        value = 0.42 * sky_exposure
-        for light in self._scene_lights():
+        lights = self._scene_lights()
+        directional = [light for light in lights if light["directional"]]
+        value = (
+            sum(light["ambient_intensity"] for light in directional)
+            if directional
+            else 0.42
+        ) * sky_exposure
+        for light in lights:
+            if light["directional"]:
+                toward_source = -np.asarray(light["direction"], dtype=float)
+                ray_distance, geom_id = self._ray(point, toward_source, exclude_body)
+                visibility = 1.0 if geom_id < 0 or ray_distance < 0.0 else 0.10
+                value += visibility * float(light["intensity"])
+                continue
             source = np.asarray(light["position"], dtype=float)
             delta = point - source
             distance = float(np.linalg.norm(delta))
@@ -1534,7 +1556,7 @@ class PhysicsWorld:
             (mujoco.mjtObj.mjOBJ_GEOM, ("geom_size", "geom_pos", "geom_quat", "geom_rgba", "geom_friction", "geom_contype", "geom_conaffinity")),
             (mujoco.mjtObj.mjOBJ_BODY, ("body_mass", "body_inertia")),
             (mujoco.mjtObj.mjOBJ_MATERIAL, ("mat_rgba",)),
-            (mujoco.mjtObj.mjOBJ_LIGHT, ("light_pos", "light_diffuse")),
+            (mujoco.mjtObj.mjOBJ_LIGHT, ("light_pos", "light_dir", "light_diffuse")),
             (mujoco.mjtObj.mjOBJ_EQUALITY, ("eq_solref", "eq_solimp")),
         )
         for object_type, fields in named_mutables:

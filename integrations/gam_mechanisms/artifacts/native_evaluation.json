@@ -1,0 +1,17 @@
+{
+  "schema": "chreatures-gam-native-evaluation-v1",
+  "artifact_sha256": "41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+  "input": "training-feature means (all standardized values equal zero)",
+  "weights": [1.0, 1.0, 1.0],
+  "result": {
+    "score": -0.002085901793751236,
+    "out_of_domain": false,
+    "consequences": [
+      {"name": "movement_response", "expected": -0.0022945246549812177, "uncertainty": 0.018491922387083547, "out_of_domain": false},
+      {"name": "energy_cost", "expected": 0.00005301767721948362, "uncertainty": 0.00001909995694971648, "out_of_domain": false},
+      {"name": "fatigue_recovery", "expected": 0.0001556051840104985, "uncertainty": 0.00006977803312853787, "out_of_domain": false}
+    ]
+  },
+  "execution": "cargo run --manifest-path integrations/gam_mechanisms/Cargo.toml -- body_consequence_laws.json FEATURE_MEANS...",
+  "status": "executed native Rust load, validation, interpolation, domain check, and candidate score"
+}

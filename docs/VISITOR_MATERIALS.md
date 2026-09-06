@@ -48,18 +48,10 @@ choice contains `pools`, `remaining_resources`, `remaining_portions`,
 is the limiting source-to-recipe ratio and can exceed one; `available` also
 requires a free physical slot.
 
-The default chemical habitat builder is unchanged. To create a new compatible
-set of habitat, Biosphere, and visitor-supply specifications:
-
-```bash
-.venv/bin/python scripts/build_chemical_habitat.py \
-  --visitor-supply \
-  --output runs/visitor-chemical-birth
-```
-
-Add `--recycling` if the new world should also contain the existing egestion,
-root uptake, and colony exudation mechanisms. The builder currently supplies
-three mixtures with distinct chemistry-derived sensory surfaces:
+The visitor-supply experiment used a retired birth-v2/v3 habitat builder. Its
+exact source remains available at
+[`867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa`](https://github.com/emberian/chreatures/blob/867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa/scripts/build_chemical_habitat.py).
+It supplied three mixtures with distinct chemistry-derived sensory surfaces:
 
 - `reserve-fruit`: directly absorbable reserve chemistry.
 - `soft-fruit`: reserve plus digestible soft tissue.
@@ -71,11 +63,8 @@ dispatch `offer_material` to its `command()` method, and include its snapshot
 beside the Biosphere snapshot. Existing checkpoints with no supply state keep
 their prior commands and chemistry.
 
-The focused physical check is:
-
-```bash
-.venv/bin/python scripts/probe_visitor_materials.py
-```
+The focused physical check is historical. Its exact source is
+[`scripts/probe_visitor_materials.py` from `867cdb8`](https://github.com/emberian/chreatures/blob/867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa/scripts/probe_visitor_materials.py).
 
 It places a reserve packet at a measured resident mouth point, advances real
 MuJoCo contact and SomaticPhysiology acquisition, checks that packet inventory

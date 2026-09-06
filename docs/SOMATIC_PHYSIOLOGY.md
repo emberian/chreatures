@@ -32,13 +32,11 @@ Undigested material and mineral remain in the gut; excretion and a complete
 spatial recycling system are outstanding mechanisms. Body/inertia changes do
 not yet account for every acquired or lost material unit.
 
-## Reproduce and run
+## Historical assay
 
-Build the current [native world kernels](../native/world-kernels/README.md), then:
-
-```console
-.venv/bin/python scripts/probe_somatic_contact.py
-```
+The executed contact probe depended on the retired birth-v2/v3 habitat builder.
+Its exact source is preserved as
+[`scripts/probe_somatic_contact.py` at `867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa`](https://github.com/emberian/chreatures/blob/867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa/scripts/probe_somatic_contact.py).
 
 The probe creates three independently initialized physical experiments with a
 finite soft-tissue packet and an initially empty gut. Quiet supplied actions and
@@ -55,25 +53,14 @@ The fixed six-leg interface and the normalized neural channel ranges are retaine
 this changes physiological meaning, so inherited motor policies remain transfer
 baselines until evaluated under these new dynamics.
 
-Fresh public birth artifacts:
+Historical public birth artifacts:
 
 - [`chemical-reef.json`](../data/habitats/chemical-reef.json): inherited body
   variation, irregular terrain and four finite grippable chemical packets.
 - [`chemical-reef-v1.json`](../data/biosphere/chemical-reef-v1.json): three growing
   colonies, private mobile compartments and finite packet rows under one program.
-- [`build_chemical_habitat.py`](../scripts/build_chemical_habitat.py): reproducible
-  founding construction. This is not an adult snapshot migration.
-
-Use them with a fresh checkpoint and a separate neural service:
-
-```console
-uv run chreatures --port 8773 --brain-url http://127.0.0.1:18773 \
-  --checkpoint runs/chemical-reef.json \
-  --habitat data/habitats/chemical-reef.json \
-  --biosphere data/biosphere/chemical-reef-v1.json \
-  --motor-genome data/genomes/nursery-embodied-v2-step9695.npz \
-  --personal-memory --personal-plasticity
-```
+- [`build_chemical_habitat.py` at `867cdb8`](https://github.com/emberian/chreatures/blob/867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa/scripts/build_chemical_habitat.py):
+  the retired founding construction. Current worlds use authored birth-v4 data.
 
 The chemistry-derived surface colors reach ordinary retinal rays. Its odor
 coefficients emit sensory tracers through the existing transport field. Those

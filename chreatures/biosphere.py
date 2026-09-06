@@ -14,14 +14,54 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+import mujoco
 import numpy as np
 
 from .growth import GrowthSystem
 from .metabolism import Chemistry, MetabolicWeb, canonical
 from .native_world import load_world_kernels
 
-FORMAT = "chreatures-biosphere-v4"
+FORMAT = "chreatures-biosphere-v5"
 KINDS = ("branch", "root", "leaf")
+
+
+def _illumination_cycle(value: Any, world: Any) -> dict[str, Any]:
+    """Validate the one current native solar-cycle boundary."""
+    required = {
+        "version", "light_entity", "period_seconds", "phase_offset_cycles",
+        "path_azimuth_degrees", "peak_irradiance", "diffuse_fraction",
+        "twilight_degrees", "orbit_radius_m", "center_m", "color",
+    }
+    if not isinstance(value, dict) or set(value) != required or value["version"] != 1:
+        raise ValueError("illumination_cycle requires the exact version 1 schema")
+    entity_id = value["light_entity"]
+    if not isinstance(entity_id, str):
+        raise ValueError("solar light entity must be a physical identity")
+    entity = world._entity(entity_id)
+    if entity["mobility"] != "static" or entity.get("quaternion", [1, 0, 0, 0]) != [1, 0, 0, 0]:
+        raise ValueError("solar light requires a static world-aligned entity frame")
+    lights = [
+        component for component in world._components[entity_id]
+        if component.get("type") == "light"
+    ]
+    if len(lights) != 1 or lights[0].get("directional") is not True:
+        raise ValueError("solar light entity requires one directional light")
+    for key in (
+        "period_seconds", "phase_offset_cycles", "path_azimuth_degrees",
+        "peak_irradiance", "diffuse_fraction", "twilight_degrees",
+        "orbit_radius_m",
+    ):
+        scalar = value[key]
+        if isinstance(scalar, bool) or not isinstance(scalar, (int, float)) or not np.isfinite(scalar):
+            raise ValueError(f"solar {key} must be a finite number")
+    for key in ("center_m", "color"):
+        vector = np.asarray(value[key], dtype=float)
+        if vector.shape != (3,) or not np.isfinite(vector).all():
+            raise ValueError(f"solar {key} must have three finite values")
+    color = np.asarray(value["color"], dtype=float)
+    if np.any(color < 0.0) or np.any(color > 1.0):
+        raise ValueError("solar color must be in [0, 1]")
+    return copy.deepcopy(value)
 
 
 def _light_sampling(value: Any) -> dict[str, Any]:
@@ -81,12 +121,17 @@ class Biosphere:
         web: MetabolicWeb,
         colonies: list[dict[str, Any]],
         *,
+        illumination_cycle: dict[str, Any],
         mobiles=None,
     ):
         self.world = world
         self.web = web
         self.config = copy.deepcopy(colonies)
         self.config_sha256 = hashlib.sha256(canonical(self.config)).hexdigest()
+        self.illumination_config = _illumination_cycle(illumination_cycle, world)
+        self.illumination_sha256 = hashlib.sha256(
+            canonical(self.illumination_config)
+        ).hexdigest()
         self.growth: dict[str, GrowthSystem] = {}
         self.parts: dict[str, dict[str, Any]] = {}
         self.active: dict[str, bool] = {}
@@ -202,9 +247,20 @@ class Biosphere:
         self._environment = load_world_kernels().LightEnvironment(
             len(self.config), directions, weights, offsets, transmission
         )
+        cycle = self.illumination_config
+        self._solar = load_world_kernels().SolarCycle(
+            cycle["period_seconds"], cycle["phase_offset_cycles"],
+            cycle["path_azimuth_degrees"], cycle["peak_irradiance"],
+            cycle["diffuse_fraction"], cycle["twilight_degrees"],
+            cycle["orbit_radius_m"], cycle["center_m"],
+        )
+        self._solar_state: dict[str, Any] = {}
+        self._solar_revision = -1
+        self._solar_light_id = -1
         self._environment_revision = -1
         self._environment_lights: tuple[np.ndarray, ...] | None = None
         self._development_light: dict[str, list[tuple[dict[str, Any], float]]] = {}
+        self._sync_solar_state(self._solar.state())
         if mobiles is not None:
             from .somatic import SomaticPhysiology
 
@@ -218,7 +274,7 @@ class Biosphere:
         if not isinstance(config, dict):
             raise TypeError("biosphere birth configuration must be an object")
         config = copy.deepcopy(config)
-        if config.get("format") != "chreatures-biosphere-birth-v3" or set(config) != {
+        if config.get("format") != "chreatures-biosphere-birth-v4" or set(config) != {
             "format",
             "chemistry",
             "compartments",
@@ -227,6 +283,7 @@ class Biosphere:
             "mobiles",
             "material_objects",
             "exchange",
+            "illumination_cycle",
         }:
             raise ValueError("invalid biosphere birth configuration")
         compartments = config["compartments"]
@@ -246,7 +303,11 @@ class Biosphere:
             [row["atp_capacity"] for row in compartments],
             bulk=config["bulk"],
         )
-        instance = cls(world, web, config["colonies"], mobiles=config["mobiles"])
+        instance = cls(
+            world, web, config["colonies"],
+            illumination_cycle=config["illumination_cycle"],
+            mobiles=config["mobiles"],
+        )
         if instance.mobility is not None:
             instance.mobility.sync_bodies()
         if config["material_objects"] is not None:
@@ -272,6 +333,64 @@ class Biosphere:
     @staticmethod
     def _matrix(values: list[Any], columns: int, dtype=float) -> np.ndarray:
         return np.asarray(values, dtype=dtype).reshape((-1, columns))
+
+    def _sync_solar_state(self, raw: Any) -> None:
+        """Apply one native sun state to the declarative and MuJoCo light."""
+        if not isinstance(raw, tuple) or len(raw) != 6:
+            raise RuntimeError("native solar cycle returned an invalid state")
+        clock, position, toward_sun, irradiance, direct, diffuse = raw
+        position = np.asarray(position, dtype=float)
+        toward_sun = np.asarray(toward_sun, dtype=float)
+        scalars = np.asarray([clock, irradiance, direct, diffuse], dtype=float)
+        if (
+            position.shape != (3,)
+            or toward_sun.shape != (3,)
+            or not np.isfinite(position).all()
+            or not np.isfinite(toward_sun).all()
+            or not np.isfinite(scalars).all()
+            or abs(float(np.linalg.norm(toward_sun)) - 1.0) > 1e-10
+            or np.any(scalars < 0.0)
+        ):
+            raise RuntimeError("native solar cycle returned a nonphysical state")
+        entity_id = self.illumination_config["light_entity"]
+        components = self.world._components[entity_id]
+        light_index, component = next(
+            (index, component)
+            for index, component in enumerate(components)
+            if component.get("type") == "light"
+        )
+        if self._solar_revision != self.world.model_revision:
+            self._solar_light_id = mujoco.mj_name2id(
+                self.world.model, mujoco.mjtObj.mjOBJ_LIGHT,
+                f"entity:{entity_id}:light:{light_index}",
+            )
+            if self._solar_light_id < 0:
+                raise RuntimeError("physical solar light is absent from MuJoCo")
+            self._solar_revision = self.world.model_revision
+        body_id = self.world._entity_mj[entity_id]
+        rotation = self.world.data.xmat[body_id].reshape(3, 3)
+        origin = self.world.data.xpos[body_id]
+        local_position = rotation.T @ (position - origin)
+        local_direction = rotation.T @ -toward_sun
+        component["position"] = local_position.astype(float).tolist()
+        component["direction"] = local_direction.astype(float).tolist()
+        component["intensity"] = float(direct)
+        component["ambient_intensity"] = float(diffuse)
+        light_id = self._solar_light_id
+        color = np.asarray(self.illumination_config["color"], dtype=float)
+        self.world.model.light_pos[light_id] = local_position
+        self.world.model.light_dir[light_id] = local_direction
+        self.world.model.light_diffuse[light_id] = color * direct
+        self.world.data.light_xpos[light_id] = position
+        self.world.data.light_xdir[light_id] = -toward_sun
+        self._solar_state = {
+            "clock_seconds": float(clock),
+            "position_m": position.astype(float).tolist(),
+            "toward_sun": toward_sun.astype(float).tolist(),
+            "irradiance": float(irradiance),
+            "direct_irradiance": float(direct),
+            "diffuse_irradiance": float(diffuse),
+        }
 
     def _bind_environment(self) -> None:
         """Cache attachment topology; MuJoCo poses and tissue remain live inputs."""
@@ -325,6 +444,8 @@ class Biosphere:
         light_intensity: list[float] = []
         light_radius: list[float] = []
         for entity in self.world._entities:
+            if entity["id"] == self.illumination_config["light_entity"]:
+                continue
             for component in self.world._components[entity["id"]]:
                 if component.get("type") != "light":
                     continue
@@ -347,6 +468,7 @@ class Biosphere:
             np.asarray(light_radius, dtype=np.float64),
         )
         self._environment_revision = self.world.model_revision
+        self._sync_solar_state(self._solar.state())
 
     def _sample_environment(self) -> np.ndarray:
         if self._environment_revision != self.world.model_revision:
@@ -379,6 +501,9 @@ class Biosphere:
             np.asarray(bud_bodies, dtype=np.int32),
             self._matrix(bud_local, 3),
             np.asarray(bud_profiles, dtype=np.int32),
+            self._solar_state["toward_sun"],
+            self._solar_state["direct_irradiance"],
+            self._solar_state["diffuse_irradiance"],
             *self._environment_lights,
             list(map(float, light["position"])),
             float(light["intensity"]),
@@ -422,6 +547,7 @@ class Biosphere:
         for colony in self.config:
             if self.active[colony["id"]]:
                 self.growth[colony["id"]].elapse(dt)
+        self._sync_solar_state(self._solar.advance(dt))
         capture = self._sample_environment()
         photons = np.zeros(self.web.count, dtype=np.float64)
         for colony_index, colony in enumerate(self.config):
@@ -446,6 +572,7 @@ class Biosphere:
             "captured_photons": float(ledger["photon_used"].sum()),
             "developments": reports,
             "parts": len(self.parts),
+            "illumination": copy.deepcopy(self._solar_state),
             "accounting": self.accounting(),
             "exchange": self.exchange.view() if self.exchange is not None else None,
         }
@@ -742,6 +869,11 @@ class Biosphere:
             "format": FORMAT,
             "config": copy.deepcopy(self.config),
             "config_sha256": self.config_sha256,
+            "illumination_cycle": {
+                "config": copy.deepcopy(self.illumination_config),
+                "config_sha256": self.illumination_sha256,
+                "clock_seconds": float(self._solar.clock_seconds()),
+            },
             "web": self.web.snapshot(),
             "growth": {key: value.snapshot() for key, value in self.growth.items()},
             "parts": copy.deepcopy(self.parts),
@@ -764,15 +896,26 @@ class Biosphere:
         snapshot = copy.deepcopy(snapshot)
         if snapshot.get("format") != FORMAT:
             raise ValueError("unsupported biosphere snapshot")
+        illumination = snapshot.get("illumination_cycle")
+        if not isinstance(illumination, dict) or set(illumination) != {
+            "config", "config_sha256", "clock_seconds",
+        }:
+            raise ValueError("invalid saved solar cycle")
         mobile_state = snapshot["mobility"]
         instance = cls(
             world,
             MetabolicWeb.restore(snapshot["web"]),
             snapshot["config"],
+            illumination_cycle=illumination["config"],
             mobiles=mobile_state["config"] if mobile_state is not None else None,
         )
         if instance.config_sha256 != snapshot["config_sha256"]:
             raise ValueError("developmental colony configuration differs")
+        if instance.illumination_sha256 != illumination["config_sha256"]:
+            raise ValueError("solar cycle configuration differs")
+        instance._sync_solar_state(
+            instance._solar.restore_clock(illumination["clock_seconds"])
+        )
         if set(snapshot["growth"]) != set(instance.growth) or set(
             snapshot["active"]
         ) != set(instance.growth):

@@ -212,11 +212,12 @@ The sample's full and partial physical masses are approximately `0.0750631` and
 sample geometry and its habitat density; they are not treated as chemical
 inventory or a calibrated mapping from elemental equivalents to kilograms.
 
-`scripts/probe_material_overhead.py` profiles the unconditional material calls
-in a fresh fast-articulated recycling world and compares complete continuation
-snapshots. Its local research-reference branch emulates the earlier scans on a
-disposable instance; it is not a runtime backend. The archived measurement in
-`data/performance/material-overhead-v1.receipt.json` supports reduced recurring
+`probe_material_overhead.py` at
+[`867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa`](https://github.com/emberian/chreatures/blob/867cdb83a1eba836a4d9f4898f7be9f83f8ab5fa/scripts/probe_material_overhead.py)
+profiles the unconditional material calls in the retired fast-articulated
+recycling world. Its local research-reference branch emulates the earlier scans
+on a disposable instance; it is not a runtime backend. The archived measurement
+in `data/performance/material-overhead-v1.receipt.json` supports reduced recurring
 material overhead and explicitly makes no whole-world speedup claim because
 shared-host wall time was noisy and physical topology compilation still
 dominates deposit events.

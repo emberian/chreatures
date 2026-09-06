@@ -75,8 +75,8 @@ class FieldEnvironment:
     Concentration units are mass per cubic meter.
     """
 
-    VERSION = 4
-    TRANSPORT = "rust-face-v1"
+    VERSION = 5
+    TRANSPORT = "rust-face-source-v2"
     MAX_STATIC_RASTER_SHAPES = 65_536
 
     def __init__(
@@ -130,6 +130,7 @@ class FieldEnvironment:
         self.diagnostics = {
             "initial_mass": [0.0] * len(self.channels),
             "injected_mass": [0.0] * len(self.channels),
+            "outside_domain_emission": [0.0] * len(self.channels),
             "decayed_mass": [0.0] * len(self.channels),
             "uptake_mass": [0.0] * len(self.channels),
             "numerical_residual": [0.0] * len(self.channels),
@@ -472,8 +473,6 @@ class FieldEnvironment:
             if not isinstance(source, dict):
                 raise ValueError("each source must be an object")
             position = _vector(source.get("position"), 3, f"source {index} position")
-            if np.any(position < 0.0) or np.any(position > self.size):
-                raise ValueError("source is outside field bounds")
             key = source.get("key")
             if key is not None and (not isinstance(key, str) or not key or len(key) > 160):
                 raise ValueError("source key must be a short nonempty string")
@@ -557,14 +556,31 @@ class FieldEnvironment:
         injected = np.zeros(len(self.channels), dtype=np.float64)
         decayed = np.zeros(len(self.channels), dtype=np.float64)
         uptake = np.zeros(len(self.channels), dtype=np.float64)
+        outside = np.zeros(len(self.channels), dtype=np.float64)
+        source_positions = np.asarray(
+            [source["position"] for source in source_values], dtype=np.float64
+        ).reshape((-1, 3))
+        source_previous = np.asarray(
+            [source["previous_position"] for source in source_values], dtype=np.float64
+        ).reshape((-1, 3))
+        source_rates = np.asarray(
+            [source["rate"] for source in source_values], dtype=np.float64
+        )
+        source_spreads = np.asarray(
+            [source["spread"] for source in source_values], dtype=np.float64
+        )
+        source_channels = np.asarray(
+            [source["channel"] for source in source_values], dtype=np.int32
+        )
         for substep in range(substeps):
             fraction = (substep + 0.5) / substeps
-            for source in source_values:
-                position = source["previous_position"] + fraction * (source["position"] - source["previous_position"])
-                mass = source["rate"] * step
-                if mass > 0.0:
-                    self._deposit_mass(position, source["channel"], mass, source["spread"])
-                    injected[source["channel"]] += mass
+            step_injected, step_outside = self._native_transport.deposit_sources(
+                step, fraction, self.concentration, self.solid,
+                source_positions, source_previous, source_rates,
+                source_spreads, source_channels,
+            )
+            injected += step_injected
+            outside += step_outside
             self._transport(step, flow_values)
             old_mass = self.total_mass.copy()
             if np.any(self.decay > 0.0):
@@ -602,6 +618,9 @@ class FieldEnvironment:
         residual = after - (before + injected - decayed - uptake)
         for name, value in (("injected_mass", injected), ("decayed_mass", decayed), ("uptake_mass", uptake)):
             self.diagnostics[name] = (np.asarray(self.diagnostics[name]) + value).tolist()
+        self.diagnostics["outside_domain_emission"] = (
+            np.asarray(self.diagnostics["outside_domain_emission"]) + outside
+        ).tolist()
         self.diagnostics["numerical_residual"] = (
             np.asarray(self.diagnostics["numerical_residual"]) + residual
         ).tolist()
@@ -612,6 +631,7 @@ class FieldEnvironment:
             "mass_before": before.tolist(),
             "mass_after": after.tolist(),
             "injected": injected.tolist(),
+            "outside_domain_emission": outside.tolist(),
             "decayed": decayed.tolist(),
             "uptake": uptake.tolist(),
             "numerical_residual": residual.tolist(),
@@ -799,16 +819,9 @@ class FieldEnvironment:
 
     @classmethod
     def restore(cls, snapshot: dict[str, Any]) -> "FieldEnvironment":
-        if not isinstance(snapshot, dict) or snapshot.get("version") not in {1, 2, 3, cls.VERSION}:
+        if not isinstance(snapshot, dict) or snapshot.get("version") != cls.VERSION:
             raise ValueError("unsupported field snapshot")
         imported_version = snapshot["version"]
-        # One-way data import, not an older execution engine. The archived
-        # NumPy face equation matches the current Rust kernel bit for bit in
-        # the independent transport and composed-field probes.
-        if snapshot["version"] in {1, 2, 3}:
-            if snapshot["version"] == 2 and "dynamic_barriers" not in snapshot:
-                raise ValueError("version 2 field snapshot requires dynamic barriers")
-            snapshot = {**snapshot, "version": cls.VERSION, "transport": cls.TRANSPORT}
         if snapshot.get("transport") != cls.TRANSPORT:
             raise ValueError("field snapshot transport implementation differs")
         raw_solid = np.asarray(snapshot["solid"])

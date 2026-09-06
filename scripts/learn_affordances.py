@@ -632,7 +632,40 @@ def _world_worker(
                     }
                     for row, body in enumerate(world.bodies)
                 }
-                outcome = world.advance(actions, float(shared["intervals"][world_index]))
+                try:
+                    outcome = world.advance(
+                        actions, float(shared["intervals"][world_index])
+                    )
+                except ValueError as error:
+                    if (
+                        str(error) == "source is outside field bounds"
+                        and getattr(world, "biosphere", None) is not None
+                    ):
+                        sources = world.field.sources_from_world(world.world)
+                        sources.extend(world.biosphere.field_sources())
+                        bounds = np.asarray(world.field.size, dtype=np.float64)
+                        outside = []
+                        for source_index, source in enumerate(sources):
+                            position = np.asarray(source.get("position"), dtype=np.float64)
+                            if position.shape == (3,) and (
+                                np.any(position < 0.0) or np.any(position > bounds)
+                            ):
+                                outside.append({
+                                    "index": source_index,
+                                    "key": source.get("key"),
+                                    "position": position.astype(float).tolist(),
+                                    "channel": source.get("channel"),
+                                    "rate": source.get("rate"),
+                                    "spread": source.get("spread"),
+                                })
+                        raise RuntimeError(
+                            "chemical field source left the declared bounds: "
+                            f"world_index={world_index}, "
+                            f"world_time={float(world.world.time)}, "
+                            f"field_size={bounds.astype(float).tolist()}, "
+                            f"outside_sources={outside}"
+                        ) from error
+                    raise
                 shared["bodies"][world_index] = _body_values(
                     world.bodies, shared["bodies"].shape[1],
                 )

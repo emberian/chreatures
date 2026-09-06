@@ -6,24 +6,35 @@ use numpy::{
 };
 use pyo3::{exceptions::PyValueError, prelude::*};
 
+mod developmental;
+pub mod gam_law;
+mod goal_memory;
+pub mod personal_consequences;
+
 #[derive(Clone)]
-struct Linear {
-    out: usize,
-    input: usize,
-    weight: Vec<f32>,
-    bias: Vec<f32>,
+pub(crate) struct Linear {
+    pub(crate) out: usize,
+    pub(crate) input: usize,
+    pub(crate) weight: Vec<f32>,
+    pub(crate) bias: Vec<f32>,
 }
 #[derive(Clone)]
-struct Gru {
-    hidden: usize,
-    input: usize,
-    w_ih: Vec<f32>,
-    w_hh: Vec<f32>,
-    b_ih: Vec<f32>,
-    b_hh: Vec<f32>,
+pub(crate) struct Gru {
+    pub(crate) hidden: usize,
+    pub(crate) input: usize,
+    pub(crate) w_ih: Vec<f32>,
+    pub(crate) w_hh: Vec<f32>,
+    pub(crate) b_ih: Vec<f32>,
+    pub(crate) b_hh: Vec<f32>,
 }
 
-fn gemm_into(input: &[f32], rows: usize, cols: usize, layer: &Linear, output: &mut Vec<f32>) {
+pub(crate) fn gemm_into(
+    input: &[f32],
+    rows: usize,
+    cols: usize,
+    layer: &Linear,
+    output: &mut Vec<f32>,
+) {
     assert_eq!(cols, layer.input);
     output.resize(rows * layer.out, 0.0);
     unsafe {
@@ -84,7 +95,7 @@ fn gemm_parts_into(
         }
     }
 }
-fn tanh_all(value: &mut [f32]) {
+pub(crate) fn tanh_all(value: &mut [f32]) {
     for x in value {
         *x = x.tanh();
     }
@@ -94,7 +105,7 @@ fn sigmoid(x: f32) -> f32 {
 }
 
 impl Gru {
-    fn step_into(
+    pub(crate) fn step_into(
         &self,
         input: &[f32],
         state: &[f32],
@@ -134,7 +145,7 @@ impl Gru {
     }
 }
 
-fn take(flat: &[f32], cursor: &mut usize, count: usize) -> PyResult<Vec<f32>> {
+pub(crate) fn take(flat: &[f32], cursor: &mut usize, count: usize) -> PyResult<Vec<f32>> {
     if *cursor + count > flat.len() {
         return Err(PyValueError::new_err("packed weights are truncated"));
     }
@@ -142,7 +153,7 @@ fn take(flat: &[f32], cursor: &mut usize, count: usize) -> PyResult<Vec<f32>> {
     *cursor += count;
     Ok(v)
 }
-fn linear(flat: &[f32], c: &mut usize, out: usize, input: usize) -> PyResult<Linear> {
+pub(crate) fn linear(flat: &[f32], c: &mut usize, out: usize, input: usize) -> PyResult<Linear> {
     Ok(Linear {
         out,
         input,
@@ -150,7 +161,7 @@ fn linear(flat: &[f32], c: &mut usize, out: usize, input: usize) -> PyResult<Lin
         bias: take(flat, c, out)?,
     })
 }
-fn gru(flat: &[f32], c: &mut usize, h: usize, input: usize) -> PyResult<Gru> {
+pub(crate) fn gru(flat: &[f32], c: &mut usize, h: usize, input: usize) -> PyResult<Gru> {
     Ok(Gru {
         hidden: h,
         input,
@@ -550,5 +561,7 @@ impl PredictiveCohort {
 #[pymodule]
 fn _cognitive_core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PredictiveCohort>()?;
+    module.add_class::<developmental::DevelopmentalResidentCohort>()?;
+    module.add_class::<goal_memory::AchievedGoalMemoryCohort>()?;
     Ok(())
 }

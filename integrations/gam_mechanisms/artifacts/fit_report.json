@@ -1,0 +1,61 @@
+{
+  "artifact": {
+    "bytes": 150514,
+    "path": "body_consequence_laws.json",
+    "sha256": "41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6"
+  },
+  "fit_seconds": 478.1301510409976,
+  "formula": "response ~ s(energy, k=9) + s(fatigue, k=9) + s(body_speed, k=9) + s(support, k=9) + s(neural_activity, k=9) + s(thrust, k=9) + s(yaw, k=9) + s(grip, k=9) + s(oral, k=9) + s(motor_magnitude, k=9) + s(thrust_x_fatigue, k=9) + s(yaw_x_speed, k=9)",
+  "independent_world_units": {
+    "held_out": 8,
+    "train": 24
+  },
+  "limitations": [
+    "The fits estimate conditional responses in experienced exploratory behavior, not interventions or causes.",
+    "The source is the completed fresh-world sensorimotor-play collection used to bootstrap development; the later online run retained only aggregate update telemetry.",
+    "Resident/world grouping is used only for evaluation splitting and is absent from runtime features.",
+    "Grid inference is a measured piecewise-linear approximation of additive native GAM predictions."
+  ],
+  "metrics": {
+    "energy_cost": {
+      "conservative_residual_bound": 0.00011612457133394416,
+      "export_grid_max_abs_error": 3.105441508064388e-05,
+      "held_out_abs_residual_q995": 0.00011612457133394416,
+      "held_out_mean_baseline_rmse": 6.343118700364783e-05,
+      "held_out_rmse": 1.9099956949716478e-05,
+      "held_out_zero_baseline_rmse": 0.00010077418234118648,
+      "in_domain_export_grid_max_abs_error": 6.420795807773774e-07,
+      "in_domain_held_out_rows": 44184,
+      "target_training_standard_deviation": 6.255348099129193e-05
+    },
+    "fatigue_recovery": {
+      "conservative_residual_bound": 0.00045469631727228395,
+      "export_grid_max_abs_error": 0.0014988117993844413,
+      "held_out_abs_residual_q995": 0.00045469631727228395,
+      "held_out_mean_baseline_rmse": 0.00016509301036580617,
+      "held_out_rmse": 6.977803312853787e-05,
+      "held_out_zero_baseline_rmse": 0.0001672299399438003,
+      "in_domain_export_grid_max_abs_error": 9.6133736512456e-07,
+      "in_domain_held_out_rows": 44184,
+      "target_training_standard_deviation": 0.00016653531697074882
+    },
+    "movement_response": {
+      "conservative_residual_bound": 0.06893974018745257,
+      "export_grid_max_abs_error": 0.030352391541728092,
+      "held_out_abs_residual_q995": 0.06893974018745257,
+      "held_out_mean_baseline_rmse": 0.023460164662232146,
+      "held_out_rmse": 0.018491922387083547,
+      "held_out_zero_baseline_rmse": 0.02346016769592061,
+      "in_domain_export_grid_max_abs_error": 2.5029408625403676e-05,
+      "in_domain_held_out_rows": 44184,
+      "target_training_standard_deviation": 0.023422956746057287
+    }
+  },
+  "prediction_rows": {
+    "held_out": 48000,
+    "train": 144000
+  },
+  "schema": "chreatures-gam-consequence-fit-report-v1",
+  "split": "complete physical worlds with world_unit modulo 4 equal to zero held out",
+  "status": "conditional predictive fits; no causal claim"
+}

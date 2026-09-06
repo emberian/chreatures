@@ -1,5 +1,5 @@
 {
-  "format": "chreatures-biosphere-birth-v3",
+  "format": "chreatures-biosphere-birth-v4",
   "chemistry": {
     "format": "chreatures-common-chemistry-v1",
     "description": "Synthetic conserved carbon-equivalent/mineral-equivalent chemistry; not calibrated molecular biochemistry.",
@@ -11391,6 +11391,27 @@
           "living-exudate-23"
         ]
       }
+    ]
+  },
+  "illumination_cycle": {
+    "version": 1,
+    "light_entity": "ground",
+    "period_seconds": 240.0,
+    "phase_offset_cycles": 0.08,
+    "path_azimuth_degrees": 18.0,
+    "peak_irradiance": 0.82,
+    "diffuse_fraction": 0.18,
+    "twilight_degrees": 6.0,
+    "orbit_radius_m": 18.0,
+    "center_m": [
+      6.0,
+      4.0,
+      0.0
+    ],
+    "color": [
+      1.0,
+      0.9,
+      0.72
     ]
   }
 }
