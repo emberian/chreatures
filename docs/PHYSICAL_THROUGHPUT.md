@@ -8,9 +8,10 @@ physiology, RNG, delayed events, sensor equations and snapshot representation as
 
 The fast path changes three measured Python costs:
 
-- It evaluates the twelve hip/knee servo equations in NumPy arrays using cached
-  MuJoCo qpos/dof addresses. Forces are still written to `qfrc_applied` before
-  each unchanged `mj_step`.
+- It binds immutable joint/body addresses and morphology coefficients into one
+  native articulated cohort. Dynamic action and physiology values are packed
+  once per tick; one native gait call and one native grip call update all
+  residents per substep before each unchanged `mj_step`.
 - It computes body illumination once during one `sense` call. Retina, shade and
   the explicit illumination channel previously repeated the same static scene
   query three times at the same `MjData.time`.
@@ -72,3 +73,20 @@ encoded-channel error. The complete `PhysicsWorld.sense` plus 351-channel encode
 path increased from 632 to 936 resident samples/s (1.482x). This is a focused
 sensor measurement; it excludes physics advance, field transport, neural work,
 and runtime communication.
+
+## Native articulated actuation
+
+[`actuation-cohort-native-v1.receipt.json`](../data/performance/actuation-cohort-native-v1.receipt.json)
+records one 24-advance, three-resident heterogeneous-world comparison with
+shared chemistry, mobile physiology, recycling, and colony exudation. Neural
+execution was excluded. The native cohort matched the research-only scalar
+reference exactly for MuJoCo position and velocity, chemical pools, world time,
+and developed-part count. Whole scenario time fell from 286.6 ms to 96.9 ms on
+the local host, a 2.956x speedup. The kernel preserves gait, external hand,
+grip, acoustics, then MuJoCo ordering and computes positive active mechanical
+work directly from the forces it applies, avoiding full global force-array
+copies for every resident and substep.
+The timing scenario did not establish a grip attachment. A joined follow-up
+used Mica's active grip on the free `chemical-packet-0`: object pose, all qpos
+and qvel values, chemistry, and positive mechanical work matched the scalar
+reference exactly (`0.2609207854437227` joules reported by both paths).

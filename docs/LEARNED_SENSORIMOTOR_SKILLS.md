@@ -21,9 +21,10 @@ The chemical-encounter run requested eating on all 960,000 resident steps. It
 recorded 36,727 generic contact-while-eating ticks but only 23 mouth-material
 contact ticks. Somatic transfer requires an actual contact point within 0.045 m
 of the head-front mouth point. Absorption and its physical reward occur in the
-same 0.05 s step as ingestion, so delayed digestion is not the dominant credit
-problem. The rare head alignment event is: one mouth-contact tick occurred per
-41,739 resident steps, far beyond the two-second GAE timescale.
+same 0.05 s step as ingestion. One mouth-contact tick per 41,739 resident steps
+therefore measures sparse exposure to successful head alignment; it does not
+measure a 41,739-step credit delay. Temporal credit or goal dependence must be
+tested from action-conditioned histories at declared future horizons.
 
 The actor currently chooses one eight-coordinate action every 0.25 s and holds
 it for five physics ticks. That is a poor seam for correcting yaw, stopping,
@@ -132,22 +133,24 @@ assignments, or analyst distances in the learning dataset. Circuit readouts may
 be stored as a separately identity-bound view, but the first worker should use
 physical sense channels so its learned control is not tied to one graph.
 
-### Recurrent achieved-goal encoder
+### First recurrent achieved-goal worker
 
-Encode the last 16 physical steps (0.8 s) with a causal GRU receiving senses,
-physiology, previous executed action, and reset. The hidden state is private per
-resident and snapshots exactly with its RNG and selected goal. A goal encoder
-with shared sensory front-end maps a future 4-step observation window to a
-stop-gradient vector. Including a short window avoids treating a single
-aliased retinal frame as a physical state.
+The implemented v1 goal autoencoder receives four normalized observations
+ending at an achieved future tick and maps the flattened `4 x 357` window through
+`1428 -> 256 tanh -> 64`; a symmetric decoder reconstructs the window. It is fit
+only on training worlds, then frozen before any worker update. The worker's causal
+GRU receives the current 357-channel observation, previous executed eight-vector,
+oral command, and real reset boundaries. Its recurrent state summarizes the
+available history rather than using a fixed 16-step input window.
 
-Sample achieved goals only from the same resident episode at offsets
-`1..40` ticks (0.05--2.0 s), with a declared log-uniform offset distribution.
-The worker predicts the next eight-vector from current recurrent state, achieved
-goal, remaining duration, and previous action. Optimize action negative
-log-likelihood plus a forward consistency loss that predicts the future goal
-encoding from current state and the recorded action suffix. This is supervised
-control and representation learning; it does not add a reward to the resident.
+Achieved goals come only from the same resident episode at offsets `1..40` ticks
+(0.05--2.0 s). The trainer chooses uniformly among five buckets (`1..2`, `3..5`,
+`6..10`, `11..20`, `21..40`), then uniformly within the selected bucket, and
+passes the normalized log horizon to the policy. It optimizes factorized action
+negative log likelihood with half the weight on all valid samples and half on
+samples whose quantized action changed, when such changes exist. A loss that
+predicts the frozen future code from the current state and recorded action suffix
+is still a proposed forward-consistency experiment; it was not used in v1.
 
 ### Runtime seam
 
@@ -171,10 +174,12 @@ goals after reconstruction and reachability tests justify it.
 
 1. Collect varied anonymous physical trajectories from the existing stochastic
    motor cohort, including terrain, collision, turns, stopping, and packets.
-2. Train the recurrent hindsight worker offline. Keep entire resident sequences
-   together across truncated backpropagation and reset hidden state only at real
-   episode boundaries.
-3. Evaluate held-out worlds on achieved-goal error, arbitrary-bearing turning,
+2. Fit the goal autoencoder using training worlds only, freeze it, and then train
+   the recurrent hindsight worker. Keep entire resident sequences together
+   across truncated backpropagation and reset hidden state only at real episode
+   boundaries. Select the worker using validation worlds only.
+3. After model selection is complete, open the heldout worlds once to evaluate
+   achieved-goal error, arbitrary-bearing turning,
    stopping distance, collision recovery, and the ratio of mouth contacts to
    all contacts. Coordinate-informed metrics may be used by the analyst but
    never passed to the model.

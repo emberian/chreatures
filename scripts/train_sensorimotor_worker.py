@@ -27,6 +27,7 @@ from research.sensorimotor_skills.data import PlayDataset, Normalizer
 from research.sensorimotor_skills.model import GoalEncoder, SensorimotorWorker
 
 BUCKETS = ((1, 2), (3, 5), (6, 10), (11, 20), (21, 40))
+ARTIFACT_MODES = ("goal-conditioned", "goal-free")
 
 
 def sha256(path):
@@ -129,7 +130,17 @@ def goals_for(sequence, start, stop, rng):
     future = torch.arange(start, stop, device=device)[:, None] + offsets
     residents = torch.arange(shape[1], device=device)[None, :]
     goal = sequence["codes"][future, residents]
-    alternative = sequence["codes"][future, (residents + 1) % shape[1]]
+    alternative_offsets = offsets.clone()
+    for index, (low, high) in enumerate(BUCKETS):
+        selected = torch.as_tensor(bucket == index, device=device)
+        width = high - low + 1
+        alternative_offsets[selected] = (
+            (alternative_offsets[selected] - low + 1) % width
+        ) + low
+    alternative_future = (
+        torch.arange(start, stop, device=device)[:, None] + alternative_offsets
+    )
+    alternative = sequence["codes"][alternative_future, residents]
     horizon = offsets.float().log1p() / math.log(41)
     return goal, alternative, horizon, bucket
 
@@ -150,8 +161,12 @@ def chunks(worker, sequence, chunk_size):
         yield start, stop, state
 
 
+def effective_goal(goal, artifact_mode):
+    return torch.zeros_like(goal) if artifact_mode == "goal-free" else goal
+
+
 @torch.no_grad()
-def evaluate(worker, sequences, *, seed, chunk_size, controls=False):
+def evaluate(worker, sequences, *, seed, chunk_size, artifact_mode, controls=False):
     worker.eval()
     rng = np.random.default_rng(seed)
     results = []
@@ -161,14 +176,27 @@ def evaluate(worker, sequences, *, seed, chunk_size, controls=False):
         total = np.zeros(8)
         correct = np.zeros(8)
         change_total = np.zeros(8)
+        worker_squared_error = np.zeros(8)
+        repeat_squared_error = np.zeros(8)
+        worker_change_squared_error = np.zeros(8)
+        repeat_change_squared_error = np.zeros(8)
+        stopping_count = np.zeros(8)
+        worker_stopping_squared_error = np.zeros(8)
+        repeat_stopping_squared_error = np.zeros(8)
+        repeat_correct = np.zeros(8)
         control_total = {
             name: np.zeros(8)
-            for name in ("permuted_goal", "zero_goal", "zero_previous")
+            for name in (
+                "permuted_goal",
+                "zero_goal",
+                "zero_explicit_previous",
+            )
         }
         bucket_sum = np.zeros((5, 2))
         per_resident = np.zeros((sequence["action"].shape[1], 3))
         for start, stop, state in chunks(worker, sequence, chunk_size):
             goal, alternative, horizon, bucket = goals_for(sequence, start, stop, rng)
+            goal = effective_goal(goal, artifact_mode)
             previous = sequence["previous"][start:stop, :, :8]
             action = sequence["action"][start:stop]
             valid = (
@@ -179,26 +207,49 @@ def evaluate(worker, sequences, *, seed, chunk_size, controls=False):
             )
             logits = worker.policy(state, goal, horizon, previous)
             loss = worker.action_nll(logits, action)
-            changed = (quantized(action) != quantized(previous)).any(-1) & valid
-            total += loss[valid].sum(0).cpu().numpy()
-            correct += (
-                (quantized(worker.decode(logits)) == quantized(action))[valid]
-                .sum(0)
-                .cpu()
-                .numpy()
+            decoded = worker.decode(logits)
+            target_bins = quantized(action)
+            previous_bins = quantized(previous)
+            changed_axes = target_bins != previous_bins
+            changed = changed_axes.any(-1) & valid
+            zero_bins = torch.as_tensor(
+                [32, 32, 32, 0, 0, 0, 0, 32], device=action.device
             )
+            stopping = (previous_bins != zero_bins) & (target_bins == zero_bins)
+            stopping &= valid[..., None]
+            total += loss[valid].sum(0).cpu().numpy()
+            correct += (quantized(decoded) == target_bins)[valid].sum(0).cpu().numpy()
+            repeat_correct += (previous_bins == target_bins)[valid].sum(0).cpu().numpy()
             change_total += loss[changed].sum(0).cpu().numpy()
+            squared_worker = (decoded - action).square()
+            squared_repeat = (previous - action).square()
+            worker_squared_error += squared_worker[valid].sum(0).cpu().numpy()
+            repeat_squared_error += squared_repeat[valid].sum(0).cpu().numpy()
+            worker_change_squared_error += squared_worker[changed].sum(0).cpu().numpy()
+            repeat_change_squared_error += squared_repeat[changed].sum(0).cpu().numpy()
+            stopping_count += stopping.sum((0, 1)).cpu().numpy()
+            worker_stopping_squared_error += (
+                (squared_worker * stopping)[valid].sum(0).cpu().numpy()
+            )
+            repeat_stopping_squared_error += (
+                (squared_repeat * stopping)[valid].sum(0).cpu().numpy()
+            )
             count += int(valid.sum())
             changed_count += int(changed.sum())
             for name, target, old_action in (
                 (
                     ("permuted_goal", alternative, previous),
                     ("zero_goal", torch.zeros_like(goal), previous),
-                    ("zero_previous", goal, torch.zeros_like(previous)),
+                    (
+                        "zero_explicit_previous",
+                        goal,
+                        torch.zeros_like(previous),
+                    ),
                 )
                 if controls
                 else ()
             ):
+                target = effective_goal(target, artifact_mode)
                 altered = worker.action_nll(
                     worker.policy(state, target, horizon, old_action), action
                 )
@@ -223,9 +274,26 @@ def evaluate(worker, sequences, *, seed, chunk_size, controls=False):
             "samples": count,
             "natural_nll_by_axis": (total / count).tolist(),
             "quantized_accuracy_by_axis": (correct / count).tolist(),
+            "repeat_last_quantized_accuracy_by_axis": (repeat_correct / count).tolist(),
+            "action_persistence_by_axis": (repeat_correct / count).tolist(),
+            "worker_map_rmse_by_axis": np.sqrt(worker_squared_error / count).tolist(),
+            "repeat_last_rmse_by_axis": np.sqrt(repeat_squared_error / count).tolist(),
             "action_change_samples": changed_count,
             "action_change_nll_by_axis": (
                 change_total / max(changed_count, 1)
+            ).tolist(),
+            "worker_map_action_change_rmse_by_axis": np.sqrt(
+                worker_change_squared_error / max(changed_count, 1)
+            ).tolist(),
+            "repeat_last_action_change_rmse_by_axis": np.sqrt(
+                repeat_change_squared_error / max(changed_count, 1)
+            ).tolist(),
+            "stopping_samples_by_axis": stopping_count.astype(int).tolist(),
+            "worker_map_stopping_rmse_by_axis": np.sqrt(
+                worker_stopping_squared_error / np.maximum(stopping_count, 1)
+            ).tolist(),
+            "repeat_last_stopping_rmse_by_axis": np.sqrt(
+                repeat_stopping_squared_error / np.maximum(stopping_count, 1)
             ).tolist(),
         }
         if controls:
@@ -254,6 +322,7 @@ def main():
     parser.add_argument("dataset", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--device", default="cuda")
+    parser.add_argument("--artifact-mode", choices=ARTIFACT_MODES, required=True)
     parser.add_argument("--seed", type=int, default=20260908)
     parser.add_argument("--goal-updates", type=int, default=384)
     parser.add_argument("--epochs", type=int, default=8)
@@ -269,7 +338,9 @@ def main():
     started = time.perf_counter()
     dataset = PlayDataset(args.dataset)
     if any(len(episode.actions) <= 43 for episode in dataset.episodes):
-        raise SystemExit('episodes need more than 43 transitions for complete goal windows')
+        raise SystemExit(
+            "episodes need more than 43 transitions for complete goal windows"
+        )
     normalizer = Normalizer.fit(dataset)
     encoder = GoalEncoder().to(args.device)
     goal_optimizer = torch.optim.AdamW(encoder.parameters(), lr=3e-4, weight_decay=1e-5)
@@ -282,6 +353,11 @@ def main():
         "worker_epochs": args.epochs,
         "chunk": args.chunk,
         "offset_buckets": BUCKETS,
+        "artifact_mode": args.artifact_mode,
+        "alternate_goal_control": (
+            "another achieved time for the same resident and episode, with a "
+            "different offset in the same log-horizon bucket; not asserted reachable"
+        ),
         "torch": torch.__version__,
         "hip": torch.version.hip,
         "device": str(args.device),
@@ -343,6 +419,7 @@ def main():
             sequence = sequences["train"][index]
             for start, stop, state in chunks(worker, sequence, args.chunk):
                 goal, _, horizon, _ = goals_for(sequence, start, stop, rng)
+                goal = effective_goal(goal, args.artifact_mode)
                 previous = sequence["previous"][start:stop, :, :8]
                 action = sequence["action"][start:stop]
                 valid = (
@@ -367,7 +444,11 @@ def main():
                 optimizer.step()
                 losses.append(float(loss.detach()))
         validation = evaluate(
-            worker, sequences["validation"], seed=args.seed + 2, chunk_size=args.chunk
+            worker,
+            sequences["validation"],
+            seed=args.seed + 2,
+            chunk_size=args.chunk,
+            artifact_mode=args.artifact_mode,
         )
         record = {
             "epoch": epoch + 1,
@@ -382,7 +463,8 @@ def main():
             atomic_save(
                 args.output / "worker.pt",
                 {
-                    "format": "chreatures-sensorimotor-worker-research-v1",
+                    "format": "chreatures-sensorimotor-worker-research-v2",
+                    "artifact_mode": args.artifact_mode,
                     "identity": identity,
                     "epoch": epoch + 1,
                     "goal_encoder": encoder.state_dict(),
@@ -393,6 +475,12 @@ def main():
     selected = torch.load(
         args.output / "worker.pt", map_location=args.device, weights_only=False
     )
+    if (
+        selected.get("format") != "chreatures-sensorimotor-worker-research-v2"
+        or selected.get("artifact_mode") != args.artifact_mode
+        or selected.get("identity", {}).get("artifact_mode") != args.artifact_mode
+    ):
+        raise RuntimeError("selected worker artifact mode or format differs")
     worker.load_state_dict(selected["worker"])
     # Heldout goals, representations and action outcomes are evaluated only now.
     holdout = [
@@ -400,7 +488,8 @@ def main():
         for ep in dataset.episodes
     ]
     result = {
-        "format": "chreatures-sensorimotor-worker-offline-result-v1",
+        "format": "chreatures-sensorimotor-worker-offline-result-v2",
+        "artifact_mode": args.artifact_mode,
         "status": "research candidate; no behavioral promotion",
         "selected_epoch": selected["epoch"],
         "trace": trace,
@@ -414,7 +503,12 @@ def main():
             args.device,
         ),
         "heldout": evaluate(
-            worker, holdout, seed=args.seed + 4, chunk_size=args.chunk, controls=True
+            worker,
+            holdout,
+            seed=args.seed + 4,
+            chunk_size=args.chunk,
+            artifact_mode=args.artifact_mode,
+            controls=True,
         ),
         "elapsed_seconds": time.perf_counter() - started,
         "artifact_sha256": sha256(args.output / "worker.pt"),

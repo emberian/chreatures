@@ -14,6 +14,7 @@ import importlib.util
 import json
 import math
 import multiprocessing as mp
+from multiprocessing import shared_memory
 import os
 from pathlib import Path
 import shlex
@@ -46,6 +47,30 @@ if mp.current_process().name == "MainProcess":
 
 
 HABITAT = ROOT / "data/habitats/hollow-garden.json"
+
+RESIDENTS_PER_WORLD = 3
+ACTION_FIELDS = (
+    "thrust", "yaw", "gaze_pitch", "grip",
+    "signal_low", "signal_mid", "signal_high", "posture", "eat",
+)
+BODY_SCALARS = (
+    "x", "y", "z", "heading", "radius", "energy", "gut", "fatigue",
+    "speed", "angular_velocity", "age", "gaze_pitch",
+)
+BODY_VECTORS = (("quaternion", 4), ("linear_velocity", 3), ("angular_velocity3d", 3))
+OUTCOME_FIELDS = (
+    "nutrition", "contact", "distance", "effort", "mechanical_work",
+    "ingested_mass", "mouth_material_contacts", "homeostatic_reward",
+)
+HOMEOSTASIS_FIELDS = (
+    "potential_delta_energy", "effort_cost_energy", "nutrition_observed",
+    "hunger_gate", "reward",
+    "before_reserve_energy", "before_reserve_shortfall_energy",
+    "before_fatigue_cost_energy", "before_gut_overload_cost_energy",
+    "before_potential_energy", "after_reserve_energy",
+    "after_reserve_shortfall_energy", "after_fatigue_cost_energy",
+    "after_gut_overload_cost_energy", "after_potential_energy",
+)
 
 
 def sha256(path: Path) -> str:
@@ -359,9 +384,117 @@ def affordance_spec(
     return spec
 
 
+def _shared_array_layout(worlds: int, channels: int) -> tuple[dict[str, dict[str, Any]], int]:
+    """Lay out one cache-line-aligned fixed cohort block."""
+    definitions = (
+        ("observations", np.dtype("<f4"), (worlds, RESIDENTS_PER_WORLD, channels)),
+        ("bodies", np.dtype("<f8"), (
+            worlds, RESIDENTS_PER_WORLD,
+            len(BODY_SCALARS) + sum(size for _name, size in BODY_VECTORS),
+        )),
+        ("actions", np.dtype("<f4"), (
+            worlds, RESIDENTS_PER_WORLD, len(ACTION_FIELDS),
+        )),
+        ("outcomes", np.dtype("<f8"), (
+            worlds, RESIDENTS_PER_WORLD, len(OUTCOME_FIELDS),
+        )),
+        ("homeostasis", np.dtype("<f8"), (
+            worlds, RESIDENTS_PER_WORLD, len(HOMEOSTASIS_FIELDS),
+        )),
+        ("intervals", np.dtype("<f8"), (worlds,)),
+        ("completed", np.dtype("<i8"), (worlds,)),
+        ("worker_seconds", np.dtype("<f8"), (worlds, 2)),
+    )
+    layout: dict[str, dict[str, Any]] = {}
+    offset = 0
+    for name, dtype, shape in definitions:
+        offset = (offset + 63) // 64 * 64
+        layout[name] = {"dtype": dtype.str, "shape": shape, "offset": offset}
+        offset += int(np.prod(shape, dtype=np.int64)) * dtype.itemsize
+    return layout, (offset + 63) // 64 * 64
+
+
+def _shared_array_views(
+    memory: shared_memory.SharedMemory, layout: Mapping[str, Mapping[str, Any]],
+) -> dict[str, np.ndarray]:
+    return {
+        name: np.ndarray(
+            tuple(specification["shape"]), dtype=np.dtype(specification["dtype"]),
+            buffer=memory.buf, offset=int(specification["offset"]),
+        )
+        for name, specification in layout.items()
+    }
+
+
+def _body_values(bodies: list[Any]) -> np.ndarray:
+    if len(bodies) != RESIDENTS_PER_WORLD:
+        raise ValueError("shared world transport requires exactly three residents")
+    rows = np.empty(
+        (RESIDENTS_PER_WORLD, len(BODY_SCALARS) + sum(
+            size for _name, size in BODY_VECTORS
+        )), dtype=np.float64,
+    )
+    for row, body in enumerate(bodies):
+        body = body.to_dict() if hasattr(body, "to_dict") else body
+        values = [float(body[name]) for name in BODY_SCALARS]
+        for name, size in BODY_VECTORS:
+            vector = np.asarray(body[name], dtype=np.float64)
+            if vector.shape != (size,):
+                raise ValueError(f"body field {name} has the wrong fixed shape")
+            values.extend(vector.astype(float).tolist())
+        rows[row] = values
+    if not np.isfinite(rows).all():
+        raise ValueError("body shared state contains nonfinite values")
+    return rows
+
+
+def _write_outcomes(
+    target: np.ndarray, homeostasis_target: np.ndarray,
+    outcomes: Mapping[str, Mapping[str, Any]], bodies: list[Any],
+) -> None:
+    target.fill(0)
+    homeostasis_target.fill(0)
+    for row, body in enumerate(bodies):
+        body_id = body.id if hasattr(body, "id") else str(body["id"])
+        outcome = outcomes[body_id]
+        homeostasis = outcome.get("homeostasis", {})
+        unknown = set(outcome) - set(OUTCOME_FIELDS) - {"homeostasis"}
+        unknown_homeostasis = set(homeostasis) - set(HOMEOSTASIS_FIELDS)
+        if unknown or unknown_homeostasis:
+            raise ValueError(
+                "shared outcome schema differs: "
+                f"fields={sorted(unknown)} homeostasis={sorted(unknown_homeostasis)}"
+            )
+        target[row] = [float(outcome.get(name, 0.0)) for name in OUTCOME_FIELDS]
+        homeostasis_target[row] = [
+            float(homeostasis.get(name, 0.0)) for name in HOMEOSTASIS_FIELDS
+        ]
+    if not np.isfinite(target).all() or not np.isfinite(homeostasis_target).all():
+        raise ValueError("outcome shared state contains nonfinite values")
+
+
+class SharedWorldCohort:
+    """Parent-owned fixed buffers with disjoint three-resident world chunks."""
+
+    def __init__(self, worlds: int, channels: int) -> None:
+        self.layout, size = _shared_array_layout(worlds, channels)
+        self.memory = shared_memory.SharedMemory(create=True, size=size)
+        self.arrays = _shared_array_views(self.memory, self.layout)
+        for array in self.arrays.values():
+            array.fill(0)
+
+    def descriptor(self) -> dict[str, Any]:
+        return {"name": self.memory.name, "layout": self.layout}
+
+    def close(self) -> None:
+        self.arrays.clear()
+        self.memory.close()
+        self.memory.unlink()
+
+
 def _world_worker(
     connection, port_spec: dict[str, Any], profile_value: dict[str, Any] | None,
-    physical_backend: str,
+    physical_backend: str, shared_descriptor: Mapping[str, Any], world_index: int,
 ) -> None:
     """Own one MuJoCo instance so native and Python work spans CPU cores."""
     from chreatures.neural_ports import encode_physical_senses
@@ -373,6 +506,8 @@ def _world_worker(
             EmbodiedTrainingProfile, EmbodiedTrainingWorld, embodied_training_spec,
         )
         profile = EmbodiedTrainingProfile.from_value(profile_value)
+    memory = shared_memory.SharedMemory(name=str(shared_descriptor["name"]))
+    shared = _shared_array_views(memory, shared_descriptor["layout"])
     world = None
     try:
         while True:
@@ -387,6 +522,50 @@ def _world_worker(
                     world.close()
                 connection.send((True, None))
                 return
+            if operation == "observe_shared":
+                started = time.perf_counter()
+                sequence = int(payload)
+                if world is None:
+                    raise RuntimeError("world must be reset before observation")
+                vectors = [
+                    encode_physical_senses(world.sense(body.id), port_spec)[1]
+                    for body in world.bodies
+                ]
+                observations = np.asarray(vectors, dtype=np.float32)
+                expected = shared["observations"][world_index].shape
+                if observations.shape != expected or not np.isfinite(observations).all():
+                    raise ValueError("encoded shared observations have the wrong shape")
+                shared["observations"][world_index] = observations
+                shared["bodies"][world_index] = _body_values(world.bodies)
+                shared["worker_seconds"][world_index, 0] += time.perf_counter() - started
+                shared["completed"][world_index] = sequence
+                connection.send((True, sequence))
+                continue
+            if operation == "advance_shared":
+                started = time.perf_counter()
+                sequence = int(payload)
+                if world is None:
+                    raise RuntimeError("world must be reset before advance")
+                action_rows = shared["actions"][world_index]
+                if not np.isfinite(action_rows).all():
+                    raise ValueError("shared actions contain nonfinite values")
+                actions = {
+                    body.id: {
+                        name: float(action_rows[row, column])
+                        for column, name in enumerate(ACTION_FIELDS)
+                    }
+                    for row, body in enumerate(world.bodies)
+                }
+                outcome = world.advance(actions, float(shared["intervals"][world_index]))
+                shared["bodies"][world_index] = _body_values(world.bodies)
+                _write_outcomes(
+                    shared["outcomes"][world_index],
+                    shared["homeostasis"][world_index], outcome, world.bodies,
+                )
+                shared["worker_seconds"][world_index, 1] += time.perf_counter() - started
+                shared["completed"][world_index] = sequence
+                connection.send((True, sequence))
+                continue
             if operation == "reset":
                 if world is not None and hasattr(world, "close"):
                     world.close()
@@ -404,6 +583,8 @@ def _world_worker(
                     )
                 result = [body.to_dict() for body in world.bodies]
             elif operation == "restore":
+                if world is not None and hasattr(world, "close"):
+                    world.close()
                 world = (
                     ArticulatedSensoriumWorld.restore(payload) if profile is None else
                     EmbodiedTrainingWorld.restore(
@@ -413,17 +594,11 @@ def _world_worker(
                 )
                 result = [body.to_dict() for body in world.bodies]
             elif operation == "observe":
-                vectors = [
-                    encode_physical_senses(world.sense(body.id), port_spec)[1]
-                    for body in world.bodies
-                ]
-                result = (np.stack(vectors), [body.to_dict() for body in world.bodies])
+                raise RuntimeError("numeric observation must use shared cohort transport")
             elif operation == "advance":
-                outcome = world.advance(payload["actions"], payload["dt"])
-                result = (
-                    outcome, [body.to_dict() for body in world.bodies],
-                    copy.deepcopy(world.last_telemetry) if profile is not None else {},
-                )
+                raise RuntimeError("numeric advance must use shared cohort transport")
+            elif operation == "telemetry":
+                result = copy.deepcopy(world.last_telemetry) if profile is not None else {}
             elif operation == "snapshot":
                 result = world.snapshot()
             elif operation == "terminal":
@@ -452,44 +627,249 @@ def _world_worker(
         except (BrokenPipeError, EOFError):
             pass
     finally:
+        memory.close()
         connection.close()
 
 
 class ProcessWorldPool:
+    """Fixed-shape numeric transport and rare structured world commands.
+
+    Each worker owns one disjoint world row.  Numeric calls complete through a
+    cohort-wide sequence barrier before the parent reads any shared buffer.
+    """
+
     def __init__(
         self, count: int, port_spec: dict[str, Any],
         profile_value: dict[str, Any] | None = None,
         physical_backend: str = "fast",
     ) -> None:
         context = mp.get_context("spawn")
+        channels = int(port_spec["physical_inputs"]["count"])
+        ordered_names = port_spec["physical_inputs"]["ordered_names"]
+        if channels != len(ordered_names) or count <= 0:
+            raise ValueError("invalid fixed world cohort dimensions")
+        self.shared = SharedWorldCohort(count, channels)
+        self._sequence = 0
+        self._closed = False
+        self._hot_calls = {"observe": 0, "advance": 0}
+        self._hot_wall_seconds = {"observe": 0.0, "advance": 0.0}
+        self._body_templates: list[list[dict[str, Any]]] | None = None
+        self._has_homeostasis = profile_value is not None
         self.connections = []
         self.processes = []
-        for _ in range(count):
-            parent, child = context.Pipe()
-            process = context.Process(
-                target=_world_worker,
-                args=(child, port_spec, profile_value, physical_backend), daemon=True,
-            )
-            process.start()
-            child.close()
-            self.connections.append(parent)
-            self.processes.append(process)
+        try:
+            descriptor = self.shared.descriptor()
+            for world_index in range(count):
+                parent, child = context.Pipe()
+                process = context.Process(
+                    target=_world_worker,
+                    args=(
+                        child, port_spec, profile_value, physical_backend,
+                        descriptor, world_index,
+                    ),
+                    daemon=True,
+                )
+                process.start()
+                child.close()
+                self.connections.append(parent)
+                self.processes.append(process)
+        except BaseException:
+            self._abort()
+            raise
+
+    def _abort(self) -> None:
+        """Close this pool after any broken barrier; its buffers are unsafe."""
+        if self._closed:
+            return
+        self._closed = True
+        for connection in self.connections:
+            try:
+                connection.close()
+            except OSError:
+                pass
+        for process in self.processes:
+            if process.is_alive():
+                process.terminate()
+        for process in self.processes:
+            process.join(timeout=5)
+            if process.is_alive():
+                process.kill()
+                process.join(timeout=5)
+        self.shared.close()
+
+    def _barrier(self, operation: str) -> None:
+        if self._closed:
+            raise RuntimeError("world worker pool is closed")
+        self._sequence += 1
+        sequence = self._sequence
+        try:
+            for connection in self.connections:
+                connection.send((operation, sequence))
+            for connection in self.connections:
+                if not connection.poll(300):
+                    raise TimeoutError(f"world worker timed out during {operation}")
+                ok, value = connection.recv()
+                if not ok:
+                    raise RuntimeError(
+                        f"world worker failed: {value['error']}\n{value['traceback']}"
+                    )
+                if int(value) != sequence:
+                    raise RuntimeError("world worker acknowledged the wrong sequence")
+            if not np.all(self.shared.arrays["completed"] == sequence):
+                raise RuntimeError("world cohort barrier completed with stale rows")
+        except BaseException:
+            self._abort()
+            raise
+
+    def _bodies(self) -> list[list[dict[str, Any]]]:
+        if self._body_templates is None:
+            raise RuntimeError("worlds must be reset before reading shared body state")
+        result = copy.deepcopy(self._body_templates)
+        values = self.shared.arrays["bodies"]
+        scalar_count = len(BODY_SCALARS)
+        for world_index, bodies in enumerate(result):
+            for resident_index, body in enumerate(bodies):
+                row = values[world_index, resident_index]
+                for column, name in enumerate(BODY_SCALARS):
+                    body[name] = float(row[column])
+                column = scalar_count
+                for name, size in BODY_VECTORS:
+                    body[name] = row[column:column + size].astype(float).tolist()
+                    column += size
+        return result
+
+    def _outcomes(self, bodies: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        values = self.shared.arrays["outcomes"]
+        homeostasis = self.shared.arrays["homeostasis"]
+        for world_index, world_bodies in enumerate(bodies):
+            by_resident = {}
+            for resident_index, body in enumerate(world_bodies):
+                outcome = {
+                    name: (
+                        int(values[world_index, resident_index, column])
+                        if name == "mouth_material_contacts" else
+                        float(values[world_index, resident_index, column])
+                    )
+                    for column, name in enumerate(OUTCOME_FIELDS)
+                }
+                if self._has_homeostasis:
+                    outcome["homeostasis"] = {
+                        name: float(homeostasis[world_index, resident_index, column])
+                        for column, name in enumerate(HOMEOSTASIS_FIELDS)
+                    }
+                by_resident[str(body["id"])] = outcome
+            result.append(by_resident)
+        return result
+
+    def _structured_call(self, operation: str, payloads: list[Any]) -> list[Any]:
+        if self._closed:
+            raise RuntimeError("world worker pool is closed")
+        try:
+            for connection, payload in zip(self.connections, payloads, strict=True):
+                connection.send((operation, payload))
+            results = []
+            for connection in self.connections:
+                if not connection.poll(300):
+                    raise TimeoutError(f"world worker timed out during {operation}")
+                ok, value = connection.recv()
+                if not ok:
+                    raise RuntimeError(
+                        f"world worker failed: {value['error']}\n{value['traceback']}"
+                    )
+                results.append(value)
+            return results
+        except BaseException:
+            self._abort()
+            raise
+
+    def timing_snapshot(self) -> dict[str, Any]:
+        """Return bounded transport costs without synchronizing a GPU."""
+        worker = self.shared.arrays["worker_seconds"].copy()
+        return {
+            "format": "chreatures-shared-world-transport-timing-v1",
+            "buffer_bytes": int(self.shared.memory.size),
+            "worlds": len(self.connections),
+            "residents_per_world": RESIDENTS_PER_WORLD,
+            "observation_channels": int(
+                self.shared.arrays["observations"].shape[-1]
+            ),
+            "numeric_layout": {
+                name: {
+                    "shape": list(array.shape), "dtype": array.dtype.str,
+                }
+                for name, array in self.shared.arrays.items()
+                if name not in {"completed", "worker_seconds"}
+            },
+            "hot_calls": copy.deepcopy(self._hot_calls),
+            "parent_wall_seconds": copy.deepcopy(self._hot_wall_seconds),
+            "worker_cpu_seconds": {
+                "observe_sum": float(worker[:, 0].sum()),
+                "observe_max_world": float(worker[:, 0].max(initial=0.0)),
+                "advance_sum": float(worker[:, 1].sum()),
+                "advance_max_world": float(worker[:, 1].max(initial=0.0)),
+            },
+        }
 
     def call_all(self, operation: str, payloads: list[Any] | None = None) -> list[Any]:
         payloads = payloads if payloads is not None else [None] * len(self.connections)
         if len(payloads) != len(self.connections):
             raise ValueError("world worker payload count differs")
-        for connection, payload in zip(self.connections, payloads, strict=True):
-            connection.send((operation, payload))
-        results = []
-        for connection in self.connections:
-            ok, value = connection.recv()
-            if not ok:
-                raise RuntimeError(f"world worker failed: {value['error']}\n{value['traceback']}")
-            results.append(value)
+        if operation == "observe":
+            if any(payload is not None for payload in payloads):
+                raise ValueError("observe does not accept payloads")
+            started = time.perf_counter()
+            self._barrier("observe_shared")
+            observations = self.shared.arrays["observations"].copy()
+            bodies = self._bodies()
+            self._hot_calls["observe"] += 1
+            self._hot_wall_seconds["observe"] += time.perf_counter() - started
+            return [(observations[index], bodies[index]) for index in range(len(bodies))]
+        if operation == "advance":
+            if self._body_templates is None:
+                raise RuntimeError("worlds must be reset before advance")
+            started = time.perf_counter()
+            action_buffer = self.shared.arrays["actions"]
+            intervals = self.shared.arrays["intervals"]
+            for world_index, (payload, bodies) in enumerate(zip(
+                payloads, self._body_templates, strict=True,
+            )):
+                if not isinstance(payload, Mapping) or set(payload) != {"actions", "dt"}:
+                    raise ValueError("advance payload must contain only actions and dt")
+                interval = float(payload["dt"])
+                if not math.isfinite(interval) or interval <= 0:
+                    raise ValueError("advance dt must be finite and positive")
+                intervals[world_index] = interval
+                actions = payload["actions"]
+                if set(actions) != {str(body["id"]) for body in bodies}:
+                    raise ValueError("advance action resident IDs differ from world")
+                for resident_index, body in enumerate(bodies):
+                    action = actions[str(body["id"])]
+                    unknown = set(action) - set(ACTION_FIELDS)
+                    if unknown:
+                        raise ValueError(f"unknown action fields: {sorted(unknown)}")
+                    action_buffer[world_index, resident_index] = [
+                        float(action.get(name, 0.0)) for name in ACTION_FIELDS
+                    ]
+            if not np.isfinite(action_buffer).all():
+                raise ValueError("shared action cohort contains nonfinite values")
+            self._barrier("advance_shared")
+            bodies = self._bodies()
+            outcomes = self._outcomes(bodies)
+            self._hot_calls["advance"] += 1
+            self._hot_wall_seconds["advance"] += time.perf_counter() - started
+            return [
+                (outcomes[index], bodies[index], {}) for index in range(len(bodies))
+            ]
+        results = self._structured_call(operation, payloads)
+        if operation in {"reset", "restore"}:
+            self._body_templates = copy.deepcopy(results)
         return results
 
     def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
         for connection in self.connections:
             try:
                 connection.send(("close", None))
@@ -497,7 +877,8 @@ class ProcessWorldPool:
                 pass
         for connection in self.connections:
             try:
-                connection.recv()
+                if connection.poll(5):
+                    connection.recv()
             except (BrokenPipeError, EOFError):
                 pass
             connection.close()
@@ -506,6 +887,7 @@ class ProcessWorldPool:
             if process.is_alive():
                 process.terminate()
                 process.join(timeout=5)
+        self.shared.close()
 
 
 class FixedCohortBrain:
@@ -1054,6 +1436,7 @@ def evaluate(
     physical_step = 0
     terminal_outcomes = None
     final_physiology = None
+    transport_timing = None
     try:
         for _ in range(0, steps, macro_steps):
             previous = trainer.act(
@@ -1077,6 +1460,7 @@ def evaluate(
                 for name, value in metrics["homeostasis"].items():
                     homeostasis.setdefault(name, []).append(value)
                 if telemetry_every and physical_step % telemetry_every == 0:
+                    cohort.last_world_telemetry = cohort.world_pool.call_all("telemetry")
                     trajectory.append({
                         "step": physical_step, "model_seconds": physical_step * 0.05,
                         "cumulative": totals.copy(), "physiology": cohort.physiology_summary(),
@@ -1090,10 +1474,13 @@ def evaluate(
             )
             rewards.extend(accumulated.tolist())
     finally:
-        if physical_step:
-            terminal_outcomes = cohort.world_pool.call_all("terminal")
-            final_physiology = cohort.physiology_summary()
-        cohort.close()
+        try:
+            if physical_step:
+                terminal_outcomes = cohort.world_pool.call_all("terminal")
+                final_physiology = cohort.physiology_summary()
+            transport_timing = cohort.world_pool.timing_snapshot()
+        finally:
+            cohort.close()
     return {
         **totals,
         "effort_mean": float(np.mean(efforts)),
@@ -1111,6 +1498,7 @@ def evaluate(
         "terminal_outcomes": terminal_outcomes,
         "ingestion_enabled": ingestion_enabled,
         "trajectory": trajectory,
+        "world_transport_timing": transport_timing,
     }
 
 
@@ -1550,6 +1938,7 @@ def main() -> int:
                 for name, value in metrics["homeostasis"].items():
                     homeostasis_values.setdefault(name, []).append(value)
                 if telemetry_every and step % telemetry_every == 0:
+                    cohort.last_world_telemetry = cohort.world_pool.call_all("telemetry")
                     telemetry = {
                         "format": "chreatures-embodied-training-telemetry-v1",
                         "step": step, "episode": cohort.episode,
@@ -1684,6 +2073,7 @@ def main() -> int:
             "partial_at_training_end": cohort.episode_steps_advanced < args.episode_steps,
             "worlds": cohort.world_pool.call_all("terminal"),
         })
+    training_transport_timing = cohort.world_pool.timing_snapshot()
     cohort.close()
     evaluation_common = {
         "worlds": args.eval_worlds, "steps": args.eval_steps,
@@ -1782,6 +2172,7 @@ def main() -> int:
         ),
         "elapsed_training_seconds": training_elapsed,
         "training_timing_seconds": training_timings,
+        "world_transport_timing": training_transport_timing,
         "config": vars(args) | {"graph": str(args.graph), "port_bundle": str(args.port_bundle), "output": str(args.output), "resume": str(args.resume) if args.resume else None},
         "learner": asdict(config), "learner_update_count": trainer.update_count,
         "updates_this_process": updates, "evaluations": evaluations,

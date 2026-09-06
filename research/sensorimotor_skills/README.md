@@ -24,3 +24,20 @@ The inherited organ updates its private context with its own five-tick proposed
 action. Per-tick exploration is applied afterward, so the organ context does not
 encode the exact delivered exploratory action history. The manifest discloses
 this bootstrap limitation and downstream training must use `executed_actions`.
+
+The collector defaults to eight worlds. A training collection requires at least
+six worlds so the data boundary can reserve two whole validation worlds and two
+whole heldout worlds, and it requires at least 44 transitions per episode so all
+five future-goal buckets through offset 40 are available. These checks run before
+the recurrence graph is loaded or allocated. Smaller mechanics checks must opt in
+with `--smoke`; their manifests set `training_readiness.ready` to false and give
+the reason. A smoke record is never a worker fitting, selection, or evaluation
+dataset, even when its requested dimensions happen to exceed the minima.
+
+The first offline worker at source commit `545ca7a` fits its goal autoencoder on
+training worlds and freezes it before recurrent worker optimization. Worker loss
+is a per-axis action negative log likelihood weighted equally between all valid
+steps and steps where the quantized action changed. Future offsets are sampled by
+choosing uniformly among five buckets (`1..2`, `3..5`, `6..10`, `11..20`, and
+`21..40`) and then uniformly within the chosen bucket. A forward-consistency loss
+remains a proposed extension; it was not part of the recorded v1 result.

@@ -64,6 +64,72 @@ class ArticulatedWorld(PhysicsWorld):
         # inherited restore can reject drift or reconstruct a custom body.
         habitat["articulated_body_spec"] = copy.deepcopy(self.articulation_spec)
         super().__init__(seed=seed, spec=habitat)
+        self._prepare_native_actuation()
+
+    def _prepare_native_actuation(self) -> None:
+        """Bind the packed native controller to this compiled MuJoCo model."""
+        from .physical_batch import NativeActuationCohort
+
+        roots, qpos, dofs, sides, phases, coefficients = [], [], [], [], [], []
+        for body in self.bodies:
+            morphology = self._resident_articulation[body.id]
+            controller = morphology["controller"]
+            roots.append(int(self._body_mj[body.id]))
+            for leg in morphology["legs"]["layout"]:
+                sides.append(float(leg["side"]))
+                phases.append(float(leg["phase"]))
+                for kind in ("hip", "knee"):
+                    joint = self._leg_joints[body.id][leg["name"]][kind]
+                    qpos.append(int(self.model.jnt_qposadr[joint]))
+                    dofs.append(int(self.model.jnt_dofadr[joint]))
+            coefficients.extend([
+                float(controller["frequency_hz"]),
+                float(controller["stance_fraction"]),
+                math.radians(float(controller["hip_sweep_degrees"])),
+                math.radians(float(controller["knee_stance_degrees"])),
+                math.radians(float(controller["knee_swing_degrees"])),
+                math.radians(float(controller["idle_knee_degrees"])),
+                float(controller["max_joint_torque"]),
+                float(controller["turn_gain"]),
+                float(controller["hip_kp"]), float(controller["knee_kp"]),
+                float(controller["hip_kd"]), float(controller["knee_kd"]),
+                float(controller["posture_kp"]), float(controller["posture_kd"]),
+                float(controller["max_posture_torque"]),
+            ])
+        self._native_actuation = NativeActuationCohort(
+            roots, qpos, dofs, sides, phases, coefficients
+        )
+
+    def _rebuild_preserving(self) -> None:
+        super()._rebuild_preserving()
+        self._prepare_native_actuation()
+
+    def _begin_resident_actuation(self, clean: dict[str, dict[str, Any]]) -> bool:
+        dynamic, grips = [], []
+        for body in self.bodies:
+            action = clean.get(body.id, {})
+            dynamic.extend([
+                float(action.get("forward", action.get("thrust", 0.0))),
+                float(action.get("turn", action.get("yaw", 0.0))),
+                float(body.energy), float(body.fatigue),
+                float(self._active_effort_scale[body.id]),
+            ])
+            entity = self._grips.get(body.id)
+            grips.append(-1 if not entity or entity not in self._entity_mj else self._entity_mj[entity])
+        self._native_actuation.begin_tick(
+            np.asarray(dynamic, dtype=np.float64), np.asarray(grips, dtype=np.int32)
+        )
+        return True
+
+    def _apply_resident_gait(self, timestep: float) -> None:
+        self._native_actuation.apply_gait(self.model, self.data, self.time, timestep)
+
+    def _apply_resident_grip(self, timestep: float) -> None:
+        self._native_actuation.apply_grip(self.model, self.data, self.time, timestep)
+
+    def _finish_resident_actuation(self) -> dict[str, float]:
+        work = self._native_actuation.finish_tick()
+        return {body.id: float(work[index]) for index, body in enumerate(self.bodies)}
 
     @staticmethod
     def _validate_articulation_spec(spec: dict[str, Any]) -> None:
@@ -517,6 +583,7 @@ class ArticulatedWorld(PhysicsWorld):
             "joint_count_per_resident": 12,
             "source_sha256": self._articulation_source_hash,
             "resident_sha256": self._resident_morphology_hashes.copy(),
+            "actuation": "native-articulated-cohort-v1",
         }
         view["articulations"] = articulations
         return view
@@ -531,6 +598,7 @@ class ArticulatedWorld(PhysicsWorld):
                 for body_id, spec in self._resident_articulation.items()
             },
         }
+        value["actuation"] = {"identity": "native-articulated-cohort-v1"}
         return value
 
 

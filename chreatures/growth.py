@@ -74,7 +74,8 @@ def _normalize_grammar(raw: Any) -> dict[str, Any]:
         "max_buds", "max_shapes_per_batch", "resources", "variation",
         "resolution", "rules", "axiom",
     }, "growth grammar")
-    if source["version"] != 2:
+    grammar_version = source["version"]
+    if grammar_version not in {2, 3}:
         raise ValueError("unsupported growth grammar version")
     name = _identifier(source["name"], "grammar name")
     cadence = _number(source["cadence_seconds"], "cadence_seconds", 0.05, 1e9)
@@ -129,11 +130,37 @@ def _normalize_grammar(raw: Any) -> dict[str, Any]:
         if role not in {"branch", "root"}:
             raise ValueError("growth rule role must be branch or root")
         segment = _mapping(rule["segment"], f"rule {symbol} segment")
-        _keys(segment, {"length", "radius", "density"}, f"rule {symbol} segment")
+        legacy_segment = {"length", "radius", "density"}
+        current_segment = legacy_segment | {
+            "radius_scale_exponent", "minimum_aspect_ratio",
+        }
+        _keys(
+            segment,
+            legacy_segment if grammar_version == 2 else current_segment,
+            f"rule {symbol} segment",
+        )
         segment = {
             "length": _number(segment["length"], "segment length", 0.001, 10.0),
             "radius": _number(segment["radius"], "segment radius", 0.0005, 1.0),
             "density": _number(segment["density"], "segment density", 0.001, 30_000.0),
+            **(
+                {
+                    "radius_scale_exponent": _number(
+                        segment["radius_scale_exponent"],
+                        "segment radius scale exponent",
+                        0.25,
+                        2.0,
+                    ),
+                    "minimum_aspect_ratio": _number(
+                        segment["minimum_aspect_ratio"],
+                        "segment minimum aspect ratio",
+                        0.0,
+                        100.0,
+                    ),
+                }
+                if grammar_version == 3
+                else {}
+            ),
         }
         activation = _mapping(rule["activation"], f"rule {symbol} activation")
         _keys(activation, {"minimum", "weights", "competition_gain"}, f"rule {symbol} activation")
@@ -210,7 +237,7 @@ def _normalize_grammar(raw: Any) -> dict[str, Any]:
             "scale": _number(bud["scale"], "bud scale", 0.01, 100.0),
         })
     return {
-        "version": 2, "name": name, "cadence_seconds": cadence,
+        "version": grammar_version, "name": name, "cadence_seconds": cadence,
         "initial_delay_seconds": initial_delay, "max_buds": max_buds,
         "max_shapes_per_batch": max_shapes,
         "resolution": {"minimum_feature_size": minimum_feature_size},
@@ -243,6 +270,11 @@ class GrowthSystem:
         rules = []
         for symbol, rule in self._grammar["rules"].items():
             segment, activation = rule["segment"], rule["activation"]
+            # Version-2 canonical grammar and hashes remain unchanged. Its
+            # historical square-root radius law enters the one native power
+            # parameter here as exponent 0.5 with no aspect cutoff.
+            radius_scale_exponent = segment.get("radius_scale_exponent", 0.5)
+            minimum_aspect_ratio = segment.get("minimum_aspect_ratio", 0.0)
             successors = [(
                 item["symbol"], math.radians(item["angle_degrees"]),
                 math.radians(item["azimuth_degrees"]),
@@ -256,7 +288,7 @@ class GrowthSystem:
             )
             rules.append((
                 symbol, rule["role"], segment["length"], segment["radius"],
-                segment["density"],
+                segment["density"], radius_scale_exponent, minimum_aspect_ratio,
                 [activation["minimum"][key] for key in _SIGNAL_NAMES],
                 [activation["weights"][key] for key in _SIGNAL_NAMES],
                 activation["competition_gain"], successors, leaf_tuple,

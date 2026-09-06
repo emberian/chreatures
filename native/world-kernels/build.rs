@@ -9,7 +9,11 @@ fn main() {
         .map(PathBuf::from)
         .expect("MUJOCO_LIB_DIR must point to the directory containing libmujoco");
     cc::Build::new()
-        .file("src/contact_shim.c")
+        .files([
+            "src/contact_shim.c",
+            "src/actuation_shim.c",
+            "src/environment_shim.c",
+        ])
         .include(include)
         .flag_if_supported("-O3")
         .flag_if_supported("-ffp-contract=off")
@@ -36,6 +40,8 @@ fn main() {
         println!("cargo:rustc-link-arg=-Wl,-rpath,{}", library.display());
     }
     println!("cargo:rerun-if-changed=src/contact_shim.c");
+    println!("cargo:rerun-if-changed=src/actuation_shim.c");
+    println!("cargo:rerun-if-changed=src/environment_shim.c");
     println!("cargo:rerun-if-env-changed=MUJOCO_INCLUDE_DIR");
     println!("cargo:rerun-if-env-changed=MUJOCO_LIB_DIR");
 }

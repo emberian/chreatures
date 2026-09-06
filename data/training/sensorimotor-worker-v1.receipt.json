@@ -1,0 +1,121 @@
+{
+  "artifact": {
+    "remote_path": "/home/ember/chreatures/runs/sensorimotor-worker/v1-seed20260908/worker.pt",
+    "remote_result_path": "/home/ember/chreatures/runs/sensorimotor-worker/v1-seed20260908/result.json",
+    "result_sha256": "007d0cc36b508923ff35b6bd31ad17e7fe52385e963dfedc4b3a15375c9d2b72",
+    "sha256": "df2a0bddd299758770fba2b3e315bdb4865c76e868f52b107a4ff832b7a44e3a"
+  },
+  "data": {
+    "action_dim": 8,
+    "collection_identity_sha256": "e0bb6152b8dc2c464066b915cafb89da986c2f346a44cf183b853cd14d07bd0a",
+    "dt_seconds": 0.05,
+    "episodes": 2,
+    "manifest_content_sha256": "69056d10a285a913501b43bb11aa25ab41f1af559f104f4872c5e2774005894c",
+    "manifest_file_sha256": "0ec6e7deee036454d6f5ce9396f3e61f99226b805668e5713ed2befb81b6bdf6",
+    "observation_dim": 357,
+    "packet_sha256": [
+      "587c5d4d2516b2b5a5c1490d13ebaa8d7fabca98bd394d3dea536a7a7b8dd1be",
+      "c7bccecbdeefa503b0a873afe3afcbd7db9bec3a72d2745dcfe14b73bc1e220c"
+    ],
+    "previous_action_dim": 9,
+    "resident_action_steps": 192000,
+    "residents_per_world": 3,
+    "split_worlds": {
+      "heldout": 2,
+      "train": 12,
+      "validation": 2
+    },
+    "steps_per_episode": 2000,
+    "worlds": 16
+  },
+  "format": "chreatures-sensorimotor-worker-training-receipt-v1",
+  "heldout_once": {
+    "episodes": 2,
+    "interpretation": "Every bucket is positive in both episodes, showing offline goal reliance only.",
+    "mean_action_nll": 2.496678142485881,
+    "permuted_goal_delta_nll_by_log_horizon_bucket": [
+      [
+        0.04756699695171986,
+        0.05232153151521289,
+        0.036549349990938174,
+        0.04261459796588658,
+        0.027609821985446276
+      ],
+      [
+        0.04589328474824778,
+        0.0523831528400688,
+        0.03293763452274784,
+        0.03546465809253152,
+        0.028943640540664128
+      ]
+    ],
+    "quantized_accuracy_by_axis": [
+      [
+        0.2447623914154318,
+        0.20711974110032363,
+        0.14265031510815876,
+        0.6156532106966445,
+        0.440044285470959,
+        0.544540964060637,
+        0.45290410492250044,
+        0.07494464316130131
+      ],
+      [
+        0.21504002725259752,
+        0.1609606540623403,
+        0.11735649804121956,
+        0.6128427865780958,
+        0.41977516607051607,
+        0.5330437744847556,
+        0.40631919604837335,
+        0.06481008346107989
+      ]
+    ],
+    "resident_columns_per_episode": 6,
+    "samples_per_episode": 11742,
+    "worlds": 2
+  },
+  "limits": [
+    "Factorized action heads do not represent all coordinated multimodal plans.",
+    "TBPTT detaches carried state at chunk boundaries; parameters change during an episode.",
+    "Goal permutation measures reliance on experienced goals, not closed-loop goal attainment.",
+    "Oral action remains a supplied physiology law, not a learned worker output.",
+    "Two heldout world slots across episodes do not establish broad environment transfer."
+  ],
+  "source": {
+    "data_boundary_sha256": "1b705e85ff1a6dd2496def1fae21de7f3155ff2582105365ac982039d1d4f134",
+    "git_commit": "545ca7a",
+    "model_sha256": "201d0962237b8571d61935ecfbc120bdf7bcfade81872165a6705f0c6753e4df",
+    "schema_sha256": "c77da7c2ea22bdf0130c791aeb9320dd4509914c6096e791007b12c0e6603cc4",
+    "trainer_sha256": "01d631caef03c970e49cedb43b5974d70c1b82f0c3dd5c826262ec39e2e9e319"
+  },
+  "status": "research candidate; offline goal reliance only; no attained-skill claim",
+  "training": {
+    "elapsed_seconds": 16.211831658147275,
+    "goal_autoencoder_updates": 384,
+    "goal_decoder": {
+      "heldout_huber": 0.13236096501350403,
+      "heldout_latent_effective_rank": 28.753511428833008,
+      "heldout_training_mean_baseline_huber": 0.329269677400589,
+      "latent_dim": 64,
+      "window": "four normalized observations ending at achieved future t+k"
+    },
+    "resource_observation": {
+      "cpu_percent_at_elapsed_5s": 160.0,
+      "gpu_busy_percent": null,
+      "memory_percent_at_elapsed_5s": 1.9,
+      "note": "Run completed before delayed sysfs sampler attached; no GPU-busy measurement is claimed."
+    },
+    "seed": 20260908,
+    "selected_epoch": 8,
+    "stack": {
+      "device": "AMD Radeon 890M",
+      "hip": "7.0.51831",
+      "torch": "2.10.0+rocm7.0"
+    },
+    "tbptt_chunk": 64,
+    "validation_nll_first": 2.740436644920436,
+    "validation_nll_selected": 2.519281733647215,
+    "worker_epochs": 8
+  }
+}
