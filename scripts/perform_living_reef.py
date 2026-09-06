@@ -43,6 +43,10 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--url", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--material", default="reserve-fruit")
+    parser.add_argument(
+        "--offer-position", type=float, nargs=3, metavar=("X", "Y", "Z"),
+        help="Fixed caregiver position derived from static habitat geometry",
+    )
     parser.add_argument("--start-in", type=float, default=1.0)
     parser.add_argument("--timeout-seconds", type=float, default=45.0)
     parser.add_argument("--poll-seconds", type=float, default=0.05)
@@ -99,7 +103,10 @@ def number(value: Any, label: str) -> float:
     return result
 
 
-def plan(state: Mapping[str, Any], material: str, start_in: float) -> dict[str, Any]:
+def plan(
+    state: Mapping[str, Any], material: str, start_in: float,
+    offer_position: list[float] | None = None,
+) -> dict[str, Any]:
     width = number(state["width"], "width")
     height = number(state["height"], "height")
     depth = number(state["depth"], "depth")
@@ -112,10 +119,16 @@ def plan(state: Mapping[str, Any], material: str, start_in: float) -> dict[str, 
         "y": round(height * y, 8),
         "z": round(min(max(depth * z, 0.16), depth), 8),
     }
-    offer = {
-        "op": "offer_material", "material": material,
-        **point(0.58, 0.44, 0.08),
-    }
+    if offer_position is None:
+        offer_point = point(0.58, 0.44, 0.08)
+        coordinate_rule = "fixed fractions of public habitat bounds"
+    else:
+        x, y, z = (number(value, "offer position") for value in offer_position)
+        if not (0 <= x <= width and 0 <= y <= height and 0 <= z <= depth):
+            raise ValueError("fixed offer position lies outside habitat bounds")
+        offer_point = {"x": x, "y": y, "z": z}
+        coordinate_rule = "caller-declared fixed static habitat geometry"
+    offer = {"op": "offer_material", "material": material, **offer_point}
     events = [
         {
             "at": 0.50,
@@ -155,7 +168,7 @@ def plan(state: Mapping[str, Any], material: str, start_in: float) -> dict[str, 
         "start_in": float(start_in),
     }
     return {
-        "coordinate_rule": "fixed fractions of public habitat bounds",
+        "coordinate_rule": coordinate_rule,
         "resident_state_consulted": False,
         "offer": offer,
         "schedule": schedule,
@@ -192,7 +205,7 @@ def main() -> int:
     initial = request_json(args.url, "/api/state")
     if initial.get("error") or initial.get("paused"):
         raise SystemExit("habitat must be healthy and advancing")
-    performance = plan(initial, args.material, args.start_in)
+    performance = plan(initial, args.material, args.start_in, args.offer_position)
     if not args.execute:
         print(json.dumps(performance, indent=2, sort_keys=True))
         return 0
