@@ -447,6 +447,64 @@ def materialize_module_variation(
     return CircuitBlueprint.from_value(document)
 
 
+def materialize_population_structural_variant(
+    parent: Any,
+    ports: NeuralPortBundle,
+    *,
+    name: str,
+    recipe: Mapping[str, Any],
+    recipe_sha256: str,
+    template_name: str,
+    seed: int,
+    mutation_scale: float,
+    selector_root: str | Path = ".",
+    parent_port_sha256: str,
+) -> CircuitBlueprint:
+    """Materialize one named population-recipe structural hypothesis.
+
+    This adapter does not select an arbitrary subgraph.  It resolves an exact
+    named template from an authenticated recipe and delegates all sparse graph
+    construction and edit bounds to ``materialize_module_variation``.
+    """
+    recipe_body = dict(recipe)
+    recipe_body.pop("sha256", None)
+    if _json_hash(recipe_body) != recipe_sha256:
+        raise ValueError("population neural recipe checksum differs")
+    source = recipe.get("source")
+    if not isinstance(source, dict) or (
+        source.get("canonical_graph_sha256") != parent.hash
+        or source.get("port_spec_sha256") != ports.spec_hash
+        or source.get("port_bundle_sha256") != parent_port_sha256
+    ):
+        raise ValueError("population structural recipe source differs")
+    templates = recipe.get("structural_templates")
+    if not isinstance(templates, list):
+        raise ValueError("population recipe lacks structural templates")
+    matches = [item for item in templates if item.get("name") == template_name]
+    if len(matches) != 1:
+        raise ValueError("population structural template is absent or duplicated")
+    chosen = matches[0]
+    blueprint = materialize_module_variation(
+        parent,
+        ports,
+        name=name,
+        template=chosen["template"],
+        bounds=chosen["bounds"],
+        seed=seed,
+        mutation_scale=mutation_scale,
+        selector_root=selector_root,
+        parent_port_sha256=parent_port_sha256,
+    )
+    document = blueprint.document
+    document["population_recipe"] = {
+        "recipe_sha256": recipe_sha256,
+        "template_name": template_name,
+    }
+    document["variation"]["population_recipe_sha256"] = recipe_sha256
+    document["variation"]["population_template"] = template_name
+    return CircuitBlueprint.from_value(document)
+
+
 def _clone_edges(
     graph: Any, modules: list[dict[str, Any]], n: int
 ) -> tuple[sparse.csr_matrix, list[dict[str, Any]], set[int]]:

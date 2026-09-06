@@ -8,7 +8,10 @@ transpose, matching :class:`chreatures.remote_brain.RemoteBrain` numerics.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
+from collections.abc import Mapping
 from typing import Any, Sequence
 
 import numpy as np
@@ -26,6 +29,37 @@ except ImportError:  # pragma: no cover - exercised on non-Triton installations
 
 
 PHYSIOLOGY_NAMES = ("activity_mean", "activity_peak", "support_mean")
+NEURAL_VARIANT_ARRAYS = (
+    "input_gain",
+    "readout_gain",
+    "excitability_gain",
+    "recurrent_source_gain",
+    "recurrent_target_gain",
+    "learning_rate_gain",
+    "modulator_gain",
+)
+
+
+def _sha256_array(value: np.ndarray) -> str:
+    return hashlib.sha256(np.ascontiguousarray(value).tobytes()).hexdigest()
+
+
+def _sha256_f32_ones(shape: tuple[int, int]) -> str:
+    digest = hashlib.sha256()
+    remaining = int(np.prod(shape, dtype=np.int64))
+    block = np.ones(min(remaining, 1 << 20), dtype=np.float32).tobytes()
+    block_values = len(block) // 4
+    while remaining:
+        take = min(remaining, block_values)
+        digest.update(block[: take * 4])
+        remaining -= take
+    return digest.hexdigest()
+
+
+def _identity_hash(value: Mapping[str, Any]) -> str:
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
 
 
 if triton is not None:
@@ -37,6 +71,9 @@ if triton is not None:
         weights,
         rate_in,
         rate_out,
+        recurrent_source_gain,
+        recurrent_target_gain,
+        excitability_gain,
         adaptation,
         support,
         drive,
@@ -63,7 +100,12 @@ if triton is not None:
                 mask=resident_mask,
                 other=0.0,
             )
-            recurrent += weight * source_rate
+            source_gain = tl.load(
+                recurrent_source_gain + source * batch_size + resident,
+                mask=resident_mask,
+                other=1.0,
+            )
+            recurrent += weight * source_gain * source_rate
         offset = row * batch_size + resident
         old_rate = tl.load(rate_in + offset, mask=resident_mask, other=0.0)
         old_adaptation = tl.load(
@@ -71,9 +113,15 @@ if triton is not None:
         )
         old_support = tl.load(support + offset, mask=resident_mask, other=1.0)
         sensory_drive = tl.load(drive + offset, mask=resident_mask, other=0.0)
-        activation = (
-            0.005 + sensory_drive + gain * recurrent - 0.10 * old_adaptation
+        target_gain = tl.load(
+            recurrent_target_gain + offset, mask=resident_mask, other=1.0
         )
+        excitability = tl.load(
+            excitability_gain + offset, mask=resident_mask, other=1.0
+        )
+        activation = 0.005 + excitability * (
+            sensory_drive + gain * target_gain * recurrent
+        ) - 0.10 * old_adaptation
         target = tl.maximum(libdevice.tanh(activation), 0.0)
         new_rate = old_rate + alpha * (target * old_support - old_rate)
         tl.store(rate_out + offset, new_rate, mask=resident_mask)
@@ -193,6 +241,43 @@ class _FixedCircuit:
         self.input_matrix = _torch_csr(inputs, self.device)
         self.readout_matrix = _torch_csr(readouts, self.device)
         self.times = np.zeros(self.batch_size, dtype=np.float64)
+        neuron_shape = (self.n, self.batch_size)
+        self.input_gain = torch.ones(
+            (self.input_count, self.batch_size), dtype=self.dtype, device=self.device
+        )
+        self.readout_gain = torch.ones(
+            (self.feature_count, self.batch_size), dtype=self.dtype, device=self.device
+        )
+        self.excitability_gain = torch.ones(neuron_shape, dtype=self.dtype, device=self.device)
+        self.recurrent_source_gain = torch.ones_like(self.excitability_gain)
+        self.recurrent_target_gain = torch.ones_like(self.excitability_gain)
+        neutral_hashes = {
+            "input_gain": _sha256_f32_ones((self.input_count, self.batch_size)),
+            "readout_gain": _sha256_f32_ones((self.feature_count, self.batch_size)),
+            **{
+                name: _sha256_f32_ones(neuron_shape)
+                for name in NEURAL_VARIANT_ARRAYS[2:]
+            },
+        }
+        self._neural_variant = {
+            "mode": "neutral",
+            "compatibility_group": _identity_hash(
+                {
+                    "graph_sha256": self.graph_hash,
+                    "inputs": self.input_count,
+                    "readouts": self.feature_count,
+                    "mode": "neutral",
+                }
+            ),
+            "phenotype_sha256": ["neutral"] * self.batch_size,
+            "array_sha256": neutral_hashes,
+            "active_parameters": list(NEURAL_VARIANT_ARRAYS[:5]),
+            "inactive_parameters": {
+                "learning_rate_gain": "no generic local plasticity update exists in this circuit",
+                "modulator_gain": "no generic modulatory current path exists in this circuit",
+            },
+        }
+        self._neural_variant["state_identity"] = _identity_hash(self._neural_variant)
 
     @property
     def input_count(self) -> int:
@@ -201,6 +286,82 @@ class _FixedCircuit:
     @property
     def feature_count(self) -> int:
         return len(self.readout_names)
+
+    def bind_neural_phenotypes(
+        self,
+        arrays: Mapping[str, np.ndarray],
+        *,
+        phenotype_sha256: Sequence[str],
+        compatibility_group: str,
+    ) -> str:
+        """Bind one immutable phenotype column per resident.
+
+        Array layout is channel/output/neuron-major with residents in the last
+        dimension. Binding performs the sole host-to-device copies; step calls
+        reuse these tensors without Python loops or reconstructed gains.
+        """
+        if set(arrays) != set(NEURAL_VARIANT_ARRAYS):
+            raise ValueError(f"neural phenotype arrays must contain {NEURAL_VARIANT_ARRAYS}")
+        if (
+            not isinstance(compatibility_group, str)
+            or len(compatibility_group) != 64
+            or any(character not in "0123456789abcdef" for character in compatibility_group)
+        ):
+            raise ValueError("compatibility_group must be a lowercase SHA-256")
+        phenotype_ids = [str(value) for value in phenotype_sha256]
+        if len(phenotype_ids) != self.batch_size or any(
+            len(value) != 64 or any(c not in "0123456789abcdef" for c in value)
+            for value in phenotype_ids
+        ):
+            raise ValueError("one phenotype SHA-256 is required per resident")
+        expected = {
+            "input_gain": (self.input_count, self.batch_size),
+            "readout_gain": (self.feature_count, self.batch_size),
+            **{
+                name: (self.n, self.batch_size)
+                for name in NEURAL_VARIANT_ARRAYS[2:]
+            },
+        }
+        host: dict[str, np.ndarray] = {}
+        for name in NEURAL_VARIANT_ARRAYS:
+            value = arrays[name]
+            if not isinstance(value, np.ndarray) or value.dtype != np.float32:
+                raise ValueError(f"{name} must be a float32 NumPy array")
+            if value.shape != expected[name] or not value.flags.c_contiguous:
+                raise ValueError(f"{name} must be contiguous with shape {expected[name]}")
+            if not np.isfinite(value).all() or np.any((value < 0.05) | (value > 4.0)):
+                raise ValueError(f"{name} must be finite in [0.05,4]")
+            host[name] = value
+        array_hashes = {name: _sha256_array(value) for name, value in host.items()}
+        identity = {
+            "mode": "candidate_phenotypes",
+            "graph_sha256": self.graph_hash,
+            "compatibility_group": compatibility_group,
+            "phenotype_sha256": phenotype_ids,
+            "array_sha256": array_hashes,
+            "active_parameters": list(NEURAL_VARIANT_ARRAYS[:5]),
+            "inactive_parameters": {
+                "learning_rate_gain": "no generic local plasticity update exists in this circuit",
+                "modulator_gain": "no generic modulatory current path exists in this circuit",
+            },
+        }
+        identity["state_identity"] = _identity_hash(identity)
+        for name in NEURAL_VARIANT_ARRAYS[:5]:
+            getattr(self, name).copy_(torch.from_numpy(host[name]).to(self.device))
+        self._neural_variant = identity
+        return identity["state_identity"]
+
+    @property
+    def neural_variant_state_identity(self) -> str:
+        return str(self._neural_variant["state_identity"])
+
+    def _state_identity_array(self) -> np.ndarray:
+        return np.asarray(self.neural_variant_state_identity)
+
+    def _require_state_identity(self, state: Mapping[str, Any]) -> None:
+        supplied = np.asarray(state.get("neural_variant_state_identity"))
+        if supplied.shape != () or str(supplied) != self.neural_variant_state_identity:
+            raise ValueError("snapshot neural phenotype identity differs")
 
     def _validate_device_channels(self, channels: torch.Tensor) -> None:
         if channels.shape != (self.input_count, self.batch_size):
@@ -259,6 +420,7 @@ class _FixedCircuit:
                 "support_recovery": self.support_recovery,
                 "substeps": 2,
             },
+            "neural_variant": dict(self._neural_variant),
         }
 
     def step_device(
@@ -297,15 +459,16 @@ class NeuronMajorCircuit(_FixedCircuit):
             self._validate_device_channels(channels)
         if not np.isfinite(dt) or not 0 < dt <= 0.2:
             raise ValueError("dt must be finite and in (0, 0.2]")
-        drive = torch.sparse.mm(self.input_matrix, channels)
+        drive = torch.sparse.mm(self.input_matrix, channels * self.input_gain)
         alpha = min(1.0, dt / 2 / self.tau)
         for _ in range(2):
-            recurrent = torch.sparse.mm(self.matrix, self.rates)
+            recurrent = self.recurrent_target_gain * torch.sparse.mm(
+                self.matrix, self.rates * self.recurrent_source_gain
+            )
             target = torch.relu(
                 torch.tanh(
                     0.005
-                    + drive
-                    + self.gain * recurrent
+                    + self.excitability_gain * (drive + self.gain * recurrent)
                     - 0.10 * self.adaptation
                 )
             )
@@ -318,7 +481,7 @@ class NeuronMajorCircuit(_FixedCircuit):
                 - 0.003 * self.rates
             )
         ).clamp_(0.65, 1)
-        readout = torch.sparse.mm(self.readout_matrix, self.rates)
+        readout = self.readout_gain * torch.sparse.mm(self.readout_matrix, self.rates)
         physiology = torch.stack(
             (
                 self.rates.mean(dim=0),
@@ -334,9 +497,11 @@ class NeuronMajorCircuit(_FixedCircuit):
             "adaptation": self.adaptation.T.contiguous().cpu().numpy(),
             "support": self.support.T.contiguous().cpu().numpy(),
             "times": self.times.copy(),
+            "neural_variant_state_identity": self._state_identity_array(),
         }
 
     def import_state(self, state: dict[str, np.ndarray]) -> None:
+        self._require_state_identity(state)
         expected = (self.batch_size, self.n)
         for name in ("rates", "adaptation", "support"):
             value = np.asarray(state[name], dtype=np.float32)
@@ -393,7 +558,9 @@ class TritonFusedCircuit(NeuronMajorCircuit):
             self._validate_device_channels(channels)
         if not np.isfinite(dt) or not 0 < dt <= 0.2:
             raise ValueError("dt must be finite and in (0, 0.2]")
-        drive = torch.sparse.mm(self.input_matrix, channels).contiguous()
+        drive = torch.sparse.mm(
+            self.input_matrix, channels * self.input_gain
+        ).contiguous()
         alpha = min(1.0, dt / 2 / self.tau)
         grid = (self.n, triton.cdiv(self.batch_size, self.resident_tile))
         arguments = (
@@ -405,6 +572,9 @@ class TritonFusedCircuit(NeuronMajorCircuit):
             *arguments,
             self.rates,
             self.rate_buffer,
+            self.recurrent_source_gain,
+            self.recurrent_target_gain,
+            self.excitability_gain,
             self.adaptation,
             self.support,
             drive,
@@ -421,6 +591,9 @@ class TritonFusedCircuit(NeuronMajorCircuit):
             *arguments,
             self.rate_buffer,
             self.rates,
+            self.recurrent_source_gain,
+            self.recurrent_target_gain,
+            self.excitability_gain,
             self.adaptation,
             self.support,
             drive,
@@ -433,7 +606,7 @@ class TritonFusedCircuit(NeuronMajorCircuit):
             FINAL=True,
             num_warps=1,
         )
-        readout = torch.sparse.mm(self.readout_matrix, self.rates)
+        readout = self.readout_gain * torch.sparse.mm(self.readout_matrix, self.rates)
         physiology = torch.stack(
             (
                 self.rates.mean(dim=0),
@@ -476,15 +649,19 @@ class ResidentMajorReferenceCircuit(_FixedCircuit):
             self._validate_device_channels(channels)
         if not np.isfinite(dt) or not 0 < dt <= 0.2:
             raise ValueError("dt must be finite and in (0, 0.2]")
-        drive = torch.sparse.mm(self.input_matrix, channels).T
+        drive = torch.sparse.mm(self.input_matrix, channels * self.input_gain).T
         alpha = min(1.0, dt / 2 / self.tau)
         for _ in range(2):
-            recurrent = torch.sparse.mm(self.matrix, self.rates.T).T
+            recurrent = (
+                self.recurrent_target_gain
+                * torch.sparse.mm(
+                    self.matrix, self.rates.T * self.recurrent_source_gain
+                )
+            ).T
             target = torch.relu(
                 torch.tanh(
                     0.005
-                    + drive
-                    + self.gain * recurrent
+                    + self.excitability_gain.T * (drive + self.gain * recurrent)
                     - 0.10 * self.adaptation
                 )
             )
@@ -497,7 +674,9 @@ class ResidentMajorReferenceCircuit(_FixedCircuit):
                 - 0.003 * self.rates
             )
         ).clamp_(0.65, 1)
-        readout = torch.sparse.mm(self.readout_matrix, self.rates.T).T
+        readout = (
+            self.readout_gain * torch.sparse.mm(self.readout_matrix, self.rates.T)
+        ).T
         physiology = torch.stack(
             (
                 self.rates.mean(dim=1),
@@ -514,9 +693,11 @@ class ResidentMajorReferenceCircuit(_FixedCircuit):
             "adaptation": self.adaptation.contiguous().cpu().numpy(),
             "support": self.support.contiguous().cpu().numpy(),
             "times": self.times.copy(),
+            "neural_variant_state_identity": self._state_identity_array(),
         }
 
     def import_state(self, state: dict[str, np.ndarray]) -> None:
+        self._require_state_identity(state)
         expected = (self.batch_size, self.n)
         for name in ("rates", "adaptation", "support"):
             value = np.asarray(state[name], dtype=np.float32)
@@ -566,13 +747,24 @@ class MicrobatchedResidentCircuit(ResidentMajorReferenceCircuit):
             rates = self.rates[start:stop]
             adaptation = self.adaptation[start:stop]
             support = self.support[start:stop]
-            chunk_channels = channels[:, start:stop].contiguous()
+            chunk_channels = (
+                channels[:, start:stop] * self.input_gain[:, start:stop]
+            ).contiguous()
             drive = torch.sparse.mm(self.input_matrix, chunk_channels).T
             for _ in range(2):
-                recurrent = torch.sparse.mm(self.matrix, rates.T).T
+                recurrent = (
+                    self.recurrent_target_gain[:, start:stop]
+                    * torch.sparse.mm(
+                        self.matrix,
+                        rates.T * self.recurrent_source_gain[:, start:stop],
+                    )
+                ).T
                 target = torch.relu(
                     torch.tanh(
-                        0.005 + drive + self.gain * recurrent - 0.10 * adaptation
+                        0.005
+                        + self.excitability_gain[:, start:stop].T
+                        * (drive + self.gain * recurrent)
+                        - 0.10 * adaptation
                     )
                 )
                 rates.add_(alpha * (target * support - rates))
@@ -584,7 +776,10 @@ class MicrobatchedResidentCircuit(ResidentMajorReferenceCircuit):
                     - 0.003 * rates
                 )
             ).clamp_(0.65, 1)
-            readout = torch.sparse.mm(self.readout_matrix, rates.T).T
+            readout = (
+                self.readout_gain[:, start:stop]
+                * torch.sparse.mm(self.readout_matrix, rates.T)
+            ).T
             combined[start:stop, : self.feature_count] = readout
             combined[start:stop, self.feature_count :] = torch.stack(
                 (

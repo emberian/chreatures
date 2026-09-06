@@ -1,0 +1,44 @@
+{
+  "artifact": {
+    "bytes": 15902,
+    "path": "/tank/chreatures/data/malecns/neural-variants/persistence-check-v1.npz",
+    "sha256": "351736a98f3cd851908a9f9f119d3bb4799e1003edf57d801b8c98e23f0e94a0"
+  },
+  "claim_boundary": "One full canonical MaleCNS phenotype artifact save/load check; it does not evaluate behavior or candidate fitness.",
+  "execution": {
+    "graph_path": "/tank/chreatures/data/malecns/derived",
+    "host": "hbox",
+    "python": "/tank/chreatures/envs/rocm-dev/bin/python"
+  },
+  "format": "chreatures-neural-variant-persistence-check-v1",
+  "genotype_sha256": "e25e7f52e755b9260d136629d849f1571fb46c32a34a72790935e4a1ec4d78d7",
+  "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "mismatched_controller_rejected": true,
+  "neural_seed": 5640007920122614499,
+  "phenotype_sha256": "35d87c8aaab28a7d4fb53c3dbfe1fb7aac8382c12bbc9481e80196bbbd041d86",
+  "port_spec_sha256": "a3182cc5c546fac164774e56cfcf3d4f185c2feab5a994fe3d2a37cc8604302e",
+  "population_helper": {
+    "batch_shapes": {
+      "excitability_gain": [165122, 3],
+      "input_gain": [351, 3],
+      "learning_rate_gain": [165122, 3],
+      "modulator_gain": [165122, 3],
+      "readout_gain": [384, 3],
+      "recurrent_source_gain": [165122, 3],
+      "recurrent_target_gain": [165122, 3]
+    },
+    "compatibility_group": "b84a8dadddf93cad732717842511e52aec892c3883202daaac27948514416a3b",
+    "contiguous": true,
+    "deduplicated_repeated_candidate": true,
+    "ordered_phenotype_sha256": [
+      "49bd062386a2afb8b9d34d1771506805130e487a6d4edd166f455927aa106945",
+      "542116e2306013ceca4f81145d6d6a4d1d2dd58598c639f04bc93cc191636e9f",
+      "49bd062386a2afb8b9d34d1771506805130e487a6d4edd166f455927aa106945"
+    ]
+  },
+  "recipe_sha256": "352b4c0cd9dacb5d84914a43651268b44073e4df0b8d9a33a1b44db64ed8bd46",
+  "roundtrip_arrays_equal": true,
+  "roundtrip_arrays_readonly": true,
+  "roundtrip_sha256_equal": true,
+  "variation_seed": 1234
+}

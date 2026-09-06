@@ -1,0 +1,629 @@
+{
+  "array_sha256": {
+    "excitability_gain": "08182a13ac8ab6319548a23d4187351521ec3d7f5b6dcbaa39bf62f6ebee95f8",
+    "input_gain": "fba0c0b4e9bd9a1131ae1024f51e0fe524650184ea1d80a48e3651427625565b",
+    "learning_rate_gain": "c1e07efa0e7d6f9308d2e71743adf8e8713af72948050278083801507368cb26",
+    "modulator_gain": "311db86a6f20e6831f91faced7f4081c93f5dbe5702cfb517805e66dc76c0a3d",
+    "readout_gain": "b8177f29d0b9259e4d76e819305bf0f6df993e097b8598b1cd220bd5a3c041cc",
+    "recurrent_source_gain": "6f07fdbad51ad3e91d96e4675ea2b356cc2017f4c6063c522b6a9ccc1f8102db",
+    "recurrent_target_gain": "5609a21e89d1b1007e0c1c31aac0f14246671f42f5d55b5979f41e24cc67ed64"
+  },
+  "base_controller": {
+    "role": "identity pin for compile check only",
+    "sha256": "c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5"
+  },
+  "claim_boundary": "Confirms full canonical annotation resolution and immutable bounded array compilation; it is not evidence that variation improves behavior or contributes anatomically.",
+  "compatibility_group": "b84a8dadddf93cad732717842511e52aec892c3883202daaac27948514416a3b",
+  "execution": {
+    "graph_path": "/tank/chreatures/data/malecns/derived",
+    "host": "hbox",
+    "python": "/tank/chreatures/envs/rocm-dev/bin/python",
+    "scope": "compile-only; no neural dynamics or campaign"
+  },
+  "finite": true,
+  "format": "chreatures-neural-variant-fullgraph-check-v1",
+  "genotype": {
+    "format": "chreatures-neural-variant-genotype-v1",
+    "generation": 0,
+    "loci": {
+      "input_groups": {
+        "angular_proprioception": {
+          "input_gain": 1.049293843076641
+        },
+        "contact": {
+          "input_gain": 0.9865922726834118
+        },
+        "contact_normal": {
+          "input_gain": 0.9913335752689246
+        },
+        "linear_proprioception": {
+          "input_gain": 1.034576135151006
+        },
+        "odor": {
+          "input_gain": 0.9200836494138805
+        },
+        "retina": {
+          "input_gain": 1.0139350723701426
+        },
+        "shade": {
+          "input_gain": 1.14760358368498
+        },
+        "sound": {
+          "input_gain": 0.9441378927864281
+        },
+        "touch": {
+          "input_gain": 0.8992972503522756
+        }
+      },
+      "neuron_groups": {
+        "ascending_pathways": {
+          "excitability_gain": 0.9830321354041655,
+          "recurrent_source_gain": 0.9955988867173003,
+          "recurrent_target_gain": 0.9107584199087772
+        },
+        "central_complex": {
+          "excitability_gain": 0.9935861514849146,
+          "learning_rate_gain": 1.0614053053455235,
+          "recurrent_source_gain": 0.9978020419313053,
+          "recurrent_target_gain": 0.9890439790327524
+        },
+        "descending_pathways": {
+          "excitability_gain": 1.009250321658903,
+          "recurrent_source_gain": 0.942573325185628,
+          "recurrent_target_gain": 1.1261368728443177
+        },
+        "dopaminergic_annotated": {
+          "excitability_gain": 1.0444880338231028,
+          "modulator_gain": 0.9397217374479553,
+          "recurrent_source_gain": 1.058293964087685
+        },
+        "kenyon_cells": {
+          "excitability_gain": 1.0987191091491997,
+          "learning_rate_gain": 1.0630376378038555,
+          "modulator_gain": 1.0730471096318561,
+          "recurrent_source_gain": 0.9101383265650019
+        },
+        "mechanosensory_pathways": {
+          "excitability_gain": 0.8511465360147487,
+          "recurrent_source_gain": 0.9078042585303704,
+          "recurrent_target_gain": 1.0394157059336084
+        },
+        "motor_efferent": {
+          "excitability_gain": 0.9729433423215756,
+          "recurrent_source_gain": 1.0070111035166582,
+          "recurrent_target_gain": 1.059118876329981
+        },
+        "mushroom_body_outputs": {
+          "excitability_gain": 1.0010974681641596,
+          "learning_rate_gain": 0.9604630628630161,
+          "modulator_gain": 0.9774520670732313,
+          "recurrent_target_gain": 0.9190953519309215
+        },
+        "olfactory_pathways": {
+          "excitability_gain": 1.0423710287463346,
+          "recurrent_source_gain": 1.062040257244305,
+          "recurrent_target_gain": 1.0336040323766325
+        },
+        "visual_pathways": {
+          "excitability_gain": 1.058331800477691,
+          "recurrent_source_gain": 0.9715353316058457,
+          "recurrent_target_gain": 0.9205468554377221
+        },
+        "vnc_intrinsic": {
+          "excitability_gain": 1.0094073247333515,
+          "learning_rate_gain": 0.9288819506140203,
+          "recurrent_source_gain": 1.0116513844207125,
+          "recurrent_target_gain": 1.0062357623143128
+        }
+      },
+      "readout_groups": {
+        "efferent": {
+          "readout_gain": 0.9635941056794355
+        },
+        "mushroom_body": {
+          "readout_gain": 0.9636046451586554
+        },
+        "navigation": {
+          "readout_gain": 1.130418834163205
+        },
+        "visual": {
+          "readout_gain": 1.0206755900358757
+        }
+      }
+    },
+    "name": "fullgraph-check-seed37",
+    "parents": [],
+    "sha256": "155e8dfe2827a37a637b183c3dc90635c1e0a9f39f9d7559664212157fecdbd7",
+    "sources": {
+      "active_graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+      "base_controller_sha256": "c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5",
+      "canonical_graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+      "port_bundle_sha256": "933b871fdd11dafa8c43afceb9862101984bf0950592af84631a4d7aa9bebe53",
+      "port_spec_sha256": "a3182cc5c546fac164774e56cfcf3d4f185c2feab5a994fe3d2a37cc8604302e"
+    },
+    "structure": null,
+    "variation": {
+      "mutation_scale": 0.35,
+      "population_loci": {
+        "excitability": 1.04,
+        "input_gain": 1.02,
+        "learning_rate_gain": 1.08,
+        "modulator_gain": 0.92,
+        "readout_gain": 0.98,
+        "recurrent_gain": 0.96
+      },
+      "recipe_sha256": "352b4c0cd9dacb5d84914a43651268b44073e4df0b8d9a33a1b44db64ed8bd46",
+      "seed": 37
+    }
+  },
+  "graph": {
+    "edges": 25563197,
+    "neurons": 165122,
+    "sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625"
+  },
+  "groups": {
+    "input_groups": [
+      {
+        "count": 320,
+        "indices_sha256": "46f5976d39a6ac28eb308eacc84751d15c7204683c562b773334ec016feeb119",
+        "match": {
+          "family": "retina"
+        },
+        "name": "retina",
+        "names_sha256": "b28d003bc82365391927016bb702f654a6b38752dd6e90cdde2312085e99d253"
+      },
+      {
+        "count": 6,
+        "indices_sha256": "66a938a7e27b3f2ac76259c6c5ddb1951ac94917fcc2b7b6ee5df90ef5add9d2",
+        "match": {
+          "family": "odor"
+        },
+        "name": "odor",
+        "names_sha256": "a0e058cac8c0b08e7d189e21d8517cc4341d2b8559cdb2e0655e1f593a9653d2"
+      },
+      {
+        "count": 1,
+        "indices_sha256": "30f2a65fb6f9807c24e188e9470ee93292fa8b970f994324352e5575e12b5071",
+        "match": {
+          "family": "contact"
+        },
+        "name": "contact",
+        "names_sha256": "8b58f1f60bfdfd753c57df6f37e78da9a881e36c21bce15665dcbd14d077c8d4"
+      },
+      {
+        "count": 6,
+        "indices_sha256": "dfb27cf869f4b3ed041dc3b07c15f8c2700e22754bc5b7d0df92ffd30592eb0b",
+        "match": {
+          "family": "contact_normal"
+        },
+        "name": "contact_normal",
+        "names_sha256": "9ade51895965e914a6321e89cb4ecec9caac3b6731a65517713ff234c837c147"
+      },
+      {
+        "count": 2,
+        "indices_sha256": "43c6579e8199799f1897b413a7cbf63de727a0758adc5e7aac46e5551dccb10e",
+        "match": {
+          "family": "touch"
+        },
+        "name": "touch",
+        "names_sha256": "ae185f20cfedb5d828b1df8b7322a57125b66b5758708179d807eb7d8a39f3de"
+      },
+      {
+        "count": 6,
+        "indices_sha256": "93aba7b0dac87390f30c92b54116c654d213e1e31c1c39e3187ed7c09901dd00",
+        "match": {
+          "family": "proprio/linear"
+        },
+        "name": "linear_proprioception",
+        "names_sha256": "7a878f699b7d8f39a0399b81bd868ba44234a6f9133253635d1c5d0292beda72"
+      },
+      {
+        "count": 6,
+        "indices_sha256": "faae91ffa21170627fbf5f4d49652031ea9c6a2c00c7727241782aa563f109f3",
+        "match": {
+          "family": "proprio/angular"
+        },
+        "name": "angular_proprioception",
+        "names_sha256": "bb9cbe74469e17b715ca614b2971e366692a6df31079acaebe7ba2deba3449ff"
+      },
+      {
+        "count": 3,
+        "indices_sha256": "075359460ff9746daf3126312c3905ad047b01d8e6b5542f977a640ca275659f",
+        "match": {
+          "family": "sound"
+        },
+        "name": "sound",
+        "names_sha256": "31516aeb615988ea3f38a1e7a0c23db611b3df8df3761fd77bb744dd190a63f9"
+      },
+      {
+        "count": 1,
+        "indices_sha256": "9ee37b2482249d763ffd4a9615caddb725367d8c18b6f9b59188d342cdbc6bbf",
+        "match": {
+          "family": "shade"
+        },
+        "name": "shade",
+        "names_sha256": "0df15e7745ae0dd3370ccf59b192107c594729cc1d9c65d4ad24214b145a4c4f"
+      }
+    ],
+    "neuron_groups": [
+      {
+        "body_ids_sha256": "0e78bf7040800e6866c158b55a7fcda357b5c2a270716d83bfe148495c6ee9c9",
+        "classes": {
+          "ol_bilateral": 116,
+          "unavailable": 99045,
+          "visual": 4107
+        },
+        "count": 103268,
+        "indices_sha256": "36529b19df1b64602a8952d40e983febc0748751a211e2e7e321d051f54f14bb",
+        "name": "visual_pathways",
+        "selectors": [
+          {
+            "superclasses": [
+              "ol_sensory",
+              "ol_intrinsic",
+              "visual_projection",
+              "visual_centrifugal"
+            ]
+          }
+        ],
+        "sides": {
+          "L": 51208,
+          "R": 52058,
+          "unavailable": 2
+        },
+        "superclasses": {
+          "ol_intrinsic": 89390,
+          "ol_sensory": 4114,
+          "visual_centrifugal": 563,
+          "visual_projection": 9201
+        }
+      },
+      {
+        "body_ids_sha256": "229d18225092be723f66e567e20c876dad7ddbcdd366a79bb71a126c79082236",
+        "classes": {
+          "ALIN": 24,
+          "ALLN": 420,
+          "ALON": 14,
+          "ALPN": 686,
+          "olfactory": 2639
+        },
+        "count": 3783,
+        "indices_sha256": "618f8aecf63aae7a72bd91fbc5f9f02b315596c3b743225701ade88db41bc7bb",
+        "name": "olfactory_pathways",
+        "selectors": [
+          {
+            "classes": [
+              "olfactory",
+              "ALPN",
+              "ALLN",
+              "ALIN",
+              "ALON"
+            ]
+          }
+        ],
+        "sides": {
+          "L": 1456,
+          "M": 2,
+          "R": 1914,
+          "unknown": 411
+        },
+        "superclasses": {
+          "cb_intrinsic": 1144,
+          "cb_sensory": 2639
+        }
+      },
+      {
+        "body_ids_sha256": "03c1ab13433e73202970ef2b45e067ab768d51974889b8e18cff61bd4f48ef88",
+        "classes": {
+          "mechanosensory": 1733,
+          "mechanosensory_proprioceptive": 1454,
+          "mechanosensory_tactile": 2558,
+          "mechanosensory_tbc": 11
+        },
+        "count": 5756,
+        "indices_sha256": "5c6cb9beda3b70a4d3f83cccba4db7f2e600a0555550535d6d3e24c98e9d0b69",
+        "name": "mechanosensory_pathways",
+        "selectors": [
+          {
+            "classes": [
+              "mechanosensory",
+              "mechanosensory_tactile",
+              "mechanosensory_proprioceptive",
+              "mechanosensory_tbc"
+            ]
+          }
+        ],
+        "sides": {
+          "L": 2845,
+          "R": 2910,
+          "unknown": 1
+        },
+        "superclasses": {
+          "cb_sensory": 1744,
+          "sensory_ascending": 423,
+          "sensory_ascending_tbc": 1,
+          "vnc_sensory": 3588
+        }
+      },
+      {
+        "body_ids_sha256": "58d08c3b674b12479639b8c3b2bd19f85dfb647dff641f47887ecba5c816c777",
+        "classes": {
+          "Kenyon_Cell": 4064
+        },
+        "count": 4064,
+        "indices_sha256": "358da27073feb12688c937e199865aec5bd581c40e8e9b8ba6b8536527ff7d21",
+        "name": "kenyon_cells",
+        "selectors": [
+          {
+            "classes": "Kenyon_Cell"
+          }
+        ],
+        "sides": {
+          "L": 2019,
+          "R": 2045
+        },
+        "superclasses": {
+          "cb_intrinsic": 4064
+        }
+      },
+      {
+        "body_ids_sha256": "f93c845d150194faa13af2ce49b86b57867432438e2fe0d5163d337c512b30c8",
+        "classes": {
+          "MBON": 97
+        },
+        "count": 97,
+        "indices_sha256": "a765cf69d5585156902deda72f52d3e8cdca1cd13663f967bc6a81dbbd3d005f",
+        "name": "mushroom_body_outputs",
+        "selectors": [
+          {
+            "classes": "MBON"
+          }
+        ],
+        "sides": {
+          "L": 48,
+          "R": 49
+        },
+        "superclasses": {
+          "cb_intrinsic": 97
+        }
+      },
+      {
+        "body_ids_sha256": "ad153340b578e6c82df17546e3202f8d50a898eca861f9770b05c5a51db880c3",
+        "classes": {
+          "DAN": 340
+        },
+        "count": 340,
+        "indices_sha256": "b81ab500c7a8e21b0315d2ea07082e4485e16d2549fcbf13dc3438b78805098d",
+        "name": "dopaminergic_annotated",
+        "selectors": [
+          {
+            "classes": "DAN"
+          }
+        ],
+        "sides": {
+          "L": 170,
+          "R": 170
+        },
+        "superclasses": {
+          "cb_intrinsic": 340
+        }
+      },
+      {
+        "body_ids_sha256": "425e9986865e929da947f79001fbf62251deee857a2f1c89f57af5a646a333a4",
+        "classes": {
+          "CX": 2950
+        },
+        "count": 2950,
+        "indices_sha256": "123a782bc002c5fe32662c0d3a7d25ba541768c496c7d01009871fdd4977aa21",
+        "name": "central_complex",
+        "selectors": [
+          {
+            "classes": "CX"
+          }
+        ],
+        "sides": {
+          "L": 1479,
+          "R": 1471
+        },
+        "superclasses": {
+          "cb_intrinsic": 2950
+        }
+      },
+      {
+        "body_ids_sha256": "c644308291abe6c6e8c91f2b1ec7e26a969210e54f8bb2c94415d53ec87b34a4",
+        "classes": {
+          "chemosensory": 1,
+          "gustatory": 80,
+          "mechanosensory_proprioceptive": 423,
+          "unavailable": 1855,
+          "unknown_sensory": 32
+        },
+        "count": 2391,
+        "indices_sha256": "ed0f6ffca16b346bfdb89d2d4ca7ffc9c05456d257aa32fbb36f8cb96fb1826e",
+        "name": "ascending_pathways",
+        "selectors": [
+          {
+            "superclasses": [
+              "ascending_neuron",
+              "sensory_ascending",
+              "efferent_ascending"
+            ]
+          }
+        ],
+        "sides": {
+          "L": 1200,
+          "M": 11,
+          "R": 1179,
+          "unavailable": 1
+        },
+        "superclasses": {
+          "ascending_neuron": 1846,
+          "efferent_ascending": 8,
+          "sensory_ascending": 537
+        }
+      },
+      {
+        "body_ids_sha256": "7b91edfb5db4d581d7dccfeaea9b874e5655e9b07cd7685f55c5c172f8ee4673",
+        "classes": {
+          "unavailable": 1318,
+          "unknown_sensory": 12
+        },
+        "count": 1330,
+        "indices_sha256": "360cf56f84717a62d4af98e2183a2a63f66f4c948415d55ccf2c5f73944bf3a9",
+        "name": "descending_pathways",
+        "selectors": [
+          {
+            "superclasses": [
+              "descending_neuron",
+              "sensory_descending",
+              "efferent_descending"
+            ]
+          }
+        ],
+        "sides": {
+          "L": 664,
+          "M": 10,
+          "R": 656
+        },
+        "superclasses": {
+          "descending_neuron": 1314,
+          "efferent_descending": 4,
+          "sensory_descending": 12
+        }
+      },
+      {
+        "body_ids_sha256": "13f554cde8836794894d2548331fca4c5c4c450768e935583045f97344f6a0e9",
+        "classes": {
+          "unavailable": 13151
+        },
+        "count": 13151,
+        "indices_sha256": "496a86cb1ee0bfb09fba28a14831275b3e2e584da5ad6a7e0d60af45686813e0",
+        "name": "vnc_intrinsic",
+        "selectors": [
+          {
+            "superclasses": "vnc_intrinsic"
+          }
+        ],
+        "sides": {
+          "L": 6469,
+          "M": 231,
+          "R": 6444,
+          "unavailable": 7
+        },
+        "superclasses": {
+          "vnc_intrinsic": 13151
+        }
+      },
+      {
+        "body_ids_sha256": "688e1ba0be3084d69fae4c8078fbad3c27be2cd34a2e1a9cfecbafd27e2b3471",
+        "classes": {
+          "unavailable": 925
+        },
+        "count": 925,
+        "indices_sha256": "8380b048babe0f1120a8a481cbfb32aff9bd692745c6a7bdd78ccaf7a752ccd3",
+        "name": "motor_efferent",
+        "selectors": [
+          {
+            "superclasses": [
+              "vnc_motor",
+              "cb_motor",
+              "vnc_efferent",
+              "cb_efferent",
+              "efferent_ascending",
+              "efferent_descending"
+            ]
+          }
+        ],
+        "sides": {
+          "L": 430,
+          "M": 65,
+          "R": 430
+        },
+        "superclasses": {
+          "cb_efferent": 4,
+          "cb_motor": 107,
+          "efferent_ascending": 8,
+          "efferent_descending": 4,
+          "vnc_efferent": 94,
+          "vnc_motor": 708
+        }
+      }
+    ],
+    "readout_groups": [
+      {
+        "count": 160,
+        "indices_sha256": "d42b0eea355ba1f885b24207024ef8377881da0a5804326be4dea05cf4cbbe4d",
+        "match": {
+          "domain": "visual"
+        },
+        "name": "visual",
+        "names_sha256": "c7da1163ec5100f4012df21253c997bed29c8730ee0129b9e3188326a819ace3"
+      },
+      {
+        "count": 96,
+        "indices_sha256": "6cb6a4173ff5cc04d9cda61d9e1181aa4db597a3bf45bf734c68a96d6c3866b0",
+        "match": {
+          "domain": "mushroom_body"
+        },
+        "name": "mushroom_body",
+        "names_sha256": "47bf5153ce99aa0b39139549f35057705ac025e8d5eab0709ab4dbf36221b0f4"
+      },
+      {
+        "count": 80,
+        "indices_sha256": "300c775bc5da7ae0dcee952dd37581a4d04afb28a2ba58a803e5fa035b938654",
+        "match": {
+          "domain": "navigation"
+        },
+        "name": "navigation",
+        "names_sha256": "e5a8ef0125e59ac513be1d295a8422d5302f1950acabc9af9a9c74dc549bb587"
+      },
+      {
+        "count": 48,
+        "indices_sha256": "e9229ae45353a15202285e0d9331aef6d831ac9aa358da6b9ce1cd287cbf132d",
+        "match": {
+          "domain": "efferent"
+        },
+        "name": "efferent",
+        "names_sha256": "ca9f33b738d05f17501c3eebe3cbae0de92d88cf13c858bb1f19acc888ceedbe"
+      }
+    ]
+  },
+  "immutable": true,
+  "phenotype_sha256": "51cde3767d13b826978ead63973483069003f9120bae2772bd669ba21425f7c3",
+  "ranges": {
+    "excitability_gain": [
+      0.8701725602149963,
+      1.1426678895950317
+    ],
+    "input_gain": [
+      0.9172831773757935,
+      1.1705557107925415
+    ],
+    "learning_rate_gain": [
+      1.0031925439834595,
+      1.1480807065963745
+    ],
+    "modulator_gain": [
+      0.8645439743995667,
+      0.9872033596038818
+    ],
+    "readout_gain": [
+      0.9443222284317017,
+      1.1078104972839355
+    ],
+    "recurrent_source_gain": [
+      0.8855482339859009,
+      1.0405826568603516
+    ],
+    "recurrent_target_gain": [
+      0.892357349395752,
+      1.1686151027679443
+    ]
+  },
+  "recipe_sha256": "352b4c0cd9dacb5d84914a43651268b44073e4df0b8d9a33a1b44db64ed8bd46",
+  "shape": {
+    "inputs": 351,
+    "neurons": 165122,
+    "readouts": 384
+  }
+}
