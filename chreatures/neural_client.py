@@ -101,6 +101,22 @@ class NeuralClient:
             self._connection.close()
             self._connection = None
 
+    def available_resident_slots(self) -> int | None:
+        """Read capacity before a funded birth; never allocate or resize a brain."""
+        metadata = self._request("GET", "/v1/metadata")
+        if metadata.get("service_incarnation") != self.service_incarnation:
+            raise NeuralServiceError("Neural service changed before resident birth")
+        brain = metadata["brain"]
+        capacity = brain.get("capacity")
+        if capacity is None:
+            return None  # Dynamically allocated backends have no fixed slot pool.
+        residents = brain.get("residents")
+        if (type(capacity) is not int or capacity < 0
+                or not isinstance(residents, list)
+                or len(residents) > capacity):
+            raise NeuralServiceError("Neural resident capacity metadata differs")
+        return capacity - len(residents)
+
     def mutate(self, path, **value):
         if self.uncertain:
             raise NeuralServiceError("An earlier neural request has unconfirmed outcome; restore the last whole-world checkpoint")

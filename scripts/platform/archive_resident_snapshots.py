@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Archive old complete brain snapshots for the population-v4 deployment.
+"""Archive old complete brain snapshots for the current population-v5 deployment.
 
 This helper is deliberately scoped to one deployment and one hbox archive.  It
 publishes a remote object and a durable local index before removing a local
@@ -21,15 +21,19 @@ import time
 import struct
 
 
+DEPLOYMENT_NAME = "population-v5-trained-ee18250"
 DEPLOYMENT = Path(
-    "/Users/ember/paperbin/chreatures/deployments/population-v4-8a801fc"
+    "/Users/ember/paperbin/chreatures/deployments/population-v5-trained-ee18250"
 )
 SNAPSHOTS = DEPLOYMENT / "run/brain/snapshots"
-WORLD_CHECKPOINT = DEPLOYMENT / "run/world/checkpoint.json"
+WORLD_CHECKPOINT = DEPLOYMENT / "run/world.json"
 INDEX = DEPLOYMENT / "run/brain/archive-index.json"
 LOCK = DEPLOYMENT / "run/brain/archive.lock"
 REMOTE_HOST = "hbox"
-REMOTE_ROOT = Path("/tank/chreatures/resident-archives/population-v4-8a801fc")
+REMOTE_TARGET = "hbox@192.168.50.39"
+REMOTE_ROOT = Path(
+    "/tank/chreatures/resident-archives/population-v5-trained-ee18250"
+)
 KEEP_RECENT = 8
 MIN_AGE_SECONDS = 180.0
 MAX_FILES_PER_RUN = 12
@@ -66,7 +70,7 @@ def atomic_json(path: Path, value: object) -> None:
 
 
 def empty_index() -> dict[str, object]:
-    return {
+    value = {
         "format": FORMAT,
         "version": 1,
         "local_snapshot_directory": str(SNAPSHOTS),
@@ -74,6 +78,11 @@ def empty_index() -> dict[str, object]:
         "remote_root": str(REMOTE_ROOT),
         "entries": {},
     }
+    value["deployment"] = DEPLOYMENT_NAME
+    identity = checkpoint_identity()
+    if identity is not None:
+        value["world_id"] = identity["world_id"]
+    return value
 
 
 def load_index() -> dict[str, object]:
@@ -81,30 +90,41 @@ def load_index() -> dict[str, object]:
         return empty_index()
     value = json.loads(INDEX.read_text(encoding="utf-8"))
     expected = empty_index()
-    for field in (
+    fields = [
         "format",
         "version",
         "local_snapshot_directory",
         "remote_host",
         "remote_root",
-    ):
-        if value.get(field) != expected[field]:
+    ]
+    fields.extend(("deployment", "world_id"))
+    for field in fields:
+        if value.get(field) != expected.get(field):
             raise RuntimeError(f"archive index {field} differs")
     if not isinstance(value.get("entries"), dict):
         raise RuntimeError("archive index entries differ")
     return value
 
 
-def checkpoint_reference() -> str | None:
+def checkpoint_identity() -> dict[str, str] | None:
     try:
         value = json.loads(WORLD_CHECKPOINT.read_text(encoding="utf-8"))
-        name = value["state"]["neural_snapshot"]["name"]
+        state = value["state"]
+        name = state["neural_snapshot"]["name"]
+        world_id = state["id"]
     except (FileNotFoundError, KeyError, TypeError, json.JSONDecodeError):
         return None
-    if not isinstance(name, str):
+    if not isinstance(name, str) or not isinstance(world_id, str) or not world_id:
         return None
     filename = name if name.endswith(".npz") else f"{name}.npz"
-    return filename if _NAME.fullmatch(filename) else None
+    if not _NAME.fullmatch(filename) or not filename.startswith(f"world-{world_id}-"):
+        return None
+    return {"filename": filename, "world_id": world_id}
+
+
+def checkpoint_reference() -> str | None:
+    identity = checkpoint_identity()
+    return None if identity is None else identity["filename"]
 
 
 def complete_npz(path: Path) -> bool:
@@ -162,13 +182,23 @@ def eligible_snapshots(now: float) -> list[Path]:
 
 
 def ssh(arguments: str, *, stdin=None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["/usr/bin/ssh", "-o", "BatchMode=yes", REMOTE_HOST, arguments],
+    result = subprocess.run(
+        [
+            "/usr/bin/ssh",
+            "-o",
+            "BatchMode=yes",
+            REMOTE_TARGET,
+            arguments,
+        ],
         stdin=stdin,
         text=stdin is None,
         capture_output=stdin is None,
-        check=True,
+        check=False,
     )
+    if result.returncode != 0:
+        detail = result.stderr.strip() if isinstance(result.stderr, str) else ""
+        raise RuntimeError(f"ssh command failed ({result.returncode}): {detail}")
+    return result
 
 
 def publish_remote(path: Path, digest: str, size: int) -> str:
@@ -180,7 +210,13 @@ def publish_remote(path: Path, digest: str, size: int) -> str:
     command = f"cat > {shlex.quote(str(temporary))}"
     with path.open("rb") as stream:
         subprocess.run(
-            ["/usr/bin/ssh", "-o", "BatchMode=yes", REMOTE_HOST, command],
+            [
+                "/usr/bin/ssh",
+                "-o",
+                "BatchMode=yes",
+                REMOTE_TARGET,
+                command,
+            ],
             stdin=stream,
             check=True,
         )
@@ -308,7 +344,13 @@ def fetch(name: str, expected_sha256: str | None) -> dict[str, object]:
     command = f"cat -- {shlex.quote(str(entry['remote_path']))}"
     with temporary.open("wb") as stream:
         subprocess.run(
-            ["/usr/bin/ssh", "-o", "BatchMode=yes", REMOTE_HOST, command],
+            [
+                "/usr/bin/ssh",
+                "-o",
+                "BatchMode=yes",
+                REMOTE_TARGET,
+                command,
+            ],
             stdout=stream,
             check=True,
         )

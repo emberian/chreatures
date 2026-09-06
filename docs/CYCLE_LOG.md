@@ -765,3 +765,15 @@ candidate-plan identity. The current training snapshot is v8, with explicit
 locator rebinding; already-allocated v6 training runs remain on their original
 source freezes. This removes a real cross-machine launch failure without
 introducing another runtime compatibility branch.
+
+The final joined M2 research birth uses frozen source `ee18250`, the actual
+trained update-20 controller, eight fresh private states and the new two-law GAM
+bank. A finite material offering and four scheduled outside light/sound events
+were delivered through the existing physical interface. The 240-frame capture
+spans ticks 807–2004; 7,694 intervening transitions were in the new bank's fitted
+domain and 1,882 were outside. The public homepage now leads with this new
+recording, while retaining the earlier v4 region separately. Its eight-slot
+neural service makes this a fixed-cohort research run. Current future source
+checks available neural slots before preparing a funded hatch; the frozen
+recorded life was not changed. Exact scope and identities are in the
+[deployment receipt](../data/development/population-v5-trained.receipt.json).
