@@ -456,3 +456,42 @@ constructed 12 parts and continued exactly through canonical reload. The live
 recycling world adopted this implementation at a paused checkpoint at tick
 11,327, with its existing physiology and private state retained. Source:
 `072d4ea`; new secretion remains disabled in that older world.
+
+## 2026-09-06 — native motor, tissue and finite outside offerings
+
+The user reiterated the Rust direction after a count found roughly 49,000
+physical Python lines, including 32,000 in the runtime. `1b2ab18` moves inherited
+motor computation and persistent tissue bookkeeping into Rust and removes the
+old production numerical loops. At 2,789 parts, the offline profiled Biosphere
+phase fell from 94.83 to 26.15 ms/tick with bit-exact world and chemical
+continuation. Complete six-tick motor execution fell from 202 to 158 microseconds
+for one resident and 1,042 to 816 microseconds for three sequential residents on
+the M2 Max. Motor output differs from NumPy by at most 5.96e-7 in the measured
+artifact comparison, so adult snapshots now identify the arithmetic runtime.
+`pre-native-motor-20260906` retains the prior engine; no live resident received
+an unannounced arithmetic change. The native builder now honors Cargo's target
+directory and installs through an atomic rename.
+
+`6c56b90` adds trainable gated context with causal sequence-PPO, fresh shared-model
+inheritance, and atomic completed-evaluation receipts. Eight focused tests ran
+against real Torch on hbox CPU, including delayed gradients, per-resident reset,
+and exact pending-rollout continuation. Four combined native artifact and receipt
+checks passed locally against the composed extension. Preliminary local checks
+loaded an older extension and failed; selecting the recorded composed binary
+resolved those build-selection failures. No gated developmental run or improved
+memory behavior is claimed. Scry searches and primary papers underpin the
+[working-memory](WORKING_MEMORY.md) and [fast-control](LEARNED_SENSORIMOTOR_SKILLS.md)
+choices. A separate trained predictive ensemble did not beat the incumbent at
+shared horizons and remains isolated research in `e5acfb6`.
+
+Fresh chemical habitats can now allocate finite outside reserves and dormant
+physical offering slots. Visitor commands transfer material into those slots;
+the browser exposes the available mixtures and remaining stock. An arranged
+mouth-contact probe consumed 0.004 from an offering. A composed research world
+then joined the native motor, full MaleCNS, personal learning, predictor, growth,
+recycling, secretion and visitor supply. After 50 warmup ticks, all 27 recorded
+owner sections and the complete neural snapshot matched over 12 continuation
+ticks. The offered packet transferred 0.22 reserve with zero elemental and stored
+energy residual. Acoustics were disabled in this assay. Its private neural service
+was stopped afterward; the ongoing recycling residents were untouched. See the
+[receipt](../data/ecology/whole-visitor-offering-replay-v1.receipt.json).

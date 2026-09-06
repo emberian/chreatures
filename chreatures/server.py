@@ -39,6 +39,7 @@ def create_app(
     physics_backend=None,
     personal_plasticity=False,
     predictive_model=None,
+    visitor_materials=None,
 ):
     checkpoint = checkpoint or ROOT / "runs/hollow-garden.json"
     authority = {"habitat": None, "error": None, "alive": True}
@@ -67,6 +68,7 @@ def create_app(
                     physics_backend=physics_backend,
                     personal_plasticity=personal_plasticity,
                     predictive_model=predictive_model,
+                    visitor_materials=visitor_materials,
                     spec=json.loads(Path(habitat_spec).read_text())
                     if habitat_spec is not None
                     else None,
@@ -325,6 +327,10 @@ def main():
         help="Native metabolic and developmental configuration for new 3D research worlds",
     )
     parser.add_argument(
+        "--visitor-materials", type=Path,
+        help="Finite outside material supplies for new chemical worlds",
+    )
+    parser.add_argument(
         "--acoustics",
         type=Path,
         help="Physical acoustic transducers for new 3D worlds; saved worlds preserve their mechanisms",
@@ -384,6 +390,7 @@ def main():
             physics_backend=args.physics_backend,
             personal_plasticity=args.personal_plasticity,
             predictive_model=args.predictive_model,
+            visitor_materials=args.visitor_materials,
         ),
         host=args.host,
         port=args.port,
