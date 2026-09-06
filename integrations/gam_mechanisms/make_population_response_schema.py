@@ -19,8 +19,9 @@ TARGETS = (
     ("allocation_mass", "expected_allocation_mass", "elemental-equivalent mass per 50 ms", "positive_softplus"),
 )
 SMOOTH_FEATURES = {
-    "energy_state_delta": ["energy", "gut", "fatigue", "thrust", "eat", "allocate"],
-    "effort": ["fatigue", "speed", "thrust", "yaw", "posture", "grip"],
+    "energy_state_delta": ["energy", "gut", "fatigue", "history_energy_mean", "thrust", "eat", "allocate"],
+    "fatigue_state_delta": ["fatigue", "history_fatigue_mean", "speed", "thrust", "yaw", "posture", "grip"],
+    "effort": ["fatigue", "history_fatigue_mean", "speed", "thrust", "yaw", "posture", "grip"],
 }
 
 
@@ -34,7 +35,8 @@ def main() -> None:
     parser.add_argument("--feature-contract", type=Path, required=True)
     parser.add_argument("--heldout-lineage", action="append", default=[])
     parser.add_argument("--heldout-candidate", action="append", default=[])
-    parser.add_argument("--heldout-environment", action="append", required=True)
+    parser.add_argument("--heldout-environment", action="append", default=[])
+    parser.add_argument("--validation-candidate", action="append", default=[])
     parser.add_argument("--target", action="append", choices=[x[0] for x in TARGETS],
                         help="explicit supported-law subset; default attempts all measured targets")
     parser.add_argument("--training-tick-stride", type=int, default=1)
@@ -55,9 +57,11 @@ def main() -> None:
         fit_rows = ~(np.isin(lineage, args.heldout_lineage)
                      | np.isin(candidate, args.heldout_candidate)
                      | np.isin(environment, args.heldout_environment))
+        fit_rows &= ~np.isin(candidate, args.validation_candidate)
         fit_rows &= (np.asarray(rows["tick_unit"], dtype=np.uint64)
                      % args.training_tick_stride == 0)
-        fit_rows &= np.asarray(rows["world_unit"], dtype=np.int64) % 5 != 0
+        if not args.validation_candidate:
+            fit_rows &= np.asarray(rows["world_unit"], dtype=np.int64) % 5 != 0
         if not fit_rows.any() or fit_rows.all():
             raise ValueError("held-out lineage/environment split is empty")
         selected = set(args.target or [x[0] for x in TARGETS])
@@ -82,6 +86,9 @@ def main() -> None:
         "budgets": [],
         "candidate_score": {"maximum_tilt": 0.25, "terms": [
             {"mechanism":"expected_energy_state_delta", "weight":1.0, "scale":score_scales["expected_energy_state_delta"]},
+            *([{"mechanism":"expected_fatigue_state_delta", "weight":-0.75,
+                "scale":score_scales["expected_fatigue_state_delta"]}]
+              if "fatigue_state_delta" in selected else []),
             {"mechanism":"expected_effort", "weight":-0.5, "scale":score_scales["expected_effort"]},
         ]} if {"energy_state_delta", "effort"}.issubset(selected) else None,
         "basis_size": 9,
@@ -89,6 +96,7 @@ def main() -> None:
         "split": {"heldout_lineages": args.heldout_lineage,
                   "heldout_candidates": args.heldout_candidate,
                   "heldout_environments": args.heldout_environment,
+                  "validation_candidates": args.validation_candidate,
                   "validation_world_mod": 5},
         "source_contract": {
             "format": "chreatures-population-gam-trace-v1",

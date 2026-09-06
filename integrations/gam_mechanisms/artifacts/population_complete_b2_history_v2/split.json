@@ -1,0 +1,20 @@
+{
+  "environment_balance": "each split contains candidates from both of the two environments",
+  "format": "chreatures-population-gam-split-v2",
+  "frozen_before_target_inspection": true,
+  "heldout_candidates": [
+    "0d4148034e128c5b7885908a7365408e0486945a25504261f8ce80e9370db8d7",
+    "51b59ce0ac648303c82f9798abcebb6ca3a565e03dde9d29f1df52c7da279114",
+    "a7463fe9ecfb044334477ca5fa2ba1e9d0bc4c559f457f4946a27fd1fb6a97dd",
+    "bbf586750ea3b65da19278d48ab8259824408c24efe07fdbd0bf8410b7f1eca7"
+  ],
+  "lineage_scope": "single shared founder; no lineage generalization",
+  "selection_rule": "sorted candidate SHA positions chosen to balance both known environment assignments; identities are audit-only",
+  "training_candidates": "remaining 8",
+  "validation_candidates": [
+    "1f2c7e89915b6289ac4294d055d829addfc3f2ce3c147658ac300436f5b559db",
+    "64a98698af8e9b876e174b05e3c7d5f1e429b42f1b15b823541905e1e620e851",
+    "a3dcd83f89ec63e7124d4e27888062b6bd12d4ee910d2ffc50668068b95ce5f5",
+    "bbf88c2aa584e6a8f8fb070067e67902edcefb5c17287cf5e00ef62b4015a742"
+  ]
+}
