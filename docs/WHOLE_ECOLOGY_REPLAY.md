@@ -26,3 +26,14 @@ neural checksum matched exactly. Acoustics and the older resource mechanism
 were disabled in this run; their null sections do not validate those dynamics.
 This is a finite same-runtime continuation check, not cross-device equivalence
 or a claim about indefinitely long trajectories.
+
+The subsequent [exudation integration receipt](../data/ecology/whole-exudation-replay-v1.receipt.json)
+uses the current exchange-v2 birth with 24 mobile return slots and 12 colony
+emission slots, the optimized growth implementation, and request-receipt
+transport. It advances 80 ticks before saving and 12 afterward. The world
+contains 12 constructed parts, six active exudate objects, nonzero material
+return and private predictive/motor state. Every recorded owner and the native
+brain snapshot match exactly. Its 0.072 emitted mass comes from supplied founder
+stores; the separate zero-founder-reserve light/dark assay establishes the
+source-production claim. Acoustics, the older resource engine and external
+perception were disabled in this integration.

@@ -1,0 +1,57 @@
+{
+  "format": "chreatures-whole-exudation-replay-receipt-v1",
+  "status": "passed",
+  "scope": {
+    "world": "fresh recycling reef birth",
+    "warmup_ticks": 80,
+    "continuation_ticks": 12,
+    "residents": 3,
+    "personal_memory": true,
+    "personal_plasticity": true,
+    "predictive_foresight": true,
+    "ecological_exchange": "chreatures-ecological-exchange-v2",
+    "mobile_deposit_slots": 24,
+    "colony_emitter_slots": 12,
+    "acoustics": false,
+    "legacy_resources": false,
+    "perception_service": false
+  },
+  "evidence": {
+    "all_26_causal_owner_sections_exact": true,
+    "native_neural_snapshot_exact": true,
+    "emitted_mass_at_checkpoint": 0.07200000000000001,
+    "active_emitter_slots_at_checkpoint": 6,
+    "active_emitter_slot_ids": ["exudate-0", "exudate-1", "exudate-4", "exudate-5", "exudate-8", "exudate-9"],
+    "developed_plant_parts": 12,
+    "growth_buds": {"colony-a": 4, "colony-b": 4, "colony-c": 5},
+    "egested_mass": 0.06830489966187966,
+    "foresight_observations": {"mica": 19, "fern": 19, "pip": 19},
+    "motor_macro_steps": {"mica": 5, "fern": 5, "pip": 5}
+  },
+  "male_cns": {
+    "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "neurons": 165122,
+    "edges": 25563197,
+    "native_snapshot_sha256": "8073390ca04a457b2eaa7413c30324aa72837333ff85628941effe59eb6d35c0"
+  },
+  "sources": {
+    "habitat": {"path": "runs/exudation-replay-birth/habitat.json", "sha256": "a0a4357c95a9bef861cab467cbedc95d6be20b8bc5fa44935e52621750e4bb12"},
+    "biosphere": {"path": "runs/exudation-replay-birth/biosphere.json", "sha256": "23c4f3f8de3fb79d92e942727234ddebcd0d1b93d8b75e799e82a5fc6e1d6c66"},
+    "brain_artifact": {"path": "data/metal-brain/metal-csr-v2.bin", "sha256": "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0"},
+    "port_bundle": {"path": "data/ports/retinal-v1-maps.npz", "sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2"},
+    "motor_genome": {"path": "data/genomes/nursery-embodied-v2-step9695.npz", "sha256": "ceb546e9d9a2ae2495c82e545031114b872c5da80ea4df7e6f9ed6c77b7832f6"},
+    "predictive_model": {"path": "data/cognitive/predictive-state-fullgraph-v3.npz", "sha256": "c7ba729b8a62b7fda5a436a69d3ee8f5036c1c63119da6549443a9ed49f82ca2"}
+  },
+  "artifacts": {
+    "checkpoint_state_sha256": "23bead3fd8702f2382218202178c7d13b30e226c966d3807dbc66b6517e3c93d",
+    "checkpoint_file_sha256": "9775ef35cf64859e8ee17e11ada3c9c7f4850ec393f5aca284873558dec4574f",
+    "report_path": "runs/metal-exudation-replay/report.json",
+    "report_sha256": "9b9970f402d84d3e240897221360614d2492ef280493c1880e66e99f90827905"
+  },
+  "service": {
+    "url": "http://127.0.0.1:18774",
+    "kernel": "simd",
+    "private_research_instance": true,
+    "stopped_after_probe": true
+  }
+}
