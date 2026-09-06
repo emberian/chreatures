@@ -16,7 +16,10 @@ from typing import Any, Mapping, Sequence
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from chreatures.population import PopulationSearch
+from chreatures.population import (
+    PopulationSearch,
+    canonical_bytes as population_canonical_bytes,
+)
 from chreatures.population_evidence import (
     BATCH_FORMAT,
     LEDGER_FORMAT,
@@ -97,15 +100,24 @@ def _verified_identity(document: Mapping[str, Any], field: str, name: str) -> st
     expected = _hash(document.get(field), f"{name}.{field}")
     body = dict(document)
     body.pop(field)
-    if hashlib.sha256(canonical_bytes(body)).hexdigest() != expected:
+    if hashlib.sha256(population_canonical_bytes(body)).hexdigest() != expected:
         raise PopulationEvidenceError(f"{name} content identity differs")
     return expected
 
 
 def _write_blob(
-    directory: Path, value: Any, *, role: str, media_type: str = "application/json"
+    directory: Path,
+    value: Any,
+    *,
+    role: str,
+    media_type: str = "application/json",
+    population_canonical: bool = False,
 ) -> tuple[Path, dict[str, Any]]:
-    payload = canonical_bytes(value)
+    payload = (
+        population_canonical_bytes(value)
+        if population_canonical
+        else canonical_bytes(value)
+    )
     digest = hashlib.sha256(payload).hexdigest()
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{digest}.json"
@@ -151,7 +163,7 @@ def _campaign(
     value = source.get("probe_panel")
     if not isinstance(value, Mapping) or value.get("format") != PANEL_FORMAT:
         raise PopulationEvidenceError("probe panel format differs")
-    logical = hashlib.sha256(canonical_bytes(value)).hexdigest()
+    logical = hashlib.sha256(population_canonical_bytes(value)).hexdigest()
     if logical != expected_panel_sha256:
         raise PopulationEvidenceError("probe panel differs from native search config")
     policy = _hash(value.get("controller_file_sha256"), "probe policy")
@@ -440,7 +452,9 @@ def _life_trace(run: Mapping[str, Any], life: Mapping[str, Any]) -> dict[str, An
             ),
             "failure_trace_sha256": life.get("failure_trace_sha256"),
         }
-    if hashlib.sha256(canonical_bytes(value)).hexdigest() != life.get("trajectory_sha256"):
+    if hashlib.sha256(population_canonical_bytes(value)).hexdigest() != life.get(
+        "trajectory_sha256"
+    ):
         raise PopulationEvidenceError(f"life {life['life_id']} trajectory identity differs")
     return value
 
@@ -452,7 +466,7 @@ def _foundation_records(
     if not isinstance(config, Mapping):
         raise PopulationEvidenceError("native search state has no config")
     config_sha256 = _hash(state.get("config_sha256"), "search config")
-    if hashlib.sha256(canonical_bytes(config)).hexdigest() != config_sha256:
+    if hashlib.sha256(population_canonical_bytes(config)).hexdigest() != config_sha256:
         raise PopulationEvidenceError("native search config content differs")
     _config_path, config_blob = _write_blob(blob_dir, config, role="search_config")
     run_id = f"population-run:{campaign_id}"
@@ -515,7 +529,7 @@ def _foundation_records(
         or controller.get("file_sha256") != panel.get("controller_file_sha256")
     ):
         raise PopulationEvidenceError("campaign metric or probe recipe differs")
-    panel_sha256 = hashlib.sha256(canonical_bytes(panel)).hexdigest()
+    panel_sha256 = hashlib.sha256(population_canonical_bytes(panel)).hexdigest()
     _panel_blob_path, panel_blob = _write_blob(
         blob_dir, panel, role="probe_policy_panel"
     )
@@ -679,7 +693,10 @@ def record_population_campaign(
 
             trace = _life_trace(run, life)
             _trace_path, trace_blob = _write_blob(
-                blob_dir, trace, role="evaluation_trace"
+                blob_dir,
+                trace,
+                role="evaluation_trace",
+                population_canonical=True,
             )
             if trace_blob["sha256"] != life["trajectory_sha256"]:
                 raise PopulationEvidenceError("materialized life trace hash differs")
