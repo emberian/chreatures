@@ -4,6 +4,7 @@ import {OrbitControls} from './vendor/three/OrbitControls.js';
 const FORMAT = 'chreatures-living-reef-public-recording-v1';
 const GEOMETRY_ENCODING = 'entity-replacement-delta-v1';
 const ACTIONS = ['thrust','yaw','gaze_pitch','grip','signal_low','signal_mid','signal_high','posture','oral'];
+const ACTOR_ACTIONS = ACTIONS.slice(0,8);
 const $ = (selector) => document.querySelector(selector);
 const canvas = $('#world-canvas');
 const ui = {
@@ -12,6 +13,9 @@ const ui = {
   peripheral: $('#peripheral'), foveal: $('#foveal'), readouts: $('#readouts'),
   metabolism: $('#metabolism'), activity: $('#activity'), support: $('#support'),
   goalTime: $('#goal-time'), goalLeft: $('#goal-left'), actions: $('#actions'), moments: $('#moments'),
+  decisionGoal: $('#decision-goal'), decisionChoice: $('#decision-choice'), proposal: $('#proposal-values'),
+  candidates: $('#candidates'), correction: $('#private-correction'), privateUpdates: $('#private-updates'),
+  goalErrorScale: $('#goal-error-scale'),
 };
 
 let renderer, scene, camera, controls, worldRoot, signalPoints, physicalSun, ambientFill;
@@ -45,6 +49,14 @@ function validate(data) {
     if (!Array.isArray(frame.bodies) || !Array.isArray(frame.entities) || !frame.selected) throw new Error(`Frame ${index} is incomplete`);
     finiteArray(frame.selected.neural_readouts?.shape, 1, `Frame ${index} readout shape`);
     if (frame.selected.neural_readouts.shape[0] !== 384) throw new Error(`Frame ${index} readouts are not 384 values`);
+    const selected=frame.selected, refinement=selected.consequence_refinement, forecast=selected.sensory_forecast;
+    if (!refinement || !forecast || !selected.sampled_proposal) throw new Error(`Frame ${index} has no recorded decision path`);
+    for(const [label,value] of [['GAM scores',refinement.candidate_scores],['GAM coverage',refinement.candidate_out_of_domain],['forecast progress',forecast.candidate_progress],['forecast disagreement',forecast.candidate_disagreement],['forecast clipping',forecast.candidate_input_clipped],['forecast tilt',forecast.candidate_logit_tilt]]){
+      if(!Array.isArray(value)||value.length!==4)throw new Error(`Frame ${index} ${label} must have four candidates`);
+    }
+    if(!Array.isArray(refinement.selected_private_correction)||refinement.selected_private_correction.length!==3)throw new Error(`Frame ${index} private correction is invalid`);
+    if(!ACTOR_ACTIONS.every(name=>Number.isFinite(selected.sampled_proposal[name])))throw new Error(`Frame ${index} actor proposal is invalid`);
+    if(!Number.isInteger(refinement.selected_candidate)||refinement.selected_candidate<0||refinement.selected_candidate>3)throw new Error(`Frame ${index} selected candidate is invalid`);
   }
   return data;
 }
@@ -304,6 +316,39 @@ function makeActionBars() {
   }));
 }
 
+function makeDecisionDisplay(){
+  ui.proposal.replaceChildren(...ACTOR_ACTIONS.map(name=>{
+    const item=document.createElement('div');item.className='proposal-value';item.dataset.action=name;
+    item.innerHTML=`<span>${name.replaceAll('_',' ')}</span><span>0.000</span>`;return item;
+  }));
+  ui.candidates.replaceChildren(...Array.from({length:4},(_,index)=>{
+    const row=document.createElement('div');row.className='candidate-row';row.dataset.candidate=index;
+    row.innerHTML=`<span>${index+1}</span><span data-value="score">—</span><span class="coverage" data-value="coverage">—</span><span data-value="progress">—</span><span data-value="disagreement">—</span><span data-value="tilt">—</span>`;
+    return row;
+  }));
+}
+
+function formatNative(value){return Number.isFinite(value)?Number(value).toFixed(3):'—';}
+
+function paintDecision(selected){
+  const refinement=selected.consequence_refinement,forecast=selected.sensory_forecast;
+  ui.decisionGoal.textContent=selected.goal.valid?`goal at ${selected.goal.recorded_time.toFixed(2)} s`:'no valid goal';
+  ui.decisionChoice.textContent=`candidate ${refinement.selected_candidate+1}`;
+  for(const item of ui.proposal.children)item.querySelector('span:last-child').textContent=formatNative(selected.sampled_proposal[item.dataset.action]);
+  for(const row of ui.candidates.children){
+    const index=Number(row.dataset.candidate),ood=refinement.candidate_out_of_domain[index];
+    row.classList.toggle('selected',index===refinement.selected_candidate);
+    row.querySelector('[data-value="score"]').textContent=formatNative(refinement.candidate_scores[index]);
+    const coverage=row.querySelector('[data-value="coverage"]');coverage.textContent=ood?'outside':'within';coverage.classList.toggle('ood',ood);
+    const progress=row.querySelector('[data-value="progress"]');progress.textContent=formatNative(forecast.candidate_progress[index]);progress.classList.toggle('clipped',forecast.candidate_input_clipped[index]);
+    row.querySelector('[data-value="disagreement"]').textContent=formatNative(forecast.candidate_disagreement[index]);
+    row.querySelector('[data-value="tilt"]').textContent=formatNative(forecast.candidate_logit_tilt[index]);
+  }
+  ui.correction.textContent=refinement.selected_private_correction.map(formatNative).join(' · ');
+  ui.privateUpdates.textContent=String(refinement.completed_private_updates_before_action);
+  ui.goalErrorScale.textContent=formatNative(forecast.empirical_goal_error_scale);
+}
+
 function paintActions(values) {
   for(const item of ui.actions.children){
     const value=Math.max(-1,Math.min(1,Number(values[item.dataset.action])||0));
@@ -343,6 +388,7 @@ function updateInstruments(index) {
   ui.goalTime.textContent=selected.goal.valid?`${selected.goal.recorded_time.toFixed(3)} s`:'no valid record';
   ui.goalLeft.textContent=selected.goal.valid?`${selected.goal.commit_remaining_ticks} ticks`:'—';
   paintActions(selected.committed_action);
+  paintDecision(selected);
   paintHistory(index);
   for(const button of ui.moments.querySelectorAll('button')) button.setAttribute('aria-current',String(Number(button.dataset.frame)===index));
 }
@@ -410,7 +456,7 @@ function animate(now) {
 
 export function loadRecording(data) {
   recording=validate(expandEntityDeltas(data));cursor=0;playing=false;
-  makePools(recording);makeActionBars();populateMoments();
+  makePools(recording);makeActionBars();makeDecisionDisplay();populateMoments();
   ui.scrubber.max=String(recording.frames.length-1);ui.scrubber.value='0';
   ui.status.textContent=recording.status;
   const bodyButton=document.querySelector('[data-camera="body"]');

@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#10251d">
   <title>Living Reef observatory — Chreatures</title>
   <link rel="stylesheet" href="living.css">
+  <link rel="stylesheet" href="living-v2.css">
   <script type="importmap">{"imports":{"three":"./vendor/three/three.module.min.js"}}</script>
 </head>
 <body>
@@ -55,6 +56,24 @@
       <section class="goal-section">
         <div class="section-title"><h2>Remembered goal</h2><span>content remains private</span></div>
         <div class="goal-grid"><div><small>recorded at</small><strong id="goal-time">—</strong></div><div><small>commitment left</small><strong id="goal-left">—</strong></div></div>
+      </section>
+
+      <section class="decision-section">
+        <div class="section-title"><h2>Recorded decision path</h2><span>native controller values</span></div>
+        <div class="decision-flow" aria-label="Remembered goal, actor proposal, candidate evaluation, and delivered action">
+          <div class="decision-step"><small>01 · remembered</small><strong id="decision-goal">goal —</strong></div>
+          <span aria-hidden="true">→</span>
+          <div class="decision-step"><small>02 · actor</small><strong>sampled proposal</strong></div>
+          <span aria-hidden="true">→</span>
+          <div class="decision-step"><small>03 · evaluated</small><strong id="decision-choice">candidate —</strong></div>
+          <span aria-hidden="true">→</span>
+          <div class="decision-step"><small>04 · physical</small><strong>delivered action</strong></div>
+        </div>
+        <div class="proposal-block"><div class="micro-title"><span>Actor proposal · 8 channels</span><span>before oral law</span></div><div id="proposal-values" class="proposal-values"></div></div>
+        <div class="candidate-head"><span>candidate</span><span>GAM score</span><span>coverage</span><span>forecast progress</span><span>disagreement</span><span>logit tilt</span></div>
+        <div id="candidates" class="candidate-table"></div>
+        <div class="decision-meta"><span>selected correction <b id="private-correction">—</b></span><span>private updates before action <b id="private-updates">—</b></span><span>forecast goal-error scale <b id="goal-error-scale">—</b></span></div>
+        <p class="decision-note">Candidate action vectors stay private at this public boundary. Forecast disagreement is a recorded heuristic, not calibrated confidence.</p>
       </section>
 
       <section>

@@ -292,6 +292,23 @@ def extract_frame(
     if set(action) != set(ACTION_NAMES) | {"oral"}:
         raise ValueError("host has not published the committed action-plus-oral schema")
     goal = cognition["goal"]
+    consequence = cognition.get("consequence_refinement")
+    sensory_forecast = cognition.get("sensory_forecast")
+    if not isinstance(consequence, Mapping) or not isinstance(sensory_forecast, Mapping):
+        raise ValueError("host view lacks current consequence and sensory forecast reports")
+    candidate_count = len(consequence.get("candidate_scores", []))
+    if candidate_count < 1 or any(
+        len(report.get(key, [])) != candidate_count
+        for report, keys in (
+            (consequence, ("candidate_scores", "candidate_out_of_domain")),
+            (sensory_forecast, (
+                "candidate_progress", "candidate_disagreement",
+                "candidate_input_clipped", "candidate_logit_tilt",
+            )),
+        )
+        for key in keys
+    ):
+        raise ValueError("host candidate reports have inconsistent shapes")
     outcomes = state.get("outcomes", {})
     frame = {
         "tick": int(state["tick"]),
@@ -423,6 +440,39 @@ def extract_frame(
                 "recorded_time": finite(goal["recorded_time"], "goal recorded time"),
                 "commit_remaining_ticks": int(goal["remaining_ticks"]),
             },
+            "sampled_proposal": {
+                key: finite(cognition["sampled_proposal"][key], f"proposal {key}")
+                for key in ACTION_NAMES
+            },
+            "consequence_refinement": {
+                "candidate_scores": [
+                    finite(value, "candidate consequence score")
+                    for value in consequence["candidate_scores"]
+                ],
+                "candidate_out_of_domain": [
+                    bool(value) for value in consequence["candidate_out_of_domain"]
+                ],
+                "selected_candidate": int(consequence["selected_candidate"]),
+                "selected_private_correction": vector(
+                    consequence["selected_private_correction"], 3,
+                    "selected private correction",
+                ),
+                "completed_private_updates_before_action": int(
+                    consequence["completed_private_updates_before_action"]
+                ),
+            },
+            "sensory_forecast": {
+                key: [finite(value, f"sensory forecast {key}") for value in sensory_forecast[key]]
+                for key in ("candidate_progress", "candidate_disagreement", "candidate_logit_tilt")
+            } | {
+                "candidate_input_clipped": [
+                    bool(value) for value in sensory_forecast["candidate_input_clipped"]
+                ],
+                "empirical_goal_error_scale": finite(
+                    sensory_forecast["empirical_goal_error_scale"],
+                    "empirical goal error scale",
+                ),
+            },
             "committed_action": {
                 key: finite(action[key], f"action {key}")
                 for key in (*ACTION_NAMES, "oral")
@@ -444,7 +494,8 @@ def extract_frame(
     if goal["changed"]:
         reasons.append("private-goal-commit")
     outcome = frame["selected"]["outcome"]
-    if outcome["ingested_mass"] > 0 or outcome["nutrition"] > 0:
+    # Ignore native roundoff-scale transport residue in the public index.
+    if outcome["ingested_mass"] > 1e-9 or outcome["nutrition"] > 1e-9:
         reasons.append("physical-ingestion")
     if outcome["mouth_material_contacts"] > 0:
         reasons.append("mouth-material-contact")
