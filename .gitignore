@@ -2,6 +2,8 @@
 __pycache__/
 .pytest_cache/
 *.pyc
+*.so
+*.dylib
 .DS_Store
 runs/*
 !runs/.gitkeep
