@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import gzip
 import hashlib
 import json
 import math
@@ -63,6 +64,10 @@ def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", required=True, help="Read-only Habitat3D base URL")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--raw-output", type=Path,
+        help="Private gzip JSONL of exact accepted host views",
+    )
     parser.add_argument("--resident-index", type=int, default=0)
     parser.add_argument("--frames", type=int, default=240)
     parser.add_argument("--stride-ticks", type=int, default=4)
@@ -86,6 +91,8 @@ def validate_arguments(args: argparse.Namespace) -> None:
         raise SystemExit("--url must be an HTTP(S) base URL without credentials")
     if args.output.exists():
         raise SystemExit("output must not already exist")
+    if args.raw_output is not None and args.raw_output.exists():
+        raise SystemExit("raw output must not already exist")
     if not 0 <= args.resident_index < 64:
         raise SystemExit("resident index must be in 0..63")
     if not 2 <= args.frames <= 10_000 or not 1 <= args.stride_ticks <= 1_000:
@@ -177,11 +184,22 @@ def body_geometry(body: Mapping[str, Any], public_index: int) -> dict[str, Any]:
 
 
 def object_geometry(entity: Mapping[str, Any], public_index: int) -> dict[str, Any]:
-    return {
+    return quantize_geometry({
         "entity": public_index,
         "shapes": [shape_geometry(shape) for shape in entity.get("shapes", [])],
         "joint": entity.get("joint"),
-    }
+    })
+
+
+def quantize_geometry(value: Any) -> Any:
+    """Bound display geometry precision while the private raw capture stays exact."""
+    if isinstance(value, float):
+        return round(value, 5)
+    if isinstance(value, list):
+        return [quantize_geometry(item) for item in value]
+    if isinstance(value, Mapping):
+        return {key: quantize_geometry(item) for key, item in value.items()}
+    return value
 
 
 def hash_fields(value: Any, prefix: str = "") -> dict[str, str]:
@@ -314,8 +332,16 @@ def extract_frame(
         "articulations": [
             {
                 "body": body_ids.index(str(item["id"])),
-                "links": item.get("links", []), "geoms": item.get("geoms", []),
-                "joints": item.get("joints", []), "sites": item.get("sites", []),
+                # Replay uses rendered shapes and transforms. The exact raw
+                # capture retains link, joint, and site diagnostics.
+                "geoms": quantize_geometry([
+                    {
+                        key: geom[key]
+                        for key in ("type", "size", "position", "quaternion", "color")
+                        if key in geom
+                    }
+                    for geom in item.get("geoms", [])
+                ]),
             }
             for item in state.get("articulations", [])
         ],
@@ -433,6 +459,25 @@ def extract_frame(
     return frame, reasons
 
 
+def encode_entity_deltas(frames: list[dict[str, Any]]) -> None:
+    """Encode full entity keyframe followed by full-object replacements."""
+    previous: dict[int, Any] = {}
+    for frame_index, frame in enumerate(frames):
+        entities = frame["entities"]
+        current = {int(entity["entity"]): entity for entity in entities}
+        if len(current) != len(entities):
+            raise ValueError("duplicate public entity index")
+        if frame_index:
+            frame["entities"] = {
+                "changed": [
+                    current[key] for key in sorted(current)
+                    if previous.get(key) != current[key]
+                ],
+                "removed": sorted(set(previous) - set(current)),
+            }
+        previous = current
+
+
 def main() -> int:
     args = arguments()
     validate_arguments(args)
@@ -457,36 +502,61 @@ def main() -> int:
     seen_phenomena: set[str] = set()
     previous = None
     target_index = 0
-    while target_index < args.frames:
-        if time.monotonic() >= deadline:
-            raise TimeoutError("recording timed out before all fixed ticks arrived")
-        state = fetch_state(args.url)
-        if state.get("error"):
-            raise RuntimeError(f"host reported an error: {state['error']}")
-        tick = int(state["tick"])
-        if tick < target_tick:
-            time.sleep(args.poll_seconds)
-            continue
-        if args.strict_ticks and tick != target_tick:
-            raise RuntimeError(
-                f"read-only sampler missed requested tick {target_tick}; observed {tick}"
-            )
-        if identity(state, args) != provenance:
-            raise RuntimeError("host identity changed during recording")
-        frame, reasons = extract_frame(
-            state, selected_id, body_ids, entity_indices, previous,
+    raw_temporary = None
+    raw_stream = None
+    if args.raw_output is not None:
+        args.raw_output.parent.mkdir(parents=True, exist_ok=True)
+        raw_temporary = args.raw_output.with_name(
+            f".{args.raw_output.name}.tmp-{os.getpid()}"
         )
-        frames.append(frame)
-        novel = [reason for reason in reasons if reason not in seen_phenomena]
-        if novel:
-            moments.append({
-                "frame": target_index, "tick": tick,
-                "model_time": frame["model_time"], "phenomena": novel,
-            })
-            seen_phenomena.update(novel)
-        previous = frame
-        target_index += 1
-        target_tick = tick + args.stride_ticks
+        raw_stream = gzip.open(raw_temporary, "wt", encoding="utf-8")
+    try:
+        while target_index < args.frames:
+            if time.monotonic() >= deadline:
+                raise TimeoutError("recording timed out before all requested frames arrived")
+            state = fetch_state(args.url)
+            if state.get("error"):
+                raise RuntimeError(f"host reported an error: {state['error']}")
+            tick = int(state["tick"])
+            if tick < target_tick:
+                time.sleep(args.poll_seconds)
+                continue
+            if args.strict_ticks and tick != target_tick:
+                raise RuntimeError(
+                    f"read-only sampler missed requested tick {target_tick}; observed {tick}"
+                )
+            if identity(state, args) != provenance:
+                raise RuntimeError("host identity changed during recording")
+            if raw_stream is not None:
+                raw_stream.write(json.dumps(
+                    state, sort_keys=True, separators=(",", ":"), allow_nan=False,
+                ) + "\n")
+            frame, reasons = extract_frame(
+                state, selected_id, body_ids, entity_indices, previous,
+            )
+            frames.append(frame)
+            novel = [reason for reason in reasons if reason not in seen_phenomena]
+            if novel:
+                moments.append({
+                    "frame": target_index, "tick": tick,
+                    "model_time": frame["model_time"], "phenomena": novel,
+                })
+                seen_phenomena.update(novel)
+            previous = frame
+            target_index += 1
+            target_tick = tick + args.stride_ticks
+    finally:
+        if raw_stream is not None:
+            raw_stream.close()
+    raw_receipt = None
+    if raw_temporary is not None:
+        os.replace(raw_temporary, args.raw_output)
+        raw_receipt = {
+            "format": "gzip-jsonl-exact-api-state-v1",
+            "frames": len(frames),
+            "sha256": sha256(args.raw_output),
+            "bytes": args.raw_output.stat().st_size,
+        }
 
     model_dt = finite(initial.get("performance", {}).get("dt"), "model dt")
     ticks = np.asarray([frame["tick"] for frame in frames], dtype=np.int64)
@@ -542,8 +612,10 @@ def main() -> int:
     if resident_hashes:
         body_model["resident_sha256"] = [resident_hashes[body_id] for body_id in body_ids]
 
+    encode_entity_deltas(frames)
     result = {
         "format": FORMAT,
+        "geometry_encoding": "entity-replacement-delta-v1",
         "status": (
             "observed physical recording; behavior and growth are not evidence of learned competence"
         ),
@@ -552,6 +624,10 @@ def main() -> int:
             "minimum_stride_ticks": args.stride_ticks,
             "strict_requested_ticks": args.strict_ticks,
             "model_dt_seconds": model_dt,
+            "model_interval_seconds": model_dt * args.stride_ticks,
+            "model_interval_semantics": (
+                "minimum requested interval; observed ticks and times are authoritative"
+            ),
             "frames": args.frames,
             "observed_ticks": ticks.astype(int).tolist(),
             "observed_model_times": [frame["model_time"] for frame in frames],
@@ -571,6 +647,7 @@ def main() -> int:
             ),
         },
         "provenance": provenance,
+        "private_raw_receipt": raw_receipt,
         "geometry": {
             "dimension": int(initial["dimension"]),
             "bounds": [
@@ -584,6 +661,8 @@ def main() -> int:
         "phenomena_moments": moments,
         "limitations": [
             "Retinal values are public-display quantized to uint8; neural readouts retain exact float32 bytes.",
+            "Entity geometry uses one full keyframe followed by full-object replacement deltas; exact host states remain content-addressed in the private raw recording.",
+            "Rendered entity and articulation geometry is rounded to five decimal places for the public replay.",
             "Phenomena labels index observed physical changes and do not interpret intention or learning.",
             "The recording samples one resident's direct retina and neural readouts while retaining all resident motion.",
         ],

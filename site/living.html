@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10251d">
+  <title>Living Reef observatory — Chreatures</title>
+  <link rel="stylesheet" href="living.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+  <main class="observatory">
+    <section class="world" aria-label="Recorded three-dimensional habitat">
+      <canvas id="world-canvas"></canvas>
+      <header class="mast">
+        <a href="index.html" class="wordmark">Chreatures</a>
+        <div class="provenance"><span class="record-dot"></span>Recorded life <span aria-hidden="true">·</span> <span id="model-time">model time —</span></div>
+      </header>
+      <div class="view-controls" role="group" aria-label="Camera mode">
+        <button type="button" data-camera="orbit" aria-pressed="true">Orbit</button>
+        <button type="button" data-camera="follow" aria-pressed="false">Follow</button>
+        <button type="button" data-camera="body" aria-pressed="false">Body</button>
+      </div>
+      <div id="loading" class="loading" role="status">Opening the public recording…</div>
+      <div class="world-note">Recorded physical states · positions are interpolated for display · no live simulation</div>
+    </section>
+
+    <aside class="instruments" aria-label="Recorded resident instruments">
+      <div class="panel-head">
+        <p class="eyebrow">Resident observation</p>
+        <h1>Inside one recorded life</h1>
+        <p id="recording-status" class="status">Waiting for recording metadata.</p>
+      </div>
+
+      <section class="transport" aria-label="Recording playback">
+        <button id="play" class="play" type="button" aria-label="Play recording">▶</button>
+        <input id="scrubber" type="range" min="0" max="0" value="0" step="0.001" aria-label="Recording position">
+        <div class="time-pair"><span id="frame-number">0 / 0</span><span id="tick-number">tick —</span></div>
+      </section>
+
+      <section class="sensor-section">
+        <div class="section-title"><h2>Direct retina</h2><span>packed u8 · RGB / proximity</span></div>
+        <div class="retinas">
+          <figure><canvas id="peripheral" width="32" height="8"></canvas><figcaption>Peripheral · 8 × 32</figcaption></figure>
+          <figure><canvas id="foveal" width="32" height="24"></canvas><figcaption>Central · 24 × 32</figcaption></figure>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-title"><h2>Population readouts</h2><span>384 float32 LE values</span></div>
+        <canvas id="readouts" class="readouts" width="384" height="54" aria-label="384 recorded neural population readouts"></canvas>
+        <div class="readout-summary"><span>activity <b id="activity">—</b></span><span>support <b id="support">—</b></span></div>
+      </section>
+
+      <section class="goal-section">
+        <div class="section-title"><h2>Remembered goal</h2><span>content remains private</span></div>
+        <div class="goal-grid"><div><small>recorded at</small><strong id="goal-time">—</strong></div><div><small>commitment left</small><strong id="goal-left">—</strong></div></div>
+      </section>
+
+      <section>
+        <div class="section-title"><h2>Delivered action</h2><span>9 committed channels</span></div>
+        <div id="actions" class="action-bars"></div>
+      </section>
+
+      <section>
+        <div class="section-title"><h2>Physical history</h2><span>through this frame</span></div>
+        <canvas id="metabolism" class="history" width="420" height="92" aria-label="Energy, gut, and fatigue history"></canvas>
+        <div class="legend"><span class="energy">energy</span><span class="gut">gut</span><span class="fatigue">fatigue</span></div>
+      </section>
+
+      <section class="moments-section">
+        <div class="section-title"><h2>Recorded moments</h2><span>observed phenomena</span></div>
+        <ol id="moments" class="moments"></ol>
+      </section>
+
+      <footer><span>Actual recording</span><span>Provided mechanics</span><span>Learned controller</span><a href="https://github.com/emberian/chreatures/blob/main/integrations/artifacts/living-reef-biography/living-reef-biography.json" target="_parent">Evidence biography ↗</a></footer>
+    </aside>
+  </main>
+  <script type="module" src="living.js"></script>
+</body>
+</html>
