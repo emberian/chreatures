@@ -16,7 +16,7 @@ import numpy as np
 
 from .metabolism import canonical
 
-FORMAT = "chreatures-somatic-physiology-v1"
+FORMAT = "chreatures-somatic-physiology-v2"
 PARAMETERS = {
     "gut_capacity",
     "reserve_capacity",
@@ -90,6 +90,7 @@ class SomaticPhysiology:
                 "ingested_mass": 0.0,
                 "mechanical_work": 0.0,
                 "funded_scale": 0.0,
+                "mouth_material_contacts": 0,
             }
             for key in self.residents
         }
@@ -100,11 +101,13 @@ class SomaticPhysiology:
                 "mechanical_work": 0.0,
                 "ingested_mass": 0.0,
                 "absorbed": 0.0,
+                "mouth_material_contacts": 0,
             }
             for key in self.residents
         }
         self.pending_dt: float | None = None
         self._outcomes = None
+        self.contacts_since = float(self.web.time)
 
     @property
     def world(self):
@@ -182,6 +185,7 @@ class SomaticPhysiology:
                 "ingested_mass": 0.0,
                 "mechanical_work": 0.0,
                 "funded_scale": scale,
+                "mouth_material_contacts": 0,
             }
             for name, amount in (
                 ("maintenance", maintenance),
@@ -307,6 +311,10 @@ class SomaticPhysiology:
                     self.last[key]["ingested_mass"] += mass
         for body in self.world.bodies:
             key, spec = body.id, self.residents[body.id]
+            count = sum(resident == key for resident, _ in material_contacts)
+            self.last[key]["mouth_material_contacts"] = count
+            self.totals[key]["mouth_material_contacts"] += count
+            outcomes[key]["mouth_material_contacts"] = count
             work = float(outcomes[key].get("mechanical_work", 0))
             self.last[key]["mechanical_work"] = work
             self.totals[key]["mechanical_work"] += work
@@ -382,11 +390,28 @@ class SomaticPhysiology:
             "paid": copy.deepcopy(self.paid),
             "last": copy.deepcopy(self.last),
             "totals": copy.deepcopy(self.totals),
+            "contacts_since": self.contacts_since,
         }
 
     def restore_state(self, snapshot: Mapping[str, Any]):
+        snapshot = copy.deepcopy(snapshot)
+        if snapshot.get("format") == "chreatures-somatic-physiology-v1":
+            snapshot["format"] = FORMAT
+            snapshot["contacts_since"] = float(self.web.time)
+            for name in ("last", "totals"):
+                for row in snapshot[name].values():
+                    row["mouth_material_contacts"] = 0
         if snapshot.get("format") != FORMAT or snapshot.get("sha256") != self.sha256:
             raise ValueError("mobile physiology identity differs")
+        since = snapshot["contacts_since"]
+        if (
+            isinstance(since, bool)
+            or not isinstance(since, (int, float))
+            or not np.isfinite(since)
+            or not 0 <= since <= self.web.time
+        ):
+            raise ValueError("invalid mouth-contact observation boundary")
+        self.contacts_since = float(since)
         for name in ("bite_credit", "paid", "last", "totals"):
             value = snapshot[name]
             if set(value) != set(self.residents):
@@ -407,6 +432,13 @@ class SomaticPhysiology:
                 raise ValueError("invalid mobile physiological state")
             setattr(self, name, copy.deepcopy(value))
         if any(
+            isinstance(row["mouth_material_contacts"], bool)
+            or not isinstance(row["mouth_material_contacts"], int)
+            for name in ("last", "totals")
+            for row in getattr(self, name).values()
+        ):
+            raise ValueError("mouth contact counters must be integers")
+        if any(
             value > self.residents[key]["maximum_bite"]
             for key, value in self.bite_credit.items()
         ):
@@ -421,6 +453,7 @@ class SomaticPhysiology:
         return {
             "kind": FORMAT,
             "sha256": self.sha256,
+            "contacts_since": self.contacts_since,
             "residents": {
                 key: {
                     **self.normalized(key),

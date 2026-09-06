@@ -67,7 +67,7 @@ Fresh public birth artifacts:
 Use them with a fresh checkpoint and a separate neural service:
 
 ```console
-uv run chreatures3d --port 8773 --brain-url http://127.0.0.1:18773 \
+uv run chreatures --port 8773 --brain-url http://127.0.0.1:18773 \
   --checkpoint runs/chemical-reef.json \
   --habitat data/habitats/chemical-reef.json \
   --biosphere data/biosphere/chemical-reef-v1.json \
@@ -81,3 +81,10 @@ tracers are not material nutrient pools and do not close an elemental food web.
 The runtime reports this distinction. Snapshot restore verifies normalized
 body readouts against the chemistry, restores private bite capacity and payment
 history, and rebinds the transient physics owner. Mid-step snapshots are rejected.
+
+The v2 physiological snapshot also records `mouth_material_contacts`: unique
+material entities contacted inside the mouth radius with a positive ingestion
+request during each physical tick. This is separate from actual `ingested_mass`
+and subsequent absorption. On import of an older snapshot, the counter starts
+at zero with an explicit `contacts_since` model-time boundary; missing historical
+observations are not interpreted as evidence of no contacts.
