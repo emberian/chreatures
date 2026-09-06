@@ -630,7 +630,12 @@ class PredictiveStateTrainer:
         return instance
 
     def export(
-        self, path: str | Path, *, training_input_identity: dict[str, Any] | None = None
+        self,
+        path: str | Path,
+        *,
+        training_input_identity: dict[str, Any] | None = None,
+        source_normalizer_path: str | Path | None = None,
+        source_dataset_manifest_path: str | Path | None = None,
     ) -> dict[str, Any]:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -655,33 +660,116 @@ class PredictiveStateTrainer:
                 )
             }
         )
-        tensor_manifest = {
-            name: {
-                "shape": list(value.shape),
-                "dtype": "float32",
-                "sha256": hashlib.sha256(value.tobytes(order="C")).hexdigest(),
-            }
-            for name, value in arrays.items()
-        }
         identity = training_input_identity or {
             "graph": {"status": "unknown"},
             "ports": {"status": "unknown"},
             "normalizer": {"status": "unknown"},
             "scope": "source rollout did not serialize these identities; research smoke only",
         }
+        export_version = self.VERSION
+        source_normalizer = None
+        temporal_contract = None
+        if source_normalizer_path is not None:
+            source_path = Path(source_normalizer_path)
+            expected = identity.get("source_normalizer", {})
+            artifact_sha256 = hashlib.sha256(source_path.read_bytes()).hexdigest()
+            if artifact_sha256 != expected.get("artifact_sha256"):
+                raise ValueError("source normalizer artifact identity differs")
+            with np.load(source_path, allow_pickle=False) as archive:
+                count = np.asarray(archive["count"], dtype=np.float64)
+                mean = np.asarray(archive["mean"], dtype=np.float64)
+                m2 = np.asarray(archive["m2"], dtype=np.float64)
+            if (
+                count.shape != ()
+                or mean.shape != (self.config.feature_dim,)
+                or m2.shape != mean.shape
+                or float(count) <= 0
+                or not np.isfinite(mean).all()
+                or not np.isfinite(m2).all()
+            ):
+                raise ValueError("invalid source normalizer moments")
+            moment_value = {
+                "count": float(count),
+                "mean": mean.tolist(),
+                "m2": m2.tolist(),
+            }
+            moment_sha256 = hashlib.sha256(
+                json.dumps(moment_value, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest()
+            if moment_sha256 != expected.get("sha256"):
+                raise ValueError("source normalizer moment identity differs")
+            arrays.update(
+                {
+                    "source_normalizer.count": np.asarray(count),
+                    "source_normalizer.mean": np.ascontiguousarray(mean),
+                    "source_normalizer.m2": np.ascontiguousarray(m2),
+                }
+            )
+            source_normalizer = {
+                "format": "chreatures-running-moments-v1",
+                "count": float(count),
+                "moment_sha256": moment_sha256,
+                "artifact_sha256": artifact_sha256,
+                "variance": "m2 / max(count, 1.0)",
+                "minimum_variance": 1e-5,
+                "output_clip": [-5.0, 5.0],
+            }
+            export_version = 2
+        if source_dataset_manifest_path is not None:
+            if source_normalizer is None:
+                raise ValueError(
+                    "temporal contract requires embedded complete source normalizer"
+                )
+            manifest_path = Path(source_dataset_manifest_path)
+            manifest_sha256 = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+            if manifest_sha256 != identity.get("dataset_manifest_sha256"):
+                raise ValueError("source dataset manifest identity differs")
+            source_manifest = json.loads(manifest_path.read_text())
+            physics_dt = float(source_manifest["physical_dt"])
+            macro_steps = int(source_manifest["macro_steps"])
+            observation_interval = float(source_manifest["macro_dt"])
+            if (
+                physics_dt <= 0
+                or macro_steps <= 0
+                or observation_interval <= 0
+                or not np.isclose(
+                    physics_dt * macro_steps,
+                    observation_interval,
+                    rtol=0,
+                    atol=1e-12,
+                )
+            ):
+                raise ValueError("invalid source dataset temporal contract")
+            temporal_contract = {
+                "physics_dt_seconds": physics_dt,
+                "macro_steps": macro_steps,
+                "observation_interval_seconds": observation_interval,
+                "source_dataset_manifest_sha256": manifest_sha256,
+            }
+            export_version = 3
+        tensor_manifest = {
+            name: {
+                "shape": list(value.shape),
+                "dtype": str(value.dtype),
+                "sha256": hashlib.sha256(value.tobytes(order="C")).hexdigest(),
+            }
+            for name, value in arrays.items()
+        }
         metadata = {
             "format": FORMAT,
-            "version": self.VERSION,
+            "version": export_version,
             "config": asdict(self.config),
             "actions": list(ACTIONS),
             "physiology": list(PHYSIOLOGY),
-            "tensor_layout": "row-major-f32",
+            "tensor_layout": "model tensors row-major-f32; source moments float64",
             "updates": self.update_count,
             "feature_layout": "neural_feature_000..feature_dim-1 then named physiology",
             "gru_gate_order": "reset,update,new (PyTorch GRUCell r,z,n)",
             "tensors": tensor_manifest,
             "training_input_identity": identity,
             "normalizer": self.normalizer.metadata(),
+            "source_normalizer": source_normalizer,
+            "temporal_contract": temporal_contract,
             "forecast_status": "trained real anonymous sequences; residual scales are not epistemic/OOD calibrated"
             if self.update_count
             else "untrained",

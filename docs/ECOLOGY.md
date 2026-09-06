@@ -9,7 +9,7 @@ The mechanism has no object-seeking policy or named preference inside it.
 Start a **new world** with an explicit resource configuration:
 
 ```sh
-uv run chreatures3d --port 8769 --brain-url http://127.0.0.1:18769 \
+uv run chreatures --port 8769 --brain-url http://127.0.0.1:18769 \
   --checkpoint runs/orchard-garden.json \
   --resources data/ecology/portable-orchard.json
 ```

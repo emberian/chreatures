@@ -14,9 +14,12 @@ private and included in the resident snapshot.
 
 ## Actual and imagined state
 
-Call `observe(features, physiology, previous_action, reset=...)` exactly once
-per actual motor macro boundary. Features must match the predictive artifact's
-locked input identity. Physiology is ordered energy, gut, fatigue, local speed,
+Call `observe(raw_features, physiology, previous_action, reset=...)` exactly
+once per actual motor macro boundary. The complete predictive artifact owns the
+frozen source PPO count/mean/M2 transform and converts raw MaleCNS readouts to
+the trained feature contract itself. Its checksum is part of the locked input
+identity; preprocessing never depends on the currently selected motor genome.
+Physiology is ordered energy, gut, fatigue, local speed,
 local angular velocity, neural support. The action is the physical eight-vector
 executed before this observation. Only this method advances the experienced
 recurrent state.
@@ -44,7 +47,7 @@ happened; imagined states are never inserted as experience.
 
 ```python
 foresight = ResidentForesight(predictive_export)
-foresight.observe(features, physiology, previous_action, reset=first_macro)
+foresight.observe(raw_features, physiology, previous_action, reset=first_macro)
 
 decision = refiner.refine(
     memory, features, local_physiology, policy_mean, policy_log_std,
@@ -52,6 +55,25 @@ decision = refiner.refine(
 )
 foresight.commit_executed(decision["action_vector"])
 ```
+
+Fresh 3-D worlds opt in through the existing personal motor path:
+
+```bash
+python -m chreatures.server \
+  --motor-genome data/genomes/nursery-20000-finite-energy.npz \
+  --personal-memory \
+  --predictive-model /path/to/complete-predictive-state.npz
+```
+
+The runtime observes raw anonymous MaleCNS output and six local physiology
+channels only at an actual five-tick motor boundary. It supplies the previously
+executed macro action, evaluates candidates, and commits the selected physical
+action's intention tail. Held ticks do not advance the predictor. If visual
+candidate evidence is also active, the chooser sums both frozen-state reports
+before applying its existing ±0.12 external-evidence bound. New checkpoints
+store the predictive artifact location and one complete private foresight
+snapshot per resident. Checkpoints without these fields restore through the
+old controller path and reserialize without foresight fields.
 
 ## Scoring and evidence limits
 
@@ -81,23 +103,42 @@ the same immutable export and rejects identity mismatches.
 ## Validation status
 
 The Python orchestration first passed a deterministic batched seam check using
-a candidate-sensitive stand-in. It then ran on hbox against the trained real
-episode-000 physical-unit export, artifact SHA-256
-`12b0faf597fa603af7da3172239e9242b0975819c44dfb182cf6863cf4b8ed82`.
-For three fixed candidates its physical forecast scores were `-0.0158723`,
-`-0.0145812`, and `-0.00805243`, producing bounded corrections `0`,
-`0.000103292`, and `0.000625593`. All four branches per candidate were valid;
-mean E/G/F residual scales were approximately `0.00263`, `0.00339`, and
-`0.00172`.
+a candidate-sensitive stand-in. The final hbox check used the complete
+four-episode physical-unit export, artifact SHA-256
+`c7ba729b8a62b7fda5a436a69d3ee8f5036c1c63119da6549443a9ed49f82ca2`.
+This artifact preserves the trained predictor and embeds the collector's source
+PPO moments (count `412656.0001`, identity `cc9f3d1a…`) so preprocessing is
+complete and independent of a deployed motor artifact. Embedded normalization
+matched the original RunningMoments calculation bit exactly.
+The v3 temporal contract also pins five 50 ms physical steps per 250 ms
+predictor observation; construction rejects a missing or different interval.
+
+For three fixed candidates its physical forecast scores were `-0.0127308`,
+`-0.00978304`, and `-0.0187044`, producing bounded corrections `0`,
+`0.000235823`, and `-0.000477887`. All four branches per candidate were valid.
+A fixed inherited-score probe selected candidate zero with foresight disabled
+and candidate one with foresight enabled. This is an actual chooser readout
+change; it does not establish that the chosen action was better.
 
 Repeated queries were identical, imagination left the actual native snapshot
 unchanged, and a JSON snapshot/restore reproduced both the pending report and
-the next observation/query including RNG-generated plans. The export had 12
-training updates and a pinned real anonymous episode-000 dataset/input
-identity. It predates the explicit `forecast_status` metadata field, so the
-report honestly labels its status unknown and uncalibrated. Native-owner parity
-for the same export measured maximum absolute differences of `5.96e-7` for
-latent state, `1.49e-8` for physical physiology mean, and `7.45e-9` for scale,
-with exact snapshot continuation. These are execution and numerical receipts,
-not evidence that foresight improves behavior or that residual scales are
-calibrated.
+the next observation/query including RNG-generated plans. The export pins its
+real anonymous four-episode dataset/input identity and explicitly says its
+residual scales are not epistemic or OOD calibrated. Native-owner episode-003
+parity measured maximum absolute differences of `7.08e-7` for latent state,
+`2.98e-8` for physical physiology mean, and `2.24e-8` for scale, with exact
+snapshot continuation and different-model restore rejection. These are
+execution and numerical receipts, not evidence that foresight improves
+behavior. The frozen action-discrimination assay found clear effects in neural
+features and angular motion, while energy, gut, and support sensitivity remained
+weak; homeostatic planning claims must remain correspondingly modest.
+
+The joined living-motor probe reconstructed a raw readout from held-out
+episode-003 row `[1,0]`; the complete artifact recovered its recorded normalized
+384-vector with maximum absolute error `0`. Two actual five-tick boundaries
+produced two predictor observations and two motor decisions. The first actions
+were different across those experienced boundaries, and restoring both private
+organs from JSON reproduced the next held action and complete foresight state
+exactly. This exercises the runtime macro lifecycle and persistence boundary on
+recorded inputs without advancing a live world or presenting it as an embodied
+performance result.

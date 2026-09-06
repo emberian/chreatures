@@ -113,6 +113,14 @@ class ResidentForesight:
         physiology = tuple(self.experienced.metadata.get("physiology", ()))
         if physiology[:3] != ("energy", "gut", "fatigue"):
             raise ValueError("predictor physiology must begin energy, gut, fatigue")
+        temporal = self.experienced.metadata.get("temporal_contract")
+        if not isinstance(temporal, Mapping) or (
+            temporal.get("macro_steps") != 5
+            or temporal.get("physics_dt_seconds") != 0.05
+            or temporal.get("observation_interval_seconds")
+            != self.config.macro_dt_seconds
+        ):
+            raise ValueError("predictor temporal contract differs from motor macros")
         self.rng = np.random.default_rng(self.config.seed)
         self.observation_count = 0
         self.last_observed_features: np.ndarray | None = None
@@ -138,7 +146,14 @@ class ResidentForesight:
         reset: bool = False,
     ) -> np.ndarray:
         """Advance experienced recurrent state at an actual macro boundary."""
-        feature = self._vector(features, self.experienced.feature_dim, "features")
+        raw_feature = self._vector(features, self.experienced.feature_dim, "raw features")
+        feature = np.asarray(
+            self.experienced.normalize_source_features(raw_feature[None, :]),
+            dtype=np.float32,
+        )
+        if feature.shape != (1, self.experienced.feature_dim) or not np.isfinite(feature).all():
+            raise ValueError("predictor source normalizer returned invalid features")
+        feature = feature[0]
         physical = self._vector(physiology, self.experienced.physiology_dim, "physiology")
         action = self._action(previous_action, "previous action")
         if np.any((physical[:3] < 0) | (physical[:3] > 1)):

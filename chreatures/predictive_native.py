@@ -33,6 +33,11 @@ PACK_ORDER = (
     "physiology_delta_log_std.weight",
     "physiology_delta_log_std.bias",
 )
+SOURCE_NORMALIZER_ORDER = (
+    "source_normalizer.count",
+    "source_normalizer.mean",
+    "source_normalizer.m2",
+)
 
 
 def _extension():
@@ -51,17 +56,36 @@ class NativePredictiveCohort:
         with np.load(export, allow_pickle=False) as archive:
             metadata = json.loads(str(archive["metadata"]))
             config = metadata.get("config", {})
-            if metadata.get("format") != FORMAT or metadata.get("version") != 1:
+            if metadata.get("format") != FORMAT or metadata.get("version") not in (
+                1,
+                2,
+                3,
+            ):
                 raise ValueError("incompatible predictive-state export")
+            if metadata["version"] == 3:
+                temporal = metadata.get("temporal_contract")
+                source_identity = metadata.get("training_input_identity", {})
+                if (
+                    not isinstance(temporal, dict)
+                    or temporal.get("source_dataset_manifest_sha256")
+                    != source_identity.get("dataset_manifest_sha256")
+                    or temporal.get("physics_dt_seconds") != 0.05
+                    or temporal.get("macro_steps") != 5
+                    or temporal.get("observation_interval_seconds") != 0.25
+                ):
+                    raise ValueError("predictive temporal contract differs")
             manifest = metadata.get("tensors", {})
             arrays = []
-            if set(manifest) != set(PACK_ORDER):
+            expected_names = set(PACK_ORDER)
+            if metadata["version"] >= 2:
+                expected_names.update(SOURCE_NORMALIZER_ORDER)
+            if set(manifest) != expected_names:
                 raise ValueError("native tensor manifest differs")
-            for name in PACK_ORDER:
+            for name in expected_names:
                 value = np.asarray(archive[name])
                 record = manifest[name]
                 if (
-                    value.dtype != np.float32
+                    str(value.dtype) != record["dtype"]
                     or list(value.shape) != record["shape"]
                     or not value.flags.c_contiguous
                 ):
@@ -71,7 +95,25 @@ class NativePredictiveCohort:
                     != record["sha256"]
                 ):
                     raise ValueError(f"native tensor checksum differs: {name}")
+            for name in PACK_ORDER:
+                value = np.asarray(archive[name])
+                if value.dtype != np.float32:
+                    raise ValueError(f"native model tensor is not float32: {name}")
                 arrays.append(value.reshape(-1))
+            if metadata["version"] >= 2:
+                self._source_count = float(
+                    np.asarray(archive["source_normalizer.count"]).reshape(-1)[0]
+                )
+                self._source_mean = np.asarray(
+                    archive["source_normalizer.mean"], dtype=np.float64
+                ).copy()
+                self._source_m2 = np.asarray(
+                    archive["source_normalizer.m2"], dtype=np.float64
+                ).copy()
+            else:
+                self._source_count = None
+                self._source_mean = None
+                self._source_m2 = None
             packed = np.ascontiguousarray(np.concatenate(arrays), dtype=np.float32)
         self.feature_dim = int(config["feature_dim"])
         self.physiology_dim = int(config["physiology_dim"])
@@ -110,6 +152,24 @@ class NativePredictiveCohort:
                 json.dumps(input_record, sort_keys=True, separators=(",", ":")).encode()
             ).hexdigest(),
         }
+
+    def normalize_source_features(self, raw: np.ndarray) -> np.ndarray:
+        """Apply the artifact-bound PPO transform to raw MaleCNS readouts."""
+        if self._source_mean is None or self._source_m2 is None:
+            raise ValueError("predictive artifact does not embed source normalization")
+        raw = np.asarray(raw)
+        if (
+            raw.ndim != 2
+            or raw.shape[1] != self.feature_dim
+            or not np.issubdtype(raw.dtype, np.floating)
+            or not np.isfinite(raw).all()
+        ):
+            raise ValueError("raw source features must be finite floating [B,F]")
+        variance = self._source_m2 / max(self._source_count, 1.0)
+        normalized = (raw.astype(np.float64) - self._source_mean) / np.sqrt(
+            np.maximum(variance, 1e-5)
+        )
+        return np.ascontiguousarray(np.clip(normalized, -5.0, 5.0), dtype=np.float32)
 
     def observe(
         self,

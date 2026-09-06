@@ -26,6 +26,18 @@ manifest SHA-256, and input identity. A same-shaped model with different weights
 rejects restoration. Exports additionally pin the output normalizer and source
 layout/split identity and carry a top-level `forecast_status`.
 
+Complete version-2 archives include the source PPO normalizer's float64
+`count/mean/m2` and both of its recorded hashes. The Python adapter method
+`normalize_source_features(raw[B,384])` validates finite floating input and
+returns contiguous float32 `[B,384]` using the exact training-time variance
+floor and clipping rule. Older archives deliberately raise when this method is
+requested.
+
+Version 3 additionally exposes an identity-bound `temporal_contract` derived
+from the source collector manifest. Loading requires the trained cadence of five
+`0.05`-second physics steps per `0.25`-second observation and the exact source
+manifest SHA-256.
+
 The GRU equations match PyTorch's `r,z,n` gate ordering and reset placement:
 `n=tanh(x_n + r*h_n)`, followed by `h'=(1-z)*n+z*h`, with both projection biases
 included. There are no version fallbacks or resident identity inputs.
