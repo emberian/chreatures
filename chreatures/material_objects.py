@@ -996,67 +996,84 @@ class MaterialObjects:
             limited = positive & (factors < 1.0) & (factors > 0.0)
             factors[limited] = np.nextafter(factors[limited], 0.0)
             receiver_limiter[edges] = factors
-        capacity_limited = requested_array * receiver_limiter
-        effective = [
-            {
-                name: float(row[pool])
-                for pool, name in enumerate(web.chemistry.pools)
-                if row[pool] > 0.0
-            }
-            for row in capacity_limited
-        ]
-
-        stage = MetabolicWeb.restore(web.snapshot())
-        staged = stage.transfer_batch(
-            donors, receivers, effective, [0.0] * len(normalized)
-        )
-        moved = np.asarray(staged["moved_resources"], dtype=np.float64)
-        if moved.shape != requested_array.shape:
-            raise RuntimeError("native material deposit returned an invalid shape")
-        for item in self.config["objects"]:
-            capacity = np.asarray(
-                [item["capacities"].get(name, 0.0) for name in web.chemistry.pools]
-            )
-            if np.any(stage.pools[item["row"]] > capacity):
-                raise RuntimeError("staged material deposit exceeded receiver capacity")
-
-        changes = []
-        operations = []
-        mass_before = {}
-        new_bases: dict[str, dict[str, Any]] = {}
         requested_entities = set(item["entity"] for item in normalized)
-        for item in self.config["objects"]:
-            entity_id = item["entity"]
-            if entity_id not in requested_entities:
-                continue
-            state = self._state[entity_id]
-            boundary = self._boundary(item, stage.pools[item["row"]])
-            if boundary == state["boundary"]:
-                continue
-            mass_before[entity_id] = self._physical_mass(entity_id)
-            if state["boundary"] is None and boundary is not None:
-                base = copy.deepcopy(self._base_entities[entity_id])
-                base["position"] = spawn_positions[entity_id]
-                new_bases[entity_id] = base
-                operations.append({
-                    "op": "add",
-                    "entity": self._scaled_entity(base, item["boundaries"][boundary]),
-                })
-            else:
-                operation = self._topology_operation(
-                    entity_id, state["boundary"], boundary
+        clearance_blocked: set[str] = set()
+        for _clearance_round in range(self.MAX_OBJECTS + 1):
+            capacity_limited = requested_array * receiver_limiter
+            effective = [
+                {
+                    name: float(row[pool])
+                    for pool, name in enumerate(web.chemistry.pools)
+                    if row[pool] > 0.0
+                }
+                for row in capacity_limited
+            ]
+            stage = MetabolicWeb.restore(web.snapshot())
+            staged = stage.transfer_batch(
+                donors, receivers, effective, [0.0] * len(normalized)
+            )
+            moved = np.asarray(staged["moved_resources"], dtype=np.float64)
+            if moved.shape != requested_array.shape:
+                raise RuntimeError("native material deposit returned an invalid shape")
+            for item in self.config["objects"]:
+                capacity = np.asarray(
+                    [item["capacities"].get(name, 0.0) for name in web.chemistry.pools]
                 )
-                if operation is not None:
-                    operations.append(operation)
-            change = {
-                "entity": entity_id,
-                "boundary_before": state["boundary"],
-                "boundary_after": boundary,
+                if np.any(stage.pools[item["row"]] > capacity):
+                    raise RuntimeError("staged material deposit exceeded receiver capacity")
+
+            changes = []
+            operations = []
+            mass_before = {}
+            new_bases: dict[str, dict[str, Any]] = {}
+            for item in self.config["objects"]:
+                entity_id = item["entity"]
+                if entity_id not in requested_entities:
+                    continue
+                state = self._state[entity_id]
+                boundary = self._boundary(item, stage.pools[item["row"]])
+                if boundary == state["boundary"]:
+                    continue
+                mass_before[entity_id] = self._physical_mass(entity_id)
+                if state["boundary"] is None and boundary is not None:
+                    base = copy.deepcopy(self._base_entities[entity_id])
+                    base["position"] = spawn_positions[entity_id]
+                    new_bases[entity_id] = base
+                    operations.append({
+                        "op": "add",
+                        "entity": self._scaled_entity(base, item["boundaries"][boundary]),
+                    })
+                else:
+                    operation = self._topology_operation(
+                        entity_id, state["boundary"], boundary
+                    )
+                    if operation is not None:
+                        operations.append(operation)
+                change = {
+                    "entity": entity_id,
+                    "boundary_before": state["boundary"],
+                    "boundary_after": boundary,
+                }
+                if entity_id in new_bases:
+                    change["spawn_position"] = spawn_positions[entity_id]
+                changes.append(change)
+            transaction = self.world.prepare_topology_batch(operations) if operations else None
+            if transaction is None or not new_bases:
+                break
+            obstructed = {
+                hit["entity"] for hit in transaction.penetrations(set(new_bases))
             }
-            if entity_id in new_bases:
-                change["spawn_position"] = spawn_positions[entity_id]
-            changes.append(change)
-        transaction = self.world.prepare_topology_batch(operations) if operations else None
+            if not obstructed:
+                break
+            newly_obstructed = obstructed - clearance_blocked
+            if not newly_obstructed:
+                raise RuntimeError("material spawn clearance did not converge")
+            clearance_blocked.update(newly_obstructed)
+            for edge, entry in enumerate(normalized):
+                if entry["entity"] in clearance_blocked:
+                    receiver_limiter[edge] = 0.0
+        else:
+            raise RuntimeError("material spawn clearance exceeded object bound")
 
         before = web.snapshot()
         totals_before = web.totals()

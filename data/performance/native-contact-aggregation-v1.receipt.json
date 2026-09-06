@@ -1,0 +1,76 @@
+{
+  "format": "chreatures-native-contact-aggregation-receipt-v1",
+  "implementation": {
+    "source_commit_base": "9e1104190013bab7160fd7493c9ea24a8d0b4820",
+    "benchmarked_sources_sha256": {
+      "chreatures/physics.py": "827726f993f4127105c323026ca5b1026ee431964a54a70cc98e9f5782afb0ef",
+      "chreatures/native_world.py": "c134897c5e0807ac32200e17940c7306f763185541b99ccd597d3c36302ac8f8",
+      "native/world-kernels/src/contacts.rs": "79da2ab3b85b25223f74f407d4339750aa67afcae863d68fe66618fc3c62676b",
+      "native/world-kernels/src/contact_shim.c": "6ae555b1510fd0801aa3cce411643af43af252b36373ba93302932c861a42de7"
+    },
+    "final_hardening": {
+      "contact_shim_c_sha256": "95a98775faa768e2d060cb80f87a61b7806ffc6e487f963022e4a84f6e1faf63",
+      "change": "Reject a contact whose geom1 or geom2 is outside [0, model.ngeom) before any geom-indexed MuJoCo or bound-metadata access. Current rigid-geom arithmetic is unchanged; unsupported future flex contacts fail visibly instead of permitting an out-of-bounds dereference."
+    },
+    "contract": "Geom-to-resident, entity, shape and name metadata is bound once per compiled model and rebound after each topology revision. The native contact pass validates model and geom bounds and derives participant ownership, counterpart entity, ground-like support rejection and tactile side. The bounded eight-normal public sensor calculation remains in NumPy to preserve its exact floating-point accumulation."
+  },
+  "binaries": {
+    "hbox_reference": {
+      "path": "/tank/chreatures/rich-online-src-v2-grandchild/_world_kernels.cpython-312-x86_64-linux-gnu.so",
+      "sha256": "76535de3aad9b5a293cb6f5b1938e573b91dff71dcad7756105d9644478981ec"
+    },
+    "hbox_aggregated": {
+      "path": "/tank/chreatures/tmp/contact-aggregate-native/_world_kernels.cpython-312-x86_64-linux-gnu.so",
+      "sha256": "f6c596d342a10a17989c2116931cbbcbdda52a79c0c32c8bb726ea3571cb2e88"
+    },
+    "local_reference": {
+      "path": "/tmp/chreatures-biosphere-light-v2/_world_kernels.cpython-312-darwin.so",
+      "sha256": "b6e95285aef09e83817d1a060ff5ec6254e4fde4f8463a413f825508ccbf9262"
+    },
+    "local_new_birth_build": {
+      "path": "/tmp/chreatures-contact-aggregate-v2/_world_kernels.cpython-312-darwin.so",
+      "sha256": "1d0e5d4640498137a9a8bcb49269fd157c0587d79e7fed5bb43a20e964ee78eb"
+    },
+    "local_hardened_build": {
+      "path": "/tmp/chreatures-contact-aggregate-hardened-v1/_world_kernels.cpython-312-darwin.so",
+      "sha256": "b56c5ff7f9a016f486229e85b75e9794baf37ef9cce986e5f909761569be9fb8",
+      "note": "Built after the fail-visible geom bounds guard; the benchmark values above retain the exact identity of the binary that was timed."
+    }
+  },
+  "family_v5_joined_benchmark": {
+    "scope": "One six-resident family-v5 EmbodiedTrainingWorld restored headlessly on hbox; 100 complete 0.05-second advances with fixed trained actions, shared chemistry, fields, Biosphere, acoustics and physiology. Neural inference and GPU work were excluded.",
+    "command": "cd /tmp && PYTHONPATH=<reference-source-or-aggregated-binary-and-source> OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 taskset -c 20-23 /tank/chreatures/envs/rocm-dev/bin/python /tmp/bench_family_v5_advance.py",
+    "command_sha256": "7a27238ce516104c7b977ecb3f912ee4c8e15aaf949f06a3e4d88aa71266a874",
+    "provenance": {
+      "inherited_parent_checkpoint": "/tank/chreatures/runs/development/rich-sensorimotor-online-v2-child-update20-seed20260914/checkpoint-update-000020.pt",
+      "inherited_parent_checkpoint_sha256": "57dda0dd2594bb98dcaff7e8ffafb87b9ae1186d40aeb158f388832a00f82278",
+      "restored_final_checkpoint": "/tank/chreatures/runs/development/rich-sensorimotor-online-v2-grandchild-update40-seed20260915/checkpoint-update-000160.pt",
+      "restored_final_checkpoint_sha256": "cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27"
+    },
+    "result": {
+      "reference_seconds": 4.418392989784479,
+      "aggregated_seconds": 4.177728204056621,
+      "reference_milliseconds_per_advance": 44.18392989784479,
+      "aggregated_milliseconds_per_advance": 41.777282040566206,
+      "whole_advance_speedup": 1.0576066163170141,
+      "initial_parts": 0,
+      "final_parts": 42,
+      "final_model_revision": 6,
+      "reference_and_aggregated_final_snapshot_sha256": "e26e18c9c5129cb89e591804b6a90ad1d04f222ff7bc75b34a1c38cc3c70a43a",
+      "final_snapshot_bytes": 2792330,
+      "exact": true
+    }
+  },
+  "mature_living_reef_validation": {
+    "scope": "Twelve complete physical plus Biosphere advances from an offline 891-part Living Reef checkpoint. This validates dense topology, physiology, acoustics and topology-derived caches; neural and server owners were excluded.",
+    "command": "PYTHONPATH=<reference-or-aggregated-native>:/Users/ember/dev/chreatures /Users/ember/dev/chreatures/.venv/bin/python /tmp/light_dump.py <output.json>",
+    "checkpoint": "/tmp/living-reef-891parts.json",
+    "checkpoint_sha256": "8d4361d2896e2bfeaba9c0c99fd8a524f0946b1605d2de519b4e30b831a21712",
+    "initial_parts": 891,
+    "initial_model_revision": 108,
+    "reference_and_aggregated_final_snapshot_sha256": "ad148d14c39b73737f0fa2b680def2c2651547524d441dea7d7acc03be517d86",
+    "final_snapshot_bytes": 1301391,
+    "exact": true
+  },
+  "interpretation": "The measured 1.058x applies to the complete headless family-v5 advance on the stated CPU affinity. It does not include neural inference, observation, rendering, process communication or live service scheduling. Existing live engines were not replaced or advanced."
+}

@@ -9,12 +9,20 @@ int chreatures_contact_batch(
     double timestep, double impulse_limit, double work_limit,
     int *geom1, int *geom2, double *positions, double *normals,
     double *relative_speed, double *impulse, double *impact_work,
-    double *contact_force_norm) {
+    double *contact_force_norm, int geom_count, const int *geom_resident,
+    const int *geom_entity, const int *resident_body, const double *resident_z,
+    int resident_count, int *participant_resident, int *participant_entity,
+    signed char *participant_side, double *participant_normal) {
   const mjModel *model = (const mjModel *)model_address;
   mjData *data = (mjData *)data_address;
-  if (!model || !data || capacity < data->ncon) return -1;
+  if (!model || !data || capacity < data->ncon || resident_count < 0 ||
+      geom_count != model->ngeom) return -1;
   for (int index = 0; index < data->ncon; ++index) {
     const mjContact *contact = data->contact + index;
+    if (contact->geom1 < 0 || contact->geom1 >= model->ngeom ||
+        contact->geom2 < 0 || contact->geom2 >= model->ngeom) {
+      return -3;
+    }
     geom1[index] = contact->geom1;
     geom2[index] = contact->geom2;
     for (int axis = 0; axis < 3; ++axis) {
@@ -44,6 +52,36 @@ int chreatures_contact_batch(
     contact_force_norm[index] = sqrt(force[0] * force[0] + force[1] * force[1] + force[2] * force[2]);
     impulse[index] = fmin(impulse_limit, fabs(force[0]) * timestep);
     impact_work[index] = fmin(work_limit, 0.5 * impulse[index] * relative_speed[index]);
+    for (int side = 0; side < 2; ++side) {
+      const int slot = 2 * index + side;
+      const int resident = geom_resident[geoms[side]];
+      const int other = geoms[1 - side];
+      participant_resident[slot] = resident;
+      participant_entity[slot] = geom_entity[other];
+      participant_side[slot] = -1;
+      for (int axis = 0; axis < 3; ++axis) participant_normal[3 * slot + axis] = 0.0;
+      if (resident < 0) continue;
+      if (resident >= resident_count || resident_body[resident] < 0 ||
+          resident_body[resident] >= model->nbody) return -2;
+      const double sign = side == 0 ? 1.0 : -1.0;
+      const double nx = sign * contact->frame[0];
+      const double ny = sign * contact->frame[1];
+      const double nz = sign * contact->frame[2];
+      if (fabs(nz) > 0.72 && contact->pos[2] < resident_z[resident]) continue;
+      const int body = resident_body[resident];
+      const double *rotation = data->xmat + 9 * body;
+      const double dxp = contact->pos[0] - data->xpos[3 * body];
+      const double dyp = contact->pos[1] - data->xpos[3 * body + 1];
+      const double dzp = contact->pos[2] - data->xpos[3 * body + 2];
+      participant_side[slot] =
+          dxp * rotation[1] + dyp * rotation[4] + dzp * rotation[7] >= 0.0;
+      participant_normal[3 * slot] =
+          rotation[0] * nx + rotation[3] * ny + rotation[6] * nz;
+      participant_normal[3 * slot + 1] =
+          rotation[1] * nx + rotation[4] * ny + rotation[7] * nz;
+      participant_normal[3 * slot + 2] =
+          rotation[2] * nx + rotation[5] * ny + rotation[8] * nz;
+    }
   }
   return data->ncon;
 }

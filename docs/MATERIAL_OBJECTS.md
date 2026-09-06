@@ -139,6 +139,12 @@ deposit may reactivate the slot at a different supplied position. Supplying a
 position for an already active object is rejected before mutation, preventing
 material deposit from becoming a teleport action.
 
+Before paying chemistry into a dormant slot, the prepared topology transaction
+checks its new geoms against the current poses and mutable geometry of the
+developed world. A penetrating spawn is capacity-blocked in the batch receipt;
+its requested chemistry remains in the donor row. This is a placement
+admissibility check, not a force-free guarantee after ordinary dynamics begin.
+
 For each slot and pool, `deposit_batch` divides the free capacity fairly among
 simultaneous requests from the same pre-state. It then passes those limited
 requests through native `transfer_batch`, which fairly handles scarcity shared

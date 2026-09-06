@@ -19,6 +19,12 @@ declared underpass clearance, and separated resident spawns. Seed variation is
 limited to small horizontal and elevation offsets and the constraints are
 checked again after variation.
 
+Each generated family also declares a broad physical catchment below the
+terrarium floor. A packet that crosses a low garden wall lands through ordinary
+gravity, collision, and friction instead of entering unbounded free fall. The
+catchment height, extent, enclosing wall height, thickness, and materials are build-time family
+parameters; it does not teleport objects or expose a controller feature.
+
 The compiler removes only the terrain entities named in the family config. It
 retains the six resident definitions and their inherited body and metabolic
 traits, the 1024-ray retinal profile, chemistry compartments, finite material

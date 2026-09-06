@@ -90,3 +90,12 @@ The timing scenario did not establish a grip attachment. A joined follow-up
 used Mica's active grip on the free `chemical-packet-0`: object pose, all qpos
 and qvel values, chemistry, and positive mechanical work matched the scalar
 reference exactly (`0.2609207854437227` joules reported by both paths).
+
+## Native contact aggregation
+
+[`native-contact-aggregation-v1.receipt.json`](../data/performance/native-contact-aggregation-v1.receipt.json)
+records the model-revision-bound contact metadata and participant aggregation
+path. A 100-step, six-resident family-v5 world remained snapshot-exact while
+complete headless advance time fell from 44.18 to 41.78 ms (1.058x). A separate
+891-part Living Reef continuation also remained byte-exact. These measurements
+exclude neural inference and live service scheduling.

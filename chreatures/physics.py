@@ -52,6 +52,79 @@ class TopologyTransaction:
     operations: tuple[dict[str, Any], ...]
     _committed: bool = False
 
+    def penetrations(
+        self, entity_ids: set[str] | list[str] | tuple[str, ...], tolerance: float = 1e-6,
+    ) -> list[dict[str, Any]]:
+        """Report obstructed candidate entities at the active world's current pose.
+
+        The compiled candidate is private to this transaction.  Existing named
+        joints and mutable geom properties are copied into it before collision
+        detection so a cold authored pose cannot decide whether a new object can
+        be inserted into a developed world.
+        """
+        if self._committed:
+            raise RuntimeError("topology transaction was already committed")
+        tolerance = _number(tolerance, "penetration tolerance", 0.0, 0.05)
+        selected = set(entity_ids)
+        if not selected or any(
+            not isinstance(value, str) or not _ID.match(value)
+            or value not in self.candidate._entity_mj
+            for value in selected
+        ):
+            raise ValueError("penetration check requires candidate entity ids")
+
+        current = self.world
+        candidate = self.candidate
+        for joint_id in range(current.model.njnt):
+            name = mujoco.mj_id2name(current.model, mujoco.mjtObj.mjOBJ_JOINT, joint_id)
+            if not name:
+                continue
+            target = mujoco.mj_name2id(candidate.model, mujoco.mjtObj.mjOBJ_JOINT, name)
+            if target < 0:
+                continue
+            joint_type = int(current.model.jnt_type[joint_id])
+            qn = 7 if joint_type == int(mujoco.mjtJoint.mjJNT_FREE) else 4 if joint_type == int(mujoco.mjtJoint.mjJNT_BALL) else 1
+            vn = 6 if joint_type == int(mujoco.mjtJoint.mjJNT_FREE) else 3 if joint_type == int(mujoco.mjtJoint.mjJNT_BALL) else 1
+            qa, da = int(current.model.jnt_qposadr[joint_id]), int(current.model.jnt_dofadr[joint_id])
+            tq, td = int(candidate.model.jnt_qposadr[target]), int(candidate.model.jnt_dofadr[target])
+            candidate.data.qpos[tq : tq + qn] = current.data.qpos[qa : qa + qn]
+            candidate.data.qvel[td : td + vn] = current.data.qvel[da : da + vn]
+        for geom_id in range(current.model.ngeom):
+            name = mujoco.mj_id2name(current.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
+            if not name:
+                continue
+            target = mujoco.mj_name2id(candidate.model, mujoco.mjtObj.mjOBJ_GEOM, name)
+            if target < 0:
+                continue
+            for field_name in (
+                "geom_size", "geom_pos", "geom_quat", "geom_contype", "geom_conaffinity",
+            ):
+                getattr(candidate.model, field_name)[target] = getattr(current.model, field_name)[geom_id]
+        candidate.data.time = current.data.time
+        mujoco.mj_forward(candidate.model, candidate.data)
+
+        hits: list[dict[str, Any]] = []
+        for index in range(candidate.data.ncon):
+            contact = candidate.data.contact[index]
+            if float(contact.dist) >= -tolerance:
+                continue
+            first, second = int(contact.geom1), int(contact.geom2)
+            entities = {
+                value for value in (
+                    candidate._geom_entity.get(first), candidate._geom_entity.get(second),
+                ) if value in selected
+            }
+            for entity_id in sorted(entities):
+                other = second if candidate._geom_entity.get(first) == entity_id else first
+                hits.append({
+                    "entity": entity_id,
+                    "penetration_m": -float(contact.dist),
+                    "other_geom": mujoco.mj_id2name(
+                        candidate.model, mujoco.mjtObj.mjOBJ_GEOM, other,
+                    ) or "",
+                })
+        return hits
+
     def commit(self) -> dict[str, Any]:
         if self._committed:
             raise RuntimeError("topology transaction was already committed")
@@ -199,6 +272,7 @@ class PhysicsWorld:
         self._light = {"position": [6.0, 4.0, 3.0], "intensity": 0.0, "remaining": 0.0, "color": [1.0, 0.94, 0.78]}
         self._compile_model()
         self._native_contacts = NativeContactBatch(max(256, int(self.model.nconmax)))
+        self._bind_contact_metadata()
         self.bodies = self._make_bodies()
         self._components = {
             entity["id"]: copy.deepcopy(entity.get("components", [])) for entity in self._entities
@@ -620,6 +694,34 @@ class PhysicsWorld:
                 self._geom_entity[geom_id] = name.split(":", 2)[1]
             elif name.startswith("resident:"):
                 self._geom_resident[geom_id] = name.split(":", 2)[1]
+        if hasattr(self, "_native_contacts"):
+            self._bind_contact_metadata()
+
+    def _bind_contact_metadata(self) -> None:
+        self._contact_resident_ids = tuple(body["id"] for body in self.spec["bodies"])
+        self._contact_entity_ids = tuple(entity["id"] for entity in self._entities)
+        resident_slot = {value: index for index, value in enumerate(self._contact_resident_ids)}
+        entity_slot = {value: index for index, value in enumerate(self._contact_entity_ids)}
+        geom_resident = np.full(self.model.ngeom, -1, dtype=np.int32)
+        geom_entity = np.full(self.model.ngeom, -1, dtype=np.int32)
+        self._contact_geom_names: list[str] = []
+        self._contact_shape_indices: list[int | None] = []
+        for geom_id in range(self.model.ngeom):
+            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id) or ""
+            self._contact_geom_names.append(name)
+            resident_id = self._geom_resident.get(geom_id)
+            entity_id = self._geom_entity.get(geom_id)
+            if resident_id is not None:
+                geom_resident[geom_id] = resident_slot[resident_id]
+            if entity_id is not None:
+                geom_entity[geom_id] = entity_slot[entity_id]
+                self._contact_shape_indices.append(int(name.rsplit(":", 1)[1]))
+            else:
+                self._contact_shape_indices.append(None)
+        self._native_contacts.bind_metadata(
+            geom_resident, geom_entity,
+            np.asarray([self._body_mj[value] for value in self._contact_resident_ids], dtype=np.int32),
+        )
 
     @staticmethod
     def _attrs_value(value: list[float]) -> str:
@@ -1400,32 +1502,28 @@ class PhysicsWorld:
         acoustic_events: list[dict[str, Any]] = []
         (
             first_ids, second_ids, points, normals, relative_speeds, impulses, impact_work,
-            contact_force_norm,
+            contact_force_norm, participant_resident, participant_entity,
+            participant_side, _participant_normals,
         ) = self._native_contacts.evaluate(
             self.model, self.data, self.model.opt.timestep,
             float(self.spec.get("limits", {}).get("acoustic_impulse", 10.0)),
             float(self.spec.get("limits", {}).get("acoustic_work", 5.0)),
+            np.asarray([self._body(value).z for value in self._contact_resident_ids]),
         )
         for index in range(self.data.ncon):
             first, second = int(first_ids[index]), int(second_ids[index])
             point = points[index]
             world_normal = normals[index]
             resident_ids = sorted({
-                value for value in (self._geom_resident.get(first), self._geom_resident.get(second))
-                if value is not None
+                self._contact_resident_ids[slot] for slot in participant_resident[index]
+                if slot >= 0
             })
             if self._physiology is not None and resident_ids and len(self._step_contact_samples) < int(
                 self.spec.get("limits", {}).get("contact_samples", 512)
             ):
-                names = [
-                    mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id) or ""
-                    for geom_id in (first, second)
-                ]
+                names = [self._contact_geom_names[first], self._contact_geom_names[second]]
                 entity_ids = [self._geom_entity.get(first), self._geom_entity.get(second)]
-                shape_indices = [
-                    int(name.rsplit(":", 1)[1]) if entity_id is not None else None
-                    for name, entity_id in zip(names, entity_ids, strict=True)
-                ]
+                shape_indices = [self._contact_shape_indices[first], self._contact_shape_indices[second]]
                 for resident_id in resident_ids:
                     if len(self._step_contact_samples) >= int(
                         self.spec.get("limits", {}).get("contact_samples", 512)
@@ -1453,28 +1551,28 @@ class PhysicsWorld:
                         "relative_normal_speed": float(relative_speeds[index]),
                         "impact_work": float(impact_work[index]),
                     })
-            participants: list[tuple[str, int, np.ndarray]] = []
-            if first in self._geom_resident:
-                participants.append((self._geom_resident[first], second, world_normal))
-            if second in self._geom_resident:
-                participants.append((self._geom_resident[second], first, -world_normal))
-            for resident_id, other, normal in participants:
-                entity_id = self._geom_entity.get(other)
+            for side_index in range(2):
+                resident_slot = int(participant_resident[index, side_index])
+                if resident_slot < 0:
+                    continue
+                resident_id = self._contact_resident_ids[resident_slot]
+                entity_slot = int(participant_entity[index, side_index])
+                entity_id = self._contact_entity_ids[entity_slot] if entity_slot >= 0 else None
                 if entity_id:
                     contacted_entities[resident_id].add(entity_id)
-                body = self._body(resident_id)
-                mj_body = self._body_mj[resident_id]
-                # Ground-like support is used for traction but excluded from the
-                # bilateral obstacle touch channel.
-                if abs(float(normal[2])) > 0.72 and point[2] < body.z:
+                touch_side = int(participant_side[index, side_index])
+                if touch_side < 0:
                     continue
                 strength = min(1.0, 0.18 + float(contact_force_norm[index]) / 3.0)
-                rotation = self.data.xmat[mj_body].reshape(3, 3)
-                delta = point - self.data.xpos[mj_body]
-                side = 1 if float(np.dot(delta, rotation[:, 1])) >= 0 else 0
-                self._touch[resident_id][side] = max(self._touch[resident_id][side], strength)
+                self._touch[resident_id][touch_side] = max(
+                    self._touch[resident_id][touch_side], strength,
+                )
                 if len(self._contact_normals[resident_id]) < 8:
-                    self._contact_normals[resident_id].append((rotation.T @ normal).astype(float).tolist())
+                    normal = world_normal if side_index == 0 else -world_normal
+                    rotation = self.data.xmat[self._body_mj[resident_id]].reshape(3, 3)
+                    self._contact_normals[resident_id].append(
+                        (rotation.T @ normal).astype(float).tolist()
+                    )
                 if entity_id:
                     self._resonance[entity_id] = max(self._resonance.get(entity_id, 0.0), strength)
         if self._acoustics is not None and acoustic_events:
@@ -1641,6 +1739,7 @@ class PhysicsWorld:
         mujoco.mj_forward(self.model, self.data)
         self._sync_public_state()
         self.model_revision += 1
+        self._bind_contact_metadata()
         hook = getattr(self, "_prepare_fast_articulation", None)
         if callable(hook):
             hook()
