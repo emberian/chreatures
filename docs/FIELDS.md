@@ -56,6 +56,7 @@ chemical sources:
 
 ```python
 sources = field.sources_from_world(world)
+field.sync_dynamic_barriers(world.diffusion_barriers())
 ledger = field.advance(0.05, sources=sources, sinks=local_sinks, flow=air_velocity)
 odor_left, odor_right = field.sample([left_antenna_xyz, right_antenna_xyz])
 ```
@@ -65,6 +66,44 @@ amount. It retains an internal source key so successive positions deposit along
 the traveled segment instead of skipping between cells. The sampled result is
 only channel concentrations. Entity keys, object IDs, source locations, and
 world coordinates never enter the organism's observation.
+
+### Moving thin membranes
+
+Hinged and sliding entities can opt into chemical coupling with a strict
+version-1 component:
+
+```json
+{
+  "type": "diffusion_barrier",
+  "version": 1,
+  "shape_indices": [0],
+  "permeability": 0.0,
+  "translation_epsilon": 0.004,
+  "rotation_epsilon": 0.012
+}
+```
+
+The selected shapes must be boxes on a `hinge` or `slide` entity. At the
+physical step boundary, `PhysicsWorld.diffusion_barriers()` supplies their
+current world poses to `sync_dynamic_barriers`. The field caches three
+face-centered factor arrays and recomputes them only after a selected panel
+moves by the declared translation or rotation tolerance. An oriented-box
+intersection test handles both rotating leaf gates and translating panels.
+Overlapping membranes use the least permeable factor.
+
+This is a thin-membrane approximation. A panel scales diffusive and advective
+transport across cell-center segments that intersect its current oriented box.
+It does not turn cells solid, remove concentration from a newly covered cell,
+displace fluid as it moves, generate pressure, or model hydrodynamics. Closing
+a gate therefore preserves field mass at the synchronization instant; it only
+changes later flux. The regular static solid and cell-permeability grids remain
+unchanged.
+
+Only explicitly selected panels participate. Creatures, food, balls, and
+ordinary moving mechanisms do not become fluid bodies. Organisms receive only
+the resulting local channel samples, with no barrier or assembly identifiers.
+`data/habitats/counterweight-chemistry.json` demonstrates a sealed sliding
+passage gate coupled to a pressure lift and a partially permeable hinged leaf.
 
 Callers may pass source dictionaries directly. A source has `position`,
 `channel`, `rate`, and optional `spread`, `key`, or `previous_position`. A sink
@@ -142,6 +181,21 @@ and sink parameters, cumulative mass ledger, and RNG state. `restore()` checks
 array shapes, finiteness, nonnegative concentration, and RNG compatibility.
 The arrays use float64 so a same-runtime continuation preserves both transport
 state and mass accounting exactly.
+
+Fields without declared moving membranes retain the original version-1
+snapshot payload and arithmetic path. A field with membranes writes version 2,
+including the normalized barrier topology, last synchronized poses, exact face
+factors, and raster update count. Restore verifies that saved factors are the
+ones implied by the saved poses before accepting them.
+
+A focused check operated the chemistry variant with the finite-mass transport
+block. The coupled slide gate moved from `0.000 m` to `0.339 m`. After the same
+one-unit release and 1.5 seconds of diffusion, measured mass immediately beyond
+the passage was `0.000439` closed and `0.06934` open. Synchronizing the closing
+gate over an already concentrated region left the complete concentration array
+and total mass bit-identical. Saving during subsequent physical motion and
+restoring both world and field produced exact 24-step continuation; rotating
+the hinged leaf changed 39 cached face factors at the probe grid resolution.
 
 Run the contained conservative-wall demonstration with:
 

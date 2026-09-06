@@ -336,6 +336,7 @@ class ContextualMotorRefiner:
         policy_log_std: Any,
         *,
         baseline_latent: Any | None = None,
+        alternative_log_std: Any | None = None,
         deterministic: bool = False,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Draw an ancestral policy action and bounded alternatives around it."""
@@ -344,6 +345,16 @@ class ContextualMotorRefiner:
             _vector(policy_log_std, len(MOTOR_ACTIONS), "policy log_std"), -3.5, 0.3
         )
         std = np.exp(log_std).astype(np.float32)
+        alternative_std = (
+            std
+            if alternative_log_std is None
+            else np.exp(np.clip(
+                _vector(
+                    alternative_log_std, len(MOTOR_ACTIONS), "alternative log_std",
+                ),
+                -5.0, 0.3,
+            )).astype(np.float32)
+        )
         if baseline_latent is None:
             baseline = mean.copy() if deterministic else (
                 mean + std * self.rng.standard_normal(len(MOTOR_ACTIONS), dtype=np.float32)
@@ -358,7 +369,7 @@ class ContextualMotorRefiner:
         if count > 1:
             noise = self.rng.standard_normal((count - 1, len(MOTOR_ACTIONS)), dtype=np.float32)
             latent[1:] = baseline + (
-                std * np.float32(self.config.candidate_std_scale)
+                alternative_std * np.float32(self.config.candidate_std_scale)
             ) * noise
         action = np.tanh(latent).astype(np.float32)
         # Match MotorOrgan.tick's projection from Gaussian action to the
@@ -366,7 +377,7 @@ class ContextualMotorRefiner:
         action[:, [3, 4, 5, 6]] = np.maximum(action[:, [3, 4, 5, 6]], 0)
         # Mean log-density per coordinate keeps inherited score differences on
         # the same scale as the bounded contextual correction.
-        z = (latent - baseline) / std
+        z = (latent - baseline) / alternative_std
         inherited = (-0.5 * np.mean(z * z, axis=1)).astype(np.float32)
         return action, inherited, latent
 
@@ -466,6 +477,7 @@ class ContextualMotorRefiner:
         candidate_actions: Any | None = None,
         inherited_scores: Any | None = None,
         baseline_latent: Any | None = None,
+        alternative_log_std: Any | None = None,
         deterministic: bool = False,
         proposal_credit_contract: str | None = None,
         candidate_evidence: Callable[
@@ -496,7 +508,9 @@ class ContextualMotorRefiner:
         if candidate_actions is None:
             actions, inherited, latent = self.candidates(
                 mean_value, log_std_value,
-                baseline_latent=baseline_latent, deterministic=deterministic,
+                baseline_latent=baseline_latent,
+                alternative_log_std=alternative_log_std,
+                deterministic=deterministic,
             )
             candidate_source = (
                 "deterministic inherited mean plus bounded local alternatives"
@@ -508,6 +522,8 @@ class ContextualMotorRefiner:
         else:
             if baseline_latent is not None:
                 raise ValueError("baseline_latent cannot accompany caller-supplied candidates")
+            if alternative_log_std is not None:
+                raise ValueError("alternative_log_std cannot accompany caller-supplied candidates")
             actions = np.asarray(candidate_actions, dtype=np.float32)
             if actions.ndim != 2 or actions.shape[1] != len(MOTOR_ACTIONS) or not 1 <= len(actions) <= 9:
                 raise ValueError("candidate_actions must have shape 1..9 by 8")
@@ -663,6 +679,19 @@ class ContextualMotorRefiner:
                 "candidate_pipeline": "generated-around-baseline-v1",
                 "proposal_credit_contract": proposal_credit_contract,
             })
+            if alternative_log_std is not None:
+                decision["provenance"].update({
+                    "alternative_noise_scale": "fixed-explicit-log-std-v1",
+                    "alternative_log_std": np.clip(
+                        _vector(
+                            alternative_log_std,
+                            len(MOTOR_ACTIONS),
+                            "alternative log_std",
+                        ),
+                        -5.0,
+                        0.3,
+                    ).astype(float).tolist(),
+                })
         if external_source is not None:
             decision["relational_selected_index"] = relational_choice
             decision["provenance"]["external_evidence"] = {
@@ -744,6 +773,7 @@ class ContextualMotorRefiner:
         *,
         policy_mean_override: Any | None = None,
         baseline_latent: Any | None = None,
+        alternative_log_std: Any | None = None,
         proposal_credit_contract: str | None = None,
         candidate_evidence: Callable[
             [tuple[tuple[float, ...], ...]], Mapping[str, Any]
@@ -777,6 +807,7 @@ class ContextualMotorRefiner:
             log_std,
             policy_artifact_sha256=motor.artifact.sha256,
             baseline_latent=baseline_latent,
+            alternative_log_std=alternative_log_std,
             deterministic=motor.deterministic,
             proposal_credit_contract=proposal_credit_contract,
             candidate_evidence=candidate_evidence,

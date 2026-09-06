@@ -17,6 +17,8 @@ from typing import Any, Iterable
 
 import numpy as np
 
+from .field_barriers import DynamicFaceBarriers
+
 
 DEFAULT_CHANNELS = [
     {"name": "odor0", "diffusion": 0.035, "decay": 0.006, "uptake": 0.0},
@@ -73,7 +75,8 @@ class FieldEnvironment:
     Concentration units are mass per cubic meter.
     """
 
-    VERSION = 1
+    VERSION = 2
+    LEGACY_VERSION = 1
 
     def __init__(
         self,
@@ -120,6 +123,9 @@ class FieldEnvironment:
         self.time = 0.0
         self.rng = np.random.default_rng(int(self.config["seed"]))
         self._source_positions: dict[str, list[float]] = {}
+        # Kept absent for legacy fields so their transport arithmetic and
+        # snapshot payload remain exactly version 1.
+        self._dynamic_barriers: DynamicFaceBarriers | None = None
         self.last_sources: list[dict[str, Any]] = []
         self.last_sinks: list[dict[str, Any]] = []
         self.diagnostics = {
@@ -149,7 +155,32 @@ class FieldEnvironment:
                 environment._voxelize_shape(shape)
         environment.permeability[environment.solid] = 0.0
         environment.concentration[:, environment.solid] = 0.0
+        provider = getattr(world, "diffusion_barriers", None)
+        if callable(provider):
+            barriers = provider()
+            if barriers:
+                environment.sync_dynamic_barriers(barriers)
         return environment
+
+    def sync_dynamic_barriers(self, barriers: Any) -> bool:
+        """Synchronize declared membrane poses at a physical step boundary.
+
+        Empty input on a legacy field is a constant-time no-op. Once a field
+        has version-2 barrier topology, that topology cannot change in place.
+        """
+        if isinstance(barriers, tuple):
+            if barriers:
+                raise ValueError("dynamic barriers must be a list")
+        elif not isinstance(barriers, list):
+            raise ValueError("dynamic barriers must be a list")
+        if not barriers and self._dynamic_barriers is None:
+            return False
+        if self._dynamic_barriers is None:
+            engine = DynamicFaceBarriers(self.size, self.shape_xyz)
+            changed = engine.sync(barriers)
+            self._dynamic_barriers = engine
+            return changed
+        return self._dynamic_barriers.sync(barriers)
 
     @staticmethod
     def _normalized_config(config: dict[str, Any] | None) -> dict[str, Any]:
@@ -470,6 +501,8 @@ class FieldEnvironment:
             p_right = tuple(p_right)
             face_permeability = np.minimum(self.permeability[p_left], self.permeability[p_right])
             face_permeability *= (~self.solid[p_left]) & (~self.solid[p_right])
+            if self._dynamic_barriers is not None:
+                face_permeability *= self._dynamic_barriers.faces[flow_component]
             left = current[left_slice]
             right = current[right_slice]
             diffusive_rate = (
@@ -639,8 +672,8 @@ class FieldEnvironment:
         return result
 
     def snapshot(self) -> dict[str, Any]:
-        return {
-            "version": self.VERSION,
+        snapshot = {
+            "version": self.LEGACY_VERSION if self._dynamic_barriers is None else self.VERSION,
             "size": self.size.tolist(),
             "config": copy.deepcopy(self.config),
             "time": self.time,
@@ -654,11 +687,15 @@ class FieldEnvironment:
             "diagnostics": copy.deepcopy(self.diagnostics),
             "rng_state": _json_value(copy.deepcopy(self.rng.bit_generator.state)),
         }
+        if self._dynamic_barriers is not None:
+            snapshot["dynamic_barriers"] = self._dynamic_barriers.snapshot()
+        return snapshot
 
     @classmethod
     def restore(cls, snapshot: dict[str, Any]) -> "FieldEnvironment":
-        if not isinstance(snapshot, dict) or snapshot.get("version") != cls.VERSION:
+        if not isinstance(snapshot, dict) or snapshot.get("version") not in {cls.LEGACY_VERSION, cls.VERSION}:
             raise ValueError("unsupported field snapshot")
+        version = snapshot["version"]
         environment = cls(
             size=snapshot["size"],
             config=snapshot["config"],
@@ -692,6 +729,12 @@ class FieldEnvironment:
             environment.rng.bit_generator.state = copy.deepcopy(snapshot["rng_state"])
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError("invalid field RNG state") from exc
+        if version == cls.VERSION:
+            if "dynamic_barriers" not in snapshot:
+                raise ValueError("version 2 field snapshot requires dynamic barriers")
+            environment._dynamic_barriers = DynamicFaceBarriers.restore(
+                environment.size, environment.shape_xyz, snapshot["dynamic_barriers"],
+            )
         return environment
 
 

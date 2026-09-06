@@ -59,6 +59,13 @@ predictor on this external-selector path.
 The caller-supplied candidate hook exists for replay and controlled evaluation;
 runtime candidates should still originate from the inherited policy.
 
+For the opt-in personal variance-v2 pipeline, candidate zero uses the private
+adapted standard deviation but every alternative perturbation uses an explicit
+copy of the immutable inherited log standard deviation. Provenance labels this
+`fixed-explicit-log-std-v1`. This keeps alternative noise conditionally
+independent of private variance parameters once the sampled baseline is fixed,
+which is required by latent-proposal score credit.
+
 Every decision records the complete physical and pre-tanh candidate vectors,
 the inherited mean and log standard deviation, inherited scores, predicted
 outcomes, support, uncertainty heuristic, contextual corrections, selected and

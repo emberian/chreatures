@@ -229,6 +229,7 @@ class EmbodiedTrainingWorld:
         outcomes = self.world.advance(actions, dt)
         acoustic = self.acoustics.advance(dt)
         resources = self.resources.advance(dt)
+        self.field.sync_dynamic_barriers(self.world.diffusion_barriers())
         field = self.field.advance(dt, sources=self.field.sources_from_world(self.world))
         rewards = []
         for body in self.bodies:

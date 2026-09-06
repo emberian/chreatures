@@ -72,7 +72,12 @@ and carried objects determine the result.
 current constraint error for rendering and diagnostics. `sense()` does not
 include assembly records, joint ids, or world coordinates. Moving gates and
 platforms affect organisms through native collision, retinal occlusion,
-contact, proprioception, light, chemical transport, and sound.
+contact, proprioception, light, and sound. Static geometry affects chemical
+transport. A moving part affects chemical transport only when it explicitly
+has a versioned `diffusion_barrier` component and the field synchronizes that
+physical pose at the environment step boundary; ordinary hinges and slides do
+not silently become fluid obstacles. The membrane changes finite-volume face
+permeability without deleting or displacing field mass; see `docs/FIELDS.md`.
 
 Joint coordinates and velocities are part of the existing
 `mjSTATE_INTEGRATION` snapshot. Habitat topology and coupling parameters are
@@ -94,6 +99,11 @@ it allows the counterweight gate to descend.
 The original terrarium mechanisms, food cycle, and optional
 `data/components/terrarium-play.json` acoustic transducers remain compatible
 with the variant. Existing terrarium and live habitat files are unchanged.
+
+`data/habitats/counterweight-chemistry.json` is a separate opt-in variant. Its
+linked passage gate is a zero-permeability moving membrane, while its hinged
+leaf is partially permeable. This lets physical work on the counterweight alter
+subsequent local chemical transport as well as traversal and line of sight.
 
 A focused operation used the bounded caregiver spring to carry the physical
 block onto the lift and then released it. Contact weight lowered the lift from
