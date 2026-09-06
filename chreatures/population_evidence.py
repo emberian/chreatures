@@ -472,14 +472,24 @@ def append_batches(
     result = deepcopy(dict(ledger))
     _validate_ledger_envelope(result)
     applied = set(result["applied_batches"])
+    existing = {record["id"]: record for record in result["records"]}
     for batch in batches:
         _validate_batch_envelope(batch, result["campaign_id"])
         batch_id = batch["batch_id"]
         if batch_id in applied:
-            raise PopulationEvidenceError(f"batch {batch_id!r} was already applied")
-        result["records"].extend(deepcopy(batch["records"]))
+            for record in batch["records"]:
+                previous = existing.get(record["id"])
+                if previous is None or canonical_bytes(previous) != canonical_bytes(record):
+                    raise PopulationEvidenceError(
+                        f"applied batch {batch_id!r} differs from ledger record "
+                        f"{record['id']!r}"
+                    )
+            continue
+        copied = deepcopy(batch["records"])
+        result["records"].extend(copied)
         result["applied_batches"].append(batch_id)
         applied.add(batch_id)
+        existing.update({record["id"]: record for record in copied})
     validate_records(result["records"], campaign_id=result["campaign_id"])
     result["records_sha256"] = hashlib.sha256(
         canonical_bytes(result["records"])
@@ -1050,6 +1060,15 @@ def _validate_batch_envelope(batch: Mapping[str, Any], campaign_id: str) -> None
         raise PopulationEvidenceError("batch_id must be nonempty")
     if not isinstance(batch.get("records"), list) or not batch["records"]:
         raise PopulationEvidenceError("batch records must be a nonempty array")
+    record_ids = [record.get("id") for record in batch["records"]]
+    if any(not isinstance(record_id, str) for record_id in record_ids) or len(
+        set(record_ids)
+    ) != len(record_ids):
+        raise PopulationEvidenceError("batch record ids must be unique strings")
+    records_sha256 = hashlib.sha256(canonical_bytes(batch["records"])).hexdigest()
+    expected_id = f"population-campaign:{records_sha256}"
+    if batch["batch_id"] != expected_id:
+        raise PopulationEvidenceError("batch_id does not authenticate batch records")
 
 
 def read_json(path: Path) -> dict[str, Any]:

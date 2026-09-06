@@ -850,8 +850,7 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                 let allocation_status = required_string(record, "allocation_status")?;
                 let continuation_count =
                     population_parents_for_role(record, "life_continuation")?.len();
-                let planned_count =
-                    population_parents_for_role(record, "planned_campaign")?.len();
+                let planned_count = population_parents_for_role(record, "planned_campaign")?.len();
                 required_sha256(record, "genome_sha256")?;
                 required_sha256(record, "environment_sha256")?;
                 let trajectory_sha256 = required_sha256(record, "trajectory_sha256")?;
@@ -1250,7 +1249,10 @@ fn run(args: &Args) -> Result<Value, Box<dyn Error>> {
 
     let persisted = fs::read(&args.output)?;
     let reloaded: EvidenceWeave = serde_json::from_slice(&persisted)?;
-    if !reloaded.validate() || reloaded != weave {
+    if !reloaded.validate() {
+        return Err("Universal Weave failed validation after serialize/reload".into());
+    }
+    if reloaded != weave {
         return Err("Universal Weave changed across serialize/reload".into());
     }
 
