@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Collect current family-v5 trajectories from native developmental residents."""
+"""Collect current regional population trajectories from native developmental residents."""
 
 from __future__ import annotations
 
@@ -30,22 +30,11 @@ from chreatures.training_cohort import (
     load_training_graph,
 )
 
-FORMAT = "chreatures-sensorimotor-play-rich-v2"
-SCHEMA = ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v2.json"
-ACTION_NAMES = (
-    "thrust",
-    "yaw",
-    "gaze_pitch",
-    "grip",
-    "signal_low",
-    "signal_mid",
-    "signal_high",
-    "posture",
-)
-OBSERVATION_ORDER = (
-    "rich_body_v1_4096",
-    "canonical_channels_351",
-    "physiology_6",
+FORMAT = "chreatures-sensorimotor-play-rich-v3"
+SCHEMA = ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v3.json"
+from chreatures.organism_interface import (
+    ACTION_NAMES, ACTION_DIM, PREVIOUS_DIM, PHYSIOLOGY_DIM,
+    OBSERVATION_DIM, OBSERVATION_ORDER,
 )
 
 
@@ -70,7 +59,7 @@ def source_identity() -> dict[str, Any]:
         Path("chreatures/training_cohort.py"),
         Path("chreatures/sensorimotor_worker_native.py"),
         Path("chreatures/training_environment.py"),
-        Path("research/sensorimotor_skills/trajectory-schema-rich-v2.json"),
+        Path("research/sensorimotor_skills/trajectory-schema-rich-v3.json"),
     )
     revision = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -137,6 +126,8 @@ def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--resident-artifact", type=Path, required=True)
+    parser.add_argument("--candidate-genomes", type=Path, required=True)
+    parser.add_argument("--neural-recipe", type=Path, required=True)
     parser.add_argument("--graph", type=Path, required=True)
     parser.add_argument("--port-bundle", type=Path, required=True)
     parser.add_argument("--chemical-habitat", type=Path, required=True)
@@ -163,6 +154,8 @@ def validate(args: argparse.Namespace) -> None:
         raise SystemExit("output must be absent or empty")
     for path in (
         args.resident_artifact,
+        args.candidate_genomes,
+        args.neural_recipe,
         args.port_bundle,
         args.chemical_habitat,
         args.chemical_biosphere,
@@ -173,36 +166,17 @@ def validate(args: argparse.Namespace) -> None:
             raise SystemExit(f"required artifact does not exist: {path}")
 
 
-def physiology(bodies, circuit: np.ndarray) -> np.ndarray:
-    rows = []
-    index = 0
-    for world in bodies:
-        for body in world:
-            rows.append(
-                (
-                    body["energy"],
-                    body["gut"],
-                    body["fatigue"],
-                    math.tanh(float(body["speed"]) / 2),
-                    math.tanh(float(body["angular_velocity"]) / 4),
-                    circuit[index, 2],
-                )
-            )
-            index += 1
-    return np.asarray(rows, dtype=np.float32)
-
-
 def observe(pool, brain, dt: float):
     rich, canonical, bodies = pool.observe_arrays()
     neural, circuit, _ = brain.step_channels(canonical, dt)
-    physical = physiology(bodies, circuit)
+    physical = pool.physiology_array(circuit[:, 2])
     observation = np.ascontiguousarray(
         np.concatenate((rich, canonical, physical), axis=1), dtype=np.float32
     )
     return observation, canonical, physical, neural, bodies
 
 
-def action_payload(actions: np.ndarray, oral: np.ndarray, bodies):
+def action_payload(actions: np.ndarray, bodies):
     payloads = []
     row = 0
     for world in bodies:
@@ -210,7 +184,6 @@ def action_payload(actions: np.ndarray, oral: np.ndarray, bodies):
         for body in world:
             mapped[str(body["id"])] = {
                 **dict(zip(ACTION_NAMES, actions[row].astype(float), strict=True)),
-                "eat": float(oral[row]),
             }
             row += 1
         payloads.append({"actions": mapped, "dt": 0.05})
@@ -242,39 +215,49 @@ def main() -> int:
     graph = load_training_graph(args.graph)
     ports = NeuralPortBundle.load(args.port_bundle, graph)
     transport = profile.component("family")["transport"]
+    residents_per_world = transport["residents"]
     required = {
-        "residents": 6,
+        "residents": residents_per_world,
         "rich": RICH_OBSERVATION_CHANNELS,
         "physical": len(ports.input_names),
-        "physiology": 6,
-        "controller": RICH_OBSERVATION_CHANNELS + len(ports.input_names) + 6,
+        "physiology": PHYSIOLOGY_DIM,
+        "controller": OBSERVATION_DIM,
         "readouts": len(ports.readout_names),
+        "actions": ACTION_DIM,
     }
-    if int(profile.component("version")) != 5 or transport != required or required != {
-        "residents": 6,
-        "rich": 4096,
-        "physical": 351,
-        "physiology": 6,
-        "controller": 4453,
-        "readouts": 384,
-    }:
-        raise SystemExit("family profile transport differs from collector interfaces")
-    count = args.worlds * 6
+    if int(profile.component("version")) != 6 or transport != required:
+        raise SystemExit("regional profile transport differs from collector interfaces")
+    count = args.worlds * residents_per_world
+    from chreatures.population import CandidateGenome
+    from chreatures.neural_genotype import NeuralVariantRecipe, compile_population_phenotypes
+
+    candidate_values = json.loads(args.candidate_genomes.read_text())
+    if not isinstance(candidate_values, list) or len(candidate_values) != count:
+        raise ValueError("collection requires one inherited candidate genome per cohort row")
+    candidates = [CandidateGenome(value) for value in candidate_values]
+    phenotypes = compile_population_phenotypes(
+        candidates, NeuralVariantRecipe.load(args.neural_recipe), graph, ports,
+        sha256(args.port_bundle), sha256(args.resident_artifact),
+    )
     brain = TrainingCohortBrain(
         graph, ports, count, device=args.device, backend=args.brain_backend
     )
+    brain.bind_phenotypes(phenotypes)
     pool = WorldTrainingPool(
         args.worlds,
         dict(ports.spec),
         profile.to_value(),
         args.physical_backend,
-        residents_per_world=6,
+        residents_per_world=residents_per_world,
     )
     artifact_path = args.resident_artifact.resolve()
     identity = {
         "format": f"{FORMAT}-identity",
         "source": source_identity(),
         "resident_artifact": resident_model_identity(artifact_path),
+        "candidate_genomes_sha256": sha256(args.candidate_genomes),
+        "candidate_order": [candidate.sha256 for candidate in candidates],
+        "neural_phenotypes": [phenotype.sha256 for phenotype in phenotypes],
         "profile": profile.to_value(),
         "graph_sha256": str(graph.hash),
         "port_spec_sha256": ports.spec_hash,
@@ -308,6 +291,9 @@ def main() -> int:
                     {
                         "seed": args.seed + episode * 1009 + world,
                         "held_out": world >= heldout_start,
+                        "candidates": candidate_values[
+                            world * residents_per_world:(world + 1) * residents_per_world
+                        ],
                     }
                     for world in range(args.worlds)
                 ]
@@ -315,7 +301,7 @@ def main() -> int:
             resident_ids = [
                 f"episode-{episode:03d}/world-{world:03d}/resident-{resident:02d}"
                 for world in range(args.worlds)
-                for resident in range(6)
+                for resident in range(residents_per_world)
             ]
             brain.reset_residents(resident_ids)
             residents = DevelopmentalResidentCohort(
@@ -324,6 +310,7 @@ def main() -> int:
                 action_mode="sample",
                 goal_seed=args.seed ^ (episode << 24) ^ 0x60A1,
                 action_seed=args.seed ^ (episode << 24) ^ 0xAC71,
+                candidate_adapters=[candidate.controller_adapter() for candidate in candidates],
             )
             expected_neural = {
                 "graph_sha256": str(graph.hash),
@@ -334,7 +321,7 @@ def main() -> int:
                 raise RuntimeError(
                     "developmental resident neural substrate differs from collection"
                 )
-            previous = np.zeros((count, 9), dtype=np.float32)
+            previous = np.zeros((count, PREVIOUS_DIM), dtype=np.float32)
             reset = np.ones(count, dtype=np.bool_)
             observation, canonical, physical, neural, bodies = observe(pool, brain, 0.05)
             observations = [observation]
@@ -342,7 +329,6 @@ def main() -> int:
             neurals = [neural]
             resets = [reset.copy()]
             actions = []
-            oral_commands = []
             outcomes_sequence = []
             for tick in range(args.steps):
                 result = residents.step(
@@ -355,13 +341,12 @@ def main() -> int:
                     reset,
                 )
                 action = np.ascontiguousarray(result["proposed_action"], dtype=np.float32)
-                oral = np.ascontiguousarray(result["oral_command"], dtype=np.float32)
                 before = physical.copy()
-                advanced = pool.advance(action_payload(action, oral, bodies))
+                advanced = pool.advance(action_payload(action, bodies))
                 world_outcomes = [value[0] for value in advanced]
                 observation, canonical, physical, neural, bodies = observe(pool, brain, 0.05)
                 executed = np.ascontiguousarray(
-                    np.concatenate((action, oral[:, None]), axis=1), dtype=np.float32
+                    action, dtype=np.float32
                 )
                 effort = np.asarray(
                     [
@@ -386,14 +371,12 @@ def main() -> int:
                 neurals.append(neural)
                 resets.append(reset.copy())
                 actions.append(action)
-                oral_commands.append(oral)
                 outcomes_sequence.append(outcome_rows(world_outcomes, bodies))
             arrays = {
                 "observation": np.stack(observations).astype(np.float32),
                 "canonical_channels": np.stack(canonicals).astype(np.float32),
                 "neural_readouts": np.stack(neurals).astype(np.float32),
                 "executed_actions": np.stack(actions).astype(np.float32),
-                "oral_command": np.stack(oral_commands).astype(np.float32),
                 "transition_outcomes": np.stack(outcomes_sequence).astype(np.float32),
                 "reset": np.stack(resets).astype(np.bool_),
                 "dt_seconds": np.asarray(0.05, dtype=np.float64),
@@ -431,14 +414,14 @@ def main() -> int:
         pool.close()
     manifest = {
         "format": FORMAT,
-        "version": 2,
+        "version": 3,
         "completed": True,
         "collection_identity": identity,
         "identity_receipt": identity_receipt,
         "collection_identity_sha256": identity["sha256"],
         "scope": {
             "worlds": args.worlds,
-            "residents_per_world": 6,
+            "residents_per_world": residents_per_world,
             "episodes": args.episodes,
             "steps_per_episode": args.steps,
             "dt_seconds": 0.05,
@@ -459,7 +442,7 @@ def main() -> int:
         "transition_outcome_order": list(OUTCOME_FIELDS),
         "packets": packets,
         "end_checkpoints": end_checkpoints,
-        "transitions": args.worlds * 6 * args.episodes * args.steps,
+        "transitions": count * args.episodes * args.steps,
         "elapsed_seconds": time.perf_counter() - started,
         "world_transport_timing": transport_timing,
     }

@@ -35,6 +35,7 @@ def create_app(
     habitat_spec=None,
     physics_backend=None,
     visitor_materials=None,
+    population_birth=None,
 ):
     checkpoint = checkpoint or ROOT / "runs/hollow-garden.json"
     authority = {"habitat": None, "error": None, "alive": True}
@@ -60,6 +61,7 @@ def create_app(
                     resident_artifact=resident_artifact,
                     physics_backend=physics_backend,
                     visitor_materials=visitor_materials,
+                    population_birth=population_birth,
                     spec=json.loads(Path(habitat_spec).read_text())
                     if habitat_spec is not None
                     else None,
@@ -311,6 +313,11 @@ def main():
         help="Physical acoustic transducers for new 3D worlds; saved worlds preserve their mechanisms",
     )
     parser.add_argument(
+        "--population-birth",
+        type=Path,
+        help="Inherited genomes and authenticated neural phenotype artifacts for a new cohort",
+    )
+    parser.add_argument(
         "--resident-artifact",
         type=Path,
         required=True,
@@ -341,6 +348,7 @@ def main():
             habitat_spec=args.habitat,
             physics_backend=args.physics_backend,
             visitor_materials=args.visitor_materials,
+            population_birth=args.population_birth,
         ),
         host=args.host,
         port=args.port,

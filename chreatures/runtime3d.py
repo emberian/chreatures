@@ -21,21 +21,14 @@ from .sensorimotor_worker_native import DevelopmentalResidentCohort
 from .visitor_events import VisitorPerformances
 
 MODEL_DT = 0.05
-SOURCE_SENSE_DIM = 351
-NEURAL_DIM = 384
-PHYSIOLOGY_DIM = 6
-RICH_RETINA_DIM = 4096
-ACTION_NAMES = (
-    "thrust",
-    "yaw",
-    "gaze_pitch",
-    "grip",
-    "signal_low",
-    "signal_mid",
-    "signal_high",
-    "posture",
+from .organism_interface import (
+    ACTION_NAMES, ACTION_DIM, PHYSIOLOGY_DIM, NEURAL_DIM,
+    OBSERVATION_DIM, OBSERVATION_ORDER, PREVIOUS_DIM, RECTIFIED_AXES,
+    identity as organism_identity,
 )
-CHECKPOINT_FORMAT = "chreatures-developmental-habitat-checkpoint-v2"
+SOURCE_SENSE_DIM = 351
+RICH_RETINA_DIM = 4096
+CHECKPOINT_FORMAT = "chreatures-developmental-habitat-checkpoint-v3"
 INTERRUPTED_FORMAT = "chreatures-developmental-habitat-interrupted-v1"
 
 
@@ -82,6 +75,7 @@ class Habitat3D:
         resident_artifact: str | Path | None = None,
         physics_backend: str | None = None,
         visitor_materials: str | Path | None = None,
+        population_birth: str | Path | None = None,
     ) -> None:
         from .acoustics import Acoustics
         from .ecology import Ecology
@@ -89,6 +83,15 @@ class Habitat3D:
 
         if resident_artifact is None:
             raise ValueError("A current --resident-artifact is required for a new life")
+        if population_birth is None or biosphere is None:
+            raise ValueError("A new population life requires --population-birth and --biosphere")
+        from .resident_birth import (
+            load_manifest, verify_controller, candidate_adapters, inherited_body_templates,
+        )
+        from .population import compose_population_birth
+
+        self.birth_manifest = load_manifest(population_birth)
+        verify_controller(self.birth_manifest, resident_artifact)
         self.engine_identity = current_engine_identity()
         if body_mode not in {"crawler", "articulated"}:
             raise ValueError("Unknown body model")
@@ -106,6 +109,13 @@ class Habitat3D:
                 ).read_text()
             )
         spec = copy.deepcopy(spec)
+        spec, biosphere_value, birth_receipt = compose_population_birth(
+            spec, json.loads(Path(biosphere).read_text()),
+            [row["candidate"] for row in self.birth_manifest["residents"]],
+        )
+        spec["population_birth"] = birth_receipt
+        self.birth_templates = inherited_body_templates(spec, biosphere_value)
+        self.birth_retry_tick = 0
         self.body_mode = body_mode
         self.physics_backend = physics_backend or (
             "vectorized" if body_mode == "articulated" else "reference"
@@ -123,7 +133,7 @@ class Habitat3D:
         if biosphere is not None:
             from .biosphere import Biosphere
 
-            self.biosphere = Biosphere.from_config(self.world, biosphere)
+            self.biosphere = Biosphere.from_config(self.world, biosphere_value)
         self.visitor_materials = None
         if visitor_materials is not None:
             from .visitor_materials import VisitorMaterialSupply
@@ -151,6 +161,7 @@ class Habitat3D:
             action_mode="sample",
             goal_seed=(seed * 1009 + 17) % 2**64,
             action_seed=(seed * 1009 + 31) % 2**64,
+            candidate_adapters=candidate_adapters(self.birth_manifest),
         )
         self._validate_resident_interface()
 
@@ -164,8 +175,11 @@ class Habitat3D:
         self.remote_ids = {
             body.id: f"{self.id}:{body.id}" for body in self.world.bodies
         }
-        self.neural.create(list(self.remote_ids.values()))
-        self.actual_previous = np.zeros((cohort_size, 9), dtype=np.float32)
+        self.neural.create([
+            {"id": self.remote_ids[body.id], "neural_phenotype": entry["neural_phenotype"]}
+            for body, entry in zip(self.world.bodies, self.birth_manifest["residents"], strict=True)
+        ])
+        self.actual_previous = np.zeros((cohort_size, PREVIOUS_DIM), dtype=np.float32)
         self.reset_rows = np.ones(cohort_size, dtype=np.bool_)
         self.outcomes = {body.id: {} for body in self.world.bodies}
         self.neural_state = {
@@ -214,22 +228,7 @@ class Habitat3D:
             raise ValueError(
                 "Resident artifact was trained with a different graph or neural port"
             )
-        expected = {
-            "format": "chreatures-rich-sensorimotor-observation-v1",
-            "observation_dim": 4453,
-            "rich_body_dim": RICH_RETINA_DIM,
-            "rich_profile_sha256": RICH_PROFILE_SHA256,
-            "rich_channel_names_sha256": RICH_CHANNEL_NAMES_SHA256,
-            "observation_order": [
-                "rich_body_v1_4096",
-                "canonical_channels_351",
-                "physiology_6",
-            ],
-            "source_sense_dim": SOURCE_SENSE_DIM,
-            "physiology_dim": PHYSIOLOGY_DIM,
-            "neural_readout_dim": NEURAL_DIM,
-            "previous_action_plus_oral_dim": 9,
-        }
+        expected = organism_identity()
         if self.residents.observation_contract != expected:
             raise ValueError(
                 "Resident artifact observation contract differs from this host"
@@ -253,7 +252,6 @@ class Habitat3D:
             "sampled_proposal": {name: 0.0 for name in ACTION_NAMES},
             "executed_action": {
                 **{name: 0.0 for name in ACTION_NAMES},
-                "oral": 0.0,
             },
             "outcome": {},
             "personal_goal_learning": {
@@ -329,23 +327,94 @@ class Habitat3D:
         return values
 
     def _physiology_rows(self, responses: dict[str, dict[str, Any]]) -> np.ndarray:
-        rows = []
-        for body in self.world.bodies:
-            response = responses[body.id]
-            rows.append(
-                (
-                    body.energy,
-                    body.gut,
-                    body.fatigue,
-                    math.tanh(float(body.speed) / 2),
-                    math.tanh(float(body.angular_velocity) / 4),
-                    response["support"],
-                )
+        if self.biosphere is None or self.biosphere.mobility is None:
+            raise RuntimeError("Current residents require funded developmental physiology")
+        rows = [
+            self.biosphere.mobility.normalized12(
+                body.id, neural_support=responses[body.id]["support"]
             )
+            for body in self.world.bodies
+        ]
         result = _finite_row(rows, (len(rows), PHYSIOLOGY_DIM), "physiology")
-        if np.any((result[:, :3] < 0.0) | (result[:, :3] > 1.0)):
+        unsigned = result[:, [0, 1, 2, 5, 6, 7, 8, 9, 10, 11]]
+        if np.any((unsigned < 0.0) | (unsigned > 1.0)) or np.any(abs(result[:, 3:5]) > 1):
             raise ValueError("Physiology exceeds its declared range")
         return result
+
+    def _attempt_brood_birth(self) -> None:
+        """Append one funded clonal offspring at a complete world boundary.
+
+        The present within-world reproduction law is asexual. Population search
+        also varies genomes, but an in-world birth never consults its archive.
+        """
+        from .organism_interface import MAX_RESIDENTS
+        from .population import CandidateGenome
+        from .physics import BirthSpaceOccupied
+
+        if self.pending_step is not None or self.tick < self.birth_retry_tick:
+            return
+        self.birth_retry_tick = self.tick + 20
+        if len(self.world.bodies) >= MAX_RESIDENTS:
+            return
+        offers = self.biosphere.hatch_offers()
+        if not offers:
+            return
+        offer = offers[0]
+        parent_id = offer["parent_id"]
+        parent_index = next(index for index, body in enumerate(self.world.bodies) if body.id == parent_id)
+        parent = self.world.bodies[parent_index]
+        inherited = copy.deepcopy(self.birth_manifest["residents"][parent_index])
+        child_id = "hatch-" + hashlib.sha256(offer["offer_id"].encode()).hexdigest()[:16]
+        bundle = copy.deepcopy(self.birth_templates[parent_id])
+        body = bundle["body"]
+        body.update(id=child_id, name=f"{parent.name} offspring {offer['serial']}")
+        # This is a declared local emergence rule. Collision checks determine
+        # whether the parent's immediate surroundings can accommodate the body.
+        transaction = None
+        separation = max(0.35, 4.0 * float(parent.radius))
+        for offset in range(8):
+            angle = float(parent.heading) + offset * math.pi / 4
+            body["position"] = [
+                parent.x + separation * math.cos(angle),
+                parent.y + separation * math.sin(angle), parent.z + 0.08,
+            ]
+            body["heading"] = float(parent.heading)
+            try:
+                transaction = self.world.prepare_resident_birth(body)
+                break
+            except BirthSpaceOccupied:
+                continue
+        if transaction is None:
+            return
+        proposal = self.biosphere.prepare_hatch(offer["offer_id"], inherited["candidate"])
+        prepared = self.biosphere.prepare_newborn(transaction.candidate, proposal, bundle)
+        seed = int(hashlib.sha256(f"{self.id}:{offer['offer_id']}".encode()).hexdigest()[:16], 16)
+        expanded = self.residents.expanded(
+            [CandidateGenome(inherited["candidate"]).controller_adapter()],
+            goal_seed=seed, action_seed=seed ^ 0xAC7100,
+        )
+        remote_id = f"{self.id}:{child_id}"
+        self.pending_step = {"tick": self.tick, "phase": "birth-neural", "offer_id": offer["offer_id"], "resident_id": child_id}
+        self.neural.create([{"id": remote_id, "neural_phenotype": inherited["neural_phenotype"]}])
+        self.pending_step["phase"] = "birth-physical"
+        transaction.commit()
+        self.biosphere = self.biosphere.commit_newborn(prepared)
+        self.residents = expanded
+        self.remote_ids[child_id] = remote_id
+        self.birth_manifest["residents"].append(inherited)
+        self.birth_templates[child_id] = copy.deepcopy(bundle)
+        self.actual_previous = np.concatenate((self.actual_previous, np.zeros((1, PREVIOUS_DIM), dtype=np.float32)))
+        self.reset_rows = np.concatenate((self.reset_rows, np.ones(1, dtype=np.bool_)))
+        self.outcomes[child_id] = {}
+        self.neural_state[child_id] = {"features": [0.0] * NEURAL_DIM, "activity": 0.0, "support": 1.0}
+        self.cognition_state[child_id] = self._empty_cognition(child_id)
+        self.history[child_id] = deque(maxlen=360)
+        if self.visitor_materials is not None:
+            self.visitor_materials.biosphere = self.biosphere
+        self.pending_step = None
+        self.note("born", f"A funded offspring of {parent.name} entered the world.",
+                  resident=child_id, parent=parent_id, funding=prepared.funding,
+                  genome_sha256=inherited["candidate"]["sha256"])
 
     def _resident_observations(
         self, source: np.ndarray, physiology: np.ndarray
@@ -361,23 +430,14 @@ class Habitat3D:
             np.concatenate((rich, source, physiology), axis=1), dtype=np.float32
         )
 
-    def _actions(
-        self, proposed: np.ndarray, oral_command: np.ndarray
-    ) -> tuple[dict[str, dict[str, float]], np.ndarray]:
-        values = _finite_row(proposed, (len(self.world.bodies), 8), "native action")
-        if np.any((values < -1.0) | (values > 1.0)) or np.any(values[:, 3:7] < 0.0):
+    def _actions(self, proposed: np.ndarray) -> dict[str, dict[str, float]]:
+        values = _finite_row(proposed, (len(self.world.bodies), ACTION_DIM), "native action")
+        if np.any((values < -1.0) | (values > 1.0)) or np.any(values[:, RECTIFIED_AXES] < 0):
             raise ValueError("Native action exceeds the physical actuator bounds")
-        oral = _finite_row(oral_command, (len(values),), "native oral command")
-        if np.any((oral < 0.0) | (oral > 1.0)):
-            raise ValueError("Native oral command exceeds its physical bounds")
-        actions = {}
-        for index, body in enumerate(self.world.bodies):
-            action = dict(
-                zip(ACTION_NAMES, values[index].astype(float).tolist(), strict=True)
-            )
-            action["eat"] = float(oral[index])
-            actions[body.id] = action
-        return actions, oral
+        return {
+            body.id: dict(zip(ACTION_NAMES, values[index].astype(float).tolist(), strict=True))
+            for index, body in enumerate(self.world.bodies)
+        }
 
     def _record_cognition(
         self, result: dict[str, np.ndarray], actions: np.ndarray
@@ -467,7 +527,7 @@ class Habitat3D:
                 "model_identity": copy.deepcopy(self.residents.model_identity),
             }
 
-    def _record_execution(self, actions: np.ndarray, oral: np.ndarray) -> None:
+    def _record_execution(self, actions: np.ndarray) -> None:
         """Publish actions and outcomes only after their physical tick commits."""
         for index, body in enumerate(self.world.bodies):
             self.cognition_state[body.id]["executed_action"] = {
@@ -478,7 +538,6 @@ class Habitat3D:
                         strict=True,
                     )
                 ),
-                "oral": float(oral[index]),
             }
             self.cognition_state[body.id]["outcome"] = copy.deepcopy(
                 self.outcomes[body.id]
@@ -569,17 +628,17 @@ class Habitat3D:
                 self.reset_rows,
             )
             if not np.array_equal(
-                native["actual_previous_action"], self.actual_previous[:, :8]
+                native["actual_previous_action"], self.actual_previous
             ):
                 raise RuntimeError("Native resident previous-action accounting differs")
             if not np.array_equal(native["physiology"], physiology):
                 raise RuntimeError("Native resident physiology accounting differs")
             proposed = _finite_row(
                 native["proposed_action"],
-                (len(self.world.bodies), 8),
+                (len(self.world.bodies), ACTION_DIM),
                 "native proposed action",
             )
-            actions, oral = self._actions(proposed, native["oral_command"])
+            actions = self._actions(proposed)
             self._record_cognition(native, proposed)
             for body in self.world.bodies:
                 self.neural_state[body.id] = response_by_body[body.id]
@@ -588,10 +647,10 @@ class Habitat3D:
             self.outcomes = self.world.advance(actions, MODEL_DT)
             physics_done = time.perf_counter()
             self.actual_previous = np.ascontiguousarray(
-                np.concatenate((proposed, oral[:, None]), axis=1), dtype=np.float32
+                proposed, dtype=np.float32
             )
             self.reset_rows.fill(False)
-            self._record_execution(proposed, oral)
+            self._record_execution(proposed)
             if self.acoustics is not None:
                 self.acoustic_state = self.acoustics.advance(MODEL_DT)
             acoustics_done = time.perf_counter()
@@ -663,6 +722,7 @@ class Habitat3D:
                             "memory": self.memory_count(body.id),
                         }
                     )
+            self._attempt_brood_birth()
             self.timings.append((time.perf_counter() - started) * 1000)
 
     def command(self, command: dict[str, Any]) -> dict[str, Any]:
@@ -840,9 +900,12 @@ class Habitat3D:
         if self.pending_step is not None:
             raise RuntimeError("Cannot checkpoint an incomplete distributed tick")
         state = {
-            "version": 2,
+            "version": 3,
             "kind": "chreatures-developmental-habitat",
             "id": self.id,
+            "birth_manifest": copy.deepcopy(self.birth_manifest),
+            "birth_templates": copy.deepcopy(self.birth_templates),
+            "birth_retry_tick": self.birth_retry_tick,
             "tick": self.tick,
             "branch": self.branch,
             "paused": self.paused,
@@ -873,7 +936,7 @@ class Habitat3D:
             "neural_state": self.neural_state,
             "outcomes": self.outcomes,
             "resident_controller": self.residents.snapshot_value(),
-            "actual_previous_plus_oral": self.actual_previous.astype(float).tolist(),
+            "actual_previous": self.actual_previous.astype(float).tolist(),
             "reset_rows": self.reset_rows.astype(bool).tolist(),
             "cognition_state": self.cognition_state,
             "journal": list(self.journal),
@@ -929,7 +992,7 @@ class Habitat3D:
         ).hexdigest() != envelope.get("sha256"):
             raise ValueError("3D checkpoint checksum mismatch")
         if (
-            value.get("version") != 2
+            value.get("version") != 3
             or value.get("kind") != "chreatures-developmental-habitat"
         ):
             raise ValueError("Unsupported developmental habitat state")
@@ -1014,6 +1077,14 @@ class Habitat3D:
                 "Remote neural graph, sources, or ports differ from this life"
             )
         instance.resident_artifact = str(Path(resident_artifact).expanduser().resolve())
+        from .resident_birth import validate_manifest, verify_controller
+
+        instance.birth_manifest = validate_manifest(value["birth_manifest"])
+        verify_controller(instance.birth_manifest, instance.resident_artifact)
+        instance.birth_templates = copy.deepcopy(value["birth_templates"])
+        instance.birth_retry_tick = int(value["birth_retry_tick"])
+        if set(instance.birth_templates) != {body.id for body in instance.world.bodies}:
+            raise ValueError("saved birth templates differ from the resident population")
         instance.residents = DevelopmentalResidentCohort.restore_value(
             value["resident_controller"], instance.resident_artifact
         )
@@ -1024,8 +1095,8 @@ class Habitat3D:
                 "Resident controller cohort differs from the physical cohort"
             )
         instance.actual_previous = _finite_row(
-            value["actual_previous_plus_oral"],
-            (cohort_size, 9),
+            value["actual_previous"],
+            (cohort_size, PREVIOUS_DIM),
             "saved previous action",
         )
         instance.reset_rows = np.asarray(value["reset_rows"], dtype=np.bool_)
