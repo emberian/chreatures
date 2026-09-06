@@ -31,7 +31,10 @@ sys.path.insert(0, str(ROOT))
 from chreatures.homeostasis import FiniteEnergyConfig, FiniteEnergyObjective
 from research.sensorimotor_skills.data import Normalizer
 from research.sensorimotor_skills.model import GoalEncoder, SensorimotorWorker
-from research.sensorimotor_skills.online_model import SlowGoalManager
+from research.sensorimotor_skills.online_model import (
+    SlowGoalManager,
+    sample_worker_actions,
+)
 
 FORMAT = "chreatures-online-sensorimotor-development-v1"
 ACTIONS = (
@@ -255,7 +258,6 @@ class ResidentGoals:
                     slot = int(self.rng[index].integers(self.seen[index]))
                     if slot < self.size:
                         reservoir[slot] = record
-            self.age += 1
         return current
 
     def manager_batch(self) -> tuple[np.ndarray, np.ndarray]:
@@ -269,10 +271,16 @@ class ResidentGoals:
 
     def apply_selection(self, selected: np.ndarray) -> None:
         for resident, slot in enumerate(selected):
-            code, achieved = self.reservoirs[resident][int(slot)]
+            code, _achieved_tick = self.reservoirs[resident][int(slot)]
             self.codes[resident] = code
-            lag = max(1, int(self.seen[resident]) - achieved)
-            self.horizons[resident, 0] = math.log1p(lag) / math.log(41)
+            self.age[resident] = 0
+            self.horizons[resident, 0] = math.log1p(self.sticky) / math.log(41)
+
+    def advance_goal_age(self) -> None:
+        """Advance attempt time; achieved-memory age remains in each record."""
+        self.age += 1
+        remaining = np.maximum(1, self.sticky - self.age)
+        self.horizons[:, 0] = np.log1p(remaining) / math.log(41)
 
     def reset(self) -> None:
         for frames, reservoir in zip(self.frames, self.reservoirs, strict=True):
@@ -521,9 +529,16 @@ def main() -> int:
                             torch.as_tensor(keys, device=device),
                             torch.as_tensor(valid, device=device),
                         )
-                        selected = torch.distributions.Categorical(
-                            logits=manager_logits
-                        ).sample()
+                        manager_probability = manager_logits.softmax(-1).cpu().numpy()
+                        selected = torch.as_tensor(
+                            [
+                                goals.rng[index].choice(
+                                    goals.size, p=manager_probability[index]
+                                )
+                                for index in range(count)
+                            ],
+                            device=device,
+                        )
                         selected_logp = F.log_softmax(manager_logits, -1).gather(
                             1, selected[:, None]
                         )[:, 0]
@@ -559,7 +574,14 @@ def main() -> int:
                         horizon,
                         torch.as_tensor(previous[:, :8], device=device),
                     )
-                    action = worker.decode(logits, mode="sample")
+                    private_uniforms = np.stack(
+                        [rng.random(12, dtype=np.float32) for rng in goals.rng]
+                    )
+                    action = sample_worker_actions(
+                        worker,
+                        logits,
+                        torch.as_tensor(private_uniforms, device=device),
+                    )
                     log_probability, _ = policy_terms(worker, logits, action)
                     value = critic(state[0], goal_tensor, horizon)
                 action_np = action.cpu().numpy()
@@ -584,6 +606,7 @@ def main() -> int:
                     old_distance - new_distance
                 )
                 reward = base_reward + progress.astype(np.float32)
+                goals.advance_goal_age()
                 for resident, event_index in enumerate(active_manager):
                     if event_index >= 0:
                         event = manager_events[event_index]

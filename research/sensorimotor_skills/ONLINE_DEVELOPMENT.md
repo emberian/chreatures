@@ -9,7 +9,7 @@ residents.
 
 The frozen v2 autoencoder supplies 64-dimensional keys for four-frame windows
 that each resident has already experienced. Each resident keeps its own bounded
-128-entry reservoir, timestamps, RNG, recurrent state, and current goal. Goals
+128-entry reservoir, achievement timestamps, RNG, recurrent state, and current goal. Goals
 are sticky for ten physics ticks. No other resident's history, future frame,
 position, object label, or identity is available to the policy.
 
@@ -21,6 +21,12 @@ uniformly; a small trainable gain and the query weights then learn through the
 manager PPO objective. The selected goal applies to the following action and
 ten-tick return. The preceding transition is always credited against the goal
 that was fixed before that action.
+
+The worker horizon input is the normalized remaining time in the current
+ten-tick attempt, `log1p(max(1, 10 - goal_age_ticks)) / log(41)`. It is distinct
+from the achieved memory's age, which remains checkpoint provenance. Action and
+manager choices use each resident's saved NumPy RNG; worker inverse-CDF sampling
+is vectorized as one batched GPU operation from a `[B,12]` uniform array.
 
 The 20 Hz worker samples its existing categorical signed axes and joint hurdle
 axes. PPO replays complete time-major rollout chunks from their exact initial
