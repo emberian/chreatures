@@ -127,6 +127,8 @@ struct ArchiveMetadata {
     schema_version: u32,
     library: String,
     source_commit: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    evidence_schema: Option<String>,
     #[serde(default)]
     archive_id: Option<String>,
     habitat_id: Option<String>,
@@ -135,6 +137,8 @@ struct ArchiveMetadata {
 
 #[derive(Debug, Deserialize)]
 struct ImportRequest {
+    #[serde(default)]
+    evidence_schema: Option<String>,
     #[serde(default)]
     archive_id: Option<String>,
     #[serde(default)]
@@ -284,7 +288,723 @@ fn evidence_pending(evidence: ImportedEvidence) -> Result<PendingRecord, Box<dyn
     })
 }
 
+const POPULATION_SCHEMA: &str = "chreatures-population-evidence-v1";
+const POPULATION_TYPES: &[&str] = &[
+    "population_run",
+    "descriptor_epoch",
+    "environment_probe_panel",
+    "genome_candidate",
+    "environment_candidate",
+    "birth",
+    "life_checkpoint",
+    "evaluation_completed",
+    "evaluation_failed",
+    "archive_decision",
+    "transfer_trial",
+    "population_snapshot",
+    "gam_fit_attempt",
+];
+
+fn population_fields<'a>(
+    record: &'a ImportedEvidence,
+) -> Result<&'a serde_json::Map<String, Value>, Box<dyn Error>> {
+    record
+        .fields
+        .as_object()
+        .ok_or_else(|| format!("population record {} fields must be an object", record.id).into())
+}
+
+fn population_roles<'a>(
+    record: &'a ImportedEvidence,
+) -> Result<&'a serde_json::Map<String, Value>, Box<dyn Error>> {
+    population_fields(record)?
+        .get("parent_roles")
+        .and_then(Value::as_object)
+        .ok_or_else(|| {
+            format!(
+                "population record {} requires fields.parent_roles",
+                record.id
+            )
+            .into()
+        })
+}
+
+fn required_string<'a>(
+    record: &'a ImportedEvidence,
+    name: &str,
+) -> Result<&'a str, Box<dyn Error>> {
+    population_fields(record)?
+        .get(name)
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| format!("population record {} requires string {name}", record.id).into())
+}
+
+fn valid_sha256(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+fn private_genome_field(value: &Value, path: &str) -> Option<String> {
+    match value {
+        Value::Object(values) => values.iter().find_map(|(key, child)| {
+            let child_path = format!("{path}.{key}");
+            let normalized = key.to_ascii_lowercase().replace('-', "_");
+            if normalized.split('_').any(|token| {
+                [
+                    "state",
+                    "memory",
+                    "optimizer",
+                    "rng",
+                    "history",
+                    "checkpoint",
+                    "rates",
+                ]
+                .contains(&token)
+            }) {
+                Some(child_path)
+            } else {
+                private_genome_field(child, &child_path)
+            }
+        }),
+        Value::Array(values) => values
+            .iter()
+            .enumerate()
+            .find_map(|(index, child)| private_genome_field(child, &format!("{path}[{index}]"))),
+        _ => None,
+    }
+}
+
+fn required_sha256<'a>(
+    record: &'a ImportedEvidence,
+    name: &str,
+) -> Result<&'a str, Box<dyn Error>> {
+    let value = required_string(record, name)?;
+    if !valid_sha256(value) {
+        return Err(format!("population record {} has invalid {name}", record.id).into());
+    }
+    Ok(value)
+}
+
+fn required_u64(record: &ImportedEvidence, name: &str) -> Result<u64, Box<dyn Error>> {
+    population_fields(record)?
+        .get(name)
+        .and_then(Value::as_u64)
+        .ok_or_else(|| format!("population record {} requires integer {name}", record.id).into())
+}
+
+fn require_blob_role(record: &ImportedEvidence, role: &str) -> Result<(), Box<dyn Error>> {
+    let count = record
+        .blob_refs
+        .iter()
+        .filter(|blob| blob.role == role)
+        .count();
+    if count != 1 {
+        return Err(format!(
+            "population record {} requires exactly one {role} blob",
+            record.id
+        )
+        .into());
+    }
+    Ok(())
+}
+
+fn population_parents_for_role(
+    record: &ImportedEvidence,
+    role: &str,
+) -> Result<Vec<String>, Box<dyn Error>> {
+    let roles = population_roles(record)?;
+    Ok(record
+        .parent_ids
+        .iter()
+        .filter(|parent| roles.get(*parent).and_then(Value::as_str) == Some(role))
+        .cloned()
+        .collect())
+}
+
+fn population_parent_for_role(
+    record: &ImportedEvidence,
+    role: &str,
+) -> Result<String, Box<dyn Error>> {
+    let parents = population_parents_for_role(record, role)?;
+    if parents.len() != 1 {
+        return Err(format!(
+            "population record {} requires exactly one parent for role {role}",
+            record.id
+        )
+        .into());
+    }
+    Ok(parents[0].clone())
+}
+
+fn role_rule(
+    record_type: &str,
+    role: &str,
+) -> Option<(&'static [&'static str], usize, Option<usize>)> {
+    match (record_type, role) {
+        ("descriptor_epoch", "campaign") => Some((&["population_run"], 1, Some(1))),
+        ("descriptor_epoch", "previous_descriptor_epoch") => {
+            Some((&["descriptor_epoch"], 0, Some(1)))
+        }
+        ("environment_probe_panel", "campaign") => Some((&["population_run"], 1, Some(1))),
+        ("environment_probe_panel", "descriptor_epoch") => {
+            Some((&["descriptor_epoch"], 1, Some(1)))
+        }
+        ("genome_candidate", "campaign") => Some((&["population_run"], 1, Some(1))),
+        ("genome_candidate", "genome_parent") => Some((&["genome_candidate"], 0, Some(2))),
+        ("genome_candidate", "inherited_law_fit") => Some((&["gam_fit_attempt"], 0, None)),
+        ("environment_candidate", "campaign") => Some((&["population_run"], 1, Some(1))),
+        ("environment_candidate", "probe_panel") => {
+            Some((&["environment_probe_panel"], 1, Some(1)))
+        }
+        ("environment_candidate", "environment_parent") => {
+            Some((&["environment_candidate"], 0, Some(2)))
+        }
+        ("birth", "candidate_genome") => Some((&["genome_candidate"], 1, Some(1))),
+        ("birth", "environment") => Some((&["environment_candidate"], 1, Some(1))),
+        ("birth", "physical_parent_birth") => Some((&["birth"], 0, Some(2))),
+        ("life_checkpoint", "life_continuation") => {
+            Some((&["birth", "life_checkpoint"], 1, Some(1)))
+        }
+        ("evaluation_completed" | "evaluation_failed", "life_continuation") => {
+            Some((&["birth", "life_checkpoint"], 1, Some(1)))
+        }
+        ("evaluation_completed" | "evaluation_failed", "candidate_genome") => {
+            Some((&["genome_candidate"], 1, Some(1)))
+        }
+        ("evaluation_completed" | "evaluation_failed", "environment") => {
+            Some((&["environment_candidate"], 1, Some(1)))
+        }
+        ("evaluation_completed" | "evaluation_failed", "descriptor_epoch") => {
+            Some((&["descriptor_epoch"], 1, Some(1)))
+        }
+        ("evaluation_completed" | "evaluation_failed", "probe_panel") => {
+            Some((&["environment_probe_panel"], 1, Some(1)))
+        }
+        ("archive_decision", "evaluated_candidate") => {
+            Some((&["evaluation_completed", "evaluation_failed"], 1, Some(1)))
+        }
+        ("archive_decision", "descriptor_epoch") => Some((&["descriptor_epoch"], 1, Some(1))),
+        ("transfer_trial", "source_evaluation" | "target_evaluation") => {
+            Some((&["evaluation_completed", "evaluation_failed"], 1, Some(1)))
+        }
+        ("transfer_trial", "candidate_genome") => Some((&["genome_candidate"], 1, Some(1))),
+        ("transfer_trial", "target_environment") => Some((&["environment_candidate"], 1, Some(1))),
+        ("transfer_trial", "probe_panel") => Some((&["environment_probe_panel"], 1, Some(1))),
+        ("population_snapshot", "campaign") => Some((&["population_run"], 1, Some(1))),
+        ("population_snapshot", "archive_decision") => Some((&["archive_decision"], 0, None)),
+        ("gam_fit_attempt", "source_evaluation") => {
+            Some((&["evaluation_completed", "evaluation_failed"], 1, None))
+        }
+        _ => None,
+    }
+}
+
+fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<dyn Error>> {
+    if records.is_empty() {
+        return Err("population evidence has no records".into());
+    }
+    let by_id: HashMap<_, _> = records
+        .iter()
+        .map(|record| (record.id.as_str(), record))
+        .collect();
+    if by_id.len() != records.len() {
+        return Err("population evidence has duplicate record ids".into());
+    }
+    if records
+        .iter()
+        .filter(|record| record.record_type == "population_run")
+        .count()
+        != 1
+    {
+        return Err("population evidence requires exactly one population_run".into());
+    }
+    let mut terminal_evaluations = HashSet::new();
+    let mut continued = HashSet::new();
+    let mut life_ids = HashSet::new();
+    let mut epoch_indices: HashMap<u64, &ImportedEvidence> = HashMap::new();
+
+    for record in records {
+        if !POPULATION_TYPES.contains(&record.record_type.as_str()) {
+            return Err(
+                format!("unsupported population record type {}", record.record_type).into(),
+            );
+        }
+        let roles = population_roles(record)?;
+        let blob_roles: HashSet<_> = record
+            .blob_refs
+            .iter()
+            .map(|blob| blob.role.as_str())
+            .collect();
+        if blob_roles.len() != record.blob_refs.len() {
+            return Err(format!("population record {} repeats a blob role", record.id).into());
+        }
+        let parent_set: HashSet<_> = record.parent_ids.iter().map(String::as_str).collect();
+        let role_set: HashSet<_> = roles.keys().map(String::as_str).collect();
+        if parent_set.len() != record.parent_ids.len() || parent_set != role_set {
+            return Err(format!(
+                "population record {} parent_roles must exactly match parent_ids",
+                record.id
+            )
+            .into());
+        }
+        if record.record_type == "population_run" && !record.parent_ids.is_empty() {
+            return Err("population_run cannot have parents".into());
+        }
+        let mut counts: HashMap<&str, usize> = HashMap::new();
+        for (parent_id, role_value) in roles {
+            let role = role_value.as_str().ok_or_else(|| {
+                format!(
+                    "population record {} parent role must be a string",
+                    record.id
+                )
+            })?;
+            let parent = by_id.get(parent_id.as_str()).ok_or_else(|| {
+                format!(
+                    "population record {} parent {parent_id} is absent",
+                    record.id
+                )
+            })?;
+            let Some((allowed_types, _, _)) = role_rule(&record.record_type, role) else {
+                return Err(
+                    format!("population record {} has invalid role {role}", record.id).into(),
+                );
+            };
+            if !allowed_types.contains(&parent.record_type.as_str()) {
+                return Err(format!(
+                    "population record {} role {role} cannot target {}",
+                    record.id, parent.record_type
+                )
+                .into());
+            }
+            *counts.entry(role).or_default() += 1;
+        }
+        let possible_roles = [
+            "campaign",
+            "previous_descriptor_epoch",
+            "descriptor_epoch",
+            "genome_parent",
+            "inherited_law_fit",
+            "probe_panel",
+            "environment_parent",
+            "candidate_genome",
+            "environment",
+            "physical_parent_birth",
+            "life_continuation",
+            "evaluated_candidate",
+            "source_evaluation",
+            "target_evaluation",
+            "target_environment",
+            "archive_decision",
+        ];
+        for role in possible_roles {
+            if let Some((_, minimum, maximum)) = role_rule(&record.record_type, role) {
+                let count = *counts.get(role).unwrap_or(&0);
+                if count < minimum || maximum.is_some_and(|high| count > high) {
+                    return Err(format!(
+                        "population record {} has invalid count for role {role}",
+                        record.id
+                    )
+                    .into());
+                }
+            }
+        }
+        if let Some(parent) = population_parents_for_role(record, "life_continuation")?.first() {
+            if !continued.insert(parent.clone()) {
+                return Err(format!("life continuation branches at {parent}").into());
+            }
+            let parent_life = required_string(by_id[parent.as_str()], "life_id")?;
+            if required_string(record, "life_id")? != parent_life {
+                return Err(format!("population record {} changes life_id", record.id).into());
+            }
+        }
+
+        match record.record_type.as_str() {
+            "population_run" => {
+                required_sha256(record, "search_config_sha256")?;
+                require_blob_role(record, "search_config")?;
+            }
+            "descriptor_epoch" => {
+                required_string(record, "descriptor_epoch_id")?;
+                required_sha256(record, "descriptor_recipe_sha256")?;
+                require_blob_role(record, "descriptor_recipe")?;
+                let index = population_fields(record)?
+                    .get("descriptor_epoch_index")
+                    .and_then(Value::as_u64)
+                    .ok_or_else(|| format!("descriptor epoch {} has invalid index", record.id))?;
+                if epoch_indices.insert(index, record).is_some() {
+                    return Err(format!("descriptor epoch index {index} is duplicated").into());
+                }
+            }
+            "environment_probe_panel" => {
+                required_string(record, "probe_panel_id")?;
+                required_sha256(record, "probe_panel_sha256")?;
+                require_blob_role(record, "probe_policy_panel")?;
+                let policies = population_fields(record)?
+                    .get("policy_artifact_sha256s")
+                    .and_then(Value::as_array)
+                    .filter(|values| !values.is_empty())
+                    .ok_or_else(|| format!("probe panel {} has no policies", record.id))?;
+                if policies
+                    .iter()
+                    .any(|value| !value.as_str().is_some_and(valid_sha256))
+                {
+                    return Err(
+                        format!("probe panel {} has an invalid policy hash", record.id).into(),
+                    );
+                }
+                let epoch_id = population_parent_for_role(record, "descriptor_epoch")?;
+                if required_string(record, "descriptor_epoch_id")?
+                    != required_string(by_id[epoch_id.as_str()], "descriptor_epoch_id")?
+                {
+                    return Err(
+                        format!("probe panel {} crosses descriptor epochs", record.id).into(),
+                    );
+                }
+            }
+            "genome_candidate" => {
+                for name in [
+                    "genome_sha256",
+                    "graph_sha256",
+                    "port_spec_sha256",
+                    "base_controller_sha256",
+                    "developmental_base_sha256",
+                    "population_adapter_bank_sha256",
+                    "organism_interface_sha256",
+                    "variation_recipe_sha256",
+                ] {
+                    required_sha256(record, name)?;
+                }
+                if required_u64(record, "policy_adapter_count")? == 0
+                    || required_u64(record, "policy_adapter_rank")? == 0
+                {
+                    return Err(format!("genome {} has invalid adapter shape", record.id).into());
+                }
+                require_blob_role(record, "genome_artifact")?;
+                if let Some(path) = private_genome_field(&record.fields, "fields") {
+                    return Err(format!(
+                        "genome record {} crosses private-state boundary in {path}",
+                        record.id
+                    )
+                    .into());
+                }
+                let actual: Vec<_> = population_parents_for_role(record, "genome_parent")?
+                    .iter()
+                    .map(|id| required_sha256(by_id[id.as_str()], "genome_sha256"))
+                    .collect::<Result<_, _>>()?;
+                let declared = population_fields(record)?
+                    .get("parent_genome_sha256s")
+                    .and_then(Value::as_array)
+                    .ok_or_else(|| format!("genome {} lacks parent_genome_sha256s", record.id))?;
+                if declared.iter().map(Value::as_str).collect::<Vec<_>>()
+                    != actual.iter().map(|value| Some(*value)).collect::<Vec<_>>()
+                {
+                    return Err(
+                        format!("genome {} parent hashes differ from edges", record.id).into(),
+                    );
+                }
+                let inherited = population_parents_for_role(record, "inherited_law_fit")?;
+                let declared_inherited = population_fields(record)?
+                    .get("inherited_law_fit_ids")
+                    .and_then(Value::as_array)
+                    .ok_or_else(|| format!("genome {} lacks inherited_law_fit_ids", record.id))?;
+                if declared_inherited
+                    .iter()
+                    .map(Value::as_str)
+                    .collect::<Vec<_>>()
+                    != inherited
+                        .iter()
+                        .map(|value| Some(value.as_str()))
+                        .collect::<Vec<_>>()
+                {
+                    return Err(format!(
+                        "genome {} inherited law fits differ from edges",
+                        record.id
+                    )
+                    .into());
+                }
+                for inherited_id in &inherited {
+                    if required_string(by_id[inherited_id.as_str()], "status")? != "completed" {
+                        return Err(format!(
+                            "genome {} inherits an unsuccessful law fit",
+                            record.id
+                        )
+                        .into());
+                    }
+                }
+            }
+            "environment_candidate" => {
+                for name in [
+                    "environment_sha256",
+                    "topology_sha256",
+                    "resource_sha256",
+                    "profile_sha256",
+                    "variation_recipe_sha256",
+                    "probe_panel_sha256",
+                ] {
+                    required_sha256(record, name)?;
+                }
+                require_blob_role(record, "environment_artifact")?;
+                required_u64(record, "environment_epoch")?;
+                let actual: Vec<_> = population_parents_for_role(record, "environment_parent")?
+                    .iter()
+                    .map(|id| required_sha256(by_id[id.as_str()], "environment_sha256"))
+                    .collect::<Result<_, _>>()?;
+                let declared = population_fields(record)?
+                    .get("parent_environment_sha256s")
+                    .and_then(Value::as_array)
+                    .ok_or_else(|| {
+                        format!("environment {} lacks parent_environment_sha256s", record.id)
+                    })?;
+                if declared.iter().map(Value::as_str).collect::<Vec<_>>()
+                    != actual.iter().map(|value| Some(*value)).collect::<Vec<_>>()
+                {
+                    return Err(format!(
+                        "environment {} parent hashes differ from edges",
+                        record.id
+                    )
+                    .into());
+                }
+                let panel_id = population_parent_for_role(record, "probe_panel")?;
+                if required_sha256(record, "probe_panel_sha256")?
+                    != required_sha256(by_id[panel_id.as_str()], "probe_panel_sha256")?
+                {
+                    return Err(format!("environment {} crosses probe panels", record.id).into());
+                }
+            }
+            "birth" => {
+                let life_id = required_string(record, "life_id")?;
+                if !life_ids.insert(life_id.to_owned()) {
+                    return Err(format!("life_id {life_id} has more than one birth").into());
+                }
+                let genome = population_parent_for_role(record, "candidate_genome")?;
+                let environment = population_parent_for_role(record, "environment")?;
+                if required_sha256(record, "genome_sha256")?
+                    != required_sha256(by_id[genome.as_str()], "genome_sha256")?
+                    || required_sha256(record, "environment_sha256")?
+                        != required_sha256(by_id[environment.as_str()], "environment_sha256")?
+                {
+                    return Err(format!(
+                        "birth {} artifact identities differ from edges",
+                        record.id
+                    )
+                    .into());
+                }
+                let mode = required_string(record, "birth_mode")?;
+                let physical = population_parents_for_role(record, "physical_parent_birth")?.len();
+                if (mode == "experimental_initialization" && physical != 0)
+                    || (mode == "embodied_reproduction" && physical == 0)
+                    || !["experimental_initialization", "embodied_reproduction"].contains(&mode)
+                {
+                    return Err(format!(
+                        "birth {} has inconsistent birth mode and physical parents",
+                        record.id
+                    )
+                    .into());
+                }
+            }
+            "life_checkpoint" => {
+                required_string(record, "life_id")?;
+                required_sha256(record, "checkpoint_sha256")?;
+                require_blob_role(record, "life_checkpoint")?;
+            }
+            "evaluation_completed" | "evaluation_failed" => {
+                require_blob_role(record, "evaluation_result")?;
+                require_blob_role(record, "evaluation_trajectory")?;
+                let evaluation_id = required_string(record, "evaluation_id")?;
+                if !terminal_evaluations.insert(evaluation_id.to_owned()) {
+                    return Err(format!(
+                        "evaluation {evaluation_id} has multiple terminal records"
+                    )
+                    .into());
+                }
+                required_string(record, "life_id")?;
+                required_u64(record, "evaluation_seed")?;
+                if required_u64(record, "committed_ticks")? == 0 {
+                    return Err(format!("evaluation {} has no committed ticks", record.id).into());
+                }
+                required_sha256(record, "genome_sha256")?;
+                required_sha256(record, "environment_sha256")?;
+                let trajectory_sha256 = required_sha256(record, "trajectory_sha256")?;
+                let trajectory_blob = record
+                    .blob_refs
+                    .iter()
+                    .find(|blob| blob.role == "evaluation_trajectory")
+                    .expect("required trajectory blob exists");
+                if trajectory_blob.sha256 != trajectory_sha256 {
+                    return Err(format!(
+                        "evaluation {} trajectory blob identity differs",
+                        record.id
+                    )
+                    .into());
+                }
+                let genome = population_parent_for_role(record, "candidate_genome")?;
+                let environment = population_parent_for_role(record, "environment")?;
+                let epoch = population_parent_for_role(record, "descriptor_epoch")?;
+                let panel = population_parent_for_role(record, "probe_panel")?;
+                if required_sha256(record, "genome_sha256")?
+                    != required_sha256(by_id[genome.as_str()], "genome_sha256")?
+                    || required_sha256(record, "environment_sha256")?
+                        != required_sha256(by_id[environment.as_str()], "environment_sha256")?
+                    || required_string(record, "descriptor_epoch_id")?
+                        != required_string(by_id[epoch.as_str()], "descriptor_epoch_id")?
+                    || required_sha256(record, "probe_panel_sha256")?
+                        != required_sha256(by_id[panel.as_str()], "probe_panel_sha256")?
+                    || required_string(by_id[panel.as_str()], "descriptor_epoch_id")?
+                        != required_string(by_id[epoch.as_str()], "descriptor_epoch_id")?
+                {
+                    return Err(
+                        format!("evaluation {} provenance differs from edges", record.id).into(),
+                    );
+                }
+                let expected = if record.record_type == "evaluation_completed" {
+                    "completed"
+                } else {
+                    "failed"
+                };
+                if required_string(record, "status")? != expected {
+                    return Err(format!(
+                        "evaluation {} status differs from record type",
+                        record.id
+                    )
+                    .into());
+                }
+                if expected == "failed" {
+                    required_string(record, "failure")?;
+                } else {
+                    let descriptor = population_fields(record)?
+                        .get("descriptor")
+                        .and_then(Value::as_array)
+                        .ok_or_else(|| format!("evaluation {} lacks descriptor", record.id))?;
+                    let dimension = population_fields(by_id[epoch.as_str()])?
+                        .get("descriptor_dimension")
+                        .and_then(Value::as_u64)
+                        .ok_or_else(|| format!("descriptor epoch {epoch} lacks dimension"))?;
+                    if descriptor.len() as u64 != dimension {
+                        return Err(format!(
+                            "evaluation {} descriptor dimension differs",
+                            record.id
+                        )
+                        .into());
+                    }
+                }
+            }
+            "archive_decision" => {
+                let evaluation_id = required_string(record, "evaluation_id")?;
+                let decision = required_string(record, "decision")?;
+                if !["retained", "rejected", "replaced"].contains(&decision) {
+                    return Err(format!("archive decision {} is invalid", record.id).into());
+                }
+                let evaluation = population_parent_for_role(record, "evaluated_candidate")?;
+                let epoch = population_parent_for_role(record, "descriptor_epoch")?;
+                if evaluation_id != required_string(by_id[evaluation.as_str()], "evaluation_id")?
+                    || required_string(record, "descriptor_epoch_id")?
+                        != required_string(by_id[epoch.as_str()], "descriptor_epoch_id")?
+                    || required_string(by_id[evaluation.as_str()], "descriptor_epoch_id")?
+                        != required_string(record, "descriptor_epoch_id")?
+                {
+                    return Err(format!("archive decision {} provenance differs", record.id).into());
+                }
+                if by_id[evaluation.as_str()].record_type == "evaluation_failed"
+                    && decision != "rejected"
+                {
+                    return Err(format!(
+                        "archive decision {} retains a failed evaluation",
+                        record.id
+                    )
+                    .into());
+                }
+            }
+            "transfer_trial" => {
+                if population_fields(record)?.get("direct_before_fine_tuning")
+                    != Some(&Value::Bool(true))
+                {
+                    return Err(format!(
+                        "transfer {} was not recorded before fine tuning",
+                        record.id
+                    )
+                    .into());
+                }
+                let source = population_parent_for_role(record, "source_evaluation")?;
+                let target = population_parent_for_role(record, "target_evaluation")?;
+                let genome = population_parent_for_role(record, "candidate_genome")?;
+                let environment = population_parent_for_role(record, "target_environment")?;
+                let panel = population_parent_for_role(record, "probe_panel")?;
+                let genome_sha = required_sha256(by_id[genome.as_str()], "genome_sha256")?;
+                if required_string(by_id[source.as_str()], "evaluation_id")?
+                    == required_string(by_id[target.as_str()], "evaluation_id")?
+                    || required_sha256(by_id[source.as_str()], "genome_sha256")? != genome_sha
+                    || required_sha256(by_id[target.as_str()], "genome_sha256")? != genome_sha
+                    || required_sha256(by_id[target.as_str()], "environment_sha256")?
+                        != required_sha256(by_id[environment.as_str()], "environment_sha256")?
+                    || required_sha256(by_id[target.as_str()], "probe_panel_sha256")?
+                        != required_sha256(by_id[panel.as_str()], "probe_panel_sha256")?
+                {
+                    return Err(
+                        format!("transfer {} provenance differs from edges", record.id).into(),
+                    );
+                }
+            }
+            "gam_fit_attempt" => {
+                require_blob_role(record, "gam_fit_report")?;
+                let status = required_string(record, "status")?;
+                if !["completed", "failed"].contains(&status) {
+                    return Err(format!("GAM fit {} has invalid status", record.id).into());
+                }
+                required_string(record, "unit_of_analysis")?;
+                if status == "failed" {
+                    required_string(record, "failure")?;
+                    if record.blob_refs.iter().any(|blob| blob.role == "gam_law") {
+                        return Err(
+                            format!("failed GAM fit {} cannot mint a law", record.id).into()
+                        );
+                    }
+                } else {
+                    require_blob_role(record, "gam_law")?;
+                }
+            }
+            "population_snapshot" => {
+                require_blob_role(record, "population_search_state")?;
+            }
+            _ => {}
+        }
+    }
+    for (index, record) in &epoch_indices {
+        let previous = population_parents_for_role(record, "previous_descriptor_epoch")?;
+        if *index == 0 && !previous.is_empty() {
+            return Err("descriptor epoch zero cannot have a predecessor".into());
+        }
+        if *index > 0 {
+            if previous.len() != 1 {
+                return Err(format!("descriptor epoch {index} requires one predecessor").into());
+            }
+            let parent_index = population_fields(by_id[previous[0].as_str()])?
+                .get("descriptor_epoch_index")
+                .and_then(Value::as_u64);
+            if parent_index != Some(index - 1) {
+                return Err(format!(
+                    "descriptor epoch {index} predecessor is not epoch {}",
+                    index - 1
+                )
+                .into());
+            }
+        }
+    }
+    Ok(())
+}
+
 fn import_weave(request: ImportRequest) -> Result<EvidenceWeave, Box<dyn Error>> {
+    if let Some(schema) = request.evidence_schema.as_deref() {
+        if schema != POPULATION_SCHEMA {
+            return Err(format!("unsupported evidence schema {schema}").into());
+        }
+        if !request.journal.is_empty() {
+            return Err("typed population evidence cannot include an untyped journal".into());
+        }
+        validate_population_evidence(&request.evidence)?;
+    }
     let capacity = request.journal.len() + request.evidence.len();
     if capacity == 0 {
         return Err("import request has no records".into());
@@ -333,6 +1053,7 @@ fn import_weave(request: ImportRequest) -> Result<EvidenceWeave, Box<dyn Error>>
             schema_version: 2,
             library: "universal-weave 0.5.0".to_owned(),
             source_commit: SOURCE_COMMIT.to_owned(),
+            evidence_schema: request.evidence_schema,
             archive_id: request.archive_id,
             habitat_id: request.habitat_id,
             description: request.description.unwrap_or_else(|| {
@@ -396,6 +1117,7 @@ fn demo_weave() -> Result<EvidenceWeave, Box<dyn Error>> {
         archive_id: Some("synthetic-demo".to_owned()),
         habitat_id: Some("synthetic-demo".to_owned()),
         description: Some("explicitly synthetic native round-trip demonstration".to_owned()),
+        evidence_schema: None,
         journal: vec![serde_json::json!({
             "id": "demo:episode:1",
             "time": 0.5,
@@ -418,11 +1140,13 @@ fn demo_weave() -> Result<EvidenceWeave, Box<dyn Error>> {
 struct Args {
     input: Option<PathBuf>,
     output: PathBuf,
+    compact_receipt: bool,
 }
 
 fn parse_args() -> Result<Args, Box<dyn Error>> {
     let mut input = None;
     let mut output = PathBuf::from("../artifacts/weave/evidence.weave.json");
+    let mut compact_receipt = false;
     let values: Vec<_> = env::args_os().skip(1).collect();
     let mut index = 0;
     while index < values.len() {
@@ -437,11 +1161,16 @@ fn parse_args() -> Result<Args, Box<dyn Error>> {
                 index += 1;
                 output = PathBuf::from(values.get(index).ok_or("--output needs a path")?);
             }
+            "--compact-receipt" => compact_receipt = true,
             other => return Err(format!("unknown argument {other}").into()),
         }
         index += 1;
     }
-    Ok(Args { input, output })
+    Ok(Args {
+        input,
+        output,
+        compact_receipt,
+    })
 }
 
 fn run(args: &Args) -> Result<Value, Box<dyn Error>> {
@@ -508,9 +1237,14 @@ fn run(args: &Args) -> Result<Value, Box<dyn Error>> {
                 .expect("portable record parents must be an array")
                 .iter()
                 .map(|parent| {
+                    let role = record["source"]["fields"]["parent_roles"]
+                        .get(parent.as_str().unwrap_or_default())
+                        .cloned()
+                        .unwrap_or(Value::Null);
                     serde_json::json!({
                         "source": parent,
                         "target": record["source_id"],
+                        "role": role,
                     })
                 })
                 .collect::<Vec<_>>()
@@ -526,7 +1260,7 @@ fn run(args: &Args) -> Result<Value, Box<dyn Error>> {
         })
         .count();
 
-    Ok(serde_json::json!({
+    let mut receipt = serde_json::json!({
         "format": "chreatures-portable-weave-biography-v1",
         "integration": "native-universal-weave-dag",
         "library": {
@@ -540,13 +1274,16 @@ fn run(args: &Args) -> Result<Value, Box<dyn Error>> {
         "bytes": persisted.len(),
         "node_count": reloaded.len(),
         "edge_count": edge_count,
-        "edges": edges,
         "multi_parent_nodes": multi_parent_nodes,
-        "topological_order": topological_order,
-        "records": records,
         "reload_equal": true,
         "validated_after_reload": true
-    }))
+    });
+    if !args.compact_receipt {
+        receipt["edges"] = Value::Array(edges);
+        receipt["topological_order"] = serde_json::to_value(topological_order)?;
+        receipt["records"] = Value::Array(records);
+    }
+    Ok(receipt)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
