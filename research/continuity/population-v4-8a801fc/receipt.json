@@ -1,0 +1,79 @@
+{
+  "acquisition": {
+    "attempt": 1,
+    "brain_bytes": 63442835,
+    "brain_file_sha256": "965427b6eb3cfeebee8b1763c24af60ae29771cfb86c9612a0f8b44171711d80",
+    "source_brain": "/Users/ember/paperbin/chreatures/deployments/population-v4-8a801fc/run/brain/snapshots/world-7bb90afd-1fca-4fd3-8a83-4d384069cdf5-10020.npz",
+    "source_world": "/Users/ember/paperbin/chreatures/deployments/population-v4-8a801fc/run/world/checkpoint.json",
+    "tick": 10020,
+    "world_file_sha256": "54aea47055ee8df18d9893306699edefc423ea49ebaaf233b7899142d67fbb6c",
+    "world_state_sha256": "91d9edd1cb5b3a1fb79713c6374565a8c83cb2bc47244b5e0dd691951a478de6"
+  },
+  "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/ember/paperbin/chreatures/deployments/population-v4-8a801fc/source /Users/ember/dev/chreatures/.venv/bin/python /Users/ember/paperbin/chreatures/research/population-v4-8a801fc-continuation-check-20260906/run_continuation_check.py",
+  "comparison": {
+    "complete_neural_snapshot_exact": true,
+    "complete_world_checkpoint_exact": true,
+    "excluded_from_comparison": [
+      "receipt-only research fork IDs",
+      "receipt-only service incarnation IDs",
+      "elapsed wall-clock durations"
+    ],
+    "first_world_difference": null,
+    "runtime_state_fields_excluded": []
+  },
+  "format": "chreatures-population-v4-coupled-continuation-check-v1",
+  "frozen_runtime": {
+    "cognitive_core_sha256": "9f38926db38b1f098407cf22c99eb09ff7e29c49f92c752eba473da0e05964dd",
+    "deployment_receipt_sha256": "8294da36339b40125f40b5e3414f4be9da9d658cdac0ca83998678303d9646d9",
+    "metal_brain_server_sha256": "e886a59e7797d11e68e6846449bb39f74cada5d775d0bfc45be783a944c73a6b",
+    "metal_graph_artifact_sha256": "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0",
+    "port_bundle_sha256": "933b871fdd11dafa8c43afceb9862101984bf0950592af84631a4d7aa9bebe53",
+    "resident_artifact_sha256": "92a1f264e91dd0d3ce156e7e289837d82c1770bf50afb92ef785dfcb66fd6356",
+    "source_revision": "8a801fc",
+    "world_kernels_sha256": "fe7539b98becfee254bf94c7fbe15e77e97e1310ad3c0f85476729c69b235546"
+  },
+  "limitations": [
+    "This demonstrates deterministic 32-tick continuation for one frozen eight-resident checkpoint on one Apple M2 Max runtime.",
+    "The runtime world UUID is necessarily preserved to address its neural snapshot; receipt-level fork IDs distinguish both research executions.",
+    "The check does not compare against a different engine, machine, graph, or checkpoint."
+  ],
+  "research_scope": {
+    "authoritative_world_mutated": false,
+    "continuation_steps": 32,
+    "execution": "two sequential runs; one Python process plus one native Metal child per run",
+    "kind": "isolated_research_fork",
+    "research_port": 19782,
+    "source_runtime_advanced": false
+  },
+  "runs": [
+    {
+      "elapsed_seconds": 8.842156874990906,
+      "final_checkpoint": "/Users/ember/paperbin/chreatures/research/population-v4-8a801fc-continuation-check-20260906/run-a/final-checkpoint.json",
+      "final_checkpoint_file_sha256": "1b046b1510d0692c8bacd5a7677528988d0dddea2d6f931b98aaac46ef089fcc",
+      "final_neural_bytes": 63442811,
+      "final_neural_sha256": "716460bb004419c110c127a342583423d576b4bbd46a9a95aac3aed5423643ee",
+      "final_neural_snapshot": "/Users/ember/paperbin/chreatures/research/population-v4-8a801fc-continuation-check-20260906/run-a/brain/snapshots/world-7bb90afd-1fca-4fd3-8a83-4d384069cdf5-10052.npz",
+      "final_state_sha256": "ef8eeaf600fc9621f46186d1b98ff486f35e0e8d849182bc1e94fe8bd7ef4caa",
+      "fork_id": "research-fork-a-29bb5eed4cc0451b9b4b838ebb46d5ef",
+      "runtime_world_id_semantics": "inherited checkpoint identifier; not an authoritative live-world claim",
+      "service_incarnation": "641ee51ac8114f249d6213f3328be1d3",
+      "source_world_id": "7bb90afd-1fca-4fd3-8a83-4d384069cdf5",
+      "tick": 10052
+    },
+    {
+      "elapsed_seconds": 8.64086737499747,
+      "final_checkpoint": "/Users/ember/paperbin/chreatures/research/population-v4-8a801fc-continuation-check-20260906/run-b/final-checkpoint.json",
+      "final_checkpoint_file_sha256": "1b046b1510d0692c8bacd5a7677528988d0dddea2d6f931b98aaac46ef089fcc",
+      "final_neural_bytes": 63442811,
+      "final_neural_sha256": "716460bb004419c110c127a342583423d576b4bbd46a9a95aac3aed5423643ee",
+      "final_neural_snapshot": "/Users/ember/paperbin/chreatures/research/population-v4-8a801fc-continuation-check-20260906/run-b/brain/snapshots/world-7bb90afd-1fca-4fd3-8a83-4d384069cdf5-10052.npz",
+      "final_state_sha256": "ef8eeaf600fc9621f46186d1b98ff486f35e0e8d849182bc1e94fe8bd7ef4caa",
+      "fork_id": "research-fork-b-d99b59ba0de04774b6b95bb3d5d3c498",
+      "runtime_world_id_semantics": "inherited checkpoint identifier; not an authoritative live-world claim",
+      "service_incarnation": "8158579de13848c1ad99dbfd98232992",
+      "source_world_id": "7bb90afd-1fca-4fd3-8a83-4d384069cdf5",
+      "tick": 10052
+    }
+  ],
+  "status": "passed"
+}
