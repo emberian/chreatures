@@ -1,5 +1,11 @@
 # Recurrent predictive state organ
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `chreatures.predictive_state` is a compact trainable dynamics organ. It closes a
 specific gap in the current controller: the existing 32-value context is a fixed
 random reservoir and its auxiliary predictor is only one-step. This organ learns

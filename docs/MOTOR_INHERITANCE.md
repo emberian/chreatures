@@ -1,5 +1,11 @@
 # Native motor inheritance
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `chreatures.motor_inheritance` deploys a trained `PredictiveActorCritic` on a
 laptop without Torch. This is inherited population training, not personal
 online learning.  The artifact freezes the learned policy, critic, predictor,

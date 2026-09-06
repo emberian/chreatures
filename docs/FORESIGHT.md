@@ -1,5 +1,11 @@
 # Private predictive foresight
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `chreatures.foresight.ResidentForesight` is an optional candidate-evidence
 organ for a resident. It does not generate unrestricted actions. At a motor
 macro boundary it evaluates the existing inherited candidate set with a

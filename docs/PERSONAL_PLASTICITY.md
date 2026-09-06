@@ -1,5 +1,11 @@
 # Private lifetime motor plasticity
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `chreatures.personal_plasticity` is an opt-in online adapter around the frozen
 inherited motor policy. It changes a resident's continuous motor tendency from
 that resident's own action and later physical consequence. It does not mutate

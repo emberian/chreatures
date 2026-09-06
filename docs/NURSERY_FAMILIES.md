@@ -76,9 +76,8 @@ from at least one finite material packet on the same generated platform. These
 are ordinary conserved chemical objects rather than feeder events or policy
 features.
 
-The current rich runner selects this constructor explicitly with
-`--environment-profile nursery-family-v5`,
-`--nursery-family-config data/habitat-families/nursery-v1.json`, and
+The current rich runner has one environment constructor. It requires
+`--nursery-family-config data/habitat-families/nursery-v1.json` and
 `--nursery-family-schedule data/training/nursery-family-schedule-v1.json`.
 Family episodes use stage 0; the finite exchange ecology replaces the retired
 feeder-placement curriculum.

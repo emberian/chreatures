@@ -1,5 +1,11 @@
 # Bounded visual perception service
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `chreatures/perception.py` is an optional asynchronous sensory organ. It sends
 one creature's field-of-view image, or at most four short-sequence frames, to a
 pinned vision-language model and returns uncertain object and affordance

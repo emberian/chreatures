@@ -1,5 +1,11 @@
 # Predictive PPO affordance learning
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `chreatures.learning` is a versioned replacement for developmental learning
 experiments. It leaves `AdaptiveOrgan` and existing residents unchanged. The
 new system addresses a statistical error in that baseline: temporally
