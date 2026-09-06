@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
+import copy
 import hashlib
 import json
 import math
@@ -41,6 +42,7 @@ class PredictivePPOConfig:
     minibatch_size: int = 512
     max_grad_norm: float = 0.8
     seed: int = 20260905
+    std_profile: str = "global-v1"
 
 
 class RunningMoments:
@@ -97,6 +99,8 @@ class PredictiveActorCritic(nn.Module):
     def __init__(self, config: PredictivePPOConfig) -> None:
         super().__init__()
         self.config = config
+        if config.std_profile not in {"global-v1", "state-conditioned-v2"}:
+            raise ValueError("std_profile must be global-v1 or state-conditioned-v2")
         torch.manual_seed(config.seed)
         self.feature_encoder = nn.Sequential(
             nn.Linear(config.feature_dim, config.hidden_dim),
@@ -142,6 +146,13 @@ class PredictiveActorCritic(nn.Module):
         nn.init.zeros_(self.policy_mean.bias)
         nn.init.orthogonal_(self.value.weight, gain=1.0)
         nn.init.zeros_(self.value.bias)
+        self.std_offset: nn.Linear | None = None
+        if config.std_profile == "state-conditioned-v2":
+            rng_state = torch.get_rng_state()
+            self.std_offset = nn.Linear(config.hidden_dim, len(ACTIONS))
+            nn.init.zeros_(self.std_offset.weight)
+            nn.init.zeros_(self.std_offset.bias)
+            torch.set_rng_state(rng_state)
 
     def forward(
         self, features: torch.Tensor, physiology: torch.Tensor, context: torch.Tensor
@@ -150,8 +161,13 @@ class PredictiveActorCritic(nn.Module):
         hidden = self.trunk(torch.cat((encoded, physiology, context), dim=-1))
         return self.policy_mean(hidden), self.value(hidden).squeeze(-1), hidden
 
-    def distribution(self, mean: torch.Tensor) -> Normal:
-        std = self.log_std.clamp(-3.5, 0.3).exp().expand_as(mean)
+    def distribution(self, mean: torch.Tensor, hidden: torch.Tensor | None = None) -> Normal:
+        effective = self.log_std
+        if self.std_offset is not None:
+            if hidden is None or hidden.shape[:-1] != mean.shape[:-1]:
+                raise ValueError("state-conditioned distribution requires matching hidden state")
+            effective = effective + 2.0 * torch.tanh(self.std_offset(hidden) / 2.0)
+        std = effective.clamp(-3.5, 0.3).exp().expand_as(mean)
         return Normal(mean, std)
 
     @staticmethod
@@ -212,7 +228,7 @@ class MacroRollout:
 class PredictivePPOTrainer:
     """Owns shared learned parameters and private per-resident context state."""
 
-    VERSION = 1
+    VERSION = 2
 
     def __init__(
         self,
@@ -266,7 +282,7 @@ class PredictivePPOTrainer:
         physiology_tensor = torch.as_tensor(physiology, device=self.device)
         context_tensor = torch.as_tensor(self.context, device=self.device)
         mean, value, hidden = self.model(feature_tensor, physiology_tensor, context_tensor)
-        distribution = self.model.distribution(mean)
+        distribution = self.model.distribution(mean, hidden)
         latent = mean if deterministic else distribution.sample()
         action = torch.tanh(latent)
         log_prob = self.model.squashed_log_prob(distribution, latent)
@@ -380,7 +396,7 @@ class PredictivePPOTrainer:
                 advantage = torch.as_tensor(flat_advantages[indices], device=self.device)
                 return_value = torch.as_tensor(flat_returns[indices], device=self.device)
                 mean, value, hidden = self.model(features, physiology, context)
-                distribution = self.model.distribution(mean)
+                distribution = self.model.distribution(mean, hidden)
                 log_prob = self.model.squashed_log_prob(distribution, latent)
                 ratio = torch.exp(log_prob - old_log_prob)
                 clipped = torch.clamp(
@@ -433,7 +449,8 @@ class PredictivePPOTrainer:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         value = {
-            "version": self.VERSION,
+            "version": 1 if self.config.std_profile == "global-v1" else self.VERSION,
+            "architecture": self.config.std_profile,
             "config": asdict(self.config),
             "resident_ids": self.resident_ids,
             "model": self.model.state_dict(),
@@ -468,11 +485,13 @@ class PredictivePPOTrainer:
         if expected_sha256 is not None and digest != expected_sha256:
             raise ValueError("learner checkpoint checksum differs")
         value = torch.load(path, map_location=device, weights_only=False)
-        if value.get("version") != cls.VERSION:
+        if value.get("version") not in {1, cls.VERSION}:
             raise ValueError("unsupported learner checkpoint")
-        instance = cls(
-            value["resident_ids"], PredictivePPOConfig(**value["config"]), device=device
-        )
+        restored_config = PredictivePPOConfig(**value["config"])
+        architecture = value.get("architecture", restored_config.std_profile)
+        if architecture != restored_config.std_profile:
+            raise ValueError("learner checkpoint architecture differs from config")
+        instance = cls(value["resident_ids"], restored_config, device=device)
         instance.model.load_state_dict(value["model"], strict=True)
         instance.optimizer.load_state_dict(value["optimizer"])
         instance.context = np.asarray(value["context"], dtype=np.float32)
@@ -487,6 +506,52 @@ class PredictivePPOTrainer:
             torch.cuda.set_rng_state(value["device_rng"].cpu(), instance.device)
         return instance, dict(value.get("extra", {}))
 
+    @classmethod
+    def upgrade_state_conditioned(
+        cls, path: str | Path, *, device: str | torch.device = "cpu",
+        expected_sha256: str | None = None,
+    ) -> tuple["PredictivePPOTrainer", dict[str, Any]]:
+        """Upgrade a global-v1 checkpoint with an exactly zero v2 offset head."""
+        legacy, extra = cls.restore(path, device=device, expected_sha256=expected_sha256)
+        if legacy.config.std_profile != "global-v1":
+            raise ValueError("upgrade source must use global-v1 variance")
+        torch_rng = torch.get_rng_state()
+        device_rng = (torch.cuda.get_rng_state(legacy.device)
+                      if legacy.device.type == "cuda" else None)
+        upgraded = cls(legacy.resident_ids,
+                       replace(legacy.config, std_profile="state-conditioned-v2"),
+                       device=legacy.device)
+        missing, unexpected = upgraded.model.load_state_dict(
+            legacy.model.state_dict(), strict=False)
+        if set(missing) != {"std_offset.weight", "std_offset.bias"} or unexpected:
+            raise RuntimeError("legacy model differs outside the new variance head")
+        old_optimizer = copy.deepcopy(legacy.optimizer.state_dict())
+        new_optimizer = upgraded.optimizer.state_dict()
+        for old_group, new_group in zip(old_optimizer["param_groups"],
+                                        new_optimizer["param_groups"], strict=True):
+            old_count = len(old_group["params"])
+            old_group["params"] = list(new_group["params"])
+            parameters = list(upgraded.model.parameters())
+            for parameter_id, parameter in zip(new_group["params"][old_count:],
+                                                parameters[old_count:], strict=True):
+                old_optimizer["state"][parameter_id] = {
+                    "step": torch.tensor(0.0),
+                    "exp_avg": torch.zeros_like(parameter),
+                    "exp_avg_sq": torch.zeros_like(parameter),
+                }
+        upgraded.optimizer.load_state_dict(old_optimizer)
+        upgraded.context = legacy.context.copy()
+        upgraded.moments = RunningMoments.restore(legacy.moments.snapshot())
+        upgraded.error_fast = legacy.error_fast.copy()
+        upgraded.error_slow = legacy.error_slow.copy()
+        upgraded.update_count = legacy.update_count
+        upgraded.decision_count = legacy.decision_count
+        upgraded.rng.bit_generator.state = copy.deepcopy(legacy.rng.bit_generator.state)
+        torch.set_rng_state(torch_rng)
+        if upgraded.device.type == "cuda" and device_rng is not None:
+            torch.cuda.set_rng_state(device_rng.cpu(), upgraded.device)
+        return upgraded, extra
+
     def export_genome(self, path: str | Path) -> dict[str, Any]:
         """Write shared learned arrays only; exclude resident context and memory."""
         path = Path(path)
@@ -495,9 +560,11 @@ class PredictivePPOTrainer:
             name: value.detach().cpu().numpy()
             for name, value in self.model.state_dict().items()
         }
+        genome_version = 1 if self.config.std_profile == "global-v1" else 2
         metadata = {
-            "format": "chreatures-predictive-ppo-genome-v1",
-            "version": self.VERSION,
+            "format": f"chreatures-predictive-ppo-genome-v{genome_version}",
+            "version": genome_version,
+            "architecture": self.config.std_profile,
             "config": asdict(self.config),
             "actions": list(ACTIONS),
             "updates": self.update_count,
@@ -516,8 +583,13 @@ class PredictivePPOTrainer:
         """Load shared arrays while retaining private context and normalizers."""
         with np.load(path, allow_pickle=False) as value:
             metadata = json.loads(str(value["metadata"]))
-            if metadata.get("format") != "chreatures-predictive-ppo-genome-v1" or metadata.get("actions") != list(ACTIONS):
+            expected_format = ("chreatures-predictive-ppo-genome-v1"
+                               if self.config.std_profile == "global-v1"
+                               else "chreatures-predictive-ppo-genome-v2")
+            if metadata.get("format") != expected_format or metadata.get("actions") != list(ACTIONS):
                 raise ValueError("incompatible predictive PPO genome")
+            if metadata.get("architecture", self.config.std_profile) != self.config.std_profile:
+                raise ValueError("predictive PPO genome architecture differs")
             state = self.model.state_dict()
             restored = {}
             for name, target in state.items():

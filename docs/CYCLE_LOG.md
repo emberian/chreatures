@@ -236,3 +236,28 @@ The learning garden explicitly uses body-v1; new construction now supplies an
 explicit default even when a caller passes a habitat spec. Restoration still
 uses the saved selector. The earlier articulated and orchard worlds already
 had body-v1 saved correctly.
+
+The longer rich-world stage reached 240 model seconds with mean fatigue 0.804,
+25% of residents at the exhausted threshold, and intake nearly plateaued.
+Its step-4,895 checkpoint preserves the diagnostic history and pending rollout.
+An action-distribution calculation explains a structural limitation: even
+zero-mean inherited Gaussian actions produce mean effort 0.297, above the
+0.271 threshold for fatigue recovery. Removing grip and vertical-motion cost
+still leaves 0.282. These are baseline action samples, before contextual
+selection, not a proof that every possible composite controller must fail.
+
+The next population architecture therefore learns state-dependent variance from
+the same trunk that receives local physiology. A zero-initialized head preserves
+initial stochastic actions and existing optimizer/RNG state exactly at the
+explicit upgrade boundary. The new developmental branch retains all 19 pending
+rollout decisions and continues the existing physical histories. A separate
+private-variance organ is being developed for lifetime learning; the current
+learning-garden residents retain their earlier mean-only private adapter.
+
+An isolated complete-graph assay now joins measured KC→MBON11 plasticity to
+the actual 165,122-neuron Metal circuit. It gathers 3,623 real KC rates and uses
+the original full incoming-row normalization, not the standalone subset's
+normalization. Controlled histories produce nonzero recurrent corrections and
+MBON suppression; frozen controls produce none. Complete native and private
+plasticity state replay exactly. The two sensory cues evoke broadly overlapping
+KC patterns, so cue specificity and useful embodied memory remain unestablished.

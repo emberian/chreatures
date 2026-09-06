@@ -97,6 +97,38 @@ An isolated service can be started with:
   --pid-file runs/metal-local/server.pid
 ```
 
+An opt-in research service can join the private gamma1pedc plasticity state to
+the full graph without changing its immutable weights:
+
+```bash
+.venv/bin/python scripts/serve_metal.py \
+  --kernel simd \
+  --snapshot-dir runs/metal-mushroom/snapshots \
+  --pid-file runs/metal-mushroom/server.pid \
+  --port 18769 \
+  --mushroom-substrate data/mushroom/gamma1pedc-kc-mbon11-v1.npz \
+  --mushroom-bridge data/mushroom/gamma1pedc-fullgraph-bridge-v1.npz
+```
+
+This mode is explicit in metadata and snapshot schema version 4. Each resident
+step supplies `mushroom_modulator` as a scalar or left/right pair in `[0,1]`.
+The native update consumes the previous step's two MBON11 corrections inside
+the recurrent term, applies the ordinary recurrent gain, and returns actual
+rates for the 3,623 connected KCs, two PPL101 neurons, and two MBON11 neurons.
+Those post-step rates advance the private bridge and prepare the next
+correction. Thus the coupling has one deterministic step of lag. With
+`--mushroom-modulator-mode actual_ppl101_rate`, requests omit
+`mushroom_modulator` and the explicitly engineered identity mapping uses the
+two actual PPL101 rates. `--mushroom-frozen` retains the joined observations
+while disabling efficacy updates.
+
+Both compact mushroom artifacts are authenticated against their adjacent JSON
+receipts before native startup. Research snapshots contain the complete fixed
+three-slot plasticity state and pending correction. Restore rejects ordinary
+snapshots, another bridge identity, another configuration, or another Metal
+kernel. Ordinary services do not send the new native fields and continue to
+use the original kernels and version 3 snapshots.
+
 ## Result on this machine
 
 Measured 2026-09-05 on the 38-core Apple M2 Max, macOS 26.6, Metal 4, using 20
