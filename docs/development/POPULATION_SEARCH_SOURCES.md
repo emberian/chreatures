@@ -128,14 +128,14 @@ different genome/environment, or given a different admission result.
 
 The native population search state has no wall clock or life/checkpoint ownership.
 `record_population_campaign.py` joins it to sealed evaluator outputs and their
-checkpoint directories. Pass the campaign manifest as `--probe-panel`; the
+checkpoint directories. Pass the campaign manifest as `--campaign`; the
 recorder extracts and authenticates the exact panel whose content hash is frozen
 in the native search config:
 
 ```sh
 python scripts/record_population_campaign.py \
   --search-state runs/population/wave-1/search.json \
-  --probe-panel runs/population/wave-1/campaign.json \
+  --campaign runs/population/wave-1/campaign.json \
   --evaluation-run runs/population/evaluations/batch-000000 \
   --ledger runs/population/wave-1/evidence.json \
   --campaign-id population-wave-1 \
