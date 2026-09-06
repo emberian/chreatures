@@ -1,0 +1,48 @@
+{
+  "external_artifact": {
+    "artifact_sha256": "e3dd61c325753aa08dc3777b86b02756491138b1bb0922f1fcc0b3c4f2221a9e",
+    "path": "/tank/chreatures/scratch/v5-body-actuator-export-check/output/developmental-resident-population-v5-visible-parity.npz",
+    "sha256": "6420c9ef312eb8b594f8b1cfbaca25480e1a15c06787101322c28c65dbfe7470"
+  },
+  "format": "chreatures-population-v5-native-parity-receipt-v1",
+  "gpu_owned_torch_check": {
+    "achieved_goal_code_max_abs_change": 0.0,
+    "cold_new_axis_active_probability_max": 0.05000000074505806,
+    "cold_new_axis_active_probability_min": 0.05000000074505806,
+    "gradient_l1": {
+      "new_actuator_active.bias": 0.949999988079071,
+      "new_actuator_active.weight": 11.957210540771484,
+      "new_actuator_positive.bias": 1.937500238418579,
+      "new_actuator_positive.weight": 24.386417388916016,
+      "physiology_adapter.weight": 0.1604628711938858
+    },
+    "new_axis_active_logit_max_change": 3.2986950874328613,
+    "rich_model_sha256": "6c599d055e52b3e536b67be142f2f52f6e6854a45253a90cefce0f59c0566162",
+    "semantics": "focused deterministic CPU autograd check with positive new-axis targets"
+  },
+  "native_binary": {
+    "path": "/tmp/chreatures-cognitive-population-v5-py312/python/_cognitive_core.cpython-312-darwin.so",
+    "sha256": "aed8c7c4078b48923b1271ad3add71a827cd4c0720316cd90bb8347e5fe7daac"
+  },
+  "reference": {
+    "path": "data/training/developmental-resident-population-v5.native-reference.npz",
+    "sha256": "778a81b3b0b3796628a2ace4cc0e7859c31f7cbe87a07490667fed30ffcfd879"
+  },
+  "result": {
+    "hidden_max_abs": [2.086162567138672e-07, 2.682209014892578e-07],
+    "snapshot_continuation": "bit-exact",
+    "visible_actuator_max_abs": [0.0, 0.0],
+    "visible_actions": [0.15625, 0.40625, 0.65625, 0.90625]
+  },
+  "scope": "forced-positive-bias mechanics fixture; not a trained controller or behavioral result",
+  "source": {
+    "commit": "2b3aef4",
+    "native_developmental_sha256": "7303b3a7a9bef8d02398e857aed9bf0608559e86499631cb06a17637184019ea",
+    "wrapper_sha256": "3063d1c2bd4fd2ad4e08ece06ea334bda2bd4acf6e9fccce09938a42c3917831"
+  },
+  "tolerance": {
+    "hidden_atol": 3e-07,
+    "visible_actuator_atol": 0.0
+  },
+  "torch_reference_sha256": "778a81b3b0b3796628a2ace4cc0e7859c31f7cbe87a07490667fed30ffcfd879"
+}

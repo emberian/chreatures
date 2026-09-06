@@ -35,6 +35,31 @@ may remain a named inherited organ with its original six-state observation and
 eight-motor-plus-oral projection. Its score cannot claim to predict the new organ
 effects. No legacy engine fallback is added.
 
+### Learning to use the new organs
+
+The organism interface remains v4; the current controller artifact is v5. The
+first cold v4 inheritance exposed a concrete coupling limitation: its six new
+body-input columns were zero while the body encoder was frozen. Population
+training also froze the zero new-actuator output weights, so a learned policy
+adapter could not make eating, release, secretion or allocation depend on context.
+In the actual frozen training run these axes appeared only about 40–63 times
+each across 143,360 transitions. Those histories remain preserved as v4 evidence.
+
+The successor adds a trainable, bias-free 12-to-128 physiology projection before
+the worker GRU, plus trainable active/magnitude projections for the four new
+actuators after the candidate policy adapter. These are shared inherited organs
+optimized in designated training populations and frozen into each exported
+artifact. They are distinct from resident-private lifetime learning. Achieved-goal
+encoding stays frozen; new physiology can influence action and recurrent state
+without changing the coordinate system of remembered sensory goals.
+
+The single cold converter records an explicit new-axis exploration probability,
+default 0.05, with uniform positive magnitude bins. It specifies initial motor
+exploration rather than a successful eating, secretion or reproductive sequence.
+Current trainers and exporters accept only the current controller format. The
+[native parity receipt](POPULATION_V5_NATIVE.md) checks the new pathways with
+nonzero parameters; it is mechanism evidence, not learned behavior.
+
 ## Population, inheritance, and lives
 
 A candidate is an immutable genome artifact: parent genome hashes (one or two),
