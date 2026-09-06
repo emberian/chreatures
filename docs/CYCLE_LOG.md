@@ -319,3 +319,32 @@ first source is a real, short 54-by-48 rollout; its startup improvement is not a
 claim of whole-life prediction or planning. A new collection stage will gather
 longer varied sensory/action histories on the AMD full graph. Native inference
 and eventual action-selection integration are separate, ongoing work.
+
+## 2026-09-05 · Ecology and a public project notebook
+
+Native common chemistry now funds actual developmental geometry in a joined
+Biosphere. Three related supplied founders built over 1,600 parts in a 180-second
+non-neural run. Dead tissue retained physical scaffold; experimental removal
+transferred a leaf's remaining tissue/detritus into another compartment's
+digestion. Elemental and energy residuals stayed below 1e-12. Same-runtime
+physics, field and developmental continuation restored exactly. The separate
+live reef on port 8772 advances this beside three full-MaleCNS mobile residents;
+mobile physiology remains outside the common chemistry. This is not yet an
+autonomous food web. Source: `6b3dd57`.
+
+Inherited body parameters now alter actual articulated geometry, mass and
+bounded motor parameters while preserving the six-leg interface. A compiler
+also produced an explicitly synthetic 168,749-neuron descendant of the measured
+MaleCNS graph, preserving ancestral edges/counts and recording cloned edge
+ancestry and changed row normalization. The derived graph executed on AMD;
+behavioral improvement is unestablished. Source: `2b35d8d`.
+
+The public GitHub Pages notebook adds a field guide, interactive geometry
+recording, dated measurements and open ecological/social questions. It calls
+out native GAM and Universal Weave integration and retains unresolved feeding
+and wiring-control results. Public assets contain no live resident state or
+private service connection. The build publishes an explicit file set with a
+source revision, and validates local URLs under the project subpath. First
+site source: `682985a`. Eusociality remains a proposed research direction;
+dependent young, reproduction and divisions of reproductive labor are not
+implemented outcomes.
