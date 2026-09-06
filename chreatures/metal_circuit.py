@@ -1,16 +1,34 @@
-"""Persistent local Metal backend for the full retinal-v1 MaleCNS circuit."""
+"""Persistent local Metal backend for the full retinal-v2 MaleCNS circuit."""
 
 from __future__ import annotations
-import hashlib, json, os, re, subprocess, threading
+
+import hashlib
+import json
+import re
 import struct
+import subprocess
+import threading
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
+
 import numpy as np
 
 SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}\Z")
-CANONICAL_ARTIFACT_SHA256 = "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0"
-CANONICAL_GRAPH_SHA256 = "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625"
-CANONICAL_PORT_SPEC_SHA256 = "fffb48c65bdb5bc2503ff8ad7c65b4419e12aa9ef5b58b9f36bc910f64dadb6f"
+CANONICAL_ARTIFACT_SHA256 = (
+    "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0"
+)
+CANONICAL_GRAPH_SHA256 = (
+    "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625"
+)
+CANONICAL_PORT_SPEC_SHA256 = (
+    "a3182cc5c546fac164774e56cfcf3d4f185c2feab5a994fe3d2a37cc8604302e"
+)
+CANONICAL_PORT_BUNDLE_SHA256 = (
+    "933b871fdd11dafa8c43afceb9862101984bf0950592af84631a4d7aa9bebe53"
+)
+MIN_CAPACITY = 6
+MAX_CAPACITY = 32
 
 
 def _sha256(path: Path) -> str:
@@ -29,7 +47,7 @@ class MetalCircuit:
         artifact: str | Path,
         port_bundle: str | Path,
         *,
-        capacity: int = 3,
+        capacity: int = 6,
         binary: str | Path | None = None,
         tau: float = 0.16,
         gain: float = 0.92,
@@ -42,15 +60,19 @@ class MetalCircuit:
         mushroom_plasticity_enabled: bool = True,
         mushroom_config: Any | None = None,
     ):
-        if capacity != 3:
-            raise ValueError("experimental Metal backend has fixed capacity 3")
+        if not isinstance(capacity, int) or isinstance(capacity, bool):
+            raise TypeError("capacity must be an integer")
+        if not MIN_CAPACITY <= capacity <= MAX_CAPACITY:
+            raise ValueError(
+                f"capacity must be in {MIN_CAPACITY}..{MAX_CAPACITY} for the current Metal cohort"
+            )
         self.capacity = capacity
         self.tau = tau
         self.gain = gain
         self.support_recovery = support_recovery
         if (tau, gain, support_recovery) != (0.16, 0.92, 0.024):
             raise ValueError(
-                "native v1 dynamics are fixed at tau=.16, gain=.92, recovery=.024"
+                "native dynamics are fixed at tau=.16, gain=.92, recovery=.024"
             )
         port_bundle = Path(port_bundle)
         with np.load(port_bundle, allow_pickle=False) as z:
@@ -84,16 +106,20 @@ class MetalCircuit:
             )
         self._input_position = {n: i for i, n in enumerate(self.input_names)}
         self._slots = {}
-        self._resident_for_slot = [None] * 3
-        self.times = np.zeros(3, dtype=np.float64)
+        self._resident_for_slot = [None] * capacity
+        self.times = np.zeros(capacity, dtype=np.float64)
         artifact = Path(artifact)
         manifest_path = (
-            Path(manifest) if manifest is not None else artifact.with_suffix(".manifest.json")
+            Path(manifest)
+            if manifest is not None
+            else artifact.with_suffix(".manifest.json")
         )
+        self.artifact_manifest_sha256 = _sha256(manifest_path)
         receipt = json.loads(manifest_path.read_text(encoding="utf-8"))
         expected = {
-            "schema_version": 1,
+            "schema_version": 2,
             "format": "metal-csr-v2",
+            "recipe": "normalized-signed-float32-recurrence+retinal-v2-csr",
             "artifact_sha256": CANONICAL_ARTIFACT_SHA256,
             "artifact_bytes": 207261844,
             "graph_sha256": CANONICAL_GRAPH_SHA256,
@@ -104,14 +130,23 @@ class MetalCircuit:
             "readouts": 384,
         }
         if any(receipt.get(key) != value for key, value in expected.items()):
-            raise ValueError("Metal artifact manifest is not the pinned canonical v2 recipe")
+            raise ValueError(
+                "Metal artifact manifest is not the pinned canonical v2 recipe"
+            )
         if (
             self.graph_hash != receipt["graph_sha256"]
             or self.port_spec_hash != receipt["port_spec_sha256"]
         ):
-            raise ValueError("port bundle identity differs from the Metal artifact manifest")
-        if _sha256(port_bundle) != receipt.get("port_bundle_sha256"):
-            raise ValueError("port bundle checksum differs from the Metal artifact manifest")
+            raise ValueError(
+                "port bundle identity differs from the Metal artifact manifest"
+            )
+        if (
+            receipt.get("port_bundle_sha256") != CANONICAL_PORT_BUNDLE_SHA256
+            or _sha256(port_bundle) != CANONICAL_PORT_BUNDLE_SHA256
+        ):
+            raise ValueError(
+                "port bundle checksum differs from the Metal artifact manifest"
+            )
         if artifact.stat().st_size != receipt["artifact_bytes"]:
             raise ValueError("Metal artifact byte size differs from its manifest")
         self.artifact_sha256 = _sha256(artifact)
@@ -127,7 +162,7 @@ class MetalCircuit:
             raise ValueError("kernel must be row or simd")
         self.kernel = kernel
         self._process = subprocess.Popen(
-            [str(binary), str(artifact), kernel],
+            [str(binary), str(artifact), kernel, str(capacity)],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             text=True,
@@ -140,10 +175,13 @@ class MetalCircuit:
             or ready.get("inputs") != 351
             or ready.get("readouts") != 384
             or ready.get("kernel") != kernel
+            or ready.get("capacity") != capacity
+            or ready.get("storage_tiles") != (capacity + 3) // 4
         ):
             self.close()
             raise RuntimeError(f"Metal backend failed startup: {ready}")
         self.device_name = ready["device"]
+        self.native_startup = ready
 
     @property
     def resident_ids(self):
@@ -206,17 +244,17 @@ class MetalCircuit:
     def step(self, residents: Sequence[Mapping[str, Any]], dt: float):
         if not np.isfinite(dt) or not 0 < dt <= 0.2:
             raise ValueError("dt must be finite and in (0, 0.2]")
-        if not residents or len(residents) > 3:
-            raise ValueError("step must contain 1..3 residents")
+        if not residents or len(residents) > self.capacity:
+            raise ValueError(f"step must contain 1..{self.capacity} residents")
         ids = [str(x.get("id", "")) for x in residents]
         if len(set(ids)) != len(ids) or any(x not in self._slots for x in ids):
             raise ValueError("step resident IDs must be unique and allocated")
-        channels = np.zeros((351, 3), dtype=np.float32)
+        channels = np.zeros((351, self.capacity), dtype=np.float32)
         mask = 0
         for item, rid in zip(residents, ids, strict=True):
             senses = item.get("senses")
             if not isinstance(senses, Mapping):
-                raise ValueError("each resident needs a senses object")
+                raise TypeError("each resident needs a senses object")
             unknown = set(senses) - set(self._input_position)
             if unknown:
                 raise ValueError(f"unknown sensory channels: {sorted(unknown)}")
@@ -237,13 +275,15 @@ class MetalCircuit:
         if self._mushroom_mode:
             corrections = self._mushroom_cohort.pending_correction
             if self._mushroom_cohort.modulator_mode == "synthetic":
-                mushroom_modulator = np.zeros((2, 3), dtype=np.float32)
+                mushroom_modulator = np.zeros((2, self.capacity), dtype=np.float32)
                 for item, rid in zip(residents, ids, strict=True):
                     value = np.asarray(item.get("mushroom_modulator"), dtype=np.float32)
                     if value.ndim == 0:
                         value = np.full(2, value, dtype=np.float32)
-                    if value.shape != (2,) or not np.isfinite(value).all() or np.any(
-                        (value < 0) | (value > 1)
+                    if (
+                        value.shape != (2,)
+                        or not np.isfinite(value).all()
+                        or np.any((value < 0) | (value > 1))
                     ):
                         raise ValueError(
                             "mushroom_modulator must be a finite scalar or bilateral pair in [0, 1]"
@@ -259,11 +299,13 @@ class MetalCircuit:
                 target_recurrent_correction=corrections.ravel().tolist(),
             )
         response = self._call(request)
-        combined = np.asarray(response["combined"], dtype=np.float32).reshape(387, 3)
+        combined = np.asarray(response["combined"], dtype=np.float32).reshape(
+            387, self.capacity
+        )
         selected = None
         if self._mushroom_mode:
             selected = np.asarray(response["selected_rates"], dtype=np.float32).reshape(
-                self._mushroom_spec.selected_count, 3
+                self._mushroom_spec.selected_count, self.capacity
             )
             bridge_steps = self._mushroom_cohort.advance(
                 selected, mushroom_modulator, mask, dt=dt
@@ -274,18 +316,18 @@ class MetalCircuit:
             self.times[slot] += dt
             vector = combined[:384, slot].tolist()
             result = {
-                    "id": rid,
-                    "time": float(self.times[slot]),
-                    "features": vector,
-                    "readout_vector": vector,
-                    "readouts": dict(zip(self.readout_names, vector, strict=True)),
-                    "activity": float(combined[384, slot]),
-                    "activity_mean": float(combined[384, slot]),
-                    "activity_peak": float(combined[385, slot]),
-                    "support": float(combined[386, slot]),
-                    "support_mean": float(combined[386, slot]),
-                    "gpu_ms": float(response["gpu_ms"]),
-                }
+                "id": rid,
+                "time": float(self.times[slot]),
+                "features": vector,
+                "readout_vector": vector,
+                "readouts": dict(zip(self.readout_names, vector, strict=True)),
+                "activity": float(combined[384, slot]),
+                "activity_mean": float(combined[384, slot]),
+                "activity_peak": float(combined[385, slot]),
+                "support": float(combined[386, slot]),
+                "support_mean": float(combined[386, slot]),
+                "gpu_ms": float(response["gpu_ms"]),
+            }
             if self._mushroom_mode:
                 bridge_step = bridge_steps[slot]
                 result["selected_rates"] = selected[:, slot].tolist()
@@ -304,14 +346,16 @@ class MetalCircuit:
                 "neurons": self.n,
                 "edges": self.edge_count,
                 "artifact_sha256": self.artifact_sha256,
+                "artifact_manifest_sha256": self.artifact_manifest_sha256,
                 "artifact_format": "metal-csr-v2",
             },
             "device": {
                 "type": "metal",
                 "name": self.device_name,
                 "kernel": self.kernel,
+                "storage_tiles": self.native_startup["storage_tiles"],
             },
-            "capacity": 3,
+            "capacity": self.capacity,
             "residents": self.resident_ids,
             "dynamics": {
                 "tau": self.tau,
@@ -324,7 +368,7 @@ class MetalCircuit:
             "readouts": self.readout_names,
             "ports": {
                 "mode": "versioned_bundle",
-                "name": "retinal-v1",
+                "name": "retinal-v2",
                 "spec_hash": self.port_spec_hash,
                 "input_count": 351,
                 "readout_count": 384,
@@ -359,15 +403,18 @@ class MetalCircuit:
         )
         if residents != self.resident_ids:
             raise ValueError(
-                "Metal v1 snapshots require the complete active cohort in slot order"
+                "Metal snapshots require the complete active cohort in slot order"
             )
         path = self._path(directory, name)
         path.parent.mkdir(parents=True, exist_ok=True)
         metadata = json.dumps(
             {
-                "version": 4 if self._mushroom_mode else 3,
+                "version": 5,
+                "state_layout": "neuron-major-float4-tiles-v1",
+                "capacity": self.capacity,
                 "graph_sha256": self.graph_hash,
                 "artifact_sha256": self.artifact_sha256,
+                "artifact_manifest_sha256": self.artifact_manifest_sha256,
                 "port_spec_hash": self.port_spec_hash,
                 "kernel": self.kernel,
                 "resident_ids": self._resident_for_slot,
@@ -405,20 +452,14 @@ class MetalCircuit:
             if length > 2_000_000:
                 raise ValueError("snapshot metadata is too large")
             meta = json.loads(handle.read(length))
-        version = meta.get("version")
-        legacy_verified = (
-            version == 2
-            and self.artifact_sha256 == CANONICAL_ARTIFACT_SHA256
-            and self.graph_hash == CANONICAL_GRAPH_SHA256
-            and self.port_spec_hash == CANONICAL_PORT_SPEC_SHA256
-        )
-        mode_matches = (version == 4) == self._mushroom_mode
         if (
-            version not in {2, 3, 4}
-            or not mode_matches
-            or (version == 3 and meta.get("artifact_sha256") != self.artifact_sha256)
-            or (version == 4 and meta.get("artifact_sha256") != self.artifact_sha256)
-            or (version == 2 and not legacy_verified)
+            meta.get("version") != 5
+            or meta.get("state_layout") != "neuron-major-float4-tiles-v1"
+            or meta.get("capacity") != self.capacity
+            or ("mushroom_research" in meta) != self._mushroom_mode
+            or meta.get("artifact_sha256") != self.artifact_sha256
+            or meta.get("artifact_manifest_sha256")
+            != self.artifact_manifest_sha256
             or meta.get("graph_sha256") != self.graph_hash
             or meta.get("port_spec_hash") != self.port_spec_hash
             or meta.get("kernel") != self.kernel
@@ -469,7 +510,13 @@ class MetalCircuit:
         if process and process.poll() is None:
             try:
                 self._call({"op": "shutdown"})
-            except Exception:
+            except (
+                BrokenPipeError,
+                OSError,
+                RuntimeError,
+                ValueError,
+                json.JSONDecodeError,
+            ):
                 process.terminate()
             process.wait(timeout=5)
 

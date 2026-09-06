@@ -7,20 +7,49 @@ resident's welfare. They never alter physical chemistry or physiology.
 
 ## Runtime contract
 
-The callable native evaluator is
-[`native/cognitive-core/src/gam_law.rs`](../native/cognitive-core/src/gam_law.rs).
-actions. It is not yet wired into the resident selector. Each candidate combines
-the same current body/neural/goal context with a
-hypothetical action. World coordinates, names, object kinds, resident IDs, and
+The native evaluator in
+[`gam_law.rs`](../native/cognitive-core/src/gam_law.rs) is connected to the
+[`developmental resident`](../native/cognitive-core/src/developmental.rs).
+The learned policy proposes four actions in the same current body/neural/goal
+context. Each proposal receives a prediction of its one-tick body consequences.
+World coordinates, names, object kinds, resident IDs, and
 evidence records are excluded. Audit-only episode/world/resident keys are used to
 split fitting data and are absent from the artifact's feature vector.
 
 A law bank declares, for every input, its name, unit, normalization, and fitted
 domain. It declares each response unit, its held-out residual RMSE, and sampled
-smooth terms. Runtime returns expected consequences and that residual uncertainty.
+smooth terms. Runtime returns expected consequences and held-out residual errors;
+these errors are empirical scales, not calibrated uncertainty intervals.
 Any feature outside the experienced domain makes the candidate out of domain and
-suppresses its scalar score. The caller supplies bounded private preference weights;
-the bank contains no happiness or privileged reward score.
+suppresses its contribution to the selection adjustment. Such a candidate retains
+the original policy's support. The bank contains no happiness or privileged reward
+score.
+
+The current selector compares predicted energy, fatigue and encoded-speed changes
+with the body component of a previously achieved sensory goal. The difference is
+divided by the goal's remaining commitment ticks, rather than by the age of the
+memory. Standardized errors are bounded, and centered candidate scores alter
+resampling weights through a bounded `0.5 * tanh(score - mean_score)` term. This is
+an engineered way to use a remembered body state; it does not prove that the whole
+sensory goal is controllable or that the old body state is reachable now.
+
+Each resident also owns a small normalized least-mean-squares residual model in
+[`personal_consequences.rs`](../native/cognitive-core/src/personal_consequences.rs).
+It learns only after a committed physical transition, using the exact executed
+action and pre-action physiology. The native boundary checks the pending tick,
+action, oral command and physiology before consuming a learning update. Unexecuted
+candidates supply no targets. Out-of-domain transitions are counted separately and
+do not update the private model. Learning rates, bounded feature coordinates,
+innovation limits and per-target correction bounds are part of the artifact.
+Private coefficients, update counts, residual summaries, RNG and pending transition
+state survive a whole-resident checkpoint.
+
+The rich Torch development policy is trained without this four-candidate
+refinement. Exporting it with the consequence bank creates a declared deployment
+variant, rather than preserving an identical policy. The joined native mechanism
+has executed on an authenticated synthetic integration fixture. A learned rich
+resident deployment and its physical outcomes remain a separate step; neither the
+fit nor that fixture establishes an improvement in behavior.
 
 `LawBank::fitted_features` is the single v1 extraction contract: physiology indices
 0/2/3/5, mean of the 384 permitted neural rates, candidate thrust/yaw/grip/oral,
@@ -30,7 +59,7 @@ for resident-private residual learning and separately returns the domain flag.
 
 The current export samples each additive smooth at 97 knots and uses clamped linear
 interpolation. Clamping is only an arithmetic safeguard: the out-of-domain flag still
-prevents promotion. The whole-fit report measures exported-grid predictions against
+prevents the selection adjustment. The whole-fit report measures exported-grid predictions against
 direct native GAM predictions.
 
 ## Executed fit
@@ -41,6 +70,18 @@ source has 192,000 transitions from two episodes and 32 independently seeded
 physical worlds. Twenty-four complete worlds (144,000 rows) train the fits; eight
 complete worlds (48,000 rows) are held out. Prediction counts and independent world
 counts are reported separately.
+
+| One-step target | Held-out GAM RMSE | Training-mean baseline RMSE |
+| --- | ---: | ---: |
+| Change in encoded speed (`tanh(speed / 2)`) | 0.01849 | 0.02346 |
+| Energy cost | 0.0000191 | 0.0000634 |
+| Fatigue recovery | 0.0000698 | 0.000165 |
+
+44,184 of 48,000 held-out rows (92.05%) lie inside all fitted feature domains.
+Within those rows, the largest sampled-grid errors relative to direct GAM
+predictions are 0.00002503, 0.0000006421 and 0.0000009613 respectively. The
+[fit report](../integrations/gam_mechanisms/artifacts/fit_report.json) records the
+source, split, domains, bounds and exact artifact identities.
 
 The state/action features are body-local energy, fatigue, speed, circuit support,
 mean MaleCNS readout activity, executed thrust/yaw/grip/oral commands, mean motor

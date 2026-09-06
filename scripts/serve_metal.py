@@ -2,7 +2,16 @@
 """Serve the persistent local Metal MaleCNS backend over the existing API."""
 
 from __future__ import annotations
-import argparse, hashlib, json, os, re, socket, sys, threading, uuid
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import socket
+import sys
+import threading
+import uuid
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -15,7 +24,6 @@ from chreatures.mushroom_plasticity import (
     MushroomBodySubstrate,
     MushroomFullGraphBridgeSpec,
 )
-
 
 HASH = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -52,7 +60,7 @@ class Sequenced:
 
     def mutate(self, seq, request_hash, operation):
         if not isinstance(seq, int) or isinstance(seq, bool):
-            raise ValueError("seq must be an integer")
+            raise TypeError("seq must be an integer")
         with self.lock:
             if seq != self.next_sequence:
                 raise ValueError(f"expected seq {self.next_sequence}, received {seq}")
@@ -132,7 +140,7 @@ def handler_type(state):
                 raise ValueError("invalid request size")
             value = json.loads(self.rfile.read(n))
             if not isinstance(value, dict):
-                raise ValueError("request must be an object")
+                raise TypeError("request must be an object")
             return value
 
         def send_json(self, status, value):
@@ -158,9 +166,11 @@ def handler_type(state):
                     incarnation = query["incarnation"][0]
                     request_hash = query["request_sha256"][0]
                     seq_text = query["seq"][0]
-                    if not re.fullmatch(r"[0-9a-f]{32}", incarnation) or not HASH.fullmatch(
-                        request_hash
-                    ) or not re.fullmatch(r"0|[1-9][0-9]*", seq_text):
+                    if (
+                        not re.fullmatch(r"[0-9a-f]{32}", incarnation)
+                        or not HASH.fullmatch(request_hash)
+                        or not re.fullmatch(r"0|[1-9][0-9]*", seq_text)
+                    ):
                         raise ValueError("receipt query identity is malformed")
                     self.send_json(
                         200, state.receipt(incarnation, int(seq_text), request_hash)
@@ -183,7 +193,7 @@ def handler_type(state):
                     self.send_json(
                         200,
                         {
-                            "backend": "metal-local-v1",
+                            "backend": "metal-local-v2",
                             "next_seq": state.next_sequence,
                             "brain": state.brain.metadata(),
                             "service_incarnation": state.incarnation,
@@ -218,9 +228,12 @@ def handler_type(state):
                 expected_hash = request_sha256(self.path, q)
                 supplied_hash = q.get("request_sha256")
                 if supplied_hash is not None and (
-                    not isinstance(supplied_hash, str) or not HASH.fullmatch(supplied_hash)
+                    not isinstance(supplied_hash, str)
+                    or not HASH.fullmatch(supplied_hash)
                 ):
-                    raise ValueError("request_sha256 must be 64 lowercase hexadecimal characters")
+                    raise ValueError(
+                        "request_sha256 must be 64 lowercase hexadecimal characters"
+                    )
                 if supplied_hash is not None and supplied_hash != expected_hash:
                     raise ValueError("request_sha256 differs from canonical request")
                 supplied_hash = expected_hash
@@ -230,7 +243,9 @@ def handler_type(state):
                         supplied_hash,
                         lambda: {
                             "seq": seq,
-                            "slots": state.brain.add_residents(q.get("resident_ids", [])),
+                            "slots": state.brain.add_residents(
+                                q.get("resident_ids", [])
+                            ),
                         },
                     )
                 elif self.path == "/v1/residents/remove":
@@ -244,6 +259,7 @@ def handler_type(state):
                         )[1],
                     )
                 elif self.path == "/v1/step":
+
                     def step():
                         residents = state.brain.step(
                             q.get("residents", []), float(q.get("dt", 0))
@@ -255,8 +271,17 @@ def handler_type(state):
                             "residents": residents,
                         }
                         if q.get("compact") is True:
-                            keys = ("id", "time", "features", "activity", "activity_peak", "support")
-                            result["residents"] = [{k: x[k] for k in keys} for x in residents]
+                            keys = (
+                                "id",
+                                "time",
+                                "features",
+                                "activity",
+                                "activity_peak",
+                                "support",
+                            )
+                            result["residents"] = [
+                                {k: x[k] for k in keys} for x in residents
+                            ]
                             result.pop("feature_names")
                         return result
 
@@ -331,11 +356,14 @@ def handler_type(state):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument(
-        "--artifact", type=Path, default=ROOT / "data/metal-brain/metal-csr-v2.bin"
+        "--artifact",
+        type=Path,
+        default=ROOT / "data/metal-brain/metal-csr-retinal-v2.bin",
     )
     p.add_argument(
-        "--port-bundle", type=Path, default=ROOT / "data/ports/retinal-v1-maps.npz"
+        "--port-bundle", type=Path, default=ROOT / "data/ports/retinal-v2-maps.npz"
     )
+    p.add_argument("--capacity", type=int, default=6)
     p.add_argument("--snapshot-dir", type=Path, required=True)
     p.add_argument("--pid-file", type=Path, required=True)
     p.add_argument("--bind", default="127.0.0.1")
@@ -384,6 +412,7 @@ def main():
         with MetalCircuit(
             a.artifact,
             a.port_bundle,
+            capacity=a.capacity,
             kernel=a.kernel,
             mushroom_substrate=substrate,
             mushroom_bridge=bridge,
