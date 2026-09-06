@@ -152,6 +152,7 @@ class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
         knee_swing = math.radians(float(controller["knee_swing_degrees"]))
         idle_knee = math.radians(float(controller["idle_knee_degrees"]))
         torque_limit = float(controller["max_joint_torque"]) * strength
+        active_scale = self._active_effort_scale[body.id]
 
         side_drive = np.clip(
             forward + self._fast_leg_sides * float(controller["turn_gain"]) * turn,
@@ -182,7 +183,7 @@ class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
             self._fast_joint_kp[body.id] * (targets - self.data.qpos[qpos])
             - self._fast_joint_kd[body.id] * self.data.qvel[dof]
         )
-        self.data.qfrc_applied[dof] = np.clip(torque, -torque_limit, torque_limit)
+        self.data.qfrc_applied[dof] = np.clip(torque, -torque_limit, torque_limit) * active_scale
 
         root = self._body_mj[body.id]
         rotation = self.data.xmat[root].reshape(3, 3)
@@ -198,7 +199,7 @@ class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
         norm = float(np.linalg.norm(correction))
         if norm > limit:
             correction *= limit / norm
-        self.data.xfrc_applied[root, 3:6] += correction
+        self.data.xfrc_applied[root, 3:6] += correction * active_scale
 
 
 __all__ = ["FastArticulatedSensoriumWorld"]

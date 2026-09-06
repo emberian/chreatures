@@ -12,6 +12,7 @@ import copy
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
+from numbers import Integral
 from pathlib import Path
 from typing import Any
 
@@ -149,6 +150,14 @@ class MetabolicWeb:
         return np.asarray(self._native.atp)
 
     @property
+    def enzyme_activity(self) -> np.ndarray:
+        return np.asarray(self._native.enzyme_activity)
+
+    @property
+    def atp_capacity(self) -> np.ndarray:
+        return np.asarray(self._native.atp_capacity)
+
+    @property
     def time(self) -> float:
         return float(self._native.time)
 
@@ -186,6 +195,40 @@ class MetabolicWeb:
         self._native.transfer(
             donor, receiver, self.chemistry.resources(resources), float(atp)
         )
+
+    def transfer_batch(
+        self,
+        donors: Sequence[int | None],
+        receivers: Sequence[int | None],
+        resources: Sequence[Mapping[str, float]],
+        atp: Sequence[float],
+    ) -> dict[str, np.ndarray]:
+        def endpoint_rows(values: Sequence[int | None]) -> np.ndarray:
+            rows = []
+            for value in values:
+                if value is None:
+                    rows.append(-1)
+                elif isinstance(value, Integral) and not isinstance(value, bool):
+                    rows.append(int(value))
+                else:
+                    raise ValueError("transfer endpoints must be integer rows or None")
+            return np.ascontiguousarray(rows, dtype=np.int64)
+
+        resource_rows = np.ascontiguousarray(
+            [self.chemistry.resources(value) for value in resources],
+            dtype=np.float64,
+        )
+        if resource_rows.size == 0:
+            resource_rows = np.empty(
+                (0, len(self.chemistry.pools)), dtype=np.float64
+            )
+        result = self._native.transfer_batch(
+            endpoint_rows(donors),
+            endpoint_rows(receivers),
+            resource_rows,
+            np.ascontiguousarray(atp, dtype=np.float64),
+        )
+        return {name: np.asarray(value) for name, value in result.items()}
 
     def split(self, parent: int, child: int, fraction: float) -> None:
         self._native.split(parent, child, float(fraction))
