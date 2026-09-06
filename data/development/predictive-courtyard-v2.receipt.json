@@ -1,0 +1,225 @@
+{
+  "format": "chreatures-predictive-courtyard-birth-v2",
+  "recorded_unix": 1788687866.71454,
+  "deployment": {
+    "format": "chreatures-frozen-deployment-v1",
+    "source_revision": "a5bdee3922bc82dd2da429af0b4fa1fcf46fa21f",
+    "source_archive_sha256": "188a49b77daec6b7b123b6e2d4303869f8c67e4a8bd65c0c4cacfb485639f4ba",
+    "created_unix": 1788687498.91743,
+    "semantics": "new research birth: predictive v2 controller and rich GAM law bank in native-generated courtyard; previous Living Reef life remains saved and paused",
+    "files": {
+      "_cognitive_core.cpython-312-darwin.so": "707969c3f69aa97299f5004580a5e62f70fea04a55d3fb3299f024fae5ea2af2",
+      "_world_kernels.cpython-312-darwin.so": "5b81d4467b35571ff023002c7c620a6a5766c27f31e41e3c99ae76c1ae4c4593",
+      "models/resident.npz": "ef7d21a290c8d08fc3b17283684aaa1eb9c5c72b8eac430e3ce06bc0ca9e58e4",
+      "habitat/habitat.json": "2b686673cbc42663bdec88ccbe2cca65b8fcfb7d0a56d88bb9ca96519f09708a",
+      "habitat/biosphere.json": "de00ee267e2e1714fbb62f4f6ed8422b408ac76335dfdd78a4b3aa94f1a57457",
+      "analyst/courtyard.json": "271b90326bc1f003789063f69ffed1e89eeb861ed396e2f25d0ea29132adcfee",
+      "analyst/family-manifest.json": "578ca405aeda86374a0d66175c605d3aeff43413c22f4804e59c17cf20120596"
+    },
+    "api_url": "http://127.0.0.1:8779",
+    "neural_url": "http://127.0.0.1:18778",
+    "analyst_data_visibility": "Habitat runtime is passed only habitat/habitat.json and habitat/biosphere.json; analyst/ files are never controller inputs."
+  },
+  "world_id": "0102b60c-dfed-483d-a636-12a0d0f33f19",
+  "tick": 3744,
+  "time": 187.19999999990225,
+  "paused": false,
+  "error": null,
+  "engine_identity_sha256": "9458e951e56fe7c9c4d29f00069ea04f26d341a5335c52e7dd855cca3b40f61a",
+  "checkpoint": {
+    "format": "chreatures-developmental-habitat-checkpoint-v2",
+    "tick": 3493,
+    "state_sha256": "8dba20c8b02ccd60bffc3b53c0830243fb3cfb43740e386ee4ba182c994b690f"
+  },
+  "parts": 913,
+  "controller": {
+    "format": "chreatures-native-developmental-resident-rich-v2",
+    "artifact_sha256": "46aa4e2828f9bbf76c46e9b8c8e586941a2deeb6bede0a1b21615a0ccc937487",
+    "file_sha256": "ef7d21a290c8d08fc3b17283684aaa1eb9c5c72b8eac430e3ce06bc0ca9e58e4",
+    "mode": "rich-achieved-goal",
+    "execution": "developmental-resident-native-rich-predictive-v2",
+    "neural_contract": {
+      "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+      "port_spec_sha256": "a3182cc5c546fac164774e56cfcf3d4f185c2feab5a994fe3d2a37cc8604302e",
+      "port_bundle_sha256": "933b871fdd11dafa8c43afceb9862101984bf0950592af84631a4d7aa9bebe53"
+    },
+    "observation_contract": {
+      "format": "chreatures-rich-sensorimotor-observation-v1",
+      "neural_readout_dim": 384,
+      "observation_dim": 4453,
+      "observation_order": [
+        "rich_body_v1_4096",
+        "canonical_channels_351",
+        "physiology_6"
+      ],
+      "physiology_dim": 6,
+      "previous_action_plus_oral_dim": 9,
+      "rich_body_dim": 4096,
+      "rich_channel_names_sha256": "b4c6b328116d820143e16ee922ccffd7b950dbe008efc580ad93056e01349bfa",
+      "rich_profile_sha256": "c71380718ba5535dbaebdeaf8aa2e88cc45cf218312a03e13507877f02a5554e",
+      "source_sense_dim": 351
+    },
+    "rich_retina_available": true
+  },
+  "observed_private_state": {
+    "mica": {
+      "completed_GAM_updates": 2974,
+      "candidate_GAM_out_of_domain": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "candidate_forecast_tilts": [
+        0.009883997961878777,
+        0.02005876787006855,
+        -0.054962292313575745,
+        0.019985035061836243
+      ],
+      "candidate_forecast_input_clipped": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "memory_count": 128
+    },
+    "fern": {
+      "completed_GAM_updates": 196,
+      "candidate_GAM_out_of_domain": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "candidate_forecast_tilts": [
+        0.020233197137713432,
+        -0.022986622527241707,
+        0.0075882915407419205,
+        -0.004181269556283951
+      ],
+      "candidate_forecast_input_clipped": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "memory_count": 128
+    },
+    "pip": {
+      "completed_GAM_updates": 245,
+      "candidate_GAM_out_of_domain": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "candidate_forecast_tilts": [
+        -0.06560682505369186,
+        0.048326198011636734,
+        0.0002991576911881566,
+        0.014410411939024925
+      ],
+      "candidate_forecast_input_clipped": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "memory_count": 128
+    },
+    "lumen": {
+      "completed_GAM_updates": 0,
+      "candidate_GAM_out_of_domain": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "candidate_forecast_tilts": [
+        0.00372711312957108,
+        0.003733252640813589,
+        -0.0103793665766716,
+        0.002798254368826747
+      ],
+      "candidate_forecast_input_clipped": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "memory_count": 128
+    },
+    "silt": {
+      "completed_GAM_updates": 97,
+      "candidate_GAM_out_of_domain": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "candidate_forecast_tilts": [
+        -0.014381526038050652,
+        -0.031930677592754364,
+        0.02333207055926323,
+        0.02344600297510624
+      ],
+      "candidate_forecast_input_clipped": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "memory_count": 128
+    },
+    "bramble": {
+      "completed_GAM_updates": 3468,
+      "candidate_GAM_out_of_domain": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "candidate_forecast_tilts": [
+        -0.0031349011696875095,
+        0.0028379487339407206,
+        0.0009883638704195619,
+        -0.0007273249793797731
+      ],
+      "candidate_forecast_input_clipped": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "memory_count": 128
+    }
+  },
+  "preceding_observed_life": {
+    "id": "d5fbd433-ffa2-4877-b55d-b2d0461166ed",
+    "reason": "End of the first two-cycle observational run; release M2 capacity for the next declared research birth. No architecture or private state was replaced.",
+    "tick": 10033,
+    "time": 501.6499999996163,
+    "paused": true,
+    "checkpoint": {
+      "ok": true,
+      "sha256": "5082900a4f33bdb531f2ae70faef1baf5fa353c1bb111211fd408bc07a47f870"
+    },
+    "body_energy": {
+      "mica": 9.596456203740193e-19,
+      "fern": 0.0005133942782012155,
+      "pip": 3.17165720946859e-21,
+      "lumen": 0.0006536992336432216,
+      "silt": 0.002974155883018043,
+      "bramble": 6.214496869390732e-05
+    },
+    "parts": 1472,
+    "finding": "This inherited controller did not maintain energy reserves in the observed life. Low reserves are operational model state, not a welfare estimate."
+  },
+  "limitations": [
+    "The two observed lives have different inherited weights, controller mechanisms and physical layouts. Their trajectories are not an ablation of any one mechanism.",
+    "Nonzero fitted refinements and private updates establish execution, not behavioral improvement.",
+    "Private goal-outcome association is implemented as a standalone native module but is not in this v2 life.",
+    "The generated courtyard designer graph is analyst-only; body sensors receive actual rendered/rayed geometry and allowed physiological inputs."
+  ]
+}

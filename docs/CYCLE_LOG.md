@@ -553,3 +553,52 @@ not an end-to-end held-out-world claim. Its compact weights and raw fit receipt
 are committed in `5b23729`; native predictive action coupling is the next
 controller revision, separate from the already-running v1 life. Forecast
 accuracy alone does not establish better physical choices.
+
+## 2026-09-06, 05:45 — predictive courtyard and varied nurseries
+
+The first rich live observation ended at tick10033 (501.65 model seconds),
+with 1,472 growing parts. It was saved and paused to release M2 capacity for
+the next research birth. The controller did not maintain reserves: final
+normalized energy was near zero for all six residents. The public 480-frame
+recording covers an earlier 207-second interval and does not claim learned
+feeding. Its compact geometry deltas, retinal views, neural population traces
+and finite outside performance are deployed in `5e38bbf`; the original exact
+raw capture remains private.
+
+`89fddf2` fits a successor GAM law bank on the completed rich collection,
+using 147,456 training transitions and 49,152 transitions from a reserved whole
+world. All three body-consequence targets improve over their training-mean
+baselines. Executed-context coverage on the interrupted rich online run rises
+from 7.63% to 68.18%. A separate native GAM atlas finds a useful effort fit,
+only a small goal-progress improvement, and failed generalization of an old-law
+residual fit. Its contrary result is retained alongside the useful surfaces.
+
+`9491279` adds a native cold compiler for connected courtyard, tiered-shelf and
+braided-passage nurseries, including ramps, underpasses, light/shade, colonies,
+finite packets and movable mechanisms. The designer graph is a separate
+analyst artifact. Current rich training is being extended to generate these
+layouts at episode boundaries; the initial native generation check is not
+already a trained family result.
+
+`a5bdee3` starts a separate predictive courtyard life using the latest durable
+child checkpoint, carrying 40 cumulative inherited PPO updates. Its current
+engine combines the learned H1 sensory predictor, rich-domain GAM bank and
+private body-consequence adaptation. The first complete autosave passed;
+nonzero private updates and forecast score contributions are visible in the
+actual run. The [courtyard receipt](../data/development/predictive-courtyard-v2.receipt.json)
+pins the exact model, source, native binaries and generated habitat. There is
+no claimed causal performance comparison with the preceding life, whose world
+and controller differ.
+
+The new native binary enables round-tripping JSON parsing for private f64
+state. The current host also persists a monotonic event counter, fixing reused
+journal IDs after the bounded journal filled; previous recorded event IDs are
+not rewritten. `dfd1639` adds a standalone private goal-outcome association
+module with exact selected-goal credit and eviction identities. Its production
+join is the following revision; it is not active in the courtyard v2 birth.
+
+The supervised child exposed an obsolete feeder-stage transition at the first
+chemical-nursery episode reset. `9e11041` removes that transition. A new declared
+grandchild inherited the child's durable checkpoint20, and has now crossed
+update40/tick5120 and completed the next episode's first update. The earlier
+interrupted lineages and durable checkpoint identities remain recorded.
