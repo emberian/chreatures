@@ -129,11 +129,13 @@ advanced for three warm-up and twenty measured 0.05-second steps. Each resident
 requested release 0.1, secretion 0.2 and allocation 0.3. The original compiled
 clearance path spent 56.62 ms per biosphere step on average (138.76 ms p95).
 The native conservative packet-overlap path spent 6.01 ms on average (11.18 ms
-p95). Commands were:
+p95). The retained comparison disables only the conservative preflight for its
+forced-compiled control, so both arms use the current chemistry and authoritative
+topology transaction. Historical implementations remain available from repository
+Git pins. The command was:
 
 ```text
-PYTHONPATH=/tmp/chreatures-regional-family-v8:/Users/ember/dev/chreatures .venv/bin/python /tmp/profile_biosphere.py
-PYTHONPATH=/tmp/chreatures-material-overlap-native2:/Users/ember/dev/chreatures .venv/bin/python /tmp/profile_biosphere.py
+PYTHONPATH=/tmp/chreatures-material-overlap-native2:/Users/ember/dev/chreatures .venv/bin/python research/performance/material_packet.py
 ```
 
 The final source hashes were `bf0317e541e03fac5e0175f98129ae2fa400bfa9e9b14d68de8b855a54625b2e`
@@ -142,7 +144,9 @@ for `chreatures/material_objects.py`,
 for `native/world-kernels/src/material_overlap.rs`, and
 `65b5e8a3d15bc39aa4e7a107e0c4b1ae9e838465dd6a02f5cf107332471fa8a2`
 for the native module registry. The test extension SHA-256 was
-`e713c58a207ba12ae3b5d02b787a99af7a5b9b122893c980361167413ab85866`.
+`e713c58a207ba12ae3b5d02b787a99af7a5b9b122893c980361167413ab85866`;
+the retained comparison script SHA-256 is
+`29d21aaada125c4cb0ab2869941c695c5de199411f5d00c4bf55ddc685b5b879`.
 
 A 90-step optimized-versus-forced-compiled comparison was bit-identical for
 both the complete biosphere snapshot
