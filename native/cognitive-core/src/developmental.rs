@@ -10,6 +10,9 @@ use crate::personal_goals::{
     GoalSlotIdentity, GoalSlotReplacement, GoalStart, GoalTransition, PersonalGoalAssociations,
     PersonalGoalConfig,
 };
+use crate::population_response::{
+    population_response_features, PopulationHistory, PopulationResponseBank,
+};
 use crate::predictive_sensory::{
     PredictiveSensoryEnsemble, INPUT as PREDICTOR_INPUT, MEMBERS as PREDICTOR_MEMBERS,
 };
@@ -107,6 +110,12 @@ pub(crate) struct DevelopmentalResidentCohort {
     active_logits: Vec<f32>,
     positive_logits: Vec<f32>,
     law: LawBank,
+    population_response: Option<PopulationResponseBank>,
+    population_history: Option<PopulationHistory>,
+    pending_population_history: Vec<f32>,
+    population_in_domain: Vec<u64>,
+    population_out_of_domain: Vec<u64>,
+    population_last_in_domain: Vec<bool>,
     consequences: PersonalConsequences,
     pending_action: Vec<f32>,
     pending_physiology: Vec<f32>,
@@ -261,6 +270,9 @@ impl DevelopmentalResidentCohort {
         self.contextual
             .grow(new_batch)
             .map_err(PyValueError::new_err)?;
+        if let Some(history) = &mut self.population_history {
+            history.grow(new_batch).map_err(PyValueError::new_err)?;
+        }
 
         macro_rules! resize_f32 {
             ($field:ident, $stride:expr) => {
@@ -292,7 +304,11 @@ impl DevelopmentalResidentCohort {
         resize_f32!(positive_logits, 8 * 32);
         resize_f32!(pending_action, PREVIOUS);
         resize_f32!(pending_physiology, PHYSIOLOGY);
+        resize_f32!(pending_population_history, 4);
         self.pending_tick.resize(new_batch, None);
+        self.population_in_domain.resize(new_batch, 0);
+        self.population_out_of_domain.resize(new_batch, 0);
+        self.population_last_in_domain.resize(new_batch, false);
         resize_f32!(candidate_scores, CANDIDATES);
         self.candidate_ood.resize(new_batch * CANDIDATES, false);
         self.selected_candidate.resize(new_batch, -1);
@@ -427,6 +443,13 @@ impl DevelopmentalResidentCohort {
             self.selected_candidate[row] = -1;
             self.selected_correction[row * 3..(row + 1) * 3].fill(0.0);
             self.personal_updates[row] = 0;
+            if let Some(history) = &mut self.population_history {
+                history.clear(row).map_err(PyValueError::new_err)?;
+            }
+            self.pending_population_history[row * 4..(row + 1) * 4].fill(0.0);
+            self.population_in_domain[row] = 0;
+            self.population_out_of_domain[row] = 0;
+            self.population_last_in_domain[row] = false;
 
             let mut state = action_seeds[index] ^ (row as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15);
             for word in &mut self.action_rng[row * 4..(row + 1) * 4] {
@@ -1073,10 +1096,25 @@ impl DevelopmentalResidentCohort {
                     .cancel_pending(row)
                     .map_err(PyValueError::new_err)?;
                 self.pending_tick[row] = None;
+                if let Some(history) = &mut self.population_history {
+                    history.clear(row).map_err(PyValueError::new_err)?;
+                }
+                self.population_in_domain[row] = 0;
+                self.population_out_of_domain[row] = 0;
+                self.population_last_in_domain[row] = false;
             }
             let current: [f32; 6] = physiology[row * PHYSIOLOGY..row * PHYSIOLOGY + 6]
                 .try_into()
                 .unwrap();
+            let current12: [f32; 12] = physiology[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY]
+                .try_into()
+                .unwrap();
+            let population_history = self
+                .population_history
+                .as_ref()
+                .map(|history| history.summary(row))
+                .transpose()
+                .map_err(PyValueError::new_err)?;
             let neural_row: &[f32; 384] =
                 neural[row * NEURAL..(row + 1) * NEURAL].try_into().unwrap();
             let desired = if selection.valid[row] && selection.remaining[row] > 0 {
@@ -1096,12 +1134,22 @@ impl DevelopmentalResidentCohort {
             let mut features_all = Vec::with_capacity(CANDIDATES);
             let mut corrections_all = Vec::with_capacity(CANDIDATES);
             let mut scores = [0.0f64; CANDIDATES];
+            let mut population_tilts = [0.0f32; CANDIDATES];
+            let mut population_evaluations = Vec::with_capacity(CANDIDATES);
             let mut forecast_progress = [0.0f32; CANDIDATES];
             let mut forecast_disagreement = [0.0f32; CANDIDATES];
             let mut forecast_valid = [false; CANDIDATES];
             for k in 0..CANDIDATES {
                 let candidate = &candidates
                     [(row * CANDIDATES + k) * ACTIONS..(row * CANDIDATES + k + 1) * ACTIONS];
+                if let (Some(bank), Some(history)) = (&self.population_response, population_history)
+                {
+                    let candidate12: [f32; 12] = candidate.try_into().unwrap();
+                    let features = population_response_features(&current12, &history, &candidate12)
+                        .map_err(PyValueError::new_err)?;
+                    population_evaluations
+                        .push(bank.evaluate(&features).map_err(PyValueError::new_err)?);
+                }
                 let action = [
                     candidate[0],
                     candidate[1],
@@ -1161,6 +1209,14 @@ impl DevelopmentalResidentCohort {
                 inherited_all.push(inherited);
                 features_all.push(features);
             }
+            if let Some(bank) = &self.population_response {
+                let tilts = bank
+                    .candidate_score_tilts(&population_evaluations)
+                    .map_err(PyValueError::new_err)?;
+                for (k, tilt) in tilts.into_iter().enumerate() {
+                    population_tilts[k] = tilt;
+                }
+            }
             let in_domain = (0..CANDIDATES)
                 .filter(|k| !self.candidate_ood[row * CANDIDATES + *k])
                 .collect::<Vec<_>>();
@@ -1176,6 +1232,7 @@ impl DevelopmentalResidentCohort {
                     } else {
                         (TILT * (scores[k] - mean).tanh()) as f32
                     };
+                self.candidate_scores[row * CANDIDATES + k] += population_tilts[k];
                 if selection.valid[row]
                     && self.recent_code_count[row] == WINDOW
                     && !forecast_clipped[row * CANDIDATES + k]
@@ -1279,6 +1336,9 @@ impl DevelopmentalResidentCohort {
             self.pending_physiology[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY]
                 .copy_from_slice(&physiology[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY]);
             self.pending_tick[row] = Some(ticks[row]);
+            if let Some(history) = population_history {
+                self.pending_population_history[row * 4..(row + 1) * 4].copy_from_slice(&history);
+            }
             let f: Vec<f64> = features_all[chosen].iter().map(|x| f64::from(*x)).collect();
             self.consequences
                 .record_executed(
@@ -1364,6 +1424,9 @@ impl DevelopmentalResidentCohort {
         learning_rate: f64,
         error_decay: f64,
         innovation_limit: f64,
+        population_response_json: Option<&str>,
+        population_response_identity: Option<&str>,
+        population_feature_contract_identity: Option<&str>,
         predictor_packed: PyReadonlyArray1<'_, f32>,
         forecast_goal_rms: f32,
         policy_adapter_packed: PyReadonlyArray1<'_, f32>,
@@ -1414,6 +1477,26 @@ impl DevelopmentalResidentCohort {
         };
         let consequences =
             PersonalConsequences::new(batch, config).map_err(PyValueError::new_err)?;
+        let population_response = match (
+            population_response_json,
+            population_response_identity,
+            population_feature_contract_identity,
+        ) {
+            (None, None, None) => None,
+            (Some(json), Some(identity), Some(contract)) => Some(
+                PopulationResponseBank::from_authenticated_json(json, identity, contract)
+                    .map_err(PyValueError::new_err)?,
+            ),
+            _ => {
+                return Err(PyValueError::new_err(
+                    "population response identities are incomplete",
+                ))
+            }
+        };
+        let population_history = population_response
+            .as_ref()
+            .map(|_| PopulationHistory::new(batch).map_err(PyValueError::new_err))
+            .transpose()?;
         if !forecast_goal_rms.is_finite() || forecast_goal_rms < 1e-4 {
             return Err(PyValueError::new_err("forecast goal RMS differs"));
         }
@@ -1570,6 +1653,12 @@ impl DevelopmentalResidentCohort {
             active_logits: vec![0.0; batch * 8],
             positive_logits: vec![0.0; batch * 8 * 32],
             law,
+            population_response,
+            population_history,
+            pending_population_history: vec![0.0; batch * 4],
+            population_in_domain: vec![0; batch],
+            population_out_of_domain: vec![0; batch],
+            population_last_in_domain: vec![false; batch],
             consequences,
             pending_action: vec![0.0; batch * PREVIOUS],
             pending_physiology: vec![0.0; batch * PHYSIOLOGY],
@@ -2034,6 +2123,33 @@ impl DevelopmentalResidentCohort {
             "contextual_bias",
             Array1::from_vec(self.contextual_bias.clone()).into_pyarray(py),
         )?;
+        out.set_item(
+            "population_response_identity",
+            self.population_response
+                .as_ref()
+                .map(|bank| bank.artifact_sha256.clone()),
+        )?;
+        out.set_item(
+            "population_feature_contract_identity",
+            self.population_response
+                .as_ref()
+                .map(|bank| bank.feature_contract_sha256.clone()),
+        )?;
+        out.set_item(
+            "population_history",
+            self.population_history
+                .as_ref()
+                .map(|history| serde_json::to_string(&history.snapshot()).unwrap()),
+        )?;
+        out.set_item("population_in_domain", self.population_in_domain.clone())?;
+        out.set_item(
+            "population_out_of_domain",
+            self.population_out_of_domain.clone(),
+        )?;
+        out.set_item(
+            "population_last_in_domain",
+            self.population_last_in_domain.clone(),
+        )?;
         Ok(out)
     }
 
@@ -2133,12 +2249,60 @@ impl DevelopmentalResidentCohort {
             }
         }
         for row in 0..self.batch {
+            if let Some(bank) = &self.population_response {
+                let before12: [f32; 12] = b[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY]
+                    .try_into()
+                    .unwrap();
+                let executed12: [f32; 12] = x[row * PREVIOUS..row * PREVIOUS + ACTIONS]
+                    .try_into()
+                    .unwrap();
+                let history: [f32; 4] = self.pending_population_history[row * 4..(row + 1) * 4]
+                    .try_into()
+                    .unwrap();
+                let features = population_response_features(&before12, &history, &executed12)
+                    .map_err(PyValueError::new_err)?;
+                let evaluation = bank.evaluate(&features).map_err(PyValueError::new_err)?;
+                self.population_last_in_domain[row] = !evaluation.out_of_domain;
+                if evaluation.out_of_domain {
+                    self.population_out_of_domain[row] += 1;
+                } else {
+                    self.population_in_domain[row] += 1;
+                }
+            }
+            if let Some(history) = &mut self.population_history {
+                let after12: [f32; 12] = a[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY]
+                    .try_into()
+                    .unwrap();
+                history
+                    .record(row, &after12)
+                    .map_err(PyValueError::new_err)?;
+            }
             self.consequences
                 .observe(row, t[row], &targets[row])
                 .map_err(PyValueError::new_err)?;
             self.pending_tick[row] = None;
         }
         let out = PyDict::new(py);
+        if self.population_response.is_some() {
+            let bank = self.population_response.as_ref().unwrap();
+            out.set_item("population_response_identity", bank.artifact_sha256.clone())?;
+            out.set_item(
+                "population_feature_contract_identity",
+                bank.feature_contract_sha256.clone(),
+            )?;
+            out.set_item(
+                "population_response_in_domain",
+                self.population_last_in_domain.clone(),
+            )?;
+            out.set_item(
+                "population_response_in_domain_total",
+                self.population_in_domain.clone(),
+            )?;
+            out.set_item(
+                "population_response_out_of_domain_total",
+                self.population_out_of_domain.clone(),
+            )?;
+        }
         out.set_item(
             "reward",
             Array1::from_vec(self.last_goal_reward.clone()).into_pyarray(py),
@@ -2214,6 +2378,49 @@ impl DevelopmentalResidentCohort {
         {
             return Err(PyValueError::new_err(
                 "developmental snapshot identity differs",
+            ));
+        }
+        let expected_bank = self
+            .population_response
+            .as_ref()
+            .map(|bank| bank.artifact_sha256.clone());
+        let expected_contract = self
+            .population_response
+            .as_ref()
+            .map(|bank| bank.feature_contract_sha256.clone());
+        if get("population_response_identity")?.extract::<Option<String>>()? != expected_bank
+            || get("population_feature_contract_identity")?.extract::<Option<String>>()?
+                != expected_contract
+        {
+            return Err(PyValueError::new_err(
+                "population response snapshot identity differs",
+            ));
+        }
+        let history_json = get("population_history")?.extract::<Option<String>>()?;
+        self.population_history = match history_json {
+            Some(json) if self.population_response.is_some() => Some(
+                PopulationHistory::restore(
+                    serde_json::from_str(&json)
+                        .map_err(|e| PyValueError::new_err(e.to_string()))?,
+                )
+                .map_err(PyValueError::new_err)?,
+            ),
+            None if self.population_response.is_none() => None,
+            _ => {
+                return Err(PyValueError::new_err(
+                    "population history snapshot identity differs",
+                ))
+            }
+        };
+        self.population_in_domain = get("population_in_domain")?.extract()?;
+        self.population_out_of_domain = get("population_out_of_domain")?.extract()?;
+        self.population_last_in_domain = get("population_last_in_domain")?.extract()?;
+        if self.population_in_domain.len() != self.batch
+            || self.population_out_of_domain.len() != self.batch
+            || self.population_last_in_domain.len() != self.batch
+        {
+            return Err(PyValueError::new_err(
+                "population response receipt dimensions differ",
             ));
         }
         let hidden: PyReadonlyArray2<'_, f32> = get("hidden")?.extract()?;

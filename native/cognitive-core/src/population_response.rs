@@ -17,6 +17,8 @@ pub struct PopulationResponseBank {
     /// Populated only by `from_authenticated_path`; never trusted from JSON.
     #[serde(skip)]
     pub artifact_sha256: String,
+    #[serde(default)]
+    pub candidate_score: Option<CandidateScoreConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -42,6 +44,19 @@ pub struct BudgetGroup {
     pub total: f64,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct CandidateScoreConfig {
+    pub maximum_tilt: f64,
+    pub terms: Vec<CandidateScoreTerm>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CandidateScoreTerm {
+    pub mechanism: String,
+    pub weight: f64,
+    pub scale: f64,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct MechanismResponse {
     pub mechanism: String,
@@ -63,6 +78,135 @@ pub struct CognitiveAdaptation {
 }
 
 pub const POPULATION_RESPONSE_FEATURES: usize = 28;
+pub const POPULATION_HISTORY_WINDOW: usize = 64;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PopulationHistorySnapshot {
+    pub residents: usize,
+    pub cursor: Vec<usize>,
+    pub count: Vec<usize>,
+    pub values: Vec<f32>,
+}
+
+/// Private causal physiology history. It deliberately stores only energy,
+/// fatigue, structural integrity, and development fraction.
+#[derive(Debug, Clone)]
+pub struct PopulationHistory {
+    state: PopulationHistorySnapshot,
+}
+
+impl PopulationHistory {
+    pub fn new(residents: usize) -> Result<Self, String> {
+        if residents == 0 {
+            return Err("population history requires residents".into());
+        }
+        Ok(Self {
+            state: PopulationHistorySnapshot {
+                residents,
+                cursor: vec![0; residents],
+                count: vec![0; residents],
+                values: vec![0.0; residents * POPULATION_HISTORY_WINDOW * 4],
+            },
+        })
+    }
+
+    pub fn summary(&self, resident: usize) -> Result<[f32; 4], String> {
+        if resident >= self.state.residents {
+            return Err("population history resident differs".into());
+        }
+        let count = self.state.count[resident];
+        if count == 0 {
+            return Ok([0.0; 4]);
+        }
+        let oldest = (self.state.cursor[resident] + POPULATION_HISTORY_WINDOW - count)
+            % POPULATION_HISTORY_WINDOW;
+        let oldest_base = (resident * POPULATION_HISTORY_WINDOW + oldest) * 4;
+        let latest = (self.state.cursor[resident] + POPULATION_HISTORY_WINDOW - 1)
+            % POPULATION_HISTORY_WINDOW;
+        let latest_base = (resident * POPULATION_HISTORY_WINDOW + latest) * 4;
+        let mut mean = [0.0f32; 2];
+        for offset in 0..count {
+            let slot = (oldest + offset) % POPULATION_HISTORY_WINDOW;
+            let source = (resident * POPULATION_HISTORY_WINDOW + slot) * 4;
+            mean[0] += self.state.values[source];
+            mean[1] += self.state.values[source + 1];
+        }
+        Ok([
+            mean[0] / count as f32,
+            mean[1] / count as f32,
+            self.state.values[latest_base + 2] - self.state.values[oldest_base + 2],
+            self.state.values[latest_base + 3] - self.state.values[oldest_base + 3],
+        ])
+    }
+
+    /// Advance history only after the matching physical consequence commits.
+    pub fn record(&mut self, resident: usize, physiology12: &[f32; 12]) -> Result<(), String> {
+        if resident >= self.state.residents || !physiology12.iter().all(|x| x.is_finite()) {
+            return Err("population history resident or physiology differs".into());
+        }
+        let current = [
+            physiology12[0],
+            physiology12[2],
+            physiology12[6],
+            physiology12[7],
+        ];
+        let cursor = self.state.cursor[resident];
+        let base = (resident * POPULATION_HISTORY_WINDOW + cursor) * 4;
+        self.state.values[base..base + 4].copy_from_slice(&current);
+        self.state.cursor[resident] = (cursor + 1) % POPULATION_HISTORY_WINDOW;
+        self.state.count[resident] =
+            (self.state.count[resident] + 1).min(POPULATION_HISTORY_WINDOW);
+        Ok(())
+    }
+
+    pub fn snapshot(&self) -> PopulationHistorySnapshot {
+        self.state.clone()
+    }
+
+    pub fn clear(&mut self, resident: usize) -> Result<(), String> {
+        if resident >= self.state.residents {
+            return Err("population history resident differs".into());
+        }
+        self.state.cursor[resident] = 0;
+        self.state.count[resident] = 0;
+        let start = resident * POPULATION_HISTORY_WINDOW * 4;
+        self.state.values[start..start + POPULATION_HISTORY_WINDOW * 4].fill(0.0);
+        Ok(())
+    }
+
+    pub fn grow(&mut self, residents: usize) -> Result<(), String> {
+        if residents <= self.state.residents {
+            return Err("population history growth must append residents".into());
+        }
+        self.state.cursor.resize(residents, 0);
+        self.state.count.resize(residents, 0);
+        self.state
+            .values
+            .resize(residents * POPULATION_HISTORY_WINDOW * 4, 0.0);
+        self.state.residents = residents;
+        Ok(())
+    }
+
+    pub fn restore(snapshot: PopulationHistorySnapshot) -> Result<Self, String> {
+        if snapshot.residents == 0
+            || snapshot.cursor.len() != snapshot.residents
+            || snapshot.count.len() != snapshot.residents
+            || snapshot.values.len() != snapshot.residents * POPULATION_HISTORY_WINDOW * 4
+            || snapshot
+                .cursor
+                .iter()
+                .any(|x| *x >= POPULATION_HISTORY_WINDOW)
+            || snapshot
+                .count
+                .iter()
+                .any(|x| *x > POPULATION_HISTORY_WINDOW)
+            || !snapshot.values.iter().all(|x| x.is_finite())
+        {
+            return Err("population history snapshot differs".into());
+        }
+        Ok(Self { state: snapshot })
+    }
+}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ResidentResponseReceipt {
@@ -90,6 +234,20 @@ pub struct PopulationResponseReceipt {
 }
 
 impl PopulationResponseBank {
+    pub fn from_authenticated_json(
+        json: &str,
+        expected_sha256: &str,
+        expected_feature_contract_sha256: &str,
+    ) -> Result<Self, String> {
+        let actual = format!("{:x}", Sha256::digest(json.as_bytes()));
+        if actual != expected_sha256 {
+            return Err(format!("population response artifact hash differs: expected {expected_sha256}, got {actual}"));
+        }
+        let mut bank: Self = serde_json::from_str(json).map_err(|e| e.to_string())?;
+        bank.artifact_sha256 = actual;
+        bank.validate(expected_feature_contract_sha256)?;
+        Ok(bank)
+    }
     /// The expected hash is stored by an immutable candidate genome. Loading a
     /// different fitted mechanism into an existing life is therefore rejected.
     pub fn from_authenticated_path(
@@ -102,10 +260,8 @@ impl PopulationResponseBank {
         if actual != expected_sha256 {
             return Err(format!("population response artifact hash differs: expected {expected_sha256}, got {actual}"));
         }
-        let mut bank: Self = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-        bank.artifact_sha256 = actual;
-        bank.validate(expected_feature_contract_sha256)?;
-        Ok(bank)
+        let json = std::str::from_utf8(&bytes).map_err(|e| e.to_string())?;
+        Self::from_authenticated_json(json, &actual, expected_feature_contract_sha256)
     }
 
     pub fn validate(&self, expected_feature_contract_sha256: &str) -> Result<(), String> {
@@ -178,7 +334,58 @@ impl PopulationResponseBank {
         {
             return Err("every budget logit must belong to exactly one budget group".into());
         }
+        if let Some(score) = &self.candidate_score {
+            if !score.maximum_tilt.is_finite()
+                || !(0.0..=0.5).contains(&score.maximum_tilt)
+                || score.terms.is_empty()
+                || score.terms.iter().any(|term| {
+                    !mechanisms.contains_key(term.mechanism.as_str())
+                        || !term.weight.is_finite()
+                        || !term.scale.is_finite()
+                        || term.scale <= 0.0
+                })
+            {
+                return Err("population candidate score contract differs".into());
+            }
+        }
         Ok(())
+    }
+
+    pub fn candidate_score_tilts(
+        &self,
+        evaluations: &[PopulationEvaluation],
+    ) -> Result<Vec<f32>, String> {
+        let Some(config) = &self.candidate_score else {
+            return Ok(vec![0.0; evaluations.len()]);
+        };
+        let mut raw = Vec::with_capacity(evaluations.len());
+        for evaluation in evaluations {
+            if evaluation.out_of_domain {
+                raw.push(None);
+                continue;
+            }
+            let values: HashMap<&str, f64> = evaluation
+                .responses
+                .iter()
+                .map(|response| (response.mechanism.as_str(), response.value))
+                .collect();
+            let score = config
+                .terms
+                .iter()
+                .map(|term| term.weight * values[term.mechanism.as_str()] / term.scale)
+                .sum::<f64>();
+            raw.push(Some(score));
+        }
+        let valid = raw.iter().flatten().copied().collect::<Vec<_>>();
+        let center = if valid.is_empty() {
+            0.0
+        } else {
+            valid.iter().sum::<f64>() / valid.len() as f64
+        };
+        Ok(raw
+            .into_iter()
+            .map(|value| value.map_or(0.0, |x| (config.maximum_tilt * (x - center).tanh()) as f32))
+            .collect())
     }
 
     pub fn evaluate(&self, raw_features: &[f64]) -> Result<PopulationEvaluation, String> {

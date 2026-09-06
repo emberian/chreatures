@@ -44,6 +44,49 @@ def finite_mapping(value: Mapping[str, Any], label: str) -> dict[str, float]:
     return result
 
 
+def physical_summary(value: Mapping[str, Any]) -> dict[str, float]:
+    """Flatten only the documented numeric resident summary into named measures."""
+    result: dict[str, float] = {}
+    scalar_fields = (
+        "valid_ticks", "valid_time_seconds", "visited_spatial_cells",
+        "mouth_contact_ticks", "mouth_contact_bouts", "contact_ticks",
+        "contact_bouts", "quiet_ticks", "outside_world_ticks",
+        "outside_deviation_sum", "outside_deviation_max", "contact_sum",
+        "distance_sum", "effort_sum", "mechanical_work_sum",
+        "ingested_mass_sum", "signal_activity_sum", "release_mass_sum",
+        "secretion_mass_sum", "allocation_mass_sum", "energy_change",
+        "mean_actual_speed", "height_mean", "height_range",
+    )
+    for name in scalar_fields:
+        raw = value.get(name)
+        if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+            number = float(raw)
+            if not math.isfinite(number):
+                raise ValueError(f"life trajectory metrics.{name} is nonfinite")
+            result[name] = number
+    arrays = (
+        ("physiology_mean", "physiology_order"),
+        ("physiology_min", "physiology_order"),
+        ("physiology_max", "physiology_order"),
+        ("executed_action_mean", "executed_action_order"),
+        ("executed_action_abs_mean", "executed_action_order"),
+        ("outcome_sum", "outcome_order"),
+        ("organ_flow_sum", "organ_flow_order"),
+    )
+    for field, order_field in arrays:
+        values, order = value.get(field), value.get(order_field)
+        if values is None:
+            continue
+        if not isinstance(values, list) or not isinstance(order, list) or len(values) != len(order):
+            raise ValueError(f"life trajectory metrics.{field} differs from {order_field}")
+        for name, raw in zip(order, values, strict=True):
+            number = float(raw)
+            if not math.isfinite(number):
+                raise ValueError(f"life trajectory metrics.{field}.{name} is nonfinite")
+            result[f"{field}.{name}"] = number
+    return result
+
+
 def evidence_records(value: dict[str, Any]) -> list[dict[str, Any]]:
     records = value.get("records", value.get("evidence_records", []))
     if not isinstance(records, list):
@@ -96,7 +139,7 @@ def evaluator_lives(values: Iterable[dict[str, Any]]) -> tuple[list[dict[str, An
                 "terminal_status": "completed" if status == "completed" else "failed",
                 "committed_ticks": int(row.get("committed_ticks", 0)),
                 "trajectory_sha256": trajectory,
-                "physical_metrics": finite_mapping(row.get("trajectory_metrics", {}), "life trajectory metrics")
+                "physical_metrics": physical_summary(row["trajectory_metrics"])
                     if isinstance(row.get("trajectory_metrics"), Mapping) else {},
             }
             lives.append(public)
@@ -118,8 +161,47 @@ def regional_records(values: Iterable[dict[str, Any]], environments: set[str]) -
         public = dict(record)
         public["sha256"] = identity
         # Graph coordinates are analyst annotations; they are never controller input.
-        if isinstance(value.get("graph"), Mapping):
-            public["region_graph"] = value["graph"]
+        graph = value.get("graph")
+        if isinstance(graph, Mapping):
+            nodes = graph.get("nodes", [])
+            edges = graph.get("edges", [])
+            if not isinstance(nodes, list) or not isinstance(edges, list):
+                raise ValueError("regional analyst graph nodes and edges must be lists")
+            regions = []
+            node_ids = []
+            for index, node in enumerate(nodes):
+                position, half = node.get("position_m"), node.get("half_size_m")
+                if not (isinstance(position, list) and len(position) == 3 and
+                        isinstance(half, list) and len(half) == 2):
+                    raise ValueError("regional analyst node geometry differs")
+                x, y, z = (float(item) for item in position)
+                hx, hy = (float(item) for item in half)
+                if not all(math.isfinite(item) for item in (x, y, z, hx, hy)) or hx <= 0 or hy <= 0:
+                    raise ValueError("regional analyst node geometry is invalid")
+                node_id = str(node.get("id", f"region-{index}"))
+                node_ids.append(node_id)
+                regions.append({
+                    "id": node_id, "position_m": [x, y, z], "half_size_m": [hx, hy],
+                    "polygon": [[x-hx, y-hy], [x+hx, y-hy], [x+hx, y+hy], [x-hx, y+hy]],
+                    "elevation": z, "lane": node.get("lane"),
+                    "underpass": bool(node.get("underpass", False)),
+                    "sheltered": bool(node.get("sheltered", False)),
+                })
+            public["regions"] = regions
+            public["region_edges"] = []
+            for edge in edges:
+                endpoints = edge.get("nodes")
+                if not (isinstance(endpoints, list) and len(endpoints) == 2 and
+                        all(isinstance(item, int) and 0 <= item < len(node_ids) for item in endpoints)):
+                    raise ValueError("regional analyst edge endpoints differ")
+                public["region_edges"].append({
+                    "id": str(edge.get("id", "regional-edge")),
+                    "from": node_ids[endpoints[0]], "to": node_ids[endpoints[1]],
+                    "rise_m": float(edge.get("rise_m", 0.0)),
+                    "run_m": float(edge.get("run_m", 0.0)),
+                    "width_m": float(edge.get("width_m", 0.0)),
+                })
+            public["region_graph_connected"] = bool(graph.get("connected", False))
         records.append(public)
     return records
 

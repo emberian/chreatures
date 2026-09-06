@@ -88,8 +88,53 @@ def current_parameter_recipe(
     return specs, founder
 
 
+def _serde_float(value: float) -> str:
+    if not math.isfinite(value):
+        raise ValueError("nonfinite values are not canonical JSON")
+    encoded = repr(value)
+    absolute = abs(value)
+    if "e" in encoded and 1e-5 <= absolute < 1e16:
+        mantissa, exponent_text = encoded.split("e")
+        exponent = int(exponent_text)
+        sign = ""
+        if mantissa.startswith("-"):
+            sign, mantissa = "-", mantissa[1:]
+        whole, _, fraction = mantissa.partition(".")
+        digits = whole + fraction
+        point = len(whole) + exponent
+        if point <= 0:
+            return sign + "0." + "0" * (-point) + digits
+        if point >= len(digits):
+            return sign + digits + "0" * (point - len(digits)) + ".0"
+        return sign + digits[:point] + "." + digits[point:]
+    if "e" in encoded:
+        mantissa, exponent = encoded.split("e")
+        encoded = f"{mantissa}e{int(exponent):+d}"
+    return encoded
+
+
+class _SerdeCanonicalEncoder(json.JSONEncoder):
+    def iterencode(self, value: Any, _one_shot: bool = False) -> Any:
+        markers = {} if self.check_circular else None
+        iterator = json.encoder._make_iterencode(
+            markers,
+            self.default,
+            json.encoder.encode_basestring,
+            self.indent,
+            _serde_float,
+            self.key_separator,
+            self.item_separator,
+            self.sort_keys,
+            self.skipkeys,
+            _one_shot,
+        )
+        return iterator(value, 0)
+
+
 def canonical_bytes(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    return _SerdeCanonicalEncoder(
+        sort_keys=True, separators=(",", ":"), allow_nan=False, ensure_ascii=False
+    ).encode(value).encode()
 
 
 def content_sha256(value: Mapping[str, Any], *, identity_field: str = "sha256") -> str:
