@@ -17,8 +17,8 @@ from typing import Any
 import mujoco
 import numpy as np
 
+from .body_genome import resolve_articulation
 from .physics import PhysicsBody, PhysicsWorld, _canonical, _hex
-
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BODY_SPEC = ROOT / "data/bodies/hexapod.json"
@@ -42,10 +42,24 @@ class ArticulatedWorld(PhysicsWorld):
         if body_spec is None:
             body_spec = habitat.get("articulated_body_spec", DEFAULT_BODY_SPEC)
         self.articulation_spec = (
-            copy.deepcopy(body_spec) if isinstance(body_spec, dict)
+            copy.deepcopy(body_spec)
+            if isinstance(body_spec, dict)
             else json.loads(Path(body_spec).read_text())
         )
         self._validate_articulation_spec(self.articulation_spec)
+        self._resident_articulation = {
+            body["id"]: resolve_articulation(
+                self.articulation_spec, body.get("articulated_traits")
+            )
+            for body in habitat["bodies"]
+        }
+        self._articulation_source_hash = hashlib.sha256(
+            _canonical(self.articulation_spec)
+        ).hexdigest()
+        self._resident_morphology_hashes = {
+            body_id: hashlib.sha256(_canonical(value)).hexdigest()
+            for body_id, value in self._resident_articulation.items()
+        }
         # Embed the exact mechanism definition in ordinary world snapshots so
         # inherited restore can reject drift or reconstruct a custom body.
         habitat["articulated_body_spec"] = copy.deepcopy(self.articulation_spec)
@@ -81,22 +95,29 @@ class ArticulatedWorld(PhysicsWorld):
         material = f"mat:{config['material']}"
         heading = float(config.get("heading", 0.0))
         quat = [math.cos(heading / 2), 0.0, 0.0, math.sin(heading / 2)]
-        trunk = self.articulation_spec["trunk"]
-        legs = self.articulation_spec["legs"]
-        antennae = self.articulation_spec["antennae"]
+        morphology = self._resident_articulation[body_id]
+        trunk = morphology["trunk"]
+        legs = morphology["legs"]
+        antennae = morphology["antennae"]
 
         pieces = [
-            f'<body {self._attrs({"name": f"resident:{body_id}", "pos": config["position"], "quat": quat})}>',
+            f"<body {self._attrs({'name': f'resident:{body_id}', 'pos': config['position'], 'quat': quat})}>",
             f'<freejoint name="resident:{body_id}:free"/>',
         ]
-        for part, position in (("thorax", [0.0, 0.0, 0.0]),
-                               ("head", trunk["head_position"]),
-                               ("abdomen", trunk["abdomen_position"])):
+        for part, position in (
+            ("thorax", [0.0, 0.0, 0.0]),
+            ("head", trunk["head_position"]),
+            ("abdomen", trunk["abdomen_position"]),
+        ):
             attrs = {
-                "name": f"resident:{body_id}:geom:{part}", "type": "ellipsoid",
-                "size": trunk[f"{part}_size"], "pos": position,
-                "material": material, "density": trunk["density"],
-                "friction": trunk["friction"], "condim": 4,
+                "name": f"resident:{body_id}:geom:{part}",
+                "type": "ellipsoid",
+                "size": trunk[f"{part}_size"],
+                "pos": position,
+                "material": material,
+                "density": trunk["density"],
+                "friction": trunk["friction"],
+                "condim": 4,
             }
             pieces.append(f"<geom {self._attrs(attrs)}/>")
 
@@ -104,15 +125,25 @@ class ArticulatedWorld(PhysicsWorld):
         for index, tip in enumerate(antennae["tip_positions"]):
             side = "left" if index == 0 else "right"
             geom = {
-                "name": f"resident:{body_id}:geom:antenna:{side}", "type": "capsule",
-                "size": [antennae["radius"]], "fromto": [*base, *tip],
-                "material": material, "density": 45.0, "contype": 0, "conaffinity": 0,
+                "name": f"resident:{body_id}:geom:antenna:{side}",
+                "type": "capsule",
+                "size": [antennae["radius"]],
+                "fromto": [*base, *tip],
+                "material": material,
+                "density": 45.0,
+                "contype": 0,
+                "conaffinity": 0,
             }
             site = {
-                "name": f"resident:{body_id}:site:antenna:{side}", "type": "sphere",
-                "size": [antennae["radius"] * 1.6], "pos": tip, "rgba": [1.0, 1.0, 1.0, 0.0],
+                "name": f"resident:{body_id}:site:antenna:{side}",
+                "type": "sphere",
+                "size": [antennae["radius"] * 1.6],
+                "pos": tip,
+                "rgba": [1.0, 1.0, 1.0, 0.0],
             }
-            pieces.extend((f"<geom {self._attrs(geom)}/>", f"<site {self._attrs(site)}/>"))
+            pieces.extend(
+                (f"<geom {self._attrs(geom)}/>", f"<site {self._attrs(site)}/>")
+            )
 
         upper_end_z = -float(legs["upper_drop"])
         lower_end_z = -float(legs["lower_drop"])
@@ -120,26 +151,48 @@ class ArticulatedWorld(PhysicsWorld):
             name, side = leg["name"], int(leg["side"])
             upper_end = [0.0, side * float(legs["upper_lateral"]), upper_end_z]
             lower_end = [0.0, side * float(legs["lower_lateral"]), lower_end_z]
-            pieces.append(f'<body {self._attrs({"name": f"resident:{body_id}:link:{name}:upper", "pos": leg["hip_position"]})}>')
-            pieces.append(f'<joint {self._attrs({"name": f"resident:{body_id}:joint:{name}:hip", "type": "hinge", "axis": [0, 0, 1], "range": legs["hip_range_degrees"], "limited": "true", "damping": legs["hip_damping"], "armature": legs["armature"]})}/>')
-            pieces.append(f'<geom {self._attrs({"name": f"resident:{body_id}:geom:{name}:upper", "type": "capsule", "size": [legs["upper_radius"]], "fromto": [0, 0, 0, *upper_end], "material": material, "density": legs["density"], "friction": trunk["friction"], "condim": 4})}/>')
-            pieces.append(f'<body {self._attrs({"name": f"resident:{body_id}:link:{name}:lower", "pos": upper_end})}>')
-            pieces.append(f'<joint {self._attrs({"name": f"resident:{body_id}:joint:{name}:knee", "type": "hinge", "axis": [1, 0, 0], "range": legs["knee_range_degrees"], "limited": "true", "damping": legs["knee_damping"], "armature": legs["armature"]})}/>')
-            pieces.append(f'<geom {self._attrs({"name": f"resident:{body_id}:geom:{name}:lower", "type": "capsule", "size": [legs["lower_radius"]], "fromto": [0, 0, 0, *lower_end], "material": material, "density": legs["density"], "friction": trunk["friction"], "condim": 4})}/>')
-            pieces.append(f'<geom {self._attrs({"name": f"resident:{body_id}:geom:{name}:tarsus", "type": "sphere", "size": [legs["tarsus_radius"]], "pos": lower_end, "material": material, "density": legs["tarsus_density"], "friction": legs["tarsus_friction"], "condim": 4})}/>')
-            pieces.append(f'<site {self._attrs({"name": f"resident:{body_id}:site:{name}:tarsus", "type": "sphere", "size": [legs["tarsus_radius"] * 0.45], "pos": lower_end, "rgba": [1.0, 1.0, 1.0, 0.0]})}/>')
+            pieces.append(
+                f"<body {self._attrs({'name': f'resident:{body_id}:link:{name}:upper', 'pos': leg['hip_position']})}>"
+            )
+            pieces.append(
+                f"<joint {self._attrs({'name': f'resident:{body_id}:joint:{name}:hip', 'type': 'hinge', 'axis': [0, 0, 1], 'range': legs['hip_range_degrees'], 'limited': 'true', 'damping': legs['hip_damping'], 'armature': legs['armature']})}/>"
+            )
+            pieces.append(
+                f"<geom {self._attrs({'name': f'resident:{body_id}:geom:{name}:upper', 'type': 'capsule', 'size': [legs['upper_radius']], 'fromto': [0, 0, 0, *upper_end], 'material': material, 'density': legs['density'], 'friction': trunk['friction'], 'condim': 4})}/>"
+            )
+            pieces.append(
+                f"<body {self._attrs({'name': f'resident:{body_id}:link:{name}:lower', 'pos': upper_end})}>"
+            )
+            pieces.append(
+                f"<joint {self._attrs({'name': f'resident:{body_id}:joint:{name}:knee', 'type': 'hinge', 'axis': [1, 0, 0], 'range': legs['knee_range_degrees'], 'limited': 'true', 'damping': legs['knee_damping'], 'armature': legs['armature']})}/>"
+            )
+            pieces.append(
+                f"<geom {self._attrs({'name': f'resident:{body_id}:geom:{name}:lower', 'type': 'capsule', 'size': [legs['lower_radius']], 'fromto': [0, 0, 0, *lower_end], 'material': material, 'density': legs['density'], 'friction': trunk['friction'], 'condim': 4})}/>"
+            )
+            pieces.append(
+                f"<geom {self._attrs({'name': f'resident:{body_id}:geom:{name}:tarsus', 'type': 'sphere', 'size': [legs['tarsus_radius']], 'pos': lower_end, 'material': material, 'density': legs['tarsus_density'], 'friction': legs['tarsus_friction'], 'condim': 4})}/>"
+            )
+            pieces.append(
+                f"<site {self._attrs({'name': f'resident:{body_id}:site:{name}:tarsus', 'type': 'sphere', 'size': [legs['tarsus_radius'] * 0.45], 'pos': lower_end, 'rgba': [1.0, 1.0, 1.0, 0.0]})}/>"
+            )
             pieces.extend(("</body>", "</body>"))
         pieces.append("</body>")
         return "".join(pieces)
 
     def _compile_model(self) -> None:
         super()._compile_model()
-        self._model_signature = hashlib.sha256(_canonical({
-            "habitat": self.spec,
-            "articulation": self.articulation_spec,
-            "mujoco": mujoco.__version__,
-            "compiled_xml_sha256": hashlib.sha256(self._xml.encode()).hexdigest(),
-        })).hexdigest()
+        self._model_signature = hashlib.sha256(
+            _canonical(
+                {
+                    "habitat": self.spec,
+                    "articulation": self.articulation_spec,
+                    "mujoco": mujoco.__version__,
+                    "compiled_xml_sha256": hashlib.sha256(
+                        self._xml.encode()
+                    ).hexdigest(),
+                }
+            )
+        ).hexdigest()
         self._leg_joints: dict[str, dict[str, dict[str, int]]] = {}
         self._tarsus_geoms: dict[str, dict[str, int]] = {}
         self._articulated_links: dict[str, dict[str, int]] = {}
@@ -150,30 +203,36 @@ class ArticulatedWorld(PhysicsWorld):
             tarsi: dict[str, int] = {}
             links = {"trunk": self._body_mj[resident_id]}
             sites: dict[str, int] = {}
-            for leg in self.articulation_spec["legs"]["layout"]:
+            for leg in self._resident_articulation[resident_id]["legs"]["layout"]:
                 name = leg["name"]
                 joints[name] = {
                     kind: mujoco.mj_name2id(
-                        self.model, mujoco.mjtObj.mjOBJ_JOINT,
+                        self.model,
+                        mujoco.mjtObj.mjOBJ_JOINT,
                         f"resident:{resident_id}:joint:{name}:{kind}",
-                    ) for kind in ("hip", "knee")
+                    )
+                    for kind in ("hip", "knee")
                 }
                 for segment in ("upper", "lower"):
                     links[f"{name}:{segment}"] = mujoco.mj_name2id(
-                        self.model, mujoco.mjtObj.mjOBJ_BODY,
+                        self.model,
+                        mujoco.mjtObj.mjOBJ_BODY,
                         f"resident:{resident_id}:link:{name}:{segment}",
                     )
                 tarsi[name] = mujoco.mj_name2id(
-                    self.model, mujoco.mjtObj.mjOBJ_GEOM,
+                    self.model,
+                    mujoco.mjtObj.mjOBJ_GEOM,
                     f"resident:{resident_id}:geom:{name}:tarsus",
                 )
                 sites[f"{name}:tarsus"] = mujoco.mj_name2id(
-                    self.model, mujoco.mjtObj.mjOBJ_SITE,
+                    self.model,
+                    mujoco.mjtObj.mjOBJ_SITE,
                     f"resident:{resident_id}:site:{name}:tarsus",
                 )
             for side in ("left", "right"):
                 sites[f"antenna:{side}"] = mujoco.mj_name2id(
-                    self.model, mujoco.mjtObj.mjOBJ_SITE,
+                    self.model,
+                    mujoco.mjtObj.mjOBJ_SITE,
                     f"resident:{resident_id}:site:antenna:{side}",
                 )
             self._leg_joints[resident_id] = joints
@@ -181,15 +240,18 @@ class ArticulatedWorld(PhysicsWorld):
             self._articulated_links[resident_id] = links
             self._articulated_sites[resident_id] = sites
 
-    def _apply_crawler_forces(self, body: PhysicsBody, action: dict[str, Any], noise: np.ndarray) -> None:
+    def _apply_crawler_forces(
+        self, body: PhysicsBody, action: dict[str, Any], noise: np.ndarray
+    ) -> None:
         """Apply joint servos and a bounded roll/pitch stance reflex.
 
         The inherited method's trunk traction is intentionally replaced.  The
         only route from forward/yaw commands to translation is articulated foot
         motion followed by MuJoCo contact and friction.
         """
-        controller = self.articulation_spec["controller"]
-        layout = self.articulation_spec["legs"]["layout"]
+        morphology = self._resident_articulation[body.id]
+        controller = morphology["controller"]
+        layout = morphology["legs"]["layout"]
         forward = float(action.get("forward", action.get("thrust", 0.0)))
         turn = float(action.get("turn", action.get("yaw", 0.0)))
         activity = max(abs(forward), abs(turn))
@@ -204,9 +266,11 @@ class ArticulatedWorld(PhysicsWorld):
 
         for leg in layout:
             name, side = leg["name"], int(leg["side"])
-            side_drive = float(np.clip(
-                forward + side * float(controller["turn_gain"]) * turn, -1.0, 1.0
-            ))
+            side_drive = float(
+                np.clip(
+                    forward + side * float(controller["turn_gain"]) * turn, -1.0, 1.0
+                )
+            )
             if activity < 1e-4 or abs(side_drive) < 1e-4:
                 hip_target, knee_target = 0.0, side * idle_knee
             else:
@@ -220,7 +284,13 @@ class ArticulatedWorld(PhysicsWorld):
                     progress = (cycle - stance_fraction) / (1.0 - stance_fraction)
                     sweep = -1.0 + 2.0 * progress
                     knee_target = side * knee_swing
-                hip_target = -side * math.copysign(1.0, side_drive) * hip_amplitude * stride * sweep
+                hip_target = (
+                    -side
+                    * math.copysign(1.0, side_drive)
+                    * hip_amplitude
+                    * stride
+                    * sweep
+                )
             targets = {"hip": hip_target, "knee": knee_target}
             for kind, target in targets.items():
                 joint_id = self._leg_joints[body.id][name][kind]
@@ -228,19 +298,21 @@ class ArticulatedWorld(PhysicsWorld):
                 dadr = int(self.model.jnt_dofadr[joint_id])
                 kp = float(controller[f"{kind}_kp"])
                 kd = float(controller[f"{kind}_kd"])
-                torque = kp * (target - float(self.data.qpos[qadr])) - kd * float(self.data.qvel[dadr])
-                self.data.qfrc_applied[dadr] = float(np.clip(torque, -torque_limit, torque_limit))
+                torque = kp * (target - float(self.data.qpos[qadr])) - kd * float(
+                    self.data.qvel[dadr]
+                )
+                self.data.qfrc_applied[dadr] = float(
+                    np.clip(torque, -torque_limit, torque_limit)
+                )
 
         # A low-gain vestibular stance reflex keeps the trunk over the support
         # polygon.  It supplies torque only; it cannot translate or set height.
         root = self._body_mj[body.id]
         rotation = self.data.xmat[root].reshape(3, 3)
         _, angular = self._velocity(root)
-        correction = (
-            np.cross(rotation[:, 2], np.array([0.0, 0.0, 1.0]))
-            * float(controller["posture_kp"])
-            - angular * float(controller["posture_kd"])
-        )
+        correction = np.cross(rotation[:, 2], np.array([0.0, 0.0, 1.0])) * float(
+            controller["posture_kp"]
+        ) - angular * float(controller["posture_kd"])
         correction[2] = 0.0
         limit = float(controller["max_posture_torque"])
         norm = float(np.linalg.norm(correction))
@@ -252,15 +324,21 @@ class ArticulatedWorld(PhysicsWorld):
         values = super().sense(body_id)
         values["tarsal_contact"] = self._tarsal_contacts(body_id)
         joint_position, joint_velocity = [], []
-        for leg in self.articulation_spec["legs"]["layout"]:
+        for leg in self._resident_articulation[body_id]["legs"]["layout"]:
             for kind in ("hip", "knee"):
                 joint_id = self._leg_joints[body_id][leg["name"]][kind]
-                joint_position.append(float(self.data.qpos[self.model.jnt_qposadr[joint_id]]))
-                joint_velocity.append(float(self.data.qvel[self.model.jnt_dofadr[joint_id]]))
+                joint_position.append(
+                    float(self.data.qpos[self.model.jnt_qposadr[joint_id]])
+                )
+                joint_velocity.append(
+                    float(self.data.qvel[self.model.jnt_dofadr[joint_id]])
+                )
         values["joint_position"] = joint_position
         values["joint_velocity"] = joint_velocity
         values["antenna_position"] = [
-            self.data.site_xpos[self._articulated_sites[body_id][f"antenna:{side}"]].astype(float).tolist()
+            self.data.site_xpos[self._articulated_sites[body_id][f"antenna:{side}"]]
+            .astype(float)
+            .tolist()
             for side in ("left", "right")
         ]
         return values
@@ -274,10 +352,16 @@ class ArticulatedWorld(PhysicsWorld):
         ]
         result = np.zeros((2, 3), dtype=float)
         for entity in self._entities:
-            scent = next((c for c in self._components[entity["id"]] if c.get("type") == "scent"), None)
+            scent = next(
+                (c for c in self._components[entity["id"]] if c.get("type") == "scent"),
+                None,
+            )
             if scent is None:
                 continue
-            food = next((c for c in self._components[entity["id"]] if c.get("type") == "food"), None)
+            food = next(
+                (c for c in self._components[entity["id"]] if c.get("type") == "food"),
+                None,
+            )
             availability = max(0.0, float(food["amount"])) if food else 1.0
             if availability <= 0.0:
                 continue
@@ -286,7 +370,8 @@ class ArticulatedWorld(PhysicsWorld):
                 distance2 = float(np.dot(source - antenna, source - antenna))
                 if distance2 <= (4.0 * sigma) ** 2:
                     result[side, int(scent["odor"])] += (
-                        float(scent.get("strength", 1.0)) * availability
+                        float(scent.get("strength", 1.0))
+                        * availability
                         * math.exp(-distance2 / (2.0 * sigma * sigma))
                     )
         return np.clip(result, 0.0, 4.0).tolist()
@@ -301,8 +386,13 @@ class ArticulatedWorld(PhysicsWorld):
                 continue
             force = np.zeros(6, dtype=float)
             mujoco.mj_contactForce(self.model, self.data, index, force)
-            strength[foot] = max(strength[foot], min(1.0, float(np.linalg.norm(force[:3])) / 1.2))
-        return [strength[leg["name"]] for leg in self.articulation_spec["legs"]["layout"]]
+            strength[foot] = max(
+                strength[foot], min(1.0, float(np.linalg.norm(force[:3])) / 1.2)
+            )
+        return [
+            strength[leg["name"]]
+            for leg in self._resident_articulation[body_id]["legs"]["layout"]
+        ]
 
     @staticmethod
     def _world_quaternion(matrix: np.ndarray) -> list[float]:
@@ -317,66 +407,130 @@ class ArticulatedWorld(PhysicsWorld):
             resident_id = body_view["id"]
             links = []
             for name, body_id in self._articulated_links[resident_id].items():
-                links.append({
-                    "name": name,
-                    "position": self.data.xpos[body_id].astype(float).tolist(),
-                    "quaternion": self.data.xquat[body_id].astype(float).tolist(),
-                })
+                links.append(
+                    {
+                        "name": name,
+                        "position": self.data.xpos[body_id].astype(float).tolist(),
+                        "quaternion": self.data.xquat[body_id].astype(float).tolist(),
+                    }
+                )
             geoms = []
             for geom_id, owner in self._geom_resident.items():
                 if owner != resident_id:
                     continue
-                full_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
+                full_name = mujoco.mj_id2name(
+                    self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id
+                )
                 kind = int(self.model.geom_type[geom_id])
                 type_name = {
                     int(mujoco.mjtGeom.mjGEOM_SPHERE): "sphere",
                     int(mujoco.mjtGeom.mjGEOM_CAPSULE): "capsule",
                     int(mujoco.mjtGeom.mjGEOM_ELLIPSOID): "ellipsoid",
                 }.get(kind, "unknown")
-                size_count = 3 if type_name == "ellipsoid" else 1 if type_name == "sphere" else 2
+                size_count = (
+                    3 if type_name == "ellipsoid" else 1 if type_name == "sphere" else 2
+                )
                 link_id = int(self.model.geom_bodyid[geom_id])
-                link_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, link_id)
-                geoms.append({
-                    "name": full_name.split(f"resident:{resident_id}:", 1)[-1],
-                    "link": "trunk" if link_id == self._body_mj[resident_id] else link_name.split(":link:", 1)[-1],
-                    "type": type_name,
-                    "size": self.model.geom_size[geom_id, :size_count].astype(float).tolist(),
-                    "position": self.data.geom_xpos[geom_id].astype(float).tolist(),
-                    "quaternion": self._world_quaternion(self.data.geom_xmat[geom_id]),
-                    "color": _hex([*self._geom_rgb(geom_id), 1.0]),
-                })
+                link_name = mujoco.mj_id2name(
+                    self.model, mujoco.mjtObj.mjOBJ_BODY, link_id
+                )
+                geoms.append(
+                    {
+                        "name": full_name.split(f"resident:{resident_id}:", 1)[-1],
+                        "link": "trunk"
+                        if link_id == self._body_mj[resident_id]
+                        else link_name.split(":link:", 1)[-1],
+                        "type": type_name,
+                        "size": self.model.geom_size[geom_id, :size_count]
+                        .astype(float)
+                        .tolist(),
+                        "position": self.data.geom_xpos[geom_id].astype(float).tolist(),
+                        "quaternion": self._world_quaternion(
+                            self.data.geom_xmat[geom_id]
+                        ),
+                        "color": _hex([*self._geom_rgb(geom_id), 1.0]),
+                    }
+                )
             joints = []
-            for leg in self.articulation_spec["legs"]["layout"]:
+            for leg in self._resident_articulation[resident_id]["legs"]["layout"]:
                 for kind in ("hip", "knee"):
                     joint_id = self._leg_joints[resident_id][leg["name"]][kind]
-                    joints.append({
-                        "name": f"{leg['name']}:{kind}",
-                        "position": float(self.data.qpos[self.model.jnt_qposadr[joint_id]]),
-                        "velocity": float(self.data.qvel[self.model.jnt_dofadr[joint_id]]),
-                        "anchor": self.data.xanchor[joint_id].astype(float).tolist(),
-                        "axis": self.data.xaxis[joint_id].astype(float).tolist(),
-                        "range": self.model.jnt_range[joint_id].astype(float).tolist(),
-                    })
+                    joints.append(
+                        {
+                            "name": f"{leg['name']}:{kind}",
+                            "position": float(
+                                self.data.qpos[self.model.jnt_qposadr[joint_id]]
+                            ),
+                            "velocity": float(
+                                self.data.qvel[self.model.jnt_dofadr[joint_id]]
+                            ),
+                            "anchor": self.data.xanchor[joint_id]
+                            .astype(float)
+                            .tolist(),
+                            "axis": self.data.xaxis[joint_id].astype(float).tolist(),
+                            "range": self.model.jnt_range[joint_id]
+                            .astype(float)
+                            .tolist(),
+                        }
+                    )
             sites = []
             for name, site_id in self._articulated_sites[resident_id].items():
-                sites.append({
-                    "name": name,
-                    "position": self.data.site_xpos[site_id].astype(float).tolist(),
-                    "quaternion": self._world_quaternion(self.data.site_xmat[site_id]),
-                })
-            articulation = {"id": resident_id, "links": links, "geoms": geoms, "joints": joints, "sites": sites}
+                sites.append(
+                    {
+                        "name": name,
+                        "position": self.data.site_xpos[site_id].astype(float).tolist(),
+                        "quaternion": self._world_quaternion(
+                            self.data.site_xmat[site_id]
+                        ),
+                    }
+                )
+            articulation = {
+                "id": resident_id,
+                "links": links,
+                "geoms": geoms,
+                "joints": joints,
+                "sites": sites,
+            }
             articulations.append(articulation)
-            body_view.update({
-                "shape": "compound", "size": list(map(float, self.articulation_spec["trunk"]["thorax_size"])),
-                "shapes": geoms, "articulation": articulation,
-            })
+            body_view.update(
+                {
+                    "shape": "compound",
+                    "size": list(
+                        map(
+                            float,
+                            self._resident_articulation[resident_id]["trunk"][
+                                "thorax_size"
+                            ],
+                        )
+                    ),
+                    "shapes": geoms,
+                    "articulation": articulation,
+                    "articulated_traits": copy.deepcopy(
+                        self._resident_articulation[resident_id]["inherited_traits"]
+                    ),
+                }
+            )
         view["body_model"] = {
             "name": self.articulation_spec["name"],
             "kind": "engineered_hexapod",
             "joint_count_per_resident": 12,
+            "source_sha256": self._articulation_source_hash,
+            "resident_sha256": self._resident_morphology_hashes.copy(),
         }
         view["articulations"] = articulations
         return view
+
+    def snapshot(self) -> dict[str, Any]:
+        value = super().snapshot()
+        value["articulated_morphology"] = {
+            "source_sha256": self._articulation_source_hash,
+            "resident_sha256": self._resident_morphology_hashes.copy(),
+            "traits": {
+                body_id: copy.deepcopy(spec["inherited_traits"])
+                for body_id, spec in self._resident_articulation.items()
+            },
+        }
+        return value
 
 
 __all__ = ["DEFAULT_BODY_SPEC", "ArticulatedWorld"]

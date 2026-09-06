@@ -1,0 +1,44 @@
+{
+  "artifacts": {
+    "derived-edges.npz": {
+      "bytes": 3632867,
+      "sha256": "4892c2c1c560312c6fa3c93d3988a21795d21c249ba135508b38a82bb21be3db"
+    },
+    "manifest.json": {
+      "bytes": 13091,
+      "sha256": "92bd87cbd350394658d6596707cc81e6f70daa684f556f037f4887ce934a5c77"
+    },
+    "native-csr-v2.bin": {
+      "bytes": 215270940,
+      "sha256": "627ac3648fcc454ce8a7212626c0ba3fec8bc0b8d97ede800ca2c4e029509f57"
+    },
+    "native-csr-v2.manifest.json": {
+      "bytes": 598,
+      "sha256": "bc0135190a0a71cc0a6522c149520f35e06c2a514c6025b2a907cd60c8ff8d6c"
+    },
+    "ports.npz": {
+      "bytes": 419620,
+      "sha256": "c85ee11910849330b69387d78114ebeffdbfbddaed47bf1ec7fb6eea91d4273f"
+    },
+    "validation-amd.json": {
+      "bytes": 1296,
+      "sha256": "e8ef20dbde377679cb1a2cb7e65bdd4b664cec286e6ccb7aa5fa5ae55736f18a"
+    }
+  },
+  "blueprint_sha256": "02d23547d18ad536acded9fec770d4da8dd0cc0374d833c84cac427d20f5c220",
+  "citation": "Sexual dimorphism in the complete Drosophila male central nervous system connectome, Cell (2026), doi:10.1016/j.cell.2026.08.015",
+  "counts": {
+    "affected_ancestral_normalization_rows": 3152,
+    "derived_neurons": 3627,
+    "edges": 26557080,
+    "neurons": 168749,
+    "synapses": 126896270
+  },
+  "graph_sha256": "8056fd12375667bee1f0aa3afe60f450615aea66aec3330701324dcb16ad1cf5",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "name": "gamma1pedc-duplicate-v1",
+  "parent_graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "schema_version": 1,
+  "storage": "/tank/chreatures/data/circuit-blueprints/gamma1pedc-duplicate-v1"
+}
