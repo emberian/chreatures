@@ -1,0 +1,50 @@
+{
+  "checkpoint": {
+    "format": "chreatures-rich-online-sensorimotor-development-v5",
+    "path": "/tank/chreatures/runs/development/population-v5-body-actuator-seed20260917-attempt4/checkpoint-update-000020.pt",
+    "physical_steps": 2560,
+    "sha256": "969bb3130de1e54ec71c63a3234355cbdadc1c6242fe0e4e46206afb7b74b46c",
+    "updates": 20
+  },
+  "delta_receipt_sha256": "48af9e9c613b62914f869c9f37516dbb9af31102b8525879b9f99c5724409b31",
+  "evidence_scope": "Parameter learning and recorded exploration, not a matched demonstration of useful control. Higher new-actuator coverage includes deliberate 0.05 cold exploration initialization.",
+  "format": "chreatures-population-v5-training-export-receipt-v1",
+  "inference_scope": "Actual learned weights exported for a separate new research birth; no existing resident changed.",
+  "native_export": {
+    "artifact_sha256": "8bad66b025c53b2a6e81419f7ac2fa0cad3a215c721d355568e95c79597da8cd",
+    "bytes": 11656700,
+    "file_sha256": "6f46a8c6f013d2e69b6baeae68c5746f494f07b3283dfee67dfbb07ba4919a84",
+    "path": "/tank/chreatures/data/models/sensorimotor-rich/population-v5-trained-seed20260917-update20/developmental-resident-population-v5-update20.npz"
+  },
+  "new_actuator_order": [
+    "eat",
+    "release",
+    "secrete",
+    "allocate"
+  ],
+  "physical_dt_seconds": 0.05,
+  "physiology_order": [
+    "energy",
+    "gut",
+    "fatigue",
+    "speed",
+    "turn",
+    "neural_support",
+    "structural_integrity",
+    "development_fraction",
+    "gland_fill",
+    "brood_fill",
+    "reproductive_maturity",
+    "exchange_load"
+  ],
+  "population_adapters": {
+    "count": 4,
+    "identity": "17da56d24ba4c541899ecbd585e2dd451cb47d6d2f87d1e464e401a83954ce8e",
+    "rank": 8
+  },
+  "resident_transitions": 81920,
+  "residents_per_world": 8,
+  "run_identity_sha256": "47b4592fa47973ecfab2a8df7c9d9b05de0370c94b3838c353093b51e2bf93e7",
+  "source_commit": "3afb6579473428624ccd693c5fb82a4f2cdaf627",
+  "worlds": 4
+}
