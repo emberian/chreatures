@@ -1,0 +1,17 @@
+{
+  "artifact_bytes": 207261844,
+  "artifact_sha256": "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0",
+  "edges": 25563197,
+  "format": "metal-csr-v2",
+  "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "inputs": 351,
+  "neurons": 165122,
+  "port_bundle_sha256": "933b871fdd11dafa8c43afceb9862101984bf0950592af84631a4d7aa9bebe53",
+  "port_map_equality": "equal dtype, shape, and element values for every sparse map array and channel name",
+  "port_spec_sha256": "a3182cc5c546fac164774e56cfcf3d4f185c2feab5a994fe3d2a37cc8604302e",
+  "readouts": 384,
+  "recipe": "normalized-signed-float32-recurrence+retinal-v2-csr",
+  "schema_version": 2,
+  "source_artifact_sha256": "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0",
+  "source_port_bundle_sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2"
+}

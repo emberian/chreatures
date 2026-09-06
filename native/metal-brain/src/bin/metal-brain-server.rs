@@ -8,9 +8,9 @@ use std::{
     time::Instant,
 };
 const SHADER: &str = include_str!("../brain.metal");
-const B: usize = 3;
 const INPUTS: usize = 351;
 const OUTPUTS: usize = 387;
+const MAX_CAPACITY: usize = 32;
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct Params {
@@ -21,6 +21,8 @@ struct Params {
     recovery: f32,
     final_step: u32,
     active_mask: u32,
+    capacity: u32,
+    tiles: u32,
 }
 fn read_vec<T: Copy + Default>(r: &mut File, n: usize) -> Vec<T> {
     let mut v = vec![T::default(); n];
@@ -96,6 +98,8 @@ struct Reply {
 struct Engine {
     device: Device,
     n: usize,
+    capacity: usize,
+    tiles: usize,
     queue: metal::CommandQueue,
     rec: [Buffer; 3],
     input: [Buffer; 3],
@@ -117,7 +121,9 @@ struct Engine {
     simd_rows: bool,
 }
 impl Engine {
-    fn load(path: &Path, simd_rows: bool) -> Self {
+    fn load(path: &Path, simd_rows: bool, capacity: usize) -> Self {
+        assert!((1..=MAX_CAPACITY).contains(&capacity));
+        let tiles = capacity.div_ceil(4);
         let mut f = File::open(path).unwrap();
         let h = read_vec::<u32>(&mut f, 6);
         assert_eq!(h[0], 0x4d424732);
@@ -145,17 +151,24 @@ impl Engine {
             d.new_compute_pipeline_state_with_function(&lib.get_function(name, None).unwrap())
                 .unwrap()
         };
-        let z = vec![[0f32; 4]; n];
-        let ones = vec![[1f32; 4]; n];
+        let z = vec![[0f32; 4]; n * tiles];
+        let mut ones = vec![[1f32; 4]; n * tiles];
+        if capacity % 4 != 0 {
+            for row in 0..n {
+                for lane in capacity % 4..4 {
+                    ones[row * tiles + tiles - 1][lane] = 0.0;
+                }
+            }
+        }
         Self {
             queue: d.new_command_queue(),
             rate: [buf(&d, &z), buf(&d, &z)],
             adapt: buf(&d, &z),
             support: buf(&d, &ones),
-            drive: zeros(&d, n),
-            channels: zeros(&d, INPUTS),
-            output: zeros(&d, OUTPUTS),
-            partial: zeros(&d, n.div_ceil(256) * 3),
+            drive: zeros(&d, n * tiles),
+            channels: zeros(&d, INPUTS * tiles),
+            output: zeros(&d, OUTPUTS * tiles),
+            partial: zeros(&d, n.div_ceil(256) * tiles * 3),
             k_in: pipeline("project_inputs"),
             k_rec: pipeline(if simd_rows {
                 "csr_rate_simd"
@@ -173,6 +186,8 @@ impl Engine {
             k_gather: pipeline("gather_rates"),
             device: d,
             n,
+            capacity,
+            tiles,
             rec,
             input,
             readout,
@@ -194,8 +209,19 @@ impl Engine {
         target_indices: &[u32],
         corrections: &[f32],
     ) -> Result<(Vec<f32>, Vec<f32>, f64), String> {
-        if ch.len() != INPUTS * B {
-            return Err("channels must have shape [351,3]".into());
+        if !dt.is_finite() || !(0.0..=0.2).contains(&dt) || dt == 0.0 {
+            return Err("dt must be finite and in (0, 0.2]".into());
+        }
+        let valid_mask = if self.capacity == 32 {
+            u32::MAX
+        } else {
+            (1_u32 << self.capacity) - 1
+        };
+        if mask & !valid_mask != 0 {
+            return Err("active mask exceeds configured capacity".into());
+        }
+        if ch.len() != INPUTS * self.capacity {
+            return Err(format!("channels must have shape [351,{}]", self.capacity));
         }
         if selected_indices.len() > 8192 || selected_indices.iter().any(|&x| x as usize >= self.n) {
             return Err("selected neuron indices are invalid".into());
@@ -209,11 +235,14 @@ impl Engine {
         let corrected = !target_indices.is_empty() || !corrections.is_empty();
         if corrected
             && (target_indices.len() != 2
-                || corrections.len() != 2 * B
+                || corrections.len() != 2 * self.capacity
                 || target_indices[0] == target_indices[1]
                 || target_indices.iter().any(|&x| x as usize >= self.n))
         {
-            return Err("target correction requires two unique indices and shape [2,3]".into());
+            return Err(format!(
+                "target correction requires two unique indices and shape [2,{}]",
+                self.capacity
+            ));
         }
         let target_buffer = if corrected {
             Some(buf(&self.device, target_indices))
@@ -221,9 +250,12 @@ impl Engine {
             None
         };
         let correction_buffer = if corrected {
-            let mut packed = vec![[0f32; 4]; 2];
+            let mut packed = vec![[0f32; 4]; 2 * self.tiles];
             for i in 0..2 {
-                packed[i][..B].copy_from_slice(&corrections[i * B..i * B + B])
+                for resident in 0..self.capacity {
+                    packed[i * self.tiles + resident / 4][resident % 4] =
+                        corrections[i * self.capacity + resident];
+                }
             }
             Some(buf(&self.device, &packed))
         } else {
@@ -237,17 +269,20 @@ impl Engine {
         let selected_buffer = if selected_indices.is_empty() {
             None
         } else {
-            Some(zeros(&self.device, selected_indices.len()))
+            Some(zeros(&self.device, selected_indices.len() * self.tiles))
         };
-        let mut packed = vec![[0f32; 4]; INPUTS];
+        let mut packed = vec![[0f32; 4]; INPUTS * self.tiles];
         for i in 0..INPUTS {
-            packed[i][..B].copy_from_slice(&ch[i * B..i * B + B])
+            for resident in 0..self.capacity {
+                packed[i * self.tiles + resident / 4][resident % 4] =
+                    ch[i * self.capacity + resident];
+            }
         }
         unsafe {
             std::ptr::copy_nonoverlapping(
                 packed.as_ptr(),
                 self.channels.contents() as *mut [f32; 4],
-                INPUTS,
+                INPUTS * self.tiles,
             )
         }
         let p0 = Params {
@@ -258,6 +293,8 @@ impl Engine {
             recovery: 0.024,
             final_step: 0,
             active_mask: mask,
+            capacity: self.capacity as u32,
+            tiles: self.tiles as u32,
         };
         let p1 = Params {
             final_step: 1,
@@ -280,7 +317,7 @@ impl Engine {
                 ],
             );
             e.set_buffer(8, Some(&pb0), 0);
-            Self::grid(e, &self.k_in, self.n);
+            Self::grid(e, &self.k_in, self.n * self.tiles);
             e.end_encoding()
         }
         for (final_step, pb, rin, rout) in [
@@ -314,11 +351,11 @@ impl Engine {
             }
             if self.simd_rows {
                 e.dispatch_threads(
-                    MTLSize::new(self.n as u64 * 32, 1, 1),
+                    MTLSize::new((self.n * self.tiles) as u64 * 32, 1, 1),
                     MTLSize::new(256, 1, 1),
                 );
             } else {
-                Self::grid(e, recurrent_pipeline, self.n);
+                Self::grid(e, recurrent_pipeline, self.n * self.tiles);
             }
             e.end_encoding();
             let _ = final_step;
@@ -336,13 +373,15 @@ impl Engine {
                     &self.output,
                 ],
             );
-            Self::grid(e, &self.k_out, 384);
+            e.set_buffer(8, Some(&pb1), 0);
+            Self::grid(e, &self.k_out, 384 * self.tiles);
             e.end_encoding()
         }
         if let (Some(indices), Some(selected)) = (&selected_index_buffer, &selected_buffer) {
             let e = cb.new_compute_command_encoder();
             bind(e, &self.k_gather, &[&self.rate[0], indices, selected]);
-            Self::grid(e, &self.k_gather, selected_indices.len());
+            e.set_buffer(8, Some(&pb1), 0);
+            Self::grid(e, &self.k_gather, selected_indices.len() * self.tiles);
             e.end_encoding()
         }
         {
@@ -354,7 +393,7 @@ impl Engine {
             );
             e.set_buffer(8, Some(&pb1), 0);
             e.dispatch_threads(
-                MTLSize::new(self.n.div_ceil(256) as u64 * 256, 1, 1),
+                MTLSize::new((self.n.div_ceil(256) * self.tiles * 256) as u64, 1, 1),
                 MTLSize::new(256, 1, 1),
             );
             e.end_encoding()
@@ -363,22 +402,27 @@ impl Engine {
             let e = cb.new_compute_command_encoder();
             bind(e, &self.k_phys_final, &[&self.partial, &self.output]);
             e.set_buffer(8, Some(&pb1), 0);
-            Self::grid(e, &self.k_phys_final, 1);
+            Self::grid(e, &self.k_phys_final, self.tiles);
             e.end_encoding()
         }
         let t = Instant::now();
         cb.commit();
         cb.wait_until_completed();
         let ms = t.elapsed().as_secs_f64() * 1000.0;
-        let raw = copy::<[f32; 4]>(&self.output, OUTPUTS);
-        let mut out = Vec::with_capacity(OUTPUTS * B);
-        for x in raw {
-            out.extend_from_slice(&x[..B])
+        let raw = copy::<[f32; 4]>(&self.output, OUTPUTS * self.tiles);
+        let mut out = Vec::with_capacity(OUTPUTS * self.capacity);
+        for row in 0..OUTPUTS {
+            for resident in 0..self.capacity {
+                out.push(raw[row * self.tiles + resident / 4][resident % 4]);
+            }
         }
-        let mut selected_out = Vec::with_capacity(selected_indices.len() * B);
+        let mut selected_out = Vec::with_capacity(selected_indices.len() * self.capacity);
         if let Some(selected) = selected_buffer {
-            for x in copy::<[f32; 4]>(&selected, selected_indices.len()) {
-                selected_out.extend_from_slice(&x[..B])
+            let raw_selected = copy::<[f32; 4]>(&selected, selected_indices.len() * self.tiles);
+            for row in 0..selected_indices.len() {
+                for resident in 0..self.capacity {
+                    selected_out.push(raw_selected[row * self.tiles + resident / 4][resident % 4]);
+                }
             }
         }
         Ok((out, selected_out, ms))
@@ -389,11 +433,12 @@ impl Engine {
             let a = self.adapt.contents() as *mut [f32; 4];
             let s = self.support.contents() as *mut [f32; 4];
             for i in 0..self.n {
-                for j in 0..B {
+                for j in 0..self.capacity {
                     if mask & (1 << j) != 0 {
-                        (*r.add(i))[j] = 0.;
-                        (*a.add(i))[j] = 0.;
-                        (*s.add(i))[j] = 1.;
+                        let index = i * self.tiles + j / 4;
+                        (*r.add(index))[j % 4] = 0.;
+                        (*a.add(index))[j % 4] = 0.;
+                        (*s.add(index))[j % 4] = 1.;
                     }
                 }
             }
@@ -406,7 +451,7 @@ impl Engine {
         f.write_all(&(metadata.len() as u64).to_le_bytes()).unwrap();
         f.write_all(metadata.as_bytes()).unwrap();
         for b in [&self.rate[0], &self.adapt, &self.support] {
-            let v = copy::<[f32; 4]>(b, self.n);
+            let v = copy::<[f32; 4]>(b, self.n * self.tiles);
             f.write_all(unsafe {
                 std::slice::from_raw_parts(v.as_ptr() as *const u8, std::mem::size_of_val(&*v))
             })
@@ -425,9 +470,13 @@ impl Engine {
         let mut m = vec![0u8; u64::from_le_bytes(l) as usize];
         f.read_exact(&mut m).unwrap();
         for b in [&self.rate[0], &self.adapt, &self.support] {
-            let v = read_vec::<[f32; 4]>(&mut f, self.n);
+            let v = read_vec::<[f32; 4]>(&mut f, self.n * self.tiles);
             unsafe {
-                std::ptr::copy_nonoverlapping(v.as_ptr(), b.contents() as *mut [f32; 4], self.n)
+                std::ptr::copy_nonoverlapping(
+                    v.as_ptr(),
+                    b.contents() as *mut [f32; 4],
+                    self.n * self.tiles,
+                )
             }
         }
         String::from_utf8(m).unwrap()
@@ -437,10 +486,20 @@ fn main() {
     let mut args = std::env::args().skip(1);
     let path = args.next().expect("artifact path");
     let simd_rows = matches!(args.next().as_deref(), Some("simd"));
-    let mut x = Engine::load(Path::new(&path), simd_rows);
+    let capacity = args
+        .next()
+        .expect("capacity")
+        .parse::<usize>()
+        .expect("capacity must be an integer");
+    assert!(
+        (1..=MAX_CAPACITY).contains(&capacity),
+        "capacity must be in 1..={MAX_CAPACITY}"
+    );
+    assert!(args.next().is_none(), "unexpected command-line argument");
+    let mut x = Engine::load(Path::new(&path), simd_rows, capacity);
     println!(
         "{}",
-        serde_json::json!({"ok":true,"device":x.device.name(),"neurons":x.n,"inputs":INPUTS,"readouts":384,"kernel":if simd_rows{"simd"}else{"row"}})
+        serde_json::json!({"ok":true,"device":x.device.name(),"neurons":x.n,"inputs":INPUTS,"readouts":384,"kernel":if simd_rows{"simd"}else{"row"},"capacity":x.capacity,"storage_tiles":x.tiles})
     );
     let stdin = io::stdin();
     for line in stdin.lock().lines() {
