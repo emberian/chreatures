@@ -944,7 +944,11 @@ def _validate_type_fields(
         status = fields.get("status")
         if status not in {"completed", "failed"}:
             raise PopulationEvidenceError(f"{record_id} has invalid fit status")
-        if fields.get("unit_of_analysis") not in {"whole_life", "world"}:
+        if fields.get("unit_of_analysis") not in {
+            "resident_transition",
+            "whole_life",
+            "world",
+        }:
             raise PopulationEvidenceError(f"{record_id} has invalid fit unit")
         law_blobs = [b for b in record["blob_refs"] if b["role"] == "gam_law"]
         if status == "completed" and len(law_blobs) != 1:
