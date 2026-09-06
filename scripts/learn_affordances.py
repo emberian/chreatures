@@ -437,6 +437,7 @@ class AffordanceCohort:
         self.timings = {name: 0.0 for name in ("world_build", "sense_encode", "brain", "physics")}
         self.body_states: list[list[dict[str, Any]]] = []
         self.last_world_telemetry: list[dict[str, Any]] = []
+        self.last_source_channels = np.empty((0, len(ports.input_names)), dtype=np.float32)
         self.resident_ids: list[str] = []
         self.reset(0)
 
@@ -495,9 +496,10 @@ class AffordanceCohort:
                 ])
         self.timings["sense_encode"] += time.perf_counter() - started
         started = time.perf_counter()
+        self.last_source_channels = np.asarray(channel_rows, dtype=np.float32)
         if hasattr(self.brain, "step_channels"):
             features, circuit_physiology, neural = self.brain.step_channels(
-                np.asarray(channel_rows, dtype=np.float32), dt
+                self.last_source_channels, dt
             )
         else:
             neural = self.brain.step(entries, dt)
@@ -719,6 +721,9 @@ def restore_checkpoint(
     cohort.timings = {name: 0.0 for name in ("world_build", "sense_encode", "brain", "physics")}
     cohort.body_states = cohort.world_pool.call_all("restore", state["worlds"])
     cohort.last_world_telemetry = []
+    cohort.last_source_channels = np.empty(
+        (0, len(ports.input_names)), dtype=np.float32
+    )
     cohort.resident_ids = [str(value) for value in state["resident_ids"]]
     if cohort.resident_ids != brain.resident_ids:
         raise ValueError("checkpoint neural and physical resident order differs")
