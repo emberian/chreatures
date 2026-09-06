@@ -73,8 +73,16 @@ part stocks and geometry correspondence. Existing saved worlds retain their
 own habitat/body specifications; current source changes do not reconstruct an
 already living resident.
 
-The mobile residents currently retain their separate physiological system.
-The view explicitly reports `resident_physiology_coupled: false` and
-`whole_food_web: false`. No environmental mineral uptake, embodied reproduction,
-autonomous predation, full mass-to-inertia coupling or whole-world resource
-conservation is claimed. Joining these transfers is the next ecological work.
+Existing saved reef residents retain their separate physiological system. Fresh
+birth-v2 worlds can bind every mobile resident to private body/gut compartments
+in the same web. `resident_physiology_coupled` then reports true. See
+[SOMATIC_PHYSIOLOGY.md](SOMATIC_PHYSIOLOGY.md) for funded activation, physical
+mouth contact, digestion and absorption, and [MATERIAL_OBJECTS.md](MATERIAL_OBJECTS.md)
+for finite shared stores and geometry boundaries.
+
+No environmental mineral uptake, embodied reproduction, autonomous predation,
+full mass-to-inertia coupling or whole-world resource conservation is claimed.
+`whole_food_web` remains false. Odor transport currently carries sensory tracers,
+separate from the conserved material pools. The older birth/snapshot formats
+have a one-way data import into the current owner, preserving their uncoupled
+physiological semantics. Existing live processes have not been upgraded.
