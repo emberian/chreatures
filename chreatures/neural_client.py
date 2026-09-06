@@ -164,8 +164,14 @@ class NeuralClient:
             return None
         return receipt["response"]
 
-    def create(self, ids):
-        return self.mutate("/v1/residents/create", resident_ids=ids)
+    def create(self, residents):
+        """Bind fresh neural lives to authenticated inherited phenotypes."""
+        if not isinstance(residents, list) or not residents or any(
+            not isinstance(row, dict) or set(row) != {"id", "neural_phenotype"}
+            for row in residents
+        ):
+            raise ValueError("neural birth requires resident identities and phenotypes")
+        return self.mutate("/v1/residents/create", residents=residents)
 
     def step(self, entries, dt):
         return self.mutate("/v1/step", residents=entries, dt=dt, compact=True)["residents"]
