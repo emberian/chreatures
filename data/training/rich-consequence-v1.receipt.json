@@ -1,0 +1,536 @@
+{
+  "artifact": {
+    "artifact_identity": "bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf",
+    "bytes": 7545779,
+    "file": "rich-consequence-ensemble.npz",
+    "sha256": "7192e01191282a736299013159b7852b291c581ad06faff3b33b37e157d4352f"
+  },
+  "elapsed_seconds": 37.019248622469604,
+  "ensemble": {
+    "interpretation": "population RMS spread of three member predictions in raw target units; not calibrated uncertainty",
+    "members": 3,
+    "validation_mean_disagreement_by_group": {
+      "body_code_delta": 0.02515917457640171,
+      "physiology_delta": 0.003565696533769369,
+      "visual_code_delta": 0.017333470284938812
+    }
+  },
+  "format": "chreatures-rich-consequence-fit-report-v1",
+  "goal_space_calibration": {
+    "interpretation": "empirical goal-space RMS on representation-exposed reserved world; not a probability interval",
+    "overall_rms": 0.054485887104041765,
+    "per_goal_coordinate_rmse": [
+      0.04706587376120325,
+      0.059676579525715076,
+      0.04740254354547002,
+      0.04180217364239509,
+      0.04369257243152433,
+      0.04617926462184834,
+      0.07396468858604607,
+      0.05906665236628385,
+      0.04613442565729976,
+      0.05704485059534587,
+      0.048181783271484147,
+      0.0657091509710915,
+      0.047550790707193466,
+      0.04133380176912861,
+      0.05645251518237697,
+      0.04323814851920397,
+      0.052192936143262654,
+      0.05588688468155818,
+      0.05512929391793116,
+      0.05743559587044347,
+      0.08026992374589544,
+      0.03314157023397092,
+      0.06521494363279305,
+      0.04330533445016521,
+      0.041733164955855405,
+      0.0617035162657494,
+      0.05975342618585765,
+      0.05074283660434174,
+      0.04791669812141231,
+      0.061082263218098905,
+      0.05141724459447536,
+      0.06964729827940706,
+      0.04967429698430961,
+      0.04765266430662502,
+      0.0551642691334555,
+      0.05594470464936118,
+      0.05532227374066464,
+      0.04001743995273166,
+      0.04726623539240944,
+      0.050500335765394214,
+      0.050064091668516664,
+      0.0561461528630709,
+      0.052798833213325805,
+      0.060629205823229164,
+      0.04334354672805935,
+      0.04971332075862841,
+      0.054240173151707004,
+      0.05038001803741684,
+      0.05161140310528612,
+      0.039659450707864315,
+      0.05677422234200582,
+      0.07981311246103583,
+      0.049884854726200516,
+      0.07640972188196546,
+      0.060345276213661814,
+      0.043817002398968595,
+      0.03832114287954752,
+      0.06043592344471187,
+      0.06777931481688819,
+      0.03764418427185074,
+      0.054449647919453975,
+      0.041017668344556966,
+      0.060294213833096286,
+      0.07525323853185124
+    ],
+    "rows": 49104,
+    "runtime_empirical_error_scale": 0.054485887104041765,
+    "zero_delta_overall_rms": 0.09880149479234446,
+    "zero_delta_per_goal_coordinate_rmse": [
+      0.08426875688773597,
+      0.08521568523942245,
+      0.07231462482720982,
+      0.06686211721906027,
+      0.06863445009721159,
+      0.07056440177835945,
+      0.14537870311295775,
+      0.08456390423683816,
+      0.08076774738141772,
+      0.07388651223379765,
+      0.08471647428775259,
+      0.14244924918706695,
+      0.07803311355978296,
+      0.0647514264450985,
+      0.07647564961062182,
+      0.05892870880736512,
+      0.07965535624935177,
+      0.07929466969374337,
+      0.08161672177271749,
+      0.09238679628609606,
+      0.11845439580062032,
+      0.041034375569047474,
+      0.09820426137186411,
+      0.061156111197309175,
+      0.06006362379766566,
+      0.1545425671670349,
+      0.11927806770902735,
+      0.09811875806522667,
+      0.06612522236902826,
+      0.09603556632976115,
+      0.08119671835857156,
+      0.17151406761294002,
+      0.11416633890547243,
+      0.10854046969606612,
+      0.0787671668020663,
+      0.13988322139065165,
+      0.12425710397120329,
+      0.06360107657816522,
+      0.09671329800327656,
+      0.09528392786734023,
+      0.08615214841116808,
+      0.104314427135892,
+      0.09587853818322724,
+      0.09207588483913194,
+      0.06224231947209747,
+      0.06623636388017513,
+      0.09589569471268494,
+      0.07293990662715005,
+      0.1154659223223891,
+      0.06693548042488803,
+      0.07802659633718267,
+      0.15793966857968306,
+      0.11746708199116951,
+      0.11681284590501553,
+      0.12376862832616907,
+      0.060360222661136304,
+      0.07281660298848128,
+      0.1059374061550273,
+      0.11856978051486533,
+      0.049157906286694336,
+      0.08462318838632985,
+      0.0690186804346525,
+      0.15676067374863153,
+      0.18377109924206014
+    ]
+  },
+  "input_clipping_at_8_sigma": {
+    "runtime_rule": "clamp every normalized coordinate to [-8,8]; any clipped candidate receives zero predictor selection tilt",
+    "train": {
+      "clipped_rows": 0,
+      "coordinate_fraction": 0.0,
+      "row_fraction": 0.0,
+      "rows": 147312
+    },
+    "validation": {
+      "clipped_rows": 0,
+      "coordinate_fraction": 0.0,
+      "row_fraction": 0.0,
+      "rows": 49104
+    },
+    "validation_action_permuted_row_fraction": 0.0
+  },
+  "metrics": {
+    "train": {
+      "all_outputs_train_scale_rmse": 0.7098718491493874,
+      "body_code_delta": {
+        "raw_mae": 0.11354039705698439,
+        "raw_rmse": 0.1629323926734416,
+        "train_scale_rmse": 0.7701601473308526
+      },
+      "physiology_delta": {
+        "raw_mae": 0.01654317260427229,
+        "raw_rmse": 0.05153070894675115,
+        "train_scale_rmse": 0.7485199613160033
+      },
+      "visual_code_delta": {
+        "raw_mae": 0.057652941963185655,
+        "raw_rmse": 0.09244682240603513,
+        "train_scale_rmse": 0.6419091564709755
+      }
+    },
+    "validation": {
+      "all_outputs_train_scale_rmse": 0.7412206151177213,
+      "body_code_delta": {
+        "raw_mae": 0.11969989650227003,
+        "raw_rmse": 0.17172696203910953,
+        "train_scale_rmse": 0.810836410568137
+      },
+      "physiology_delta": {
+        "raw_mae": 0.01723865917343482,
+        "raw_rmse": 0.052499788096609684,
+        "train_scale_rmse": 0.803935883996006
+      },
+      "visual_code_delta": {
+        "raw_mae": 0.05966782859493655,
+        "raw_rmse": 0.09474823334009413,
+        "train_scale_rmse": 0.6609220063002775
+      }
+    },
+    "validation_action_change_strata": {
+      "changed_0.05_to_0.25": {
+        "action_change_mean_abs_9": 0.07945013046264648,
+        "model": {
+          "all_outputs_train_scale_rmse": 0.8730613782017204,
+          "body_code_delta": {
+            "raw_mae": 0.14361774222129764,
+            "raw_rmse": 0.201158334189897,
+            "train_scale_rmse": 0.9492638480329453
+          },
+          "physiology_delta": {
+            "raw_mae": 0.019823702309336673,
+            "raw_rmse": 0.0591336255520413,
+            "train_scale_rmse": 0.8478683065571284
+          },
+          "visual_code_delta": {
+            "raw_mae": 0.07327259012376479,
+            "raw_rmse": 0.11399834708137846,
+            "train_scale_rmse": 0.7908241121274667
+          }
+        },
+        "rows": 18858,
+        "zero_delta": {
+          "all_outputs_train_scale_rmse": 1.2368977494516773,
+          "body_code_delta": {
+            "raw_mae": 0.1783680318608834,
+            "raw_rmse": 0.26432961857964243,
+            "train_scale_rmse": 1.2311291461377052
+          },
+          "physiology_delta": {
+            "raw_mae": 0.02504877357835627,
+            "raw_rmse": 0.08242822182884411,
+            "train_scale_rmse": 1.008295115861989
+          },
+          "visual_code_delta": {
+            "raw_mae": 0.10491485330691705,
+            "raw_rmse": 0.19430236056209027,
+            "train_scale_rmse": 1.2522827287369427
+          }
+        }
+      },
+      "changed_gt_0.25": {
+        "action_change_mean_abs_9": 0.3261798620223999,
+        "model": {
+          "all_outputs_train_scale_rmse": 1.3265663150955305,
+          "body_code_delta": {
+            "raw_mae": 0.20612196937284005,
+            "raw_rmse": 0.29428218546548696,
+            "train_scale_rmse": 1.3932175700186347
+          },
+          "physiology_delta": {
+            "raw_mae": 0.01641803789419476,
+            "raw_rmse": 0.05201661581890559,
+            "train_scale_rmse": 1.2752997438612659
+          },
+          "visual_code_delta": {
+            "raw_mae": 0.11252709254860749,
+            "raw_rmse": 0.17313101741808812,
+            "train_scale_rmse": 1.2588700397647876
+          }
+        },
+        "rows": 654,
+        "zero_delta": {
+          "all_outputs_train_scale_rmse": 2.152066134399211,
+          "body_code_delta": {
+            "raw_mae": 0.2857942412565535,
+            "raw_rmse": 0.4321608121451266,
+            "train_scale_rmse": 2.0152736788468815
+          },
+          "physiology_delta": {
+            "raw_mae": 0.013207307932969868,
+            "raw_rmse": 0.05783054628837528,
+            "train_scale_rmse": 1.407265933745421
+          },
+          "visual_code_delta": {
+            "raw_mae": 0.18362838463755227,
+            "raw_rmse": 0.3435138612623922,
+            "train_scale_rmse": 2.3077509630178463
+          }
+        }
+      },
+      "near_unchanged_le_0.05": {
+        "action_change_mean_abs_9": 0.023961719125509262,
+        "model": {
+          "all_outputs_train_scale_rmse": 0.6221171907952254,
+          "body_code_delta": {
+            "raw_mae": 0.10254786993337385,
+            "raw_rmse": 0.14571974380504302,
+            "train_scale_rmse": 0.6883456875669699
+          },
+          "physiology_delta": {
+            "raw_mae": 0.015609433127874727,
+            "raw_rmse": 0.04780597053184292,
+            "train_scale_rmse": 0.7605311510610325
+          },
+          "visual_code_delta": {
+            "raw_mae": 0.04982974561520069,
+            "raw_rmse": 0.07715172915755113,
+            "train_scale_rmse": 0.5396934098803808
+          }
+        },
+        "rows": 29592,
+        "zero_delta": {
+          "all_outputs_train_scale_rmse": 0.707608319486461,
+          "body_code_delta": {
+            "raw_mae": 0.10442729902813842,
+            "raw_rmse": 0.16299835048286698,
+            "train_scale_rmse": 0.7671361453285446
+          },
+          "physiology_delta": {
+            "raw_mae": 0.019254303648463898,
+            "raw_rmse": 0.0680690037754525,
+            "train_scale_rmse": 0.8998633783621399
+          },
+          "visual_code_delta": {
+            "raw_mae": 0.04860978953774292,
+            "raw_rmse": 0.09401352140815605,
+            "train_scale_rmse": 0.6312168709059487
+          }
+        }
+      }
+    },
+    "validation_action_permuted": {
+      "all_outputs_train_scale_rmse": 1.3594579479545958,
+      "body_code_delta": {
+        "raw_mae": 0.18770697328006483,
+        "raw_rmse": 0.26505914620645077,
+        "train_scale_rmse": 1.2197256127374243
+      },
+      "physiology_delta": {
+        "raw_mae": 0.017447821407567333,
+        "raw_rmse": 0.05292593502225448,
+        "train_scale_rmse": 0.8085619387190212
+      },
+      "visual_code_delta": {
+        "raw_mae": 0.15252195996675155,
+        "raw_rmse": 0.24241630702296776,
+        "train_scale_rmse": 1.5048277557990732
+      }
+    },
+    "validation_zero_delta": {
+      "all_outputs_train_scale_rmse": 0.9751836998365113,
+      "body_code_delta": {
+        "raw_mae": 0.13523921496120475,
+        "raw_rmse": 0.2129124403449212,
+        "train_scale_rmse": 0.9954033676289579
+      },
+      "physiology_delta": {
+        "raw_mae": 0.02139908571794861,
+        "raw_rmse": 0.07379799960910959,
+        "train_scale_rmse": 0.9512127556531853
+      },
+      "visual_code_delta": {
+        "raw_mae": 0.07203156889898357,
+        "raw_rmse": 0.14627704845424555,
+        "train_scale_rmse": 0.9556689828824578
+      }
+    }
+  },
+  "split": {
+    "disclosure": "the frozen representation bootstrap saw all four worlds; world 3 is predictor validation only, not end-to-end held-out generalization",
+    "train_rows": 147312,
+    "train_worlds": [
+      0,
+      1,
+      2
+    ],
+    "validation_rows": 49104,
+    "validation_worlds": [
+      3
+    ]
+  },
+  "status": "descriptive reserved-world prediction; no causal, welfare, or calibrated-uncertainty claim",
+  "training_trace": [
+    {
+      "epoch": 1,
+      "member": 0,
+      "normalized_mse": 0.8973077531097584
+    },
+    {
+      "epoch": 2,
+      "member": 0,
+      "normalized_mse": 0.7766502621418052
+    },
+    {
+      "epoch": 3,
+      "member": 0,
+      "normalized_mse": 0.747289985732301
+    },
+    {
+      "epoch": 4,
+      "member": 0,
+      "normalized_mse": 0.7225811455062563
+    },
+    {
+      "epoch": 5,
+      "member": 0,
+      "normalized_mse": 0.6872697264049941
+    },
+    {
+      "epoch": 6,
+      "member": 0,
+      "normalized_mse": 0.6402698693827541
+    },
+    {
+      "epoch": 7,
+      "member": 0,
+      "normalized_mse": 0.6013603875830493
+    },
+    {
+      "epoch": 8,
+      "member": 0,
+      "normalized_mse": 0.5708852047069306
+    },
+    {
+      "epoch": 9,
+      "member": 0,
+      "normalized_mse": 0.5473753083952477
+    },
+    {
+      "epoch": 10,
+      "member": 0,
+      "normalized_mse": 0.5307995059389988
+    },
+    {
+      "epoch": 1,
+      "member": 1,
+      "normalized_mse": 0.8978539764965294
+    },
+    {
+      "epoch": 2,
+      "member": 1,
+      "normalized_mse": 0.7764365950469229
+    },
+    {
+      "epoch": 3,
+      "member": 1,
+      "normalized_mse": 0.7483368017417905
+    },
+    {
+      "epoch": 4,
+      "member": 1,
+      "normalized_mse": 0.7271631601528248
+    },
+    {
+      "epoch": 5,
+      "member": 1,
+      "normalized_mse": 0.697794771361483
+    },
+    {
+      "epoch": 6,
+      "member": 1,
+      "normalized_mse": 0.6562809328296434
+    },
+    {
+      "epoch": 7,
+      "member": 1,
+      "normalized_mse": 0.6121019176192816
+    },
+    {
+      "epoch": 8,
+      "member": 1,
+      "normalized_mse": 0.5745121413791064
+    },
+    {
+      "epoch": 9,
+      "member": 1,
+      "normalized_mse": 0.5468708991978499
+    },
+    {
+      "epoch": 10,
+      "member": 1,
+      "normalized_mse": 0.5282459135706551
+    },
+    {
+      "epoch": 1,
+      "member": 2,
+      "normalized_mse": 0.8947374524595787
+    },
+    {
+      "epoch": 2,
+      "member": 2,
+      "normalized_mse": 0.7756275270561889
+    },
+    {
+      "epoch": 3,
+      "member": 2,
+      "normalized_mse": 0.7477893630145647
+    },
+    {
+      "epoch": 4,
+      "member": 2,
+      "normalized_mse": 0.7258286163254567
+    },
+    {
+      "epoch": 5,
+      "member": 2,
+      "normalized_mse": 0.6930696772767729
+    },
+    {
+      "epoch": 6,
+      "member": 2,
+      "normalized_mse": 0.6508153984753048
+    },
+    {
+      "epoch": 7,
+      "member": 2,
+      "normalized_mse": 0.6105788396911149
+    },
+    {
+      "epoch": 8,
+      "member": 2,
+      "normalized_mse": 0.5755346904842475
+    },
+    {
+      "epoch": 9,
+      "member": 2,
+      "normalized_mse": 0.5505759313231612
+    },
+    {
+      "epoch": 10,
+      "member": 2,
+      "normalized_mse": 0.5301850185508744
+    }
+  ]
+}

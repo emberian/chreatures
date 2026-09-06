@@ -1,0 +1,93 @@
+{
+  "arrays": {
+    "actual_goal": {
+      "dtype": "<f4",
+      "sha256": "cd533faf6643b652c5ee1864c19f3af4a8a01f1dfd96836403addeefd6cfaa41",
+      "shape": [
+        3,
+        64
+      ]
+    },
+    "clipped": {
+      "dtype": "|b1",
+      "sha256": "709e80c88487a2411e1ee4dfb9f22a861492d20c4765150c0c794abd70f8147c",
+      "shape": [
+        3
+      ]
+    },
+    "input": {
+      "dtype": "<f4",
+      "sha256": "3ca2bfa742e8130f9deb8e931f28a1717492e64d879f93a8da7d3ab39c452d41",
+      "shape": [
+        3,
+        1426
+      ]
+    },
+    "normalized_input": {
+      "dtype": "<f4",
+      "sha256": "9fff304edcd283ce671f377a6a1a2236f34c6dccfb978bed75a022a3dfd46333",
+      "shape": [
+        3,
+        1426
+      ]
+    },
+    "normalized_member_output": {
+      "dtype": "<f4",
+      "sha256": "180191b2c7cf8d803fd6e28a669bfcdda667263449fa6d4174341729dac17263",
+      "shape": [
+        3,
+        3,
+        262
+      ]
+    },
+    "predicted_goal": {
+      "dtype": "<f4",
+      "sha256": "70dec6b105440a60deb3f1609469fe380bbc93da10dabd2990b60607b24bfed0",
+      "shape": [
+        3,
+        64
+      ]
+    },
+    "raw_disagreement": {
+      "dtype": "<f4",
+      "sha256": "d69af070956b036e234e6c6919ed3a2986e1c9dfb198d75ed704a5d16146e981",
+      "shape": [
+        3,
+        262
+      ]
+    },
+    "raw_ensemble_mean": {
+      "dtype": "<f4",
+      "sha256": "886ba211d0bc67ffc5cdc1e671736b2ea5f81838b9296d9aa5f9759d513ae5f1",
+      "shape": [
+        3,
+        262
+      ]
+    },
+    "raw_member_output": {
+      "dtype": "<f4",
+      "sha256": "41d1b088ba9afc49fecb28285c473d850ee289c67974f514b28b809d59c01205",
+      "shape": [
+        3,
+        3,
+        262
+      ]
+    },
+    "target": {
+      "dtype": "<f4",
+      "sha256": "d20cf10dc2508cbc916997c6ddaa35bb4ef2b1f16d0f395bdb9a6100eee764c2",
+      "shape": [
+        3,
+        262
+      ]
+    }
+  },
+  "file": {
+    "bytes": 62008,
+    "sha256": "4910fed8c964089bcbda6f6470d82e1961b7ec3098e36c9cf4132306451229b1"
+  },
+  "format": "chreatures-rich-consequence-native-reference-v1",
+  "partition": "episode-000/world-003; first,middle,last valid transition without identity columns",
+  "source_artifact_sha256": "7192e01191282a736299013159b7852b291c581ad06faff3b33b37e157d4352f",
+  "source_episode_sha256": "4a4443e0d7185c94cc411d18b2ab631fdb89f6f68b361daceaa741d6ccfd35a1"
+}

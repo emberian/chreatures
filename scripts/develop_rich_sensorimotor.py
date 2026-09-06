@@ -83,6 +83,7 @@ def atomic_npz(path: Path, arrays: dict[str, np.ndarray]) -> None:
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bootstrap-worker", type=Path, required=True)
+    parser.add_argument("--initialize-from-development", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--graph", type=Path, required=True)
     parser.add_argument("--port-bundle", type=Path, required=True)
@@ -138,6 +139,8 @@ def validate(args: argparse.Namespace) -> None:
         raise SystemExit("goal progress coefficient must be in [0,1]")
     if args.output.exists() and any(args.output.iterdir()):
         raise SystemExit("output must be absent or empty")
+    if args.initialize_from_development is not None and not args.initialize_from_development.is_file():
+        raise SystemExit("development initialization checkpoint does not exist")
 
 
 class GoalAdapter:
@@ -430,6 +433,11 @@ def save_development(
     episode,
     physical_steps,
     updates,
+    observation,
+    physical,
+    neural_readout,
+    raw_observation,
+    current_code,
 ):
     """Atomically save coherent world, neural, optimizer, and private state."""
     value = {
@@ -455,6 +463,11 @@ def save_development(
         "torch_rng": torch.get_rng_state(),
         "numpy_rng": np.random.get_state(),
         "pending_rollout": {"length": 0},
+        "boundary_observation": observation,
+        "boundary_physiology": physical,
+        "boundary_neural_readout": neural_readout,
+        "boundary_raw_observation": raw_observation,
+        "boundary_current_code": current_code,
     }
     temporary = path.with_name(f".{path.name}.tmp-{os.getpid()}")
     torch.save(value, temporary)
@@ -508,6 +521,41 @@ def main() -> int:
         [*worker.parameters(), *critic.parameters(), *manager.parameters()],
         lr=args.learning_rate,
     )
+    initialization = None
+    if args.initialize_from_development is not None:
+        initialization_path = args.initialize_from_development.resolve()
+        checkpoint = torch.load(
+            initialization_path,
+            map_location=device,
+            weights_only=False,
+        )
+        if checkpoint.get("format") != FORMAT:
+            raise ValueError("development initialization format differs")
+        parent_identity = checkpoint["identity"]
+        if (
+            parent_identity.get("rich_profile_sha256") != RICH_PROFILE_SHA256
+            or parent_identity.get("rich_channel_names_sha256")
+            != RICH_CHANNEL_NAMES_SHA256
+            or parent_identity.get("graph_sha256") != str(graph.hash)
+            or parent_identity.get("port_spec_sha256") != ports.spec_hash
+            or parent_identity.get("bootstrap_sha256")
+            != sha256(args.bootstrap_worker.resolve())
+        ):
+            raise ValueError("development initialization substrate differs")
+        worker.load_state_dict(checkpoint["model"], strict=True)
+        critic.load_state_dict(checkpoint["critic"], strict=True)
+        manager.load_state_dict(checkpoint["goal_manager"], strict=True)
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        initialization = {
+            "path": str(initialization_path),
+            "sha256": sha256(initialization_path),
+            "updates": int(checkpoint["updates"]),
+            "physical_steps": int(checkpoint["physical_steps"]),
+            "semantics": (
+                "shared worker, critic, goal manager, and optimizer inherited; "
+                "fresh world, neural, private goal/history, and RNG state"
+            ),
+        }
     goals = ResidentGoals(
         count,
         args.goal_reservoir_size,
@@ -553,6 +601,7 @@ def main() -> int:
             for key, value in vars(args).items()
             if isinstance(value, Path)
         },
+        "development_initialization": initialization,
     }
     atomic_json(args.output / "identity.json", identity)
     episode = 0
@@ -1003,6 +1052,11 @@ def main() -> int:
                     episode=episode,
                     physical_steps=rollout_start + args.rollout_steps,
                     updates=len(updates),
+                    observation=observation,
+                    physical=physical,
+                    neural_readout=neural,
+                    raw_observation=raw_observation,
+                    current_code=current_code,
                 )
         save_development(
             args.output / "development.pt",
@@ -1022,6 +1076,11 @@ def main() -> int:
             episode=episode,
             physical_steps=args.steps,
             updates=len(updates),
+            observation=observation,
+            physical=physical,
+            neural_readout=neural,
+            raw_observation=raw_observation,
+            current_code=current_code,
         )
         atomic_json(
             args.output / "result.json",
