@@ -361,6 +361,10 @@ class Habitat3D:
         offers = self.biosphere.hatch_offers()
         if not offers:
             return
+        if self.neural.available_resident_slots() == 0:
+            # Funded brood stays in its parent until a neural slot is available.
+            # Do not prepare chemistry or issue an impossible create mutation.
+            return
         offer = offers[0]
         parent_id = offer["parent_id"]
         parent_index = next(index for index, body in enumerate(self.world.bodies) if body.id == parent_id)

@@ -1,0 +1,197 @@
+{
+  "birth": {
+    "assignment_file_sha256": "571bdf34b33e5dbb6a3bef1edc3ec24bc5a700bbb7a7c23ed4aae834d31d5e9a",
+    "manifest_file_sha256": "85074100f0d665cc6dd45420bbdc979810987a7c6e7c021a0bae93a387221856",
+    "profile_file_sha256": "58f0034f398f41c6be30e7faa7eefcea9f8d3f44bc1d5b25cd2249fd8c420ccf",
+    "visitor_materials_sha256": "31d0ef77dc34a2d4e17940b8ce53c62e3df98a54cfab8e78f6fba2570a553770"
+  },
+  "brain": {
+    "capacity": 8,
+    "device": "Apple M2 Max",
+    "edges": 25563197,
+    "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "kernel": "simd",
+    "neurons": 165122,
+    "next_seq_at_receipt": 2602,
+    "port": 18783,
+    "resident_count": 8,
+    "service_incarnation": "fc2112c345be489fbaf08eea9cfbbfbd"
+  },
+  "checkpoint": {
+    "neural_snapshot": {
+      "artifact_sha256": "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0",
+      "bytes": 15887474,
+      "name": "world-cd85d081-a323-4480-821b-b3e45ae7acbb-2441",
+      "residents": [
+        "cd85d081-a323-4480-821b-b3e45ae7acbb:mica",
+        "cd85d081-a323-4480-821b-b3e45ae7acbb:fern",
+        "cd85d081-a323-4480-821b-b3e45ae7acbb:pip",
+        "cd85d081-a323-4480-821b-b3e45ae7acbb:lumen",
+        "cd85d081-a323-4480-821b-b3e45ae7acbb:silt",
+        "cd85d081-a323-4480-821b-b3e45ae7acbb:bramble",
+        "cd85d081-a323-4480-821b-b3e45ae7acbb:cairn",
+        "cd85d081-a323-4480-821b-b3e45ae7acbb:moss"
+      ],
+      "scope": "all",
+      "sha256": "4929337127ecb060ed01d5e61d5829877fbc326713a06c468ad3c0cebc61f5d3"
+    },
+    "path": "run/world.json",
+    "tick": 2441
+  },
+  "content_sha256": "379d329032cc9252716cc0013f0d3c5f88cc49f1eae1b7dc1e630b83f354c184",
+  "controller": {
+    "artifact_sha256": "8bad66b025c53b2a6e81419f7ac2fa0cad3a215c721d355568e95c79597da8cd",
+    "file_sha256": "6f46a8c6f013d2e69b6baeae68c5746f494f07b3283dfee67dfbb07ba4919a84"
+  },
+  "created_at": "2026-09-06T21:36:11.493469+00:00",
+  "format": "chreatures-population-v5-research-deployment-receipt-v1",
+  "limitations": [
+    "Population-response in-domain counters measure coverage of committed transitions, not causal choice changes.",
+    "The visitor sequence used fixed habitat coordinates and did not inspect resident state.",
+    "The recording is observational and does not establish learned competence or behavioral improvement.",
+    "This frozen research service has eight neural slots, all allocated; it cannot support another neural resident. New ecology deployments should reserve 32 slots. Current source defers funded hatching when the service is full; that later guard was not installed into this frozen life."
+  ],
+  "native": {
+    "cognitive_core_sha256": "ab8d01be863494e32542f14346864cd5404c3557d565dcb07568a19abbc1b75f",
+    "metal_brain_server_sha256": "e886a59e7797d11e68e6846449bb39f74cada5d775d0bfc45be783a944c73a6b",
+    "world_kernels_sha256": "e11d1eee0b1bdf0274854271f18b8bf5245bd48b26021394ffba4f3f5a6a7a1b"
+  },
+  "outside_interaction": {
+    "completion": {
+      "delivered": 4,
+      "duration": 8.0,
+      "event_count": 4,
+      "events": [
+        {
+          "at": 0.5,
+          "kind": "signal"
+        },
+        {
+          "at": 1.75,
+          "kind": "light"
+        },
+        {
+          "at": 4.5,
+          "kind": "signal"
+        },
+        {
+          "at": 6.0,
+          "kind": "light"
+        }
+      ],
+      "failure": null,
+      "id": "performance-1",
+      "motif_id": null,
+      "name": "Living Reef: light across water",
+      "start_time": 24.1,
+      "status": "completed"
+    },
+    "content_sha256": "b7a92e682d79bf3267ebf56baeb55cac17faae8e02bf90a9e8d844ad2f0ce58f",
+    "file_sha256": "d8d00355549bde08e65772109127597c11a73a95db69b002b96cdcefcd336391",
+    "offer": {
+      "choice": "reserve-fruit",
+      "format": "chreatures-visitor-material-offer-v1",
+      "fraction": 1.0,
+      "moved_resources": [
+        0.0,
+        0.0,
+        0.18,
+        0.025,
+        0.0,
+        0.0
+      ],
+      "offer_count": 1,
+      "outside_boundary": {
+        "chemical_energy": 0.27,
+        "elements": {
+          "carbon_equivalent": 0.28,
+          "mineral_equivalent": 0.025
+        }
+      },
+      "pools": [
+        "mineral",
+        "inorganic_carbon",
+        "reserve",
+        "soft_tissue",
+        "tough_tissue",
+        "detritus"
+      ],
+      "position": [
+        10.29310156,
+        5.48236806,
+        0.39237925
+      ],
+      "remaining_source_resources": [
+        0.0,
+        0.0,
+        2.2199999999999998,
+        0.27499999999999997,
+        0.0,
+        0.0
+      ]
+    },
+    "receipt": "run/recordings/outside-performance.json"
+  },
+  "population_response": {
+    "artifact_sha256": "e787c7936558319b8f07a9f54e308d995fa2ed27007a414e2831e4c2b3b7a426",
+    "feature_contract_sha256": "b4551169171bf4ab0a2389a6956cd99469e13a99d00b9f0b81963e31ed35a03d"
+  },
+  "recording": {
+    "content_sha256": "8c3b6f7f68a1fdacca82ce4ff722b004f92fa03823a8f7e5083eefc04c79fb4b",
+    "counter_deltas": {
+      "personal_goal_completed": 960,
+      "personal_goal_learned": 952,
+      "personal_goal_skipped_replaced": 8,
+      "population_response_in_domain_total": 7694,
+      "population_response_out_of_domain_total": 1882,
+      "private_consequence_updates": 70
+    },
+    "file_sha256": "a1a3acd1c1ebd899b79772a453094798690b024456b4b8a0ea92d9c98ab4f585",
+    "first_counters": {
+      "personal_goal_completed": 632,
+      "personal_goal_learned": 619,
+      "personal_goal_skipped_replaced": 13,
+      "population_response_in_domain_total": 5111,
+      "population_response_out_of_domain_total": 1345,
+      "private_consequence_updates": 48
+    },
+    "first_tick": 807,
+    "frames": 240,
+    "last_counters": {
+      "personal_goal_completed": 1592,
+      "personal_goal_learned": 1571,
+      "personal_goal_skipped_replaced": 21,
+      "population_response_in_domain_total": 12805,
+      "population_response_out_of_domain_total": 3227,
+      "private_consequence_updates": 118
+    },
+    "last_tick": 2004,
+    "maximum_executed_action": {
+      "allocate": 0.96875,
+      "eat": 1.0,
+      "release": 1.0,
+      "secrete": 1.0
+    },
+    "nonzero_executed_resident_frames": {
+      "allocate": 67,
+      "eat": 108,
+      "release": 98,
+      "secrete": 123
+    },
+    "raw_sha256": "f6a3b704a1e0bfaffb55f647af7420834c90df6fab3f13f061dc5e63ee398af2",
+    "receipt": "run/recordings/headless.json"
+  },
+  "source": {
+    "archive_sha256": "b619ff4b6c961ea883e89e90ff81ccecd20734d36a926bccc232b2256d281ea7",
+    "revision": "ee18250"
+  },
+  "status": "running isolated research world; execution measurements only; no behavioral improvement claim",
+  "world": {
+    "id": "cd85d081-a323-4480-821b-b3e45ae7acbb",
+    "model_time_at_receipt": 129.39999999995482,
+    "paused": false,
+    "port": 8783,
+    "resident_count": 8,
+    "tick_at_receipt": 2588
+  }
+}

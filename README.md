@@ -43,7 +43,17 @@ Both upstream libraries have executed against actual project data. Their artifac
 
 ## What has run
 
-The current regional observatory replays **240 actual frames from eight v4 residents**, covering model seconds 51.65–118.50. The source recording contains delivered actions, body measurements, real geometry and private learning diagnostics. Its simulation ran on the M2 with the full MaleCNS graph. This is a recorded episode, not a live connection to the private world, and it does not establish successful feeding, reproduction or social learning. [Watch the regional world](https://emberian.github.io/chreatures/living.html?recording=regional-wave).
+The earlier regional observatory replays **240 actual frames from eight v4 residents**, covering model seconds 51.65–118.50. The source recording contains delivered actions, body measurements, real geometry and private learning diagnostics. Its simulation ran on the M2 with the full MaleCNS graph. This is a recorded episode, not a live connection to the private world, and it does not establish successful feeding, reproduction or social learning. [Watch the regional world](https://emberian.github.io/chreatures/living.html?recording=regional-wave).
+
+The homepage now leads with a **new trained v5 research world**, also eight
+residents, using the update-20 controller and the two additional population GAM
+laws. Its 240 recorded frames cover model seconds 40.35–100.20 after an outside
+material offering and light/sound sequence. During that interval, 7,694 committed
+transitions were within the new bank's fitted domain and 1,882 were outside;
+private goal learning continued and all four new actuator channels executed.
+This establishes joined execution, without a demonstrated behavioral benefit.
+[Watch the trained organs](https://emberian.github.io/chreatures/living.html?recording=trained-organs)
+· [Run identity and capacity](docs/development/POPULATION_V5_RUN.md).
 
 The first full population campaign recorded **1,033,824 resident transitions**. Two 32-life cohorts stopped at ticks 9,967 and 10,340 when a depleted ATP payment exceeded the available amount by one floating-point rounding unit. The remaining 16 lives reached tick 24,000, or 20 model minutes. Their completed runs did not demonstrate sustained feeding or regulation. The native repair conservatively partitions actual available ATP and commits cohort payments atomically; it does not grant energy. Native search retains the affected lives as engine failures with no archive quality. The [Universal Weave evidence](integrations/artifacts/population-wave-v1) preserves all 80 terminal histories and the shared causes.
 
@@ -67,7 +77,7 @@ uv run python native/world-kernels/build_extension.py
 uv run python native/cognitive-core/build_extension.py
 ```
 
-Acquire the [MaleCNS graph](docs/MALECNS.md), build the current [retinal-v2 port bundle](docs/NEURAL_PORTS.md), and start a dedicated [AMD neural service](docs/REMOTE_BRAIN.md) or [Apple Metal service](docs/METAL_BRAIN.md) with sufficient cohort capacity. New worlds require the **same graph and port identities** as the resident artifact. Existing frozen lives keep their loaded engine and service.
+Acquire the [MaleCNS graph](docs/MALECNS.md), build the current [retinal-v2 port bundle](docs/NEURAL_PORTS.md), and start a dedicated [AMD neural service](docs/REMOTE_BRAIN.md) or [Apple Metal service](docs/METAL_BRAIN.md). Reserve 32 neural slots for an ecology world so its founders leave room for offspring. New worlds require the **same graph and port identities** as the resident artifact. Existing frozen lives keep their loaded engine and service.
 
 Current worlds require a population-v5 native controller, matching candidate genomes and a birth manifest referencing their compiled neural phenotypes. The body interface remains v4. The tracked `developmental-resident-rich-grandchild-update160-v3.npz` is an ancestor artifact; it cannot directly launch the current runtime. Export a current training checkpoint with:
 

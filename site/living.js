@@ -353,6 +353,9 @@ function paintDecision(selected){
   ui.correction.textContent=refinement.selected_private_correction.map(formatNative).join(' · ');
   ui.privateUpdates.textContent=String(refinement.completed_private_updates_before_action);
   ui.goalErrorScale.textContent=formatNative(forecast.empirical_goal_error_scale);
+  const response=selected.population_response,coverage=$('#population-response-coverage');
+  coverage.hidden=!response;
+  if(response)coverage.textContent=`Population GAM: last executed action ${response.executed_transition_in_domain?'within':'outside'} the fitted domain · ${response.in_domain_total.toLocaleString()} covered / ${response.out_of_domain_total.toLocaleString()} outside since birth. Coverage does not establish an effect on the selected action.`;
 }
 
 function paintActions(values) {
@@ -489,8 +492,9 @@ for(const button of document.querySelectorAll('[data-camera]'))button.addEventLi
 
 initThree();
 const recordingKey=new URLSearchParams(location.search).get('recording');
-const recordingAsset=recordingKey==='regional-wave'?'./assets/regional-wave-recording.json':'./assets/living-reef-recording.json';
+const recordingAsset=recordingKey==='trained-organs'?'./assets/trained-organs-recording.json':recordingKey==='regional-wave'?'./assets/regional-wave-recording.json':'./assets/living-reef-recording.json';
 if(recordingKey==='regional-wave'){document.title='Regional world recording — Chreatures';ui.evidenceLink.textContent='Population atlas →';ui.evidenceLink.href='population.html'}
+if(recordingKey==='trained-organs'){document.title='Trained organs in a regional world — Chreatures';ui.evidenceLink.textContent='Trained controller receipt →';ui.evidenceLink.href='https://github.com/emberian/chreatures/tree/main/data/training/population-v5-update20'}
 fetch(recordingAsset)
   .then(response=>{if(!response.ok)throw new Error(`HTTP ${response.status}`);return response.json();})
   .then(loadRecording)
