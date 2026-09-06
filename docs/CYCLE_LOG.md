@@ -277,3 +277,45 @@ component now lets hinged/sliding panels alter diffusion-face permeability.
 Its physical probe increased transmitted concentration 158-fold when the gate
 opened and retained all field mass when closing. It models a moving membrane,
 not displacement of fluid. Legacy worlds keep their original chemical rules.
+
+## Native world core and learned predictive state
+
+The user selected AGPL-3.0-or-later for original Chreatures code and explicitly
+asked us to retire obsolete implementations rather than accumulate runtime
+compatibility branches. LICENSE, NOTICE.md, Python metadata and Rust package
+metadata now carry that choice; third-party/data notices remain separate.
+
+Contact reduction and conservative chemical transport now have one native
+production implementation. Rust owns reusable batch buffers and calls MuJoCo
+through a small C shim. The old scalar contact and NumPy face equations exist
+only as isolated numerical references in tests/probes. Field version-1/2 data
+can be imported into the current version-3 engine; this does not select an old
+runtime. The `pre-native-world-20260905` tag preserves the preceding engine.
+Existing live processes were not restarted by this change.
+
+Five focused composed-physics checks passed, including generic bodies,
+acoustics, empty contacts and reconstruction. The native contact substitution
+improved the hbox rich-world measurement from 23.74 to 29.14 steps/s. Chemical
+concentrations matched the reference exactly through 100 transport steps and
+24 complete source/sink/decay steps with restored continuation, both with and
+without moving membranes. Separate busy-laptop measurements reduced complete
+field advance from 16.74 to 11.88 ms without membranes and 17.55 to 12.89 ms
+with membranes. These measurements must not be multiplied into an unmeasured
+combined speedup.
+
+The selected visual organ now uses one 512-pixel tile per body view, fp16 and
+eager attention. On the Radeon 890M its warmed genuine two-frame feature call
+fell from 4.593 s to 0.306 s. The representation changed, so existing visual
+memories must not be silently reinterpreted. The old encoder is archived as
+`perception-native-tiles-v1`; the active source has one v3 encoder. An isolated
+persistent v3 service is available on persvati port 8776; older lives continue
+using their original port 8775 service until an explicit organ migration.
+
+We also stopped treating more regulation optimization as the only route to a
+richer creature. The current motor context is a fixed random reservoir. A new
+learned recurrent predictive-state organ has an observation-conditioned state,
+a separate action transition model, and masked multi-horizon training. Its
+first source is a real, short 54-by-48 rollout; its startup improvement is not a
+claim of whole-life prediction or planning. A new collection stage will gather
+longer varied sensory/action histories on the AMD full graph. Native inference
+and eventual action-selection integration are separate, ongoing work.
