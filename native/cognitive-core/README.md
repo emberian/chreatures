@@ -179,3 +179,16 @@ predictor's held-out scaled RMSE was `0.74122` versus `0.97518` for zero-delta
 prediction and `1.35946` with permuted candidate actions. These measurements
 support numerical integration and action sensitivity, not causal control
 benefit.
+
+## Current inherited v3 artifact
+
+`data/genomes/developmental-resident-rich-grandchild-update160-v3.npz`
+exports the completed grandchild checkpoint at 160 additional PPO updates and
+491,520 resident transitions. Its file SHA-256 is
+`c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5`
+and its internal artifact identity is
+`f4c6da1c10f75c465d6e04714a9986f2e5698aebe652904c34646ef2921521f4`.
+It retains the authenticated H1 predictor, rich-domain GAM bank, and private
+goal contract. The adjacent receipt records the source checkpoint and complete
+lineage. This is a fixed inherited controller for a future birth; the export
+does not establish that the later weights improve behavior.
