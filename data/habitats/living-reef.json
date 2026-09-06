@@ -92,7 +92,11 @@
       "living-exudate-20",
       "living-exudate-21",
       "living-exudate-22",
-      "living-exudate-23"
+      "living-exudate-23",
+      "living-visitor-reserve-00",
+      "living-visitor-reserve-01",
+      "living-visitor-fibrous-00",
+      "living-visitor-fibrous-01"
     ]
   },
   "limits": {
@@ -726,6 +730,38 @@
         0.5,
         0.38,
         0.11,
+        1.0
+      ]
+    },
+    "living-visitor-reserve-00": {
+      "rgba": [
+        0.78,
+        0.2,
+        0.07,
+        1.0
+      ]
+    },
+    "living-visitor-reserve-01": {
+      "rgba": [
+        0.78,
+        0.2,
+        0.07,
+        1.0
+      ]
+    },
+    "living-visitor-fibrous-00": {
+      "rgba": [
+        0.34,
+        0.28,
+        0.12,
+        1.0
+      ]
+    },
+    "living-visitor-fibrous-01": {
+      "rgba": [
+        0.34,
+        0.28,
+        0.12,
         1.0
       ]
     }

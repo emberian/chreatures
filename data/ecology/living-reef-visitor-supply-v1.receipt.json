@@ -1,0 +1,176 @@
+{
+  "accounting_after_offer": {
+    "fibrous-pulp-mineral": {
+      "available": true,
+      "available_slots": 1,
+      "initial_resources": [
+        0.18,
+        0.0,
+        0.48,
+        0.0,
+        1.2,
+        0.72
+      ],
+      "pools": [
+        "mineral",
+        "inorganic_carbon",
+        "reserve",
+        "soft_tissue",
+        "tough_tissue",
+        "detritus"
+      ],
+      "remaining_portions": 13.399999999999999,
+      "remaining_resources": [
+        0.16799999999999998,
+        0.0,
+        0.44999999999999996,
+        0.0,
+        1.1199999999999999,
+        0.6699999999999999
+      ],
+      "supplied_chemical_energy": 0.48200000000000043,
+      "supplied_elements": {
+        "carbon_equivalent": 0.5500000000000005,
+        "mineral_equivalent": 0.14200000000000013
+      },
+      "supplied_resources": [
+        0.01200000000000001,
+        0.0,
+        0.030000000000000027,
+        0.0,
+        0.08000000000000007,
+        0.050000000000000044
+      ]
+    },
+    "reserve-fruit": {
+      "available": true,
+      "available_slots": 1,
+      "initial_resources": [
+        0.0,
+        0.0,
+        2.4,
+        0.3,
+        0.0,
+        0.0
+      ],
+      "pools": [
+        "mineral",
+        "inorganic_carbon",
+        "reserve",
+        "soft_tissue",
+        "tough_tissue",
+        "detritus"
+      ],
+      "remaining_portions": 10.999999999999998,
+      "remaining_resources": [
+        0.0,
+        0.0,
+        2.2199999999999998,
+        0.27499999999999997,
+        0.0,
+        0.0
+      ],
+      "supplied_chemical_energy": 0.27000000000000024,
+      "supplied_elements": {
+        "carbon_equivalent": 0.28000000000000025,
+        "mineral_equivalent": 0.025000000000000022
+      },
+      "supplied_resources": [
+        0.0,
+        0.0,
+        0.18000000000000016,
+        0.025000000000000022,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "content_sha256": "95adb9325a6b116b0dfbb03ea95bb63a44f557131acc56987aca2684c98c3830",
+  "ecology_slot_overlap": false,
+  "format": "chreatures-living-reef-visitor-supply-probe-v1",
+  "headless_continuation": {
+    "active_offered_slots": 2,
+    "biosphere_time": 0.2,
+    "dt": 0.05,
+    "nutrition_total": 0.027566415540542566,
+    "steps": 4,
+    "world_time": 0.2000000000000001
+  },
+  "initial": {
+    "active_visitor_slots": 0,
+    "compartments": 102,
+    "dormant_visitor_slots": 4,
+    "material_objects": 64
+  },
+  "native": {
+    "path": "/tmp/chreatures-mobile-photo-v4/_world_kernels.cpython-312-darwin.so",
+    "sha256": "2d491cf166944a43bf3131cc962c9139c10cd10a77255f0d5ac07542e73e0282"
+  },
+  "offers": [
+    {
+      "choice": "reserve-fruit",
+      "elemental_residual": {
+        "carbon_equivalent": 0.0,
+        "mineral_equivalent": 0.0
+      },
+      "fraction": 1.0,
+      "moved_resources": [
+        0.0,
+        0.0,
+        0.18,
+        0.025,
+        0.0,
+        0.0
+      ],
+      "outside_boundary": {
+        "chemical_energy": 0.27,
+        "elements": {
+          "carbon_equivalent": 0.28,
+          "mineral_equivalent": 0.025
+        }
+      },
+      "physical_mass": 0.0594113875215322,
+      "stored_energy_residual": 0.0
+    },
+    {
+      "choice": "fibrous-pulp-mineral",
+      "elemental_residual": {
+        "carbon_equivalent": 0.0,
+        "mineral_equivalent": 0.0
+      },
+      "fraction": 1.0,
+      "moved_resources": [
+        0.012,
+        0.0,
+        0.03,
+        0.0,
+        0.08,
+        0.05
+      ],
+      "outside_boundary": {
+        "chemical_energy": 0.482,
+        "elements": {
+          "carbon_equivalent": 0.55,
+          "mineral_equivalent": 0.14200000000000002
+        }
+      },
+      "physical_mass": 0.03692837444539683,
+      "stored_energy_residual": 0.0
+    }
+  ],
+  "passed": true,
+  "seed": 20260909,
+  "sources": {
+    "data/biosphere/living-reef.json": "5c002b387cc3406ef02430c880f44a405adf22a8a7d4a611e6ff5de94cebf92a",
+    "data/habitats/living-reef.json": "70d3659059564ee3ba75ccca91fe82cfc81d6c28ac2626141def38ec302628e7",
+    "data/visitors/living-reef.json": "d8a09254d5ff9d503b77dba2277fda0ff1fa39bebadb8ba37f744c84551953a6"
+  },
+  "web_pool_sum_offer_residual": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ]
+}

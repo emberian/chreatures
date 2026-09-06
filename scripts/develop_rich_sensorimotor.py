@@ -89,12 +89,12 @@ def arguments() -> argparse.Namespace:
     parser.add_argument(
         "--chemical-habitat",
         type=Path,
-        default=ROOT / "data/habitats/chemical-reef-v3.json",
+        default=ROOT / "data/habitats/living-reef.json",
     )
     parser.add_argument(
         "--chemical-biosphere",
         type=Path,
-        default=ROOT / "data/biosphere/chemical-reef-v3.json",
+        default=ROOT / "data/biosphere/living-reef.json",
     )
     parser.add_argument("--worlds", type=int, default=4)
     parser.add_argument("--residents-per-world", type=int, default=6)

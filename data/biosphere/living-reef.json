@@ -1052,6 +1052,50 @@
       "pools": {},
       "atp": 0.0,
       "atp_capacity": 0.0
+    },
+    {
+      "enzymes": {},
+      "pools": {
+        "reserve": 2.4,
+        "soft_tissue": 0.3
+      },
+      "atp": 0.0,
+      "atp_capacity": 0.0
+    },
+    {
+      "enzymes": {},
+      "pools": {},
+      "atp": 0.0,
+      "atp_capacity": 0.0
+    },
+    {
+      "enzymes": {},
+      "pools": {},
+      "atp": 0.0,
+      "atp_capacity": 0.0
+    },
+    {
+      "enzymes": {},
+      "pools": {
+        "mineral": 0.18,
+        "reserve": 0.48,
+        "tough_tissue": 1.2,
+        "detritus": 0.72
+      },
+      "atp": 0.0,
+      "atp_capacity": 0.0
+    },
+    {
+      "enzymes": {},
+      "pools": {},
+      "atp": 0.0,
+      "atp_capacity": 0.0
+    },
+    {
+      "enzymes": {},
+      "pools": {},
+      "atp": 0.0,
+      "atp_capacity": 0.0
     }
   ],
   "bulk": {},
@@ -10816,6 +10860,384 @@
               0.0,
               0.25,
               1.7
+            ]
+          }
+        }
+      },
+      {
+        "entity": "living-visitor-reserve-00",
+        "row": 97,
+        "capacities": {
+          "mineral": 0.5,
+          "inorganic_carbon": 0.5,
+          "reserve": 0.5,
+          "soft_tissue": 0.5,
+          "tough_tissue": 0.5,
+          "detritus": 0.5
+        },
+        "content_weights": {
+          "mineral": 1,
+          "inorganic_carbon": 1,
+          "reserve": 1,
+          "soft_tissue": 5,
+          "tough_tissue": 5,
+          "detritus": 5
+        },
+        "remove_when_empty": true,
+        "boundaries": [
+          {
+            "minimum_content": 0.1,
+            "scale": 1.0
+          },
+          {
+            "minimum_content": 0.035,
+            "scale": 0.74
+          },
+          {
+            "minimum_content": 0.0,
+            "scale": 0.5
+          }
+        ],
+        "dormant_template": {
+          "id": "living-visitor-reserve-00",
+          "mobility": "free",
+          "material": "living-visitor-reserve-00",
+          "physical_material": "light",
+          "position": [
+            0.5,
+            0.5,
+            0.1
+          ],
+          "shapes": [
+            {
+              "type": "sphere",
+              "size": [
+                0.072
+              ]
+            }
+          ],
+          "components": []
+        },
+        "surface": {
+          "rgb_bias": [
+            0.08,
+            0.018,
+            0.008
+          ],
+          "rgb_coefficients": {
+            "reserve": [
+              2.5,
+              0.42,
+              0.08
+            ],
+            "soft_tissue": [
+              0.45,
+              0.8,
+              0.12
+            ]
+          },
+          "odor_coefficients": {
+            "reserve": [
+              2.0,
+              0.06,
+              0.0
+            ],
+            "soft_tissue": [
+              0.15,
+              1.4,
+              0.04
+            ]
+          }
+        }
+      },
+      {
+        "entity": "living-visitor-reserve-01",
+        "row": 98,
+        "capacities": {
+          "mineral": 0.5,
+          "inorganic_carbon": 0.5,
+          "reserve": 0.5,
+          "soft_tissue": 0.5,
+          "tough_tissue": 0.5,
+          "detritus": 0.5
+        },
+        "content_weights": {
+          "mineral": 1,
+          "inorganic_carbon": 1,
+          "reserve": 1,
+          "soft_tissue": 5,
+          "tough_tissue": 5,
+          "detritus": 5
+        },
+        "remove_when_empty": true,
+        "boundaries": [
+          {
+            "minimum_content": 0.1,
+            "scale": 1.0
+          },
+          {
+            "minimum_content": 0.035,
+            "scale": 0.74
+          },
+          {
+            "minimum_content": 0.0,
+            "scale": 0.5
+          }
+        ],
+        "dormant_template": {
+          "id": "living-visitor-reserve-01",
+          "mobility": "free",
+          "material": "living-visitor-reserve-01",
+          "physical_material": "light",
+          "position": [
+            0.5,
+            0.5,
+            0.1
+          ],
+          "shapes": [
+            {
+              "type": "sphere",
+              "size": [
+                0.072
+              ]
+            }
+          ],
+          "components": []
+        },
+        "surface": {
+          "rgb_bias": [
+            0.08,
+            0.018,
+            0.008
+          ],
+          "rgb_coefficients": {
+            "reserve": [
+              2.5,
+              0.42,
+              0.08
+            ],
+            "soft_tissue": [
+              0.45,
+              0.8,
+              0.12
+            ]
+          },
+          "odor_coefficients": {
+            "reserve": [
+              2.0,
+              0.06,
+              0.0
+            ],
+            "soft_tissue": [
+              0.15,
+              1.4,
+              0.04
+            ]
+          }
+        }
+      },
+      {
+        "entity": "living-visitor-fibrous-00",
+        "row": 100,
+        "capacities": {
+          "mineral": 0.5,
+          "inorganic_carbon": 0.5,
+          "reserve": 0.5,
+          "soft_tissue": 0.5,
+          "tough_tissue": 0.5,
+          "detritus": 0.5
+        },
+        "content_weights": {
+          "mineral": 1,
+          "inorganic_carbon": 1,
+          "reserve": 1,
+          "soft_tissue": 5,
+          "tough_tissue": 5,
+          "detritus": 5
+        },
+        "remove_when_empty": true,
+        "boundaries": [
+          {
+            "minimum_content": 0.1,
+            "scale": 1.0
+          },
+          {
+            "minimum_content": 0.035,
+            "scale": 0.74
+          },
+          {
+            "minimum_content": 0.0,
+            "scale": 0.5
+          }
+        ],
+        "dormant_template": {
+          "id": "living-visitor-fibrous-00",
+          "mobility": "free",
+          "material": "living-visitor-fibrous-00",
+          "physical_material": "light",
+          "position": [
+            0.5,
+            0.5,
+            0.1
+          ],
+          "shapes": [
+            {
+              "type": "ellipsoid",
+              "size": [
+                0.08,
+                0.058,
+                0.05
+              ]
+            }
+          ],
+          "components": []
+        },
+        "surface": {
+          "rgb_bias": [
+            0.035,
+            0.028,
+            0.01
+          ],
+          "rgb_coefficients": {
+            "mineral": [
+              0.35,
+              1.0,
+              0.3
+            ],
+            "reserve": [
+              1.0,
+              0.2,
+              0.04
+            ],
+            "tough_tissue": [
+              0.22,
+              0.65,
+              0.12
+            ],
+            "detritus": [
+              0.32,
+              0.18,
+              0.04
+            ]
+          },
+          "odor_coefficients": {
+            "reserve": [
+              0.7,
+              0.04,
+              0.0
+            ],
+            "tough_tissue": [
+              0.05,
+              0.32,
+              0.1
+            ],
+            "detritus": [
+              0.0,
+              0.3,
+              1.9
+            ]
+          }
+        }
+      },
+      {
+        "entity": "living-visitor-fibrous-01",
+        "row": 101,
+        "capacities": {
+          "mineral": 0.5,
+          "inorganic_carbon": 0.5,
+          "reserve": 0.5,
+          "soft_tissue": 0.5,
+          "tough_tissue": 0.5,
+          "detritus": 0.5
+        },
+        "content_weights": {
+          "mineral": 1,
+          "inorganic_carbon": 1,
+          "reserve": 1,
+          "soft_tissue": 5,
+          "tough_tissue": 5,
+          "detritus": 5
+        },
+        "remove_when_empty": true,
+        "boundaries": [
+          {
+            "minimum_content": 0.1,
+            "scale": 1.0
+          },
+          {
+            "minimum_content": 0.035,
+            "scale": 0.74
+          },
+          {
+            "minimum_content": 0.0,
+            "scale": 0.5
+          }
+        ],
+        "dormant_template": {
+          "id": "living-visitor-fibrous-01",
+          "mobility": "free",
+          "material": "living-visitor-fibrous-01",
+          "physical_material": "light",
+          "position": [
+            0.5,
+            0.5,
+            0.1
+          ],
+          "shapes": [
+            {
+              "type": "ellipsoid",
+              "size": [
+                0.08,
+                0.058,
+                0.05
+              ]
+            }
+          ],
+          "components": []
+        },
+        "surface": {
+          "rgb_bias": [
+            0.035,
+            0.028,
+            0.01
+          ],
+          "rgb_coefficients": {
+            "mineral": [
+              0.35,
+              1.0,
+              0.3
+            ],
+            "reserve": [
+              1.0,
+              0.2,
+              0.04
+            ],
+            "tough_tissue": [
+              0.22,
+              0.65,
+              0.12
+            ],
+            "detritus": [
+              0.32,
+              0.18,
+              0.04
+            ]
+          },
+          "odor_coefficients": {
+            "reserve": [
+              0.7,
+              0.04,
+              0.0
+            ],
+            "tough_tissue": [
+              0.05,
+              0.32,
+              0.1
+            ],
+            "detritus": [
+              0.0,
+              0.3,
+              1.9
             ]
           }
         }

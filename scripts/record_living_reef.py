@@ -204,6 +204,15 @@ def identity(state: Mapping[str, Any], args: argparse.Namespace) -> dict[str, An
     controller = state.get("resident_controller", {})
     graph = str(anatomy.get("sha256", ""))
     artifact = str(controller.get("artifact_sha256", ""))
+    engine = state.get("engine_identity")
+    if not isinstance(engine, Mapping) or len(str(engine.get("sha256", ""))) != 64:
+        raise ValueError("host view lacks its pinned engine identity")
+    compact_engine = {
+        key: engine.get(key)
+        for key in (
+            "format", "sha256", "native", "dependencies", "python", "system", "machine",
+        )
+    }
     if len(graph) != 64:
         raise ValueError("host view lacks a graph SHA-256")
     if args.expected_graph_sha256 and graph != args.expected_graph_sha256:
@@ -221,6 +230,10 @@ def identity(state: Mapping[str, Any], args: argparse.Namespace) -> dict[str, An
     return {
         "source_revision": args.source_revision,
         "source_content_sha256": args.source_content_sha256,
+        "source_content_semantics": (
+            "caller-pinned source archive or the identical engine_identity.sha256"
+        ),
+        "engine_identity": compact_engine,
         "physical_profile_sha256": args.profile_sha256,
         "graph_sha256": graph,
         "resident_artifact_sha256": artifact or None,

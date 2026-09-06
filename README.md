@@ -12,6 +12,8 @@ Inspired by *Creatures* and the changing societies and environments of *Children
 
 Residents acquire finite material through mouth contact, digest it into usable reserves, spend energy on activity, and return material through physical deposits. Colonies can release accumulated reserves into consumable packets. These mechanisms share conserved synthetic chemistry. Their combination provides an ecological substrate; a self-sustaining food web, reproduction and evolved social organization remain goals.
 
+Some inherited bodies also capture light through a dorsal surface. Its area is bounded by the physical thorax; orientation and occlusion change the available photons. The same carbon-fixation chemistry converts them subject to finite substrates and enzyme activity. Absorptivity varies continuously down to zero, while all bodies retain feeding and movement. [Mobile mixotrophy](docs/MOBILE_PHOTOTROPHY.md).
+
 The current neural substrate is the **MaleCNS v1.0 brain and ventral nerve cord**: **165,122 traced neurons**, **25,563,197 directed edges** and **124,025,046 synapses** represented by those edges. Anatomical wiring constrains the recurrent network. The rate dynamics, chemical rules, bodies and sensory/motor interfaces include explicit engineering assumptions. This is a synthetic species project, not a recovered fly.
 
 A resident's current control loop combines:
@@ -36,7 +38,7 @@ Both upstream libraries have executed against actual project data. Their artifac
 
 The earlier joined neural/controller experiment completed **245,760 resident transitions** and **160 PPO updates** in four three-resident chemical worlds on an AMD RX 6750 XT. It trained a continuous worker and a slower achieved-goal manager alongside the full MaleCNS circuit. These are execution and training results; they do not establish improved physical skill. [Recorded run](research/sensorimotor_skills/ONLINE_DEVELOPMENT.md).
 
-GAM consequence models were fitted to **192,000 recorded physical transitions**, holding out complete physical worlds. Native interpolation, operating-domain checks and artifact loading have run. The new private learner, rich visual controller and their complete stochastic snapshots have executed in isolation; the larger rich-world collection and learned deployment are the current integration work.
+GAM consequence models were fitted to **192,000 recorded physical transitions**, holding out complete physical worlds. Native interpolation, operating-domain checks and artifact loading have run. The larger rich-world collection has now completed **196,608 transitions** across six bodies in four worlds, including raw retinal observations, full-circuit readouts, delivered actions and physical outcomes. The new private learner, rich visual controller and their complete stochastic snapshots have executed in isolation; learned current-life deployment is the next integration step.
 
 The new reef's physical and chemical runs have exercised growth, exudation, recycling, acoustic contacts and changing solar exposure. The coupled collection exposed and fixed two integration defects: construction invalidating a cached retinal model, and physical emitters crossing the finite chemical grid boundary. Outside-domain emission is now accounted separately rather than placed in an unrelated boundary cell.
 
@@ -68,12 +70,13 @@ uv run chreatures --port 8777 \
   --resident-artifact /path/to/rich-developmental-resident.npz \
   --habitat data/habitats/living-reef.json \
   --biosphere data/biosphere/living-reef.json \
+  --visitor-materials data/visitors/living-reef.json \
   --checkpoint runs/living-reef.json
 ```
 
 The local interface lets people manipulate physical objects, offer finite resources, and make light, sound and gesture stimuli. Its inspector shows actual retinal inputs, population readouts, motor actions, remembered goals and physical state. Public GitHub Pages contain recordings, never an undisclosed connection to a private running world.
 
-Whole-world checkpoints preserve neural and physical state, private memories and learning, RNG, pending actions, chemical pools, constructed topology and the solar clock. An ambiguous distributed mutation pauses the world. Current development deliberately breaks obsolete interfaces and checkpoint formats; old engines belong in Git history rather than parallel compatibility paths.
+Whole-world checkpoints preserve neural and physical state, private memories and learning, RNG, pending actions, chemical pools, constructed topology and the solar clock. Restore checks the pinned source, native binaries and runtime before touching the remote neural state. Deploy lives from immutable source directories. An ambiguous distributed mutation pauses the world. Current development deliberately breaks obsolete interfaces and checkpoint formats; old engines belong in Git history rather than parallel compatibility paths.
 
 ## Working together
 

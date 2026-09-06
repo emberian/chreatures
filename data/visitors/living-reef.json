@@ -1,0 +1,44 @@
+{
+  "format": "chreatures-visitor-material-supply-v1",
+  "chemistry_sha256": "fc482774de2dd3c08e92cd9f6bdaf8298c39e41a8ef173e8430b7363841e9928",
+  "choices": [
+    {
+      "id": "reserve-fruit",
+      "source_row": 96,
+      "initial_resources": {
+        "reserve": 2.4,
+        "soft_tissue": 0.3
+      },
+      "portion": {
+        "reserve": 0.18,
+        "soft_tissue": 0.025
+      },
+      "minimum_fraction": 0.25,
+      "slots": [
+        "living-visitor-reserve-00",
+        "living-visitor-reserve-01"
+      ]
+    },
+    {
+      "id": "fibrous-pulp-mineral",
+      "source_row": 99,
+      "initial_resources": {
+        "mineral": 0.18,
+        "reserve": 0.48,
+        "tough_tissue": 1.2,
+        "detritus": 0.72
+      },
+      "portion": {
+        "mineral": 0.012,
+        "reserve": 0.03,
+        "tough_tissue": 0.08,
+        "detritus": 0.05
+      },
+      "minimum_fraction": 0.25,
+      "slots": [
+        "living-visitor-fibrous-00",
+        "living-visitor-fibrous-01"
+      ]
+    }
+  ]
+}
