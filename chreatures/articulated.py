@@ -263,6 +263,7 @@ class ArticulatedWorld(PhysicsWorld):
         knee_swing = math.radians(float(controller["knee_swing_degrees"]))
         idle_knee = math.radians(float(controller["idle_knee_degrees"]))
         torque_limit = float(controller["max_joint_torque"]) * strength
+        active_scale = self._active_effort_scale[body.id]
 
         for leg in layout:
             name, side = leg["name"], int(leg["side"])
@@ -303,7 +304,7 @@ class ArticulatedWorld(PhysicsWorld):
                 )
                 self.data.qfrc_applied[dadr] = float(
                     np.clip(torque, -torque_limit, torque_limit)
-                )
+                ) * active_scale
 
         # A low-gain vestibular stance reflex keeps the trunk over the support
         # polygon.  It supplies torque only; it cannot translate or set height.
@@ -318,7 +319,7 @@ class ArticulatedWorld(PhysicsWorld):
         norm = float(np.linalg.norm(correction))
         if norm > limit:
             correction *= limit / norm
-        self.data.xfrc_applied[root, 3:6] += correction
+        self.data.xfrc_applied[root, 3:6] += correction * active_scale
 
     def sense(self, body_id: str) -> dict[str, Any]:
         values = super().sense(body_id)

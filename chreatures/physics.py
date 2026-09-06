@@ -191,6 +191,9 @@ class PhysicsWorld:
         self._grips: dict[str, str | None] = {}
         self._hand: dict[str, Any] | None = None
         self._acoustics: Any | None = None
+        self._physiology: Any | None = None
+        self._active_effort_scale = {body["id"]: 1.0 for body in self.spec["bodies"]}
+        self._step_contact_samples: dict[tuple[Any, ...], dict[str, Any]] = {}
         self.model_revision = 0
         self._light = {"position": [6.0, 4.0, 3.0], "intensity": 0.0, "remaining": 0.0, "color": [1.0, 0.94, 0.78]}
         self._compile_model()
@@ -464,6 +467,9 @@ class PhysicsWorld:
             raise ValueError("habitat limits must be a mapping")
         _number(limits.get("acoustic_impulse", 10.0), "acoustic impulse limit", 1e-6, 10.0)
         _number(limits.get("acoustic_work", 5.0), "acoustic work limit", 1e-8, 5.0)
+        contact_samples = limits.get("contact_samples", 512)
+        if isinstance(contact_samples, bool) or not isinstance(contact_samples, int) or not 1 <= contact_samples <= 4096:
+            raise ValueError("contact_samples must be an integer in 1..4096")
         if len(spec["entities"]) > int(limits.get("entities", 96)):
             raise ValueError("entity capacity exceeded")
         normalize_assemblies(spec.get("assemblies", []), expanded_entities)
@@ -830,6 +836,15 @@ class PhysicsWorld:
             raise RuntimeError("an acoustic engine is already attached")
         self._acoustics = engine
 
+    def bind_physiology(self, engine: Any | None) -> None:
+        """Bind a transient owner of resident metabolism and fatigue."""
+        if engine is not None and (
+            not callable(getattr(engine, "begin_step", None))
+            or not callable(getattr(engine, "finish_step", None))
+        ):
+            raise TypeError("physiology engine does not implement begin_step/finish_step")
+        self._physiology = engine
+
     def acoustic_entity_state(self, entity_id: str) -> dict[str, Any]:
         """Expose physical source pose and hinge motion to environment machinery."""
         entity = self._entity(entity_id)
@@ -1096,6 +1111,17 @@ class PhysicsWorld:
 
     def advance(self, actions: dict[str, dict[str, Any]], dt: float = MODEL_DT) -> dict[str, dict[str, float]]:
         clean, step = self._validate_actions(actions, dt)
+        if self._physiology is None:
+            self._active_effort_scale = {body.id: 1.0 for body in self.bodies}
+        else:
+            scales = self._physiology.begin_step(copy.deepcopy(clean), step)
+            ids = {body.id for body in self.bodies}
+            if not isinstance(scales, dict) or set(scales) != ids:
+                raise ValueError("physiology begin_step must return every resident effort scale")
+            self._active_effort_scale = {
+                body_id: _number(value, "physiology effort scale", 0.0, 1.0)
+                for body_id, value in scales.items()
+            }
         starts = {body.id: np.array([body.x, body.y, body.z]) for body in self.bodies}
         outcomes = {
             body.id: {"nutrition": 0.0, "contact": 0.0, "distance": 0.0, "effort": 0.0}
@@ -1104,6 +1130,8 @@ class PhysicsWorld:
         self._touch = {body.id: [0.0, 0.0] for body in self.bodies}
         self._contact_normals = {body.id: [] for body in self.bodies}
         contacted_entities = {body.id: set() for body in self.bodies}
+        self._step_contact_samples = {}
+        mechanical_work = {body.id: 0.0 for body in self.bodies}
         self.signals = [signal for signal in self.signals if self._age_signal(signal, step)]
         for body in self.bodies:
             self._signal_cooldown[body.id] = max(0.0, self._signal_cooldown[body.id] - step)
@@ -1112,11 +1140,16 @@ class PhysicsWorld:
             self._update_grip(body.id, action.get("grip", 0.0))
             tones = self._action_tones(action, self.bodies.index(body) % 3)
             if tones and self._signal_cooldown[body.id] <= 1e-12:
+                emitted = False
                 for tone, strength in tones:
                     if len(self.signals) >= self._signal_limit:
                         break
-                    self._emit_signal(body.x, body.y, body.z + 0.08, tone, strength)
-                self._signal_cooldown[body.id] = 0.5
+                    funded_strength = strength * self._active_effort_scale[body.id]
+                    if funded_strength > 0.0:
+                        self._emit_signal(body.x, body.y, body.z + 0.08, tone, funded_strength)
+                        emitted = True
+                if emitted:
+                    self._signal_cooldown[body.id] = 0.5
         self._light["remaining"] = max(0.0, self._light["remaining"] - step)
         self._sync_light_model()
         for entity_id in self._resonance:
@@ -1131,9 +1164,28 @@ class PhysicsWorld:
                 self.data.xfrc_applied[:] = 0.0
                 self.data.qfrc_applied[:] = 0.0
                 for body in self.bodies:
-                    self._apply_crawler_forces(body, clean.get(body.id, {}), motor_noise[body.id])
+                    if self._physiology is None:
+                        self._apply_crawler_forces(body, clean.get(body.id, {}), motor_noise[body.id])
+                    else:
+                        q_before = self.data.qfrc_applied.copy()
+                        x_before = self.data.xfrc_applied.copy()
+                        self._apply_crawler_forces(body, clean.get(body.id, {}), motor_noise[body.id])
+                        mechanical_work[body.id] += self._positive_applied_work(
+                            self.data.qfrc_applied - q_before, self.data.xfrc_applied - x_before,
+                            self.model.opt.timestep,
+                        )
                 self._apply_hand_force()
-                self._apply_grip_forces()
+                if self._physiology is None:
+                    self._apply_grip_forces()
+                else:
+                    for body in self.bodies:
+                        q_before = self.data.qfrc_applied.copy()
+                        x_before = self.data.xfrc_applied.copy()
+                        self._apply_grip_forces(body.id)
+                        mechanical_work[body.id] += self._positive_applied_work(
+                            self.data.qfrc_applied - q_before, self.data.xfrc_applied - x_before,
+                            self.model.opt.timestep,
+                        )
                 if self._acoustics is not None:
                     self._acoustics.before_substep(self.model.opt.timestep)
                 mujoco.mj_step(self.model, self.data)
@@ -1149,7 +1201,7 @@ class PhysicsWorld:
 
         for body in self.bodies:
             action = clean.get(body.id, {})
-            for entity_id in contacted_entities[body.id]:
+            for entity_id in contacted_entities[body.id] if self._physiology is None else ():
                 food = next((c for c in self._components[entity_id] if c.get("type") == "food"), None)
                 if food is None or action.get("eat", 0.0) <= 0.0 or float(food["amount"]) <= 0.0:
                     continue
@@ -1157,9 +1209,6 @@ class PhysicsWorld:
                 food["amount"] = float(food["amount"]) - bite
                 body.gut += bite
                 outcomes[body.id]["nutrition"] += bite * float(food.get("nutrition", 1.0))
-            digestion = min(body.gut, 0.032 * step, max(0.0, (1.0 - body.energy) / 0.84))
-            body.gut -= digestion
-            body.energy += digestion * 0.84
             thrust = abs(action.get("forward", action.get("thrust", 0.0)))
             turn = abs(action.get("turn", action.get("yaw", 0.0)))
             vertical = abs(action.get("lift", action.get("vertical", action.get("posture", 0.0))))
@@ -1167,16 +1216,33 @@ class PhysicsWorld:
                 0.45 * thrust + 0.18 * turn + 0.22 * vertical + 0.15 * action.get("grip", 0.0)
                 + 0.25 * min(1.0, abs(body.linear_velocity[2]) / 1.2), 0.0, 1.0
             ))
-            body.energy = float(np.clip(body.energy - step * (0.0007 + 0.0042 * effort), 0.0, 1.0))
-            body.fatigue = float(np.clip(body.fatigue + step * (0.07 * effort - 0.026 * (1.0 - min(1.0, effort))), 0.0, 1.0))
-            body.gut = float(np.clip(body.gut, 0.0, 1.0))
+            if self._physiology is None:
+                digestion = min(body.gut, 0.032 * step, max(0.0, (1.0 - body.energy) / 0.84))
+                body.gut -= digestion
+                body.energy += digestion * 0.84
+                body.energy = float(np.clip(body.energy - step * (0.0007 + 0.0042 * effort), 0.0, 1.0))
+                body.fatigue = float(np.clip(body.fatigue + step * (0.07 * effort - 0.026 * (1.0 - min(1.0, effort))), 0.0, 1.0))
+                body.gut = float(np.clip(body.gut, 0.0, 1.0))
             body.age += step
             outcomes[body.id]["contact"] = float(max(self._touch[body.id]))
             outcomes[body.id]["distance"] = float(np.linalg.norm(np.array([body.x, body.y, body.z]) - starts[body.id]))
             outcomes[body.id]["effort"] = effort
+            if self._physiology is not None:
+                outcomes[body.id]["mechanical_work"] = mechanical_work[body.id]
+        if self._physiology is not None:
+            self._physiology.finish_step(
+                copy.deepcopy(clean), outcomes, list(self._step_contact_samples.values()), step,
+            )
         self.time = float(self.data.time)
         self._sync_public_state()
         return outcomes
+
+    def _positive_applied_work(self, qfrc: np.ndarray, xfrc: np.ndarray, dt: float) -> float:
+        power = float(np.dot(qfrc, self.data.qvel))
+        for body_id in np.flatnonzero(np.any(xfrc != 0.0, axis=1)):
+            linear, angular = self._velocity(int(body_id))
+            power += float(np.dot(xfrc[body_id, :3], linear) + np.dot(xfrc[body_id, 3:], angular))
+        return max(0.0, power) * float(dt)
 
     @staticmethod
     def _action_tones(action: dict[str, Any], default_tone: int) -> list[tuple[int, float]]:
@@ -1215,6 +1281,7 @@ class PhysicsWorld:
         rotation = self.data.xmat[mj_body].reshape(3, 3)
         linear, angular = self._velocity(mj_body)
         prototype = self.spec["body_prototype"]
+        scale = self._active_effort_scale[body.id]
         fatigue = 1.0 - 0.72 * body.fatigue
         vitality = 0.18 + 0.82 * body.energy
         supported = self._has_support_contact(body.id)
@@ -1224,18 +1291,18 @@ class PhysicsWorld:
             heading = rotation[:, 0].copy()
             heading[2] = 0.0
             heading /= max(float(np.linalg.norm(heading)), 1e-9)
-            self.data.xfrc_applied[mj_body, :3] += heading * force - linear * 1.35
+            self.data.xfrc_applied[mj_body, :3] += (heading * force - linear * 1.35) * scale
             turn = action.get("turn", action.get("yaw", 0.0))
-            self.data.xfrc_applied[mj_body, 5] += float(prototype["turn_torque"]) * turn * fatigue + 0.0004 * noise[1] * abs(turn)
+            self.data.xfrc_applied[mj_body, 5] += (float(prototype["turn_torque"]) * turn * fatigue + 0.0004 * noise[1] * abs(turn)) * scale
             # The learned eight-axis adapter calls this coordinate ``posture``;
             # direct physics clients may name the same vertical traction ``lift``.
             lift = action.get("lift", action.get("vertical", action.get("posture", 0.0)))
-            self.data.xfrc_applied[mj_body, 2] += float(prototype["vertical_force"]) * lift
+            self.data.xfrc_applied[mj_body, 2] += float(prototype["vertical_force"]) * lift * scale
         z_axis = rotation[:, 2]
         posture = action.get("posture")
         posture_gain = 1.0 if posture is None else 0.5 + 0.5 * posture
         stabilizing = np.cross(z_axis, np.array([0.0, 0.0, 1.0])) * float(prototype["posture_torque"]) * posture_gain
-        self.data.xfrc_applied[mj_body, 3:6] += stabilizing - angular * 0.012
+        self.data.xfrc_applied[mj_body, 3:6] += (stabilizing - angular * 0.012) * scale
 
     def _update_grip(self, body_id: str, grip: float) -> None:
         if grip <= 0.1:
@@ -1253,8 +1320,10 @@ class PhysicsWorld:
                 self._grips[body_id] = entity_id
                 return
 
-    def _apply_grip_forces(self) -> None:
+    def _apply_grip_forces(self, only_body_id: str | None = None) -> None:
         for body in self.bodies:
+            if only_body_id is not None and body.id != only_body_id:
+                continue
             entity_id = self._grips.get(body.id)
             if not entity_id or entity_id not in self._entity_mj:
                 continue
@@ -1265,7 +1334,7 @@ class PhysicsWorld:
             position = self.data.xpos[object_body]
             velocity, _ = self._velocity(object_body)
             body_velocity, _ = self._velocity(creature_body)
-            force = (target - position) * 15.0 - (velocity - body_velocity) * 1.1
+            force = ((target - position) * 15.0 - (velocity - body_velocity) * 1.1) * self._active_effort_scale[body.id]
             norm = float(np.linalg.norm(force))
             if norm > 8.0:
                 force *= 8.0 / norm
@@ -1306,6 +1375,38 @@ class PhysicsWorld:
             first, second = int(first_ids[index]), int(second_ids[index])
             point = points[index]
             world_normal = normals[index]
+            resident_ids = sorted({
+                value for value in (self._geom_resident.get(first), self._geom_resident.get(second))
+                if value is not None
+            })
+            if self._physiology is not None and resident_ids and len(self._step_contact_samples) < int(
+                self.spec.get("limits", {}).get("contact_samples", 512)
+            ):
+                names = [
+                    mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_id) or ""
+                    for geom_id in (first, second)
+                ]
+                entity_ids = [self._geom_entity.get(first), self._geom_entity.get(second)]
+                shape_indices = [
+                    int(name.rsplit(":", 1)[1]) if entity_id is not None else None
+                    for name, entity_id in zip(names, entity_ids, strict=True)
+                ]
+                for resident_id in resident_ids:
+                    if len(self._step_contact_samples) >= int(
+                        self.spec.get("limits", {}).get("contact_samples", 512)
+                    ):
+                        break
+                    key = (
+                        resident_id, first, second,
+                        *(round(float(value), 4) for value in point),
+                    )
+                    self._step_contact_samples.setdefault(key, {
+                        "resident_id": resident_id,
+                        "participant_resident_ids": resident_ids,
+                        "geom_ids": [first, second], "geom_names": names,
+                        "entity_ids": entity_ids, "entity_shape_indices": shape_indices,
+                        "point": point.astype(float).tolist(),
+                    })
             if self._acoustics is not None:
                 for entity_id in {
                     value for value in (self._geom_entity.get(first), self._geom_entity.get(second))

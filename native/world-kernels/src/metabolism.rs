@@ -245,6 +245,11 @@ impl MetabolicCohort {
     }
 
     #[getter]
+    fn atp_capacity<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        self.atp_capacity.clone().into_pyarray(py)
+    }
+
+    #[getter]
     fn bulk_pool<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
         self.bulk_pool.clone().into_pyarray(py)
     }
@@ -536,6 +541,200 @@ impl MetabolicCohort {
             self.bulk_atp += atp;
         }
         Ok(())
+    }
+
+    fn transfer_batch<'py>(
+        &mut self,
+        py: Python<'py>,
+        donors: PyReadonlyArray1<'_, i64>,
+        receivers: PyReadonlyArray1<'_, i64>,
+        resources: PyReadonlyArray2<'_, f64>,
+        atp: PyReadonlyArray1<'_, f64>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let m = donors.len();
+        if receivers.shape() != [m] || resources.shape() != [m, self.k] || atp.shape() != [m] {
+            return Err(PyValueError::new_err("transfer batch shapes differ"));
+        }
+        let donors = donors.as_slice()?;
+        let receivers = receivers.as_slice()?;
+        let requested = resources.as_slice()?;
+        let requested_atp = atp.as_slice()?;
+        let valid = |value: i64| value == -1 || (value >= 0 && value < self.n as i64);
+        if !finite_nonnegative(requested)
+            || !finite_nonnegative(requested_atp)
+            || donors
+                .iter()
+                .zip(receivers)
+                .any(|(&donor, &receiver)| !valid(donor) || !valid(receiver) || donor == receiver)
+        {
+            return Err(PyValueError::new_err(
+                "transfer batch contains an invalid endpoint or amount",
+            ));
+        }
+
+        // Endpoint n denotes the owned bulk pool. Every factor below is
+        // computed before applying any transfer.
+        let bulk = self.n;
+        let endpoint_count = self.n + 1;
+        let endpoint = |value: i64| if value == -1 { bulk } else { value as usize };
+        let mut resource_demand = vec![0.0; endpoint_count * self.k];
+        let mut atp_demand = vec![0.0; endpoint_count];
+        let mut atp_incoming = vec![0.0; self.n];
+        for edge in 0..m {
+            let donor = endpoint(donors[edge]);
+            let receiver = endpoint(receivers[edge]);
+            for species in 0..self.k {
+                resource_demand[donor * self.k + species] += requested[edge * self.k + species];
+            }
+            atp_demand[donor] += requested_atp[edge];
+            if receiver < self.n {
+                atp_incoming[receiver] += requested_atp[edge];
+            }
+        }
+        if resource_demand.iter().any(|value| !value.is_finite())
+            || atp_demand.iter().any(|value| !value.is_finite())
+            || atp_incoming.iter().any(|value| !value.is_finite())
+        {
+            return Err(PyValueError::new_err(
+                "transfer batch aggregate demand is not finite",
+            ));
+        }
+        let mut resource_factor = vec![1.0; endpoint_count * self.k];
+        let mut donor_atp_factor = vec![1.0; endpoint_count];
+        let mut receiver_atp_factor = vec![1.0; self.n];
+        for source in 0..endpoint_count {
+            for species in 0..self.k {
+                let demand = resource_demand[source * self.k + species];
+                let available = if source == bulk {
+                    self.bulk_pool[species]
+                } else {
+                    self.pools[source * self.k + species]
+                };
+                if demand > 0.0 {
+                    resource_factor[source * self.k + species] = (available / demand).min(1.0);
+                }
+            }
+            let available = if source == bulk {
+                self.bulk_atp
+            } else {
+                self.atp[source]
+            };
+            if atp_demand[source] > 0.0 {
+                donor_atp_factor[source] = (available / atp_demand[source]).min(1.0);
+            }
+        }
+        for receiver in 0..self.n {
+            if atp_incoming[receiver] > 0.0 {
+                receiver_atp_factor[receiver] =
+                    ((self.atp_capacity[receiver] - self.atp[receiver]) / atp_incoming[receiver])
+                        .clamp(0.0, 1.0);
+            }
+        }
+
+        let mut moved = vec![0.0; m * self.k];
+        let mut resource_limiter = vec![1.0; m * self.k];
+        let mut moved_atp = vec![0.0; m];
+        let mut atp_limiter = vec![1.0; m];
+        let mut pool_delta = vec![0.0; self.n * self.k];
+        let mut bulk_delta = vec![0.0; self.k];
+        let mut atp_delta = vec![0.0; self.n];
+        let mut bulk_atp_delta = 0.0;
+        for edge in 0..m {
+            let donor = endpoint(donors[edge]);
+            let receiver = endpoint(receivers[edge]);
+            for species in 0..self.k {
+                let factor = resource_factor[donor * self.k + species];
+                let value = requested[edge * self.k + species] * factor;
+                resource_limiter[edge * self.k + species] = factor;
+                moved[edge * self.k + species] = value;
+                if donor == bulk {
+                    bulk_delta[species] -= value;
+                } else {
+                    pool_delta[donor * self.k + species] -= value;
+                }
+                if receiver == bulk {
+                    bulk_delta[species] += value;
+                } else {
+                    pool_delta[receiver * self.k + species] += value;
+                }
+            }
+            let receive_factor = if receiver == bulk {
+                1.0
+            } else {
+                receiver_atp_factor[receiver]
+            };
+            let factor = donor_atp_factor[donor].min(receive_factor);
+            let value = requested_atp[edge] * factor;
+            atp_limiter[edge] = factor;
+            moved_atp[edge] = value;
+            if donor == bulk {
+                bulk_atp_delta -= value;
+            } else {
+                atp_delta[donor] -= value;
+            }
+            if receiver == bulk {
+                bulk_atp_delta += value;
+            } else {
+                atp_delta[receiver] += value;
+            }
+        }
+
+        let mut next_pools = self.pools.clone();
+        let mut next_atp = self.atp.clone();
+        let mut next_bulk = self.bulk_pool.clone();
+        for (value, delta) in next_pools.iter_mut().zip(pool_delta) {
+            *value += delta;
+        }
+        for (value, delta) in next_atp.iter_mut().zip(atp_delta) {
+            *value += delta;
+        }
+        for (value, delta) in next_bulk.iter_mut().zip(bulk_delta) {
+            *value += delta;
+        }
+        let next_bulk_atp = self.bulk_atp + bulk_atp_delta;
+        if next_pools
+            .iter()
+            .chain(&next_bulk)
+            .any(|x| !x.is_finite() || *x < -1e-10)
+            || next_atp.iter().any(|x| !x.is_finite() || *x < -1e-10)
+            || !next_bulk_atp.is_finite()
+            || next_bulk_atp < -1e-10
+            || next_atp
+                .iter()
+                .zip(&self.atp_capacity)
+                .any(|(x, cap)| *x > *cap + 1e-10)
+        {
+            return Err(PyValueError::new_err(
+                "transfer batch produced invalid aggregate state",
+            ));
+        }
+        for value in next_pools.iter_mut().chain(&mut next_bulk) {
+            *value = value.max(0.0);
+        }
+        for value in &mut next_atp {
+            *value = value.max(0.0);
+        }
+        self.pools = next_pools;
+        self.atp = next_atp;
+        self.bulk_pool = next_bulk;
+        self.bulk_atp = next_bulk_atp.max(0.0);
+
+        let out = PyDict::new(py);
+        out.set_item(
+            "moved_resources",
+            Array2::from_shape_vec((m, self.k), moved)
+                .unwrap()
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "resource_limiter",
+            Array2::from_shape_vec((m, self.k), resource_limiter)
+                .unwrap()
+                .into_pyarray(py),
+        )?;
+        out.set_item("moved_atp", moved_atp.into_pyarray(py))?;
+        out.set_item("atp_limiter", atp_limiter.into_pyarray(py))?;
+        Ok(out)
     }
 
     /// Debit exported work from one compartment without creating a heat sink.

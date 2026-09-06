@@ -61,6 +61,15 @@ capacity before mutating anything. `split(parent, child, fraction)` requires an
 empty child and subtracts the exact transferred resource and ATP values from
 the parent. Enzyme inheritance and mutation remain outside this primitive.
 
+`transfer_batch` computes proportional allocations from beginning-state donor
+balances. Its conservation guarantee is numerical float64 conservation rather
+than arbitrary-batch bit-exact summation: aggregate application rejects a
+negative value below `-1e-10`, while a subtraction residue in `[-1e-10, 0)` is
+clamped to zero. Batch ordering can therefore change last-bit accumulation.
+The focused unit-scale permutation check uses `2e-15` absolute tolerance;
+larger values require a scale-aware float64 tolerance. Nonfinite aggregate
+demand is rejected atomically even when every individual request is finite.
+
 `pay_work(row, amount)` performs an all-or-none ATP debit from one compartment
 and records the same amount in the cumulative exported-work column. It rejects
 invalid rows, nonfinite or negative amounts, and any amount above the exact ATP
