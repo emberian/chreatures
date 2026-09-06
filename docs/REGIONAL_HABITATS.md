@@ -79,3 +79,25 @@ Current sources are:
 - `data/training/regional-environment-schedule-v1.json`: explicit current
   training and held-out environment founder seeds.
 - `chreatures/habitat_family.py`: the thin hash-checking host boundary.
+
+Materialize one founder environment headlessly with:
+
+```sh
+PROFILE_SHA256="$(shasum -a 256 docs/development/POPULATION_WAVE.md | awk '{print $1}')"
+uv run python scripts/generate_regional_family.py \
+  --output runs/regional-founder initial \
+  --archetype terraced-delta --seed 20260906 --residents 8 \
+  --profile-sha256 "$PROFILE_SHA256"
+```
+
+An inherited environment uses the same command and grammar:
+
+```sh
+uv run python scripts/generate_regional_family.py \
+  --output runs/regional-child mutate \
+  --parent-genome runs/regional-founder/environment.genome.json \
+  --variation-seed 20260907
+```
+
+Each output directory contains the genome, concrete habitat, concrete birth-v6
+biosphere, analyst-only graph, and a manifest hashing all inputs and outputs.

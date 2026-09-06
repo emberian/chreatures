@@ -183,6 +183,7 @@ def load_bootstrap(path: Path, device: torch.device, *, cold_inherit_v3: bool):
     identity = value["identity"]
     model = RichSensorimotorModel().to(device)
     inherited_manager = None
+    inherited_adapters = None
     if cold_inherit_v3:
         model.load_state_dict(cold_inherit_v3_model(value["model"]), strict=True)
         normalizer = RichNormalizer.cold_inherit_v3(identity["normalizer"])
@@ -198,10 +199,19 @@ def load_bootstrap(path: Path, device: torch.device, *, cold_inherit_v3: bool):
     else:
         model.load_state_dict(value["model"], strict=True)
         normalizer = RichNormalizer.from_value(identity["normalizer"])
+        inherited_manager = value.get("goal_manager")
+        inherited_adapters = value.get("candidate_adapters")
     for module in (model.visual, model.body, model.goal_encoder, model.goal_decoder):
         module.requires_grad_(False)
         module.eval()
-    return GoalAdapter(model), model, normalizer, identity, inherited_manager
+    return (
+        GoalAdapter(model),
+        model,
+        normalizer,
+        identity,
+        inherited_manager,
+        inherited_adapters,
+    )
 
 
 def observe(pool, brain, normalizer):
@@ -490,7 +500,14 @@ def main() -> int:
     )
     from chreatures.training_environment import EmbodiedTrainingProfile
 
-    encoder, worker, normalizer, bootstrap_identity, inherited_manager = load_bootstrap(
+    (
+        encoder,
+        worker,
+        normalizer,
+        bootstrap_identity,
+        inherited_manager,
+        inherited_adapters,
+    ) = load_bootstrap(
         args.bootstrap_worker.resolve(),
         device,
         cold_inherit_v3=args.cold_inherit_v3,
@@ -559,13 +576,17 @@ def main() -> int:
     adapters = PopulationAdapterBank(
         args.candidate_count, args.candidate_adapter_rank
     ).to(device)
-    if args.candidate_count > 1:
+    if inherited_adapters is not None:
+        adapters.load_state_dict(inherited_adapters, strict=True)
+    elif args.candidate_count > 1:
         worker.requires_grad_(False)
         adapters.vary(
             torch.arange(1, args.candidate_count, device=device),
             seed=args.seed ^ 0xADA7,
             scale=args.candidate_variation_scale,
         )
+    if args.candidate_count > 1:
+        worker.requires_grad_(False)
     optimizer = torch.optim.AdamW(
         [
             *[
