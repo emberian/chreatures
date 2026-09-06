@@ -69,7 +69,7 @@
           <span aria-hidden="true">→</span>
           <div class="decision-step"><small>04 · physical</small><strong>delivered action</strong></div>
         </div>
-        <div class="proposal-block"><div class="micro-title"><span>Actor proposal · 8 channels</span><span>before oral law</span></div><div id="proposal-values" class="proposal-values"></div></div>
+        <div class="proposal-block"><div class="micro-title"><span id="proposal-contract">Actor proposal · 8 channels</span><span>recorded native values</span></div><div id="proposal-values" class="proposal-values"></div></div>
         <div class="candidate-head"><span>candidate</span><span>GAM score</span><span>coverage</span><span>forecast progress</span><span>disagreement</span><span>logit tilt</span></div>
         <div id="candidates" class="candidate-table"></div>
         <div class="decision-meta"><span>selected correction <b id="private-correction">—</b></span><span>private updates before action <b id="private-updates">—</b></span><span>forecast goal-error scale <b id="goal-error-scale">—</b></span></div>
@@ -77,7 +77,7 @@
       </section>
 
       <section>
-        <div class="section-title"><h2>Delivered action</h2><span>9 committed channels</span></div>
+        <div class="section-title"><h2>Delivered action</h2><span id="action-contract">9 committed channels</span></div>
         <div id="actions" class="action-bars"></div>
       </section>
 
@@ -87,12 +87,18 @@
         <div class="legend"><span class="energy">energy</span><span class="gut">gut</span><span class="fatigue">fatigue</span></div>
       </section>
 
+      <section>
+        <div class="section-title"><h2>Recorded body state</h2><span id="physiology-contract">3 post-physics channels</span></div>
+        <div id="physiology-values" class="proposal-values" aria-label="Recorded post-physics body state values"></div>
+        <p class="decision-note">Measured after the physical tick in the host view. These raw values are not the controller's normalized pre-action physiology vector.</p>
+      </section>
+
       <section class="moments-section">
         <div class="section-title"><h2>Recorded moments</h2><span>observed phenomena</span></div>
         <ol id="moments" class="moments"></ol>
       </section>
 
-      <footer><span>Actual recording</span><span>Provided mechanics</span><span>Learned controller</span><a href="https://github.com/emberian/chreatures/blob/main/integrations/artifacts/living-reef-biography/living-reef-biography.json" target="_parent">Evidence biography ↗</a></footer>
+      <footer><span>Actual recording</span><span>Provided mechanics</span><span>Learned controller</span><a id="recording-evidence-link" href="https://github.com/emberian/chreatures/blob/main/integrations/artifacts/living-reef-biography/living-reef-biography.json" target="_parent">Earlier biography ↗</a></footer>
     </aside>
   </main>
   <script type="module" src="living.js"></script>
