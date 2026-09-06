@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "chreatures-sensorimotor-play-trajectory-v1",
+  "title": "Chreatures body-local sensorimotor play trajectory",
+  "description": "NPZ array contract. Partition keys live in the manifest; model arrays contain no resident identity, entity identity, object label, world coordinate, heading, distance, or bearing.",
+  "type": "object",
+  "required": [
+    "source_senses",
+    "physiology",
+    "executed_actions",
+    "oral_command",
+    "reset",
+    "dt_seconds"
+  ],
+  "properties": {
+    "source_senses": {
+      "description": "float32 [T+1,N,351], encoded permitted body-local physical senses in port order",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": ["T+1", "N", 351]
+    },
+    "physiology": {
+      "description": "float32 [T+1,N,6]: energy, gut, fatigue, tanh(speed/2), tanh(angular_velocity/4), circuit support",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": ["T+1", "N", 6]
+    },
+    "executed_actions": {
+      "description": "float32 [T,N,8], final clipped physical commands in thrust,yaw,gaze_pitch,grip,signal_low,signal_mid,signal_high,posture order",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": ["T", "N", 8]
+    },
+    "oral_command": {
+      "description": "float32 [T,N], actual eat command supplied by the declared body-state law clip((1-gut)*(1.1-energy),0,1)",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": ["T", "N"]
+    },
+    "reset": {
+      "description": "bool [T+1,N], true only for the first observation of each fresh episode",
+      "x-numpy-dtype": "|b1",
+      "x-numpy-shape": ["T+1", "N"]
+    },
+    "dt_seconds": {
+      "description": "float64 scalar physical observation/action interval",
+      "x-numpy-dtype": "<f8",
+      "x-numpy-shape": []
+    },
+    "neural_readouts": {
+      "description": "optional float32 [T+1,N,384] identity-bound full-graph readout view; never substitutes for source_senses",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": ["T+1", "N", 384]
+    }
+  },
+  "additionalProperties": false
+}
