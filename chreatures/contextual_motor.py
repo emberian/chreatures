@@ -789,7 +789,7 @@ class ContextualMotorRefiner:
         normalized = motor.normalize(raw_motor_senses)
         motor_physiology = motor.physiology_vector(local_physiology)
         mean, inherited_value, hidden = motor.forward(normalized, motor_physiology)
-        log_std = np.clip(motor.artifact.arrays["log_std"], -3.5, 0.3).astype(np.float32)
+        log_std = motor.distribution_log_std(hidden)
         selection_mean = (
             mean if policy_mean_override is None
             else _vector(policy_mean_override, len(MOTOR_ACTIONS), "policy mean override")

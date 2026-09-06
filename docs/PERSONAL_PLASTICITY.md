@@ -34,10 +34,13 @@ performance guarantee.
 ## Optional state-conditioned exploration
 
 The original `fixed-inherited-v1` variance remains the default. Its diagonal
-Gaussian standard deviations are immutable for a lifetime, so even an actor
-that learns a zero mean retains a nonzero activity floor. In the current
-physical effort equation that floor can exceed the fatigue recovery threshold.
-Mean adaptation alone therefore cannot express physical rest.
+Gaussian scale is supplied by the immutable inherited policy and frozen for
+each decision. A global-v1 artifact returns one global vector; a
+state-conditioned-v2 artifact derives it from the same decision hidden state.
+Neither changes from private lifetime learning, so even an actor that learns a
+zero mean retains a nonzero activity floor. In the current physical effort
+equation that floor can exceed the fatigue recovery threshold. Mean adaptation
+alone therefore cannot express physical rest.
 
 `PersonalPlasticityConfig(variance_adaptation="state-log-std-v2")` enables a
 separate private log-standard-deviation head. Its exact feature profile is
@@ -62,8 +65,8 @@ no fatigue threshold, rest command, or authored state gate.
 
 When variance-v2 is active, contextual alternatives are still formed as
 `zj = z0 + inherited_sigma*c*epsilon_j`. Their perturbation scale is the
-immutable inherited standard deviation, while only baseline `z0` uses the
-private effective standard deviation. Consequently the downstream candidate
+frozen decision-time inherited standard deviation, while only baseline `z0`
+uses the private effective standard deviation. Consequently the downstream candidate
 generator has no additional private-variance path after conditioning on `z0`,
 and the baseline proposal-density score remains valid. Decision provenance
 records inherited and effective log standard deviations, the exact sampled
@@ -83,10 +86,11 @@ inherited_mean, _, hidden = motor.forward(
     motor.normalize(raw_neural_features),
     motor.physiology_vector(local_physiology),
 )
+inherited_log_std = motor.distribution_log_std(hidden)
 proposal = plasticity.propose(
     feature64,
     inherited_mean,
-    motor.artifact.arrays["log_std"],
+    inherited_log_std,
     local_physiology=motor.physiology_vector(local_physiology),
 )
 physical_vector = plasticity.commit(proposal)

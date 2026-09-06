@@ -41,6 +41,33 @@ _MUTABLE_MODEL_FIELDS = (
 )
 
 
+@dataclass
+class TopologyTransaction:
+    """A validated, precompiled topology replacement awaiting atomic commit."""
+
+    world: "PhysicsWorld"
+    expected_revision: int
+    candidate: "PhysicsWorld"
+    operations: tuple[dict[str, Any], ...]
+    _committed: bool = False
+
+    def commit(self) -> dict[str, Any]:
+        if self._committed:
+            raise RuntimeError("topology transaction was already committed")
+        if self.world.model_revision != self.expected_revision:
+            raise RuntimeError("topology transaction is stale")
+        replaced = {
+            operation["id"] for operation in self.operations if operation["op"] == "replace"
+        }
+        self.world._adopt_topology_candidate(self.candidate, replaced)
+        self._committed = True
+        return {
+            "model_revision": self.world.model_revision,
+            "model_signature": self.world._model_signature,
+            "entity_count": len(self.world._entities),
+        }
+
+
 def _number(value: Any, name: str, low: float | None = None, high: float | None = None) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float, np.number)):
         raise ValueError(f"{name} must be a finite number")
@@ -164,6 +191,7 @@ class PhysicsWorld:
         self._grips: dict[str, str | None] = {}
         self._hand: dict[str, Any] | None = None
         self._acoustics: Any | None = None
+        self.model_revision = 0
         self._light = {"position": [6.0, 4.0, 3.0], "intensity": 0.0, "remaining": 0.0, "color": [1.0, 0.94, 0.78]}
         self._compile_model()
         self._native_contacts = NativeContactBatch(max(256, int(self.model.nconmax)))
@@ -1321,6 +1349,158 @@ class PhysicsWorld:
             velocity = abs(float(self.data.qvel[self.model.jnt_dofadr[joint_id]]))
             self._resonance[entity_id] = max(self._resonance.get(entity_id, 0.0), min(1.0, velocity * 0.22))
 
+    def prepare_topology_batch(self, operations: list[dict[str, Any]]) -> TopologyTransaction:
+        """Validate and compile a generic entity edit batch without mutating this world."""
+        if not isinstance(operations, list) or not operations:
+            raise ValueError("topology batch requires at least one operation")
+        candidate_spec = copy.deepcopy(self.spec)
+        entities = candidate_spec["entities"]
+        touched: set[str] = set()
+        for operation in operations:
+            if not isinstance(operation, dict) or operation.get("op") not in {
+                "add", "remove", "replace", "append_shapes",
+            }:
+                raise ValueError("unsupported topology operation")
+            kind = operation["op"]
+            entity_id = (
+                operation.get("entity", {}).get("id") if kind == "add" else operation.get("id")
+            )
+            if not isinstance(entity_id, str) or not _ID.match(entity_id) or entity_id in touched:
+                raise ValueError("topology operation requires one unique valid entity id")
+            touched.add(entity_id)
+            matches = [index for index, entity in enumerate(entities) if entity.get("id") == entity_id]
+            if kind == "add":
+                if matches or set(operation) != {"op", "entity"} or not isinstance(operation["entity"], dict):
+                    raise ValueError("invalid topology add operation")
+                entities.append(copy.deepcopy(operation["entity"]))
+            elif kind == "remove":
+                if len(matches) != 1 or set(operation) != {"op", "id"}:
+                    raise ValueError("invalid topology remove operation")
+                entities.pop(matches[0])
+            elif kind == "replace":
+                entity = operation.get("entity")
+                if (
+                    len(matches) != 1 or set(operation) != {"op", "id", "entity"}
+                    or not isinstance(entity, dict) or entity.get("id") != entity_id
+                ):
+                    raise ValueError("invalid topology replace operation")
+                entities[matches[0]] = copy.deepcopy(entity)
+            else:
+                shapes = operation.get("shapes")
+                if (
+                    len(matches) != 1 or set(operation) != {"op", "id", "shapes"}
+                    or not isinstance(shapes, list) or not shapes
+                ):
+                    raise ValueError("invalid append_shapes operation")
+                entities[matches[0]].setdefault("shapes", []).extend(copy.deepcopy(shapes))
+        # Construction performs the full schema validation and the only MuJoCo
+        # compilation. The candidate owns no state visible to the active world.
+        candidate = type(self)(seed=self.seed, spec=candidate_spec)
+        return TopologyTransaction(
+            self, self.model_revision, candidate, tuple(copy.deepcopy(operations)),
+        )
+
+    def _adopt_topology_candidate(
+        self, candidate: "PhysicsWorld", replaced_entities: set[str],
+    ) -> None:
+        """Commit one precompiled candidate while retaining all named dynamic state."""
+        joint_state: dict[str, tuple[list[float], list[float]]] = {}
+        for joint_id in range(self.model.njnt):
+            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_JOINT, joint_id)
+            joint_type = int(self.model.jnt_type[joint_id])
+            qn = 7 if joint_type == int(mujoco.mjtJoint.mjJNT_FREE) else 4 if joint_type == int(mujoco.mjtJoint.mjJNT_BALL) else 1
+            vn = 6 if joint_type == int(mujoco.mjtJoint.mjJNT_FREE) else 3 if joint_type == int(mujoco.mjtJoint.mjJNT_BALL) else 1
+            qa, da = int(self.model.jnt_qposadr[joint_id]), int(self.model.jnt_dofadr[joint_id])
+            joint_state[name] = (self.data.qpos[qa : qa + qn].tolist(), self.data.qvel[da : da + vn].tolist())
+        actuator_state = {}
+        for actuator_id in range(self.model.nu):
+            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, actuator_id)
+            actuator_state[name] = float(self.data.ctrl[actuator_id])
+        mutable_by_name: dict[tuple[int, str], dict[str, np.ndarray]] = {}
+        named_mutables = (
+            (mujoco.mjtObj.mjOBJ_GEOM, ("geom_size", "geom_pos", "geom_quat", "geom_rgba", "geom_friction", "geom_contype", "geom_conaffinity")),
+            (mujoco.mjtObj.mjOBJ_BODY, ("body_mass", "body_inertia")),
+            (mujoco.mjtObj.mjOBJ_MATERIAL, ("mat_rgba",)),
+            (mujoco.mjtObj.mjOBJ_LIGHT, ("light_pos", "light_diffuse")),
+            (mujoco.mjtObj.mjOBJ_EQUALITY, ("eq_solref", "eq_solimp")),
+        )
+        for object_type, fields in named_mutables:
+            count = {
+                mujoco.mjtObj.mjOBJ_GEOM: self.model.ngeom,
+                mujoco.mjtObj.mjOBJ_BODY: self.model.nbody,
+                mujoco.mjtObj.mjOBJ_MATERIAL: self.model.nmat,
+                mujoco.mjtObj.mjOBJ_LIGHT: self.model.nlight,
+                mujoco.mjtObj.mjOBJ_EQUALITY: self.model.neq,
+            }[object_type]
+            for object_id in range(count):
+                name = mujoco.mj_id2name(self.model, object_type, object_id)
+                if name:
+                    entity_id = name.split(":", 2)[1] if name.startswith("entity:") else None
+                    if entity_id in replaced_entities and object_type in {
+                        mujoco.mjtObj.mjOBJ_GEOM, mujoco.mjtObj.mjOBJ_BODY,
+                    }:
+                        continue
+                    mutable_by_name[(int(object_type), name)] = {
+                        field: np.asarray(getattr(self.model, field)[object_id]).copy()
+                        for field in fields
+                    }
+        old_time = float(self.data.time)
+        old_bodies = {body.id: body.to_dict() for body in self.bodies}
+        old_components = copy.deepcopy(self._components)
+        old_resonance = self._resonance.copy()
+        compiled = (
+            "spec", "_entities", "_assemblies", "_xml", "model", "data", "_model_signature",
+            "_body_mj", "_body_joint", "_entity_mj", "_entity_joint", "_geom_entity",
+            "_geom_resident",
+        )
+        for name in compiled:
+            setattr(self, name, getattr(candidate, name))
+        if hasattr(candidate, "_leg_joints"):
+            self._leg_joints = candidate._leg_joints
+        for (object_type, name), values in mutable_by_name.items():
+            object_id = mujoco.mj_name2id(self.model, object_type, name)
+            if object_id >= 0:
+                for field, value in values.items():
+                    getattr(self.model, field)[object_id] = value
+        for name, (qpos, qvel) in joint_state.items():
+            joint_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, name)
+            if joint_id >= 0:
+                qa, da = int(self.model.jnt_qposadr[joint_id]), int(self.model.jnt_dofadr[joint_id])
+                self.data.qpos[qa : qa + len(qpos)] = qpos
+                self.data.qvel[da : da + len(qvel)] = qvel
+        for name, value in actuator_state.items():
+            actuator_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name)
+            if actuator_id >= 0:
+                self.data.ctrl[actuator_id] = value
+        self.data.time = old_time
+        self.bodies = self._make_bodies()
+        for body in self.bodies:
+            if body.id in old_bodies:
+                for key in ("energy", "gut", "fatigue", "age", "gaze_pitch"):
+                    setattr(body, key, old_bodies[body.id][key])
+        self._components = {entity["id"]: copy.deepcopy(entity.get("components", [])) for entity in self._entities}
+        for entity_id in (self._components.keys() & old_components.keys()) - replaced_entities:
+            self._components[entity_id] = old_components[entity_id]
+        self._diffusion_barrier_entities = tuple(
+            entity["id"] for entity in self._entities
+            if any(component.get("type") == "diffusion_barrier" for component in self._components[entity["id"]])
+        )
+        self._resonance = {
+            entity["id"]: (
+                0.0 if entity["id"] in replaced_entities
+                else old_resonance.get(entity["id"], 0.0)
+            )
+            for entity in self._entities
+        }
+        self._sync_light_model()
+        self._sync_hand_mocap()
+        mujoco.mj_forward(self.model, self.data)
+        self._sync_public_state()
+        self.model_revision += 1
+        hook = getattr(self, "_prepare_fast_articulation", None)
+        if callable(hook):
+            hook()
+
     def command(self, command: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(command, dict) or not isinstance(command.get("op"), str):
             raise ValueError("command requires string op")
@@ -1478,6 +1658,7 @@ class PhysicsWorld:
         self._sync_hand_mocap()
         mujoco.mj_forward(self.model, self.data)
         self._sync_public_state()
+        self.model_revision += 1
 
     def view(self) -> dict[str, Any]:
         self._sync_public_state()
