@@ -1,0 +1,187 @@
+{
+  "base_revision": "a5bdee3922bc82dd2da429af0b4fa1fcf46fa21f",
+  "bootstrap": {
+    "sha256": "cadebcece6034af1346c71c68d9962ea0f598f3f4e81263a5a4beee1db50543f"
+  },
+  "command": "/home/ember/kaxsim/.venv7/bin/python scripts/train_rich_prediction.py /home/ember/chreatures-data/sensorimotor-play/rich-v2-seed20260912 --bootstrap /home/ember/chreatures/runs/sensorimotor-rich/bootstrap-v1-seed20260912/rich-worker.pt --output /home/ember/chreatures/runs/sensorimotor-rich/action-suffix-v1-seed20260912 --epochs 10 --batch-size 1024 --seed 20260912 --device cuda --suffix-horizons 5 20",
+  "dataset": {
+    "descriptive_validation_worlds": [
+      3
+    ],
+    "manifest_content_sha256": "14bb5f01f6fa2a69323180ed9c7d683e9ae1127f4bc22f11a3d0609c8fc855fe",
+    "train_worlds": [
+      0,
+      1,
+      2
+    ],
+    "transitions": 196608,
+    "worlds": 4
+  },
+  "device": {
+    "hip": "7.0.51831",
+    "name": "AMD Radeon 890M",
+    "torch": "2.10.0+rocm7.0"
+  },
+  "experiments": [
+    {
+      "actual_reference": {
+        "path": "data/training/rich-action-suffix-h005-v1.reference.npz",
+        "rows": [
+          0,
+          24528,
+          49055
+        ],
+        "sha256": "a55c3d98bfd9ac46e2e643e700ade6d63ecb0d3d7224722cfeda7cbe653babb8"
+      },
+      "artifact": {
+        "artifact_identity": "ce4e9725fc9de990147405c00924a2eebc41fe36e1ba14aed56de3164129e8be",
+        "bytes": 9856842,
+        "path": "data/genomes/rich-action-suffix-h005-v1.npz",
+        "sha256": "d9fcb262bb25ad97e4c3f9139c73a5efc58a9999a2ce3530d07cd9421da86a33"
+      },
+      "elapsed_seconds": 53.15270327869803,
+      "failed_models": [],
+      "fit_receipt": {
+        "path": "data/training/rich-action-suffix-h005-v1.receipt.json",
+        "sha256": "4312314cebeef5e10e336d895c72b4309f4cf500f555247221c5fe11c0bf7f48"
+      },
+      "horizon_ticks": 5,
+      "numpy_float32_reference_parity": {
+        "clip_exact": true,
+        "disagreement_max_abs": 3.650784492492676e-07,
+        "mean_max_abs": 4.172325134277344e-07,
+        "member_max_abs": 6.556510925292969e-07
+      },
+      "validation": {
+        "action_suffix_permuted_goal_rms": 0.5380341341040866,
+        "action_suffix_permuted_scaled_rmse": 1.0346786463572621,
+        "constant_plan_coverage": {
+          "actual_suffix": {
+            "action_plus_oral_stop_le_0.05_fraction": 0.0,
+            "exact_constant_fraction": 0.0,
+            "motor_stop_le_0.05_fraction": 2.0384866275277233e-05,
+            "motor_stop_rows": 1,
+            "row_8_sigma_clip_fraction": 0.0,
+            "suffix_standardized_abs_max": 7.067176818847656,
+            "suffix_standardized_rms_mean": 0.9610909325122626
+          },
+          "candidate_constant_zero_action_plus_oral": {
+            "row_8_sigma_clip_fraction": 0.0,
+            "suffix_standardized_abs_max": 4.45481014251709,
+            "suffix_standardized_rms_mean": 1.5717614434342608
+          },
+          "candidate_repeat_first_observed_action_plus_oral": {
+            "row_8_sigma_clip_fraction": 0.0,
+            "suffix_standardized_abs_max": 7.067176818847656,
+            "suffix_standardized_rms_mean": 0.9513583238633875
+          },
+          "interpretation": "input-domain diagnostics only; a future constant-plan controller would execute the first action and replan, but no such controller is implemented"
+        },
+        "goal_rms": 0.23692493543310822,
+        "rows": {
+          "disclosure": "the frozen representation bootstrap saw all four worlds; world 3 is predictor validation only, not end-to-end held-out generalization",
+          "train_rows": 147168,
+          "train_worlds": [
+            0,
+            1,
+            2
+          ],
+          "validation_rows": 49056,
+          "validation_worlds": [
+            3
+          ]
+        },
+        "scaled_rmse": 0.674563909607207,
+        "zero_current_window_goal_rms": 0.5098621011359745,
+        "zero_current_window_scaled_rmse": 1.1133427149824584
+      }
+    },
+    {
+      "actual_reference": {
+        "path": "data/training/rich-action-suffix-h020-v1.reference.npz",
+        "rows": [
+          0,
+          24438,
+          48875
+        ],
+        "sha256": "7286a2dd1b2f34018006f789ac1ff10766cfe48cc4d58f0ad381f2d815dd5b2b"
+      },
+      "artifact": {
+        "artifact_identity": "247d5a436b16da439745d6af95a6abe6bbb5ca42169e9ff0db6338a93d9927a3",
+        "bytes": 10244494,
+        "path": "data/genomes/rich-action-suffix-h020-v1.npz",
+        "sha256": "b2e23be61718f088ce9d98a21ee36abdd2e1a66a9ec231032b6dbb02652f73e1"
+      },
+      "elapsed_seconds": 50.5413560308516,
+      "failed_models": [],
+      "fit_receipt": {
+        "path": "data/training/rich-action-suffix-h020-v1.receipt.json",
+        "sha256": "c5c0611f723065698f91fa94966ca035137458c21a2658b2f6790f3908a7ab0c"
+      },
+      "horizon_ticks": 20,
+      "numpy_float32_reference_parity": {
+        "clip_exact": true,
+        "disagreement_max_abs": 4.6193599700927734e-07,
+        "mean_max_abs": 3.5762786865234375e-07,
+        "member_max_abs": 7.748603820800781e-07
+      },
+      "validation": {
+        "action_suffix_permuted_goal_rms": 0.5660208297681049,
+        "action_suffix_permuted_scaled_rmse": 0.9532359026531616,
+        "constant_plan_coverage": {
+          "actual_suffix": {
+            "action_plus_oral_stop_le_0.05_fraction": 0.0,
+            "exact_constant_fraction": 0.0,
+            "motor_stop_le_0.05_fraction": 0.0,
+            "motor_stop_rows": 0,
+            "row_8_sigma_clip_fraction": 0.0,
+            "suffix_standardized_abs_max": 7.065803527832031,
+            "suffix_standardized_rms_mean": 0.9763892598980154
+          },
+          "candidate_constant_zero_action_plus_oral": {
+            "row_8_sigma_clip_fraction": 0.0,
+            "suffix_standardized_abs_max": 4.470848083496094,
+            "suffix_standardized_rms_mean": 1.5752175296342408
+          },
+          "candidate_repeat_first_observed_action_plus_oral": {
+            "row_8_sigma_clip_fraction": 0.0,
+            "suffix_standardized_abs_max": 7.065803527832031,
+            "suffix_standardized_rms_mean": 0.9504803568187792
+          },
+          "interpretation": "input-domain diagnostics only; a future constant-plan controller would execute the first action and replan, but no such controller is implemented"
+        },
+        "goal_rms": 0.29184428916701793,
+        "rows": {
+          "disclosure": "the frozen representation bootstrap saw all four worlds; world 3 is predictor validation only, not end-to-end held-out generalization",
+          "train_rows": 146628,
+          "train_worlds": [
+            0,
+            1,
+            2
+          ],
+          "validation_rows": 48876,
+          "validation_worlds": [
+            3
+          ]
+        },
+        "scaled_rmse": 0.6685238693459972,
+        "zero_current_window_goal_rms": 0.5350134327918427,
+        "zero_current_window_scaled_rmse": 0.9841569756044591
+      }
+    }
+  ],
+  "format": "chreatures-rich-action-suffix-artifact-recipe-v1",
+  "h1_artifact_unchanged": {
+    "path": "data/genomes/rich-consequence-ensemble-v1.npz",
+    "sha256": "7192e01191282a736299013159b7852b291c581ad06faff3b33b37e157d4352f"
+  },
+  "limitations": [
+    "The frozen representation front saw all four worlds.",
+    "World 3 is descriptive predictor validation, not end-to-end heldout generalization.",
+    "Action suffix evidence is observational and does not establish causality.",
+    "Ensemble disagreement is not calibrated uncertainty.",
+    "Observed exact-constant and motor-stop suffix coverage is sparse and is reported per horizon."
+  ],
+  "prospective_use": "constant five- or twenty-tick plans could be compared, only the first action executed, then replanned; no planner or runtime integration is implemented",
+  "status": "two completed experimental Torch fits; no runtime integration"
+}

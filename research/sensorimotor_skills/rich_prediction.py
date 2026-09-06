@@ -12,6 +12,8 @@ import torch
 from torch import nn
 
 FORMAT = "chreatures-rich-consequence-ensemble-v1"
+ACTION_SUFFIX_FORMAT = "chreatures-rich-action-suffix-consequence-ensemble-v1"
+ACTION_SUFFIX_HORIZONS = (5, 20)
 FRAME_CODE_DIM = 256
 FRAME_WINDOW = 4
 NEURAL_DIM = 384
@@ -19,6 +21,7 @@ ACTION_ORAL_DIM = 9
 PHYSIOLOGY_DIM = 6
 INPUT_DIM = FRAME_WINDOW * FRAME_CODE_DIM + NEURAL_DIM + 2 * ACTION_ORAL_DIM
 OUTPUT_DIM = FRAME_CODE_DIM + PHYSIOLOGY_DIM
+ACTION_SUFFIX_OUTPUT_DIM = FRAME_WINDOW * FRAME_CODE_DIM + PHYSIOLOGY_DIM
 MEMBERS = 3
 INPUT_SCALE_FLOOR = 0.02
 CODE_DELTA_SCALE_FLOOR = 1e-3
@@ -36,6 +39,28 @@ OUTPUT_SEGMENTS = {
     "next_raw_physiology_delta": [256, 262],
 }
 FRAME_CODE_SEGMENTS = {"visual": [0, 128], "body": [128, 256]}
+
+
+def action_suffix_input_dim(horizon: int) -> int:
+    if horizon not in ACTION_SUFFIX_HORIZONS:
+        raise ValueError(f"action suffix horizon must be one of {ACTION_SUFFIX_HORIZONS}")
+    return FRAME_WINDOW * FRAME_CODE_DIM + NEURAL_DIM + ACTION_ORAL_DIM * (1 + horizon)
+
+
+def action_suffix_input_segments(horizon: int) -> dict[str, list[int]]:
+    dimension = action_suffix_input_dim(horizon)
+    return {
+        "frame_codes_t_minus_3_through_t": [0, 1024],
+        "neural_readouts_t": [1024, 1408],
+        "previous_action_plus_oral": [1408, 1417],
+        "executed_action_oral_suffix_t_through_t_plus_h_minus_1": [1417, dimension],
+    }
+
+
+ACTION_SUFFIX_OUTPUT_SEGMENTS = {
+    "future_four_frame_code_deltas_from_current": [0, 1024],
+    "future_raw_physiology_delta": [1024, 1030],
+}
 
 
 @dataclass(frozen=True)
@@ -93,6 +118,116 @@ class RichConsequenceEnsemble(nn.Module):
     def forward(self, value: torch.Tensor) -> torch.Tensor:
         """Return member predictions as ``[...,3,262]`` normalized targets."""
         return torch.stack([member(value) for member in self.members], dim=-2)
+
+
+@dataclass(frozen=True)
+class ActionSuffixPredictionConfig:
+    horizon: int
+    hidden_dim: int = 256
+    members: int = MEMBERS
+    frame_code_dim: int = FRAME_CODE_DIM
+    frame_window: int = FRAME_WINDOW
+    neural_dim: int = NEURAL_DIM
+    action_oral_dim: int = ACTION_ORAL_DIM
+    physiology_dim: int = PHYSIOLOGY_DIM
+
+    def __post_init__(self) -> None:
+        action_suffix_input_dim(self.horizon)
+        if tuple(asdict(self).values())[1:] != (
+            256,
+            MEMBERS,
+            FRAME_CODE_DIM,
+            FRAME_WINDOW,
+            NEURAL_DIM,
+            ACTION_ORAL_DIM,
+            PHYSIOLOGY_DIM,
+        ):
+            raise ValueError("action suffix consequence dimensions are fixed")
+
+    @property
+    def input_dim(self) -> int:
+        return action_suffix_input_dim(self.horizon)
+
+    @property
+    def output_dim(self) -> int:
+        return ACTION_SUFFIX_OUTPUT_DIM
+
+
+class ActionSuffixConsequenceMember(nn.Module):
+    """One independent fixed-horizon endpoint-window predictor."""
+
+    def __init__(self, horizon: int) -> None:
+        super().__init__()
+        self.config = ActionSuffixPredictionConfig(horizon)
+        self.layer0 = nn.Linear(self.config.input_dim, self.config.hidden_dim)
+        self.layer1 = nn.Linear(self.config.hidden_dim, self.config.hidden_dim)
+        self.output = nn.Linear(self.config.hidden_dim, self.config.output_dim)
+
+    def forward(self, value: torch.Tensor) -> torch.Tensor:
+        if value.shape[-1] != self.config.input_dim:
+            raise ValueError(
+                f"H{self.config.horizon} suffix input must end with {self.config.input_dim}"
+            )
+        value = torch.tanh(self.layer0(value))
+        value = torch.tanh(self.layer1(value))
+        return self.output(value)
+
+
+class ActionSuffixConsequenceEnsemble(nn.Module):
+    """Three independent members for one declared action-suffix horizon."""
+
+    def __init__(self, horizon: int) -> None:
+        super().__init__()
+        self.config = ActionSuffixPredictionConfig(horizon)
+        self.members = nn.ModuleList(
+            ActionSuffixConsequenceMember(horizon) for _ in range(MEMBERS)
+        )
+
+    def forward(self, value: torch.Tensor) -> torch.Tensor:
+        return torch.stack([member(value) for member in self.members], dim=-2)
+
+
+def normalized_suffix_input(
+    value: torch.Tensor,
+    mean: torch.Tensor,
+    scale: torch.Tensor,
+    horizon: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Normalize a declared suffix input and report rows crossing the clamp."""
+    dimension = action_suffix_input_dim(horizon)
+    if value.shape[-1] != dimension or mean.shape != (dimension,) or scale.shape != (
+        dimension,
+    ):
+        raise ValueError("action suffix input normalization shapes differ")
+    standardized = (value - mean) / scale
+    clipped = torch.any(torch.abs(standardized) > NORMALIZED_INPUT_CLIP, dim=-1)
+    return torch.clamp(standardized, -NORMALIZED_INPUT_CLIP, NORMALIZED_INPUT_CLIP), clipped
+
+
+def denormalize_suffix_output(
+    normalized: torch.Tensor,
+    mean: torch.Tensor,
+    scale: torch.Tensor,
+) -> torch.Tensor:
+    if (
+        normalized.shape[-1] != ACTION_SUFFIX_OUTPUT_DIM
+        or mean.shape != (ACTION_SUFFIX_OUTPUT_DIM,)
+        or scale.shape != (ACTION_SUFFIX_OUTPUT_DIM,)
+    ):
+        raise ValueError("action suffix output normalization shapes differ")
+    return normalized * scale + mean
+
+
+def suffix_ensemble_summary(
+    raw_members: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    if raw_members.shape[-2:] != (MEMBERS, ACTION_SUFFIX_OUTPUT_DIM):
+        raise ValueError("action suffix ensemble output shape differs")
+    mean = raw_members.mean(dim=-2)
+    disagreement = torch.sqrt(
+        torch.mean((raw_members - mean[..., None, :]) ** 2, dim=-2)
+    )
+    return mean, disagreement
 
 
 def normalized_input(
@@ -171,6 +306,10 @@ def artifact_identity(metadata: Mapping[str, Any], arrays: Mapping[str, np.ndarr
 
 __all__ = [
     "ACTION_ORAL_DIM",
+    "ACTION_SUFFIX_FORMAT",
+    "ACTION_SUFFIX_HORIZONS",
+    "ACTION_SUFFIX_OUTPUT_DIM",
+    "ACTION_SUFFIX_OUTPUT_SEGMENTS",
     "CODE_DELTA_SCALE_FLOOR",
     "FORMAT",
     "FRAME_CODE_DIM",
@@ -186,12 +325,19 @@ __all__ = [
     "OUTPUT_SEGMENTS",
     "PHYSIOLOGY_DELTA_SCALE_FLOOR",
     "PHYSIOLOGY_DIM",
+    "ActionSuffixConsequenceEnsemble",
+    "ActionSuffixPredictionConfig",
     "RichConsequenceEnsemble",
     "RichPredictionConfig",
     "artifact_identity",
+    "action_suffix_input_dim",
+    "action_suffix_input_segments",
     "array_sha256",
     "denormalize_output",
     "ensemble_summary",
+    "denormalize_suffix_output",
     "normalized_input",
+    "normalized_suffix_input",
+    "suffix_ensemble_summary",
     "tensor_bundle_sha256",
 ]

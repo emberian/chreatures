@@ -1,0 +1,649 @@
+{
+  "artifact": {
+    "artifact_identity": "247d5a436b16da439745d6af95a6abe6bbb5ca42169e9ff0db6338a93d9927a3",
+    "bytes": 10244494,
+    "file": "rich-action-suffix-h020-ensemble.npz",
+    "sha256": "b2e23be61718f088ce9d98a21ee36abdd2e1a66a9ec231032b6dbb02652f73e1"
+  },
+  "constant_plan_coverage": {
+    "actual_suffix": {
+      "action_plus_oral_stop_le_0.05_fraction": 0.0,
+      "exact_constant_fraction": 0.0,
+      "motor_stop_le_0.05_fraction": 0.0,
+      "motor_stop_rows": 0,
+      "row_8_sigma_clip_fraction": 0.0,
+      "suffix_standardized_abs_max": 7.065803527832031,
+      "suffix_standardized_rms_mean": 0.9763892598980154
+    },
+    "candidate_constant_zero_action_plus_oral": {
+      "row_8_sigma_clip_fraction": 0.0,
+      "suffix_standardized_abs_max": 4.470848083496094,
+      "suffix_standardized_rms_mean": 1.5752175296342408
+    },
+    "candidate_repeat_first_observed_action_plus_oral": {
+      "row_8_sigma_clip_fraction": 0.0,
+      "suffix_standardized_abs_max": 7.065803527832031,
+      "suffix_standardized_rms_mean": 0.9504803568187792
+    },
+    "interpretation": "input-domain diagnostics only; a future constant-plan controller would execute the first action and replan, but no such controller is implemented"
+  },
+  "elapsed_seconds": 50.5413560308516,
+  "ensemble": {
+    "failed_models": [],
+    "interpretation": "population RMS spread of three member predictions in raw target units; not calibrated uncertainty",
+    "members": 3,
+    "validation_mean_disagreement": {
+      "future_physiology_delta": 0.004968332592397928,
+      "future_window_code_delta": 0.04355984926223755
+    }
+  },
+  "exposure": {
+    "epochs_per_member": 10,
+    "members": 3,
+    "row_presentations_total": 4398840,
+    "rows_per_epoch": 146628
+  },
+  "format": "chreatures-rich-action-suffix-fit-report-v1",
+  "goal_space_calibration": {
+    "action_suffix_permuted": {
+      "overall_rms": 0.5660208297681049,
+      "per_goal_coordinate_rmse": [
+        0.40780077115482444,
+        0.5440982191982706,
+        0.6573468717336843,
+        0.5755947275357732,
+        0.32792865811339345,
+        0.4853798538550431,
+        0.6006825338752277,
+        0.5064633607189657,
+        0.4388154508537959,
+        0.44015588362765173,
+        0.5343125633445276,
+        0.4952470143725749,
+        0.4271899793432707,
+        0.4821430374488412,
+        0.40137215000025317,
+        0.47629349234828744,
+        0.5273269505000183,
+        0.6804666545450075,
+        0.7231090305602068,
+        0.40832516105759453,
+        0.729412196907434,
+        0.6006979868663029,
+        0.7933351115922029,
+        0.35326127892615156,
+        0.5013203287480767,
+        0.5278539422809208,
+        0.45909393653044006,
+        0.4555878651114125,
+        0.3751662469862762,
+        0.66733503207876,
+        0.5295056882211061,
+        0.5407472698721377,
+        0.7030378311697978,
+        0.7950080303738318,
+        0.56403715050057,
+        0.8707028591036443,
+        0.526700419677689,
+        0.9607776573990481,
+        0.45045790687530884,
+        0.47825603304211617,
+        0.5017519626655054,
+        0.5631430904469537,
+        0.6059179523176441,
+        0.604816783426776,
+        0.36736731993520444,
+        0.474227944697863,
+        0.5661742558388774,
+        0.49742270991945486,
+        0.5042197792202494,
+        0.4978566386457226,
+        0.5234104007934305,
+        0.7072300604612733,
+        0.4584371783760373,
+        0.7260320310057606,
+        0.4742512226628099,
+        0.4785089872172318,
+        0.4988932083732732,
+        0.8584607547038154,
+        0.6119593179759258,
+        0.4527387687517772,
+        0.667777464287834,
+        0.29772585382402067,
+        0.5980506590348679,
+        0.6510507712760543
+      ]
+    },
+    "empirical_model_error_scale": 0.29184428916701793,
+    "interpretation": "empirical frozen-goal-space RMS on a representation-exposed reserved world; not a probability interval",
+    "model": {
+      "overall_rms": 0.29184428916701793,
+      "per_goal_coordinate_rmse": [
+        0.24738304017724638,
+        0.31564821727719855,
+        0.29200756572897224,
+        0.2670057130849675,
+        0.21509114685147665,
+        0.24502133172754786,
+        0.36707120250703507,
+        0.3367117728057638,
+        0.24321189514889474,
+        0.2824023396519916,
+        0.24272995407411832,
+        0.28903880185777703,
+        0.2516090851091014,
+        0.23903156815178697,
+        0.2874879108731857,
+        0.24102764831475418,
+        0.2747696207457478,
+        0.36710151401703306,
+        0.3378528228377694,
+        0.25309064267058357,
+        0.40782515679596393,
+        0.2521272228510528,
+        0.3854151034664503,
+        0.21783341011812088,
+        0.2546038033951366,
+        0.27568775860271916,
+        0.24742406440940348,
+        0.27103629837192295,
+        0.3078206240642594,
+        0.32124864280759685,
+        0.32161738543201246,
+        0.3147964569038031,
+        0.3186912110700532,
+        0.27390189457265546,
+        0.3219413206056459,
+        0.2794961032893736,
+        0.2679434222008615,
+        0.36335900779571395,
+        0.2310095586736631,
+        0.265506682719107,
+        0.2803475449971975,
+        0.30066679230768273,
+        0.3013422897235035,
+        0.32953626883907033,
+        0.24499108385177207,
+        0.28310035799353517,
+        0.3122134510752197,
+        0.32800015565764107,
+        0.24870219942012917,
+        0.19969074313230953,
+        0.2957995199168362,
+        0.3328498385050379,
+        0.2604993992193916,
+        0.39434635880747654,
+        0.276860955344304,
+        0.26140163817122164,
+        0.1957018757139226,
+        0.36079699761134665,
+        0.3593555552777276,
+        0.23104421204891007,
+        0.3558285466078605,
+        0.20808144191148664,
+        0.24578266518407726,
+        0.31151033922057164
+      ]
+    },
+    "rows": 48876,
+    "zero_current_window": {
+      "overall_rms": 0.5350134327918427,
+      "per_goal_coordinate_rmse": [
+        0.3883743058040281,
+        0.5090526602270341,
+        0.6055676178851858,
+        0.5113003766448055,
+        0.31984514145905263,
+        0.4375595944702617,
+        0.6092110071650129,
+        0.4732035063826853,
+        0.4180607252045461,
+        0.4226302023734611,
+        0.5027349174546321,
+        0.5153899319959422,
+        0.396079800527951,
+        0.4395176603588718,
+        0.4330285743569544,
+        0.43139627634462396,
+        0.49222592717057706,
+        0.6159592297611552,
+        0.6507739622523041,
+        0.40239280725617954,
+        0.6948036818569828,
+        0.5290135539364688,
+        0.7824425618141938,
+        0.33299203504403674,
+        0.4663064092689172,
+        0.5348837168013972,
+        0.46838758726855007,
+        0.4560974164494296,
+        0.3638969742037069,
+        0.6456216653426484,
+        0.4626907861973417,
+        0.5726702951125766,
+        0.608464236069522,
+        0.6926175907537924,
+        0.5434174934640553,
+        0.737094567019221,
+        0.5608266697238998,
+        0.8566855827047914,
+        0.4474329321687183,
+        0.44546263921100454,
+        0.47821866343918074,
+        0.5396523894962932,
+        0.575755018605644,
+        0.5739088301525632,
+        0.36782761229096905,
+        0.4539064733816122,
+        0.5595803109144963,
+        0.5082397537879593,
+        0.4778882991643891,
+        0.4262145651697016,
+        0.5198391196871865,
+        0.668473686808277,
+        0.4702409631463928,
+        0.7020516132066371,
+        0.44473449070851306,
+        0.4700264624366132,
+        0.464685043195353,
+        0.7869646408594544,
+        0.6130974790561958,
+        0.39106766191746994,
+        0.6252769326845163,
+        0.2937707412763638,
+        0.5665394865746725,
+        0.6561777675575955
+      ]
+    }
+  },
+  "horizon": {
+    "reset_exclusion": "any reset from t-3 through t+20",
+    "seconds": 1.0,
+    "target_window_ticks": [
+      17,
+      18,
+      19,
+      20
+    ],
+    "ticks": 20,
+    "valid_t": "3 through T-20"
+  },
+  "input_clipping_at_8_sigma": {
+    "runtime_rule_if_integrated": "clamp every normalized coordinate to [-8,8]; any clipped plan receives zero predictor selection tilt",
+    "train": {
+      "clipped_rows": 0,
+      "coordinate_fraction": 0.0,
+      "row_fraction": 0.0,
+      "rows": 146628
+    },
+    "validation": {
+      "clipped_rows": 0,
+      "coordinate_fraction": 0.0,
+      "row_fraction": 0.0,
+      "rows": 48876
+    },
+    "validation_action_suffix_permuted_row_fraction": 0.0
+  },
+  "metrics": {
+    "train": {
+      "all_outputs_train_scale_rmse": 0.6083351701226567,
+      "future_physiology_delta": {
+        "raw_mae": 0.018984716041751976,
+        "raw_rmse": 0.05444828917513811,
+        "train_scale_rmse": 0.8241468178650703
+      },
+      "future_window_body_code_delta": {
+        "raw_mae": 0.16675733715931534,
+        "raw_rmse": 0.22562277502433248,
+        "train_scale_rmse": 0.6506031850419363
+      },
+      "future_window_code_delta": {
+        "raw_mae": 0.13482291425651186,
+        "raw_rmse": 0.19431404938190072,
+        "train_scale_rmse": 0.6068445230182199
+      },
+      "future_window_visual_code_delta": {
+        "raw_mae": 0.10288849135370837,
+        "raw_rmse": 0.15687658513845512,
+        "train_scale_rmse": 0.5596749465964235
+      }
+    },
+    "validation": {
+      "all_outputs_train_scale_rmse": 0.6685238693459972,
+      "future_physiology_delta": {
+        "raw_mae": 0.01928590028671255,
+        "raw_rmse": 0.05463262762404924,
+        "train_scale_rmse": 0.8665827635974594
+      },
+      "future_window_body_code_delta": {
+        "raw_mae": 0.18698332042761068,
+        "raw_rmse": 0.2502085207933463,
+        "train_scale_rmse": 0.7213542742375184
+      },
+      "future_window_code_delta": {
+        "raw_mae": 0.15040996118883163,
+        "raw_rmse": 0.21380698058659192,
+        "train_scale_rmse": 0.6671901307653922
+      },
+      "future_window_visual_code_delta": {
+        "raw_mae": 0.11383660195005257,
+        "raw_rmse": 0.16977204133047397,
+        "train_scale_rmse": 0.608221466425467
+      }
+    },
+    "validation_action_suffix_permuted": {
+      "all_outputs_train_scale_rmse": 0.9532359026531616,
+      "future_physiology_delta": {
+        "raw_mae": 0.019434004346073282,
+        "raw_rmse": 0.0548154156367657,
+        "train_scale_rmse": 0.9163893145861028
+      },
+      "future_window_body_code_delta": {
+        "raw_mae": 0.24857788922626528,
+        "raw_rmse": 0.3344498285240692,
+        "train_scale_rmse": 0.9426875959832753
+      },
+      "future_window_code_delta": {
+        "raw_mae": 0.21829918337598353,
+        "raw_rmse": 0.30979259967296047,
+        "train_scale_rmse": 0.9534476044382588
+      },
+      "future_window_visual_code_delta": {
+        "raw_mae": 0.18802047752570175,
+        "raw_rmse": 0.2829950915201234,
+        "train_scale_rmse": 0.9640875298422762
+      }
+    },
+    "validation_actual_suffix_strata": {
+      "actual_exact_constant_suffix": {
+        "model": null,
+        "rows": 0,
+        "zero_current_window": null
+      },
+      "actual_motor_stop_suffix_le_0.05": {
+        "model": null,
+        "rows": 0,
+        "zero_current_window": null
+      },
+      "actual_variable_suffix": {
+        "model": {
+          "all_outputs_train_scale_rmse": 0.6685238693459972,
+          "future_physiology_delta": {
+            "raw_mae": 0.01928590028671255,
+            "raw_rmse": 0.05463262762404924,
+            "train_scale_rmse": 0.8665827635974594
+          },
+          "future_window_body_code_delta": {
+            "raw_mae": 0.18698332042761068,
+            "raw_rmse": 0.2502085207933463,
+            "train_scale_rmse": 0.7213542742375184
+          },
+          "future_window_code_delta": {
+            "raw_mae": 0.15040996118883163,
+            "raw_rmse": 0.21380698058659192,
+            "train_scale_rmse": 0.6671901307653922
+          },
+          "future_window_visual_code_delta": {
+            "raw_mae": 0.11383660195005257,
+            "raw_rmse": 0.16977204133047397,
+            "train_scale_rmse": 0.608221466425467
+          }
+        },
+        "rows": 48876,
+        "zero_current_window": {
+          "all_outputs_train_scale_rmse": 0.9841569756044591,
+          "future_physiology_delta": {
+            "raw_mae": 0.023300307778538108,
+            "raw_rmse": 0.07038387961241599,
+            "train_scale_rmse": 1.2500349542854934
+          },
+          "future_window_body_code_delta": {
+            "raw_mae": 0.24846194165463648,
+            "raw_rmse": 0.35258518709884884,
+            "train_scale_rmse": 0.9998544991266832
+          },
+          "future_window_code_delta": {
+            "raw_mae": 0.2064414739302396,
+            "raw_rmse": 0.31865237139039443,
+            "train_scale_rmse": 0.9823870685376067
+          },
+          "future_window_visual_code_delta": {
+            "raw_mae": 0.16442100620584268,
+            "raw_rmse": 0.28064631375436505,
+            "train_scale_rmse": 0.9646033824510227
+          }
+        }
+      }
+    },
+    "validation_zero_current_window": {
+      "all_outputs_train_scale_rmse": 0.9841569756044591,
+      "future_physiology_delta": {
+        "raw_mae": 0.023300307778538108,
+        "raw_rmse": 0.07038387961241599,
+        "train_scale_rmse": 1.2500349542854934
+      },
+      "future_window_body_code_delta": {
+        "raw_mae": 0.24846194165463648,
+        "raw_rmse": 0.35258518709884884,
+        "train_scale_rmse": 0.9998544991266832
+      },
+      "future_window_code_delta": {
+        "raw_mae": 0.2064414739302396,
+        "raw_rmse": 0.31865237139039443,
+        "train_scale_rmse": 0.9823870685376067
+      },
+      "future_window_visual_code_delta": {
+        "raw_mae": 0.16442100620584268,
+        "raw_rmse": 0.28064631375436505,
+        "train_scale_rmse": 0.9646033824510227
+      }
+    }
+  },
+  "reference": {
+    "bytes": 86965,
+    "file": "rich-action-suffix-h020-reference.npz",
+    "rows": [
+      0,
+      24438,
+      48875
+    ],
+    "sha256": "7286a2dd1b2f34018006f789ac1ff10766cfe48cc4d58f0ad381f2d815dd5b2b",
+    "source": "actual reserved-world validation rows"
+  },
+  "split": {
+    "disclosure": "the frozen representation bootstrap saw all four worlds; world 3 is predictor validation only, not end-to-end held-out generalization",
+    "train_rows": 146628,
+    "train_worlds": [
+      0,
+      1,
+      2
+    ],
+    "validation_rows": 48876,
+    "validation_worlds": [
+      3
+    ]
+  },
+  "status": "experimental descriptive action-suffix forecast; no runtime, causal, welfare, or calibrated-uncertainty claim",
+  "training_trace": [
+    {
+      "epoch": 1,
+      "horizon": 20,
+      "member": 0,
+      "normalized_mse": 0.7606258274919809
+    },
+    {
+      "epoch": 2,
+      "horizon": 20,
+      "member": 0,
+      "normalized_mse": 0.6106427813960353
+    },
+    {
+      "epoch": 3,
+      "horizon": 20,
+      "member": 0,
+      "normalized_mse": 0.5354085330126455
+    },
+    {
+      "epoch": 4,
+      "horizon": 20,
+      "member": 0,
+      "normalized_mse": 0.49001180771983716
+    },
+    {
+      "epoch": 5,
+      "horizon": 20,
+      "member": 0,
+      "normalized_mse": 0.46004494574845456
+    },
+    {
+      "epoch": 6,
+      "horizon": 20,
+      "member": 0,
+      "normalized_mse": 0.43970790384352804
+    },
+    {
+      "epoch": 7,
+      "horizon": 20,
+      "member": 0,
+      "normalized_mse": 0.4246631362832542
+    },
+    {
+      "epoch": 8,
+      "horizon": 20,
+      "member": 0,
+      "normalized_mse": 0.41201040302799485
+    },
+    {
+      "epoch": 9,
+      "horizon": 20,
+      "member": 0,
+      "normalized_mse": 0.4014863823465179
+    },
+    {
+      "epoch": 10,
+      "horizon": 20,
+      "member": 0,
+      "normalized_mse": 0.39255066333024036
+    },
+    {
+      "epoch": 1,
+      "horizon": 20,
+      "member": 1,
+      "normalized_mse": 0.7585911613509442
+    },
+    {
+      "epoch": 2,
+      "horizon": 20,
+      "member": 1,
+      "normalized_mse": 0.6087985813404699
+    },
+    {
+      "epoch": 3,
+      "horizon": 20,
+      "member": 1,
+      "normalized_mse": 0.5359513442280945
+    },
+    {
+      "epoch": 4,
+      "horizon": 20,
+      "member": 1,
+      "normalized_mse": 0.49188739954035027
+    },
+    {
+      "epoch": 5,
+      "horizon": 20,
+      "member": 1,
+      "normalized_mse": 0.4613084115792658
+    },
+    {
+      "epoch": 6,
+      "horizon": 20,
+      "member": 1,
+      "normalized_mse": 0.4405453177401434
+    },
+    {
+      "epoch": 7,
+      "horizon": 20,
+      "member": 1,
+      "normalized_mse": 0.42451571194559146
+    },
+    {
+      "epoch": 8,
+      "horizon": 20,
+      "member": 1,
+      "normalized_mse": 0.4120339563919121
+    },
+    {
+      "epoch": 9,
+      "horizon": 20,
+      "member": 1,
+      "normalized_mse": 0.40142171540610755
+    },
+    {
+      "epoch": 10,
+      "horizon": 20,
+      "member": 1,
+      "normalized_mse": 0.3917516673418063
+    },
+    {
+      "epoch": 1,
+      "horizon": 20,
+      "member": 2,
+      "normalized_mse": 0.759995003268141
+    },
+    {
+      "epoch": 2,
+      "horizon": 20,
+      "member": 2,
+      "normalized_mse": 0.6092143776855345
+    },
+    {
+      "epoch": 3,
+      "horizon": 20,
+      "member": 2,
+      "normalized_mse": 0.5351755496504836
+    },
+    {
+      "epoch": 4,
+      "horizon": 20,
+      "member": 2,
+      "normalized_mse": 0.48943040100259294
+    },
+    {
+      "epoch": 5,
+      "horizon": 20,
+      "member": 2,
+      "normalized_mse": 0.4598246423740657
+    },
+    {
+      "epoch": 6,
+      "horizon": 20,
+      "member": 2,
+      "normalized_mse": 0.43974817467047383
+    },
+    {
+      "epoch": 7,
+      "horizon": 20,
+      "member": 2,
+      "normalized_mse": 0.42450439614434937
+    },
+    {
+      "epoch": 8,
+      "horizon": 20,
+      "member": 2,
+      "normalized_mse": 0.4117228019316217
+    },
+    {
+      "epoch": 9,
+      "horizon": 20,
+      "member": 2,
+      "normalized_mse": 0.40113563826799775
+    },
+    {
+      "epoch": 10,
+      "horizon": 20,
+      "member": 2,
+      "normalized_mse": 0.3912877253185016
+    }
+  ]
+}
