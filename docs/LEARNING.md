@@ -50,7 +50,13 @@ the parent process batches all 48 neural states on one GPU and trains the policy
 there. This avoids serializing whole worlds on each step and lets native world
 work span CPU cores.
 
-The default neural backend is `TritonFusedCircuit`. Its HIP wave32 kernel fuses
+The default neural backend is `MaleCNSEdgeTiledCircuit`. Its HIP wave32 kernel
+reduces eight consecutive edges in parallel inside each CSR row. On the full
+graph at B48, the complete interleaved path measured 20.522 ms versus 34.059 ms
+for the original fused Triton kernel (1.660×); five nonzero steps agreed within
+2.54e-7 in rates and 5.96e-8 in readouts, and snapshot replay was exact. The
+underlying `TritonFusedCircuit` remains available as `--brain-backend triton`.
+Its kernel fuses
 CSR recurrence with each rate update while preserving the two global Jacobi
 substeps. A full-graph B48 ABBA measurement found 27.286 ms per step, or
 1,759.15 resident-steps/s, versus 159.442 ms and 301.05 resident-steps/s for
@@ -187,3 +193,84 @@ Continuation summaries distinguish `steps_advanced` and
 `resident_steps_advanced` for the timed process from the absolute step
 coordinate and cumulative policy exposure. Never divide a cumulative step
 coordinate by a resumed process's elapsed time.
+
+## Sustained current-life profile
+
+`--training-profile current-life-v1` opts into the versioned body-v1 world in
+`chreatures.training_environment`. Each checkpoint then binds and stores the
+profile hash plus complete physics, diffusion field, renewable ecology and
+acoustic state. This profile requires the finite-energy-v1 objective, 24,000
+physical steps (1,200 model seconds) per episode and held-out run, telemetry
+every 1,200 steps, checkpoints every 4,800 steps, and at least two full
+training episodes. Telemetry records reserve, gut, fatigue, depletion,
+exhaustion and stationary fractions along with the component ledgers. These
+horizons are long enough to expose the reserve-zero/fatigue-one collapse seen
+around 1,100 model seconds in an earlier deployed policy; short acquisition
+scores do not establish sustained regulation.
+
+The first current-life diagnostic inherited the shared learner, optimizer and
+normalizer from the fresh finite-energy 20k stage while explicitly creating
+new private contexts, neural state and worlds:
+
+```sh
+HSA_OVERRIDE_GFX_VERSION=10.3.0 \
+TRITON_CACHE_DIR=/tank/chreatures/cache/triton \
+PYTORCH_KERNEL_CACHE_PATH=/tank/chreatures/cache/pytorch-learning \
+/tank/chreatures/envs/rocm-dev/bin/python \
+  /tank/chreatures/learning-src-embodied-v1-20260905/scripts/learn_affordances.py \
+  --graph /tank/chreatures/data/malecns/derived \
+  --port-bundle /tank/chreatures/data/ports/retinal-v1-maps.npz \
+  --output /tank/chreatures/runs/learning/embodied-homeostasis-inherited20k-16x3-v1 \
+  --worlds 16 --workers 16 --steps 48000 --episode-steps 24000 \
+  --macro-steps 5 --rollout-decisions 64 --checkpoint-every 4800 \
+  --first-checkpoint 320 --eval-worlds 8 --eval-steps 24000 \
+  --seed 20260906 --reward-objective finite-energy-v1 \
+  --training-profile current-life-v1 --brain-backend tiled \
+  --warm-start-learner /tank/chreatures/runs/learning/homeostasis-canonical-fresh-16x3-v1/checkpoints/learner-step-0020000.pt
+```
+
+The SHA-verified step-320 checkpoint contains all 16 component worlds, the
+full 48-resident neural state, learner/optimizer/private state and an empty
+drained rollout. Its first timing window was 348.0 resident-steps/s overall:
+physics used 32.70 of 44.14 seconds, the edge-tiled full connectome used 7.92
+seconds, sensing 3.15 seconds, and actor plus PPO 0.94 seconds. Rich physical
+and environmental evolution is therefore the current throughput bottleneck.
+
+This global-variance stage was deliberately branched after retaining the
+step-4,895 checkpoint instead of spending the full 48k budget confirming an
+identified limitation. At step 4,800 (240 model seconds), mean energy had
+fallen to 0.70275, reserve to 0.77215 and mean fatigue had risen to 0.80386;
+25% of residents exceeded 0.95 fatigue and nutrition had nearly plateaued.
+The actor reduced its global thrust/yaw standard deviations from 0.563/0.514
+to 0.490/0.479, but one state-independent variance could not reliably express
+both exploration and rest. `stage-receipt.json` preserves the exact checkpoint,
+all four telemetry intervals and the bounded diagnostic scope. It contains no
+held-out or sustained-regulation claim. The next architecture branch uses a
+learned state-conditioned variance without a hand-coded fatigue gate.
+
+That branch continued from the exact step-4,895 physical, neural, learner and
+private state. A subsequently found version guard omitted its 19 pending
+rollout decisions, and a later resume omitted 62 more; neither set entered a
+PPO update. All learned weights and optimizer state before each boundary were
+retained. `rollout-restore-correction.json` records both discontinuities. The
+fixed loader restores rollout arrays for every checkpoint version from v2
+onward; a real v5 restore then consumed 49 saved plus 15 new decisions in one
+3,072-sample update. The variance head itself is zero-initialized, preserving
+the old policy distribution at upgrade, and its new optimizer moments begin at
+zero. The checkpoint-carried scientific profile remains
+`0603060b...34ba`, while the physical implementation moves to the separately
+validated bit-equivalent fast engine. The run record exposes both transitions.
+
+```sh
+.../learn_affordances.py \
+  --graph /tank/chreatures/data/malecns/derived \
+  --port-bundle /tank/chreatures/data/ports/retinal-v1-maps.npz \
+  --output /tank/chreatures/runs/learning/embodied-homeostasis-inherited20k-16x3-v1 \
+  --worlds 16 --workers 16 --steps 52895 --episode-steps 24000 \
+  --macro-steps 5 --rollout-decisions 64 --checkpoint-every 4800 \
+  --eval-worlds 8 --eval-steps 24000 --seed 20260906 \
+  --reward-objective finite-energy-v1 --training-profile current-life-v1 \
+  --brain-backend tiled --std-profile state-conditioned-v2 \
+  --physical-backend fast --allow-physical-backend-transition \
+  --resume .../checkpoints/cohort-step-0004895.json.gz
+```

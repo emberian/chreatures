@@ -22,6 +22,7 @@ ACTIONS = (
 )
 PHYSIOLOGY = ("energy", "gut", "fatigue", "speed", "angular_velocity", "support")
 ARTIFACT_FORMAT = "chreatures-predictive-ppo-motor-organ-v1"
+ARTIFACT_FORMAT_V2 = "chreatures-predictive-ppo-motor-organ-v2"
 SNAPSHOT_FORMAT = "chreatures-motor-organ-snapshot-v1"
 
 
@@ -74,15 +75,25 @@ class MotorArtifact:
 
     def __init__(self, metadata: Mapping[str, Any], arrays: Mapping[str, np.ndarray]) -> None:
         self.metadata = dict(metadata)
-        if self.metadata.get("format") != ARTIFACT_FORMAT:
+        artifact_format = self.metadata.get("format")
+        if artifact_format not in {ARTIFACT_FORMAT, ARTIFACT_FORMAT_V2}:
             raise ValueError("incompatible motor artifact format")
         if tuple(self.metadata.get("actions", ())) != ACTIONS:
             raise ValueError("motor artifact action schema differs")
-        missing = set(self.REQUIRED) - set(arrays)
+        config = dict(self.metadata.get("config", {}))
+        std_profile = config.get("std_profile", "global-v1")
+        expected_format = ARTIFACT_FORMAT_V2 if std_profile == "state-conditioned-v2" else ARTIFACT_FORMAT
+        if artifact_format != expected_format:
+            raise ValueError("motor artifact format and variance architecture differ")
+        required = self.REQUIRED + (
+            ("std_offset.weight", "std_offset.bias")
+            if std_profile == "state-conditioned-v2" else ()
+        )
+        missing = set(required) - set(arrays)
         if missing:
             raise ValueError(f"motor artifact is missing arrays: {sorted(missing)}")
         validated = {}
-        for name in self.REQUIRED:
+        for name in required:
             value = np.asarray(arrays[name])
             if not np.issubdtype(value.dtype, np.number) or not np.isfinite(value).all():
                 raise ValueError(f"invalid motor artifact array {name}")
@@ -95,7 +106,7 @@ class MotorArtifact:
         if len(expected) != 64 or expected != actual:
             raise ValueError("motor artifact content identity differs")
         self.sha256 = actual
-        self.config = dict(self.metadata["config"])
+        self.config = config
         self._validate_shapes()
 
     def _validate_shapes(self) -> None:
@@ -117,6 +128,11 @@ class MotorArtifact:
             "predictor.2.weight": (q, h), "predictor.2.bias": (q,),
             "normalizer_mean": (f,), "normalizer_m2": (f,), "normalizer_count": (),
         }
+        if self.config.get("std_profile", "global-v1") == "state-conditioned-v2":
+            shapes.update({
+                "std_offset.weight": (len(ACTIONS), h),
+                "std_offset.bias": (len(ACTIONS),),
+            })
         for name, shape in shapes.items():
             if self.arrays[name].shape != shape:
                 raise ValueError(f"motor artifact array {name} has shape {self.arrays[name].shape}, expected {shape}")
@@ -222,6 +238,18 @@ class MotorOrgan:
         hidden_prediction = np.tanh(self._linear("predictor.0", joined)).astype(np.float32)
         return self._linear("predictor.2", hidden_prediction).astype(np.float32)
 
+    def distribution_log_std(self, hidden: Any) -> np.ndarray:
+        """Return the immutable inherited log scale for this hidden state."""
+        hidden = np.asarray(hidden, dtype=np.float32)
+        expected = (int(self.artifact.config["hidden_dim"]),)
+        if hidden.shape != expected or not np.isfinite(hidden).all():
+            raise ValueError(f"hidden state must be finite with shape {expected}")
+        effective = self.artifact.arrays["log_std"]
+        if self.artifact.config.get("std_profile", "global-v1") == "state-conditioned-v2":
+            offset = self._linear("std_offset", hidden).astype(np.float32)
+            effective = effective + np.float32(2.0) * np.tanh(offset / np.float32(2.0))
+        return np.clip(effective, -3.5, .3).astype(np.float32)
+
     def _update_context(self, next_features: np.ndarray) -> None:
         a = self.artifact.arrays
         projected = self.projected(next_features)
@@ -315,7 +343,7 @@ class MotorOrgan:
             if self.deterministic:
                 latent = mean
             else:
-                std = np.exp(np.clip(self.artifact.arrays["log_std"], -3.5, .3)).astype(np.float32)
+                std = np.exp(self.distribution_log_std(hidden)).astype(np.float32)
                 latent = mean + std * self.rng.standard_normal(len(ACTIONS), dtype=np.float32)
             return self._commit_macro_action(
                 normalized, hidden, np.tanh(latent).astype(np.float32), float(dt)

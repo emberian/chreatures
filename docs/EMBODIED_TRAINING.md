@@ -25,6 +25,18 @@ acoustic, RNG, and ledger state, verifies an optional expected profile hash,
 and rejects clocks that differ.  This prevents a saved legacy environment from
 silently acquiring the new sensorium or ecology.
 
+`EmbodiedTrainingProfile.current_v2()` is a new opt-in contract rather than a
+mutation of a v1 run.  It records a three-stage egocentric food-bearing
+schedule of `[0.75, pi/2, pi]` radians.  A training spec and every v2 world
+snapshot record the selected stage and effective half-span.  Held-out specs
+always use `pi`, including when the training stage is narrower.  The v2
+resource contract also raises conserved ambient material inflow to `0.008`
+units/s, reservoir uptake by 3x, and producer growth by 2.5x.  Its three early
+foods (`sun-berry`, `shade-nectar`, and `screen-seed`) are all backed by those
+renewable reservoirs.  This makes repeated physical acquisition possible over
+the declared long episode without creating food, repairing physiology, or
+paying an oracle reward.
+
 The learner observes only the existing encoded senses returned by `sense`:
 occluded body-frame rays, bilateral local chemical concentrations, physical
 sound, touch, illumination, shade, and body-local proprioception.  World
@@ -54,6 +66,24 @@ outcomes = world.advance(actions, 0.05)
 snapshot = world.snapshot()
 world = EmbodiedTrainingWorld.restore(snapshot, expected_profile=profile)
 ```
+
+Select v2 and its curriculum stage only at a new environment boundary:
+
+```python
+profile = EmbodiedTrainingProfile.current_v2()
+spec = embodied_training_spec(seed, profile=profile, stage=1)  # pi/2
+world = EmbodiedTrainingWorld(seed, spec, profile)
+
+probe_spec = embodied_training_spec(
+    heldout_seed, profile=profile, stage=1, held_out=True,
+)  # always pi
+```
+
+The factory signature is `embodied_training_spec(seed, *, held_out=False,
+stage=0, profile=None, base_spec=None)`.  Profile v1 accepts only stage zero
+and retains its original serialized spec and snapshot shape.  Profile v2
+snapshots use `chreatures-embodied-training-world-v2`, embed `stage`, and
+restore only when that stage agrees with the physical world's stored spec.
 
 For a process worker, replace only construction and restore:
 
@@ -90,10 +120,13 @@ training environment and is not a resume.
 The factory starts from `terrarium-garden.json`, preserves the connected
 terraces and ramps, and varies resident headings, initial physiology, movable
 food/play-object placement, and the positions of two independent occluders.
-It then puts one ordinary finite renewable food body 0.28–0.44 m from each
+It then puts one ordinary finite food body 0.28–0.44 m from each
 resident at a randomized egocentric bearing.  This supplies an early physically
 reachable acquisition opportunity; eating still requires contact, food can be
 moved or exhausted, and replenishment follows the independent ecology ledger.
+V1 retains its historical nearby-food tuple, including one nonrenewable authored
+food. V2 uses only the three ecology-backed renewable foods and expands their
+bearing distribution by the explicit stage schedule above.
 There is no resident-ID-aware feeder, oracle controller, or physiology repair.
 Held-out worlds use a disjoint seed offset and wider occluder variation.  This
 changes physical visibility, contact opportunities, local diffusion, movable

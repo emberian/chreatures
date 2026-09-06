@@ -20,7 +20,9 @@ from .sensorium import ArticulatedSensoriumWorld, BODY_FRAME
 
 
 PROFILE_FORMAT = "chreatures-embodied-training-profile-v1"
+PROFILE_FORMAT_V2 = "chreatures-embodied-training-profile-v2"
 SNAPSHOT_FORMAT = "chreatures-embodied-training-world-v1"
+SNAPSHOT_FORMAT_V2 = "chreatures-embodied-training-world-v2"
 ROOT = Path(__file__).resolve().parents[1]
 PHYSICAL_BACKENDS = {
     "reference": ArticulatedSensoriumWorld,
@@ -45,7 +47,8 @@ class EmbodiedTrainingProfile:
             "format", "version", "name", "sensorium", "body", "fields",
             "resources", "acoustics", "homeostasis", "variation", "horizons", "sources",
         }
-        if set(raw) != expected or raw.get("format") != PROFILE_FORMAT or raw.get("version") != 1:
+        identity = (raw.get("format"), raw.get("version"))
+        if set(raw) != expected or identity not in ((PROFILE_FORMAT, 1), (PROFILE_FORMAT_V2, 2)):
             raise ValueError("unsupported embodied training profile")
         if raw["sensorium"] != {"frame": BODY_FRAME} or raw["body"] != "articulated":
             raise ValueError("embodied training v1 requires body-v1 articulated sensing")
@@ -110,6 +113,46 @@ class EmbodiedTrainingProfile:
     def to_value(self) -> dict[str, Any]:
         return {"value": copy.deepcopy(self._value), "sha256": self.sha256}
 
+    def with_full_bearings(self, *, training_half_span: float = math.pi) -> "EmbodiedTrainingProfile":
+        """Derive a declared curriculum with unbiased held-out food bearings.
+
+        Existing profile-v1 worlds keep their original draws. A teacher may
+        choose a narrower training span at a new episode boundary, while probes
+        always draw across the complete circle.
+        """
+        span = float(training_half_span)
+        if not math.isfinite(span) or not 0 < span <= math.pi:
+            raise ValueError("training food-bearing half-span must be in (0, pi]")
+        value = copy.deepcopy(self._value)
+        value["format"] = PROFILE_FORMAT_V2
+        value["version"] = 2
+        value["name"] = "current-life-full-bearing-v2"
+        value["variation"].update({
+            "version": 2,
+            "parent_profile_sha256": self.sha256,
+            "training_food_bearing_schedule_rad": [
+                min(0.75, span), min(math.pi / 2.0, span), span,
+            ],
+            "heldout_food_bearing_half_span_rad": math.pi,
+        })
+        value["variation"].pop("training_food_bearing_half_span_rad", None)
+        # V2 uses the three ecology-backed foods for its reachable curriculum.
+        # Increased inflow, uptake, and growth let those ordinary producers
+        # recover repeatedly over a 1,200 s episode; conservation remains in
+        # Ecology's material/energy ledger.
+        resources = value["resources"]
+        resources["ambient"]["material_inflow_rate"] = 0.008
+        for reservoir in resources["reservoirs"]:
+            reservoir["uptake_rate"] = float(reservoir["uptake_rate"]) * 3.0
+        for producer in resources["producers"]:
+            producer["growth_rate"] = float(producer["growth_rate"]) * 2.5
+        return type(self)(value)
+
+    @classmethod
+    def current_v2(cls) -> "EmbodiedTrainingProfile":
+        """Build the three-stage full-bearing renewable nursery profile."""
+        return cls.current().with_full_bearings(training_half_span=math.pi)
+
     @classmethod
     def from_value(cls, encoded: Mapping[str, Any]) -> "EmbodiedTrainingProfile":
         if not isinstance(encoded, Mapping) or set(encoded) != {"value", "sha256"}:
@@ -129,6 +172,7 @@ class EmbodiedTrainingProfile:
 
 def embodied_training_spec(
     seed: int, *, held_out: bool = False,
+    stage: int = 0,
     profile: EmbodiedTrainingProfile | None = None,
     base_spec: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -139,6 +183,12 @@ def embodied_training_spec(
     )
     spec["sensorium"] = profile.component("sensorium")
     variation = profile.component("variation")
+    profile_version = int(profile.component("version"))
+    if isinstance(stage, bool) or not isinstance(stage, (int, np.integer)):
+        raise ValueError("training stage must be an integer")
+    stage = int(stage)
+    if profile_version == 1 and stage != 0:
+        raise ValueError("profile v1 has no staged bearing curriculum")
     chosen_seed = int(seed) + (int(variation["heldout_seed_offset"]) if held_out else 0)
     rng = np.random.default_rng(chosen_seed)
     width, height = map(float, spec["size"][:2])
@@ -166,10 +216,28 @@ def embodied_training_spec(
         body["fatigue"] = float(rng.uniform(.02, .08))
     # One ordinary renewable food begins within early physical reach of each
     # resident. This is a world curriculum, not an identity-aware policy aid.
-    nearby_food = ("way-berry", "screen-seed", "sun-berry")
+    nearby_food = (("way-berry", "screen-seed", "sun-berry") if profile_version == 1
+                   else ("sun-berry", "shade-nectar", "screen-seed"))
     low, high = map(float, variation["early_food_distance_m"])
+    if variation["version"] == 1:
+        food_bearing_span = 0.75
+    elif variation["version"] == 2:
+        schedule = variation["training_food_bearing_schedule_rad"]
+        if len(schedule) != 3 or stage not in range(len(schedule)):
+            raise ValueError("profile-v2 training stage must be 0, 1, or 2")
+        food_bearing_span = float(
+            variation["heldout_food_bearing_half_span_rad"] if held_out else schedule[stage]
+        )
+        if (
+            not math.isfinite(food_bearing_span)
+            or not 0 < food_bearing_span <= math.pi
+            or (held_out and food_bearing_span != math.pi)
+        ):
+            raise ValueError("Invalid version-2 food-bearing distribution")
+    else:
+        raise ValueError("Unsupported embodied environment variation")
     for body, entity_id in zip(spec["bodies"], nearby_food, strict=True):
-        angle = float(body["heading"] + rng.uniform(-.75, .75))
+        angle = float(body["heading"] + rng.uniform(-food_bearing_span, food_bearing_span))
         distance = float(rng.uniform(low, high))
         entity = by_id[entity_id]
         entity["position"][0] = float(np.clip(body["position"][0] + math.cos(angle) * distance, .25, width - .25))
@@ -177,7 +245,14 @@ def embodied_training_spec(
         entity["position"][2] = float(body["position"][2])
     spec["name"] = "embodied-current-life-heldout" if held_out else "embodied-current-life-training"
     spec["training_profile_sha256"] = profile.sha256
-    spec["training_variant"] = {"seed": chosen_seed, "held_out": bool(held_out)}
+    if profile_version == 1:
+        # Preserve the exact v1 spec/checkpoint contract.
+        spec["training_variant"] = {"seed": chosen_seed, "held_out": bool(held_out)}
+    else:
+        spec["training_variant"] = {
+            "seed": chosen_seed, "held_out": bool(held_out), "stage": stage,
+            "food_bearing_half_span_rad": food_bearing_span,
+        }
     return spec
 
 
@@ -198,6 +273,13 @@ class EmbodiedTrainingWorld:
             raise ValueError(f"unknown embodied physical backend: {physical_backend!r}")
         self.seed = int(seed)
         self.profile = profile
+        self.profile_version = int(profile.component("version"))
+        variant = spec.get("training_variant", {})
+        self.stage = int(variant.get("stage", 0))
+        if self.profile_version == 2 and (
+            self.stage not in range(3) or "food_bearing_half_span_rad" not in variant
+        ):
+            raise ValueError("profile-v2 world spec omits its curriculum stage")
         self.physical_backend = physical_backend
         self.world = PHYSICAL_BACKENDS[physical_backend](seed=self.seed, spec=copy.deepcopy(spec))
         self.field = FieldEnvironment.from_world(self.world, profile.component("fields"))
@@ -256,13 +338,16 @@ class EmbodiedTrainingWorld:
         return outcomes
 
     def snapshot(self) -> dict[str, Any]:
-        return {
+        value = {
             "format": SNAPSHOT_FORMAT, "version": 1,
             "seed": self.seed, "profile": self.profile.to_value(),
             "world": self.world.snapshot(), "field": self.field.snapshot(),
             "resources": self.resources.snapshot(), "acoustics": self.acoustics.snapshot(),
             "last_telemetry": copy.deepcopy(self.last_telemetry),
         }
+        if self.profile_version == 2:
+            value.update({"format": SNAPSHOT_FORMAT_V2, "version": 2, "stage": self.stage})
+        return value
 
     @classmethod
     def restore(
@@ -270,9 +355,12 @@ class EmbodiedTrainingWorld:
         expected_profile: EmbodiedTrainingProfile | str | None = None,
         *, physical_backend: str = "reference",
     ) -> "EmbodiedTrainingWorld":
-        if snapshot.get("format") != SNAPSHOT_FORMAT or snapshot.get("version") != 1:
+        identity = (snapshot.get("format"), snapshot.get("version"))
+        if identity not in ((SNAPSHOT_FORMAT, 1), (SNAPSHOT_FORMAT_V2, 2)):
             raise ValueError("unsupported embodied training world snapshot")
         profile = EmbodiedTrainingProfile.from_value(snapshot["profile"])
+        if int(profile.component("version")) != int(snapshot["version"]):
+            raise ValueError("training world/profile versions differ")
         expected_hash = expected_profile.sha256 if isinstance(expected_profile, EmbodiedTrainingProfile) else expected_profile
         if expected_hash is not None and str(expected_hash) != profile.sha256:
             raise ValueError("training checkpoint profile differs")
@@ -281,10 +369,18 @@ class EmbodiedTrainingWorld:
         instance = cls.__new__(cls)
         instance.seed = int(snapshot["seed"])
         instance.profile = profile
+        instance.profile_version = int(profile.component("version"))
+        instance.stage = int(snapshot.get("stage", 0))
+        if instance.profile_version == 2 and instance.stage not in range(3):
+            raise ValueError("invalid restored curriculum stage")
         instance.physical_backend = physical_backend
         instance.world = PHYSICAL_BACKENDS[physical_backend].restore(snapshot["world"])
         if instance.world.spec.get("training_profile_sha256") != profile.sha256:
             raise ValueError("restored physical world profile differs")
+        if instance.profile_version == 2 and int(
+            instance.world.spec.get("training_variant", {}).get("stage", -1)
+        ) != instance.stage:
+            raise ValueError("restored physical world curriculum stage differs")
         instance.field = FieldEnvironment.restore(snapshot["field"])
         instance.resources = Ecology.restore(instance.world, snapshot["resources"])
         instance.acoustics = Acoustics.restore(instance.world, snapshot["acoustics"])
