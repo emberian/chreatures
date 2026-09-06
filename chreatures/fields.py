@@ -75,8 +75,9 @@ class FieldEnvironment:
     Concentration units are mass per cubic meter.
     """
 
-    VERSION = 3
+    VERSION = 4
     TRANSPORT = "rust-face-v1"
+    MAX_STATIC_RASTER_SHAPES = 65_536
 
     def __init__(
         self,
@@ -118,7 +119,6 @@ class FieldEnvironment:
             if values.shape != self.grid_shape or not np.isfinite(values).all() or np.any((values < 0) | (values > 1)):
                 raise ValueError(f"permeability must be finite in [0,1] with shape {self.grid_shape}")
             self.permeability = values.copy()
-        self.permeability[self.solid] = 0.0
         self.base_flow = self._flow_array(self.config.get("flow", [0.0, 0.0, 0.0]))
         self.time = 0.0
         self.rng = np.random.default_rng(int(self.config["seed"]))
@@ -136,7 +136,20 @@ class FieldEnvironment:
             "substeps": 0,
             "last_cfl": 0.0,
         }
-        self._apply_permeability_zones(self.config.get("permeability_zones", []))
+        self._base_permeability = self.permeability.copy()
+        self._apply_permeability_zones(
+            self.config.get("permeability_zones", []), self._base_permeability,
+        )
+        self.permeability[:] = self._base_permeability
+        self.permeability[self.solid] = 0.0
+        self._static_revision: int | None = None
+        self._static_topology = {
+            "rasterizations": 0,
+            "displaced_mass": [0.0] * len(self.channels),
+            "mass_distance": [0.0] * len(self.channels),
+            "max_distance": 0.0,
+            "last": None,
+        }
         try:
             from _world_kernels import TransportSolver
         except ImportError as exc:
@@ -156,20 +169,134 @@ class FieldEnvironment:
             raise ValueError("FieldEnvironment.from_world requires a 3D physical world")
         size = [view["width"], view["height"], view.get("depth", 3.5)]
         environment = cls(size=size, config=config)
-        environment.solid[:] = False
-        for entity in view.get("entities", []):
-            if entity.get("mobility") != "static":
-                continue
-            for shape in entity.get("shapes", []):
-                environment._voxelize_shape(shape)
-        environment.permeability[environment.solid] = 0.0
-        environment.concentration[:, environment.solid] = 0.0
+        revision = getattr(world, "model_revision", None)
+        environment._sync_static_view(view, revision)
         provider = getattr(world, "diffusion_barriers", None)
         if callable(provider):
             barriers = provider()
             if barriers:
                 environment.sync_dynamic_barriers(barriers)
         return environment
+
+    def sync_static_geometry(self, world: Any) -> dict[str, Any] | None:
+        """Rerasterize static geometry once after a world topology commit.
+
+        The revision check is the fast path. Candidate rasterization and mass
+        relocation complete before any field array is mutated.
+        """
+        revision = getattr(world, "model_revision", None)
+        if isinstance(revision, bool) or not isinstance(revision, (int, np.integer)) or revision < 0:
+            raise ValueError("world model_revision must be a nonnegative integer")
+        revision = int(revision)
+        if self._static_revision == revision:
+            return None
+        view = world.view()
+        return self._sync_static_view(view, revision)
+
+    def _sync_static_view(self, view: Any, revision: Any) -> dict[str, Any]:
+        if not isinstance(view, dict) or view.get("dimension") != 3:
+            raise ValueError("static field synchronization requires a 3D world view")
+        world_size = np.asarray(
+            [view.get("width"), view.get("height"), view.get("depth")], dtype=np.float64,
+        )
+        if world_size.shape != (3,) or not np.isfinite(world_size).all() or not np.array_equal(world_size, self.size):
+            raise ValueError("world and field dimensions differ")
+        if isinstance(revision, bool) or not isinstance(revision, (int, np.integer)) or revision < 0:
+            raise ValueError("world model_revision must be a nonnegative integer")
+        entities = view.get("entities")
+        if not isinstance(entities, list):
+            raise ValueError("world view entities must be a list")
+        static_shapes: list[dict[str, Any]] = []
+        for entity in entities:
+            if not isinstance(entity, dict):
+                raise ValueError("world view entities must contain objects")
+            if entity.get("mobility") != "static":
+                continue
+            shapes = entity.get("shapes")
+            if not isinstance(shapes, list):
+                raise ValueError("static entity shapes must be a list")
+            if not all(isinstance(shape, dict) for shape in shapes):
+                raise ValueError("static entity shapes must contain objects")
+            static_shapes.extend(shapes)
+        if len(static_shapes) > self.MAX_STATIC_RASTER_SHAPES:
+            raise ValueError(
+                f"static rasterization supports at most {self.MAX_STATIC_RASTER_SHAPES} shapes"
+            )
+        if math.prod(self.shape_xyz) > 2_500_000:
+            raise ValueError("static rasterization supports at most 2.5M field cells")
+        candidate_solid = np.zeros(self.grid_shape, dtype=bool)
+        for shape in static_shapes:
+            self._voxelize_shape(shape, candidate_solid)
+
+        newly_solid = candidate_solid & ~self.solid
+        reopened = self.solid & ~candidate_solid
+        candidate_concentration = self.concentration.copy()
+        before = self.total_mass.copy()
+        displaced_mass = np.zeros(len(self.channels), dtype=np.float64)
+        mass_distance = np.zeros(len(self.channels), dtype=np.float64)
+        max_distance = 0.0
+        occupied = newly_solid & np.any(candidate_concentration > 0.0, axis=0)
+        if np.any(occupied):
+            fluid = ~candidate_solid
+            if not np.any(fluid):
+                raise ValueError("static topology would make a mass-bearing field all solid")
+            from scipy.ndimage import distance_transform_edt
+
+            distances, nearest = distance_transform_edt(
+                candidate_solid,
+                sampling=(self.dz, self.dy, self.dx),
+                return_indices=True,
+            )
+            sources = np.nonzero(occupied)
+            destinations = tuple(nearest[axis][sources] for axis in range(3))
+            source_distance = distances[sources]
+            max_distance = float(np.max(source_distance, initial=0.0))
+            for channel in range(len(self.channels)):
+                moved = candidate_concentration[(np.full(len(sources[0]), channel), *sources)]
+                displaced_mass[channel] = float(moved.sum()) * self.cell_volume
+                mass_distance[channel] = float(np.dot(moved, source_distance)) * self.cell_volume
+                np.add.at(candidate_concentration[channel], destinations, moved)
+            candidate_concentration[:, occupied] = 0.0
+        candidate_concentration[:, candidate_solid] = 0.0
+        after = candidate_concentration.sum(axis=(1, 2, 3)) * self.cell_volume
+        residual = after - before
+        tolerance = np.maximum(1e-14, np.abs(before) * 2e-13)
+        if np.any(np.abs(residual) > tolerance):
+            raise FloatingPointError("static topology mass redistribution exceeded roundoff tolerance")
+        mean_distance = np.divide(
+            mass_distance, displaced_mass,
+            out=np.zeros_like(mass_distance), where=displaced_mass > 0.0,
+        )
+        report = {
+            "revision": int(revision),
+            "static_shapes": len(static_shapes),
+            "new_solid_cells": int(np.count_nonzero(newly_solid)),
+            "reopened_cells": int(np.count_nonzero(reopened)),
+            "displaced_mass": displaced_mass.tolist(),
+            "mean_displacement": mean_distance.tolist(),
+            "max_displacement": max_distance,
+            "mass_before": before.tolist(),
+            "mass_after": after.tolist(),
+            "mass_residual": residual.tolist(),
+        }
+        # Adopt only after the complete candidate and ledger validate.
+        self.solid[:] = candidate_solid
+        self.concentration[:] = candidate_concentration
+        self.permeability[:] = self._base_permeability
+        self.permeability[self.solid] = 0.0
+        self._static_revision = int(revision)
+        self._static_topology["rasterizations"] += 1
+        self._static_topology["displaced_mass"] = (
+            np.asarray(self._static_topology["displaced_mass"]) + displaced_mass
+        ).tolist()
+        self._static_topology["mass_distance"] = (
+            np.asarray(self._static_topology["mass_distance"]) + mass_distance
+        ).tolist()
+        self._static_topology["max_distance"] = max(
+            float(self._static_topology["max_distance"]), max_distance,
+        )
+        self._static_topology["last"] = copy.deepcopy(report)
+        return report
 
     def sync_dynamic_barriers(self, barriers: Any) -> bool:
         """Synchronize declared membrane poses at a physical step boundary.
@@ -251,7 +378,7 @@ class FieldEnvironment:
             (np.arange(self.nz, dtype=np.float64) + 0.5) * self.dz,
         )
 
-    def _apply_permeability_zones(self, zones: Any) -> None:
+    def _apply_permeability_zones(self, zones: Any, target: np.ndarray) -> None:
         if not isinstance(zones, list):
             raise ValueError("permeability_zones must be a list")
         x, y, z = self.cell_centers
@@ -268,9 +395,11 @@ class FieldEnvironment:
                 & (y[None, :, None] >= lower[1]) & (y[None, :, None] <= upper[1])
                 & (x[None, None, :] >= lower[0]) & (x[None, None, :] <= upper[0])
             )
-            self.permeability[mask & ~self.solid] = value
+            target[mask] = value
 
-    def _voxelize_shape(self, shape: dict[str, Any]) -> None:
+    def _voxelize_shape(self, shape: dict[str, Any], target: np.ndarray | None = None) -> None:
+        if target is None:
+            target = self.solid
         kind = shape.get("type")
         if kind not in {"box", "sphere", "capsule", "cylinder", "ellipsoid"}:
             return
@@ -305,7 +434,7 @@ class FieldEnvironment:
         else:  # capsule: radius and cylindrical half-length along local z
             axial = np.maximum(np.abs(local[..., 2]) - size[1], 0.0)
             inside = np.sum(local[..., :2] ** 2, axis=-1) + axial * axial <= size[0] ** 2
-        self.solid[np.ix_(iz, iy, ix)] |= inside
+        target[np.ix_(iz, iy, ix)] |= inside
 
     def _flow_array(self, flow: Any) -> np.ndarray:
         if flow is None:
@@ -654,6 +783,9 @@ class FieldEnvironment:
             "concentration": self.concentration.tolist(),
             "solid": self.solid.tolist(),
             "permeability": self.permeability.tolist(),
+            "base_permeability": self._base_permeability.tolist(),
+            "static_revision": self._static_revision,
+            "static_topology": copy.deepcopy(self._static_topology),
             "base_flow": self.base_flow.tolist(),
             "source_positions": copy.deepcopy(self._source_positions),
             "last_sources": copy.deepcopy(self.last_sources),
@@ -667,24 +799,57 @@ class FieldEnvironment:
 
     @classmethod
     def restore(cls, snapshot: dict[str, Any]) -> "FieldEnvironment":
-        if not isinstance(snapshot, dict) or snapshot.get("version") not in {1, 2, cls.VERSION}:
+        if not isinstance(snapshot, dict) or snapshot.get("version") not in {1, 2, 3, cls.VERSION}:
             raise ValueError("unsupported field snapshot")
+        imported_version = snapshot["version"]
         # One-way data import, not an older execution engine. The archived
         # NumPy face equation matches the current Rust kernel bit for bit in
         # the independent transport and composed-field probes.
-        if snapshot["version"] in {1, 2}:
+        if snapshot["version"] in {1, 2, 3}:
             if snapshot["version"] == 2 and "dynamic_barriers" not in snapshot:
                 raise ValueError("version 2 field snapshot requires dynamic barriers")
             snapshot = {**snapshot, "version": cls.VERSION, "transport": cls.TRANSPORT}
         if snapshot.get("transport") != cls.TRANSPORT:
             raise ValueError("field snapshot transport implementation differs")
+        raw_solid = np.asarray(snapshot["solid"])
+        if raw_solid.dtype.kind != "b":
+            raise ValueError("invalid solid field snapshot")
+        saved_solid = raw_solid.astype(bool, copy=False)
+        saved_permeability = np.asarray(snapshot["permeability"], dtype=np.float64)
+        supplied_base = snapshot.get("base_permeability")
+        if imported_version == cls.VERSION or supplied_base is not None:
+            base_permeability = np.asarray(snapshot.get("base_permeability"), dtype=np.float64)
+        else:
+            # Legacy snapshots did not retain permeability hidden underneath a
+            # static solid. Recover configured defaults there while preserving
+            # every saved fluid-cell value.
+            base_permeability = None
         environment = cls(
             size=snapshot["size"],
             config=snapshot["config"],
-            solid_mask=np.asarray(snapshot["solid"], dtype=bool),
-            permeability=np.asarray(snapshot["permeability"], dtype=np.float64),
+            solid_mask=saved_solid,
+            permeability=1.0,
         )
-        saved_permeability = np.asarray(snapshot["permeability"], dtype=np.float64)
+        if (
+            saved_permeability.shape != environment.grid_shape
+            or not np.isfinite(saved_permeability).all()
+            or np.any((saved_permeability < 0.0) | (saved_permeability > 1.0))
+        ):
+            raise ValueError("invalid permeability field snapshot")
+        if base_permeability is None:
+            base_permeability = environment._base_permeability.copy()
+            base_permeability[~saved_solid] = saved_permeability[~saved_solid]
+        if (
+            base_permeability.shape != environment.grid_shape
+            or not np.isfinite(base_permeability).all()
+            or np.any((base_permeability < 0.0) | (base_permeability > 1.0))
+        ):
+            raise ValueError("invalid base permeability field snapshot")
+        expected_permeability = base_permeability.copy()
+        expected_permeability[saved_solid] = 0.0
+        if not np.array_equal(saved_permeability, expected_permeability):
+            raise ValueError("saved permeability differs from base permeability and solids")
+        environment._base_permeability[:] = base_permeability
         environment.permeability[:] = saved_permeability
         environment.permeability[environment.solid] = 0.0
         concentration = np.asarray(snapshot.get("concentration"), dtype=np.float64)
@@ -707,6 +872,52 @@ class FieldEnvironment:
         environment.last_sources = copy.deepcopy(snapshot.get("last_sources", []))
         environment.last_sinks = copy.deepcopy(snapshot.get("last_sinks", []))
         environment.diagnostics = copy.deepcopy(snapshot["diagnostics"])
+        if imported_version == cls.VERSION:
+            revision = snapshot.get("static_revision")
+            if revision is not None and (
+                isinstance(revision, bool)
+                or not isinstance(revision, int)
+                or revision < 0
+            ):
+                raise ValueError("invalid static topology revision")
+            topology = snapshot.get("static_topology")
+            if not isinstance(topology, dict) or set(topology) != {
+                "rasterizations", "displaced_mass", "mass_distance", "max_distance", "last",
+            }:
+                raise ValueError("invalid static topology ledger")
+            rasterizations = topology["rasterizations"]
+            if isinstance(rasterizations, bool) or not isinstance(rasterizations, int) or rasterizations < 0:
+                raise ValueError("invalid static topology rasterization count")
+            for key in ("displaced_mass", "mass_distance"):
+                values = np.asarray(topology[key], dtype=np.float64)
+                if values.shape != (len(environment.channels),) or not np.isfinite(values).all() or np.any(values < 0.0):
+                    raise ValueError(f"invalid static topology {key}")
+            _number(topology["max_distance"], "static topology max distance", 0.0, 1e9)
+            last = topology["last"]
+            if (rasterizations == 0) != (last is None) or (last is not None and revision is None):
+                raise ValueError("static topology ledger and revision differ")
+            if last is not None:
+                if not isinstance(last, dict) or set(last) != {
+                    "revision", "static_shapes", "new_solid_cells", "reopened_cells",
+                    "displaced_mass", "mean_displacement", "max_displacement",
+                    "mass_before", "mass_after", "mass_residual",
+                }:
+                    raise ValueError("invalid last static topology report")
+                for key in ("revision", "static_shapes", "new_solid_cells", "reopened_cells"):
+                    if isinstance(last[key], bool) or not isinstance(last[key], int) or last[key] < 0:
+                        raise ValueError(f"invalid last static topology {key}")
+                for key in ("displaced_mass", "mean_displacement", "mass_before", "mass_after"):
+                    values = np.asarray(last[key], dtype=np.float64)
+                    if values.shape != (len(environment.channels),) or not np.isfinite(values).all() or np.any(values < 0.0):
+                        raise ValueError(f"invalid last static topology {key}")
+                residual = np.asarray(last["mass_residual"], dtype=np.float64)
+                if residual.shape != (len(environment.channels),) or not np.isfinite(residual).all():
+                    raise ValueError("invalid last static topology mass residual")
+                _number(last["max_displacement"], "last static topology max displacement", 0.0, 1e9)
+                if last["revision"] != revision:
+                    raise ValueError("last static topology revision differs")
+            environment._static_revision = revision
+            environment._static_topology = copy.deepcopy(topology)
         try:
             environment.rng.bit_generator.state = copy.deepcopy(snapshot["rng_state"])
         except (KeyError, TypeError, ValueError) as exc:

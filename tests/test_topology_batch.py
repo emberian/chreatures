@@ -67,7 +67,13 @@ def test_topology_batch_compiles_then_atomically_preserves_world_state_and_resto
     assert world.rng.bit_generator.state == before_rng
     assert ([body.to_dict() for body in world.bodies], world._touch, world._contact_normals,
             world._grips, world._hand) == before_private
-    assert PhysicsWorld.restore(world.snapshot()).snapshot() == world.snapshot()
+    restored = PhysicsWorld.restore(world.snapshot())
+    assert restored.model_revision == 1
+    assert restored.snapshot() == world.snapshot()
+
+    legacy = world.snapshot()
+    legacy.pop("model_revision")
+    assert PhysicsWorld.restore(legacy).model_revision == 0
 
 
 def test_topology_batch_failure_and_stale_commit_leave_world_unchanged():
