@@ -187,8 +187,25 @@ def _add_recycling(habitat, birth):
                 },
             }
         )
+    emitter_slots = []
+    slot_template = copy.deepcopy(birth["material_objects"]["objects"][-1])
+    for index in range(12):
+        name = f"exudate-{index}"
+        emitter_slots.append(name)
+        habitat["materials"][name] = {"rgba": [0.48, 0.36, 0.10, 1.0]}
+        habitat["compiler"]["material_order"].append(name)
+        row = len(birth["compartments"])
+        birth["compartments"].append(
+            {"enzymes": {}, "pools": {}, "atp": 0.0, "atp_capacity": 0.0}
+        )
+        item = copy.deepcopy(slot_template)
+        item["entity"] = name
+        item["row"] = row
+        item["dormant_template"]["id"] = name
+        item["dormant_template"]["material"] = name
+        birth["material_objects"]["objects"].append(item)
     birth["exchange"] = {
-        "format": "chreatures-ecological-exchange-v1",
+        "format": "chreatures-ecological-exchange-v2",
         "deposit_slots": slots,
         "mobiles": [
             {
@@ -216,6 +233,21 @@ def _add_recycling(habitat, birth):
                 "capacities": {"mineral": 10.0, "inorganic_carbon": 80.0},
             }
             for colony in birth["colonies"]
+        ],
+        "emitters": [
+            {
+                "id": f"{colony['id']}-reserve-exudate",
+                "donor_row": colony["body_row"],
+                "attachment_entity": colony["bindings"]["branch"],
+                "local_offset": [0.08, 0.0, 0.08],
+                "interval": 2.0,
+                "minimum_mass": 0.004,
+                "maximum_mass": 0.03,
+                "rates": {"reserve": 0.006},
+                "reserve_floors": {"reserve": 42.0},
+                "deposit_slots": emitter_slots[index * 4 : (index + 1) * 4],
+            }
+            for index, colony in enumerate(birth["colonies"])
         ],
     }
 
