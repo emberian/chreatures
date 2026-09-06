@@ -1,0 +1,28 @@
+{
+  "format": "chreatures-grandchild-developmental-atlas-provenance-v1",
+  "status": "analyst-only fitted models; no resident promotion",
+  "source_revision": "9e110419",
+  "run": "/tank/chreatures/runs/development/rich-sensorimotor-online-v2-grandchild-update40-seed20260915",
+  "identity_sha256": "597f75b7f729d186a5c6c35a174031b1dff96520390909835bf3f2bc9d0ce2f9",
+  "result_sha256": "f9e2c37be35dd00aab7fb1f234b5677fb99bcf1cbaa0689246da34c0dea9c3b1",
+  "final_artifact_sha256": "bce4702ece0c12b4950b6e3e4f2652724425c646138692658e5dae9960faffe9",
+  "final_checkpoint_sha256": "cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+  "completed": {"updates": 160, "physical_steps": 20480, "resident_transitions": 491520, "episodes": 4, "worlds": 4, "residents_per_world": 6},
+  "ancestry": {
+    "parent_checkpoint": "/tank/chreatures/runs/development/rich-sensorimotor-online-v2-child-update20-seed20260914/checkpoint-update-000020.pt",
+    "parent_checkpoint_sha256": "57dda0dd2594bb98dcaff7e8ffafb87b9ae1186d40aeb158f388832a00f82278",
+    "parent_updates": 20,
+    "parent_physical_steps": 2560,
+    "inherited": ["worker", "critic", "goal manager", "optimizer"],
+    "fresh_lifecycle_state": ["world", "neural state", "private goals/history", "RNG"]
+  },
+  "reference_law_sha256": "1abb586294db1cbc8db7ba20788eec01d54ef88cf9a642b7e15c4f909223d87b",
+  "compact_sha256": "255b502f8b60ca49a6dd743f15c4afb1e922f57ced21f1aaac4e1b758534a8e1",
+  "behavior_audit": "data/analysis/rich-grandchild160-behavior.json",
+  "limits": [
+    "One inherited lineage and one seed do not establish improvement against a matched control.",
+    "Executed actions are observed after sampling and clipping; pre-clipping logits are absent.",
+    "Goal-code distance progress does not establish goal attainment or controllability.",
+    "Audit identities and physical outcomes were never controller inputs."
+  ]
+}
