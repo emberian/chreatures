@@ -10,6 +10,15 @@ The native hot path reuses cohort-owned buffers and returns member deltas, ensem
 
 Training requires explicit whole-world partitions. For the first corpus, worlds 0–3 fit all moments and weights, world 4 supplies validation and per-horizon goal-space error, and world 5 is opened once for the final report. The frozen resident checkpoint is replayed only to encode frames. Effective recurrent context is recorded directly from native execution because candidate `recurrent_gain` creates private state that shared Torch GRU replay cannot reconstruct exactly.
 
+The first collection completed 393,216 transitions in 1,716.603 wall seconds
+(229.06 resident transitions/s including compression and checkpoints). Six
+eight-resident worlds each supplied two 4,096-tick episodes. Disk-backed arrays
+keep collection memory bounded; packet hashes and the authenticated relay to
+persvati are retained in the [collection receipt](../data/training/rich-sensorimotor-play-v3.receipt.json).
+Its frozen v5 source and update-160 policy precede the reciprocal-v6 chemistry
+and memory changes. Fits on this corpus are inherited priors for the new world;
+held-out source-world error does not validate the new ecological dynamics.
+
 ```bash
 /home/ember/kaxsim/.venv7/bin/python scripts/train_rich_prediction.py \
   /home/ember/chreatures-data/sensorimotor-play/rich-v3-predictor-seed20260918 \
