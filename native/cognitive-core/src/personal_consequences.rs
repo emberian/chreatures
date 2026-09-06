@@ -105,6 +105,22 @@ impl ConsequenceConfig {
 }
 
 impl PersonalConsequences {
+    pub fn grow(&mut self, new_batch: usize) -> Result<(), String> {
+        if new_batch <= self.individuals.len() {
+            return Err("personal consequence growth must append rows".into());
+        }
+        let width = (self.config.feature_names.len() + 1) * self.config.targets.len();
+        self.individuals.resize_with(new_batch, || Individual {
+            weights: vec![0.0; width],
+            squared_error: vec![0.0; self.config.targets.len()],
+            updates: 0,
+            out_of_domain: 0,
+            last_completed_tick: None,
+            pending: None,
+        });
+        Ok(())
+    }
+
     pub fn config(&self) -> &ConsequenceConfig {
         &self.config
     }
@@ -126,6 +142,24 @@ impl PersonalConsequences {
             config,
             individuals: vec![row; batch],
         })
+    }
+
+    /// Clear one vacated cohort slot before installing a new life. The shared
+    /// inherited law/config remains unchanged.
+    pub fn clear_resident(&mut self, resident: usize) -> Result<(), String> {
+        let row = self
+            .individuals
+            .get_mut(resident)
+            .ok_or("unknown resident")?;
+        *row = Individual {
+            weights: vec![0.0; (self.config.feature_names.len() + 1) * self.config.targets.len()],
+            squared_error: vec![0.0; self.config.targets.len()],
+            updates: 0,
+            out_of_domain: 0,
+            last_completed_tick: None,
+            pending: None,
+        };
+        Ok(())
     }
 
     fn check_context(&self, features: &[f64], inherited: &[f64]) -> Result<(), String> {

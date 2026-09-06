@@ -6,11 +6,13 @@ use numpy::{
 };
 use pyo3::{exceptions::PyValueError, prelude::*};
 
+mod contextual_episodic;
 mod developmental;
 pub mod gam_law;
 mod goal_memory;
 pub mod personal_consequences;
 pub mod personal_goals;
+pub mod population_response;
 mod predictive_sensory;
 
 #[derive(Clone)]

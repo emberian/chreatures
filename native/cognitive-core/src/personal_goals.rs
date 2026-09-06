@@ -297,6 +297,21 @@ struct Individual {
     last_receipt: Option<GoalOutcomeReceipt>,
 }
 
+impl Individual {
+    fn empty(slots: usize) -> Self {
+        Self {
+            slots: vec![SlotModel::empty(); slots],
+            pending: None,
+            completed_goals: 0,
+            learned_goals: 0,
+            skipped_replaced_goals: 0,
+            frozen_goals: 0,
+            cancelled_goals: 0,
+            last_receipt: None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct PersonalGoalAssociations {
     schema: String,
@@ -436,21 +451,22 @@ pub fn finite_energy_transition(
 }
 
 impl PersonalGoalAssociations {
+    pub fn grow(&mut self, new_residents: usize) -> Result<(), String> {
+        if new_residents <= self.residents {
+            return Err("personal goal growth must append residents".into());
+        }
+        self.individuals
+            .resize_with(new_residents, || Individual::empty(self.config.slots));
+        self.residents = new_residents;
+        Ok(())
+    }
+
     pub fn new(residents: usize, config: PersonalGoalConfig) -> Result<Self, String> {
         config.validate()?;
         if !(1..=4096).contains(&residents) {
             return Err("invalid private goal association cohort size".into());
         }
-        let individual = Individual {
-            slots: vec![SlotModel::empty(); config.slots],
-            pending: None,
-            completed_goals: 0,
-            learned_goals: 0,
-            skipped_replaced_goals: 0,
-            frozen_goals: 0,
-            cancelled_goals: 0,
-            last_receipt: None,
-        };
+        let individual = Individual::empty(config.slots);
         Ok(Self {
             schema: FORMAT.into(),
             config_sha256: config.identity()?,
@@ -488,6 +504,16 @@ impl PersonalGoalAssociations {
             skipped_replaced_goals: individual.skipped_replaced_goals,
             cancelled_goals: individual.cancelled_goals,
         })
+    }
+
+    /// Clear all lifelong association state when a cohort slot is assigned to
+    /// a new organism. The configured research learning toggle is preserved.
+    pub fn clear_resident(&mut self, resident: usize) -> Result<(), String> {
+        if resident >= self.residents {
+            return Err("unknown resident".into());
+        }
+        self.individuals[resident] = Individual::empty(self.config.slots);
+        Ok(())
     }
 
     fn individual(&self, resident: usize) -> Result<&Individual, String> {

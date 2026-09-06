@@ -9,6 +9,8 @@ const KEY: usize = 64;
 const CAPACITY: usize = 128;
 const HOLD_TICKS: u64 = 10;
 const FORMAT: &str = "chreatures-achieved-goal-memory-v2";
+const MAX_BATCH: usize = 4096;
+const MAX_RESERVOIR_BYTES: usize = 64_usize << 30;
 
 pub(crate) fn splitmix64(state: &mut u64) -> u64 {
     *state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
@@ -61,7 +63,8 @@ fn finite_f64(value: &[f64]) -> bool {
 }
 
 /// Private achieved-history storage for a fixed resident cohort.
-#[pyclass]
+#[pyclass(skip_from_py_object)]
+#[derive(Clone)]
 pub(crate) struct AchievedGoalMemoryCohort {
     batch: usize,
     observation_dim: usize,
@@ -96,6 +99,85 @@ pub(crate) struct AchievedGoalMemoryCohort {
 }
 
 impl AchievedGoalMemoryCohort {
+    pub(crate) fn grow(&mut self, new_batch: usize, seed: u64) -> PyResult<()> {
+        let reservoir_values = new_batch
+            .checked_mul(CAPACITY)
+            .and_then(|value| value.checked_mul(WINDOW))
+            .and_then(|value| value.checked_mul(self.observation_dim))
+            .ok_or_else(|| PyValueError::new_err("goal-memory dimensions overflow"))?;
+        if new_batch <= self.batch
+            || new_batch > MAX_BATCH
+            || reservoir_values
+                .checked_mul(std::mem::size_of::<f32>())
+                .is_none_or(|bytes| bytes > MAX_RESERVOIR_BYTES)
+        {
+            return Err(PyValueError::new_err("goal-memory growth must append rows"));
+        }
+        let old = self.batch;
+        self.batch = new_batch;
+        self.ring
+            .resize(new_batch * WINDOW * self.observation_dim, 0.0);
+        self.ring_tick.resize(new_batch * WINDOW, 0);
+        self.ring_time.resize(new_batch * WINDOW, 0.0);
+        self.ring_count.resize(new_batch, 0);
+        self.ring_cursor.resize(new_batch, 0);
+        self.generation.resize(new_batch, 0);
+        self.consumed_generation.resize(new_batch, 0);
+        self.has_push.resize(new_batch, false);
+        self.last_push_tick.resize(new_batch, 0);
+        self.windows.resize(reservoir_values, 0.0);
+        self.keys.resize(new_batch * CAPACITY * KEY, 0.0);
+        self.recorded_tick.resize(new_batch * CAPACITY, 0);
+        self.recorded_time.resize(new_batch * CAPACITY, 0.0);
+        self.slot_generation.resize(new_batch * CAPACITY, 0);
+        self.count.resize(new_batch, 0);
+        self.seen.resize(new_batch, 0);
+        self.rng.resize(new_batch * 4, 0);
+        self.selected_valid.resize(new_batch, false);
+        self.selected_slot.resize(new_batch, -1);
+        self.selected_window
+            .resize(new_batch * WINDOW * self.observation_dim, 0.0);
+        self.selected_key.resize(new_batch * KEY, 0.0);
+        self.selected_recorded_tick.resize(new_batch, 0);
+        self.selected_recorded_time.resize(new_batch, 0.0);
+        self.selected_generation.resize(new_batch, 0);
+        self.selected_at_tick.resize(new_batch, 0);
+        self.hold_until_tick.resize(new_batch, 0);
+        self.has_choose_tick.resize(new_batch, false);
+        self.last_choose_tick.resize(new_batch, 0);
+        for row in old..new_batch {
+            self.clear_resident(row, seed)?;
+        }
+        Ok(())
+    }
+
+    /// Install a fresh life into one reusable cohort slot. Episode reset uses
+    /// `push_inner(reset=true)` and deliberately does not call this method.
+    pub(crate) fn clear_resident(&mut self, row: usize, seed: u64) -> PyResult<()> {
+        if row >= self.batch {
+            return Err(PyValueError::new_err("unknown goal-memory resident"));
+        }
+        self.clear_recent(row);
+        self.generation[row] = 0;
+        self.consumed_generation[row] = 0;
+        self.has_push[row] = false;
+        self.last_push_tick[row] = 0;
+        let window_start = row * CAPACITY * WINDOW * self.observation_dim;
+        let window_stop = (row + 1) * CAPACITY * WINDOW * self.observation_dim;
+        self.windows[window_start..window_stop].fill(0.0);
+        self.keys[row * CAPACITY * KEY..(row + 1) * CAPACITY * KEY].fill(0.0);
+        self.recorded_tick[row * CAPACITY..(row + 1) * CAPACITY].fill(0);
+        self.recorded_time[row * CAPACITY..(row + 1) * CAPACITY].fill(0.0);
+        self.slot_generation[row * CAPACITY..(row + 1) * CAPACITY].fill(0);
+        self.count[row] = 0;
+        self.seen[row] = 0;
+        let mut state = seed ^ (row as u64).wrapping_mul(0xd2b7_4407_b1ce_6e93);
+        for word in &mut self.rng[row * 4..(row + 1) * 4] {
+            *word = splitmix64(&mut state);
+        }
+        Ok(())
+    }
+
     pub(crate) fn recent_ring_state(&self) -> (&[u8], &[u8]) {
         (&self.ring_count, &self.ring_cursor)
     }
@@ -414,9 +496,9 @@ pub(crate) struct SelectionArrays {
 impl AchievedGoalMemoryCohort {
     #[new]
     pub(crate) fn new(batch: usize, observation_dim: usize, seed: u64) -> PyResult<Self> {
-        if batch == 0 || batch > 256 || !(1..=8192).contains(&observation_dim) {
+        if batch == 0 || batch > MAX_BATCH || !(1..=8192).contains(&observation_dim) {
             return Err(PyValueError::new_err(
-                "goal-memory batch must be 1..256 and observation_dim 1..8192",
+                "goal-memory batch must be 1..4096 and observation_dim 1..8192",
             ));
         }
         let reservoir_values = batch
@@ -424,9 +506,12 @@ impl AchievedGoalMemoryCohort {
             .and_then(|value| value.checked_mul(WINDOW))
             .and_then(|value| value.checked_mul(observation_dim))
             .ok_or_else(|| PyValueError::new_err("goal-memory dimensions overflow"))?;
-        if reservoir_values > (1_usize << 28) {
+        if reservoir_values
+            .checked_mul(std::mem::size_of::<f32>())
+            .is_none_or(|bytes| bytes > MAX_RESERVOIR_BYTES)
+        {
             return Err(PyValueError::new_err(
-                "goal-memory raw reservoir exceeds the 1 GiB cohort bound",
+                "goal-memory raw reservoir exceeds the 64 GiB cohort bound",
             ));
         }
         let mut rng = vec![0; batch * 4];
