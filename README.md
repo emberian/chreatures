@@ -109,8 +109,12 @@ Useful contributions include better embodied learning, controllable bodies, comb
 
 ## Attribution and reuse
 
+Original Chreatures code is licensed under **AGPL-3.0-or-later**. See [LICENSE](LICENSE)
+and [NOTICE.md](NOTICE.md). Vendored code, pretrained models, scientific datasets,
+and derived data retain their separately identified licenses.
+
 - **MaleCNS v1.0:** [Janelia release](https://male-cns.janelia.org/download/), with source hashes, filtering and license attribution in [the local manifest](data/malecns/manifest.json).
 - **FlyWire / published brain model:** [the source ledger](docs/CONNECTOME.md). The compact extracted data retains the conservative **CC BY-NC 4.0** public-release restriction documented there; it is not relicensed by this repository.
 - **GAM:** AGPL-3.0-or-later. **Universal Weave:** Unlicense. **Three.js:** MIT, with its license beside the vendored renderer.
 
-Scientific source data, upstream libraries and original project code have distinct licensing scopes. Keep their notices and provenance with reused artifacts.
+Keep the notices and provenance for each component with reused artifacts.

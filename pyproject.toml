@@ -6,6 +6,8 @@ build-backend = "hatchling.build"
 name = "chreatures"
 version = "0.1.0"
 description = "An embodied nursery for connectome-rooted artificial life"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE", "NOTICE.md"]
 requires-python = ">=3.11"
 dependencies = ["numpy>=2.0", "scipy>=1.14", "fastapi>=0.115", "uvicorn>=0.30", "websockets>=14", "mujoco>=3.9,<4"]
 

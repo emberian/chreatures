@@ -2,10 +2,10 @@
 name = "chreatures-weave"
 version = "0.1.0"
 edition = "2024"
+license = "AGPL-3.0-or-later"
 publish = false
 
 [dependencies]
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.145"
 universal-weave = { git = "https://github.com/transkatgirl/universal-weave.git", rev = "7a5a0dabb94885e44ad8a6c4355c015d7f38020f", default-features = false, features = ["serde"] }
-
