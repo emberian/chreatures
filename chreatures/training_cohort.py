@@ -16,6 +16,9 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from .organism_interface import (
+    ACTION_NAMES, MAX_RESIDENTS, PHYSIOLOGY_DIM, RECTIFIED_AXES,
+)
 
 RICH_OBSERVATION_CHANNELS = 4096
 RICH_SENSORIUM_PROFILE_SHA256 = (
@@ -24,17 +27,7 @@ RICH_SENSORIUM_PROFILE_SHA256 = (
 RICH_CHANNEL_NAMES_SHA256 = (
     "b4c6b328116d820143e16ee922ccffd7b950dbe008efc580ad93056e01349bfa"
 )
-ACTION_FIELDS = (
-    "thrust",
-    "yaw",
-    "gaze_pitch",
-    "grip",
-    "signal_low",
-    "signal_mid",
-    "signal_high",
-    "posture",
-    "eat",
-)
+ACTION_FIELDS = ACTION_NAMES
 BODY_SCALARS = (
     "x",
     "y",
@@ -107,6 +100,8 @@ def _shared_array_layout(
     """Lay out one cache-line-aligned fixed cohort block."""
     definitions = (
         ("observations", np.dtype("<f4"), (worlds, residents_per_world, channels)),
+        ("physiology", np.dtype("<f4"), (worlds, residents_per_world, PHYSIOLOGY_DIM)),
+        ("organ_flows", np.dtype("<f8"), (worlds, residents_per_world, 3)),
         (
             "rich_observations",
             np.dtype("<f4"),
@@ -216,7 +211,11 @@ def _write_outcomes(
         body_id = body.id if hasattr(body, "id") else str(body["id"])
         outcome = outcomes[body_id]
         homeostasis = outcome.get("homeostasis", {})
-        unknown = set(outcome) - set(OUTCOME_FIELDS) - {"homeostasis"}
+        # Actual material flows have their own native shared buffer. They are
+        # not silently inserted into the fixed physical-outcome vector.
+        unknown = set(outcome) - set(OUTCOME_FIELDS) - {
+            "homeostasis", "released_mass", "secreted_mass", "allocated_mass",
+        }
         unknown_homeostasis = set(homeostasis) - set(HOMEOSTASIS_FIELDS)
         if unknown or unknown_homeostasis:
             raise ValueError(
@@ -235,6 +234,8 @@ class SharedWorldCohort:
     """Parent-owned fixed buffers with disjoint resident cohort chunks."""
 
     def __init__(self, worlds: int, channels: int, residents_per_world: int) -> None:
+        if worlds < 1 or channels < 1 or not 1 <= residents_per_world <= MAX_RESIDENTS:
+            raise ValueError("invalid population transport dimensions")
         self.layout, size = _shared_array_layout(
             worlds,
             channels,
@@ -283,9 +284,9 @@ def _world_worker(
     )
 
     profile = EmbodiedTrainingProfile.from_value(profile_value)
-    if int(profile.component("version")) != 5:
+    if int(profile.component("version")) != 6:
         raise ValueError(
-            "world training transport requires the current family-v5 profile"
+            "world training transport requires the current regional-v6 profile"
         )
     memory = shared_memory.SharedMemory(name=str(shared_descriptor["name"]))
     shared = _shared_array_views(memory, shared_descriptor["layout"])
@@ -379,6 +380,8 @@ def _world_worker(
                     world.bodies,
                     shared["bodies"].shape[1],
                 )
+                shared["physiology"][world_index] = world.physiology_rows()
+                shared["organ_flows"][world_index] = world.biosphere.mobility.organ_flows()
                 shared["worker_seconds"][world_index, 0] += (
                     time.perf_counter() - started
                 )
@@ -442,6 +445,8 @@ def _world_worker(
                     world.bodies,
                     shared["bodies"].shape[1],
                 )
+                shared["physiology"][world_index] = world.physiology_rows()
+                shared["organ_flows"][world_index] = world.biosphere.mobility.organ_flows()
                 _write_outcomes(
                     shared["outcomes"][world_index],
                     shared["homeostasis"][world_index],
@@ -462,6 +467,8 @@ def _world_worker(
                     held_out=payload.get("held_out", False),
                     stage=0,
                     profile=profile,
+                    environment=payload.get("environment"),
+                    candidates=payload.get("candidates"),
                 )
                 world = EmbodiedTrainingWorld(
                     payload["seed"],
@@ -481,6 +488,8 @@ def _world_worker(
                 result = [body.to_dict() for body in world.bodies]
             elif operation == "snapshot":
                 result = world.snapshot()
+            elif operation == "terminal_outcomes":
+                result = world.terminal_outcomes()
             else:
                 raise ValueError(f"unknown world worker operation {operation}")
             connection.send((True, result))
@@ -509,12 +518,17 @@ class WorldTrainingPool:
         port_spec: dict[str, Any],
         profile_value: dict[str, Any],
         physical_backend: str = "fast",
-        residents_per_world: int = 6,
+        residents_per_world: int | None = None,
     ) -> None:
         context = mp.get_context("spawn")
+        declared_residents = profile_value["value"]["family"]["transport"]["residents"]
+        if residents_per_world is None:
+            residents_per_world = declared_residents
+        if residents_per_world != declared_residents:
+            raise ValueError("transport resident count differs from regional profile")
         channels = int(port_spec["physical_inputs"]["count"])
         ordered_names = port_spec["physical_inputs"]["ordered_names"]
-        if channels != len(ordered_names) or count <= 0 or residents_per_world <= 0:
+        if channels != len(ordered_names) or count <= 0 or not 1 <= residents_per_world <= MAX_RESIDENTS:
             raise ValueError("invalid fixed world cohort dimensions")
         self.residents_per_world = int(residents_per_world)
         self.shared = SharedWorldCohort(count, channels, self.residents_per_world)
@@ -721,6 +735,37 @@ class WorldTrainingPool:
         self._body_templates = copy.deepcopy(results)
         return results
 
+    def physiology_array(self, neural_support: np.ndarray) -> np.ndarray:
+        """Copy private body readouts and bind current private neural support.
+
+        The worker computes organ state from its actual chemistry. This array
+        exposes no positions, entity labels or other residents' private state.
+        Call after a completed observe/advance barrier.
+        """
+        if self._closed or self._body_templates is None:
+            raise RuntimeError("worlds must be active before physiology access")
+        result = self.shared.arrays["physiology"].reshape(-1, PHYSIOLOGY_DIM).copy()
+        support = np.asarray(neural_support, dtype=np.float32)
+        if support.shape != (len(result),) or not np.isfinite(support).all():
+            raise ValueError("neural support must identify every population row")
+        if np.any((support < 0) | (support > 1)):
+            raise ValueError("neural support is outside [0,1]")
+        result[:, 5] = support
+        if not np.isfinite(result).all():
+            raise RuntimeError("private body physiology is nonfinite")
+        return result
+
+    def organ_flows_array(self) -> np.ndarray:
+        """Actual donor-side release, secretion and allocation after the barrier."""
+        if self._closed or self._body_templates is None:
+            raise RuntimeError("worlds must be active before organ-flow access")
+        return self.shared.arrays["organ_flows"].reshape(-1, 3).copy()
+
+    def terminal_outcomes(self) -> list[dict[str, Any]]:
+        if self._body_templates is None:
+            raise RuntimeError("worlds must be active before outcome access")
+        return self._structured_call("terminal_outcomes", [None] * len(self.connections))
+
     def restore(self, snapshots: list[Mapping[str, Any]]) -> list[list[dict[str, Any]]]:
         """Restore exact current family worlds into all worker slots."""
         if len(snapshots) != len(self.connections):
@@ -766,8 +811,12 @@ class WorldTrainingPool:
                 action_buffer[world_index, resident_index] = [
                     float(action.get(name, 0.0)) for name in ACTION_FIELDS
                 ]
-        if not np.isfinite(action_buffer).all():
-            raise ValueError("shared action cohort contains nonfinite values")
+        if (
+            not np.isfinite(action_buffer).all()
+            or np.any((action_buffer < -1) | (action_buffer > 1))
+            or np.any(action_buffer[..., RECTIFIED_AXES] < 0)
+        ):
+            raise ValueError("shared action cohort exceeds its physical bounds")
         self._barrier("advance_shared")
         bodies = self._bodies()
         outcomes = self._outcomes(bodies)
@@ -852,6 +901,25 @@ class TrainingCohortBrain:
         self.resident_ids = clean
         self.circuit.reset()
 
+    def bind_phenotypes(self, phenotypes: list[Any]) -> None:
+        """Install inherited neural arrays once, before a new cohort advances.
+
+        Binding deliberately changes model identity. A continuation must bind
+        the identical phenotypes before restoring its private dynamic state.
+        """
+        from .neural_genotype import batch_neural_phenotypes
+
+        if len(phenotypes) != self.capacity:
+            raise ValueError("neural phenotype count differs from cohort capacity")
+        if np.any(self.circuit.times != 0):
+            raise RuntimeError("neural inheritance is only bound before advancing a life")
+        if any(item.active_graph_sha256 != self.graph_hash for item in phenotypes):
+            raise ValueError("neural phenotype graph differs from loaded anatomy")
+        arrays, identities, group = batch_neural_phenotypes(phenotypes)
+        self.circuit.bind_neural_phenotypes(
+            arrays, phenotype_sha256=identities, compatibility_group=group
+        )
+
     def step_channels(
         self, channels: np.ndarray, dt: float
     ) -> tuple[np.ndarray, np.ndarray, list[dict[str, float]]]:
@@ -890,7 +958,7 @@ class TrainingCohortBrain:
         temporary = path.with_name(path.name + ".tmp")
         state = self.circuit.export_state()
         metadata = {
-            "format": "chreatures-training-cohort-neural-state-v1",
+            "format": "chreatures-training-cohort-neural-state-v2",
             "backend": self.backend,
             "capacity": self.capacity,
             "graph_sha256": self.graph_hash,
@@ -914,7 +982,7 @@ class TrainingCohortBrain:
         with np.load(path, allow_pickle=False) as value:
             metadata = json.loads(str(value["metadata"]))
             if (
-                metadata.get("format") != "chreatures-training-cohort-neural-state-v1"
+                metadata.get("format") != "chreatures-training-cohort-neural-state-v2"
                 or metadata.get("backend") != self.backend
                 or metadata.get("capacity") != self.capacity
                 or metadata.get("graph_sha256") != self.graph_hash
@@ -924,7 +992,10 @@ class TrainingCohortBrain:
             residents = [str(item) for item in metadata["resident_ids"]]
             state = {
                 key: np.asarray(value[key])
-                for key in ("rates", "adaptation", "support", "times")
+                for key in (
+                    "rates", "adaptation", "support", "times",
+                    "neural_variant_state_identity",
+                )
             }
         if not residents or len(residents) > self.capacity:
             raise ValueError("fixed circuit snapshot cohort size differs")

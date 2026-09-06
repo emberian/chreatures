@@ -11,6 +11,7 @@ import copy
 import hashlib
 import json
 from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -21,8 +22,20 @@ from .growth import GrowthSystem
 from .metabolism import Chemistry, MetabolicWeb, canonical
 from .native_world import load_world_kernels
 
-FORMAT = "chreatures-biosphere-v6"
+FORMAT = "chreatures-biosphere-v7"
 KINDS = ("branch", "root", "leaf")
+
+
+@dataclass
+class PreparedNewborn:
+    """Private chemical owner aligned to one prepared physical candidate."""
+
+    source_sha256: str
+    proposal_sha256: str
+    resident_id: str
+    candidate: Biosphere
+    funding: dict[str, Any]
+    _committed: bool = False
 
 
 def _illumination_cycle(value: Any, world: Any) -> dict[str, Any]:
@@ -36,7 +49,7 @@ def _illumination_cycle(value: Any, world: Any) -> dict[str, Any]:
         raise ValueError("illumination_cycle requires the exact version 1 schema")
     entity_id = value["light_entity"]
     if not isinstance(entity_id, str):
-        raise ValueError("solar light entity must be a physical identity")
+        raise TypeError("solar light entity must be a physical identity")
     entity = world._entity(entity_id)
     if entity["mobility"] != "static" or entity.get("quaternion", [1, 0, 0, 0]) != [1, 0, 0, 0]:
         raise ValueError("solar light requires a static world-aligned entity frame")
@@ -341,7 +354,7 @@ class Biosphere:
         if not isinstance(config, dict):
             raise TypeError("biosphere birth configuration must be an object")
         config = copy.deepcopy(config)
-        if config.get("format") != "chreatures-biosphere-birth-v5" or set(config) != {
+        if config.get("format") != "chreatures-biosphere-birth-v6" or set(config) != {
             "format",
             "chemistry",
             "compartments",
@@ -697,10 +710,10 @@ class Biosphere:
         if self.mobility is not None:
             self.mobility.before_reactions(dt)
         ledger = self.web.step(dt, photons, np.zeros(self.web.count))
-        if self.mobility is not None:
-            self.mobility.after_reactions(dt)
         if self.exchange is not None:
             self.exchange.after_reactions(dt)
+        if self.mobility is not None:
+            self.mobility.after_reactions(dt)
         self._distribute_turnover(ledger)
         reports = self._develop()
         if self.materials is not None:
@@ -717,6 +730,7 @@ class Biosphere:
             ),
             "accounting": self.accounting(),
             "exchange": self.exchange.view() if self.exchange is not None else None,
+            "hatch_offers": self.hatch_offers(),
         }
         return copy.deepcopy(self.last_report)
 
@@ -744,24 +758,226 @@ class Biosphere:
             self.world.model.mat_rgba[material, :3] = cue["rgb"]
 
     def field_sources(self) -> list[dict[str, Any]]:
-        if self.materials is None:
-            return []
         sources = []
-        for cue in self.materials.surface_cues():
-            body = self.world._entity_mj[cue["entity"]]
-            position = self.world.data.xpos[body].astype(float).tolist()
-            for channel, strength in enumerate(cue["odor"]):
-                if strength > 0:
-                    sources.append(
-                        {
-                            "key": f"chemical-surface:{cue['entity']}:{channel}",
-                            "position": position,
-                            "channel": channel,
-                            "rate": 0.018 * strength,
-                            "spread": 0.04,
-                        }
-                    )
+        if self.materials is not None:
+            for cue in self.materials.surface_cues():
+                body = self.world._entity_mj[cue["entity"]]
+                position = self.world.data.xpos[body].astype(float).tolist()
+                for channel, strength in enumerate(cue["odor"]):
+                    if strength > 0:
+                        sources.append(
+                            {
+                                "key": f"chemical-surface:{cue['entity']}:{channel}",
+                                "position": position,
+                                "channel": channel,
+                                "rate": 0.018 * strength,
+                                "spread": 0.04,
+                            }
+                        )
+        if self.mobility is not None:
+            sources.extend(self.mobility.field_sources())
         return sources
+
+    def hatch_offers(self) -> list[dict[str, Any]]:
+        return [] if self.mobility is None else self.mobility.hatch_offers()
+
+    def prepare_hatch(
+        self, offer_id: str, child_genome: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        if self.mobility is None:
+            raise RuntimeError("biosphere has no mobile lifecycle")
+        return self.mobility.prepare_hatch(offer_id, child_genome)
+
+    def prepare_newborn(
+        self,
+        candidate_world: Any,
+        hatch_proposal: Mapping[str, Any],
+        newborn: Mapping[str, Any],
+    ) -> PreparedNewborn:
+        """Build a private B+1 chemical owner without mutating this biosphere."""
+        if self.mobility is None or self.exchange is None:
+            raise RuntimeError("resident birth requires mobile exchange physiology")
+        if len(self.world.bodies) >= 32:
+            raise ValueError("resident capacity exceeded")
+        if not isinstance(newborn, Mapping) or set(newborn) != {
+            "body", "mobile", "exchange", "founders",
+        }:
+            raise ValueError("newborn bundle fields differ")
+        if (
+            len(candidate_world.bodies) != len(self.world.bodies) + 1
+            or [body.id for body in candidate_world.bodies[:-1]]
+            != [body.id for body in self.world.bodies]
+            or candidate_world.spec["bodies"][-1] != newborn["body"]
+        ):
+            raise ValueError("newborn physical candidate differs")
+        resident_id = candidate_world.bodies[-1].id
+        if resident_id in self.mobility.residents:
+            raise ValueError("newborn identity already exists")
+
+        founders = newborn["founders"]
+        if not isinstance(founders, Mapping) or set(founders) != {
+            "body", "gut", "structure", "gland", "brood",
+        }:
+            raise ValueError("newborn requires five private founders")
+        founder_rows = []
+        for name in ("body", "gut", "structure", "gland", "brood"):
+            row = founders[name]
+            if not isinstance(row, Mapping) or set(row) != {
+                "enzymes", "pools", "atp", "atp_capacity",
+            }:
+                raise ValueError("newborn founder fields differ")
+            if row["pools"] or float(row["atp"]) != 0.0:
+                raise ValueError("newborn rows must be empty before brood funding")
+            founder_rows.append(copy.deepcopy(dict(row)))
+
+        proposal = copy.deepcopy(dict(hatch_proposal))
+        proposal_sha256 = proposal.pop("proposal_sha256", None)
+        if (
+            proposal.get("format") != "chreatures-hatch-proposal-v1"
+            or proposal_sha256 != hashlib.sha256(canonical(proposal)).hexdigest()
+            or proposal["web_state_sha256"]
+            != hashlib.sha256(canonical(self.web.snapshot())).hexdigest()
+        ):
+            raise ValueError("newborn hatch proposal is stale or altered")
+        offer = next(
+            (
+                value
+                for value in self.hatch_offers()
+                if value["offer_id"] == proposal["offer"]["offer_id"]
+            ),
+            None,
+        )
+        if offer != proposal["offer"]:
+            raise ValueError("newborn hatch offer differs")
+
+        base = self.web.count
+        expanded_web = self.web.expanded(
+            [row["enzymes"] for row in founder_rows],
+            [row["atp_capacity"] for row in founder_rows],
+        )
+        assigned = {
+            f"{name}_row": base + index
+            for index, name in enumerate(("body", "gut", "structure", "gland", "brood"))
+        }
+        mobile = copy.deepcopy(dict(newborn["mobile"]))
+        if "id" in mobile or set(mobile) & set(assigned):
+            raise ValueError("generator, not genotype, assigns newborn row identities")
+        mobile.update(id=resident_id, **assigned)
+        mobile_config = [*copy.deepcopy(self.mobility.config), mobile]
+
+        stock = expanded_web.pools[offer["brood_row"]]
+        stock_mass = float(stock @ self.mobility.mass_weights)
+        factor = min(1.0, offer["material_target"] / stock_mass) if stock_mass > 0 else 0.0
+        funding_receipt = expanded_web.transfer_batch(
+            [offer["brood_row"]], [assigned["body_row"]],
+            [dict(zip(
+                expanded_web.chemistry.pools, (stock * factor).tolist(), strict=True
+            ))],
+            [offer["energy_target"]],
+        )
+        funded_resources = np.asarray(
+            funding_receipt["moved_resources"][0], dtype=np.float64
+        )
+        funded_atp = float(funding_receipt["moved_atp"][0])
+        if (
+            float(funded_resources @ self.mobility.mass_weights) + 1e-12
+            < offer["material_target"]
+            or funded_atp + 1e-12 < offer["energy_target"]
+        ):
+            raise ValueError("newborn body capacity cannot accept prepared brood funding")
+
+        candidate = type(self)(
+            candidate_world, expanded_web, self.config,
+            illumination_cycle=self.illumination_config,
+            mobile_phototrophy=self.mobile_photo_config,
+            mobiles=mobile_config,
+        )
+        saved = self.snapshot()
+        candidate._sync_solar_state(
+            candidate._solar.restore_clock(
+                saved["illumination_cycle"]["clock_seconds"]
+            )
+        )
+        candidate.growth = {
+            key: GrowthSystem.restore(candidate.growth[key].grammar, value)
+            for key, value in saved["growth"].items()
+        }
+        candidate.parts = {
+            key: copy.deepcopy(saved["parts"][key]) for key in saved["part_order"]
+        }
+        candidate.active = copy.deepcopy(saved["active"])
+        candidate.initial_totals = copy.deepcopy(saved["initial_totals"])
+        candidate.initial_ledger = copy.deepcopy(saved["initial_ledger"])
+        candidate.last_report = copy.deepcopy(saved["last_report"])
+        candidate._bind_tissue()
+
+        from .ecological_exchange import EcologicalExchange
+        from .material_objects import MaterialObjects
+        from .somatic import SomaticPhysiology
+
+        candidate.mobility = SomaticPhysiology.expanded_from(
+            self.mobility, candidate, mobile_config
+        )
+        candidate_world.bind_physiology(candidate.mobility)
+        if saved["material_objects"] is not None:
+            candidate.materials = MaterialObjects.restore(
+                candidate_world, candidate, saved["material_objects"]
+            )
+        exchange_config = copy.deepcopy(self.exchange.config)
+        exchange_mobile = copy.deepcopy(dict(newborn["exchange"]))
+        if "id" in exchange_mobile:
+            raise ValueError("generator, not genotype, assigns exchange identity")
+        exchange_mobile["id"] = resident_id
+        exchange_config["mobiles"].append(exchange_mobile)
+        candidate.exchange = EcologicalExchange.expanded_from(
+            self.exchange, candidate, exchange_config
+        )
+        candidate.mobility._lifecycle.commit(
+            np.asarray([offer["resident_index"]], dtype=np.int32),
+            np.asarray([offer["serial"]], dtype=np.int64),
+        )
+        candidate.mobility._maturity[offer["resident_index"]] = 0.0
+        candidate.mobility.sync_bodies()
+        if candidate.last_report:
+            candidate.last_report["hatch_offers"] = candidate.hatch_offers()
+        source_sha256 = hashlib.sha256(canonical(saved)).hexdigest()
+        funding = {
+            "format": "chreatures-hatch-funding-v1",
+            "offer_id": offer["offer_id"], "parent_id": offer["parent_id"],
+            "resident_id": resident_id,
+            "child_genome": proposal["child_genome"],
+            "child_genome_sha256": proposal["child_genome_sha256"],
+            "resources": dict(zip(
+                expanded_web.chemistry.pools, funded_resources.tolist(), strict=True
+            )),
+            "atp": funded_atp, "assigned_rows": assigned,
+        }
+        return PreparedNewborn(
+            source_sha256, str(proposal_sha256), resident_id, candidate, funding
+        )
+
+    def commit_newborn(self, prepared: PreparedNewborn) -> Biosphere:
+        """Adopt a prepared chemical owner after its physical transaction commits."""
+        if not isinstance(prepared, PreparedNewborn) or prepared._committed:
+            raise ValueError("newborn preparation is absent or already committed")
+        current = hashlib.sha256(canonical(self.snapshot())).hexdigest()
+        if current != prepared.source_sha256:
+            raise RuntimeError("newborn preparation is stale after biosphere change")
+        if (
+            len(self.world.bodies) != len(self.mobility.residents) + 1
+            or self.world.bodies[-1].id != prepared.resident_id
+        ):
+            raise RuntimeError("physical newborn was not committed at the appended slot")
+        candidate = prepared.candidate
+        if candidate.world.model is not self.world.model:
+            raise RuntimeError("committed physical world differs from prepared newborn")
+        candidate.world = self.world
+        if candidate.materials is not None:
+            candidate.materials.world = self.world
+        self.world.bind_physiology(candidate.mobility)
+        candidate.mobility.sync_bodies()
+        prepared._committed = True
+        return candidate
 
     def _bind_tissue(self) -> None:
         """Rebind native numeric tissue after a committed topology change."""
@@ -1118,4 +1334,4 @@ class Biosphere:
         return instance
 
 
-__all__ = ["Biosphere"]
+__all__ = ["Biosphere", "PreparedNewborn"]

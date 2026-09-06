@@ -17,8 +17,7 @@ import numpy as np
 
 from .metabolism import canonical
 
-FORMAT_V1 = "chreatures-ecological-exchange-v1"
-FORMAT = "chreatures-ecological-exchange-v2"
+FORMAT = "chreatures-ecological-exchange-v3"
 
 
 def _positive(value, name, *, zero=False):
@@ -37,21 +36,14 @@ class EcologicalExchange:
         self.biosphere = biosphere
         config = copy.deepcopy(config)
         version = config.get("format") if isinstance(config, dict) else None
-        expected = (
-            {"format", "deposit_slots", "mobiles", "roots"}
-            if version == FORMAT_V1
-            else {"format", "deposit_slots", "mobiles", "roots", "emitters"}
-        )
+        expected = {"format", "deposit_slots", "mobiles", "roots", "emitters"}
         if (
             not isinstance(config, dict)
             or set(config) != expected
-            or version not in {FORMAT_V1, FORMAT}
+            or version != FORMAT
             or biosphere.materials is None
         ):
             raise ValueError("ecological exchange requires material object bindings")
-        if version == FORMAT_V1:
-            config["format"] = FORMAT
-            config["emitters"] = []
         self.config = copy.deepcopy(config)
         slots = config["deposit_slots"]
         if not isinstance(slots, list) or len(set(slots)) != len(slots):
@@ -121,28 +113,41 @@ class EcologicalExchange:
         material_rows = set(biosphere.materials.donor_rows.values())
         for spec in config.get("emitters", []):
             if set(spec) != {
-                "id", "donor_row", "attachment_entity", "local_offset",
-                "interval", "minimum_mass", "maximum_mass", "rates",
-                "reserve_floors", "deposit_slots",
+                "id",
+                "donor_row",
+                "attachment_entity",
+                "local_offset",
+                "interval",
+                "minimum_mass",
+                "maximum_mass",
+                "rates",
+                "reserve_floors",
+                "deposit_slots",
             }:
                 raise ValueError("invalid material emitter parameters")
             identity = spec["id"]
             donor = spec["donor_row"]
             emitter_slots = spec["deposit_slots"]
             if (
-                not isinstance(identity, str) or not identity
+                not isinstance(identity, str)
+                or not identity
                 or identity in self.emitters
-                or isinstance(donor, bool) or not isinstance(donor, int)
+                or isinstance(donor, bool)
+                or not isinstance(donor, int)
                 or not 0 <= donor < len(self.web.pools)
-                or donor in structure_rows or donor in material_rows
+                or donor in structure_rows
+                or donor in material_rows
             ):
                 raise ValueError("emitter requires a distinct non-structural donor")
             if (
-                not isinstance(emitter_slots, list) or not emitter_slots
+                not isinstance(emitter_slots, list)
+                or not emitter_slots
                 or len(set(emitter_slots)) != len(emitter_slots)
                 or set(emitter_slots) & used_slots
-                or any(slot not in items or "dormant_template" not in items[slot]
-                       for slot in emitter_slots)
+                or any(
+                    slot not in items or "dormant_template" not in items[slot]
+                    for slot in emitter_slots
+                )
             ):
                 raise ValueError("emitter dormant slots must be disjoint and reusable")
             used_slots.update(emitter_slots)
@@ -152,7 +157,11 @@ class EcologicalExchange:
             ):
                 raise ValueError("emitter attachment entity is absent")
             offset = np.asarray(spec["local_offset"], dtype=float)
-            if offset.shape != (3,) or not np.isfinite(offset).all() or np.max(np.abs(offset)) > 4:
+            if (
+                offset.shape != (3,)
+                or not np.isfinite(offset).all()
+                or np.max(np.abs(offset)) > 4
+            ):
                 raise ValueError("emitter local offset is invalid")
             for key in ("interval", "minimum_mass", "maximum_mass"):
                 _positive(spec[key], key)
@@ -173,6 +182,9 @@ class EcologicalExchange:
             self.emitters[identity] = spec
         self.sha256 = hashlib.sha256(canonical(self.config)).hexdigest()
         self.elapsed = dict.fromkeys(self.mobiles, 0.0)
+        self.release_credit = dict.fromkeys(self.mobiles, 0.0)
+        self._staged_release: dict[str, float] | None = None
+        self.release_receipt = dict.fromkeys(self.mobiles, 0.0)
         self.egested = {key: [0.0] * len(names) for key in self.mobiles}
         self.acquired = {key: [0.0] * len(names) for key in self.roots}
         self.capacity_blocked = dict.fromkeys(self.mobiles, 0)
@@ -182,9 +194,42 @@ class EcologicalExchange:
         self.emitter_attachment_unavailable = dict.fromkeys(self.emitters, 0)
         self.emitter_cursor = dict.fromkeys(self.emitters, 0)
         self.last = {
-            "deposits": [], "root_transfers": [], "emitter_deposits": [],
+            "deposits": [],
+            "root_transfers": [],
+            "emitter_deposits": [],
         }
         self.mass_weights = self.web.chemistry._arrays[1].sum(axis=1)
+
+    @classmethod
+    def expanded_from(cls, previous, biosphere, config):
+        """Build a B+1 exchange owner while retaining completed old ledgers."""
+        candidate = cls(biosphere, config)
+        old_ids = list(previous.mobiles)
+        new_ids = list(candidate.mobiles)
+        if new_ids[:-1] != old_ids or len(new_ids) != len(old_ids) + 1:
+            raise ValueError("ecological expansion requires one appended mobile")
+        child = new_ids[-1]
+        candidate.elapsed = {**previous.elapsed, child: 0.0}
+        candidate.release_credit = {**previous.release_credit, child: 0.0}
+        candidate.release_receipt = {key: 0.0 for key in new_ids}
+        candidate.egested = {
+            **copy.deepcopy(previous.egested),
+            child: [0.0] * len(candidate.web.chemistry.pools),
+        }
+        candidate.capacity_blocked = {**previous.capacity_blocked, child: 0}
+        for name in (
+            "acquired",
+            "emitter_elapsed",
+            "emitted",
+            "emitter_capacity_blocked",
+            "emitter_attachment_unavailable",
+            "emitter_cursor",
+        ):
+            if set(getattr(previous, name)) != set(getattr(candidate, name)):
+                raise ValueError("ecological nonmobile identity changed during birth")
+            setattr(candidate, name, copy.deepcopy(getattr(previous, name)))
+        candidate.last = copy.deepcopy(previous.last)
+        return candidate
 
     @staticmethod
     def _pool_parameters(values, names):
@@ -247,7 +292,9 @@ class EcologicalExchange:
 
     def before_reactions(self, dt):
         self.last = {
-            "deposits": [], "root_transfers": [], "emitter_deposits": [],
+            "deposits": [],
+            "root_transfers": [],
+            "emitter_deposits": [],
         }
         contacts = self._root_contacts()
         requests, recipients = [], []
@@ -306,7 +353,25 @@ class EcologicalExchange:
                     {"colony": colony, "source": source, "resources": moved}
                 )
 
+    def stage_mobile_release(self, budgets: Mapping[str, float]) -> None:
+        """Accept one action-funded bolus budget for the next chemical boundary."""
+        if self._staged_release is not None or set(budgets) != set(self.mobiles):
+            raise RuntimeError("ecological mobile release boundary differs")
+        clean = {
+            key: _positive(value, "mobile release budget", zero=True)
+            for key, value in budgets.items()
+        }
+        self._staged_release = clean
+
+    def take_mobile_release_receipt(self) -> dict[str, float]:
+        """Consume actual donor mass moved by the completed release boundary."""
+        receipt = self.release_receipt.copy()
+        self.release_receipt = dict.fromkeys(self.mobiles, 0.0)
+        return receipt
+
     def after_reactions(self, dt):
+        if self._staged_release is None:
+            self._staged_release = dict.fromkeys(self.mobiles, 0.0)
         names = self.web.chemistry.pools
         free = [
             slot
@@ -315,13 +380,16 @@ class EcologicalExchange:
         ]
         requests, recipients = [], []
         for key, spec in self.mobiles.items():
-            self.elapsed[key] += dt
-            if self.elapsed[key] + 1e-12 < spec["interval"]:
+            budget = self._staged_release[key]
+            if budget > 0.0:
+                self.elapsed[key] = min(spec["interval"], self.elapsed[key] + dt)
+            self.release_credit[key] = min(
+                spec["maximum_mass"],
+                self.release_credit[key] + budget,
+            )
+            if self.release_credit[key] < spec["minimum_mass"]:
                 continue
-            elapsed = self.elapsed[key]
-            self.elapsed[key] = 0.0
             private = self.biosphere.mobility.residents[key]
-            scale = self.biosphere.mobility.last[key]["funded_scale"]
             vectors, rows = [], []
             for compartment in ("gut", "body"):
                 row = private[f"{compartment}_row"]
@@ -329,7 +397,7 @@ class EcologicalExchange:
                     [spec[f"{compartment}_rates"].get(name, 0) for name in names]
                 )
                 vectors.append(
-                    self.web.pools[row] * (-np.expm1(-elapsed * scale * rates))
+                    self.web.pools[row] * (-np.expm1(-self.elapsed[key] * rates))
                 )
                 rows.append(row)
             mass = sum(float(vector @ self.mass_weights) for vector in vectors)
@@ -351,7 +419,7 @@ class EcologicalExchange:
                 self.capacity_blocked[key] += 1
                 free.insert(0, slot)
                 continue
-            factor = min(1.0, spec["maximum_mass"] / mass)
+            factor = min(1.0, self.release_credit[key] / mass)
             for row, vector in zip(rows, vectors, strict=True):
                 if np.any(vector > 0):
                     requests.append(
@@ -369,10 +437,15 @@ class EcologicalExchange:
                 recipients, receipt["moved_resources"], strict=True
             ):
                 self.egested[key] = (np.asarray(self.egested[key]) + moved).tolist()
+                mass = float(np.asarray(moved, dtype=np.float64) @ self.mass_weights)
+                self.release_receipt[key] += mass
+                self.release_credit[key] = max(0.0, self.release_credit[key] - mass)
+                self.elapsed[key] = 0.0
                 self.last["deposits"].append(
                     {"resident": key, "entity": slot, "resources": moved}
                 )
             self.biosphere.mobility.sync_bodies()
+        self._staged_release = None
         self._emit_material(dt)
 
     def _emit_material(self, dt):
@@ -383,7 +456,8 @@ class EcologicalExchange:
         requests, recipients = [], []
         for identity, spec in self.emitters.items():
             self.emitter_elapsed[identity] = min(
-                spec["interval"], self.emitter_elapsed[identity] + dt,
+                spec["interval"],
+                self.emitter_elapsed[identity] + dt,
             )
             elapsed = self.emitter_elapsed[identity]
             if elapsed + 1e-12 < spec["interval"]:
@@ -404,8 +478,11 @@ class EcologicalExchange:
             slots = spec["deposit_slots"]
             start = self.emitter_cursor[identity] % len(slots)
             chosen = next(
-                (slots[(start + offset) % len(slots)] for offset in range(len(slots))
-                 if slots[(start + offset) % len(slots)] not in self.world._entity_mj),
+                (
+                    slots[(start + offset) % len(slots)]
+                    for offset in range(len(slots))
+                    if slots[(start + offset) % len(slots)] not in self.world._entity_mj
+                ),
                 None,
             )
             if chosen is None:
@@ -419,11 +496,12 @@ class EcologicalExchange:
                 self.emitter_attachment_unavailable[identity] += 1
                 continue
             entity = self.world._entity_mj.get(
-                attachment, self.world._body_mj.get(attachment),
+                attachment,
+                self.world._body_mj.get(attachment),
             )
-            position = self.world.data.xpos[entity] + self.world.data.xmat[entity].reshape(
-                3, 3
-            ) @ np.asarray(spec["local_offset"], dtype=float)
+            position = self.world.data.xpos[entity] + self.world.data.xmat[
+                entity
+            ].reshape(3, 3) @ np.asarray(spec["local_offset"], dtype=float)
             if np.any(position < 0) or np.any(
                 position > [self.world.width, self.world.height, self.world.depth]
             ):
@@ -435,17 +513,23 @@ class EcologicalExchange:
                 for index, name in enumerate(names)
                 if requested[index] > 0.0
             }
-            requests.append({
-                "entity": chosen, "donor_row": donor,
-                "resources": resources, "position": position.tolist(),
-            })
+            requests.append(
+                {
+                    "entity": chosen,
+                    "donor_row": donor,
+                    "resources": resources,
+                    "position": position.tolist(),
+                }
+            )
             recipients.append((identity, chosen))
         if not requests:
             return
         receipt = self.biosphere.materials.deposit_batch(requests)
         transferred = False
         for (identity, slot), moved in zip(
-            recipients, receipt["moved_resources"], strict=True,
+            recipients,
+            receipt["moved_resources"],
+            strict=True,
         ):
             vector = np.asarray(moved, dtype=np.float64)
             if np.any(vector > 0):
@@ -456,13 +540,21 @@ class EcologicalExchange:
                 self.emitted[identity] = (
                     np.asarray(self.emitted[identity]) + vector
                 ).tolist()
-                self.last["emitter_deposits"].append({
-                    "emitter": identity, "entity": slot, "resources": moved,
-                })
+                self.last["emitter_deposits"].append(
+                    {
+                        "emitter": identity,
+                        "entity": slot,
+                        "resources": moved,
+                    }
+                )
         if transferred and self.biosphere.mobility is not None:
             self.biosphere.mobility.sync_bodies()
 
     def snapshot(self):
+        if self._staged_release is not None:
+            raise RuntimeError(
+                "cannot snapshot ecological exchange inside a release boundary"
+            )
         value = {
             "format": self.config["format"],
             "config": copy.deepcopy(self.config),
@@ -471,15 +563,19 @@ class EcologicalExchange:
             "egested": copy.deepcopy(self.egested),
             "acquired": copy.deepcopy(self.acquired),
             "capacity_blocked": self.capacity_blocked.copy(),
+            "release_credit": self.release_credit.copy(),
+            "release_receipt": self.release_receipt.copy(),
             "last": copy.deepcopy(self.last),
         }
-        value.update({
-            "emitter_elapsed": self.emitter_elapsed.copy(),
-            "emitted": copy.deepcopy(self.emitted),
-            "emitter_capacity_blocked": self.emitter_capacity_blocked.copy(),
-            "emitter_attachment_unavailable": self.emitter_attachment_unavailable.copy(),
-            "emitter_cursor": self.emitter_cursor.copy(),
-        })
+        value.update(
+            {
+                "emitter_elapsed": self.emitter_elapsed.copy(),
+                "emitted": copy.deepcopy(self.emitted),
+                "emitter_capacity_blocked": self.emitter_capacity_blocked.copy(),
+                "emitter_attachment_unavailable": self.emitter_attachment_unavailable.copy(),
+                "emitter_cursor": self.emitter_cursor.copy(),
+            }
+        )
         return value
 
     @classmethod
@@ -493,16 +589,18 @@ class EcologicalExchange:
             "egested",
             "acquired",
             "capacity_blocked",
+            "release_credit",
+            "release_receipt",
             "last",
         }
         emitter_fields = {
-            "emitter_elapsed", "emitted", "emitter_capacity_blocked",
-            "emitter_attachment_unavailable", "emitter_cursor",
+            "emitter_elapsed",
+            "emitted",
+            "emitter_capacity_blocked",
+            "emitter_attachment_unavailable",
+            "emitter_cursor",
         }
-        if (
-            source_format not in {FORMAT_V1, FORMAT}
-            or set(snapshot) != common | (emitter_fields if source_format == FORMAT else set())
-        ):
+        if source_format != FORMAT or set(snapshot) != common | emitter_fields:
             raise ValueError("invalid ecological exchange snapshot fields")
         if snapshot.get("config", {}).get("format") != source_format:
             raise ValueError("ecological exchange snapshot/config formats differ")
@@ -510,14 +608,21 @@ class EcologicalExchange:
         if snapshot["sha256"] != source_sha256:
             raise ValueError("ecological exchange identity differs")
         instance = cls(biosphere, snapshot["config"])
-        if source_format == FORMAT and snapshot["sha256"] != instance.sha256:
+        if snapshot["sha256"] != instance.sha256:
             raise ValueError("ecological exchange identity differs")
-        keys = ["elapsed", "egested", "acquired", "capacity_blocked"]
-        if source_format == FORMAT:
-            keys.extend((
-                "emitter_elapsed", "emitted", "emitter_capacity_blocked",
-                "emitter_attachment_unavailable", "emitter_cursor",
-            ))
+        keys = [
+            "elapsed",
+            "egested",
+            "acquired",
+            "capacity_blocked",
+            "release_credit",
+            "release_receipt",
+            "emitter_elapsed",
+            "emitted",
+            "emitter_capacity_blocked",
+            "emitter_attachment_unavailable",
+            "emitter_cursor",
+        ]
         for key in keys:
             value = snapshot[key]
             expected = getattr(instance, key)
@@ -532,8 +637,10 @@ class EcologicalExchange:
                 else:
                     _positive(row, key, zero=True)
                     if key in {
-                        "capacity_blocked", "emitter_capacity_blocked",
-                        "emitter_attachment_unavailable", "emitter_cursor",
+                        "capacity_blocked",
+                        "emitter_capacity_blocked",
+                        "emitter_attachment_unavailable",
+                        "emitter_cursor",
                     } and not isinstance(row, int):
                         raise ValueError("ecological event count must be integral")
                     if (
@@ -546,16 +653,13 @@ class EcologicalExchange:
                         and row > instance.emitters[identity]["interval"]
                     ):
                         raise ValueError("emitter elapsed phase exceeds interval")
-                    if (
-                        key == "emitter_cursor"
-                        and row >= len(instance.emitters[identity]["deposit_slots"])
+                    if key == "emitter_cursor" and row >= len(
+                        instance.emitters[identity]["deposit_slots"]
                     ):
                         raise ValueError("emitter slot cursor is invalid")
             setattr(instance, key, copy.deepcopy(value))
         canonical(snapshot["last"])
         instance.last = copy.deepcopy(snapshot["last"])
-        if source_format == FORMAT_V1:
-            instance.last["emitter_deposits"] = []
         return instance
 
     def view(self):
@@ -566,6 +670,8 @@ class EcologicalExchange:
             "egested": copy.deepcopy(self.egested),
             "acquired": copy.deepcopy(self.acquired),
             "capacity_blocked": self.capacity_blocked.copy(),
+            "release_credit": self.release_credit.copy(),
+            "last_release_mass": self.release_receipt.copy(),
             "emitted": copy.deepcopy(self.emitted),
             "emitter_capacity_blocked": self.emitter_capacity_blocked.copy(),
             "emitter_attachment_unavailable": self.emitter_attachment_unavailable.copy(),

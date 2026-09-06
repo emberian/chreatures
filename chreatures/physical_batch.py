@@ -100,6 +100,24 @@ class FastArticulatedSensoriumWorld(ArticulatedSensoriumWorld):
         self._fast_sense_illumination: dict[str, float] | None = None
         self._fast_advance_syncs = -1
         self._fast_food_amounts: tuple[float, ...] = ()
+        self._fast_dynamic = np.empty((len(self.bodies), 5), dtype=np.float64)
+        self._fast_grips = np.empty(len(self.bodies), dtype=np.int32)
+
+    def _begin_resident_actuation(self, clean: dict[str, dict[str, Any]]) -> bool:
+        """Fill persistent cohort buffers from the already packed v4 actions."""
+        self._fast_dynamic[:, :2] = self._action_cohort[:, :2]
+        for index, body in enumerate(self.bodies):
+            self._fast_dynamic[index, 2:] = (
+                body.energy, body.fatigue, self._active_effort_scale[body.id],
+            )
+            entity = self._grips.get(body.id)
+            self._fast_grips[index] = (
+                -1 if not entity or entity not in self._entity_mj else self._entity_mj[entity]
+            )
+        self._native_actuation.begin_tick(
+            self._fast_dynamic.reshape(-1), self._fast_grips,
+        )
+        return True
 
     def _rebuild_preserving(self) -> None:
         """Rebind model-address caches after a successful topology rebuild.

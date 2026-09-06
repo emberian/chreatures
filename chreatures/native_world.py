@@ -27,13 +27,28 @@ class NativeContactBatch:
 
     def bind_metadata(
         self, geom_resident: np.ndarray, geom_entity: np.ndarray,
-        resident_body: np.ndarray,
+        geom_shape: np.ndarray, resident_body: np.ndarray,
     ) -> None:
         self._native.bind_metadata(
             np.asarray(geom_resident, dtype=np.int32),
             np.asarray(geom_entity, dtype=np.int32),
+            np.asarray(geom_shape, dtype=np.int32),
             np.asarray(resident_body, dtype=np.int32),
         )
+
+    def begin_tick(self, limit: int) -> None:
+        self._native.begin_tick(int(limit))
+
+    def finish_tick(self) -> tuple[np.ndarray, ...]:
+        values = tuple(np.asarray(value) for value in self._native.finish_tick())
+        count = len(values[0])
+        expected = (
+            (count,), (count,), (count,), (count,), (count, 3),
+            (count,), (count,), (count,),
+        )
+        if tuple(value.shape for value in values) != expected:
+            raise RuntimeError("native packed contacts are malformed")
+        return values
 
     def evaluate(
         self, model: Any, data: Any, timestep: float,
@@ -52,7 +67,7 @@ class NativeContactBatch:
         expected = (
             (data.ncon,), (data.ncon,), (data.ncon, 3), (data.ncon, 3),
             (data.ncon,), (data.ncon,), (data.ncon,), (data.ncon,),
-            (data.ncon, 2), (data.ncon, 2), (data.ncon, 2), (data.ncon, 2, 3),
+            (data.ncon, 2), (data.ncon, 2), (data.ncon, 2),
         )
         if tuple(value.shape for value in arrays) != expected:
             raise RuntimeError("native contact kernel returned malformed arrays")

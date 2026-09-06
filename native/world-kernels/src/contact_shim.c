@@ -12,7 +12,7 @@ int chreatures_contact_batch(
     double *contact_force_norm, int geom_count, const int *geom_resident,
     const int *geom_entity, const int *resident_body, const double *resident_z,
     int resident_count, int *participant_resident, int *participant_entity,
-    signed char *participant_side, double *participant_normal) {
+    signed char *participant_side) {
   const mjModel *model = (const mjModel *)model_address;
   mjData *data = (mjData *)data_address;
   if (!model || !data || capacity < data->ncon || resident_count < 0 ||
@@ -59,13 +59,10 @@ int chreatures_contact_batch(
       participant_resident[slot] = resident;
       participant_entity[slot] = geom_entity[other];
       participant_side[slot] = -1;
-      for (int axis = 0; axis < 3; ++axis) participant_normal[3 * slot + axis] = 0.0;
       if (resident < 0) continue;
       if (resident >= resident_count || resident_body[resident] < 0 ||
           resident_body[resident] >= model->nbody) return -2;
       const double sign = side == 0 ? 1.0 : -1.0;
-      const double nx = sign * contact->frame[0];
-      const double ny = sign * contact->frame[1];
       const double nz = sign * contact->frame[2];
       if (fabs(nz) > 0.72 && contact->pos[2] < resident_z[resident]) continue;
       const int body = resident_body[resident];
@@ -75,12 +72,6 @@ int chreatures_contact_batch(
       const double dzp = contact->pos[2] - data->xpos[3 * body + 2];
       participant_side[slot] =
           dxp * rotation[1] + dyp * rotation[4] + dzp * rotation[7] >= 0.0;
-      participant_normal[3 * slot] =
-          rotation[0] * nx + rotation[3] * ny + rotation[6] * nz;
-      participant_normal[3 * slot + 1] =
-          rotation[1] * nx + rotation[4] * ny + rotation[7] * nz;
-      participant_normal[3 * slot + 2] =
-          rotation[2] * nx + rotation[5] * ny + rotation[8] * nz;
     }
   }
   return data->ncon;

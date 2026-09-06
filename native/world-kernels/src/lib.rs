@@ -8,9 +8,11 @@ mod environment;
 mod growth;
 mod habitat_family;
 mod illumination;
+mod lifecycle;
 mod metabolism;
-mod motor_runtime;
+mod population_trajectory;
 mod sensorium;
+mod somatic;
 mod transport;
 
 #[pymodule]
@@ -23,8 +25,10 @@ fn _world_kernels(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<growth::GrowthKernel>()?;
     module.add_class::<habitat_family::HabitatFamily>()?;
     module.add_class::<illumination::SolarCycle>()?;
+    module.add_class::<lifecycle::LifecycleCohort>()?;
     module.add_class::<metabolism::MetabolicCohort>()?;
-    module.add_class::<motor_runtime::MotorRuntime>()?;
+    module.add_class::<population_trajectory::PopulationTrajectory>()?;
+    module.add_class::<somatic::SomaticCohort>()?;
     module.add_class::<sensorium::RetinaCohort>()?;
     module.add_class::<transport::TransportSolver>()?;
     Ok(())

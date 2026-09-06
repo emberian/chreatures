@@ -81,6 +81,22 @@ hatching remains physical brood state, not a silently dropped birth. The initial
 campaign can also instantiate fresh evaluation lives directly from genomes; this
 is experimental initialization and is recorded separately from embodied birth.
 
+The current in-world rule is clonal and asexual: an offspring inherits its
+parent's immutable candidate genome and constitutive body, enzyme, capacity, and
+allocation template. It receives no parent memory, controller state, neural
+state, or optimizer state. Population search varies genomes only between cold
+evaluation lives and is not consulted by a hatch inside a running world.
+
+The joined birth check moved 0.01 conserved material and 0.01 ATP from a funded
+parent brood row into a fresh newborn body row. It appended one physical body and
+five private chemistry rows, retained the existing metabolic program and clock,
+and left every old chemistry row byte-identical except the debited parent brood
+row. The chemical commit then synchronized all parent and newborn public body
+readouts after physical topology adoption; a version 7 snapshot restored exactly
+and completed a subsequent three-resident physical and chemical step. This is
+mechanism evidence for the transaction, not evidence of reproductive success in
+a population campaign.
+
 ## Runtime and evidence boundaries
 
 Rust owns recurring physiology, lifecycle, population search, memory and numeric
