@@ -1,0 +1,299 @@
+{
+  "audit": {
+    "checkpoint_restore": "G2 step2400 full neural/world/learner checkpoint restored exactly before corrected evaluation",
+    "g2_config_rejection": "chemical-g2-transfer-short-v3 retained/aborted before steps",
+    "g2_corrected_evaluation": "explicit immutable inherited comparison genome; final summary is authoritative",
+    "g2_empty_launch": "chemical-g2-transfer-short-v2 retained/aborted; no steps",
+    "g2_initial_random_partial": "chemical-g2-transfer-short-v1 retained/aborted at step360; excluded",
+    "g2_invalid_evaluation": "summary-invalid-comparison.json retained; learned-self comparison excluded"
+  },
+  "completed_unix": 1788664856.2732298,
+  "conditions": {
+    "canonical": {
+      "comparison_genome_sha256": "0ba23a03dd0db83fae8b85f65496aa96387fc5ec771db027b7411ffbdc18fc93",
+      "evaluations": {
+        "fixed_comparison": {
+          "contacts": 0.0,
+          "distance": 18.690450366214037,
+          "effort_mean": 0.021826193511175613,
+          "energy_final": 0.7215413451194763,
+          "fatigue_final": 0.0,
+          "gut_final": 0.02571428380906582,
+          "ingestion_enabled": true,
+          "nutrition": 0.8639999925320125,
+          "nutrition_events": 14400.0,
+          "reserve_final": 0.7431413531303406,
+          "reward_mean_per_macro_resident": -0.00516670524209783,
+          "stationary_fraction_mean": 0.0061805555555555555
+        },
+        "fixed_comparison_ingestion_disabled": {
+          "contacts": 0.0,
+          "distance": 18.690450366214037,
+          "effort_mean": 0.021826193511175613,
+          "energy_final": 0.7215413451194763,
+          "fatigue_final": 0.0,
+          "gut_final": 0.02571428380906582,
+          "ingestion_enabled": false,
+          "nutrition": 0.8639999925320125,
+          "nutrition_events": 14400.0,
+          "reserve_final": 0.7431413531303406,
+          "reward_mean_per_macro_resident": -0.00516670524209783,
+          "stationary_fraction_mean": 0.0061805555555555555
+        },
+        "learned": {
+          "contacts": 0.0,
+          "distance": 26.273759584919468,
+          "effort_mean": 0.02179823986177022,
+          "energy_final": 0.7215413451194763,
+          "fatigue_final": 0.0,
+          "gut_final": 0.02571428380906582,
+          "ingestion_enabled": true,
+          "nutrition": 0.8639999925320125,
+          "nutrition_events": 14400.0,
+          "reserve_final": 0.7431413531303406,
+          "reward_mean_per_macro_resident": -0.00516661718797372,
+          "stationary_fraction_mean": 0.005416666666666667
+        },
+        "learned_neural_silenced": {
+          "contacts": 0.0,
+          "distance": 10.13984408221791,
+          "effort_mean": 0.03312034933827818,
+          "energy_final": 0.7215413451194763,
+          "fatigue_final": 0.0,
+          "gut_final": 0.02571428380906582,
+          "ingestion_enabled": true,
+          "nutrition": 0.8639999925320125,
+          "nutrition_events": 14400.0,
+          "reserve_final": 0.7431413531303406,
+          "reward_mean_per_macro_resident": -0.005202281836116324,
+          "stationary_fraction_mean": 0.017777777777777778
+        }
+      },
+      "final_checkpoint": {
+        "cohort": "cohort-step-0002400.json.gz",
+        "cohort_bytes": 459125,
+        "cohort_sha256": "51e6b492ff2c0868c239fab27e11714451e978ce26498db204e7a777e46402f5",
+        "learner": {
+          "bytes": 1538501,
+          "path": "bulk://runs/learning/chemical-canonical-transfer-short-v1/checkpoints/learner-step-0002400.pt",
+          "sha256": "8bc37f6483f87f41d9245c975c6f6f31327ec98884facff601b513da39a6533c"
+        },
+        "neural": {
+          "bytes": 59101487,
+          "name": "neural-step-0002400",
+          "sha256": "04f70781612dd0f86f0493fb5d96e6b81aee24f5cbb60aafb4f86c7755760aea"
+        },
+        "rollout": {
+          "bytes": 207,
+          "length": 0,
+          "path": "rollout-step-0002400.npz",
+          "sha256": "9654a99397ee5492b00c20957908fd7458fc6df4f109aea253e232d3c1ef7e52"
+        },
+        "step": 2400
+      },
+      "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+      "learned_genome_sha256": "1350117da7f74273c760db3e1b11a8f3c4d37798bf1e6e94b294a8a8601a4ada",
+      "path": "bulk://runs/learning/chemical-canonical-transfer-short-v1",
+      "port_spec_sha256": "fffb48c65bdb5bc2503ff8ad7c65b4419e12aa9ef5b58b9f36bc910f64dadb6f",
+      "summary_sha256": "f301c4abbd3a1bf3666e3aeb3eca109f4d44e060b4ed99079e5375f40141a0a3",
+      "terminal_training": [
+        {
+          "absorbed": 3.4559999999997246,
+          "energy_mean": 0.7215413586884516,
+          "episode": 0,
+          "fatigue_mean": 0.0,
+          "gut_mean": 0.025714285714294006,
+          "ingested_mass": 0.0,
+          "physical_steps": 1200
+        },
+        {
+          "absorbed": 3.4559999999997246,
+          "energy_mean": 0.7215413586884516,
+          "episode": 1,
+          "fatigue_mean": 0.0,
+          "gut_mean": 0.025714285714294006,
+          "ingested_mass": 0.0,
+          "physical_steps": 1200
+        }
+      ],
+      "training": {
+        "elapsed_seconds": 190.8967470061034,
+        "physical_steps": 2400,
+        "resident_steps": 115200,
+        "resident_steps_per_second": 603.4675907616006,
+        "timing_fraction": {
+          "algorithm": 0.008614027579608944,
+          "brain": 0.25676828868450247,
+          "physics": 0.5194974753563472,
+          "ppo": 0.012129659841027849,
+          "sense_encode": 0.08861759021465802,
+          "world_build": 0.003636719148707432
+        },
+        "timing_seconds": {
+          "algorithm": 1.6443898435682058,
+          "brain": 49.01623104419559,
+          "physics": 99.17037812341005,
+          "ppo": 2.3155126059427857,
+          "sense_encode": 16.916809699498117,
+          "world_build": 0.6942378552630544
+        }
+      }
+    },
+    "derived_g2": {
+      "comparison_genome_sha256": "0ba23a03dd0db83fae8b85f65496aa96387fc5ec771db027b7411ffbdc18fc93",
+      "evaluations": {
+        "fixed_comparison": {
+          "contacts": 0.0,
+          "distance": 21.777986994783983,
+          "effort_mean": 0.026781112413542967,
+          "energy_final": 0.7215413451194763,
+          "fatigue_final": 0.0,
+          "gut_final": 0.02571428380906582,
+          "ingestion_enabled": true,
+          "nutrition": 0.8639999925320125,
+          "nutrition_events": 14400.0,
+          "reserve_final": 0.7431413531303406,
+          "reward_mean_per_macro_resident": -0.005182313238886612,
+          "stationary_fraction_mean": 0.00375
+        },
+        "fixed_comparison_ingestion_disabled": {
+          "contacts": 0.0,
+          "distance": 21.777986994783983,
+          "effort_mean": 0.026781112413542967,
+          "energy_final": 0.7215413451194763,
+          "fatigue_final": 0.0,
+          "gut_final": 0.02571428380906582,
+          "ingestion_enabled": false,
+          "nutrition": 0.8639999925320125,
+          "nutrition_events": 14400.0,
+          "reserve_final": 0.7431413531303406,
+          "reward_mean_per_macro_resident": -0.005182313238886612,
+          "stationary_fraction_mean": 0.00375
+        },
+        "learned": {
+          "contacts": 0.0,
+          "distance": 28.389443116898917,
+          "effort_mean": 0.03252345763767759,
+          "energy_final": 0.7215413451194763,
+          "fatigue_final": 0.0,
+          "gut_final": 0.02571428380906582,
+          "ingestion_enabled": true,
+          "nutrition": 0.8639999925320125,
+          "nutrition_events": 14400.0,
+          "reserve_final": 0.7431413531303406,
+          "reward_mean_per_macro_resident": -0.005200401639376651,
+          "stationary_fraction_mean": 0.005
+        },
+        "learned_neural_silenced": {
+          "contacts": 0.0,
+          "distance": 10.129513391824919,
+          "effort_mean": 0.03733359832937519,
+          "energy_final": 0.7215413451194763,
+          "fatigue_final": 0.0,
+          "gut_final": 0.02571428380906582,
+          "ingestion_enabled": true,
+          "nutrition": 0.8639999925320125,
+          "nutrition_events": 14400.0,
+          "reserve_final": 0.7431413531303406,
+          "reward_mean_per_macro_resident": -0.0052155535720279055,
+          "stationary_fraction_mean": 0.0038888888888888883
+        }
+      },
+      "final_checkpoint": {
+        "cohort": "cohort-step-0002400.json.gz",
+        "cohort_bytes": 459151,
+        "cohort_sha256": "e882787a4103a7fb2a7767e8158ae730108ae803cd0877784b4c0fae755a332b",
+        "learner": {
+          "bytes": 1538501,
+          "path": "bulk://runs/learning/chemical-g2-transfer-short-v4/checkpoints/learner-step-0002400.pt",
+          "sha256": "60c85042306eff1805842d353bdb4c68153ef1ce8a29680efb12163a7a7dcfa5"
+        },
+        "neural": {
+          "bytes": 60169259,
+          "name": "neural-step-0002400",
+          "sha256": "31cb14daf2f2ccfb527a3a3d566bc01123d8c729f04e20ca346e23501d1eff29"
+        },
+        "rollout": {
+          "bytes": 207,
+          "length": 0,
+          "path": "rollout-step-0002400.npz",
+          "sha256": "9654a99397ee5492b00c20957908fd7458fc6df4f109aea253e232d3c1ef7e52"
+        },
+        "step": 2400
+      },
+      "graph_sha256": "d4d927715b988e00249730dba3cb496210fc442b9fad5288cb2f0d8438331163",
+      "learned_genome_sha256": "0770cfc1fb9ac77f37d0692c9e07a027b32490133fbd330e228f13ec6691f6c9",
+      "path": "bulk://runs/learning/chemical-g2-transfer-short-v4",
+      "port_spec_sha256": "6717b9ddfb2cf2431da3139fbeddb2ae656658e9a2455057f1819e9f61006365",
+      "summary_sha256": "c157b8585fc8e7018276536fa040b6b6f8ef31ce19fab8d408db26304ada90a5",
+      "terminal_training": [
+        {
+          "absorbed": 3.4559999999997246,
+          "energy_mean": 0.7215413586884516,
+          "episode": 0,
+          "fatigue_mean": 0.0,
+          "gut_mean": 0.025714285714294006,
+          "ingested_mass": 0.0,
+          "physical_steps": 1200
+        },
+        {
+          "absorbed": 3.4559999999997246,
+          "energy_mean": 0.7215413586884516,
+          "episode": 1,
+          "fatigue_mean": 0.0,
+          "gut_mean": 0.025714285714294006,
+          "ingested_mass": 0.0,
+          "physical_steps": 1200
+        }
+      ],
+      "training": {
+        "elapsed_seconds": 197.19606156647205,
+        "physical_steps": 2400,
+        "resident_steps": 115200,
+        "resident_steps_per_second": 584.1901662988724,
+        "timing_fraction": {
+          "algorithm": 0.028226761965579755,
+          "brain": 0.2989242104930388,
+          "physics": 0.4997434340338905,
+          "ppo": 0.012937638878748174,
+          "sense_encode": 0.08698745299065526,
+          "world_build": 0.0039535828138356904
+        },
+        "timing_seconds": {
+          "algorithm": 5.566206290386617,
+          "brain": 58.94667701609433,
+          "physics": 98.54743698518723,
+          "ppo": 2.5512514328584075,
+          "sense_encode": 17.153583135455847,
+          "world_build": 0.7796309599652886
+        }
+      }
+    }
+  },
+  "format": "chreatures-chemical-transfer-paired-assay-v1",
+  "invariants": {
+    "chemical_profile_sha256": "da896a6628eadaa21ff4c430dc65df0ba41e4e809aa0f76ca7bd375902bdbc2d",
+    "comparison_genome_sha256": "0ba23a03dd0db83fae8b85f65496aa96387fc5ec771db027b7411ffbdc18fc93",
+    "episode_steps": 1200,
+    "episodes": 2,
+    "eval_steps": 1200,
+    "eval_worlds": 4,
+    "macro_steps": 5,
+    "native_binary_sha256": "bd144ef2900b7e1ef7869ac100210ef0bc290a375a180342740790748e26fbde",
+    "physiology_semantics": "chemical E/G preserve 0..1 interface only; old learner is uncalibrated transfer",
+    "policy_checkpoint_sha256": "e72a0b521ea2013e344383b1d5d0e284f8694c1b7d8ee9b56a54a4cef2bf3ea0",
+    "residents": 48,
+    "seed": 20260906,
+    "source_base_commit": "d8513dd",
+    "worlds": 16
+  },
+  "observations": {
+    "causal_limit": "single seed and policy; G2 condition changes circuit topology. Do not infer anatomical superiority or autonomous regulation.",
+    "neural_dependence": "feature silencing changes distance and effort, but neither topology acquired a finite material packet",
+    "new_material_ingestion": "zero in both training episodes and all deterministic evaluations; contact with finite packets did not occur",
+    "nutrition_metric": "0.864 evaluation total in both ingestion-enabled/disabled conditions is absorption from initialized gut chemistry, not acquisition",
+    "physiology": "both conditions end E=0.721541, G=0.0257143, F=0 after 60 s; this horizon establishes coupled execution, not sustained regulation"
+  },
+  "path_scheme": "bulk:// denotes the project bulk root; no host/user path is embedded",
+  "scope": "one seed, short 60-second episodes; canonical versus one engineered G2 anatomy while body, chemistry, policy initialization, seed and budgets match"
+}

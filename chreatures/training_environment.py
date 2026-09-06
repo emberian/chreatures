@@ -22,9 +22,11 @@ from .sensorium import ArticulatedSensoriumWorld, BODY_FRAME
 PROFILE_FORMAT = "chreatures-embodied-training-profile-v1"
 PROFILE_FORMAT_V2 = "chreatures-embodied-training-profile-v2"
 PROFILE_FORMAT_V3 = "chreatures-embodied-chemical-nursery-profile-v3"
+PROFILE_FORMAT_V4 = "chreatures-embodied-chemical-encounter-profile-v4"
 SNAPSHOT_FORMAT = "chreatures-embodied-training-world-v1"
 SNAPSHOT_FORMAT_V2 = "chreatures-embodied-training-world-v2"
 SNAPSHOT_FORMAT_V3 = "chreatures-embodied-training-world-v3"
+SNAPSHOT_FORMAT_V4 = "chreatures-embodied-training-world-v4"
 ROOT = Path(__file__).resolve().parents[1]
 PHYSICAL_BACKENDS = {
     "reference": ArticulatedSensoriumWorld,
@@ -50,10 +52,16 @@ class EmbodiedTrainingProfile:
             "resources", "acoustics", "homeostasis", "variation", "horizons", "sources",
         }
         chemical_expected = legacy_expected | {"habitat", "biosphere", "physiology"}
+        encounter_expected = chemical_expected | {"conditions"}
         identity = (raw.get("format"), raw.get("version"))
-        expected = chemical_expected if identity == (PROFILE_FORMAT_V3, 3) else legacy_expected
+        expected = (
+            encounter_expected if identity == (PROFILE_FORMAT_V4, 4)
+            else chemical_expected if identity == (PROFILE_FORMAT_V3, 3)
+            else legacy_expected
+        )
         if set(raw) != expected or identity not in (
-            (PROFILE_FORMAT, 1), (PROFILE_FORMAT_V2, 2), (PROFILE_FORMAT_V3, 3)
+            (PROFILE_FORMAT, 1), (PROFILE_FORMAT_V2, 2),
+            (PROFILE_FORMAT_V3, 3), (PROFILE_FORMAT_V4, 4),
         ):
             raise ValueError("unsupported embodied training profile")
         if raw["sensorium"] != {"frame": BODY_FRAME} or raw["body"] != "articulated":
@@ -68,7 +76,7 @@ class EmbodiedTrainingProfile:
             raise ValueError("embodied training profile components must be mappings")
         if raw["version"] < 3 and not isinstance(raw["resources"], dict):
             raise ValueError("legacy embodied profiles require ecology resources")
-        if raw["version"] == 3:
+        if raw["version"] in (3, 4):
             if raw["resources"] is not None or not all(
                 isinstance(raw[key], dict) for key in ("habitat", "biosphere", "physiology")
             ):
@@ -80,6 +88,73 @@ class EmbodiedTrainingProfile:
                 "transfer_baseline": "old-policy input range only; not calibrated to prior physiology",
             }:
                 raise ValueError("chemical nursery physiology semantics differ")
+        if raw["version"] == 4:
+            self._validate_encounter_conditions(raw["conditions"])
+
+    @staticmethod
+    def _validate_encounter_conditions(value: Any) -> None:
+        expected = {
+            "format", "version", "name", "resource_abundance",
+            "initial_chemistry", "placement", "horizons",
+        }
+        if (
+            not isinstance(value, dict) or set(value) != expected
+            or value.get("format") != "chreatures-chemical-resource-encounter-conditions-v1"
+            or value.get("version") != 1
+        ):
+            raise ValueError("invalid chemical encounter conditions")
+        abundance = value["resource_abundance"]
+        chemistry = value["initial_chemistry"]
+        placement = value["placement"]
+        horizons = value["horizons"]
+        if set(abundance) != {"nearby_packet_count", "packet_stock_scale"}:
+            raise ValueError("chemical resource abundance fields differ")
+        if (
+            isinstance(abundance["nearby_packet_count"], bool)
+            or not isinstance(abundance["nearby_packet_count"], int)
+            or abundance["nearby_packet_count"] < 1
+            or not 0 < float(abundance["packet_stock_scale"]) <= 1
+        ):
+            raise ValueError("invalid chemical resource abundance")
+        if set(chemistry) != {
+            "body_atp_fraction", "body_reserve_fraction", "gut_pool_fraction",
+        } or any(not 0 <= float(chemistry[key]) <= 1 for key in chemistry):
+            raise ValueError("invalid chemical initial-state fractions")
+        if set(placement) != {
+            "maximum_build_attempts", "boundary_margin_m", "vertical_reach_m",
+            "surface_clearance_m", "training_schedule", "heldout",
+        } or not 1 <= int(placement["maximum_build_attempts"]) <= 128:
+            raise ValueError("invalid chemical placement controls")
+        if not 0.1 <= float(placement["boundary_margin_m"]) <= 1:
+            raise ValueError("invalid chemical placement boundary")
+        if not 0.05 <= float(placement["vertical_reach_m"]) <= 1:
+            raise ValueError("invalid chemical placement vertical reach")
+        if not 0 < float(placement["surface_clearance_m"]) <= 0.02:
+            raise ValueError("invalid chemical placement surface clearance")
+        schedule = placement["training_schedule"]
+        if not isinstance(schedule, list) or len(schedule) != 3:
+            raise ValueError("chemical encounter curriculum requires three stages")
+        for distribution in [*schedule, placement["heldout"]]:
+            if not isinstance(distribution, dict) or set(distribution) != {
+                "radius_m", "bearing_half_span_rad",
+            }:
+                raise ValueError("invalid chemical placement distribution")
+            radius = distribution["radius_m"]
+            bearing = float(distribution["bearing_half_span_rad"])
+            if (
+                not isinstance(radius, list) or len(radius) != 2
+                or not 0.2 <= float(radius[0]) < float(radius[1]) <= 2
+                or not 0 < bearing <= math.pi
+            ):
+                raise ValueError("invalid chemical placement extent")
+        required_horizons = {
+            "training_episode_steps", "heldout_steps", "telemetry_every_steps",
+            "checkpoint_every_steps", "dt_seconds",
+        }
+        if set(horizons) != required_horizons or any(
+            float(horizons[key]) <= 0 for key in required_horizons
+        ):
+            raise ValueError("invalid chemical encounter horizons")
 
     @classmethod
     def current(cls) -> "EmbodiedTrainingProfile":
@@ -243,6 +318,85 @@ class EmbodiedTrainingProfile:
         })
 
     @classmethod
+    def chemical_encounters(
+        cls, habitat: str | Path, biosphere: str | Path,
+        conditions: str | Path,
+    ) -> "EmbodiedTrainingProfile":
+        """Create the staged finite-packet encounter profile from data."""
+        base = cls.chemical_nursery(habitat, biosphere)
+        value = copy.deepcopy(base._value)
+        conditions_path = Path(conditions).resolve()
+        condition_value = json.loads(conditions_path.read_text())
+        cls._validate_encounter_conditions(condition_value)
+        birth = value["biosphere"]
+        if birth.get("format") == "chreatures-biosphere-birth-v2":
+            birth["format"] = "chreatures-biosphere-birth-v3"
+            birth["exchange"] = None
+        if birth.get("format") != "chreatures-biosphere-birth-v3" or birth.get("exchange") is not None:
+            raise ValueError("chemical encounter profile requires exchange=None")
+        mobiles = birth.get("mobiles")
+        materials = birth.get("material_objects")
+        if not isinstance(mobiles, list) or not mobiles or not isinstance(materials, dict):
+            raise ValueError("chemical encounter profile requires mobile bodies and materials")
+        material_rows = [item["row"] for item in materials.get("objects", [])]
+        nearby_count = int(condition_value["resource_abundance"]["nearby_packet_count"])
+        if nearby_count > len(material_rows):
+            raise ValueError("nearby packet count exceeds physical material objects")
+        chemistry = condition_value["initial_chemistry"]
+        compartments = birth["compartments"]
+        for mobile in mobiles:
+            body = compartments[mobile["body_row"]]
+            gut = compartments[mobile["gut_row"]]
+            body["atp"] = float(body["atp_capacity"]) * float(
+                chemistry["body_atp_fraction"]
+            )
+            body["pools"]["reserve"] = float(mobile["reserve_capacity"]) * float(
+                chemistry["body_reserve_fraction"]
+            )
+            gut_fraction = float(chemistry["gut_pool_fraction"])
+            gut["pools"] = {
+                name: float(amount) * gut_fraction
+                for name, amount in gut["pools"].items()
+            }
+        stock_scale = float(condition_value["resource_abundance"]["packet_stock_scale"])
+        for row in material_rows:
+            compartments[row]["pools"] = {
+                name: float(amount) * stock_scale
+                for name, amount in compartments[row]["pools"].items()
+            }
+        value.update({
+            "format": PROFILE_FORMAT_V4,
+            "version": 4,
+            "name": "common-chemistry-finite-packet-encounters-v4",
+            "biosphere": birth,
+            "conditions": condition_value,
+            "variation": {
+                "version": 4,
+                "heldout_seed_offset": 80_000_003,
+                "body_heading_span_rad": math.pi,
+                "fatigue_range": [0.02, 0.08],
+                "conditions_sha256": hashlib.sha256(_canonical(condition_value)).hexdigest(),
+            },
+            "horizons": {
+                **condition_value["horizons"],
+                "rationale": (
+                    "250 s episodes expose acquisition and digestion while three stages "
+                    "broaden physical packet range and bearing"
+                ),
+            },
+        })
+        value["sources"]["encounter_conditions"] = {
+            "path": str(conditions_path), "sha256": _sha(conditions_path),
+        }
+        # Re-pin the compiler because chemical_nursery hashed it before this
+        # constructor's source was fully interpreted.
+        compiler = ROOT / "chreatures/training_environment.py"
+        value["sources"]["training_environment"] = {
+            "path": str(compiler), "sha256": _sha(compiler),
+        }
+        return cls(value)
+
+    @classmethod
     def from_value(cls, encoded: Mapping[str, Any]) -> "EmbodiedTrainingProfile":
         if not isinstance(encoded, Mapping) or set(encoded) != {"value", "sha256"}:
             raise ValueError("invalid encoded embodied training profile")
@@ -270,7 +424,7 @@ def embodied_training_spec(
     profile_version = int(profile.component("version"))
     spec = (
         copy.deepcopy(dict(base_spec)) if base_spec is not None
-        else profile.component("habitat") if profile_version == 3
+        else profile.component("habitat") if profile_version in (3, 4)
         else json.loads((ROOT / profile.component("sources")["habitat"]["path"]).read_text())
     )
     spec["sensorium"] = profile.component("sensorium")
@@ -282,9 +436,11 @@ def embodied_training_spec(
         raise ValueError("profile v1 has no staged bearing curriculum")
     chosen_seed = int(seed) + (int(variation["heldout_seed_offset"]) if held_out else 0)
     rng = np.random.default_rng(chosen_seed)
-    if profile_version == 3:
-        if stage != 0:
+    if profile_version in (3, 4):
+        if profile_version == 3 and stage != 0:
             raise ValueError("chemical nursery v3 has no staged curriculum")
+        if profile_version == 4 and stage not in range(3):
+            raise ValueError("chemical encounter profile stage must be 0, 1, or 2")
         low, high = map(float, variation["fatigue_range"])
         for body in spec["bodies"]:
             body["heading"] = float(rng.uniform(
@@ -292,13 +448,25 @@ def embodied_training_spec(
             ))
             body["fatigue"] = float(rng.uniform(low, high))
         spec["name"] = (
-            "common-chemistry-mobile-heldout" if held_out
+            "common-chemistry-encounter-heldout" if held_out and profile_version == 4
+            else "common-chemistry-encounter-training" if profile_version == 4
+            else "common-chemistry-mobile-heldout" if held_out
             else "common-chemistry-mobile-training"
         )
         spec["training_profile_sha256"] = profile.sha256
         spec["training_variant"] = {
-            "seed": chosen_seed, "held_out": bool(held_out), "stage": 0,
+            "seed": chosen_seed, "held_out": bool(held_out), "stage": stage,
         }
+        if profile_version == 4:
+            conditions = profile.component("conditions")
+            distribution = (
+                conditions["placement"]["heldout"] if held_out
+                else conditions["placement"]["training_schedule"][stage]
+            )
+            spec["training_variant"].update({
+                "placement_distribution": copy.deepcopy(distribution),
+                "conditions_sha256": variation["conditions_sha256"],
+            })
         return spec
     width, height = map(float, spec["size"][:2])
     by_id = {entity["id"]: entity for entity in spec["entities"]}
@@ -391,12 +559,21 @@ class EmbodiedTrainingWorld:
             raise ValueError("profile-v2 world spec omits its curriculum stage")
         if self.profile_version == 3 and self.stage != 0:
             raise ValueError("chemical nursery v3 has no staged curriculum")
+        if self.profile_version == 4 and (
+            self.stage not in range(3) or "placement_distribution" not in variant
+        ):
+            raise ValueError("chemical encounter world omits its placement stage")
         self.physical_backend = physical_backend
-        self.world = PHYSICAL_BACKENDS[physical_backend](seed=self.seed, spec=copy.deepcopy(spec))
+        if self.profile_version == 4:
+            self.world = self._build_encounter_world(copy.deepcopy(spec))
+        else:
+            self.world = PHYSICAL_BACKENDS[physical_backend](
+                seed=self.seed, spec=copy.deepcopy(spec)
+            )
         self.field = FieldEnvironment.from_world(self.world, profile.component("fields"))
         self.resources = None
         self.biosphere = None
-        if self.profile_version == 3:
+        if self.profile_version in (3, 4):
             from .biosphere import Biosphere
 
             self.biosphere = Biosphere.from_config(
@@ -411,6 +588,131 @@ class EmbodiedTrainingWorld:
             FiniteEnergyConfig.from_value(profile.component("homeostasis"))
         )
         self.last_telemetry: dict[str, Any] = {}
+
+    def _build_encounter_world(self, spec: dict[str, Any]):
+        """Place finite packets, rejecting contacts using the actual MuJoCo model."""
+        conditions = self.profile.component("conditions")
+        placement = conditions["placement"]
+        count = int(conditions["resource_abundance"]["nearby_packet_count"])
+        material_ids = [
+            str(item["entity"])
+            for item in self.profile.component("biosphere")["material_objects"]["objects"]
+        ][:count]
+        entities = {item["id"]: item for item in spec["entities"]}
+        if len(material_ids) != count or any(item not in entities for item in material_ids):
+            raise ValueError("physical packet entities differ from chemical materials")
+        bodies = spec["bodies"]
+        if not bodies:
+            raise ValueError("chemical encounter world needs mobile residents")
+        distribution = spec["training_variant"]["placement_distribution"]
+        low, high = map(float, distribution["radius_m"])
+        span = float(distribution["bearing_half_span_rad"])
+        margin = float(placement["boundary_margin_m"])
+        vertical_reach = float(placement["vertical_reach_m"])
+        clearance = float(placement["surface_clearance_m"])
+        width, height = map(float, spec["size"][:2])
+        for attempt in range(int(placement["maximum_build_attempts"])):
+            candidate = copy.deepcopy(spec)
+            candidate_entities = {item["id"]: item for item in candidate["entities"]}
+            rng = np.random.default_rng(
+                int(spec["training_variant"]["seed"]) ^ 0xC4E11 ^ (attempt * 0x9E3779B1)
+            )
+            realized = []
+            for index, entity_id in enumerate(material_ids):
+                body = bodies[index % len(bodies)]
+                radius = float(rng.uniform(low, high))
+                offset = float(rng.uniform(-span, span))
+                bearing = float(body["heading"] + offset)
+                position = [
+                    float(np.clip(
+                        float(body["position"][0]) + radius * math.cos(bearing),
+                        margin, width - margin,
+                    )),
+                    float(np.clip(
+                        float(body["position"][1]) + radius * math.sin(bearing),
+                        margin, height - margin,
+                    )),
+                    0.0,
+                ]
+                candidate_entities[entity_id]["position"] = position
+                realized.append({
+                    "entity": entity_id, "resident": str(body["id"]),
+                    "radius_m": radius, "bearing_offset_rad": offset,
+                    "position": position,
+                })
+            # Query the complete native scene for the actual supporting surface.
+            # Material packets are omitted only from this placement probe so they
+            # cannot occlude each other's downward rays.
+            probe_spec = copy.deepcopy(candidate)
+            probe_spec["entities"] = [
+                item for item in probe_spec["entities"] if item["id"] not in material_ids
+            ]
+            probe = PHYSICAL_BACKENDS[self.physical_backend](
+                seed=self.seed, spec=probe_spec
+            )
+            valid_surfaces = True
+            try:
+                for item in realized:
+                    point = item["position"]
+                    distance, geom_id = probe._ray(
+                        np.asarray([point[0], point[1], probe.depth - 1e-4]),
+                        np.asarray([0.0, 0.0, -1.0]), -1,
+                    )
+                    supporting_entity = probe._geom_entity.get(int(geom_id))
+                    if distance < 0 or supporting_entity is None:
+                        valid_surfaces = False
+                        break
+                    try:
+                        support = probe._entity(supporting_entity)
+                    except (KeyError, ValueError):
+                        valid_surfaces = False
+                        break
+                    if support["mobility"] != "static":
+                        valid_surfaces = False
+                        break
+                    surface_z = float(probe.depth - 1e-4 - distance)
+                    resident = next(
+                        body for body in bodies if body["id"] == item["resident"]
+                    )
+                    if abs(surface_z - float(resident["position"][2])) > vertical_reach:
+                        valid_surfaces = False
+                        break
+                    packet = candidate_entities[item["entity"]]
+                    shapes = packet.get("shapes", [])
+                    if (
+                        len(shapes) != 1 or shapes[0].get("type") != "sphere"
+                        or len(shapes[0].get("size", [])) != 1
+                    ):
+                        raise ValueError("chemical encounter packets must be single spheres")
+                    point[2] = surface_z + float(shapes[0]["size"][0]) + clearance
+                    packet["position"] = point
+                    item["supporting_entity"] = supporting_entity
+                    item["support_surface_z"] = surface_z
+            finally:
+                if hasattr(probe, "close"):
+                    probe.close()
+            if not valid_surfaces:
+                continue
+            candidate["training_variant"]["placement_attempt"] = attempt
+            candidate["training_variant"]["packet_placements"] = realized
+            world = PHYSICAL_BACKENDS[self.physical_backend](
+                seed=self.seed, spec=candidate
+            )
+            if not self._packets_have_initial_contacts(world, set(material_ids)):
+                return world
+            if hasattr(world, "close"):
+                world.close()
+        raise RuntimeError("could not place chemical packets without physical intersections")
+
+    @staticmethod
+    def _packets_have_initial_contacts(world: Any, packet_ids: set[str]) -> bool:
+        for index in range(int(world.data.ncon)):
+            contact = world.data.contact[index]
+            first = world._geom_entity.get(int(contact.geom1))
+            second = world._geom_entity.get(int(contact.geom2))
+            if first in packet_ids or second in packet_ids:
+                return True
+        return False
 
     @property
     def bodies(self):
@@ -454,6 +756,17 @@ class EmbodiedTrainingWorld:
         self.last_telemetry = {
             "time": float(self.world.time), "profile_sha256": self.profile.sha256,
             "nutrition": float(sum(item["nutrition"] for item in outcomes.values())),
+            "absorbed": float(sum(item["nutrition"] for item in outcomes.values())),
+            "ingested_mass": float(sum(
+                item.get("ingested_mass", 0.0) for item in outcomes.values()
+            )),
+            "mouth_material_contacts": int(sum(
+                item.get("mouth_material_contacts", 0) for item in outcomes.values()
+            )),
+            "eat_requests": int(sum(
+                float(actions.get(body.id, {}).get("eat", 0.0)) > 0
+                for body in self.bodies
+            )),
             "distance": float(sum(item["distance"] for item in outcomes.values())),
             "contacts": int(sum(item["contact"] > 0 for item in outcomes.values())),
             "effort_mean": float(np.mean([item["effort"] for item in outcomes.values()])),
@@ -465,7 +778,7 @@ class EmbodiedTrainingWorld:
             "acoustics": copy.deepcopy(acoustic),
             "physiology_semantics": (
                 self.profile.component("physiology")
-                if self.profile_version == 3 else {
+                if self.profile_version in (3, 4) else {
                     "energy": "legacy scalar body reserve readout",
                     "gut": "legacy scalar gut fill readout",
                     "fatigue": "bounded actuator fatigue state",
@@ -495,7 +808,7 @@ class EmbodiedTrainingWorld:
             "time": float(self.world.time), "profile_sha256": self.profile.sha256,
             "physiology_semantics": (
                 self.profile.component("physiology")
-                if self.profile_version == 3 else {
+                if self.profile_version in (3, 4) else {
                     "energy": "legacy scalar body reserve readout",
                     "gut": "legacy scalar gut fill readout",
                     "fatigue": "bounded actuator fatigue state",
@@ -525,6 +838,11 @@ class EmbodiedTrainingWorld:
                 "format": SNAPSHOT_FORMAT_V3, "version": 3, "stage": 0,
                 "biosphere": self.biosphere.snapshot(),
             })
+        elif self.profile_version == 4:
+            value.update({
+                "format": SNAPSHOT_FORMAT_V4, "version": 4, "stage": self.stage,
+                "biosphere": self.biosphere.snapshot(),
+            })
         return value
 
     @classmethod
@@ -535,7 +853,8 @@ class EmbodiedTrainingWorld:
     ) -> "EmbodiedTrainingWorld":
         identity = (snapshot.get("format"), snapshot.get("version"))
         if identity not in (
-            (SNAPSHOT_FORMAT, 1), (SNAPSHOT_FORMAT_V2, 2), (SNAPSHOT_FORMAT_V3, 3)
+            (SNAPSHOT_FORMAT, 1), (SNAPSHOT_FORMAT_V2, 2),
+            (SNAPSHOT_FORMAT_V3, 3), (SNAPSHOT_FORMAT_V4, 4),
         ):
             raise ValueError("unsupported embodied training world snapshot")
         profile = EmbodiedTrainingProfile.from_value(snapshot["profile"])
@@ -555,18 +874,24 @@ class EmbodiedTrainingWorld:
             raise ValueError("invalid restored curriculum stage")
         if instance.profile_version == 3 and instance.stage != 0:
             raise ValueError("invalid restored chemical nursery stage")
+        if instance.profile_version == 4 and instance.stage not in range(3):
+            raise ValueError("invalid restored chemical encounter stage")
         instance.physical_backend = physical_backend
         instance.world = PHYSICAL_BACKENDS[physical_backend].restore(snapshot["world"])
         if instance.world.spec.get("training_profile_sha256") != profile.sha256:
             raise ValueError("restored physical world profile differs")
-        if instance.profile_version == 2 and int(
+        if instance.profile_version in (2, 4) and int(
             instance.world.spec.get("training_variant", {}).get("stage", -1)
         ) != instance.stage:
             raise ValueError("restored physical world curriculum stage differs")
+        if instance.profile_version == 4 and instance.world.spec.get(
+            "training_variant", {}
+        ).get("conditions_sha256") != profile.component("variation")["conditions_sha256"]:
+            raise ValueError("restored physical world encounter conditions differ")
         instance.field = FieldEnvironment.restore(snapshot["field"])
         instance.resources = None
         instance.biosphere = None
-        if instance.profile_version == 3:
+        if instance.profile_version in (3, 4):
             if snapshot.get("resources") is not None or not isinstance(
                 snapshot.get("biosphere"), Mapping
             ):
