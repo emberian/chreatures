@@ -74,7 +74,8 @@ _ROLE_RULES: dict[str, dict[str, tuple[frozenset[str], int, int | None]]] = {
         "probe_panel": (frozenset({"environment_probe_panel"}), 1, 1),
     },
     "evaluation_failed": {
-        "life_continuation": (frozenset({"birth", "life_checkpoint"}), 1, 1),
+        "life_continuation": (frozenset({"birth", "life_checkpoint"}), 0, 1),
+        "planned_campaign": (frozenset({"population_run"}), 0, 1),
         "candidate_genome": (frozenset({"genome_candidate"}), 1, 1),
         "environment": (frozenset({"environment_candidate"}), 1, 1),
         "descriptor_epoch": (frozenset({"descriptor_epoch"}), 1, 1),
@@ -123,8 +124,8 @@ _REQUIRED_BLOBS = {
     "genome_candidate": frozenset({"genome_artifact"}),
     "environment_candidate": frozenset({"environment_artifact"}),
     "life_checkpoint": frozenset({"life_checkpoint"}),
-    "evaluation_completed": frozenset({"evaluation_result", "evaluation_trajectory"}),
-    "evaluation_failed": frozenset({"evaluation_result", "evaluation_trajectory"}),
+    "evaluation_completed": frozenset({"evaluation_result", "evaluation_trace"}),
+    "evaluation_failed": frozenset({"evaluation_result", "evaluation_trace"}),
     "population_snapshot": frozenset({"population_search_state"}),
     "gam_fit_attempt": frozenset({"gam_fit_report"}),
 }
@@ -358,14 +359,16 @@ def evaluation_records_from_native(
     evaluation: Mapping[str, Any],
     *,
     life_id: str,
-    continuation_record_id: str,
+    continuation_record_id: str | None,
+    campaign_record_id: str | None,
+    allocated: bool,
     descriptor_epoch_record_id: str,
     descriptor_epoch_id: str,
     probe_panel_record_id: str,
     probe_panel_sha256: str,
     time: Mapping[str, Any],
     result_artifact: Mapping[str, Any],
-    trajectory_artifact: Mapping[str, Any],
+    trace_artifact: Mapping[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Normalize a terminal population-core Evaluation and its archive decision.
 
@@ -384,12 +387,18 @@ def evaluation_records_from_native(
     native_status = evaluation.get("status")
     if native_status not in {"success", "failure"}:
         raise PopulationEvidenceError("native evaluation status must be success or failure")
+    if native_status == "success" and not allocated:
+        raise PopulationEvidenceError("a completed evaluation must have allocated a life")
+    if allocated != (continuation_record_id is not None) or allocated == (
+        campaign_record_id is not None
+    ):
+        raise PopulationEvidenceError("evaluation allocation proof edges are inconsistent")
     if evaluation.get("life_id") != life_id:
         raise PopulationEvidenceError("native evaluation life_id differs from campaign life")
     trajectory_sha256 = evaluation.get("trajectory_sha256")
     _valid_hash(trajectory_sha256, "native trajectory sha256")
-    if trajectory_artifact.get("sha256") != trajectory_sha256:
-        raise PopulationEvidenceError("trajectory blob differs from native evaluation")
+    if trace_artifact.get("sha256") != trajectory_sha256:
+        raise PopulationEvidenceError("trace blob differs from native evaluation")
     record_type = "evaluation_completed" if native_status == "success" else "evaluation_failed"
     fields: dict[str, Any] = {
         "evaluation_id": evaluation_id,
@@ -397,6 +406,7 @@ def evaluation_records_from_native(
         "genome_sha256": genome_sha,
         "environment_sha256": environment_sha,
         "status": "completed" if native_status == "success" else "failed",
+        "allocation_status": "allocated" if allocated else "not_allocated",
         "failure": evaluation.get("failure", ""),
         "metrics": dict(evaluation.get("metrics", {})),
         "evaluation_seed": evaluation.get("evaluation_seed"),
@@ -412,6 +422,15 @@ def evaluation_records_from_native(
             quality=evaluation.get("quality"),
         )
     terminal_id = f"evaluation:{evaluation_id}:{fields['status']}"
+    parents = {
+        f"genome:{genome_sha}": "candidate_genome",
+        f"environment:{environment_sha}": "environment",
+        descriptor_epoch_record_id: "descriptor_epoch",
+        probe_panel_record_id: "probe_panel",
+    }
+    parents[
+        continuation_record_id if allocated else campaign_record_id
+    ] = "life_continuation" if allocated else "planned_campaign"
     terminal = evidence_record(
         id=terminal_id,
         time=time,
@@ -421,14 +440,8 @@ def evaluation_records_from_native(
             if native_status == "success"
             else "Retained failed physical population evaluation."
         ),
-        parents={
-            continuation_record_id: "life_continuation",
-            f"genome:{genome_sha}": "candidate_genome",
-            f"environment:{environment_sha}": "environment",
-            descriptor_epoch_record_id: "descriptor_epoch",
-            probe_panel_record_id: "probe_panel",
-        },
-        blobs=[result_artifact, trajectory_artifact],
+        parents=parents,
+        blobs=[result_artifact, trace_artifact],
         fields=fields,
     )
     retained = bool(evaluation.get("archive_retained", False))
@@ -483,13 +496,31 @@ def reconcile_population_state(
     evaluations = state.get("evaluations")
     if not isinstance(evaluations, list):
         raise PopulationEvidenceError("native population state lacks evaluations")
+    config = state.get("config")
+    if not isinstance(config, Mapping):
+        raise PopulationEvidenceError("native population state lacks search config")
+    config_sha256 = state.get("config_sha256")
+    probe_panel_sha256 = config.get("environment_probe_panel_sha256")
+    environment_epoch = config.get("environment_epoch")
+    _valid_hash(config_sha256, "native search config identity")
+    if hashlib.sha256(canonical_bytes(config)).hexdigest() != config_sha256:
+        raise PopulationEvidenceError("native search config content hash differs")
+    _valid_hash(probe_panel_sha256, "native environment probe panel identity")
+    if isinstance(environment_epoch, bool) or not isinstance(environment_epoch, int):
+        raise PopulationEvidenceError("native environment epoch is invalid")
+    run = next(record for record in records if record["record_type"] == "population_run")
+    if run["fields"].get("search_config_sha256") != config_sha256:
+        raise PopulationEvidenceError("population run differs from native search config")
     terminals: dict[str, Mapping[str, Any]] = {}
     decisions: dict[str, Mapping[str, Any]] = {}
+    environments: dict[str, Mapping[str, Any]] = {}
     for record in records:
         if record.get("record_type") in {"evaluation_completed", "evaluation_failed"}:
             terminals[record.get("fields", {}).get("evaluation_id")] = record
         elif record.get("record_type") == "archive_decision":
             decisions[record.get("fields", {}).get("evaluation_id")] = record
+        elif record.get("record_type") == "environment_candidate":
+            environments[record.get("fields", {}).get("environment_sha256")] = record
     failures = 0
     seen_evaluations: set[str] = set()
     for raw in evaluations:
@@ -519,9 +550,15 @@ def reconcile_population_state(
             or fields.get("genome_sha256") != raw.get("candidate_sha256")
             or fields.get("environment_sha256") != raw.get("environment_sha256")
             or fields.get("trajectory_sha256") != raw.get("trajectory_sha256")
+            or fields.get("probe_panel_sha256") != probe_panel_sha256
         ):
             raise PopulationEvidenceError(
                 f"native evaluation {evaluation_id} identity differs from terminal evidence"
+            )
+        environment = environments.get(raw.get("environment_sha256"))
+        if environment is None or environment["fields"].get("environment_epoch") != environment_epoch:
+            raise PopulationEvidenceError(
+                f"native evaluation {evaluation_id} environment epoch is absent or differs"
             )
         retained = raw.get("archive_retained")
         if not isinstance(retained, bool):
@@ -569,6 +606,7 @@ def validate_records(records: Sequence[Mapping[str, Any]], *, campaign_id: str) 
 
     continuations: Counter[str] = Counter()
     terminal_evaluations: dict[str, str] = {}
+    archive_decisions: dict[str, str] = {}
     epoch_indices: dict[int, Mapping[str, Any]] = {}
     epoch_ids: set[str] = set()
     panel_ids: set[str] = set()
@@ -593,6 +631,13 @@ def validate_records(records: Sequence[Mapping[str, Any]], *, campaign_id: str) 
                     f"evaluation {evaluation_id} has more than one terminal record"
                 )
             terminal_evaluations[evaluation_id] = record["id"]
+        elif record_type == "archive_decision":
+            evaluation_id = _string(fields, "evaluation_id", record["id"])
+            if evaluation_id in archive_decisions:
+                raise PopulationEvidenceError(
+                    f"evaluation {evaluation_id} has more than one archive decision"
+                )
+            archive_decisions[evaluation_id] = record["id"]
         elif record_type == "descriptor_epoch":
             index = _integer(fields, "descriptor_epoch_index", record["id"])
             epoch_id = _string(fields, "descriptor_epoch_id", record["id"])
@@ -615,6 +660,12 @@ def validate_records(records: Sequence[Mapping[str, Any]], *, campaign_id: str) 
     if branched:
         raise PopulationEvidenceError(
             f"life continuation branches at {', '.join(sorted(branched))}"
+        )
+    if set(archive_decisions) != set(terminal_evaluations):
+        missing = sorted(set(terminal_evaluations) - set(archive_decisions))
+        unknown = sorted(set(archive_decisions) - set(terminal_evaluations))
+        raise PopulationEvidenceError(
+            f"terminal/archive decision mismatch; missing={missing}, unknown={unknown}"
         )
     for index, epoch in epoch_indices.items():
         previous = _parents_with_role(epoch, "previous_descriptor_epoch")
@@ -789,13 +840,29 @@ def _validate_type_fields(
         _string(fields, "evaluation_id", record_id)
         if _integer(fields, "evaluation_seed", record_id) < 0:
             raise PopulationEvidenceError(f"{record_id} evaluation_seed is negative")
-        if _integer(fields, "committed_ticks", record_id) < 1:
+        committed_ticks = _integer(fields, "committed_ticks", record_id)
+        if committed_ticks < 0 or (
+            record_type == "evaluation_completed" and committed_ticks == 0
+        ):
             raise PopulationEvidenceError(f"{record_id} committed_ticks is invalid")
-        trajectory_blob = next(
-            blob for blob in record["blob_refs"] if blob["role"] == "evaluation_trajectory"
+        allocation_status = fields.get("allocation_status")
+        continuation = _parents_with_role(record, "life_continuation")
+        planned = _parents_with_role(record, "planned_campaign")
+        if record_type == "evaluation_completed":
+            valid_allocation = allocation_status == "allocated" and len(continuation) == 1 and not planned
+        elif allocation_status == "allocated":
+            valid_allocation = len(continuation) == 1 and not planned
+        elif allocation_status == "not_allocated":
+            valid_allocation = not continuation and len(planned) == 1 and committed_ticks == 0
+        else:
+            valid_allocation = False
+        if not valid_allocation:
+            raise PopulationEvidenceError(f"{record_id} allocation proof is inconsistent")
+        trace_blob = next(
+            blob for blob in record["blob_refs"] if blob["role"] == "evaluation_trace"
         )
-        if trajectory_blob["sha256"] != fields["trajectory_sha256"]:
-            raise PopulationEvidenceError(f"{record_id} trajectory blob identity differs")
+        if trace_blob["sha256"] != fields["trajectory_sha256"]:
+            raise PopulationEvidenceError(f"{record_id} trace blob identity differs")
         if fields.get("status") != ("completed" if record_type.endswith("completed") else "failed"):
             raise PopulationEvidenceError(f"{record_id} terminal status differs from its type")
         metrics = fields.get("metrics")

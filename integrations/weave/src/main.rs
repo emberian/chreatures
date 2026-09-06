@@ -468,9 +468,13 @@ fn role_rule(
         ("life_checkpoint", "life_continuation") => {
             Some((&["birth", "life_checkpoint"], 1, Some(1)))
         }
-        ("evaluation_completed" | "evaluation_failed", "life_continuation") => {
+        ("evaluation_completed", "life_continuation") => {
             Some((&["birth", "life_checkpoint"], 1, Some(1)))
         }
+        ("evaluation_failed", "life_continuation") => {
+            Some((&["birth", "life_checkpoint"], 0, Some(1)))
+        }
+        ("evaluation_failed", "planned_campaign") => Some((&["population_run"], 0, Some(1))),
         ("evaluation_completed" | "evaluation_failed", "candidate_genome") => {
             Some((&["genome_candidate"], 1, Some(1)))
         }
@@ -522,8 +526,11 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
         return Err("population evidence requires exactly one population_run".into());
     }
     let mut terminal_evaluations = HashSet::new();
+    let mut archive_decisions = HashSet::new();
     let mut continued = HashSet::new();
     let mut life_ids = HashSet::new();
+    let mut descriptor_epoch_ids = HashSet::new();
+    let mut probe_panel_ids = HashSet::new();
     let mut epoch_indices: HashMap<u64, &ImportedEvidence> = HashMap::new();
 
     for record in records {
@@ -593,6 +600,7 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
             "environment",
             "physical_parent_birth",
             "life_continuation",
+            "planned_campaign",
             "evaluated_candidate",
             "source_evaluation",
             "target_evaluation",
@@ -627,7 +635,13 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                 require_blob_role(record, "search_config")?;
             }
             "descriptor_epoch" => {
-                required_string(record, "descriptor_epoch_id")?;
+                let descriptor_epoch_id = required_string(record, "descriptor_epoch_id")?;
+                if !descriptor_epoch_ids.insert(descriptor_epoch_id.to_owned()) {
+                    return Err(format!(
+                        "descriptor epoch identity {descriptor_epoch_id} is duplicated"
+                    )
+                    .into());
+                }
                 required_sha256(record, "descriptor_recipe_sha256")?;
                 require_blob_role(record, "descriptor_recipe")?;
                 let index = population_fields(record)?
@@ -639,7 +653,12 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                 }
             }
             "environment_probe_panel" => {
-                required_string(record, "probe_panel_id")?;
+                let probe_panel_id = required_string(record, "probe_panel_id")?;
+                if !probe_panel_ids.insert(probe_panel_id.to_owned()) {
+                    return Err(
+                        format!("probe panel identity {probe_panel_id} is duplicated").into(),
+                    );
+                }
                 required_sha256(record, "probe_panel_sha256")?;
                 require_blob_role(record, "probe_policy_panel")?;
                 let policies = population_fields(record)?
@@ -654,6 +673,11 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                     return Err(
                         format!("probe panel {} has an invalid policy hash", record.id).into(),
                     );
+                }
+                let unique_policies: HashSet<_> =
+                    policies.iter().filter_map(Value::as_str).collect();
+                if unique_policies.len() != policies.len() {
+                    return Err(format!("probe panel {} repeats a policy", record.id).into());
                 }
                 let epoch_id = population_parent_for_role(record, "descriptor_epoch")?;
                 if required_string(record, "descriptor_epoch_id")?
@@ -812,7 +836,7 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
             }
             "evaluation_completed" | "evaluation_failed" => {
                 require_blob_role(record, "evaluation_result")?;
-                require_blob_role(record, "evaluation_trajectory")?;
+                require_blob_role(record, "evaluation_trace")?;
                 let evaluation_id = required_string(record, "evaluation_id")?;
                 if !terminal_evaluations.insert(evaluation_id.to_owned()) {
                     return Err(format!(
@@ -822,23 +846,24 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                 }
                 required_string(record, "life_id")?;
                 required_u64(record, "evaluation_seed")?;
-                if required_u64(record, "committed_ticks")? == 0 {
-                    return Err(format!("evaluation {} has no committed ticks", record.id).into());
-                }
+                let committed_ticks = required_u64(record, "committed_ticks")?;
+                let allocation_status = required_string(record, "allocation_status")?;
+                let continuation_count =
+                    population_parents_for_role(record, "life_continuation")?.len();
+                let planned_count =
+                    population_parents_for_role(record, "planned_campaign")?.len();
                 required_sha256(record, "genome_sha256")?;
                 required_sha256(record, "environment_sha256")?;
                 let trajectory_sha256 = required_sha256(record, "trajectory_sha256")?;
-                let trajectory_blob = record
+                let trace_blob = record
                     .blob_refs
                     .iter()
-                    .find(|blob| blob.role == "evaluation_trajectory")
-                    .expect("required trajectory blob exists");
-                if trajectory_blob.sha256 != trajectory_sha256 {
-                    return Err(format!(
-                        "evaluation {} trajectory blob identity differs",
-                        record.id
-                    )
-                    .into());
+                    .find(|blob| blob.role == "evaluation_trace")
+                    .expect("required trace blob exists");
+                if trace_blob.sha256 != trajectory_sha256 {
+                    return Err(
+                        format!("evaluation {} trace blob identity differs", record.id).into(),
+                    );
                 }
                 let genome = population_parent_for_role(record, "candidate_genome")?;
                 let environment = population_parent_for_role(record, "environment")?;
@@ -873,7 +898,32 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                 }
                 if expected == "failed" {
                     required_string(record, "failure")?;
+                    let valid_allocation = (allocation_status == "allocated"
+                        && continuation_count == 1
+                        && planned_count == 0)
+                        || (allocation_status == "not_allocated"
+                            && continuation_count == 0
+                            && planned_count == 1
+                            && committed_ticks == 0);
+                    if !valid_allocation {
+                        return Err(format!(
+                            "failed evaluation {} has inconsistent allocation proof",
+                            record.id
+                        )
+                        .into());
+                    }
                 } else {
+                    if committed_ticks == 0
+                        || allocation_status != "allocated"
+                        || continuation_count != 1
+                        || planned_count != 0
+                    {
+                        return Err(format!(
+                            "completed evaluation {} has inconsistent allocation proof",
+                            record.id
+                        )
+                        .into());
+                    }
                     let descriptor = population_fields(record)?
                         .get("descriptor")
                         .and_then(Value::as_array)
@@ -893,6 +943,12 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
             }
             "archive_decision" => {
                 let evaluation_id = required_string(record, "evaluation_id")?;
+                if !archive_decisions.insert(evaluation_id.to_owned()) {
+                    return Err(format!(
+                        "evaluation {evaluation_id} has multiple archive decisions"
+                    )
+                    .into());
+                }
                 let decision = required_string(record, "decision")?;
                 if !["retained", "rejected", "replaced"].contains(&decision) {
                     return Err(format!("archive decision {} is invalid", record.id).into());
@@ -970,6 +1026,9 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
             }
             _ => {}
         }
+    }
+    if archive_decisions != terminal_evaluations {
+        return Err("terminal evaluations and archive decisions do not match".into());
     }
     for (index, record) in &epoch_indices {
         let previous = population_parents_for_role(record, "previous_descriptor_epoch")?;

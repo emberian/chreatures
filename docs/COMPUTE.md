@@ -172,3 +172,36 @@ Current external roots are `/tank/chreatures/campaigns/v1` on hbox,
 `/home/ember/chreatures-campaigns/v1` on persvati, and `runs/campaigns/v1` on
 the M2. The M2 root is for orchestration and compact receipts because its local
 disk has much less free space than either AMD host.
+
+### Heterogeneous population episodes
+
+`scripts/evaluate_population.py` executes one hardware-sized compatibility
+group in the current physical world, full connectome, and native developmental
+controller. The assignment document contains `worlds`; every row provides an
+exact `{split,index}` environment selector, an unsigned seed, and a nonempty
+list of complete `chreatures-population-genome-v1` values. All worlds in one
+job have the same resident count, which is checked against the pinned profile.
+
+```sh
+python scripts/evaluate_population.py \
+  --profile /bulk/campaign/profile.json \
+  --resident-artifact /bulk/models/developmental-resident-population-v4.npz \
+  --graph /bulk/data/malecns/derived \
+  --port-bundle /bulk/data/ports/retinal-v2-maps.npz \
+  --neural-recipe data/ports/neural-variant-canonical-v1.json \
+  --assignments /bulk/campaign/batches/000001.json \
+  --output /bulk/campaign/runs/000001 \
+  --steps 1200 --checkpoint-every 600 --telemetry-every 120 \
+  --device cuda --brain-backend tiled --physical-backend fast
+```
+
+The evaluator compiles and binds each candidate's neural phenotype, applies its
+native controller adapter, delivers all twelve current actions, and records
+actual physiology, organ flows, physical outcomes and native trajectory
+summaries. Checkpoints contain the complete world, neural, controller/private
+RNG, trajectory, boundary observation and previous-action state. `--resume`
+accepts only the same evaluation identity and restores the latest authenticated
+whole-step checkpoint before sampling another action. A failure writes one
+diagnostic that references the last completed checkpoint and every affected
+candidate. Its content-addressed copy remains under `failures/` across explicit
+resume attempts; the evaluator does not retry or reset a life on its own.
