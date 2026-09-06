@@ -21,7 +21,6 @@ import numpy as np
 
 from .metabolism import MetabolicWeb, canonical
 
-
 FORMAT = "chreatures-material-objects-v1"
 PROPOSAL_FORMAT = "chreatures-material-transfer-v1"
 _ID = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,95}$")
@@ -576,6 +575,75 @@ class MaterialObjects:
             raise ValueError(f"{name} must request positive material")
         return vector
 
+    @staticmethod
+    def _minimum_packet_radius(item: Mapping[str, Any]) -> float | None:
+        """Return a guaranteed inscribed radius for a simple dormant packet."""
+        template = item.get("dormant_template")
+        shapes = template.get("shapes") if isinstance(template, dict) else None
+        if not isinstance(shapes, list) or len(shapes) != 1:
+            return None
+        shape = shapes[0]
+        if (
+            shape.get("type") != "sphere"
+            or set(shape) != {"type", "size"}
+            or not isinstance(shape.get("size"), list)
+            or len(shape["size"]) != 1
+        ):
+            return None
+        return float(shape["size"][0]) * min(
+            float(boundary["scale"]) for boundary in item["boundaries"]
+        )
+
+    def _guaranteed_spawn_overlaps(
+        self,
+        new_bases: Mapping[str, Mapping[str, Any]],
+        altered_entities: set[str],
+    ) -> set[str]:
+        """Batch staged simple-packet overlap proofs in the native kernel."""
+        eligible = []
+        positions = []
+        radii = []
+        for entity_id, base in new_bases.items():
+            item = self._item(entity_id)
+            radius = self._minimum_packet_radius(item)
+            if radius is None:
+                continue
+            eligible.append(entity_id)
+            positions.append(base["position"])
+            radii.append(radius)
+        if not eligible:
+            return set()
+        from .native_world import load_world_kernels
+
+        geom_enabled = np.ones(self.world.model.ngeom, dtype=np.bool_)
+        if altered_entities:
+            for geom, entity in self.world._geom_entity.items():
+                if entity in altered_entities:
+                    geom_enabled[geom] = False
+        overlap = np.asarray(
+            load_world_kernels().guaranteed_sphere_overlap_batch(
+                np.ascontiguousarray(positions, dtype=np.float64),
+                np.ascontiguousarray(radii, dtype=np.float64),
+                np.asarray(self.world.model.geom_type, dtype=np.int32),
+                np.asarray(self.world.data.geom_xpos, dtype=np.float64),
+                np.asarray(self.world.data.geom_xmat, dtype=np.float64),
+                np.asarray(self.world.model.geom_size, dtype=np.float64),
+                np.asarray(self.world.model.geom_rbound, dtype=np.float64),
+                np.asarray(self.world.model.geom_contype, dtype=np.int32),
+                np.asarray(self.world.model.geom_conaffinity, dtype=np.int32),
+                geom_enabled,
+                1e-6,
+            ),
+            dtype=np.bool_,
+        )
+        if overlap.shape != (len(eligible),):
+            raise RuntimeError("native material overlap batch returned malformed data")
+        return {
+            entity_id
+            for entity_id, blocked in zip(eligible, overlap, strict=True)
+            if blocked
+        }
+
     def prepare_withdraw(
         self, entity_id: str, receiver_row: int, resources: Mapping[str, float]
     ) -> dict[str, Any]:
@@ -1057,6 +1125,23 @@ class MaterialObjects:
                 if entity_id in new_bases:
                     change["spawn_position"] = spawn_positions[entity_id]
                 changes.append(change)
+            altered_entities = {
+                operation["id"]
+                for operation in operations
+                if operation["op"] in {"replace", "remove"}
+            }
+            guaranteed = self._guaranteed_spawn_overlaps(
+                new_bases, altered_entities
+            )
+            if guaranteed:
+                newly_obstructed = guaranteed - clearance_blocked
+                if not newly_obstructed:
+                    raise RuntimeError("material spawn clearance did not converge")
+                clearance_blocked.update(newly_obstructed)
+                for edge, entry in enumerate(normalized):
+                    if entry["entity"] in clearance_blocked:
+                        receiver_limiter[edge] = 0.0
+                continue
             transaction = self.world.prepare_topology_batch(operations) if operations else None
             if transaction is None or not new_bases:
                 break
