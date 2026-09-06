@@ -22,11 +22,15 @@ const ui = {
   resident: $('#resident-select'), residentCoverage: $('#resident-coverage'), events: $('#events'),
   eventFilters: $('#event-filters'), eventContract: $('#event-contract'),
   context: $('#context-diagnostics'), contextUnavailable: $('#context-unavailable'),
+  source: $('#recording-source'), hearSignals: $('#hear-signals'),
 };
 
 let renderer, scene, camera, controls, worldRoot, signalPoints, physicalSun, ambientFill, inspectionLights, pathLine, gazeLine, eventPoints;
 let recording = null, cursor = 0, playing = false, lastClock = performance.now(), cameraMode = 'orbit';
 let activeBody = 0, activeEventKind = 'all';
+let audioContext=null,hearingSignals=false,lastAudibleFrame=-1;
+const activeVoices=new Set();
+let pathFrameIndices=[];
 const overlayVisibility={path:true,gaze:true,signals:true,events:true};
 let pools = new Map();
 const dummy = new THREE.Object3D(), tint = new THREE.Color(), qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
@@ -60,10 +64,11 @@ function validate(data) {
     const details=Array.isArray(frame.resident_details)?frame.resident_details:(frame.selected?[frame.selected]:[]);
     for(const selected of details){
     if(selected.neural_readouts){finiteArray(selected.neural_readouts.shape,1,`Frame ${index} readout shape`);if(selected.neural_readouts.shape[0]!==384)throw new Error(`Frame ${index} readouts are not 384 values`);}
-    const refinement=selected.consequence_refinement,forecast=selected.sensory_forecast;
+    const refinement=selected.refinement||selected.consequence_refinement,forecast=selected.forecast||selected.sensory_forecast;
+    if(refinement?.status==='unavailable'&&forecast?.status==='unavailable')continue;
     if (!refinement && !forecast && !selected.sampled_proposal) continue;
     if (!refinement || !forecast || !selected.sampled_proposal) throw new Error(`Frame ${index} has a partial decision path`);
-    for(const [label,value] of [['GAM scores',refinement.candidate_scores],['GAM coverage',refinement.candidate_out_of_domain],['forecast progress',forecast.candidate_progress],['forecast disagreement',forecast.candidate_disagreement],['forecast clipping',forecast.candidate_input_clipped],['forecast tilt',forecast.candidate_logit_tilt]]){
+    for(const [label,value] of [['GAM scores',refinement.candidate_scores],['GAM coverage',refinement.candidate_out_of_domain],['forecast progress',forecast.candidate_progress],['forecast disagreement',forecast.candidate_disagreement],['forecast validity',forecast.candidate_forecast_invalid||forecast.candidate_input_clipped],['forecast tilt',forecast.candidate_logit_tilt]]){
       if(!Array.isArray(value)||value.length!==4)throw new Error(`Frame ${index} ${label} must have four candidates`);
     }
     if(!Array.isArray(refinement.selected_private_correction)||refinement.selected_private_correction.length!==3)throw new Error(`Frame ${index} private correction is invalid`);
@@ -313,14 +318,17 @@ function residentIds(){
 function residentDetail(frame,body=activeBody){
   const detail=(frame.resident_details||[]).find(value=>value.body===body)||(frame.selected?.body===body?frame.selected:null);
   const trace=(frame.resident_traces||[]).find(value=>value.body===body);
-  return detail?{...trace,...detail}:trace||null;
+  if(!detail)return trace||null;
+  const bodyState=detail.recorded_body_state||trace?.recorded_body_state,goal=detail.goal?{...detail.goal,commit_remaining_ticks:detail.goal.remaining_ticks??detail.goal.commit_remaining_ticks}:undefined;
+  const response=detail.population_response?.status==='recorded'?detail.population_response.value:detail.population_response?.status==='unavailable'?null:detail.population_response;
+  return {...trace,...detail,goal,metabolism:detail.metabolism||trace?.metabolism||(bodyState?{energy:bodyState.energy,gut:bodyState.gut,fatigue:bodyState.fatigue}:undefined),consequence_refinement:detail.refinement||detail.consequence_refinement,sensory_forecast:detail.forecast||detail.sensory_forecast,sequence_memory:detail.memory_summary?.sequence||detail.sequence_memory,context:detail.memory_summary?.contextual||detail.context,population_response:response};
 }
 
-function bodyPose(frame,body=activeBody){return (frame.bodies||[]).find(value=>value.body===body)||frame.bodies?.[body]||null;}
+function bodyPose(frame,body=activeBody){return (frame.bodies||[]).find(value=>value.body===body)||null;}
 
 function rebuildResidentOverlays(){
   if(!recording||!pathLine)return;
-  const samples=recording.frames.map(frame=>bodyPose(frame)).filter(Boolean).map(body=>body.position);
+  const samples=[];pathFrameIndices=[];recording.frames.forEach((frame,index)=>{const body=bodyPose(frame);if(body){samples.push(body.position);pathFrameIndices.push(index);}});
   pathLine.geometry.dispose();pathLine.geometry=new THREE.BufferGeometry().setFromPoints(samples.map(value=>new THREE.Vector3().fromArray(value)));
   pathLine.geometry.setDrawRange(0,1);
   const eventPositions=[];
@@ -337,7 +345,7 @@ function rebuildResidentOverlays(){
 
 function updateResidentOverlays(frameIndex){
   if(!pathLine)return;
-  pathLine.visible=overlayVisibility.path;pathLine.geometry.setDrawRange(0,Math.max(1,frameIndex+1));
+  const pathCount=pathFrameIndices.filter(index=>index<=frameIndex).length;pathLine.visible=overlayVisibility.path&&pathCount>0;pathLine.geometry.setDrawRange(0,pathCount);
   const detail=residentDetail(recording.frames[frameIndex]);
   const pose=detail?.retina_pose;
   gazeLine.visible=overlayVisibility.gaze&&Boolean(pose);
@@ -434,7 +442,7 @@ function paintDecision(selected){
     row.classList.toggle('selected',index===refinement.selected_candidate);
     row.querySelector('[data-value="score"]').textContent=formatNative(refinement.candidate_scores[index]);
     const coverage=row.querySelector('[data-value="coverage"]');coverage.textContent=ood?'outside':'within';coverage.classList.toggle('ood',ood);
-    const progress=row.querySelector('[data-value="progress"]');progress.textContent=formatNative(forecast.candidate_progress[index]);progress.classList.toggle('clipped',forecast.candidate_input_clipped[index]);
+    const progress=row.querySelector('[data-value="progress"]');progress.textContent=formatNative(forecast.candidate_progress[index]);progress.classList.toggle('clipped',(forecast.candidate_forecast_invalid||forecast.candidate_input_clipped||[])[index]);
     row.querySelector('[data-value="disagreement"]').textContent=formatNative(forecast.candidate_disagreement[index]);
     row.querySelector('[data-value="tilt"]').textContent=formatNative(forecast.candidate_logit_tilt[index]);
   }
@@ -454,8 +462,9 @@ function setDecisionAvailable(available){
 function paintContext(selected){
   const streams=[['context',selected?.context],['sequence memory',selected?.sequence_memory],['action prediction',selected?.action_prediction]],rows=[];
   for(const [stream,value] of streams){
-    if(value===undefined||value===null)continue;
-    const entries=typeof value==='object'&&!Array.isArray(value)?Object.entries(value):[['value',value]];
+    if(value===undefined||value===null||value.status==='unavailable')continue;
+    const published=value.status==='recorded'&&Object.hasOwn(value,'value')?value.value:value;
+    const entries=typeof published==='object'&&!Array.isArray(published)?Object.entries(published):[['value',published]];
     for(const [name,item] of entries){
       const row=document.createElement('div'),label=document.createElement('span'),output=document.createElement('code');row.className='diagnostic-row';label.textContent=`${stream} · ${name.replaceAll('_',' ')}`;
       output.textContent=Array.isArray(item)?item.map(value=>typeof value==='number'?formatNative(value):String(value)).join(' · '):typeof item==='number'?formatNative(item):String(item);
@@ -509,7 +518,8 @@ function updateInstruments(index) {
   ui.goalLeft.textContent=selected?.goal?.valid?`${selected.goal.commit_remaining_ticks} ticks`:'—';
   paintActions(selected?.committed_action||{});
   if(selected?.recorded_body_state||selected?.metabolism)paintPhysiology(selected);else ui.physiology.replaceChildren();
-  const hasDecision=Boolean(selected?.consequence_refinement&&selected?.sensory_forecast&&selected?.sampled_proposal);setDecisionAvailable(hasDecision);if(hasDecision)paintDecision(selected);
+  const refinement=selected?.consequence_refinement,forecast=selected?.sensory_forecast;
+  const hasDecision=Boolean(refinement&&forecast&&selected?.sampled_proposal&&refinement.status!=='unavailable'&&forecast.status!=='unavailable');setDecisionAvailable(hasDecision);if(hasDecision)paintDecision(selected);
   paintContext(selected);
   paintHistory(index);
   updateResidentOverlays(index);
@@ -538,6 +548,20 @@ function populateEvents(){
 
 function nearestFrame(tick){let best=0;for(let index=1;index<recording.frames.length;index++)if(Math.abs(recording.frames[index].tick-tick)<Math.abs(recording.frames[best].tick-tick))best=index;return best;}
 
+function sonifyFrame(index){
+  if(!hearingSignals||document.hidden||!audioContext||index===lastAudibleFrame)return;lastAudibleFrame=index;
+  const frame=recording.frames[index],ids=new Set(frame.event_ids||[]),events=(recording.events||[]).filter(event=>event.kind==='signal_emission'&&(ids.has(event.event_id)||event.tick===frame.tick)).slice(0,3);
+  for(const event of events){
+    if(activeVoices.size>=3)break;
+    const band=Number(event.details?.signal?.tone),rawStrength=Number(event.details?.signal?.strength);if(!Number.isFinite(band)||!Number.isFinite(rawStrength))continue;
+    const strength=Math.max(0,Math.min(1,rawStrength)),oscillator=audioContext.createOscillator(),gain=audioContext.createGain(),start=audioContext.currentTime,voice={oscillator,gain};oscillator.type='sine';oscillator.frequency.value=[220,330,495][Math.max(0,Math.min(2,Math.round(band)))];gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.06*strength,start+.012);gain.gain.exponentialRampToValueAtTime(.0001,start+.16);oscillator.connect(gain).connect(audioContext.destination);activeVoices.add(voice);oscillator.addEventListener('ended',()=>{oscillator.disconnect();gain.disconnect();activeVoices.delete(voice);},{once:true});oscillator.start(start);oscillator.stop(start+.17);
+  }
+}
+
+function stopActiveVoices(){
+  for(const voice of [...activeVoices]){try{voice.oscillator.stop();}catch{}voice.oscillator.disconnect();voice.gain.disconnect();activeVoices.delete(voice);}
+}
+
 function selectedPose(frame) {
   return bodyPose(frame);
 }
@@ -565,39 +589,55 @@ function updateCamera(a,b,alpha) {
 
 function seek(value) {
   if(!recording)return;
+  stopActiveVoices();
   cursor=Math.max(0,Math.min(recording.frames.length-1,Number(value)));
+  lastAudibleFrame=Math.round(cursor);
   ui.scrubber.value=cursor;
   updateInstruments(Math.round(cursor));
+}
+
+function modelTimeAtCursor(value){
+  const lower=Math.floor(value),upper=Math.min(recording.frames.length-1,lower+1),alpha=value-lower;
+  return THREE.MathUtils.lerp(recording.frames[lower].model_time,recording.frames[upper].model_time,alpha);
+}
+
+function cursorAtModelTime(modelTime){
+  const frames=recording.frames;if(modelTime<=frames[0].model_time)return 0;if(modelTime>=frames.at(-1).model_time)return frames.length-1;
+  let low=0,high=frames.length-1;while(high-low>1){const middle=(low+high)>>1;if(frames[middle].model_time<=modelTime)low=middle;else high=middle;}
+  const span=frames[high].model_time-frames[low].model_time;return low+(modelTime-frames[low].model_time)/span;
 }
 
 function animate(now) {
   const delta=Math.min(.1,(now-lastClock)/1000);lastClock=now;
   if(recording){
     if(playing){
-      const interval=recording.sampling.model_interval_seconds || .05;
-      cursor+=delta/interval;
-      if(cursor>=recording.frames.length-1){cursor=recording.frames.length-1;playing=false;ui.play.textContent='▶';ui.play.ariaLabel='Play recording';}
+      cursor=cursorAtModelTime(modelTimeAtCursor(cursor)+delta);
+      if(cursor>=recording.frames.length-1){cursor=recording.frames.length-1;playing=false;stopActiveVoices();ui.play.textContent='▶';ui.play.ariaLabel='Play recording';}
       ui.scrubber.value=cursor;
     }
     const lower=Math.floor(cursor), upper=Math.min(recording.frames.length-1,lower+1), alpha=cursor-lower;
     updateGeometry(recording.frames[lower],recording.frames[upper],alpha);
     updateCamera(recording.frames[lower],recording.frames[upper],alpha);
     const display=Math.round(cursor);
-    if(Number(ui.frame.dataset.current)!==display){ui.frame.dataset.current=display;updateInstruments(display);}
+    if(Number(ui.frame.dataset.current)!==display){ui.frame.dataset.current=display;updateInstruments(display);if(playing)sonifyFrame(display);}
   }
   controls.enabled=cameraMode==='orbit';controls.update();renderer.render(scene,camera);
 }
 
 export function loadRecording(data) {
-  recording=validate(expandEntityDeltas(data));cursor=0;playing=false;
+  stopActiveVoices();recording=validate(expandEntityDeltas(data));cursor=0;playing=false;
   const ids=residentIds();activeBody=ids.includes(recording.frames[0].selected?.body)?recording.frames[0].selected.body:ids[0];
   ui.resident.replaceChildren(...ids.map((id,index)=>{const option=document.createElement('option');option.value=String(id);option.textContent=`Resident ${index+1} · body ${id}`;return option;}));ui.resident.value=String(activeBody);ui.resident.disabled=false;
   makePools(recording);makeActionBars();makeDecisionDisplay();populateMoments();populateEvents();
   ui.scrubber.max=String(recording.frames.length-1);ui.scrubber.value='0';
   ui.status.textContent=recording.status;
+  const provenance=recording.provenance||{},revision=provenance.world_source_revision||provenance.source_revision||'unavailable',content=provenance.world_source_content_sha256||provenance.source_content_sha256;
+  ui.source.textContent=`world ${revision}${content?` · ${content.slice(0,12)}…`:''}${provenance.capture_tool?.revision?` · recorder ${provenance.capture_tool.revision}`:''}`;
+  const hasSignalEvents=(recording.events||[]).some(event=>event.kind==='signal_emission');ui.hearSignals.disabled=!hasSignalEvents;ui.hearSignals.title=hasSignalEvents?'Sonification of recorded physical signals; not animal sound or mental state':'No recorded signal event stream is available';
   const detailCapability=recording.capabilities?.resident_details,eventCapability=recording.capabilities?.events;
   if(detailCapability?.status==='unavailable')ui.residentCoverage.textContent=detailCapability.reason||'Multi-resident detailed streams are unavailable in this recording.';
   if(eventCapability?.status==='unavailable')ui.eventContract.textContent=eventCapability.reason||'unavailable in this recording';
+  for(const name of ['energy','gut','fatigue']){const field=recording.recorded_body_state?.fields?.find(value=>value.name===name),label=document.querySelector(`.legend .${name}`);if(label&&field?.unit)label.textContent=`${name} · ${field.unit}`;}
   const bodyButton=document.querySelector('[data-camera="body"]');
   const hasRetinaPose=recording.frames.some(frame=>residentDetail(frame)?.retina_pose);
   bodyButton.disabled=!hasRetinaPose;
@@ -610,7 +650,7 @@ ui.resident.addEventListener('change',()=>{activeBody=Number(ui.resident.value);
 
 ui.play.addEventListener('click',()=>{
   if(!recording)return;if(cursor>=recording.frames.length-1)seek(0);
-  playing=!playing;ui.play.textContent=playing?'Ⅱ':'▶';ui.play.ariaLabel=playing?'Pause recording':'Play recording';lastClock=performance.now();
+  playing=!playing;if(!playing)stopActiveVoices();ui.play.textContent=playing?'Ⅱ':'▶';ui.play.ariaLabel=playing?'Pause recording':'Play recording';lastClock=performance.now();
 });
 ui.scrubber.addEventListener('input',()=>{playing=false;ui.play.textContent='▶';seek(ui.scrubber.value);});
 for(const button of document.querySelectorAll('[data-camera]'))button.addEventListener('click',()=>{
@@ -623,6 +663,8 @@ $('#inspection-light').addEventListener('click',event=>{
   inspectionLights.visible=!inspectionLights.visible;
   event.currentTarget.setAttribute('aria-pressed',String(inspectionLights.visible));
 });
+ui.hearSignals.addEventListener('click',async()=>{if(ui.hearSignals.disabled)return;if(!audioContext)audioContext=new AudioContext();await audioContext.resume();hearingSignals=!hearingSignals;if(!hearingSignals)stopActiveVoices();lastAudibleFrame=Math.round(cursor);ui.hearSignals.setAttribute('aria-pressed',String(hearingSignals));ui.hearSignals.textContent=hearingSignals?'Recorded signals audible':'Hear recorded signals';});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopActiveVoices();if(audioContext?.state==='running')audioContext.suspend();}else if(hearingSignals&&audioContext?.state==='suspended')audioContext.resume();});
 for(const button of document.querySelectorAll('[data-overlay]'))button.addEventListener('click',()=>{const key=button.dataset.overlay;overlayVisibility[key]=!overlayVisibility[key];button.setAttribute('aria-pressed',String(overlayVisibility[key]));});
 
 initThree();

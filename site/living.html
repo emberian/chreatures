@@ -30,6 +30,7 @@
         <button type="button" data-overlay="events" aria-pressed="true">Events</button>
       </div>
       <button id="inspection-light" class="inspection-light" type="button" aria-pressed="true" title="Additional light for inspecting the recording; the recorded retinal inputs remain in the instruments">Inspection light</button>
+      <button id="hear-signals" class="hear-signals" type="button" aria-pressed="false" disabled title="Sonification is available only when recorded signal events exist">Hear recorded signals</button>
       <div id="loading" class="loading" role="status">Opening the public recording…</div>
       <div class="world-note">Recorded physical states · positions are interpolated for display · no live simulation</div>
     </section>
@@ -39,6 +40,7 @@
         <p class="eyebrow">Resident observation</p>
         <h1>Inside one recorded life</h1>
         <p id="recording-status" class="status">Waiting for recording metadata.</p>
+        <p id="recording-source" class="recording-source">Source identity —</p>
         <label class="resident-picker" for="resident-select"><span>Recorded resident</span><select id="resident-select" disabled><option>Awaiting recording</option></select></label>
         <p id="resident-coverage" class="resident-coverage">Detailed streams are checked per resident and frame.</p>
       </div>
