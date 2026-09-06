@@ -1,0 +1,134 @@
+{
+  "format": "chreatures-literature-search-v1",
+  "date": "2026-09-06",
+  "provider": "Scry HTTP API",
+  "schema_first": true,
+  "purpose": "working memory architecture and controls",
+  "queries": [
+    {
+      "sql": "SELECT id, title, doi, publication_year, cited_by_count FROM openalex.works WHERE hasAllTokens(search_text_lc, ['hippocampal','artificial']) AND publication_year >= 2018 ORDER BY cited_by_count DESC LIMIT 20",
+      "relations": [
+        "openalex.works"
+      ],
+      "record_id": "cc74a7f0-34b3-4aa3-aa98-1fe630bcf7d6",
+      "row_count": 20,
+      "rows_before_limit_at_least": 48,
+      "duration_ms": 274,
+      "truncated": false,
+      "billing_mode": "free_slack",
+      "spend_nanodollars": 0,
+      "burden_nanodollars": 482223,
+      "coverage": [
+        {
+          "extent": {
+            "basis": "scan",
+            "column": "publication_date",
+            "computed_at": "2026-09-06T04:15:41Z",
+            "max": "2026-09-06",
+            "min": "1900-01-01",
+            "newest_event_at": "2026-09-06T00:00:00Z",
+            "observed_gaps": null
+          },
+          "freshness_blocker": "bounded snapshot load; freshness advances when a new OpenAlex snapshot batch lands, not on a continuous schedule",
+          "freshness_lag_seconds": 6239103,
+          "known_holes": [],
+          "relation": "openalex.works"
+        }
+      ]
+    },
+    {
+      "sql": "SELECT id, title, doi, publication_year, cited_by_count FROM openalex.works WHERE hasAllTokens(search_text_lc, ['memory','reinforcement']) AND publication_year >= 2024 ORDER BY cited_by_count DESC LIMIT 20",
+      "relations": [
+        "openalex.works"
+      ],
+      "record_id": "2c177a12-1081-4dc3-b453-72b5b6723d33",
+      "row_count": 20,
+      "rows_before_limit_at_least": 353,
+      "duration_ms": 591,
+      "truncated": false,
+      "billing_mode": "free_slack",
+      "spend_nanodollars": 0,
+      "burden_nanodollars": 1032570,
+      "coverage": [
+        {
+          "extent": {
+            "basis": "scan",
+            "column": "publication_date",
+            "computed_at": "2026-09-06T04:15:41Z",
+            "max": "2026-09-06",
+            "min": "1900-01-01",
+            "newest_event_at": "2026-09-06T00:00:00Z",
+            "observed_gaps": null
+          },
+          "freshness_blocker": "bounded snapshot load; freshness advances when a new OpenAlex snapshot batch lands, not on a continuous schedule",
+          "freshness_lag_seconds": 6239103,
+          "known_holes": [],
+          "relation": "openalex.works"
+        }
+      ]
+    },
+    {
+      "sql": "SELECT id, title, doi, publication_year, cited_by_count FROM openalex.works WHERE hasAllTokens(search_text_lc, ['recurrent','reinforcement']) AND publication_year >= 2018 ORDER BY cited_by_count DESC LIMIT 20",
+      "relations": [
+        "openalex.works"
+      ],
+      "record_id": "4f36f9c8-d00f-4c81-919b-67dbca9a17f3",
+      "row_count": 20,
+      "rows_before_limit_at_least": 320,
+      "duration_ms": 163,
+      "truncated": false,
+      "billing_mode": "free_slack",
+      "spend_nanodollars": 0,
+      "burden_nanodollars": 292987,
+      "coverage": [
+        {
+          "extent": {
+            "basis": "scan",
+            "column": "publication_date",
+            "computed_at": "2026-09-06T04:15:41Z",
+            "max": "2026-09-06",
+            "min": "1900-01-01",
+            "newest_event_at": "2026-09-06T00:00:00Z",
+            "observed_gaps": null
+          },
+          "freshness_blocker": "bounded snapshot load; freshness advances when a new OpenAlex snapshot batch lands, not on a continuous schedule",
+          "freshness_lag_seconds": 6239103,
+          "known_holes": [],
+          "relation": "openalex.works"
+        }
+      ]
+    },
+    {
+      "sql": "SELECT id, title, doi, publication_year FROM openalex.works WHERE hasAllTokens(search_text_lc, ['recurrent','pomdps']) OR hasAllTokens(search_text_lc, ['recurrent','warp']) OR hasToken(search_text_lc, 'popgym') ORDER BY cited_by_count DESC LIMIT 20",
+      "relations": [
+        "openalex.works"
+      ],
+      "record_id": "c4653c0d-f0c7-46ec-86cf-6e8d03d877c0",
+      "row_count": 20,
+      "rows_before_limit_at_least": 26,
+      "duration_ms": 185,
+      "truncated": false,
+      "billing_mode": "free_slack",
+      "spend_nanodollars": 0,
+      "burden_nanodollars": 331181,
+      "coverage": [
+        {
+          "extent": {
+            "basis": "scan",
+            "column": "publication_date",
+            "computed_at": "2026-09-06T04:15:41Z",
+            "max": "2026-09-06",
+            "min": "1900-01-01",
+            "newest_event_at": "2026-09-06T00:00:00Z",
+            "observed_gaps": null
+          },
+          "freshness_blocker": "bounded snapshot load; freshness advances when a new OpenAlex snapshot batch lands, not on a continuous schedule",
+          "freshness_lag_seconds": 6239103,
+          "known_holes": [],
+          "relation": "openalex.works"
+        }
+      ]
+    }
+  ],
+  "interpretation": "Queries are bounded discovery over a snapshot, not exhaustive reviews or evidence of model efficacy."
+}
