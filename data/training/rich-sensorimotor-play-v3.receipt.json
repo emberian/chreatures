@@ -1,0 +1,89 @@
+{
+  "collection": {
+    "collection_identity_sha256": "6049a991cd83e297d9929c2181d99f8b0380f4e741653d13d4aa6f1b2b22a63d",
+    "elapsed_seconds": 1716.603371,
+    "format": "chreatures-sensorimotor-play-rich-v3",
+    "manifest_content_sha256": "f2508e090765587c5414e8e8f1aa921bb350df626ef5e5de222a3d105ff93e99",
+    "manifest_file_sha256": "4840208fbe6cb780f51febb766b042c61ac5c2192a13ae3a5e7d824f4d9cda0e",
+    "resident_transitions": 393216,
+    "resident_transitions_per_second": 229.06,
+    "source_path": "/tank/chreatures/runs/collections/rich-sensorimotor-play-v3-predictor-seed20260918",
+    "status": "authenticated-complete",
+    "version": 3
+  },
+  "distribution_scope": {
+    "controller_generation": "population-v5-update160",
+    "dt_seconds": 0.05,
+    "episodes": 2,
+    "final_holdout_world_slots": [
+      5
+    ],
+    "residents_per_world": 8,
+    "seed": 20260918,
+    "steps_per_episode": 4096,
+    "train_world_slots": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "validation_world_slots": [
+      4
+    ],
+    "worlds": 6
+  },
+  "format": "chreatures-sensorimotor-play-rich-v3-receipt-v1",
+  "instrumentation_source": {
+    "base_revision": "9ad2139a229887dc7302901ea793c6964128ad08",
+    "collector_sha256": "9f6d9bad88611bed02106eb1256066b8fe6a0ce09ab4380d8ef3492ddfda0b8e",
+    "instrumentation_patch_sha256": "cd60456e0ef41346288a64e32d9710803cfe9e0902889c2206814b50a7c8447a",
+    "schema_sha256": "826ddf3bc855c8ba1d964dc6493c55e271fcc7c2aa304efbe4f10c7074776acd",
+    "source_archive_sha256": "22e0a72a9fcde46fa7b68e84b0b1612d13114b490e52c5b8ee5e7275b3fbf53d",
+    "source_manifest_content_sha256": "57b0a5063c6fd121e19ca79ab9ce5fe0abc728be90994c5075e35fad30c28d6d",
+    "source_manifest_file_sha256": "5a9a7665c3961d24c22ec65e3e00ed44ab025b12786332b94d6875a2cf94b74c"
+  },
+  "model_identity": {
+    "candidate_bank_file_sha256": "28bd94c4b09b9976135b366db0599002f5807edd8f818ed58eb53ca712842c94",
+    "development_checkpoint_sha256": "904c72f2d3a310c7b1262d39777ec1de9a3cd0d6a7c2b1aa2a11637106d84f22",
+    "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "native_resident_artifact_sha256": "f4c95a4f293882b493aec9c505c5caeaa915dba496bced6d51718c9e2db1a6a6",
+    "profile_sha256": "1161585aec007b434d46886f4ad838b1fccee10669b7e7a5662dfd02cc1b7bd5"
+  },
+  "packet_contract": {
+    "canonical_channels": "float32[T+1,48,351]",
+    "executed_actions": "float32[T,48,12]",
+    "neural_readouts": "float32[T+1,48,384]",
+    "observation": "float32[T+1,48,4459]",
+    "reset": "bool[T+1,48]",
+    "transition_outcomes": "float32[T,48,8]",
+    "worker_recurrent_context": "float32[T,48,128]"
+  },
+  "packets": [
+    {
+      "bytes": 1055291322,
+      "episode": 0,
+      "sha256": "cc1b86eda4c8057a84c714da328ca586512023d342942cf06b06844ffe2b2b7c"
+    },
+    {
+      "bytes": 1067905952,
+      "episode": 1,
+      "sha256": "da88964d812e1cdaf8b47eb7f91b3b6c787aefaef22a4816d70b3979d1a7e02b"
+    }
+  ],
+  "relay": {
+    "destination_path": "/home/ember/chreatures-data/sensorimotor-play/rich-v3-predictor-seed20260918",
+    "file_count": 10,
+    "file_set_sha256": "89b2f7dba4adc68a9aef9b3a4335accd76f9dcaf9b598d3523ce5fcb8b7a06f0",
+    "total_bytes": 3655843802,
+    "verification": "source and destination recursive file hashes matched before atomic destination publication"
+  },
+  "resource_notes": {
+    "collector_peak_parent_rss_bytes_approx": 4310000000,
+    "failed_capacity_attempt": {
+      "path": "/tank/chreatures/runs/collections/rich-sensorimotor-play-v3-predictor-seed20260918.capacity-attempt1",
+      "reason": "list-and-stack packet assembly projected an unsafe seal-time memory transient",
+      "status": "preserved-stopped-at-boundary"
+    },
+    "final_storage": "disk-backed fixed-shape arrays were flushed before packet sealing"
+  }
+}

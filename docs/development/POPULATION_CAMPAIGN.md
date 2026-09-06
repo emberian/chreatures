@@ -9,9 +9,9 @@ parent selection, transfer eligibility, archive cells, and retention remain in
 ## Inputs and initialization
 
 `init` accepts an encoded `EmbodiedTrainingProfile.to_value()` at profile
-version 7 and a file-executed population-v5 controller NPZ. It strictly requires
-format `chreatures-native-developmental-resident-population-v5`, metadata
-version 5, and execution `developmental-resident-native-population-v5`. It
+version 7 and a file-executed population-v6 controller NPZ. It strictly requires
+format `chreatures-native-developmental-resident-population-v6`, metadata
+version 6, and execution `developmental-resident-native-population-v6`. It
 verifies the profile, every registered native environment record, the controller
 file and internal artifact identities, graph and port identities, organism
 interface, adapter-bank identity/count/rank, and biosphere birth source. The
