@@ -1,0 +1,94 @@
+{
+  "format": "chreatures-biosphere-tissue-native-receipt-v1",
+  "measured_at_local": "2026-09-06T01:20:57-04:00",
+  "scope": "Offline neutral PhysicsWorld and Biosphere continuation under cProfile from a copied saved state. No Habitat3D, neural state, rendering, or live service was loaded or contacted.",
+  "checkpoint": {
+    "path": "runs/recycling-before-grown-optimization.json",
+    "sha256": "0fc23c501f53a13b7384afc26ec6065d2930ce9dfe95c96600ce4d994a8e1224",
+    "tick": 11327,
+    "parts": 2789,
+    "model_revision": 155,
+    "body_mode": "articulated",
+    "physics_backend": "vectorized"
+  },
+  "host": {
+    "platform": "Darwin-25.6.0-arm64",
+    "processor": "Apple M2 Max",
+    "python": "3.12.14",
+    "rustc": "1.98.0-nightly (91fe22da8 2026-06-21)"
+  },
+  "build": {
+    "method": "release build with CARGO_TARGET_DIR=/tmp/chreatures-biosphere-tissue-target and PYO3_PYTHON=.venv/bin/python",
+    "module": "/tmp/chreatures-biosphere-tissue-module/_world_kernels.cpython-312-darwin.so",
+    "module_sha256": "4e512bc336d132eb9219fafe6e2246ef49f1c6cfe91f7f09edd459cacfa32e57",
+    "repo_or_live_module_replaced": false
+  },
+  "parameters": {
+    "steps": 12,
+    "dt_seconds": 0.05,
+    "actions": "neutral",
+    "warmup_steps": 0
+  },
+  "python_baseline": {
+    "artifact": "/tmp/biosphere-native-baseline.json",
+    "artifact_sha256": "faac723d21f2ebad44f262ce152b4f1a5efc366cac438c2166074e3236635a30",
+    "biosphere_seconds": 1.1380136259904248,
+    "biosphere_milliseconds_per_tick": 94.83446883253539,
+    "physics_seconds": 0.49115999899368035,
+    "function_calls": 745474,
+    "cumulative_seconds": {
+      "_check_structure": 0.41061124800000004,
+      "_part_resource_matrix": 0.313999165,
+      "_distribute_turnover": 0.10303912600000001,
+      "_develop": 0.138364958
+    }
+  },
+  "native_result": {
+    "artifact": "/tmp/chreatures-native-biosphere-tissue-profile.json",
+    "artifact_sha256": "113d45bd4e68778abdd45492d428db03d0db443185865d8b9b2e08e030894fd9",
+    "biosphere_seconds": 0.31380329201056156,
+    "biosphere_milliseconds_per_tick": 26.150274334213464,
+    "physics_seconds": 0.2847344600013457,
+    "function_calls": 373702,
+    "cumulative_seconds": {
+      "_check_structure": 0.00020345900000000002,
+      "_distribute_turnover": 0.037388377,
+      "_develop": 0.082517291
+    },
+    "biosphere_phase_speedup": 3.6265190804694396,
+    "structural_wrapper_speedup": 13.663881008631767,
+    "profiled_function_call_reduction_fraction": 0.4987055215876074
+  },
+  "exactness": {
+    "python_reference_probe": "/tmp/compare_native_tissue.py",
+    "python_reference_probe_sha256": "e503b0904dc7459f9088d822e3a61b2e8a4dc4cd9409d8ed5a10da9f4a55a751",
+    "steps": 12,
+    "full_biosphere_snapshot_exact": true,
+    "full_world_snapshot_exact": true,
+    "canonical_restore_continuation_steps": 4,
+    "canonical_restored_biosphere_exact": true,
+    "canonical_restored_world_exact": true
+  },
+  "topology_rebind_validation": {
+    "probe": "scripts/probe_biosphere.py --seconds 4",
+    "report": "/tmp/chreatures-native-tissue-birth-check-3/report.json",
+    "report_sha256": "1c35a160a57c9145f32510896a19dcf49cb51d9cf9da5e3483edc7f77583d5ac",
+    "development_commits": 3,
+    "final_parts_after_one_leaf_transfer": 11,
+    "canonical_continuation_exact": true,
+    "maximum_absolute_elemental_residual": 1.1368683772161603e-13,
+    "absolute_energy_residual": 1.829647544582258e-13
+  },
+  "interpretation": {
+    "supported_claim": "At 2,789 parts, persistent native tissue bookkeeping removes the dominant Python mapping scan, validation reduction, and turnover loop while preserving the previous optimized Python result bit exactly.",
+    "state_contract": "Python part records remain the sole serialized authority. The Rust matrix is transient, is rebuilt from canonical records on restore, and is rebound after every committed growth or part-removal topology change.",
+    "whole_runtime_speedup_claim": false,
+    "reason": "The measurement covers neutral physics plus Biosphere only under cProfile. It excludes neural inference, fields, rendering, HTTP work, and the rest of Habitat3D; shared-host physics timing also differed between runs."
+  },
+  "sources": {
+    "chreatures/biosphere.py": "6f3af89e4473328e2e75bbdffcfa970e90b413594450e872e8324bafb11126f7",
+    "native/world-kernels/src/biosphere_tissue.rs": "c3c0073e53abdfa2bdba1b7b2ff316694fe82b78e20fd8c304fadf80e25dc58a",
+    "native/world-kernels/src/lib.rs": "2f436a50c9edb3a729480bf40e6d9dd15f5679600c961d4e720c44d06efca04e",
+    "scripts/probe_grown_biosphere.py": "a954e7962d026aaf78d05aa29d3d8540bfcbe02b6f8725495eda51f44144bda1"
+  }
+}

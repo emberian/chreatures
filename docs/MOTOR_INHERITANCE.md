@@ -1,12 +1,49 @@
-# NumPy motor inheritance
+# Native motor inheritance
 
 `chreatures.motor_inheritance` deploys a trained `PredictiveActorCritic` on a
-laptop with NumPy alone.  This is inherited population training, not personal
+laptop without Torch. This is inherited population training, not personal
 online learning.  The artifact freezes the learned policy, critic, predictor,
 fixed feature/context transforms, and the final calibrated `RunningMoments`.
 Each `MotorOrgan` owns its recurrent context, random stream, held macro action,
 macro clock, previous normalized features and prediction.  Nothing in this
 module changes an existing resident's anatomical substrate.
+
+Artifact validation, normalizer arithmetic, action sampling, macro sequencing,
+and persistence remain in Python. Each validated `MotorArtifact` packs its
+float32 weights once into a shared native `MotorRuntime`; resident ticks do not
+rebuild Python dictionaries or copy weights. The PyO3 core owns the forward,
+projection, predictor, conditioned-variance, and reservoir/gated context math.
+Its methods accept contiguous neuron-major batches up to 256 rows, including
+the resident-scale `B=1` and `B=3` cases. `MotorOrgan` is the single production
+path through that core. NumPy equations remain only as test references.
+
+The native core uses Accelerate SGEMM on Apple Silicon and explicit float32
+loops on other targets. Reduction order can differ from NumPy, so cross-backend equivalence uses an absolute
+`2e-6` tolerance. The measured maximum on the real 384-input conditioned-scale
+artifact was `5.96e-7` across forward, predictor, scale, projection, context,
+and prediction-error outputs for both one and three rows. Within one compiled
+runtime, restoring the private state and NumPy random generator gives exact
+continuation. Snapshots keep the artifact hash and all mutable state; no native
+working state exists outside that snapshot contract.
+
+Native deployment changes the trajectory arithmetic boundary. Snapshot v2
+therefore records the native runtime identity (`f32-accelerate-sgemm` on macOS,
+or `f32-ordered-scalar` elsewhere), and restore rejects another identity.
+Snapshot v1 identifies the former NumPy execution path and is intentionally not
+auto-restored by this module. An operator migrating such a resident must keep
+the v1 snapshot as the rollback point, explicitly accept a new trajectory,
+start the native runtime from those private arrays through a separate migration
+tool, and save the first v2 snapshot before resuming ticks. Copying the old
+fields into v2 without that recorded decision is unsupported.
+
+On the M2 Max, a deterministic six-tick sequence through the complete
+`MotorOrgan` took a median 158 microseconds for one resident, compared with 202
+microseconds through the preserved NumPy implementation. Three resident
+sequences took 816 versus 1,042 microseconds. The lower-level combined native
+forward/predict/scale/context calls took 18.9 microseconds at B1 and 81.2 at B3,
+versus 71.1 and 145 microseconds for the NumPy reference. These are local
+resident-scale timings, not hardware peak claims; Python macro bookkeeping and
+per-resident calls remain visible in the complete-path measurement.
 
 The controller accepts only a 384-value MaleCNS readout and six body-local
 physiology values.  A physiology dictionary is mapped in training order:
@@ -99,6 +136,34 @@ through candidate selection.  Private variance is a relative offset for the
 baseline proposal; alternative candidate noise remains tied to the immutable
 conditioned inherited scale, independent of private parameters.
 
+Artifact format v3 adds the explicitly trained `gated-v1` working context. The
+candidate uses the existing arrays and projected next neural observation:
+
+```text
+z = tanh(projected_next @ context_feature.T
+         + action @ context_action.T
+         + h @ context_recur.T)
+gate = sigmoid(projected_next @ context_gate_feature.T
+               + action @ context_gate_action.T
+               + h @ context_gate_recur.T
+               + context_gate_bias)
+h_next = h + gate * (z - h)
+```
+
+The four new immutable arrays have exact shapes `(context_dim,
+projection_dim)`, `(context_dim, 8)`, `(context_dim, context_dim)`, and
+`(context_dim,)`. The loader checks the v3 format, version, architecture name,
+and every shape. Physiology is still an input to the action policy, but it does
+not enter this context recurrence. A missing `context_profile` identifies an
+existing `reservoir-v1` artifact and retains its original full-write recurrence
+and canonical hash. V3 export is for fresh trained descendants; loading or
+snapshotting an earlier resident never upgrades its immutable artifact.
+
+Private snapshots need no new mutable fields. They already preserve the
+resident's context, held action, macro position, predictor history, and RNG
+state; self-contained snapshots embed all new inherited gate arrays. Restore
+validates the artifact identity before reinstating that private state.
+
 ## Export from a training machine
 
 Torch checkpoints use Python serialization and must be treated as trusted
@@ -173,6 +238,21 @@ the trained abstract thrust/yaw/posture interface rather than direct leg-joint
 commands, and it does not add the training world's separate local eating
 reflex.  Future personal episodic learning belongs in a separate organ and
 must not mutate these inherited arrays.
+
+### Gated v3 deployment check
+
+The v3 exporter was exercised on persvati with Torch 2.10.0+rocm7.0 in CPU
+mode using a small synthetic gated checkpoint. This verifies deployment
+equivalence and serialization, not learned behavior. The actual exporter wrote
+`chreatures-predictive-ppo-motor-organ-v3` artifact identity
+`fb3adfa562ab3ac889643f52b00277457fb7a22f9946ed9eb65dc97a25cd8da9`
+from checkpoint SHA-256
+`75f1e547ab7b7035b7debe3ceaf1314ac484cb425204e04f9befe04ab16d4d48`.
+Across 32 recurrent decisions, the maximum Torch/NumPy gated-context error was
+`8.94e-8`; all forward, projection, predictor, variance, and context errors
+were below the declared `2e-6` threshold. A snapshot taken inside a held macro
+then produced exact NumPy actions, context, held action, macro position, and
+decision count after restore.
 
 ## Nursery 8,000-step artifact
 

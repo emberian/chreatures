@@ -18,6 +18,7 @@ import numpy as np
 
 from .growth import GrowthSystem
 from .metabolism import Chemistry, MetabolicWeb, canonical
+from .native_world import load_world_kernels
 
 FORMAT = "chreatures-biosphere-v4"
 KINDS = ("branch", "root", "leaf")
@@ -129,6 +130,12 @@ class Biosphere:
         self.mobility = None
         self.materials = None
         self.exchange = None
+        self._tissue = load_world_kernels().BiosphereTissue(
+            list(self.web.chemistry.pools),
+            list(self.growth),
+            [colony["structure_row"] for colony in self.config],
+            self.web.chemistry._arrays[0],
+        )
         if mobiles is not None:
             from .somatic import SomaticPhysiology
 
@@ -192,7 +199,7 @@ class Biosphere:
             from .ecological_exchange import EcologicalExchange
 
             instance.exchange = EcologicalExchange(instance, config["exchange"])
-        instance._check_structure()
+        instance._bind_tissue()
         return instance
 
     def _ledger(self) -> np.ndarray:
@@ -269,7 +276,7 @@ class Biosphere:
         """Advance chemistry and development after the caller advances physics."""
         if not np.isfinite(dt) or not 0 < dt <= 1.0:
             raise ValueError("biosphere step must be in (0, 1] seconds")
-        checked_structure = self._check_structure()
+        self._check_structure()
         if self.exchange is not None:
             self.exchange.before_reactions(dt)
         photons = np.zeros(self.web.count, dtype=np.float64)
@@ -284,7 +291,7 @@ class Biosphere:
             self.mobility.after_reactions(dt)
         if self.exchange is not None:
             self.exchange.after_reactions(dt)
-        self._distribute_turnover(ledger, checked_structure)
+        self._distribute_turnover(ledger)
         reports = self._develop()
         if self.materials is not None:
             self.materials.sync_geometry()
@@ -342,91 +349,17 @@ class Biosphere:
                     )
         return sources
 
-    def _part_resource_matrix(self, owned: list[dict[str, Any]]) -> np.ndarray:
-        """Validate internal part chemistry into one allocation, in saved order."""
-        names = self.web.chemistry.pools
-        allowed = set(names)
-        if not owned:
-            return np.empty((0, len(names)), dtype=np.float64)
-        rows = []
-        for part in owned:
-            resources = part["resources"]
-            if not isinstance(resources, Mapping) or set(resources) - allowed:
-                raise ValueError("unknown chemical resource")
-            rows.append([resources.get(name, 0.0) for name in names])
-        matrix = np.asarray(rows, dtype=np.float64)
-        if matrix.shape != (len(owned), len(names)):
-            raise ValueError("physical part resource matrix differs")
-        if not np.isfinite(matrix).all() or np.any(matrix < 0.0):
-            raise ValueError("resource quantities must be finite and nonnegative")
-        return matrix
+    def _bind_tissue(self) -> None:
+        """Rebind native numeric tissue after a committed topology change."""
+        self._tissue.bind(self.parts, self.web.pools)
 
-    def _check_structure(self) -> dict[str, tuple[list[dict[str, Any]], np.ndarray]]:
-        checked = {}
-        for colony in self.config:
-            owned = [
-                part for part in self.parts.values() if part["colony"] == colony["id"]
-            ]
-            resources = self._part_resource_matrix(owned)
-            total = np.zeros(len(self.web.chemistry.pools))
-            # Preserve the historical insertion-order floating reduction.
-            for row in resources:
-                total += row
-            if not np.allclose(
-                total, self.web.pools[colony["structure_row"]], rtol=1e-11, atol=1e-12
-            ):
-                raise ValueError(
-                    "physical structures and allocated chemical tissue disagree"
-                )
-            checked[colony["id"]] = (owned, resources)
-        return checked
+    def _check_structure(self) -> None:
+        self._tissue.validate(self.web.pools)
 
-    def _distribute_turnover(
-        self,
-        ledger: Mapping[str, Any],
-        checked: dict[str, tuple[list[dict[str, Any]], np.ndarray]] | None = None,
-    ) -> None:
+    def _distribute_turnover(self, ledger: Mapping[str, Any]) -> None:
         # Turnover changes live tissue to detritus without removing its material
         # or geometry. Dead scaffold can persist; removal is a separate transfer.
-        chemistry = self.web.chemistry
-        for colony in self.config:
-            if checked is None:
-                owned = [
-                    part
-                    for part in self.parts.values()
-                    if part["colony"] == colony["id"]
-                ]
-                before = self._part_resource_matrix(owned)
-            else:
-                owned, before = checked[colony["id"]]
-            if not owned:
-                continue
-            after = before.copy()
-            for reaction, extent in enumerate(
-                ledger["extent"][colony["structure_row"]]
-            ):
-                if extent <= 0:
-                    continue
-                stoich = chemistry._arrays[0][reaction]
-                consumed = np.flatnonzero(stoich < 0)
-                if len(consumed) != 1:
-                    raise RuntimeError(
-                        "structural reaction has unsupported geometric bookkeeping"
-                    )
-                substrate = int(consumed[0])
-                total = before[:, substrate].sum()
-                if total <= 0:
-                    raise RuntimeError(
-                        "structural reaction consumed unallocated substrate"
-                    )
-                after += (extent * before[:, substrate] / total)[:, None] * stoich[
-                    None, :
-                ]
-            if np.any(after < -1e-12):
-                raise RuntimeError("structural turnover produced negative material")
-            after = np.maximum(after, 0.0)
-            for part, resources in zip(owned, after, strict=True):
-                part["resources"] = dict(zip(chemistry.pools, resources.tolist()))
+        self._tissue.turnover(self.parts, ledger["extent"])
 
     def _develop(self) -> list[dict[str, Any]]:
         operations = []
@@ -496,6 +429,7 @@ class Biosphere:
             if next_parts is None:
                 raise RuntimeError("staged development has no physical part records")
             self.parts = next_parts
+            self._bind_tissue()
             for colony, _, candidate in staged:
                 self.growth[colony["id"]] = candidate
             return [
@@ -621,6 +555,7 @@ class Biosphere:
             self.web = MetabolicWeb.restore(before)
             raise
         self.parts = next_parts
+        self._bind_tissue()
         return {
             "parts": part_ids,
             "receivers": dict(receivers),
@@ -735,7 +670,7 @@ class Biosphere:
         instance.initial_totals = copy.deepcopy(snapshot["initial_totals"])
         instance.initial_ledger = copy.deepcopy(snapshot["initial_ledger"])
         instance.last_report = copy.deepcopy(snapshot["last_report"])
-        instance._check_structure()
+        instance._bind_tissue()
         if instance.mobility is not None:
             instance.mobility.restore_state(mobile_state)
         if snapshot["material_objects"] is not None:
