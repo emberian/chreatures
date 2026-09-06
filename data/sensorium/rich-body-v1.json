@@ -1,0 +1,61 @@
+{
+  "format": "chreatures-sensorium-profile",
+  "version": 1,
+  "name": "rich-body-v1",
+  "frame": "articulated-head-local",
+  "lens": {
+    "attachment": "resident:{id}:geom:head",
+    "origin": "head center plus local-forward (head x radius + 0.004 m)",
+    "self_occlusion": "full",
+    "body_exclusion_id": -1
+  },
+  "gaze": {
+    "source": "PhysicsBody.gaze_pitch",
+    "scale": 0.62,
+    "clamp_radians": [-1.15, 1.15],
+    "composition": "clamp(scale * gaze_pitch + ray_pitch_offset)"
+  },
+  "maximum_range_m": 3.2,
+  "transduction": {
+    "components": ["red", "green", "blue", "proximity"],
+    "rgb": "min(1, material_or_geom_rgb * (0.45 + 0.55 * illumination))",
+    "proximity": "max(0, 1 - hit_distance / maximum_range_m)",
+    "miss": [0.0, 0.0, 0.0, 0.0],
+    "dtype": "float32"
+  },
+  "rasters": [
+    {
+      "name": "peripheral",
+      "shape": [8, 32, 4],
+      "pitch_degrees": [-50.0, 50.0],
+      "yaw_degrees": [-100.0, 100.0],
+      "sampling": "inclusive-linear-centers-elevation-major"
+    },
+    {
+      "name": "foveal",
+      "shape": [24, 32, 4],
+      "pitch_degrees": [-22.0, 22.0],
+      "yaw_degrees": [-30.0, 30.0],
+      "sampling": "inclusive-linear-centers-elevation-major"
+    }
+  ],
+  "packed": {
+    "shape": [1024, 4],
+    "flat_channels": 4096,
+    "layout": "resident-major, peripheral then foveal, elevation, azimuth, component"
+  },
+  "coarse_projection": {
+    "purpose": "declared 5x16x4 projection for the canonical 351 neural port encoder",
+    "source": "peripheral",
+    "method": "unweighted area pooling of measured rays",
+    "azimuth_groups": "adjacent pairs [2*j, 2*j+1]",
+    "elevation_offsets": [0, 2, 3, 5, 6, 8],
+    "shape": [5, 16, 4],
+    "extra_collision_rays": 0
+  },
+  "inheritance": {
+    "selector": "sensorium.profile",
+    "matched_restore": ["profile", "profile_sha256"],
+    "mutable_per_resident_parameters": []
+  }
+}

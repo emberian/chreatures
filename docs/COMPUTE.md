@@ -96,9 +96,11 @@ hosts before selecting the representation.
 
 Current training uses one spawned process per three-resident physical world.
 `ProcessWorldPool` keeps fixed numeric arrays in one parent-owned shared-memory
-block: `float32 [world,3,351]` observations, `float32 [world,3,9]` motor and oral
-commands, and fixed body, physiology, and outcome rows. Each worker writes only
-its world row. Hot pipe messages contain an operation and monotonically
+block: direct `float32 [world,resident,4096]` rich retina, pooled
+`float32 [world,resident,351]` neural channels, `float32 [world,resident,9]`
+motor and oral commands, and fixed body, physiology, and outcome rows. The
+resident dimension is declared at construction; current Living Reef worlds use
+six. Each worker writes only its world row. Hot pipe messages contain an operation and monotonically
 increasing sequence number; the parent reads a cohort only after every row has
 acknowledged that sequence. A worker error closes the entire pool and its shared
 memory, so callers cannot consume a partly updated cohort. World construction,

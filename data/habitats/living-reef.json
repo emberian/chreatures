@@ -1,0 +1,3569 @@
+{
+  "version": 1,
+  "name": "living-reef",
+  "units": "meters",
+  "size": [
+    12.0,
+    8.0,
+    3.5
+  ],
+  "gravity": [
+    0.0,
+    0.0,
+    -9.81
+  ],
+  "physics_timestep": 0.005,
+  "compiler": {
+    "material_order": [
+      "loam",
+      "terracotta",
+      "limestone",
+      "darkstone",
+      "timber",
+      "leaf",
+      "berry",
+      "nectar",
+      "seed",
+      "violet",
+      "cyan",
+      "cream",
+      "mica",
+      "fern",
+      "pip",
+      "lumen",
+      "silt",
+      "bramble",
+      "living-packet-00",
+      "living-packet-01",
+      "living-packet-02",
+      "living-packet-03",
+      "living-packet-04",
+      "living-packet-05",
+      "living-packet-06",
+      "living-packet-07",
+      "living-packet-08",
+      "living-packet-09",
+      "living-packet-10",
+      "living-packet-11",
+      "living-deposit-00",
+      "living-deposit-01",
+      "living-deposit-02",
+      "living-deposit-03",
+      "living-deposit-04",
+      "living-deposit-05",
+      "living-deposit-06",
+      "living-deposit-07",
+      "living-deposit-08",
+      "living-deposit-09",
+      "living-deposit-10",
+      "living-deposit-11",
+      "living-deposit-12",
+      "living-deposit-13",
+      "living-deposit-14",
+      "living-deposit-15",
+      "living-deposit-16",
+      "living-deposit-17",
+      "living-deposit-18",
+      "living-deposit-19",
+      "living-deposit-20",
+      "living-deposit-21",
+      "living-deposit-22",
+      "living-deposit-23",
+      "living-exudate-00",
+      "living-exudate-01",
+      "living-exudate-02",
+      "living-exudate-03",
+      "living-exudate-04",
+      "living-exudate-05",
+      "living-exudate-06",
+      "living-exudate-07",
+      "living-exudate-08",
+      "living-exudate-09",
+      "living-exudate-10",
+      "living-exudate-11",
+      "living-exudate-12",
+      "living-exudate-13",
+      "living-exudate-14",
+      "living-exudate-15",
+      "living-exudate-16",
+      "living-exudate-17",
+      "living-exudate-18",
+      "living-exudate-19",
+      "living-exudate-20",
+      "living-exudate-21",
+      "living-exudate-22",
+      "living-exudate-23"
+    ]
+  },
+  "limits": {
+    "entities": 256,
+    "signals": 256,
+    "hand_force": 60.0,
+    "impulse": 4.0,
+    "acoustic_impulse": 10.0,
+    "acoustic_work": 5.0,
+    "contact_samples": 1024
+  },
+  "materials": {
+    "loam": {
+      "rgba": [
+        0.2,
+        0.29,
+        0.2,
+        1.0
+      ]
+    },
+    "terracotta": {
+      "rgba": [
+        0.66,
+        0.36,
+        0.23,
+        1.0
+      ]
+    },
+    "limestone": {
+      "rgba": [
+        0.69,
+        0.66,
+        0.52,
+        1.0
+      ]
+    },
+    "darkstone": {
+      "rgba": [
+        0.24,
+        0.29,
+        0.34,
+        1.0
+      ]
+    },
+    "timber": {
+      "rgba": [
+        0.47,
+        0.29,
+        0.16,
+        1.0
+      ]
+    },
+    "leaf": {
+      "rgba": [
+        0.18,
+        0.55,
+        0.27,
+        1.0
+      ]
+    },
+    "berry": {
+      "rgba": [
+        0.88,
+        0.1,
+        0.22,
+        1.0
+      ]
+    },
+    "nectar": {
+      "rgba": [
+        0.96,
+        0.67,
+        0.1,
+        1.0
+      ]
+    },
+    "seed": {
+      "rgba": [
+        0.68,
+        0.47,
+        0.2,
+        1.0
+      ]
+    },
+    "violet": {
+      "rgba": [
+        0.56,
+        0.23,
+        0.81,
+        1.0
+      ]
+    },
+    "cyan": {
+      "rgba": [
+        0.12,
+        0.67,
+        0.73,
+        1.0
+      ]
+    },
+    "cream": {
+      "rgba": [
+        0.88,
+        0.82,
+        0.65,
+        1.0
+      ]
+    },
+    "mica": {
+      "rgba": [
+        0.94,
+        0.48,
+        0.32,
+        1.0
+      ]
+    },
+    "fern": {
+      "rgba": [
+        0.32,
+        0.73,
+        0.42,
+        1.0
+      ]
+    },
+    "pip": {
+      "rgba": [
+        0.32,
+        0.55,
+        0.89,
+        1.0
+      ]
+    },
+    "lumen": {
+      "rgba": [
+        0.88,
+        0.74,
+        0.28,
+        1.0
+      ]
+    },
+    "silt": {
+      "rgba": [
+        0.48,
+        0.36,
+        0.3,
+        1.0
+      ]
+    },
+    "bramble": {
+      "rgba": [
+        0.58,
+        0.24,
+        0.46,
+        1.0
+      ]
+    },
+    "living-packet-00": {
+      "rgba": [
+        0.7,
+        0.2,
+        0.1,
+        1.0
+      ]
+    },
+    "living-packet-01": {
+      "rgba": [
+        0.42,
+        0.5,
+        0.16,
+        1.0
+      ]
+    },
+    "living-packet-02": {
+      "rgba": [
+        0.28,
+        0.25,
+        0.12,
+        1.0
+      ]
+    },
+    "living-packet-03": {
+      "rgba": [
+        0.7,
+        0.2,
+        0.1,
+        1.0
+      ]
+    },
+    "living-packet-04": {
+      "rgba": [
+        0.42,
+        0.5,
+        0.16,
+        1.0
+      ]
+    },
+    "living-packet-05": {
+      "rgba": [
+        0.28,
+        0.25,
+        0.12,
+        1.0
+      ]
+    },
+    "living-packet-06": {
+      "rgba": [
+        0.7,
+        0.2,
+        0.1,
+        1.0
+      ]
+    },
+    "living-packet-07": {
+      "rgba": [
+        0.42,
+        0.5,
+        0.16,
+        1.0
+      ]
+    },
+    "living-packet-08": {
+      "rgba": [
+        0.28,
+        0.25,
+        0.12,
+        1.0
+      ]
+    },
+    "living-packet-09": {
+      "rgba": [
+        0.7,
+        0.2,
+        0.1,
+        1.0
+      ]
+    },
+    "living-packet-10": {
+      "rgba": [
+        0.42,
+        0.5,
+        0.16,
+        1.0
+      ]
+    },
+    "living-packet-11": {
+      "rgba": [
+        0.28,
+        0.25,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-00": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-01": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-02": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-03": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-04": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-05": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-06": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-07": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-08": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-09": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-10": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-11": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-12": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-13": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-14": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-15": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-16": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-17": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-18": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-19": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-20": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-21": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-22": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-deposit-23": {
+      "rgba": [
+        0.32,
+        0.26,
+        0.12,
+        1.0
+      ]
+    },
+    "living-exudate-00": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-01": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-02": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-03": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-04": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-05": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-06": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-07": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-08": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-09": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-10": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-11": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-12": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-13": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-14": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-15": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-16": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-17": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-18": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-19": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-20": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-21": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-22": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    },
+    "living-exudate-23": {
+      "rgba": [
+        0.5,
+        0.38,
+        0.11,
+        1.0
+      ]
+    }
+  },
+  "physical_materials": {
+    "earth": {
+      "density": 950,
+      "friction": [
+        1.15,
+        0.025,
+        0.004
+      ]
+    },
+    "masonry": {
+      "density": 1800,
+      "friction": [
+        0.95,
+        0.018,
+        0.003
+      ]
+    },
+    "timber": {
+      "density": 560,
+      "friction": [
+        0.82,
+        0.014,
+        0.003
+      ]
+    },
+    "light": {
+      "density": 38,
+      "friction": [
+        0.7,
+        0.012,
+        0.002
+      ]
+    },
+    "mechanism-light": {
+      "density": 1.0,
+      "friction": [
+        0.88,
+        0.012,
+        0.002
+      ]
+    },
+    "mechanism-weight": {
+      "density": 3.0,
+      "friction": [
+        0.82,
+        0.012,
+        0.002
+      ]
+    },
+    "body": {
+      "density": 160,
+      "friction": [
+        0.72,
+        0.03,
+        0.006
+      ]
+    }
+  },
+  "body_prototype": {
+    "shape": {
+      "type": "ellipsoid",
+      "size": [
+        0.11,
+        0.075,
+        0.055
+      ]
+    },
+    "physical_material": "body",
+    "radius": 0.1,
+    "traction_force": 10.0,
+    "turn_torque": 0.2,
+    "posture_torque": 0.18,
+    "vertical_force": 30.0
+  },
+  "bodies": [
+    {
+      "id": "mica",
+      "name": "Mica",
+      "position": [
+        0.78,
+        1.72,
+        0.1
+      ],
+      "heading": 0.05,
+      "material": "mica",
+      "energy": 0.8,
+      "gut": 0.1,
+      "fatigue": 0.04
+    },
+    {
+      "id": "fern",
+      "name": "Fern",
+      "position": [
+        3.4,
+        6.55,
+        0.1
+      ],
+      "heading": 5.75,
+      "material": "fern",
+      "energy": 0.76,
+      "gut": 0.16,
+      "fatigue": 0.04
+    },
+    {
+      "id": "pip",
+      "name": "Pip",
+      "position": [
+        10.15,
+        1.8,
+        0.72
+      ],
+      "heading": 3.15,
+      "material": "pip",
+      "energy": 0.82,
+      "gut": 0.08,
+      "fatigue": 0.04
+    },
+    {
+      "id": "lumen",
+      "name": "Lumen",
+      "position": [
+        6.2,
+        3.15,
+        0.1
+      ],
+      "heading": 1.65,
+      "material": "lumen",
+      "energy": 0.79,
+      "gut": 0.11,
+      "fatigue": 0.04,
+      "articulated_traits": {
+        "body_scale": 1.04,
+        "axial_scale": 0.94,
+        "leg_length_scale": 1.18,
+        "antenna_length_scale": 1.32,
+        "frequency_scale": 0.94
+      }
+    },
+    {
+      "id": "silt",
+      "name": "Silt",
+      "position": [
+        10.55,
+        6.55,
+        0.1
+      ],
+      "heading": 3.65,
+      "material": "silt",
+      "energy": 0.77,
+      "gut": 0.13,
+      "fatigue": 0.04,
+      "articulated_traits": {
+        "body_scale": 1.18,
+        "radial_scale": 1.12,
+        "density_scale": 1.17,
+        "friction_scale": 1.26,
+        "torque_scale": 1.14,
+        "frequency_scale": 0.82
+      }
+    },
+    {
+      "id": "bramble",
+      "name": "Bramble",
+      "position": [
+        2.35,
+        4.95,
+        0.1
+      ],
+      "heading": 5.15,
+      "material": "bramble",
+      "energy": 0.81,
+      "gut": 0.09,
+      "fatigue": 0.04,
+      "articulated_traits": {
+        "body_scale": 0.86,
+        "axial_scale": 1.12,
+        "leg_radius_scale": 0.86,
+        "antenna_spread_scale": 1.38,
+        "sweep_scale": 1.16,
+        "frequency_scale": 1.16
+      }
+    }
+  ],
+  "presets": {
+    "berry-pod": {
+      "mobility": "free",
+      "material": "berry",
+      "physical_material": "light",
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.085
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "food",
+          "amount": 0.62,
+          "capacity": 1.2,
+          "nutrition": 1.0
+        },
+        {
+          "type": "scent",
+          "odor": 0,
+          "strength": 1.0
+        }
+      ]
+    },
+    "nectar-pod": {
+      "mobility": "free",
+      "material": "nectar",
+      "physical_material": "light",
+      "shapes": [
+        {
+          "type": "capsule",
+          "size": [
+            0.065,
+            0.095
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "food",
+          "amount": 0.52,
+          "capacity": 1.05,
+          "nutrition": 0.92
+        },
+        {
+          "type": "scent",
+          "odor": 1,
+          "strength": 1.0
+        }
+      ]
+    },
+    "seed-pod": {
+      "mobility": "free",
+      "material": "seed",
+      "physical_material": "light",
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.095,
+            0.07,
+            0.06
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "food",
+          "amount": 0.46,
+          "capacity": 0.9,
+          "nutrition": 0.82
+        },
+        {
+          "type": "scent",
+          "odor": 2,
+          "strength": 0.82
+        }
+      ]
+    },
+    "play-ball": {
+      "mobility": "free",
+      "material": "violet",
+      "physical_material": "light",
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.15
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "scent",
+          "odor": 2,
+          "strength": 0.4
+        },
+        {
+          "type": "resonator",
+          "tone": 2,
+          "gain": 0.42
+        }
+      ]
+    },
+    "play-block": {
+      "mobility": "free",
+      "material": "cyan",
+      "physical_material": "light",
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.13,
+            0.13,
+            0.13
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "resonator",
+          "tone": 1,
+          "gain": 0.3
+        }
+      ]
+    }
+  },
+  "entities": [
+    {
+      "id": "ground",
+      "mobility": "static",
+      "material": "loam",
+      "physical_material": "earth",
+      "position": [
+        6.0,
+        4.0,
+        -0.12
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            6.0,
+            4.0,
+            0.12
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "west-wall",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        -0.1,
+        4.0,
+        0.45
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.1,
+            4.0,
+            0.45
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "east-wall",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        12.1,
+        4.0,
+        0.45
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.1,
+            4.0,
+            0.45
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "north-wall",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        6.0,
+        -0.1,
+        0.45
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            6.0,
+            0.1,
+            0.45
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "south-wall",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        6.0,
+        8.1,
+        0.45
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            6.0,
+            0.1,
+            0.45
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "west-rise",
+      "mobility": "static",
+      "material": "terracotta",
+      "physical_material": "masonry",
+      "position": [
+        1.9,
+        1.8,
+        0.0903
+      ],
+      "quaternion": [
+        0.99854609,
+        0.0,
+        -0.05390453,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            1.32,
+            0.72,
+            0.05
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            1.32,
+            0.025,
+            0.055
+          ],
+          "position": [
+            0.0,
+            -0.745,
+            0.08
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            1.32,
+            0.025,
+            0.055
+          ],
+          "position": [
+            0.0,
+            0.745,
+            0.08
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "middle-terrace",
+      "mobility": "static",
+      "material": "terracotta",
+      "physical_material": "masonry",
+      "position": [
+        4.4,
+        1.8,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            1.4,
+            1.15,
+            0.14
+          ],
+          "position": [
+            0.0,
+            0.0,
+            0.14
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            1.4,
+            0.03,
+            0.07
+          ],
+          "position": [
+            0.0,
+            -1.18,
+            0.35
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.48,
+            0.03,
+            0.07
+          ],
+          "position": [
+            -0.92,
+            1.18,
+            0.35
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "upper-rise",
+      "mobility": "static",
+      "material": "limestone",
+      "physical_material": "masonry",
+      "position": [
+        7.2,
+        1.8,
+        0.4003
+      ],
+      "quaternion": [
+        0.99838672,
+        0.0,
+        -0.05677991,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            1.5,
+            0.72,
+            0.05
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            1.5,
+            0.025,
+            0.055
+          ],
+          "position": [
+            0.0,
+            -0.745,
+            0.08
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "upper-terrace",
+      "mobility": "static",
+      "material": "limestone",
+      "physical_material": "masonry",
+      "position": [
+        9.8,
+        1.8,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            1.2,
+            1.15,
+            0.12
+          ],
+          "position": [
+            0.0,
+            0.0,
+            0.5
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.25
+          ],
+          "position": [
+            -1.05,
+            -1.0,
+            0.25
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.25
+          ],
+          "position": [
+            1.05,
+            -1.0,
+            0.25
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.25
+          ],
+          "position": [
+            -1.05,
+            1.0,
+            0.25
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.25
+          ],
+          "position": [
+            1.05,
+            1.0,
+            0.25
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            1.2,
+            0.03,
+            0.07
+          ],
+          "position": [
+            0.0,
+            -1.18,
+            0.69
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.03,
+            0.42,
+            0.07
+          ],
+          "position": [
+            1.23,
+            -0.73,
+            0.69
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "shade",
+          "radius": 1.55,
+          "strength": 0.78
+        }
+      ]
+    },
+    {
+      "id": "garden-return",
+      "mobility": "static",
+      "material": "limestone",
+      "physical_material": "masonry",
+      "position": [
+        9.8,
+        5.025,
+        0.2606
+      ],
+      "quaternion": [
+        0.99719167,
+        -0.07489171,
+        0.0,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.78,
+            2.1,
+            0.05
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.025,
+            2.1,
+            0.055
+          ],
+          "position": [
+            -0.805,
+            0.0,
+            0.08
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.025,
+            2.1,
+            0.055
+          ],
+          "position": [
+            0.805,
+            0.0,
+            0.08
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "echo-arch",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        6.4,
+        5.4,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.13,
+            0.72,
+            0.43
+          ],
+          "position": [
+            -0.78,
+            0.0,
+            0.43
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.13,
+            0.72,
+            0.43
+          ],
+          "position": [
+            0.78,
+            0.0,
+            0.43
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.91,
+            0.72,
+            0.1
+          ],
+          "position": [
+            0.0,
+            0.0,
+            0.91
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "shade",
+          "radius": 1.12,
+          "strength": 0.82
+        }
+      ]
+    },
+    {
+      "id": "garden-screen",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "timber",
+      "position": [
+        3.85,
+        4.45,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.055,
+            0.82,
+            0.38
+          ],
+          "position": [
+            0.0,
+            0.0,
+            0.38
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.48,
+            0.055,
+            0.3
+          ],
+          "position": [
+            0.43,
+            -0.765,
+            0.3
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "shade",
+          "radius": 0.88,
+          "strength": 0.48
+        }
+      ]
+    },
+    {
+      "id": "underdeck-light",
+      "mobility": "static",
+      "material": "cyan",
+      "physical_material": "light",
+      "position": [
+        9.8,
+        1.8,
+        0.31
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.045
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "light",
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "direction": [
+            0.0,
+            0.0,
+            -1.0
+          ],
+          "color": [
+            0.16,
+            0.65,
+            0.78
+          ],
+          "intensity": 0.44,
+          "radius": 1.65
+        }
+      ]
+    },
+    {
+      "id": "terrace-light",
+      "mobility": "static",
+      "material": "nectar",
+      "physical_material": "light",
+      "position": [
+        10.65,
+        1.08,
+        1.02
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.05
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "light",
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "direction": [
+            -0.25,
+            0.25,
+            -1.0
+          ],
+          "color": [
+            1.0,
+            0.58,
+            0.19
+          ],
+          "intensity": 0.68,
+          "radius": 2.25
+        }
+      ]
+    },
+    {
+      "id": "balance-plank",
+      "mobility": "hinge",
+      "material": "timber",
+      "physical_material": "timber",
+      "position": [
+        5.05,
+        6.55,
+        0.31
+      ],
+      "joint": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "range": [
+          -22.0,
+          22.0
+        ],
+        "damping": 0.065,
+        "initial": 3.0
+      },
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            1.12,
+            0.34,
+            0.05
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "resonator",
+          "tone": 0,
+          "gain": 0.45
+        },
+        {
+          "type": "acoustic_resonator",
+          "id": "balance-plank-acoustic",
+          "drive": "both",
+          "tones": [
+            1.0,
+            0.14,
+            0.04
+          ],
+          "energy_capacity": 0.038,
+          "initial_energy": 0.0,
+          "capture_efficiency": 0.28,
+          "impact_threshold": 2e-06,
+          "min_impact_speed": 0.02,
+          "cooldown": 0.08,
+          "decay_time": 0.72,
+          "radiative_fraction": 0.68,
+          "reference_energy": 0.006,
+          "gain": 0.52,
+          "range": 3.0,
+          "occlusion": 0.12,
+          "hinge_damping": 0.0035,
+          "max_hinge_torque": 0.048,
+          "source_offset": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "balance-fulcrum",
+      "mobility": "static",
+      "material": "darkstone",
+      "physical_material": "masonry",
+      "position": [
+        5.05,
+        6.55,
+        0.17
+      ],
+      "shapes": [
+        {
+          "type": "cylinder",
+          "size": [
+            0.11,
+            0.31
+          ],
+          "quaternion": [
+            0.70710678,
+            0.70710678,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "leaf-gate",
+      "mobility": "hinge",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        7.02,
+        4.66,
+        0.34
+      ],
+      "joint": {
+        "axis": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "range": [
+          -72.0,
+          72.0
+        ],
+        "damping": 0.032,
+        "initial": -8.0
+      },
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.58,
+            0.025,
+            0.31
+          ],
+          "position": [
+            -0.58,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "resonator",
+          "tone": 1,
+          "gain": 0.48
+        },
+        {
+          "type": "acoustic_resonator",
+          "id": "leaf-gate-acoustic",
+          "drive": "both",
+          "tones": [
+            0.05,
+            1.0,
+            0.16
+          ],
+          "energy_capacity": 0.015,
+          "initial_energy": 0.0,
+          "capture_efficiency": 0.28,
+          "impact_threshold": 2e-06,
+          "min_impact_speed": 0.02,
+          "cooldown": 0.08,
+          "decay_time": 0.72,
+          "radiative_fraction": 0.68,
+          "reference_energy": 0.006,
+          "gain": 0.52,
+          "range": 2.1,
+          "occlusion": 0.12,
+          "hinge_damping": 0.0014,
+          "max_hinge_torque": 0.02,
+          "source_offset": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bell-frame",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "timber",
+      "position": [
+        1.4,
+        6.25,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.84
+          ],
+          "position": [
+            -0.48,
+            0.0,
+            0.84
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.08,
+            0.08,
+            0.84
+          ],
+          "position": [
+            0.48,
+            0.0,
+            0.84
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.56,
+            0.08,
+            0.08
+          ],
+          "position": [
+            0.0,
+            0.0,
+            1.67
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "rain-bell",
+      "mobility": "hinge",
+      "material": "cream",
+      "physical_material": "timber",
+      "position": [
+        1.4,
+        6.25,
+        1.6
+      ],
+      "joint": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "range": [
+          -62.0,
+          62.0
+        ],
+        "damping": 0.022,
+        "initial": 14.0
+      },
+      "shapes": [
+        {
+          "type": "capsule",
+          "size": [
+            0.055
+          ],
+          "fromto": [
+            0.0,
+            0.0,
+            -0.02,
+            0.0,
+            0.0,
+            -0.72
+          ]
+        },
+        {
+          "type": "sphere",
+          "size": [
+            0.135
+          ],
+          "position": [
+            0.0,
+            0.0,
+            -0.79
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "resonator",
+          "tone": 2,
+          "gain": 0.75
+        },
+        {
+          "type": "acoustic_resonator",
+          "id": "rain-bell-acoustic",
+          "drive": "hinge",
+          "tones": [
+            0.1,
+            0.3,
+            1.0
+          ],
+          "energy_capacity": 0.044,
+          "initial_energy": 0.0,
+          "capture_efficiency": 0.28,
+          "impact_threshold": 2e-06,
+          "min_impact_speed": 0.02,
+          "cooldown": 0.0,
+          "decay_time": 1.1,
+          "radiative_fraction": 0.68,
+          "reference_energy": 0.006,
+          "gain": 0.52,
+          "range": 3.5,
+          "occlusion": 0.12,
+          "hinge_damping": 0.004,
+          "max_hinge_torque": 0.055,
+          "source_offset": [
+            0,
+            0,
+            -0.77
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tone-ball",
+      "preset": "play-ball",
+      "position": [
+        3.25,
+        5.3,
+        0.17
+      ],
+      "components": [
+        {
+          "type": "acoustic_resonator",
+          "id": "tone-ball-acoustic",
+          "drive": "contact",
+          "tones": [
+            0.08,
+            0.28,
+            1.0
+          ],
+          "energy_capacity": 0.024,
+          "initial_energy": 0.0,
+          "capture_efficiency": 0.28,
+          "impact_threshold": 2e-06,
+          "min_impact_speed": 0.02,
+          "cooldown": 0.08,
+          "decay_time": 0.72,
+          "radiative_fraction": 0.68,
+          "reference_energy": 0.006,
+          "gain": 0.52,
+          "range": 2.5,
+          "occlusion": 0.12,
+          "hinge_damping": 0.002,
+          "max_hinge_torque": 0.035,
+          "source_offset": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cyan-ball",
+      "preset": "play-ball",
+      "material": "cyan",
+      "position": [
+        8.45,
+        4.6,
+        0.17
+      ],
+      "components": [
+        {
+          "type": "acoustic_resonator",
+          "id": "cyan-ball-acoustic",
+          "drive": "contact",
+          "tones": [
+            0.18,
+            1.0,
+            0.1
+          ],
+          "energy_capacity": 0.024,
+          "initial_energy": 0.0,
+          "capture_efficiency": 0.28,
+          "impact_threshold": 2e-06,
+          "min_impact_speed": 0.02,
+          "cooldown": 0.08,
+          "decay_time": 0.72,
+          "radiative_fraction": 0.68,
+          "reference_energy": 0.006,
+          "gain": 0.52,
+          "range": 2.5,
+          "occlusion": 0.12,
+          "hinge_damping": 0.002,
+          "max_hinge_torque": 0.035,
+          "source_offset": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rattle-block",
+      "preset": "play-block",
+      "position": [
+        6.42,
+        5.4,
+        0.15
+      ],
+      "components": [
+        {
+          "type": "acoustic_resonator",
+          "id": "rattle-block-acoustic",
+          "drive": "contact",
+          "tones": [
+            1.0,
+            0.18,
+            0.05
+          ],
+          "energy_capacity": 0.024,
+          "initial_energy": 0.0,
+          "capture_efficiency": 0.28,
+          "impact_threshold": 2e-06,
+          "min_impact_speed": 0.02,
+          "cooldown": 0.08,
+          "decay_time": 0.45,
+          "radiative_fraction": 0.68,
+          "reference_energy": 0.006,
+          "gain": 0.52,
+          "range": 1.9,
+          "occlusion": 0.12,
+          "hinge_damping": 0.002,
+          "max_hinge_torque": 0.035,
+          "source_offset": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stack-block-a",
+      "preset": "play-block",
+      "position": [
+        2.55,
+        6.85,
+        0.15
+      ]
+    },
+    {
+      "id": "stack-block-b",
+      "preset": "play-block",
+      "material": "leaf",
+      "position": [
+        2.55,
+        6.85,
+        0.43
+      ]
+    },
+    {
+      "id": "lift-approach",
+      "mobility": "static",
+      "material": "terracotta",
+      "physical_material": "masonry",
+      "position": [
+        6.2,
+        3.85,
+        0.0602
+      ],
+      "quaternion": [
+        0.99792222,
+        0.0,
+        -0.06442964,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.68,
+            0.5,
+            0.03
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.68,
+            0.02,
+            0.04
+          ],
+          "position": [
+            0.0,
+            -0.52,
+            0.065
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.68,
+            0.02,
+            0.04
+          ],
+          "position": [
+            0.0,
+            0.52,
+            0.065
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "pressure-lift",
+      "mobility": "slide",
+      "material": "cyan",
+      "physical_material": "mechanism-light",
+      "position": [
+        7.5,
+        3.85,
+        0.0
+      ],
+      "joint": {
+        "axis": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "range": [
+          0.0,
+          0.18
+        ],
+        "damping": 0.55,
+        "initial": 0.18
+      },
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.6,
+            0.5,
+            0.035
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "resonator",
+          "tone": 0,
+          "gain": 0.34
+        },
+        {
+          "type": "acoustic_resonator",
+          "id": "pressure-lift-acoustic",
+          "drive": "contact",
+          "tones": [
+            0.7,
+            0.35,
+            0.08
+          ],
+          "energy_capacity": 0.024,
+          "initial_energy": 0.0,
+          "capture_efficiency": 0.28,
+          "impact_threshold": 2e-06,
+          "min_impact_speed": 0.02,
+          "cooldown": 0.08,
+          "decay_time": 0.72,
+          "radiative_fraction": 0.68,
+          "reference_energy": 0.006,
+          "gain": 0.4,
+          "range": 1.8,
+          "occlusion": 0.12,
+          "hinge_damping": 0.002,
+          "max_hinge_torque": 0.035,
+          "source_offset": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "passage-gate",
+      "mobility": "slide",
+      "material": "leaf",
+      "physical_material": "mechanism-weight",
+      "position": [
+        8.15,
+        3.85,
+        0.25
+      ],
+      "joint": {
+        "axis": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "range": [
+          0.0,
+          0.42
+        ],
+        "damping": 0.75,
+        "initial": 0.0
+      },
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.035,
+            0.55,
+            0.25
+          ]
+        }
+      ],
+      "components": [
+        {
+          "type": "shade",
+          "radius": 0.7,
+          "strength": 0.46
+        },
+        {
+          "type": "diffusion_barrier",
+          "version": 1,
+          "shape_indices": [
+            0
+          ],
+          "permeability": 0.08,
+          "translation_epsilon": 0.015,
+          "rotation_epsilon": 0.02
+        }
+      ]
+    },
+    {
+      "id": "lift-frame",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "timber",
+      "position": [
+        8.15,
+        3.85,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "box",
+          "size": [
+            0.055,
+            0.055,
+            0.46
+          ],
+          "position": [
+            0.0,
+            -0.64,
+            0.46
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.055,
+            0.055,
+            0.46
+          ],
+          "position": [
+            0.0,
+            0.64,
+            0.46
+          ]
+        },
+        {
+          "type": "box",
+          "size": [
+            0.055,
+            0.72,
+            0.055
+          ],
+          "position": [
+            0.0,
+            0.0,
+            0.92
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "counterweight-block",
+      "preset": "play-block",
+      "material": "cream",
+      "position": [
+        5.32,
+        3.85,
+        0.15
+      ]
+    },
+    {
+      "id": "reef-01-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        0.45,
+        3.2,
+        0.08
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-01-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        0.45,
+        3.2,
+        0.08
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-01-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        0.45,
+        3.2,
+        0.08
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-02-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        3.23,
+        1.06,
+        0.31
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-02-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        3.23,
+        1.06,
+        0.31
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-02-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        3.23,
+        1.06,
+        0.31
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-03-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        4.4,
+        0.58,
+        0.34
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-03-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        4.4,
+        0.58,
+        0.34
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-03-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        4.4,
+        0.58,
+        0.34
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-04-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        5.82,
+        2.55,
+        0.34
+      ],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-04-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        5.82,
+        2.55,
+        0.34
+      ],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-04-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        5.82,
+        2.55,
+        0.34
+      ],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-05-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        7.15,
+        1.01,
+        0.51
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-05-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        7.15,
+        1.01,
+        0.51
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-05-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        7.15,
+        1.01,
+        0.51
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-06-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        8.54,
+        2.55,
+        0.68
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-06-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        8.54,
+        2.55,
+        0.68
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-06-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        8.54,
+        2.55,
+        0.68
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-07-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        9.75,
+        0.58,
+        0.68
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-07-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        9.75,
+        0.58,
+        0.68
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-07-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        9.75,
+        0.58,
+        0.68
+      ],
+      "quaternion": [
+        0.7071067811865476,
+        0.0,
+        0.0,
+        -0.7071067811865476
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-08-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        11.06,
+        2.25,
+        0.68
+      ],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-08-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        11.06,
+        2.25,
+        0.68
+      ],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-08-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        11.06,
+        2.25,
+        0.68
+      ],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-09-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        8.92,
+        4.55,
+        0.39
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-09-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        8.92,
+        4.55,
+        0.39
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-09-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        8.92,
+        4.55,
+        0.39
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-10-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        10.68,
+        5.65,
+        0.39
+      ],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-10-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        10.68,
+        5.65,
+        0.39
+      ],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-10-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        10.68,
+        5.65,
+        0.39
+      ],
+      "quaternion": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-11-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        5.47,
+        5.4,
+        0.56
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-11-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        5.47,
+        5.4,
+        0.56
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-11-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        5.47,
+        5.4,
+        0.56
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-12-branches",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        3.76,
+        4.45,
+        0.48
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.006
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-12-roots",
+      "mobility": "static",
+      "material": "timber",
+      "physical_material": "light",
+      "position": [
+        3.76,
+        4.45,
+        0.48
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.005
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "reef-12-leaves",
+      "mobility": "static",
+      "material": "leaf",
+      "physical_material": "light",
+      "position": [
+        3.76,
+        4.45,
+        0.48
+      ],
+      "quaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shapes": [
+        {
+          "type": "sphere",
+          "size": [
+            0.004
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-00",
+      "mobility": "free",
+      "material": "living-packet-00",
+      "physical_material": "light",
+      "position": [
+        1.15,
+        3.9,
+        0.1
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-01",
+      "mobility": "free",
+      "material": "living-packet-01",
+      "physical_material": "light",
+      "position": [
+        2.55,
+        6.2,
+        0.1
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-02",
+      "mobility": "free",
+      "material": "living-packet-02",
+      "physical_material": "light",
+      "position": [
+        4.4,
+        1.75,
+        0.42
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-03",
+      "mobility": "free",
+      "material": "living-packet-03",
+      "physical_material": "light",
+      "position": [
+        6.4,
+        5.4,
+        0.16
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-04",
+      "mobility": "free",
+      "material": "living-packet-04",
+      "physical_material": "light",
+      "position": [
+        9.8,
+        1.8,
+        0.76
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-05",
+      "mobility": "free",
+      "material": "living-packet-05",
+      "physical_material": "light",
+      "position": [
+        9.72,
+        5.0,
+        0.43
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-06",
+      "mobility": "free",
+      "material": "living-packet-06",
+      "physical_material": "light",
+      "position": [
+        7.35,
+        3.55,
+        0.14
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-07",
+      "mobility": "free",
+      "material": "living-packet-07",
+      "physical_material": "light",
+      "position": [
+        3.0,
+        5.35,
+        0.11
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-08",
+      "mobility": "free",
+      "material": "living-packet-08",
+      "physical_material": "light",
+      "position": [
+        10.75,
+        6.45,
+        0.11
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-09",
+      "mobility": "free",
+      "material": "living-packet-09",
+      "physical_material": "light",
+      "position": [
+        1.35,
+        6.25,
+        0.11
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-10",
+      "mobility": "free",
+      "material": "living-packet-10",
+      "physical_material": "light",
+      "position": [
+        5.0,
+        6.55,
+        0.11
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    },
+    {
+      "id": "living-packet-11",
+      "mobility": "free",
+      "material": "living-packet-11",
+      "physical_material": "light",
+      "position": [
+        8.55,
+        4.75,
+        0.11
+      ],
+      "shapes": [
+        {
+          "type": "ellipsoid",
+          "size": [
+            0.075,
+            0.06,
+            0.05
+          ]
+        }
+      ],
+      "components": []
+    }
+  ],
+  "assemblies": [
+    {
+      "id": "lifted-passage",
+      "type": "joint_coupling",
+      "joint_a": "pressure-lift",
+      "joint_b": "passage-gate",
+      "offset": 0.18,
+      "ratio": -0.42857143,
+      "solref": [
+        0.012,
+        1.0
+      ],
+      "solimp": [
+        0.95,
+        0.99,
+        0.001,
+        0.5,
+        2.0
+      ]
+    }
+  ]
+}

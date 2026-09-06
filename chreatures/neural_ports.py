@@ -20,7 +20,8 @@ from scipy import sparse
 
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_PORT_SPEC = ROOT / "data" / "ports" / "retinal-v1.json"
+DEFAULT_PORT_SPEC = ROOT / "data" / "ports" / "retinal-v2.json"
+DEFAULT_SENSORIUM_PROFILE = ROOT / "data" / "sensorium" / "rich-body-v1.json"
 
 RETINA_ELEVATIONS = 5
 RETINA_AZIMUTHS = 16
@@ -91,10 +92,25 @@ def load_port_spec(path: str | Path = DEFAULT_PORT_SPEC) -> dict[str, Any]:
     }
     if not isinstance(value, dict) or not required.issubset(value):
         raise ValueError(f"neural port spec needs keys {sorted(required)}")
-    if value["schema_version"] != 1 or value["physical_inputs"]["count"] != len(BASE_INPUT_NAMES):
+    if (
+        value["schema_version"] != 2
+        or value.get("name") != "retinal-v2"
+        or value["physical_inputs"]["count"] != len(BASE_INPUT_NAMES)
+    ):
         raise ValueError("unsupported or malformed neural port schema")
     if value["physical_inputs"]["ordered_names"] != BASE_INPUT_NAMES:
-        raise ValueError("neural port channel order differs from retinal-v1")
+        raise ValueError("neural port channel order differs from retinal-v2")
+    source = value["physical_inputs"].get("retina_source", {})
+    profile_path = DEFAULT_SENSORIUM_PROFILE
+    if (
+        source.get("profile") != "rich-body-v1"
+        or source.get("profile_sha256") != _sha256(profile_path)
+        or source.get("projection")
+        != "peripheral-area-pool-5x16-elevation-2/1/2/1/2-azimuth-pairs-v1"
+        or source.get("measured_rays") != 1024
+        or source.get("projection_collision_rays") != 0
+    ):
+        raise ValueError("retinal-v2 does not match the current native sensorium")
     return value
 
 
@@ -209,7 +225,7 @@ def _read_hex_annotations(graph: Any, path: Path) -> tuple[np.ndarray, np.ndarra
         import pyarrow.ipc as ipc
     except ImportError as exc:  # pragma: no cover - extraction-host dependency
         raise RuntimeError(
-            "building retinal-v1 needs pyarrow and the pinned MaleCNS annotation Feather; "
+            "building retinal-v2 needs pyarrow and the pinned MaleCNS annotation Feather; "
             "loading an already serialized port bundle does not"
         ) from exc
 
@@ -332,7 +348,7 @@ def _base_input_assignments(
                 records.append({
                     "name": name,
                     "family": "retina",
-                    "routing": "measured assignedOlHex coordinates binned to the synthetic raster; RGB/proximity type cohorts and camera-axis alignment are engineered",
+                    "routing": "measured assignedOlHex coordinates binned to the 5x16 canonical neural raster; sensor values are an engineered area pool of measured rich-body-v1 peripheral rays, and RGB/proximity type cohorts plus camera-axis alignment are engineered",
                     "hex_bin": {"hex1_to_azimuth": azimuth, "hex2_to_elevation": elevation},
                     "component": component,
                     "nearest_hex_fallback": nearest_fallback,
@@ -430,7 +446,7 @@ def _base_input_assignments(
         "source": _source_record(graph, assignments["shade"]),
     })
     if list(assignments) != BASE_INPUT_NAMES:
-        raise RuntimeError("retinal-v1 input builder changed declared channel order")
+        raise RuntimeError("retinal-v2 input builder changed declared channel order")
     if any(not len(indices) for indices in assignments.values()):
         empty = [name for name, indices in assignments.items() if not len(indices)]
         raise ValueError(f"neural input ports have no source neurons: {empty}")
@@ -642,7 +658,7 @@ def build_neural_port(
     annotation_path: str | Path | None = None,
     feature_ports: Mapping[str, Any] | None = None,
 ) -> NeuralPortBundle:
-    """Build the retinal-v1 sparse interface from real MaleCNS annotations."""
+    """Build the retinal-v2 sparse interface from real MaleCNS annotations."""
     spec = load_port_spec(spec_path)
     expected_graph = spec["graph"].get("dataset_hash")
     if expected_graph and graph.hash != expected_graph:

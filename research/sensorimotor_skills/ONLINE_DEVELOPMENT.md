@@ -45,3 +45,21 @@ empty pending 20 Hz rollout. They pin the graph, ports, chemical profile,
 bootstrap worker and normalizer identity, action order, and 0.05-second interval.
 The first run is an integrated developmental experiment; offline or training
 reward changes alone do not establish physical competence.
+
+## First joined run
+
+The frozen `bec8a49` runner completed one uninterrupted hbox run with four
+three-resident chemical worlds. It executed 20,480 world ticks, 160 shared PPO
+updates, and 245,760 resident transitions in 670.717 seconds (366.41 resident
+transitions/second). The final artifact is
+`/tank/chreatures/runs/development/sensorimotor-worker-online-v1b-seed20260911/development.pt`,
+SHA-256 `0f20e21df906c83873415034dee060bd0a57fc12ccdd8ad259647c71d6dd9304`.
+
+The shared-memory world transport consumed 242.787 seconds in advance calls and
+45.127 seconds in observations, 42.93% of total wall time. The remaining time
+includes full-MaleCNS steps, worker and manager inference, PPO, and coherent
+checkpoints. On the last batch, physical reward averaged `-0.0007458`, the
+separately logged engineered goal-progress term averaged `+0.0019252`, worker
+entropy was `18.0265`, and manager entropy was `4.8396`. These are training
+measurements. They do not show that a resident learned useful goal selection or
+improved physical behavior.
