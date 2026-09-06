@@ -7211,6 +7211,69 @@
         }
       }
     },
+    "14b1d86e4d5301b2c7815e35ff9f066b": {
+      "id": "14b1d86e4d5301b2c7815e35ff9f066b",
+      "from": [
+        "db4a27f0d4f446cfa996d851806b74d0"
+      ],
+      "to": [],
+      "active": true,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "interpretation-correction:590f02405e105ce01ed08e6e278cb58eb7befaa0a9aa349be18302da334bc9b3",
+        "time": {
+          "domain": "analysis_sequence",
+          "value": 4
+        },
+        "record_type": "interpretation_correction",
+        "text": "Supplementary correction to fitted-score interpretation; model unchanged.",
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "role": "correction_receipt",
+            "uri": "urn:sha256:590f02405e105ce01ed08e6e278cb58eb7befaa0a9aa349be18302da334bc9b3",
+            "sha256": "590f02405e105ce01ed08e6e278cb58eb7befaa0a9aa349be18302da334bc9b3",
+            "bytes": 1694,
+            "media_type": "application/json",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [
+            {
+              "bytes": 1694,
+              "media_type": "application/json",
+              "role": "correction_receipt",
+              "sha256": "590f02405e105ce01ed08e6e278cb58eb7befaa0a9aa349be18302da334bc9b3",
+              "uri": "urn:sha256:590f02405e105ce01ed08e6e278cb58eb7befaa0a9aa349be18302da334bc9b3",
+              "verification": "verified_local_sha256"
+            }
+          ],
+          "fields": {
+            "bank_sha256": "4d535c586c899609a51c14792b6dda6a50c66dc84e2b763c1a99a74842947b92",
+            "claims": "No coefficient, domain, calibration, fitted artifact, or causal claim is changed.",
+            "correction_sha256": "590f02405e105ce01ed08e6e278cb58eb7befaa0a9aa349be18302da334bc9b3",
+            "original_support_report_sha256": "ebaafb1d7668a726000b39919db03de13143b0654aa462ed00a27d85cac813e0",
+            "parent_roles": {
+              "gam-fit:4d535c586c899609a51c14792b6dda6a50c66dc84e2b763c1a99a74842947b92": "corrected_record"
+            },
+            "status": "supplementary-interpretation-correction",
+            "surface_sha256": "47003d9aeff592748ea2c473027d1576d42dc74a6aaae9a521f7f0cbf5a2388f"
+          },
+          "id": "interpretation-correction:590f02405e105ce01ed08e6e278cb58eb7befaa0a9aa349be18302da334bc9b3",
+          "parent_ids": [
+            "gam-fit:4d535c586c899609a51c14792b6dda6a50c66dc84e2b763c1a99a74842947b92"
+          ],
+          "record_type": "interpretation_correction",
+          "text": "Supplementary correction to fitted-score interpretation; model unchanged.",
+          "time": {
+            "domain": "analysis_sequence",
+            "value": 4
+          }
+        }
+      }
+    },
     "3fb556ba822404ac606405d75d86b147": {
       "id": "3fb556ba822404ac606405d75d86b147",
       "from": [
@@ -47223,7 +47286,9 @@
         "a83db928f240bc6a9125718459142537",
         "ff56aefdda5fdca14c07e41b5dbf8f78"
       ],
-      "to": [],
+      "to": [
+        "14b1d86e4d5301b2c7815e35ff9f066b"
+      ],
       "active": true,
       "bookmarked": false,
       "contents": {
@@ -54963,6 +55028,7 @@
     "31d011bb2c92968461a1f1248b26a55a"
   ],
   "active": [
+    "14b1d86e4d5301b2c7815e35ff9f066b",
     "31d011bb2c92968461a1f1248b26a55a",
     "b902865f6b6bd9224a472c2e8182b24f",
     "86c504456988f3de716d4795c4a2ec89",
