@@ -1,0 +1,836 @@
+{
+  "nodes": {
+    "235a233faee8fc9b2f8739b7d496f5d7": {
+      "id": "235a233faee8fc9b2f8739b7d496f5d7",
+      "from": [
+        "ebc2f985a88a081b016a1fadb7e6fb07"
+      ],
+      "to": [
+        "bf26b321ed6162d71af5c543b9b8d2c6",
+        "ccf250354480f6bac9b96a24e9f64502"
+      ],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "transition-audit:dbc0baeb9070d35529ae7b85a850b550ab41aee166440cc1e280276571556020",
+        "time": {
+          "domain": "resident_transition",
+          "value": 491520
+        },
+        "record_type": "full_transition_audit",
+        "text": "All recorded grandchild transitions were audited: 90 of 96 trajectories made mouth-material contact, while all 96 lost energy.",
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "role": "full_transition_audit",
+            "uri": "urn:sha256:dbc0baeb9070d35529ae7b85a850b550ab41aee166440cc1e280276571556020",
+            "sha256": "dbc0baeb9070d35529ae7b85a850b550ab41aee166440cc1e280276571556020",
+            "bytes": 64844,
+            "media_type": "application/json",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [
+            {
+              "bytes": 64844,
+              "media_type": "application/json",
+              "role": "full_transition_audit",
+              "sha256": "dbc0baeb9070d35529ae7b85a850b550ab41aee166440cc1e280276571556020",
+              "uri": "urn:sha256:dbc0baeb9070d35529ae7b85a850b550ab41aee166440cc1e280276571556020",
+              "verification": "verified_local_sha256"
+            }
+          ],
+          "fields": {
+            "energy_delta_total": -41.502227783203125,
+            "energy_negative_trajectories": 96,
+            "ingested_mass_total": 28.352945318911225,
+            "matched_control": false,
+            "mouth_contact_steps": 1853,
+            "mouth_contact_trajectories": 90,
+            "physical_reward_negative_trajectories": 96,
+            "trajectories": 96
+          },
+          "id": "transition-audit:dbc0baeb9070d35529ae7b85a850b550ab41aee166440cc1e280276571556020",
+          "parent_ids": [
+            "grandchild-complete:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27"
+          ],
+          "record_type": "full_transition_audit",
+          "text": "All recorded grandchild transitions were audited: 90 of 96 trajectories made mouth-material contact, while all 96 lost energy.",
+          "time": {
+            "domain": "resident_transition",
+            "value": 491520
+          }
+        }
+      }
+    },
+    "ebc2f985a88a081b016a1fadb7e6fb07": {
+      "id": "ebc2f985a88a081b016a1fadb7e6fb07",
+      "from": [
+        "432a00eccb4ad9868fe7e54c4d45ef08"
+      ],
+      "to": [
+        "cb133be12931af3e7b434a44683d6064",
+        "235a233faee8fc9b2f8739b7d496f5d7",
+        "bf26b321ed6162d71af5c543b9b8d2c6"
+      ],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "grandchild-complete:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+        "time": {
+          "domain": "training_update",
+          "value": 160
+        },
+        "record_type": "completed_checkpoint",
+        "text": "The grandchild run completed 160 updates and 491,520 resident transitions.",
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "role": "grandchild_training_checkpoint",
+            "uri": "urn:sha256:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+            "sha256": "cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+            "bytes": 106360751,
+            "media_type": "application/x-pytorch",
+            "verification": "reported_by_hash_verified_source_receipt"
+          }
+        ],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [
+            {
+              "bytes": 106360751,
+              "media_type": "application/x-pytorch",
+              "role": "grandchild_training_checkpoint",
+              "sha256": "cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+              "uri": "urn:sha256:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+              "verification": "reported_by_hash_verified_source_receipt"
+            }
+          ],
+          "fields": {
+            "checkpoint_stored_outside_git": true,
+            "pending_rollout_length": 0,
+            "physical_steps": 20480,
+            "resident_transitions": 491520
+          },
+          "id": "grandchild-complete:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+          "parent_ids": [
+            "grandchild-run:597f75b7f729d186a5c6c35a174031b1dff96520390909835bf3f2bc9d0ce2f9"
+          ],
+          "record_type": "completed_checkpoint",
+          "text": "The grandchild run completed 160 updates and 491,520 resident transitions.",
+          "time": {
+            "domain": "training_update",
+            "value": 160
+          }
+        }
+      }
+    },
+    "65a48cae8834b62b97f9ea8ff58d7274": {
+      "id": "65a48cae8834b62b97f9ea8ff58d7274",
+      "from": [
+        "ccf250354480f6bac9b96a24e9f64502"
+      ],
+      "to": [],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "proposal-arm:goal-coefficient-0.001:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+        "time": {
+          "domain": "proposal_arm",
+          "value": 0.001
+        },
+        "record_type": "proposed_training_arm",
+        "text": "Proposed reduced_goal_shaping continuation with goal_progress_coefficient=0.001; it has not run.",
+        "artifact_uri": null,
+        "blob_refs": [],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [],
+          "fields": {
+            "autostart": false,
+            "checkpoint_created": false,
+            "coefficient": 0.001,
+            "resident_born": false,
+            "role": "reduced_goal_shaping",
+            "status": "proposed_not_executed"
+          },
+          "id": "proposal-arm:goal-coefficient-0.001:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+          "parent_ids": [
+            "proposal:paired-goal-coefficient:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27"
+          ],
+          "record_type": "proposed_training_arm",
+          "text": "Proposed reduced_goal_shaping continuation with goal_progress_coefficient=0.001; it has not run.",
+          "time": {
+            "domain": "proposal_arm",
+            "value": 0.001
+          }
+        }
+      }
+    },
+    "d1230b4ab903e4d8e64afff2420fca48": {
+      "id": "d1230b4ab903e4d8e64afff2420fca48",
+      "from": [],
+      "to": [
+        "bb024d6063bbec38f50023b9c8cc731b"
+      ],
+      "active": true,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "courtyard-v2-life:0102b60c-dfed-483d-a636-12a0d0f33f19",
+        "time": {
+          "domain": "model_tick",
+          "value": 0
+        },
+        "record_type": "separate_research_life",
+        "text": "Predictive Courtyard V2 began as a separate research life with its own world and private state.",
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "role": "courtyard_life_receipt",
+            "uri": "urn:sha256:889e7676743638bee1cebdde049d7ca858d9c3144c6aa0452653c512d1f8f465",
+            "sha256": "889e7676743638bee1cebdde049d7ca858d9c3144c6aa0452653c512d1f8f465",
+            "bytes": 7568,
+            "media_type": "application/json",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [
+            {
+              "bytes": 7568,
+              "media_type": "application/json",
+              "role": "courtyard_life_receipt",
+              "sha256": "889e7676743638bee1cebdde049d7ca858d9c3144c6aa0452653c512d1f8f465",
+              "uri": "urn:sha256:889e7676743638bee1cebdde049d7ca858d9c3144c6aa0452653c512d1f8f465",
+              "verification": "verified_local_sha256"
+            }
+          ],
+          "fields": {
+            "controller_artifact_sha256": "46aa4e2828f9bbf76c46e9b8c8e586941a2deeb6bede0a1b21615a0ccc937487",
+            "controller_format": "chreatures-native-developmental-resident-rich-v2",
+            "same_life_as_grandchild": false,
+            "source_revision": "a5bdee3922bc82dd2da429af0b4fa1fcf46fa21f",
+            "world_id": "0102b60c-dfed-483d-a636-12a0d0f33f19"
+          },
+          "id": "courtyard-v2-life:0102b60c-dfed-483d-a636-12a0d0f33f19",
+          "parent_ids": [],
+          "record_type": "separate_research_life",
+          "text": "Predictive Courtyard V2 began as a separate research life with its own world and private state.",
+          "time": {
+            "domain": "model_tick",
+            "value": 0
+          }
+        }
+      }
+    },
+    "bb024d6063bbec38f50023b9c8cc731b": {
+      "id": "bb024d6063bbec38f50023b9c8cc731b",
+      "from": [
+        "d1230b4ab903e4d8e64afff2420fca48"
+      ],
+      "to": [
+        "bb995fd5b72bc7f0d480f5c07a704241"
+      ],
+      "active": true,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "courtyard-checkpoint:9c030d466a18fdb36e643b2f9069506b6a88843939a74d5b66b184668fa13ad9",
+        "time": {
+          "domain": "model_tick",
+          "value": 9021
+        },
+        "record_type": "last_complete_checkpoint",
+        "text": "The last complete Courtyard V2 checkpoint was preserved outside Git before the later incomplete tick.",
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "role": "courtyard_last_complete_checkpoint",
+            "uri": "urn:sha256:9c030d466a18fdb36e643b2f9069506b6a88843939a74d5b66b184668fa13ad9",
+            "sha256": "9c030d466a18fdb36e643b2f9069506b6a88843939a74d5b66b184668fa13ad9",
+            "bytes": 79550462,
+            "media_type": "application/json",
+            "verification": "verified_external_local_sha256"
+          }
+        ],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [
+            {
+              "bytes": 79550462,
+              "media_type": "application/json",
+              "role": "courtyard_last_complete_checkpoint",
+              "sha256": "9c030d466a18fdb36e643b2f9069506b6a88843939a74d5b66b184668fa13ad9",
+              "uri": "urn:sha256:9c030d466a18fdb36e643b2f9069506b6a88843939a74d5b66b184668fa13ad9",
+              "verification": "verified_external_local_sha256"
+            }
+          ],
+          "fields": {
+            "checkpoint_stored_outside_git": true,
+            "model_seconds": 451.05,
+            "state_sha256": "8e120f2396db1474f425105940faa3df5a224a4c0be2a95b1032a58f12a3e915",
+            "tick": 9021,
+            "world_id": "0102b60c-dfed-483d-a636-12a0d0f33f19"
+          },
+          "id": "courtyard-checkpoint:9c030d466a18fdb36e643b2f9069506b6a88843939a74d5b66b184668fa13ad9",
+          "parent_ids": [
+            "courtyard-v2-life:0102b60c-dfed-483d-a636-12a0d0f33f19"
+          ],
+          "record_type": "last_complete_checkpoint",
+          "text": "The last complete Courtyard V2 checkpoint was preserved outside Git before the later incomplete tick.",
+          "time": {
+            "domain": "model_tick",
+            "value": 9021
+          }
+        }
+      }
+    },
+    "bb995fd5b72bc7f0d480f5c07a704241": {
+      "id": "bb995fd5b72bc7f0d480f5c07a704241",
+      "from": [
+        "bb024d6063bbec38f50023b9c8cc731b"
+      ],
+      "to": [],
+      "active": true,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "courtyard-physical-failure:f30c2eda55263abc7194fc5d01f8476ca0062f21e3b9f332df726e9773890859",
+        "time": {
+          "domain": "model_seconds_read_only",
+          "value": 458.8999999996552
+        },
+        "record_type": "physical_source_failure_pause",
+        "text": "Courtyard V2 paused after a physical source position left the field range; the incomplete tick was not saved.",
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "role": "courtyard_incomplete_tick_pause",
+            "uri": "urn:sha256:f30c2eda55263abc7194fc5d01f8476ca0062f21e3b9f332df726e9773890859",
+            "sha256": "f30c2eda55263abc7194fc5d01f8476ca0062f21e3b9f332df726e9773890859",
+            "bytes": 1196,
+            "media_type": "application/json",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [
+            {
+              "bytes": 1196,
+              "media_type": "application/json",
+              "role": "courtyard_incomplete_tick_pause",
+              "sha256": "f30c2eda55263abc7194fc5d01f8476ca0062f21e3b9f332df726e9773890859",
+              "uri": "urn:sha256:f30c2eda55263abc7194fc5d01f8476ca0062f21e3b9f332df726e9773890859",
+              "verification": "verified_local_sha256"
+            }
+          ],
+          "fields": {
+            "autostart": false,
+            "continuation_started": false,
+            "incomplete_tick_committed": false,
+            "paused": true,
+            "reason": "Research world automatically paused after incomplete tick: source 68 position outside field range. New save refused; preserve previous complete checkpoint and live process RAM.",
+            "source_index": 68
+          },
+          "id": "courtyard-physical-failure:f30c2eda55263abc7194fc5d01f8476ca0062f21e3b9f332df726e9773890859",
+          "parent_ids": [
+            "courtyard-checkpoint:9c030d466a18fdb36e643b2f9069506b6a88843939a74d5b66b184668fa13ad9"
+          ],
+          "record_type": "physical_source_failure_pause",
+          "text": "Courtyard V2 paused after a physical source position left the field range; the incomplete tick was not saved.",
+          "time": {
+            "domain": "model_seconds_read_only",
+            "value": 458.8999999996552
+          }
+        }
+      }
+    },
+    "cb133be12931af3e7b434a44683d6064": {
+      "id": "cb133be12931af3e7b434a44683d6064",
+      "from": [
+        "ebc2f985a88a081b016a1fadb7e6fb07"
+      ],
+      "to": [],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "native-v3-export:c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5",
+        "time": {
+          "domain": "training_update",
+          "value": 160
+        },
+        "record_type": "native_model_export",
+        "text": "The completed checkpoint was exported as the authenticated native rich V3 artifact for a future birth.",
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "role": "native_v3_export",
+            "uri": "urn:sha256:c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5",
+            "sha256": "c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5",
+            "bytes": 9218444,
+            "media_type": "application/x-npz",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "role": "native_v3_export_receipt",
+            "uri": "urn:sha256:d82950c6383c7ecb1e347435ec41814e9375bcf0916eecdb70f979d432b000b7",
+            "sha256": "d82950c6383c7ecb1e347435ec41814e9375bcf0916eecdb70f979d432b000b7",
+            "bytes": 2124,
+            "media_type": "application/json",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [
+            {
+              "bytes": 9218444,
+              "media_type": "application/x-npz",
+              "role": "native_v3_export",
+              "sha256": "c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5",
+              "uri": "urn:sha256:c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5",
+              "verification": "verified_local_sha256"
+            },
+            {
+              "bytes": 2124,
+              "media_type": "application/json",
+              "role": "native_v3_export_receipt",
+              "sha256": "d82950c6383c7ecb1e347435ec41814e9375bcf0916eecdb70f979d432b000b7",
+              "uri": "urn:sha256:d82950c6383c7ecb1e347435ec41814e9375bcf0916eecdb70f979d432b000b7",
+              "verification": "verified_local_sha256"
+            }
+          ],
+          "fields": {
+            "artifact_identity": "f4c6da1c10f75c465d6e04714a9986f2e5698aebe652904c34646ef2921521f4",
+            "file_sha256": "c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5",
+            "format": "chreatures-native-developmental-resident-rich-v3",
+            "instantiated_in_this_record": false,
+            "status": "exported inherited controller weights for a future birth; no behavioral benefit claim"
+          },
+          "id": "native-v3-export:c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5",
+          "parent_ids": [
+            "grandchild-complete:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27"
+          ],
+          "record_type": "native_model_export",
+          "text": "The completed checkpoint was exported as the authenticated native rich V3 artifact for a future birth.",
+          "time": {
+            "domain": "training_update",
+            "value": 160
+          }
+        }
+      }
+    },
+    "5b4e9c4948d39409b83e4938adcb4689": {
+      "id": "5b4e9c4948d39409b83e4938adcb4689",
+      "from": [
+        "bf26b321ed6162d71af5c543b9b8d2c6"
+      ],
+      "to": [],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "gam-fit-failure:goal-progress:cd19d0d740e426b2d6b4d2101c313ab447614e03b5adc90b69abc3d409f79109",
+        "time": {
+          "domain": "resident_transition",
+          "value": 491520
+        },
+        "record_type": "native_gam_fit_failure",
+        "text": "The goal-progress GAM failed REML certification after 200 outer iterations; no model or surface was minted.",
+        "artifact_uri": null,
+        "blob_refs": [],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [],
+          "fields": {
+            "formula": "response ~ s(goal_distance,k=9)+s(goal_age,k=8)+s(history_rms,k=8)+s(neural_mean,k=8)+s(peripheral_proximity,k=8)+s(foveal_proximity,k=8)+s(fatigue,k=8)+s(speed,k=8)+s(thrust,k=8)+s(yaw,k=8)+s(experience_tick,k=8)+ti(goal_distance,goal_age,k=16)",
+            "full_error_preserved_in_atlas": true,
+            "hessian_positive_semidefinite": false,
+            "model_minted": false,
+            "projected_gradient_norm": 0.6186,
+            "stationarity_bound": 0.00412,
+            "train_rows": 276480,
+            "unit": "goal_progress_code_distance_per_tick"
+          },
+          "id": "gam-fit-failure:goal-progress:cd19d0d740e426b2d6b4d2101c313ab447614e03b5adc90b69abc3d409f79109",
+          "parent_ids": [
+            "gam-atlas:cd19d0d740e426b2d6b4d2101c313ab447614e03b5adc90b69abc3d409f79109"
+          ],
+          "record_type": "native_gam_fit_failure",
+          "text": "The goal-progress GAM failed REML certification after 200 outer iterations; no model or surface was minted.",
+          "time": {
+            "domain": "resident_transition",
+            "value": 491520
+          }
+        }
+      }
+    },
+    "37237613dd8b231d64bea73f2aa2aa10": {
+      "id": "37237613dd8b231d64bea73f2aa2aa10",
+      "from": [
+        "bf26b321ed6162d71af5c543b9b8d2c6"
+      ],
+      "to": [],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "gam-fit:body_law_residual:2a913762c80361e58e0d8c851969dceacb6f6cba4569beca33e7cae1b8c41815",
+        "time": {
+          "domain": "resident_transition",
+          "value": 491520
+        },
+        "record_type": "native_gam_fit",
+        "text": "Native GAM fit for body_law_residual completed with descriptive validation and held-out episode metrics.",
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "role": "native_gam_body_law_residual",
+            "uri": "urn:sha256:2a913762c80361e58e0d8c851969dceacb6f6cba4569beca33e7cae1b8c41815",
+            "sha256": "2a913762c80361e58e0d8c851969dceacb6f6cba4569beca33e7cae1b8c41815",
+            "media_type": "application/octet-stream",
+            "verification": "reported_by_hash_verified_source_receipt"
+          }
+        ],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [
+            {
+              "media_type": "application/octet-stream",
+              "role": "native_gam_body_law_residual",
+              "sha256": "2a913762c80361e58e0d8c851969dceacb6f6cba4569beca33e7cae1b8c41815",
+              "uri": "urn:sha256:2a913762c80361e58e0d8c851969dceacb6f6cba4569beca33e7cae1b8c41815",
+              "verification": "reported_by_hash_verified_source_receipt"
+            }
+          ],
+          "fields": {
+            "causal_claim": false,
+            "formula": "response ~ s(experience_tick,k=10)+s(goal_distance,k=8)+s(goal_age,k=8)+s(history_rms,k=8)+s(neural_mean,k=8)+s(neural_std,k=8)+s(peripheral_proximity,k=8)+s(foveal_proximity,k=8)+s(visual_contrast,k=8)+s(energy,k=8)+s(fatigue,k=8)+s(motor_magnitude,k=8)+ti(experience_tick,goal_distance,k=16)",
+            "installed_in_resident": false,
+            "metrics": {
+              "held_out": {
+                "mean_baseline_rmse": 0.3450978205189083,
+                "rmse": 0.34299094269165176,
+                "rows": 70787
+              },
+              "validation_worlds": {
+                "mean_baseline_rmse": 0.352046977919245,
+                "rmse": 0.30402109291119495,
+                "rows": 54123
+              }
+            },
+            "unit": "mean_absolute_standardized_deployed_body_law_residual"
+          },
+          "id": "gam-fit:body_law_residual:2a913762c80361e58e0d8c851969dceacb6f6cba4569beca33e7cae1b8c41815",
+          "parent_ids": [
+            "gam-atlas:cd19d0d740e426b2d6b4d2101c313ab447614e03b5adc90b69abc3d409f79109"
+          ],
+          "record_type": "native_gam_fit",
+          "text": "Native GAM fit for body_law_residual completed with descriptive validation and held-out episode metrics.",
+          "time": {
+            "domain": "resident_transition",
+            "value": 491520
+          }
+        }
+      }
+    },
+    "cd8f42130b3c7a514e731bd508495726": {
+      "id": "cd8f42130b3c7a514e731bd508495726",
+      "from": [
+        "bf26b321ed6162d71af5c543b9b8d2c6"
+      ],
+      "to": [],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "gam-fit:effort:2eff12231577b6f6a9a029548514ef932ebffc3e9cfac11ccea102954653590b",
+        "time": {
+          "domain": "resident_transition",
+          "value": 491520
+        },
+        "record_type": "native_gam_fit",
+        "text": "Native GAM fit for effort completed with descriptive validation and held-out episode metrics.",
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "role": "native_gam_effort",
+            "uri": "urn:sha256:2eff12231577b6f6a9a029548514ef932ebffc3e9cfac11ccea102954653590b",
+            "sha256": "2eff12231577b6f6a9a029548514ef932ebffc3e9cfac11ccea102954653590b",
+            "media_type": "application/octet-stream",
+            "verification": "reported_by_hash_verified_source_receipt"
+          }
+        ],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [
+            {
+              "media_type": "application/octet-stream",
+              "role": "native_gam_effort",
+              "sha256": "2eff12231577b6f6a9a029548514ef932ebffc3e9cfac11ccea102954653590b",
+              "uri": "urn:sha256:2eff12231577b6f6a9a029548514ef932ebffc3e9cfac11ccea102954653590b",
+              "verification": "reported_by_hash_verified_source_receipt"
+            }
+          ],
+          "fields": {
+            "causal_claim": false,
+            "formula": "response ~ s(energy,k=8)+s(fatigue,k=8)+s(speed,k=8)+s(support,k=8)+s(neural_mean,k=8)+s(history_rms,k=8)+s(thrust,k=8)+s(yaw,k=8)+s(grip,k=8)+s(posture,k=8)+s(oral,k=8)+s(motor_magnitude,k=8)+s(motor_x_fatigue,k=8)+s(experience_tick,k=8)",
+            "installed_in_resident": false,
+            "metrics": {
+              "held_out": {
+                "mean_baseline_rmse": 0.13232167658063515,
+                "rmse": 0.020087238554135856,
+                "rows": 122880
+              },
+              "validation_worlds": {
+                "mean_baseline_rmse": 0.14827260644792967,
+                "rmse": 0.01878101733124146,
+                "rows": 92160
+              }
+            },
+            "unit": "world_reported_effort_per_tick"
+          },
+          "id": "gam-fit:effort:2eff12231577b6f6a9a029548514ef932ebffc3e9cfac11ccea102954653590b",
+          "parent_ids": [
+            "gam-atlas:cd19d0d740e426b2d6b4d2101c313ab447614e03b5adc90b69abc3d409f79109"
+          ],
+          "record_type": "native_gam_fit",
+          "text": "Native GAM fit for effort completed with descriptive validation and held-out episode metrics.",
+          "time": {
+            "domain": "resident_transition",
+            "value": 491520
+          }
+        }
+      }
+    },
+    "63af2a701806605242d5fff3d3ef671c": {
+      "id": "63af2a701806605242d5fff3d3ef671c",
+      "from": [
+        "ccf250354480f6bac9b96a24e9f64502"
+      ],
+      "to": [],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "proposal-arm:goal-coefficient-0.01:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+        "time": {
+          "domain": "proposal_arm",
+          "value": 0.01
+        },
+        "record_type": "proposed_training_arm",
+        "text": "Proposed control continuation with goal_progress_coefficient=0.01; it has not run.",
+        "artifact_uri": null,
+        "blob_refs": [],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [],
+          "fields": {
+            "autostart": false,
+            "checkpoint_created": false,
+            "coefficient": 0.01,
+            "resident_born": false,
+            "role": "control",
+            "status": "proposed_not_executed"
+          },
+          "id": "proposal-arm:goal-coefficient-0.01:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+          "parent_ids": [
+            "proposal:paired-goal-coefficient:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27"
+          ],
+          "record_type": "proposed_training_arm",
+          "text": "Proposed control continuation with goal_progress_coefficient=0.01; it has not run.",
+          "time": {
+            "domain": "proposal_arm",
+            "value": 0.01
+          }
+        }
+      }
+    },
+    "ccf250354480f6bac9b96a24e9f64502": {
+      "id": "ccf250354480f6bac9b96a24e9f64502",
+      "from": [
+        "235a233faee8fc9b2f8739b7d496f5d7"
+      ],
+      "to": [
+        "63af2a701806605242d5fff3d3ef671c",
+        "65a48cae8834b62b97f9ea8ff58d7274"
+      ],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "proposal:paired-goal-coefficient:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+        "time": {
+          "domain": "proposal",
+          "value": 1
+        },
+        "record_type": "future_training_proposal",
+        "text": "A paired continuation from the frozen update-160 checkpoint is proposed to compare goal-progress coefficients 0.01 and 0.001.",
+        "artifact_uri": null,
+        "blob_refs": [],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [],
+          "fields": {
+            "fork_started": false,
+            "paired_single_variable": "goal_progress_coefficient",
+            "result_claim": false,
+            "selection_metrics": [
+              "full_episode_energy_change",
+              "conserved_ingested_mass",
+              "effort",
+              "mouth_contact_bouts"
+            ],
+            "shared_start_checkpoint_sha256": "cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+            "status": "proposed_only"
+          },
+          "id": "proposal:paired-goal-coefficient:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+          "parent_ids": [
+            "transition-audit:dbc0baeb9070d35529ae7b85a850b550ab41aee166440cc1e280276571556020"
+          ],
+          "record_type": "future_training_proposal",
+          "text": "A paired continuation from the frozen update-160 checkpoint is proposed to compare goal-progress coefficients 0.01 and 0.001.",
+          "time": {
+            "domain": "proposal",
+            "value": 1
+          }
+        }
+      }
+    },
+    "bf26b321ed6162d71af5c543b9b8d2c6": {
+      "id": "bf26b321ed6162d71af5c543b9b8d2c6",
+      "from": [
+        "ebc2f985a88a081b016a1fadb7e6fb07",
+        "235a233faee8fc9b2f8739b7d496f5d7"
+      ],
+      "to": [
+        "37237613dd8b231d64bea73f2aa2aa10",
+        "cd8f42130b3c7a514e731bd508495726",
+        "5b4e9c4948d39409b83e4938adcb4689"
+      ],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "gam-atlas:cd19d0d740e426b2d6b4d2101c313ab447614e03b5adc90b69abc3d409f79109",
+        "time": {
+          "domain": "resident_transition",
+          "value": 491520
+        },
+        "record_type": "native_gam_atlas",
+        "text": "Native gamfit analyzed the completed grandchild telemetry; the atlas is analyst-only and was not installed in a resident.",
+        "artifact_uri": null,
+        "blob_refs": [
+          {
+            "role": "native_gam_atlas",
+            "uri": "urn:sha256:cd19d0d740e426b2d6b4d2101c313ab447614e03b5adc90b69abc3d409f79109",
+            "sha256": "cd19d0d740e426b2d6b4d2101c313ab447614e03b5adc90b69abc3d409f79109",
+            "bytes": 116243,
+            "media_type": "application/json",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "role": "native_gam_atlas_provenance",
+            "uri": "urn:sha256:a001b47df68836852de2e74a914449e2297415d52aa55989fabe00628e40cc8e",
+            "sha256": "a001b47df68836852de2e74a914449e2297415d52aa55989fabe00628e40cc8e",
+            "bytes": 1906,
+            "media_type": "application/json",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [
+            {
+              "bytes": 116243,
+              "media_type": "application/json",
+              "role": "native_gam_atlas",
+              "sha256": "cd19d0d740e426b2d6b4d2101c313ab447614e03b5adc90b69abc3d409f79109",
+              "uri": "urn:sha256:cd19d0d740e426b2d6b4d2101c313ab447614e03b5adc90b69abc3d409f79109",
+              "verification": "verified_local_sha256"
+            },
+            {
+              "bytes": 1906,
+              "media_type": "application/json",
+              "role": "native_gam_atlas_provenance",
+              "sha256": "a001b47df68836852de2e74a914449e2297415d52aa55989fabe00628e40cc8e",
+              "uri": "urn:sha256:a001b47df68836852de2e74a914449e2297415d52aa55989fabe00628e40cc8e",
+              "verification": "verified_local_sha256"
+            }
+          ],
+          "fields": {
+            "fit_seconds": 384.70844954199856,
+            "gamfit_source_commit": "7c7eca8ac4826de95c8e743a20294bee132a9bcc",
+            "gamfit_version": "0.1.259",
+            "resident_promotion": false,
+            "source_commit": "c6ec91f40801c09a518bc2b3f16f5c3a4cea5481",
+            "split": "episodes before 3, worlds 0..2 train; world 3 validates; complete episode 3 held out"
+          },
+          "id": "gam-atlas:cd19d0d740e426b2d6b4d2101c313ab447614e03b5adc90b69abc3d409f79109",
+          "parent_ids": [
+            "grandchild-complete:cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+            "transition-audit:dbc0baeb9070d35529ae7b85a850b550ab41aee166440cc1e280276571556020"
+          ],
+          "record_type": "native_gam_atlas",
+          "text": "Native gamfit analyzed the completed grandchild telemetry; the atlas is analyst-only and was not installed in a resident.",
+          "time": {
+            "domain": "resident_transition",
+            "value": 491520
+          }
+        }
+      }
+    },
+    "432a00eccb4ad9868fe7e54c4d45ef08": {
+      "id": "432a00eccb4ad9868fe7e54c4d45ef08",
+      "from": [],
+      "to": [
+        "ebc2f985a88a081b016a1fadb7e6fb07"
+      ],
+      "active": false,
+      "bookmarked": false,
+      "contents": {
+        "source_id": "grandchild-run:597f75b7f729d186a5c6c35a174031b1dff96520390909835bf3f2bc9d0ce2f9",
+        "time": {
+          "domain": "training_update",
+          "value": 0
+        },
+        "record_type": "development_run",
+        "text": "Grandchild developmental run began from inherited controller state with fresh world, neural, private-history, and RNG state.",
+        "artifact_uri": null,
+        "blob_refs": [],
+        "source": {
+          "artifact_uri": null,
+          "blob_refs": [],
+          "fields": {
+            "matched_control": false,
+            "one_lineage_one_seed": true,
+            "parent_checkpoint_sha256": "57dda0dd2594bb98dcaff7e8ffafb87b9ae1186d40aeb158f388832a00f82278",
+            "source_commit": "9e1104190013bab7160fd7493c9ea24a8d0b4820"
+          },
+          "id": "grandchild-run:597f75b7f729d186a5c6c35a174031b1dff96520390909835bf3f2bc9d0ce2f9",
+          "parent_ids": [],
+          "record_type": "development_run",
+          "text": "Grandchild developmental run began from inherited controller state with fresh world, neural, private-history, and RNG state.",
+          "time": {
+            "domain": "training_update",
+            "value": 0
+          }
+        }
+      }
+    }
+  },
+  "roots": [
+    "432a00eccb4ad9868fe7e54c4d45ef08",
+    "d1230b4ab903e4d8e64afff2420fca48"
+  ],
+  "active": [
+    "bb995fd5b72bc7f0d480f5c07a704241",
+    "d1230b4ab903e4d8e64afff2420fca48",
+    "bb024d6063bbec38f50023b9c8cc731b"
+  ],
+  "bookmarked": [],
+  "metadata": {
+    "schema_version": 2,
+    "library": "universal-weave 0.5.0",
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+    "archive_id": "grandchild-batch-and-courtyard-pause:7f7e86a7cad3589947b31e4f7a25ea97e0b7a290297351586f14f3048ed720d1",
+    "habitat_id": null,
+    "description": "External evidence record for the completed grandchild batch and a separate paused Courtyard V2 life; never organism memory or controller input."
+  }
+}
