@@ -1,0 +1,406 @@
+{
+  "artifacts": {
+    "bulk_run": "bulk://runs/learning/chemical-encounters-canonical-v1",
+    "motor_genome": "data/genomes/chemical-encounters-v1-step20000.npz"
+  },
+  "conditions": {
+    "format": "chreatures-chemical-resource-encounter-conditions-v1",
+    "horizons": {
+      "checkpoint_every_steps": 5000,
+      "dt_seconds": 0.05,
+      "heldout_steps": 5000,
+      "telemetry_every_steps": 500,
+      "training_episode_steps": 5000
+    },
+    "initial_chemistry": {
+      "body_atp_fraction": 0.7,
+      "body_reserve_fraction": 0.5,
+      "gut_pool_fraction": 0.0
+    },
+    "name": "finite-packet-body-local-curriculum-v1",
+    "placement": {
+      "boundary_margin_m": 0.2,
+      "heldout": {
+        "bearing_half_span_rad": 3.141592653589793,
+        "radius_m": [
+          0.3,
+          0.95
+        ]
+      },
+      "maximum_build_attempts": 32,
+      "surface_clearance_m": 0.002,
+      "training_schedule": [
+        {
+          "bearing_half_span_rad": 0.7,
+          "radius_m": [
+            0.24,
+            0.36
+          ]
+        },
+        {
+          "bearing_half_span_rad": 1.5707963267948966,
+          "radius_m": [
+            0.28,
+            0.55
+          ]
+        },
+        {
+          "bearing_half_span_rad": 3.141592653589793,
+          "radius_m": [
+            0.32,
+            0.9
+          ]
+        }
+      ],
+      "vertical_reach_m": 0.25
+    },
+    "resource_abundance": {
+      "nearby_packet_count": 4,
+      "packet_stock_scale": 1.0
+    },
+    "version": 1
+  },
+  "format": "chreatures-chemical-resource-encounter-assay-v1",
+  "heldout": {
+    "deterministic_policy": true,
+    "evaluations": {
+      "fixed_comparison": {
+        "absorbed": 0.0,
+        "distance": 114.76670346012311,
+        "effort_mean": 0.027926290655136108,
+        "energy_final": 0.3749222755432129,
+        "fatigue_final": 0.0,
+        "gut_final": 0.0,
+        "ingested_mass": 0.0,
+        "ingestion_events": 0.0,
+        "mouth_material_contacts": 0.0,
+        "nutrition": 0.0,
+        "reserve_final": 0.3749222755432129,
+        "reward_mean_per_macro_resident": -0.0027425115954247303,
+        "reward_total": -32.910139145096764,
+        "stationary_fraction_mean": 0.0034666666666666665
+      },
+      "fixed_comparison_ingestion_disabled": {
+        "absorbed": 0.0,
+        "distance": 114.76670346012311,
+        "effort_mean": 0.027926290655136108,
+        "energy_final": 0.3749222755432129,
+        "fatigue_final": 0.0,
+        "gut_final": 0.0,
+        "ingested_mass": 0.0,
+        "ingestion_events": 0.0,
+        "mouth_material_contacts": 0.0,
+        "nutrition": 0.0,
+        "reserve_final": 0.3749222755432129,
+        "reward_mean_per_macro_resident": -0.0027425115954247303,
+        "reward_total": -32.910139145096764,
+        "stationary_fraction_mean": 0.0034666666666666665
+      },
+      "learned": {
+        "absorbed": 0.08042632133143579,
+        "distance": 104.7551364772208,
+        "effort_mean": 0.033977516559138894,
+        "energy_final": 0.37381711602211,
+        "fatigue_final": 0.0,
+        "gut_final": 0.001436258084140718,
+        "ingested_mass": 0.0924908914603293,
+        "ingestion_events": 3.0,
+        "mouth_material_contacts": 3.0,
+        "nutrition": 0.08042632133143579,
+        "reserve_final": 0.37502357363700867,
+        "reward_mean_per_macro_resident": -0.002760368166840635,
+        "reward_total": -33.12441800208762,
+        "stationary_fraction_mean": 0.004033333333333333
+      },
+      "learned_neural_silenced": {
+        "absorbed": 0.0,
+        "distance": 50.079685251056084,
+        "effort_mean": 0.029592586685717105,
+        "energy_final": 0.3790687322616577,
+        "fatigue_final": 0.0,
+        "gut_final": 0.0,
+        "ingested_mass": 0.0,
+        "ingestion_events": 0.0,
+        "mouth_material_contacts": 0.0,
+        "nutrition": 0.0,
+        "reserve_final": 0.3790687322616577,
+        "reward_mean_per_macro_resident": -0.0026980812386609614,
+        "reward_total": -32.37697486393154,
+        "stationary_fraction_mean": 0.011583333333333333
+      }
+    },
+    "full_bearing": true,
+    "model_seconds_per_condition": 250.0,
+    "physical_steps_per_condition": 5000,
+    "residents": 12,
+    "worlds": 4
+  },
+  "identities": {
+    "artifact_canonical_sha256": "f0d3f9a43e242adc27ed58b7a30f728730013680aad8b80c42607696aac3b5ea",
+    "artifact_file_sha256": "daba5662479ffcb94d7e61df7f129a76696499cda62c959219747eb5efa6ff9c",
+    "canonical_graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "comparison_genome_sha256": "0ba23a03dd0db83fae8b85f65496aa96387fc5ec771db027b7411ffbdc18fc93",
+    "encounter_conditions_sha256": "98c0fe5f8c8f8f3c2bd6f0821477c983b3a381d3c7fac5123ba3a6ee81dd2bda",
+    "final_cohort_checkpoint_sha256": "95ddab3baba12657cf6f0517c0673e0974e153c2b11221f5fe9197938725b4a5",
+    "final_learner_checkpoint_sha256": "4c311f05264c47d0e5a8f9892a8f183562a8966a5d7f98981d3b1b05b6347170",
+    "final_neural_checkpoint_sha256": "914e4b6d9e1e0339b5f2a9b4f0b81e5c5cb804e56f426bffd709c3464b44a689",
+    "learned_training_genome_sha256": "68f9a4bb0c5eae8015a04498d3a0b7ea8eb8f921644164b9a80d9ff1cb112776",
+    "native_world_binary_sha256": "bd144ef2900b7e1ef7869ac100210ef0bc290a375a180342740790748e26fbde",
+    "port_bundle_sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2",
+    "port_spec_sha256": "fffb48c65bdb5bc2503ff8ad7c65b4419e12aa9ef5b58b9f36bc910f64dadb6f",
+    "reward_objective": {
+      "config": {
+        "assimilation_efficiency": 0.84,
+        "effort_energy_rate": 0.0042,
+        "effort_extra_weight": 0.25,
+        "fatigue_energy_weight": 0.08,
+        "gut_comfort": 0.55,
+        "gut_overload_energy_weight": 0.08,
+        "max_interval_seconds": 2.0,
+        "reserve_target": 0.85,
+        "reserve_temperature": 0.08,
+        "reward_per_energy": 12.0,
+        "version": 1
+      },
+      "format": "chreatures-finite-energy-homeostasis-v1",
+      "sha256": "01ae937a153a056c8cc5fa5be4d55cdfb38dbfcede4dbceb16ec33e19c5f4d00"
+    },
+    "run_record_sha256": "baa1301597d0d74bc4f6dcf4aff075411cb723d3c82ec2aa9fa32137de1838d8",
+    "summary_sha256": "e859afde2c19d7d5626d9d3b5eda561ccdf447769e40dd2f58191e76d5a0e655",
+    "telemetry_sha256": "88bf72e92e04c5928c2f9dd3ae261cfe4ed33a91c5dfdbd9c7c2c40bf11ad2ff",
+    "training_profile_sha256": "245db2143289e2e3be6a3c5a928c2c8357a5a050fd7f1f77859700e7877148c0",
+    "warm_learner_sha256": "e72a0b521ea2013e344383b1d5d0e284f8694c1b7d8ee9b56a54a4cef2bf3ea0"
+  },
+  "observations": {
+    "bounded_capability": "learned policy produced 3 ingestion-positive mouth-contact ticks in heldout; fixed inherited and neural-feature-silenced policies produced zero",
+    "event_semantics": "a tick counts one resident/material contact in one physical tick; 3 ticks are not 3 independent meals",
+    "homeostatic_failure": "learned mean reward was worse than inherited comparison and neural-silenced control; actuator effort was higher, so this run does not establish improved overall regulation",
+    "neural_feature_dependence": "learned acquisition disappeared when 384 neural features were silenced in the same heldout seed/layout distribution",
+    "single_seed_limit": "one training seed and one heldout seed cohort; no population-level anatomical or general skill conclusion"
+  },
+  "path_scheme": "bulk:// denotes the project bulk root; no host/user path is embedded",
+  "scope": "one training seed; canonical MaleCNS; 16 worlds x 3 residents; four 250 s staged episodes; deterministic four-world 250 s full-bearing heldout per condition",
+  "seeds": {
+    "heldout_cohort_base": 21160906,
+    "heldout_effective_world_seed_end": 101160912,
+    "heldout_effective_world_seed_start": 101160909,
+    "heldout_profile_offset": 80000003,
+    "learner_and_training_base": 20260906,
+    "training_world_formula": "base + episode * 1009 + world_index; world_index 0..15"
+  },
+  "software": {
+    "brain": {
+      "backend": "GPUTarget(backend='hip', arch='gfx1030', warp_size=32)",
+      "batch_size": 48,
+      "canonical_external_order": true,
+      "device": {
+        "memory_allocated_bytes": 404174336,
+        "name": "AMD Radeon Graphics",
+        "type": "cuda"
+      },
+      "dtype": "torch.float32",
+      "dynamics": {
+        "gain": 0.92,
+        "substeps": 2,
+        "support_recovery": 0.024,
+        "tau": 0.16
+      },
+      "edge_reduction": "float32 tile tree then serial tile accumulation",
+      "edge_tile": 8,
+      "edges": 25563197,
+      "engine": "fixed-cohort-triton-edge8-csr-v1",
+      "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+      "inputs": 351,
+      "layout": "neuron_major_triton_edge_tiled",
+      "neurons": 165122,
+      "num_warps": 1,
+      "physiology_names": [
+        "activity_mean",
+        "activity_peak",
+        "support_mean"
+      ],
+      "readouts": 384,
+      "resident_tile": 32,
+      "residents": [
+        "eval-w00:mica",
+        "eval-w00:fern",
+        "eval-w00:pip",
+        "eval-w01:mica",
+        "eval-w01:fern",
+        "eval-w01:pip",
+        "eval-w02:mica",
+        "eval-w02:fern",
+        "eval-w02:pip",
+        "eval-w03:mica",
+        "eval-w03:fern",
+        "eval-w03:pip"
+      ],
+      "selection_basis": "best complete-path median on RX6750XT B48",
+      "state_shape": [
+        165122,
+        48
+      ],
+      "within_row_edge_order": "grouped in canonical consecutive tiles"
+    },
+    "device": {
+      "memory_allocated_bytes": 335093760,
+      "name": "AMD Radeon Graphics",
+      "type": "cuda"
+    },
+    "torch": {
+      "hip": "6.3.42134-a9a80e791",
+      "version": "2.9.1+rocm6.3"
+    }
+  },
+  "source_sha256": {
+    "chreatures/acoustics.py": "7b1f65304334d23a4d14fe9aa5ba96f48ea63890826b0ce4d7d62edb2c5a5f2d",
+    "chreatures/articulated.py": "9dca3f7cb18bfee51846292881417af417f485d24ae283bf554657a284a6667c",
+    "chreatures/biosphere.py": "6304e745d0a3d9a36d8c616ed8d142d5bfadf237b70d8e7a629af1ee14ddffbc",
+    "chreatures/ecology.py": "2bc2d14b536f78b90b865036d473b714ded585c21982b4622d61596ee3b72824",
+    "chreatures/fast_circuit.py": "1194d3e55f80ffe0682318365d7c26db03b53f34b57a56d048a5efddadb6b50d",
+    "chreatures/fields.py": "571e632b9d8857d6d5779aada4176f66e8c419ef7580ea9c93986a16f3fd419b",
+    "chreatures/growth.py": "3f76ae827dc980582354fcff85e96316b4a36488546e3fee85b4df0a397b9316",
+    "chreatures/homeostasis.py": "3bb8a2a59194c061a448902fe5d97f36335c07833b2b2fbd4c1b44ce6794bbab",
+    "chreatures/learning.py": "340906f7d2c791fa0e720318b191859172512bdbf8b88ae9a30b1603649557a6",
+    "chreatures/malecns.py": "d8f801403342bcb6965f2dc75af31a75e565d361a189567da90470f6b466dbb8",
+    "chreatures/material_objects.py": "0304e13996472f7acea92e49f8a3fe5f95790f98c6a8236411331c17d7335884",
+    "chreatures/metabolism.py": "3ed19358f8dfe2f0eaf676b73ebc78fdb0908a3d14c557b6a53539ce96216a41",
+    "chreatures/neural_ports.py": "5fb54dff5974953ee490fee91d130569ff171e56cd96364911bb936ec8812f86",
+    "chreatures/physical_batch.py": "b4d5bd1cdc4002c9bbbe4d7faa1e967638278708b12482012510d52953d60b78",
+    "chreatures/physics.py": "5467d066e92b6d5f595886ec72fbdaced99bdd66745b3cd605fcee514caa544b",
+    "chreatures/remote_brain.py": "24edd9238a023954e7fbad09959fe42214806425ad57a2d8ef2fa6851b6ec289",
+    "chreatures/sensorium.py": "5cb49c0be3bfc81806f20788477574a5bcafffe3d7b0db7080e193367c2e5beb",
+    "chreatures/somatic.py": "8485383775b0ced9e2aea4b56310afe1893795a77b631b51470606e7abbf51ba",
+    "chreatures/tiled_circuit.py": "1526e6ca583faf69e017258cd6ebe89f42fd7e4d6bc1b550912e4996855ab302",
+    "chreatures/training_environment.py": "6cde6bcc0862219d2b861d935246c08fbabee349c93ff2696e725cd78678ff3f",
+    "data/bodies/hexapod.json": "59b7e3eadd6ba9130cbfa4f6effe3a8169fe4f868680f6b539447e9faffd9895",
+    "data/habitats/hollow-garden.json": "c8f4213e03e39ec53427a51c7bc1f677a22d6f9a079c4664b84b3987191d7898",
+    "data/ports/retinal-v1.json": "5874f9a23c8b86028c91e2c5069d77a91209ac95ce584847902b47f8e6798859",
+    "scripts/learn_affordances.py": "ea7098037f4faf1a5aab449461f6705d15aec1b1907beb55c38f6bf89cc8a8e7"
+  },
+  "training": {
+    "cumulative": {
+      "absorbed": 0.3135618919059975,
+      "contact_while_eating": 36727.0,
+      "contacts": 36727.0,
+      "distance": 2356.4727740743765,
+      "eat_request_steps": 960000.0,
+      "ingested_mass": 0.36059618298895657,
+      "ingestion_events": 23.0,
+      "mouth_material_contacts": 23.0,
+      "nutrition": 0.3135618919059975,
+      "nutrition_events": 20344.0
+    },
+    "decisions_total_including_warm_lineage": 12544,
+    "elapsed_seconds": 2649.9277152754366,
+    "episodes": [
+      {
+        "absorbed": 0.047369292470877414,
+        "curriculum_stage": 0,
+        "distance_m": 604.1597732248244,
+        "end_physiology": {
+          "energy_mean": 0.30604772220853355,
+          "energy_min": 0.25170659863739037,
+          "fatigue_max": 0.0,
+          "fatigue_mean": 0.0,
+          "gut_mean": 0.00021147005567355917
+        },
+        "episode": 0,
+        "generic_contact_while_eating_ticks": 11785,
+        "ingested_mass": 0.0544746863415091,
+        "ingestion_positive_ticks": 5,
+        "model_seconds": 250.0,
+        "mouth_material_contact_ticks": 5,
+        "physical_steps": 5000,
+        "world_seed_end": 20260921,
+        "world_seed_start": 20260906
+      },
+      {
+        "absorbed": 0.07826086956500469,
+        "curriculum_stage": 1,
+        "distance_m": 588.348680869573,
+        "end_physiology": {
+          "energy_mean": 0.31804193177176937,
+          "energy_min": 0.2685588063478308,
+          "fatigue_max": 0.0,
+          "fatigue_mean": 0.0,
+          "gut_mean": 0.00034937888199390224
+        },
+        "episode": 1,
+        "generic_contact_while_eating_ticks": 9462,
+        "ingested_mass": 0.09,
+        "ingestion_positive_ticks": 2,
+        "model_seconds": 250.0,
+        "mouth_material_contact_ticks": 2,
+        "physical_steps": 5000,
+        "world_seed_end": 20261930,
+        "world_seed_start": 20261915
+      },
+      {
+        "absorbed": 0.0824274023601841,
+        "curriculum_stage": 2,
+        "distance_m": 574.5680848042853,
+        "end_physiology": {
+          "energy_mean": 0.33257718511547324,
+          "energy_min": 0.2863258753476899,
+          "fatigue_max": 0.0008353665282606401,
+          "fatigue_mean": 1.7403469338763335e-05,
+          "gut_mean": 0.0003679794749638773
+        },
+        "episode": 2,
+        "generic_contact_while_eating_ticks": 5548,
+        "ingested_mass": 0.09479151271897066,
+        "ingestion_positive_ticks": 4,
+        "model_seconds": 250.0,
+        "mouth_material_contact_ticks": 4,
+        "physical_steps": 5000,
+        "world_seed_end": 20262939,
+        "world_seed_start": 20262924
+      },
+      {
+        "absorbed": 0.10550432304709143,
+        "curriculum_stage": 2,
+        "distance_m": 589.3962351756938,
+        "end_physiology": {
+          "energy_mean": 0.3306052027295791,
+          "energy_min": 0.2768097397653446,
+          "fatigue_max": 0.0,
+          "fatigue_mean": 0.0,
+          "gut_mean": 0.0004710014422304899
+        },
+        "episode": 3,
+        "generic_contact_while_eating_ticks": 9932,
+        "ingested_mass": 0.12132997150603579,
+        "ingestion_positive_ticks": 12,
+        "model_seconds": 250.0,
+        "mouth_material_contact_ticks": 12,
+        "physical_steps": 5000,
+        "world_seed_end": 20263948,
+        "world_seed_start": 20263933
+      }
+    ],
+    "resident_steps": 960000,
+    "resident_steps_per_second": 362.27403278440613,
+    "residents": 48,
+    "steps": 20000,
+    "timing_fraction": {
+      "algorithm": 0.004528706715554532,
+      "brain": 0.1532434415866276,
+      "physics": 0.7534374932053829,
+      "ppo": 0.002749116832308128,
+      "sense_encode": 0.06707584643619632,
+      "world_build": 0.00040552157648986246
+    },
+    "timing_seconds": {
+      "algorithm": 12.000745439901948,
+      "brain": 406.0840430445969,
+      "physics": 1996.5548949725926,
+      "ppo": 7.284960886463523,
+      "sense_encode": 177.74614449683577,
+      "world_build": 1.0746028646826744
+    },
+    "updates": 194,
+    "worlds": 16
+  },
+  "version": 1
+}
