@@ -95,8 +95,12 @@ def main() -> None:
     assignment = json.loads(Path(identity["assignments"]["path"]).read_text())
     for world in assignment["worlds"]:
         for candidate in world["candidates"]:
-            ancestry = candidate.get("ancestry", {})
-            lineage.append(str(ancestry.get("founder_sha256") or ancestry.get("parent_sha256") or candidate["sha256"]))
+            parents = candidate.get("parents")
+            if not isinstance(parents, list) or any(not isinstance(x, str) for x in parents):
+                raise ValueError("candidate ancestry is absent")
+            lineage.append(parents[0] if len(parents) == 1 else
+                           candidate["sha256"] if not parents else
+                           hashlib.sha256("".join(sorted(parents)).encode()).hexdigest())
     source_hashes = [sha256(path) for path in chunks]
     args.output.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(

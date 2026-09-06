@@ -91,18 +91,23 @@ def fit(data_path: Path, schema_path: Path, feature_contract_path: Path, output:
     data = np.load(data_path)
     x, target = data["features"].astype(float), data["targets"].astype(float)
     names = [item["name"] for item in schema["features"]]
-    if x.shape[1] != len(names) or target.shape[1] != len(schema["responses"]):
+    if x.shape[1] != len(names) or target.ndim != 2 or any(
+            not 0 <= int(response["target_column"]) < target.shape[1]
+            for response in schema["responses"]):
         raise ValueError("population response data dimensions differ from schema")
     unit_keys = ("lineage_unit", "environment_unit", "candidate_unit", "episode_unit", "world_unit")
     for key in unit_keys:
         if key not in data.files or len(data[key]) != len(x):
             raise ValueError(f"population response data lacks complete-unit axis {key}")
     lineage, environment = data["lineage_unit"], data["environment_unit"]
+    candidate = data["candidate_unit"]
     test_lineages = np.asarray(schema["split"]["heldout_lineages"], dtype=lineage.dtype)
     test_environments = np.asarray(schema["split"]["heldout_environments"], dtype=environment.dtype)
+    test_candidates = np.asarray(schema["split"].get("heldout_candidates", []), dtype=candidate.dtype)
     heldout_lineage = np.isin(lineage, test_lineages)
     heldout_environment = np.isin(environment, test_environments)
-    test = heldout_lineage | heldout_environment
+    heldout_candidate = np.isin(candidate, test_candidates)
+    test = heldout_lineage | heldout_candidate | heldout_environment
     remaining = ~test
     validation = remaining & (data["world_unit"].astype(np.int64) % int(schema["split"].get("validation_world_mod", 5)) == 0)
     train = remaining & ~validation
@@ -119,7 +124,8 @@ def fit(data_path: Path, schema_path: Path, feature_contract_path: Path, output:
     laws, response_rules, model_report = [], [], {}
     started = time.perf_counter()
     for response_index, response in enumerate(schema["responses"]):
-        transformed = inverse_target(target[:, response_index], response["transform"])
+        target_column = int(response["target_column"])
+        transformed = inverse_target(target[:, target_column], response["transform"])
         formula = f"response ~ {terms}"
         try:
             rows = records(z, transformed, np.flatnonzero(train), names)
@@ -138,6 +144,7 @@ def fit(data_path: Path, schema_path: Path, feature_contract_path: Path, output:
             metrics = {}
             for split_name, mask in (("validation", validation),
                                      ("heldout_lineage", heldout_lineage),
+                                     ("heldout_candidate", heldout_candidate),
                                      ("heldout_environment", heldout_environment),
                                      ("heldout_union", test)):
                 if not mask.any(): continue
@@ -149,8 +156,8 @@ def fit(data_path: Path, schema_path: Path, feature_contract_path: Path, output:
                     metric_scale = "latent log allocation before joint budget softmax"
                 else:
                     predicted = forward_target(direct_raw, response["transform"])
-                    observed = target[mask, response_index]
-                    baseline_value = np.full(len(observed), target[train, response_index].mean())
+                    observed = target[mask, target_column]
+                    baseline_value = np.full(len(observed), target[train, target_column].mean())
                     metric_scale = response["unit"]
                 metrics[split_name] = {"rows": int(mask.sum()),
                     "scale": metric_scale,

@@ -1,0 +1,30 @@
+{
+  "format": "chreatures-population-gam-split-declaration-v1",
+  "declared_before_outcome_inspection": true,
+  "evaluation_identity_sha256": "d32e1383ae40fe7ab1c3cb004b008b4b8639a632126677a5c7b31268242fd639",
+  "evaluation_path": "/tank/chreatures/campaigns/v1/evaluations/plan-0000/batch-0000",
+  "ancestry_scope": {
+    "distinct_founder_lineages": 1,
+    "shared_parent_sha256": "0788e9295bb2dd15025d56fec1c9122b554763e136f36825df7cedc088932d86",
+    "lineage_holdout": "not estimable in this first-generation batch"
+  },
+  "heldout_candidates": [
+    "26b72fb9b173b5ec29d16cff8dbeab92ff293298d0956cc189f4c184e9f61a6d",
+    "10d5193b4df40603ec427319900b3c9be77e564d46654795ea79ac0606bc9623",
+    "2d86db81e08aca4de4e324f40598029c880095a379da8d6efc746dcc27a610cc"
+  ],
+  "heldout_environments": [
+    "53d0cf8a2cced47799feab68ea777da100f3256e402d368e1bd548836a1b63a7"
+  ],
+  "validation_rule": "among remaining rows, world_unit modulo 5 equals zero",
+  "expected_complete_life_units": {
+    "fit_pool_before_world_validation": 21,
+    "world_validation": 7,
+    "training": 14,
+    "heldout_candidate": 3,
+    "heldout_environment": 8,
+    "heldout_union": 11
+  },
+  "selection_rule": "first candidate in immutable assignment order for each non-heldout world, plus the assignment-declared heldout environment",
+  "target_values_inspected": false
+}

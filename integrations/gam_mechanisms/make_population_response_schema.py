@@ -28,8 +28,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rows", type=Path, required=True)
     parser.add_argument("--feature-contract", type=Path, required=True)
-    parser.add_argument("--heldout-lineage", action="append", required=True)
+    parser.add_argument("--heldout-lineage", action="append", default=[])
+    parser.add_argument("--heldout-candidate", action="append", default=[])
     parser.add_argument("--heldout-environment", action="append", required=True)
+    parser.add_argument("--target", action="append", choices=[x[0] for x in TARGETS],
+                        help="explicit supported-law subset; default attempts all measured targets")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     contract = json.loads(args.feature_contract.read_text())
@@ -39,18 +42,23 @@ def main() -> None:
             raise ValueError("prepared population targets differ")
         lineage = np.asarray(rows["lineage_unit"]).astype(str)
         environment = np.asarray(rows["environment_unit"]).astype(str)
+        candidate = np.asarray(rows["candidate_unit"]).astype(str)
         fit_rows = ~(np.isin(lineage, args.heldout_lineage)
+                     | np.isin(candidate, args.heldout_candidate)
                      | np.isin(environment, args.heldout_environment))
         if not fit_rows.any() or fit_rows.all():
             raise ValueError("held-out lineage/environment split is empty")
+        selected = set(args.target or [x[0] for x in TARGETS])
         responses = []
         score_scales = {}
         for column, (law, mechanism, unit, kind) in enumerate(TARGETS):
+            if law not in selected:
+                continue
             extent = max(float(np.max(np.abs(target[fit_rows, column]))) * 1.05, 1e-6)
             transform = ({"kind": kind, "magnitude": extent} if kind == "signed_tanh"
                          else {"kind": kind, "ceiling": extent})
             responses.append({"law": law, "mechanism": mechanism, "unit": unit,
-                              "transform": transform})
+                              "target_column": column, "transform": transform})
             score_scales[mechanism] = max(float(np.std(target[fit_rows, column])), 1e-6)
     schema = {
         "format": "chreatures-population-response-fit-v1",
@@ -60,12 +68,11 @@ def main() -> None:
         "budgets": [],
         "candidate_score": {"maximum_tilt": 0.25, "terms": [
             {"mechanism":"expected_energy_state_delta", "weight":1.0, "scale":score_scales["expected_energy_state_delta"]},
-            {"mechanism":"expected_fatigue_state_delta", "weight":-1.0, "scale":score_scales["expected_fatigue_state_delta"]},
             {"mechanism":"expected_effort", "weight":-0.5, "scale":score_scales["expected_effort"]},
-            {"mechanism":"expected_ingested_mass", "weight":0.5, "scale":score_scales["expected_ingested_mass"]},
-        ]},
+        ]} if {"energy_state_delta", "effort"}.issubset(selected) else None,
         "basis_size": 9,
         "split": {"heldout_lineages": args.heldout_lineage,
+                  "heldout_candidates": args.heldout_candidate,
                   "heldout_environments": args.heldout_environment,
                   "validation_world_mod": 5},
         "source_contract": {
