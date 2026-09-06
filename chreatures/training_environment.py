@@ -15,12 +15,17 @@ from .acoustics import Acoustics
 from .ecology import Ecology
 from .fields import FieldEnvironment
 from .homeostasis import FiniteEnergyConfig, FiniteEnergyObjective
+from .physical_batch import FastArticulatedSensoriumWorld
 from .sensorium import ArticulatedSensoriumWorld, BODY_FRAME
 
 
 PROFILE_FORMAT = "chreatures-embodied-training-profile-v1"
 SNAPSHOT_FORMAT = "chreatures-embodied-training-world-v1"
 ROOT = Path(__file__).resolve().parents[1]
+PHYSICAL_BACKENDS = {
+    "reference": ArticulatedSensoriumWorld,
+    "fast": FastArticulatedSensoriumWorld,
+}
 
 
 def _canonical(value: Any) -> bytes:
@@ -179,16 +184,22 @@ def embodied_training_spec(
 class EmbodiedTrainingWorld:
     """Drop-in worker world with body-v1, diffusion, resources and acoustics."""
 
-    def __init__(self, seed: int, spec: dict[str, Any], profile: EmbodiedTrainingProfile) -> None:
+    def __init__(
+        self, seed: int, spec: dict[str, Any], profile: EmbodiedTrainingProfile,
+        *, physical_backend: str = "reference",
+    ) -> None:
         if not isinstance(profile, EmbodiedTrainingProfile):
             raise TypeError("profile must be an EmbodiedTrainingProfile")
         if spec.get("sensorium") != profile.component("sensorium"):
             raise ValueError("world spec sensorium differs from training profile")
         if spec.get("training_profile_sha256") != profile.sha256:
             raise ValueError("world spec does not identify its training profile")
+        if physical_backend not in PHYSICAL_BACKENDS:
+            raise ValueError(f"unknown embodied physical backend: {physical_backend!r}")
         self.seed = int(seed)
         self.profile = profile
-        self.world = ArticulatedSensoriumWorld(seed=self.seed, spec=copy.deepcopy(spec))
+        self.physical_backend = physical_backend
+        self.world = PHYSICAL_BACKENDS[physical_backend](seed=self.seed, spec=copy.deepcopy(spec))
         self.field = FieldEnvironment.from_world(self.world, profile.component("fields"))
         self.resources = Ecology(self.world, profile.component("resources"), seed=self.seed ^ 0xEC0106)
         self.acoustics = Acoustics(self.world, profile.component("acoustics"))
@@ -256,6 +267,7 @@ class EmbodiedTrainingWorld:
     def restore(
         cls, snapshot: Mapping[str, Any],
         expected_profile: EmbodiedTrainingProfile | str | None = None,
+        *, physical_backend: str = "reference",
     ) -> "EmbodiedTrainingWorld":
         if snapshot.get("format") != SNAPSHOT_FORMAT or snapshot.get("version") != 1:
             raise ValueError("unsupported embodied training world snapshot")
@@ -263,10 +275,13 @@ class EmbodiedTrainingWorld:
         expected_hash = expected_profile.sha256 if isinstance(expected_profile, EmbodiedTrainingProfile) else expected_profile
         if expected_hash is not None and str(expected_hash) != profile.sha256:
             raise ValueError("training checkpoint profile differs")
+        if physical_backend not in PHYSICAL_BACKENDS:
+            raise ValueError(f"unknown embodied physical backend: {physical_backend!r}")
         instance = cls.__new__(cls)
         instance.seed = int(snapshot["seed"])
         instance.profile = profile
-        instance.world = ArticulatedSensoriumWorld.restore(snapshot["world"])
+        instance.physical_backend = physical_backend
+        instance.world = PHYSICAL_BACKENDS[physical_backend].restore(snapshot["world"])
         if instance.world.spec.get("training_profile_sha256") != profile.sha256:
             raise ValueError("restored physical world profile differs")
         instance.field = FieldEnvironment.restore(snapshot["field"])
@@ -285,4 +300,7 @@ class EmbodiedTrainingWorld:
         self.acoustics.close()
 
 
-__all__ = ["EmbodiedTrainingProfile", "EmbodiedTrainingWorld", "embodied_training_spec"]
+__all__ = [
+    "EmbodiedTrainingProfile", "EmbodiedTrainingWorld", "PHYSICAL_BACKENDS",
+    "embodied_training_spec",
+]

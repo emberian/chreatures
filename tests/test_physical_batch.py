@@ -9,6 +9,9 @@ from chreatures.ecology import Ecology
 from chreatures.fields import FieldEnvironment
 from chreatures.physical_batch import FastArticulatedSensoriumWorld
 from chreatures.sensorium import ArticulatedSensoriumWorld
+from chreatures.training_environment import (
+    EmbodiedTrainingProfile, EmbodiedTrainingWorld, embodied_training_spec,
+)
 
 
 ROOT = Path(__file__).parents[1]
@@ -117,3 +120,43 @@ def test_fast_world_rebinds_after_dynamic_entity_and_restores_full_ecosystem():
     )
     assert _step(restored_reference, 17) == _step(restored_fast, 17)
     _assert_parity(restored_reference, restored_fast)
+
+
+def test_embodied_training_world_fast_backend_is_exact_across_restore():
+    profile = EmbodiedTrainingProfile.current()
+    spec = embodied_training_spec(918, profile=profile)
+    reference = EmbodiedTrainingWorld(918, spec, profile, physical_backend="reference")
+    fast = EmbodiedTrainingWorld(918, spec, profile, physical_backend="fast")
+
+    for index in range(8):
+        actions = {
+            body.id: {
+                "forward": float(np.sin(index * 0.23 + body_index)),
+                "turn": float(np.cos(index * 0.17 - body_index) * 0.8),
+                "gaze_pitch": float(np.sin(index * 0.11 + body_index) * 0.7),
+                "grip": float((index + body_index) % 5 == 0),
+            }
+            for body_index, body in enumerate(reference.bodies)
+        }
+        assert {body.id: reference.sense(body.id) for body in reference.bodies} == {
+            body.id: fast.sense(body.id) for body in fast.bodies
+        }
+        assert reference.advance(actions, 0.05) == fast.advance(actions, 0.05)
+        assert reference.last_telemetry == fast.last_telemetry
+
+    add = {"op": "add", "preset": "play-ball", "id": "training-ball",
+           "x": 6.1, "y": 3.1, "z": 0.22}
+    assert reference.world.command(add) == fast.world.command(add)
+    assert reference.snapshot() == fast.snapshot()
+
+    reference_restored = EmbodiedTrainingWorld.restore(
+        reference.snapshot(), expected_profile=profile, physical_backend="reference"
+    )
+    fast_restored = EmbodiedTrainingWorld.restore(
+        fast.snapshot(), expected_profile=profile, physical_backend="fast"
+    )
+    actions = {body.id: {"forward": 0.4, "turn": -0.2} for body in reference_restored.bodies}
+    assert reference_restored.advance(actions, 0.05) == fast_restored.advance(actions, 0.05)
+    assert {body.id: reference_restored.sense(body.id) for body in reference_restored.bodies} == {
+        body.id: fast_restored.sense(body.id) for body in fast_restored.bodies
+    }
