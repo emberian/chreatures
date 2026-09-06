@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 import numpy as np
 
-from .brain import CHANNELS
+from .malecns import DEFAULT_INPUT_CHANNELS
 
 
 class NeuralServiceError(RuntimeError):
@@ -33,14 +33,22 @@ class NeuralClient:
         self.input_names = self.metadata["brain"]["inputs"]
         self.output_names = self.metadata["brain"]["readouts"]
         self.port_spec = None
-        if self.input_names != CHANNELS:
-            from .neural_ports import load_port_spec
+        if self.input_names != DEFAULT_INPUT_CHANNELS:
+            from .neural_ports import encoding_sha256, load_port_spec
             spec = load_port_spec()
             if self.input_names != spec["physical_inputs"]["ordered_names"]:
                 raise ValueError("Remote sensory map differs from the supported versioned interfaces")
             expected_hash = hashlib.sha256(json.dumps(spec, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
-            if self.metadata["brain"].get("ports", {}).get("spec_hash") != expected_hash:
-                raise ValueError("Remote sensory port semantics differ from the local specification")
+            ports = self.metadata["brain"].get("ports", {})
+            if ports.get("spec_hash") != expected_hash:
+                expected_encoding = encoding_sha256(spec)
+                if (
+                    ports.get("mode") != "versioned_bundle"
+                    or ports.get("encoding_sha256") != expected_encoding
+                ):
+                    raise ValueError(
+                        "Remote sensory preprocessing differs from the local specification"
+                    )
             self.port_spec = spec
 
     def encode(self, senses):
@@ -122,4 +130,10 @@ def sensory_channels(senses):
                              [senses.get("shade", 0), np.max(senses.get("touch", [0, 0]))]))
     if values.shape != (16,) or not np.isfinite(values).all():
         raise ValueError("Invalid physical sensory observations")
-    return dict(zip(CHANNELS, np.clip(values, 0, 1).astype(float).tolist()))
+    return dict(
+        zip(
+            DEFAULT_INPUT_CHANNELS,
+            np.clip(values, 0, 1).astype(float).tolist(),
+            strict=True,
+        )
+    )
