@@ -15,6 +15,8 @@ from typing import Any, Mapping
 
 import numpy as np
 
+from .native_world import load_world_kernels
+
 
 ACTIONS = (
     "thrust", "yaw", "gaze_pitch", "grip",
@@ -23,7 +25,9 @@ ACTIONS = (
 PHYSIOLOGY = ("energy", "gut", "fatigue", "speed", "angular_velocity", "support")
 ARTIFACT_FORMAT = "chreatures-predictive-ppo-motor-organ-v1"
 ARTIFACT_FORMAT_V2 = "chreatures-predictive-ppo-motor-organ-v2"
-SNAPSHOT_FORMAT = "chreatures-motor-organ-snapshot-v1"
+ARTIFACT_FORMAT_V3 = "chreatures-predictive-ppo-motor-organ-v3"
+SNAPSHOT_FORMAT = "chreatures-motor-organ-snapshot-v2"
+LEGACY_SNAPSHOT_FORMAT = "chreatures-motor-organ-snapshot-v1"
 
 
 def _json(value: Any) -> str:
@@ -76,18 +80,45 @@ class MotorArtifact:
     def __init__(self, metadata: Mapping[str, Any], arrays: Mapping[str, np.ndarray]) -> None:
         self.metadata = dict(metadata)
         artifact_format = self.metadata.get("format")
-        if artifact_format not in {ARTIFACT_FORMAT, ARTIFACT_FORMAT_V2}:
+        if artifact_format not in {
+            ARTIFACT_FORMAT,
+            ARTIFACT_FORMAT_V2,
+            ARTIFACT_FORMAT_V3,
+        }:
             raise ValueError("incompatible motor artifact format")
         if tuple(self.metadata.get("actions", ())) != ACTIONS:
             raise ValueError("motor artifact action schema differs")
         config = dict(self.metadata.get("config", {}))
         std_profile = config.get("std_profile", "global-v1")
-        expected_format = ARTIFACT_FORMAT_V2 if std_profile == "state-conditioned-v2" else ARTIFACT_FORMAT
+        context_profile = config.get("context_profile", "reservoir-v1")
+        if std_profile not in {"global-v1", "state-conditioned-v2"}:
+            raise ValueError("unsupported motor variance architecture")
+        if context_profile not in {"reservoir-v1", "gated-v1"}:
+            raise ValueError("unsupported motor context architecture")
+        if context_profile == "gated-v1":
+            expected_format, expected_version = ARTIFACT_FORMAT_V3, 3
+        elif std_profile == "state-conditioned-v2":
+            expected_format, expected_version = ARTIFACT_FORMAT_V2, 2
+        else:
+            expected_format, expected_version = ARTIFACT_FORMAT, 1
         if artifact_format != expected_format:
-            raise ValueError("motor artifact format and variance architecture differ")
+            raise ValueError("motor artifact format and architecture differ")
+        if context_profile == "gated-v1" and (
+            self.metadata.get("version") != expected_version
+            or self.metadata.get("architecture") != "gated-v1"
+        ):
+            raise ValueError("gated motor artifact architecture metadata differs")
         required = self.REQUIRED + (
             ("std_offset.weight", "std_offset.bias")
             if std_profile == "state-conditioned-v2" else ()
+        ) + (
+            (
+                "context_gate_feature",
+                "context_gate_action",
+                "context_gate_recur",
+                "context_gate_bias",
+            )
+            if context_profile == "gated-v1" else ()
         )
         missing = set(required) - set(arrays)
         if missing:
@@ -108,6 +139,47 @@ class MotorArtifact:
         self.sha256 = actual
         self.config = config
         self._validate_shapes()
+        self._runtime = self._build_runtime()
+
+    def _build_runtime(self):
+        a = self.arrays
+        gated = self.config.get("context_profile", "reservoir-v1") == "gated-v1"
+        state_std = self.config.get("std_profile", "global-v1") == "state-conditioned-v2"
+        names = [
+            "projection", "context_feature", "context_action", "context_recur",
+        ]
+        if gated:
+            names.extend((
+                "context_gate_feature", "context_gate_action",
+                "context_gate_recur", "context_gate_bias",
+            ))
+        names.extend((
+            "feature_encoder.0.weight", "feature_encoder.0.bias",
+            "trunk.0.weight", "trunk.0.bias", "trunk.2.weight", "trunk.2.bias",
+            "policy_mean.weight", "policy_mean.bias", "value.weight", "value.bias",
+            "predictor.0.weight", "predictor.0.bias",
+            "predictor.2.weight", "predictor.2.bias", "log_std",
+        ))
+        if state_std:
+            names.extend(("std_offset.weight", "std_offset.bias"))
+        packed = np.ascontiguousarray(
+            np.concatenate([a[name].reshape(-1) for name in names]), dtype=np.float32
+        )
+        runtime_type = getattr(load_world_kernels(), "MotorRuntime", None)
+        if runtime_type is None:
+            raise RuntimeError(
+                "installed _world_kernels predates MotorRuntime; rebuild native/world-kernels"
+            )
+        c = self.config
+        return runtime_type(
+            int(c["feature_dim"]), int(c["physiology_dim"]), int(c["context_dim"]),
+            int(c["hidden_dim"]), int(c["projection_dim"]), gated, state_std, packed,
+        )
+
+    @property
+    def runtime(self):
+        """Shared immutable native parameter owner with batched numerical APIs."""
+        return self._runtime
 
     def _validate_shapes(self) -> None:
         c = self.config
@@ -132,6 +204,13 @@ class MotorArtifact:
             shapes.update({
                 "std_offset.weight": (len(ACTIONS), h),
                 "std_offset.bias": (len(ACTIONS),),
+            })
+        if self.config.get("context_profile", "reservoir-v1") == "gated-v1":
+            shapes.update({
+                "context_gate_feature": (x, q),
+                "context_gate_action": (x, len(ACTIONS)),
+                "context_gate_recur": (x, x),
+                "context_gate_bias": (x,),
             })
         for name, shape in shapes.items():
             if self.arrays[name].shape != shape:
@@ -170,7 +249,7 @@ class MotorArtifact:
 
 
 class MotorOrgan:
-    """One resident's stateful inherited policy, using NumPy only."""
+    """One resident's private policy state around the native numerical core."""
 
     def __init__(
         self, artifact: MotorArtifact | str | Path, *, seed: int | None = None,
@@ -217,26 +296,24 @@ class MotorOrgan:
             raise ValueError("physiology must contain six finite local values")
         return values
 
-    def _linear(self, name: str, value: np.ndarray) -> np.ndarray:
-        a = self.artifact.arrays
-        return value @ a[name + ".weight"].T + a[name + ".bias"]
-
     def forward(self, normalized: np.ndarray, physiology: np.ndarray) -> tuple[np.ndarray, np.float32, np.ndarray]:
-        encoded = np.tanh(self._linear("feature_encoder.0", normalized)).astype(np.float32)
-        joined = np.concatenate((encoded, physiology, self.context)).astype(np.float32)
-        hidden = np.tanh(self._linear("trunk.0", joined)).astype(np.float32)
-        hidden = np.tanh(self._linear("trunk.2", hidden)).astype(np.float32)
-        mean = self._linear("policy_mean", hidden).astype(np.float32)
-        value = np.float32(self._linear("value", hidden)[0])
-        return mean, value, hidden
+        mean, value, hidden = self.artifact.runtime.forward(
+            np.ascontiguousarray(normalized[None, :], dtype=np.float32),
+            np.ascontiguousarray(physiology[None, :], dtype=np.float32),
+            np.ascontiguousarray(self.context[None, :], dtype=np.float32),
+        )
+        return np.asarray(mean)[0], np.float32(np.asarray(value)[0]), np.asarray(hidden)[0]
 
     def projected(self, normalized: np.ndarray) -> np.ndarray:
-        return np.tanh(normalized @ self.artifact.arrays["projection"].T).astype(np.float32)
+        return np.asarray(self.artifact.runtime.project(
+            np.ascontiguousarray(normalized[None, :], dtype=np.float32)
+        ))[0]
 
     def predictor(self, hidden: np.ndarray, action: np.ndarray) -> np.ndarray:
-        joined = np.concatenate((hidden, action)).astype(np.float32)
-        hidden_prediction = np.tanh(self._linear("predictor.0", joined)).astype(np.float32)
-        return self._linear("predictor.2", hidden_prediction).astype(np.float32)
+        return np.asarray(self.artifact.runtime.predict(
+            np.ascontiguousarray(hidden[None, :], dtype=np.float32),
+            np.ascontiguousarray(action[None, :], dtype=np.float32),
+        ))[0]
 
     def distribution_log_std(self, hidden: Any) -> np.ndarray:
         """Return the immutable inherited log scale for this hidden state."""
@@ -244,23 +321,31 @@ class MotorOrgan:
         expected = (int(self.artifact.config["hidden_dim"]),)
         if hidden.shape != expected or not np.isfinite(hidden).all():
             raise ValueError(f"hidden state must be finite with shape {expected}")
-        effective = self.artifact.arrays["log_std"]
-        if self.artifact.config.get("std_profile", "global-v1") == "state-conditioned-v2":
-            offset = self._linear("std_offset", hidden).astype(np.float32)
-            effective = effective + np.float32(2.0) * np.tanh(offset / np.float32(2.0))
-        return np.clip(effective, -3.5, .3).astype(np.float32)
+        return np.asarray(self.artifact.runtime.log_std(
+            np.ascontiguousarray(hidden[None, :], dtype=np.float32)
+        ))[0]
 
     def _update_context(self, next_features: np.ndarray) -> None:
-        a = self.artifact.arrays
-        projected = self.projected(next_features)
-        self.context = np.tanh(
-            projected @ a["context_feature"].T
-            + self.held_action @ a["context_action"].T
-            + self.context @ a["context_recur"].T
-        ).astype(np.float32)
-        if self.previous_features is not None and self.previous_prediction is not None:
-            target = projected - self.projected(self.previous_features)
-            self.last_prediction_error = float(np.mean((target - self.previous_prediction) ** 2))
+        has_previous = self.previous_features is not None
+        previous_features = (
+            self.previous_features if has_previous else np.zeros_like(next_features)
+        )
+        previous_prediction = (
+            self.previous_prediction
+            if has_previous
+            else np.zeros(int(self.artifact.config["projection_dim"]), dtype=np.float32)
+        )
+        context, _projected, error = self.artifact.runtime.update_context(
+            np.ascontiguousarray(next_features[None, :], dtype=np.float32),
+            np.ascontiguousarray(self.held_action[None, :], dtype=np.float32),
+            np.ascontiguousarray(self.context[None, :], dtype=np.float32),
+            np.ascontiguousarray(previous_features[None, :], dtype=np.float32),
+            np.ascontiguousarray(previous_prediction[None, :], dtype=np.float32),
+            np.asarray([has_previous], dtype=np.bool_),
+        )
+        self.context = np.asarray(context)[0].copy()
+        if has_previous:
+            self.last_prediction_error = float(np.asarray(error)[0])
 
     @staticmethod
     def _physical_action(action: np.ndarray) -> dict[str, float]:
@@ -379,7 +464,8 @@ class MotorOrgan:
             arrays["previous_features"] = _array_value(self.previous_features)
             arrays["previous_prediction"] = _array_value(self.previous_prediction)
         value = {
-            "format": SNAPSHOT_FORMAT, "version": 1,
+            "format": SNAPSHOT_FORMAT, "version": 2,
+            "runtime_identity": self.artifact.runtime.identity,
             "artifact_sha256": self.artifact.sha256,
             "deterministic": self.deterministic, "held_ticks": self.held_ticks,
             "macro_time": self.macro_time, "decision_count": self.decision_count,
@@ -398,7 +484,11 @@ class MotorOrgan:
     ) -> "MotorOrgan":
         """Restore private state against a shared or embedded immutable artifact."""
         try:
-            if value.get("format") != SNAPSHOT_FORMAT or value.get("version") != 1:
+            if value.get("format") == LEGACY_SNAPSHOT_FORMAT:
+                raise ValueError(
+                    "legacy NumPy motor snapshot requires an explicit trajectory migration"
+                )
+            if value.get("format") != SNAPSHOT_FORMAT or value.get("version") != 2:
                 raise ValueError("unsupported motor snapshot")
             if artifact is None:
                 artifact = MotorArtifact.from_value(value["artifact"])
@@ -406,6 +496,8 @@ class MotorOrgan:
                 artifact = MotorArtifact.load(artifact)
             if artifact.sha256 != value.get("artifact_sha256"):
                 raise ValueError("motor snapshot artifact identity differs")
+            if value.get("runtime_identity") != artifact.runtime.identity:
+                raise ValueError("motor snapshot runtime arithmetic identity differs")
             arrays = value["arrays"]
             instance = cls(artifact, deterministic=bool(value["deterministic"]))
             instance.context = _array_from_value(arrays["context"], "context").astype(np.float32, copy=False)
@@ -451,7 +543,8 @@ class MotorOrgan:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         metadata = {
-            "format": SNAPSHOT_FORMAT, "version": 1,
+            "format": SNAPSHOT_FORMAT, "version": 2,
+            "runtime_identity": self.artifact.runtime.identity,
             "artifact_sha256": self.artifact.sha256,
             "artifact_metadata": self.artifact.metadata,
             "deterministic": self.deterministic, "held_ticks": self.held_ticks,
@@ -481,7 +574,11 @@ class MotorOrgan:
             raise ValueError("motor snapshot file checksum differs")
         with np.load(path, allow_pickle=False) as value:
             metadata = json.loads(str(value["metadata"]))
-            if metadata.get("format") != SNAPSHOT_FORMAT or metadata.get("version") != 1:
+            if metadata.get("format") == LEGACY_SNAPSHOT_FORMAT:
+                raise ValueError(
+                    "legacy NumPy motor snapshot requires an explicit trajectory migration"
+                )
+            if metadata.get("format") != SNAPSHOT_FORMAT or metadata.get("version") != 2:
                 raise ValueError("unsupported motor snapshot")
             artifact_arrays = {
                 name.removeprefix("artifact::"): np.asarray(value[name])
@@ -490,8 +587,11 @@ class MotorOrgan:
             artifact = MotorArtifact(metadata["artifact_metadata"], artifact_arrays)
             if artifact.sha256 != metadata.get("artifact_sha256"):
                 raise ValueError("embedded motor artifact identity differs")
+            if metadata.get("runtime_identity") != artifact.runtime.identity:
+                raise ValueError("motor snapshot runtime arithmetic identity differs")
             private = {
-                "format": SNAPSHOT_FORMAT, "version": 1,
+                "format": SNAPSHOT_FORMAT, "version": 2,
+                "runtime_identity": metadata["runtime_identity"],
                 "artifact_sha256": artifact.sha256,
                 **{name: metadata[name] for name in (
                     "deterministic", "held_ticks", "macro_time", "decision_count", "rng",

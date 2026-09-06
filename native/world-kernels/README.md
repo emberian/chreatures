@@ -17,6 +17,11 @@ framework-style install name with the actual bundled library path. At runtime,
 `ContactBatch` compares `mjVERSION_HEADER` with `mj_version()` before accepting
 MuJoCo object addresses.
 
+The builder honors Cargo's configured target directory, including
+`CARGO_TARGET_DIR`, and stages the completed extension before an atomic rename.
+It never rewrites a library inode already mapped by a running resident. Use
+`--output-dir /path/to/isolated-build` for research or a pending migration.
+
 `ContactBatch.evaluate` crosses the FFI boundary once for all contacts in a
 MuJoCo substep, whether or not an acoustic engine is attached. A small C shim
 performs the MuJoCo ABI calls and fixed-vector contact arithmetic; Rust owns
@@ -39,3 +44,19 @@ field advance improved from 16.74 to 11.88 ms without membranes and 17.55 to
 12.89 ms with them. The hbox contact-only substitution improved a complete
 rich-world measurement from 23.74 to 29.14 steps/s. These are separate measured
 comparisons, not a claimed combined speedup.
+
+`BiosphereTissue` keeps a dense structural matrix across ticks, validates colony
+totals, applies structural turnover, and publishes the resource dictionaries
+used by checkpoints. Growth, removal and restore explicitly rebind that matrix.
+No Python turnover implementation remains in production. The 2,789-part
+[measurement](../../data/performance/biosphere-tissue-native-v1.receipt.json)
+preserved full world and Biosphere continuation exactly.
+
+`MotorRuntime` owns packed immutable inherited parameters, accepting batches of
+1–256 residents for policy/value inference, predictions, projection, variance
+and recurrent context updates. Apple builds use Accelerate SGEMM; other targets
+currently use explicit float32 accumulation. Python owns boundary validation,
+normalization, private RNG and action timing. Arithmetic differs slightly from
+the previous NumPy path, so v2 motor snapshots carry an execution identity and
+reject an unannounced arithmetic transition. See
+[motor deployment](../../docs/MOTOR_INHERITANCE.md) for parity and performance.

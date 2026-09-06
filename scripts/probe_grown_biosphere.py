@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Profile Biosphere overhead from an offline grown-world checkpoint copy.
 
-The research-reference branch binds the previous part scanning and deep-copy
-behavior to one disposable instance. It is never selectable by a runtime. This
-script restores only the physical world and Biosphere; it does not construct or
-load Habitat3D, restore neural state, or contact a service.
+The research-reference branch binds the previous optimized Python tissue scan
+and turnover behavior to one disposable instance. It is never selectable by a
+runtime. This script restores only the physical world and Biosphere; it does not
+construct or load Habitat3D, restore neural state, or contact a service.
 
 Copy a checkpoint away from a running world before invoking this probe, for
 example::
@@ -17,7 +17,6 @@ example::
 from __future__ import annotations
 
 import argparse
-import copy
 import cProfile
 import hashlib
 import json
@@ -35,20 +34,40 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from chreatures.biosphere import Biosphere
-from chreatures.growth import GrowthSystem
-from chreatures.metabolism import MetabolicWeb
 from chreatures.runtime3d import physical_world_type
 
 
 def _install_research_reference(biosphere: Biosphere) -> None:
     """Bind the exact prior hot-path behavior to one disposable instance."""
 
+    def resource_matrix(self, owned):
+        names = self.web.chemistry.pools
+        allowed = set(names)
+        if not owned:
+            return np.empty((0, len(names)), dtype=np.float64)
+        rows = []
+        for part in owned:
+            resources = part["resources"]
+            if not isinstance(resources, dict) or set(resources) - allowed:
+                raise ValueError("unknown chemical resource")
+            rows.append([resources.get(name, 0.0) for name in names])
+        matrix = np.asarray(rows, dtype=np.float64)
+        if not np.isfinite(matrix).all() or np.any(matrix < 0.0):
+            raise ValueError("resource quantities must be finite and nonnegative")
+        return matrix
+
     def check_structure(self):
+        checked = {}
         for colony in self.config:
+            owned = [
+                part
+                for part in self.parts.values()
+                if part["colony"] == colony["id"]
+            ]
+            resources = resource_matrix(self, owned)
             total = np.zeros(len(self.web.chemistry.pools))
-            for part in self.parts.values():
-                if part["colony"] == colony["id"]:
-                    total += self.web.chemistry.resources(part["resources"])
+            for row in resources:
+                total += row
             if not np.allclose(
                 total,
                 self.web.pools[colony["structure_row"]],
@@ -58,20 +77,15 @@ def _install_research_reference(biosphere: Biosphere) -> None:
                 raise ValueError(
                     "physical structures and allocated chemical tissue disagree"
                 )
+            checked[colony["id"]] = (owned, resources)
+        self._research_tissue_checked = checked
 
-    def distribute_turnover(self, ledger, checked=None):
+    def distribute_turnover(self, ledger):
         chemistry = self.web.chemistry
         for colony in self.config:
-            owned = [
-                part
-                for part in self.parts.values()
-                if part["colony"] == colony["id"]
-            ]
+            owned, before = self._research_tissue_checked[colony["id"]]
             if not owned:
                 continue
-            before = np.asarray(
-                [chemistry.resources(part["resources"]) for part in owned]
-            )
             after = before.copy()
             for reaction, extent in enumerate(
                 ledger["extent"][colony["structure_row"]]
@@ -97,89 +111,10 @@ def _install_research_reference(biosphere: Biosphere) -> None:
                     zip(chemistry.pools, resources.tolist(), strict=True)
                 )
 
-    def develop(self):
-        operations = []
-        staged = []
-        pending = []
-        next_parts = copy.deepcopy(self.parts)
-        try:
-            for colony in self.config:
-                name = colony["id"]
-                if not self.active[name]:
-                    continue
-                growth = self.growth[name]
-                if not growth.is_due:
-                    continue
-                pool = self.web.pools[colony["body_row"]]
-                budget = sum(
-                    pool[self.web.chemistry.pools.index(key)]
-                    for key in growth.resource_names
-                )
-                proposal = growth.propose(self._signals(colony), float(budget))
-                if proposal is None:
-                    continue
-                pending.append((name, proposal["token"]))
-                request = proposal["request"]
-                vector = self.web.chemistry.resources(request["resources"])
-                if (
-                    np.any(vector > pool)
-                    or request["atp"] > self.web.atp[colony["body_row"]]
-                ):
-                    growth.reject(proposal["token"])
-                    continue
-                candidate = GrowthSystem.restore(growth.grammar, growth.snapshot())
-                candidate.commit(
-                    proposal["token"],
-                    request["resources"],
-                    request["atp"],
-                    physical_committed=True,
-                )
-                physical = growth.physical_operations(
-                    proposal, colony["bindings"]
-                )
-                operations.extend(physical)
-                self._record_parts(colony, proposal, physical, next_parts)
-                staged.append((colony, proposal, candidate))
-            if not staged:
-                return []
-            transaction = self.world.prepare_topology_batch(operations)
-            before = self.web.snapshot()
-            try:
-                for colony, proposal, _ in staged:
-                    request = proposal["request"]
-                    self.web.transfer(
-                        colony["body_row"],
-                        colony["structure_row"],
-                        request["resources"],
-                    )
-                    self.web.pay_work(colony["body_row"], request["atp"])
-                transaction.commit()
-            except Exception:
-                self.web = MetabolicWeb.restore(before)
-                raise
-            self.parts = next_parts
-            for colony, _, candidate in staged:
-                self.growth[colony["id"]] = candidate
-            return [
-                {
-                    "colony": colony["id"],
-                    "request": proposal["request"],
-                    "token": proposal["token"],
-                }
-                for colony, proposal, _ in staged
-            ]
-        except Exception:
-            for name, token in pending:
-                growth = self.growth[name]
-                if growth.snapshot()["pending"] is not None:
-                    growth.reject(token)
-            raise
-
     biosphere._check_structure = types.MethodType(check_structure, biosphere)
     biosphere._distribute_turnover = types.MethodType(
         distribute_turnover, biosphere
     )
-    biosphere._develop = types.MethodType(develop, biosphere)
 
 
 def _profile_branch(
@@ -213,7 +148,6 @@ def _profile_branch(
         "_check_structure": "_check_structure",
         "distribute_turnover": "_distribute_turnover",
         "_distribute_turnover": "_distribute_turnover",
-        "develop": "_develop",
         "_develop": "_develop",
         "_part_resource_matrix": "_part_resource_matrix",
     }
