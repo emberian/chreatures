@@ -22,7 +22,7 @@ try{
  const dummy=new THREE.Object3D(), color=new THREE.Color();
  let frames=[],stage=1,close=true;
  function view(){
-  if(close){camera.position.set(4.75,.1,2.25);controls.target.set(2.8,2.9,1.1);}
+  if(close){camera.position.set(3.7,.1,1.3);controls.target.set(5.1,1.75,.63);}
   else{camera.position.set(15,-12,12.5);controls.target.set(6,4,.55);}
   controls.update();
  }
