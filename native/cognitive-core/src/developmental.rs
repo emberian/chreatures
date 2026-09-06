@@ -5,6 +5,10 @@ use crate::goal_memory::{
     random_u64, splitmix64, unit_f64, AchievedGoalMemoryCohort, SelectionArrays,
 };
 use crate::personal_consequences::{ConsequenceConfig, ConsequenceTarget, PersonalConsequences};
+use crate::personal_goals::{
+    GoalSlotIdentity, GoalSlotReplacement, GoalStart, GoalTransition, PersonalGoalAssociations,
+    PersonalGoalConfig,
+};
 use crate::predictive_sensory::{
     PredictiveSensoryEnsemble, INPUT as PREDICTOR_INPUT, MEMBERS as PREDICTOR_MEMBERS,
 };
@@ -29,7 +33,7 @@ const PHYSIOLOGY: usize = 6;
 const RESERVOIR: usize = 128;
 const SIGNED: [usize; 4] = [0, 1, 2, 7];
 const POSITIVE: [usize; 4] = [3, 4, 5, 6];
-const FORMAT: &str = "chreatures-developmental-resident-native-rich-v1";
+const FORMAT: &str = "chreatures-developmental-resident-native-rich-v3";
 const CANDIDATES: usize = 4;
 const TILT: f64 = 0.5;
 
@@ -115,6 +119,15 @@ pub(crate) struct DevelopmentalResidentCohort {
     forecast_tilt: Vec<f32>,
     predictor: PredictiveSensoryEnsemble,
     forecast_goal_rms: f32,
+    personal_goals: PersonalGoalAssociations,
+    goal_credit_pending: Vec<bool>,
+    selected_goal_bias: Vec<f32>,
+    selected_goal_prediction: Vec<f32>,
+    last_goal_reward: Vec<f32>,
+    last_goal_return: Vec<f32>,
+    last_goal_completed: Vec<bool>,
+    last_goal_attributed: Vec<bool>,
+    last_goal_learned: Vec<bool>,
 }
 
 fn categorical(logits: &[f32], state: &mut [u64]) -> usize {
@@ -431,6 +444,7 @@ impl DevelopmentalResidentCohort {
         );
         self.logits.fill(0.0);
         let (keys, counts) = self.memory.key_rows();
+        let (recorded_ticks, generations) = self.memory.slot_identities();
         for row in 0..self.batch {
             for slot in 0..counts[row] as usize {
                 let mut dot = 0.0f32;
@@ -439,8 +453,55 @@ impl DevelopmentalResidentCohort {
                 }
                 self.logits[row * RESERVOIR + slot] = dot * self.core.query_gain / 8.0;
             }
+            let biases = self
+                .personal_goals
+                .selection_biases(
+                    row,
+                    &recorded_ticks[row * RESERVOIR..(row + 1) * RESERVOIR],
+                    &generations[row * RESERVOIR..(row + 1) * RESERVOIR],
+                    [
+                        physiology[row * PHYSIOLOGY] as f64,
+                        physiology[row * PHYSIOLOGY + 1] as f64,
+                        physiology[row * PHYSIOLOGY + 2] as f64,
+                    ],
+                )
+                .map_err(PyValueError::new_err)?;
+            for slot in 0..counts[row] as usize {
+                self.logits[row * RESERVOIR + slot] += biases[slot] as f32;
+            }
         }
-        self.memory.choose_inner(&self.logits, 1.0, ticks)
+        let selection = self.memory.choose_inner(&self.logits, 1.0, ticks)?;
+        let mut starts = Vec::new();
+        let mut start_rows = Vec::new();
+        for row in 0..self.batch {
+            if selection.changed[row] && selection.valid[row] {
+                starts.push(GoalStart {
+                    resident: row,
+                    slot: selection.slot[row] as usize,
+                    identity: GoalSlotIdentity {
+                        recorded_tick: selection.recorded_tick[row],
+                        generation: selection.generation[row],
+                    },
+                    selected_at_tick: ticks[row],
+                    physiology: [
+                        physiology[row * PHYSIOLOGY] as f64,
+                        physiology[row * PHYSIOLOGY + 1] as f64,
+                        physiology[row * PHYSIOLOGY + 2] as f64,
+                    ],
+                });
+                start_rows.push(row);
+            }
+        }
+        let estimates = self
+            .personal_goals
+            .begin_goals(&starts)
+            .map_err(PyValueError::new_err)?;
+        for (row, estimate) in start_rows.into_iter().zip(estimates) {
+            self.goal_credit_pending[row] = true;
+            self.selected_goal_bias[row] = estimate.logit_bias as f32;
+            self.selected_goal_prediction[row] = estimate.predicted_normalized_return as f32;
+        }
+        Ok(selection)
     }
 
     fn policy_actions(&mut self, goal: &[f32], remaining: &[u64]) -> Vec<f32> {
@@ -1013,6 +1074,16 @@ impl DevelopmentalResidentCohort {
             forecast_tilt: vec![0.0; batch * CANDIDATES],
             predictor,
             forecast_goal_rms,
+            personal_goals: PersonalGoalAssociations::new(batch, PersonalGoalConfig::current(true))
+                .map_err(PyValueError::new_err)?,
+            goal_credit_pending: vec![false; batch],
+            selected_goal_bias: vec![0.0; batch],
+            selected_goal_prediction: vec![0.0; batch],
+            last_goal_reward: vec![0.0; batch],
+            last_goal_return: vec![0.0; batch],
+            last_goal_completed: vec![false; batch],
+            last_goal_attributed: vec![false; batch],
+            last_goal_learned: vec![false; batch],
         })
     }
 
@@ -1058,6 +1129,21 @@ impl DevelopmentalResidentCohort {
             ));
         }
         let (inserted, selection, actions, oral) = py.detach(|| -> PyResult<_> {
+            for (row, should_reset) in rst.iter().enumerate() {
+                if *should_reset {
+                    self.personal_goals
+                        .cancel_pending(row)
+                        .map_err(PyValueError::new_err)?;
+                    self.goal_credit_pending[row] = false;
+                    self.selected_goal_bias[row] = 0.0;
+                    self.selected_goal_prediction[row] = 0.0;
+                    self.last_goal_reward[row] = 0.0;
+                    self.last_goal_return[row] = 0.0;
+                    self.last_goal_completed[row] = false;
+                    self.last_goal_attributed[row] = false;
+                    self.last_goal_learned[row] = false;
+                }
+            }
             self.observe(o, a, rst);
             self.remember_frame_codes(rst);
             let (_windows, valid) = self.memory.push_inner(o, t, time, rst)?;
@@ -1069,12 +1155,31 @@ impl DevelopmentalResidentCohort {
                 return Err(PyValueError::new_err("raw/code goal rings diverged"));
             }
             let keys = self.encode_windows(&valid);
-            let inserted = self.memory.remember_inner(&keys, &valid)?;
+            let remembered = self.memory.remember_with_changes_inner(&keys, &valid)?;
+            let replacements: Vec<_> = remembered
+                .slots
+                .iter()
+                .zip(&remembered.generations)
+                .enumerate()
+                .filter_map(|(row, (slot, generation))| {
+                    (*slot >= 0).then_some(GoalSlotReplacement {
+                        resident: row,
+                        slot: *slot as usize,
+                        identity: GoalSlotIdentity {
+                            recorded_tick: t[row],
+                            generation: *generation,
+                        },
+                    })
+                })
+                .collect();
+            self.personal_goals
+                .replace_slots(&replacements)
+                .map_err(PyValueError::new_err)?;
             let selection = self.manager_selection(n, p, t)?;
             let candidates = self.policy_actions(&selection.key, &selection.remaining);
             let (actions, oral) =
                 self.refine_candidates(&candidates, &selection, p, n, a, &keys, t, rst)?;
-            Ok((inserted, selection, actions, oral))
+            Ok((remembered.slots, selection, actions, oral))
         })?;
         let out = PyDict::new(py);
         out.set_item(
@@ -1182,6 +1287,10 @@ impl DevelopmentalResidentCohort {
             Array1::from_vec(selection.recorded_time).into_pyarray(py),
         )?;
         out.set_item(
+            "goal_generation",
+            Array1::from_vec(selection.generation).into_pyarray(py),
+        )?;
+        out.set_item(
             "goal_remaining_ticks",
             Array1::from_vec(selection.remaining).into_pyarray(py),
         )?;
@@ -1197,13 +1306,79 @@ impl DevelopmentalResidentCohort {
                 .unwrap()
                 .into_pyarray(py),
         )?;
+        out.set_item(
+            "personal_goal_selected_bias",
+            Array1::from_vec(self.selected_goal_bias.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "personal_goal_prediction",
+            Array1::from_vec(self.selected_goal_prediction.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "personal_goal_last_reward",
+            Array1::from_vec(self.last_goal_reward.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "personal_goal_last_return",
+            Array1::from_vec(self.last_goal_return.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "personal_goal_completed",
+            Array1::from_vec(self.last_goal_completed.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "personal_goal_attributed",
+            Array1::from_vec(self.last_goal_attributed.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "personal_goal_learned",
+            Array1::from_vec(self.last_goal_learned.clone()).into_pyarray(py),
+        )?;
+        let stats: Vec<_> = (0..self.batch)
+            .map(|row| self.personal_goals.stats(row))
+            .collect::<Result<_, _>>()
+            .map_err(PyValueError::new_err)?;
+        out.set_item(
+            "personal_goal_completed_total",
+            Array1::from_vec(stats.iter().map(|value| value.completed_goals).collect())
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "personal_goal_learned_total",
+            Array1::from_vec(stats.iter().map(|value| value.learned_goals).collect())
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "personal_goal_frozen_total",
+            Array1::from_vec(stats.iter().map(|value| value.frozen_goals).collect())
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "personal_goal_skipped_total",
+            Array1::from_vec(
+                stats
+                    .iter()
+                    .map(|value| value.skipped_replaced_goals)
+                    .collect(),
+            )
+            .into_pyarray(py),
+        )?;
+        out.set_item(
+            "personal_goal_cancelled_total",
+            Array1::from_vec(stats.iter().map(|value| value.cancelled_goals).collect())
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "personal_goal_learning_enabled",
+            self.personal_goals.config().learning_enabled,
+        )?;
         Ok(out)
     }
 
     fn snapshot<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let out = PyDict::new(py);
         out.set_item("format", FORMAT)?;
-        out.set_item("version", 3)?;
+        out.set_item("version", 4)?;
         out.set_item("batch", self.batch)?;
         out.set_item("conditioned", self.conditioned)?;
         out.set_item("sample", self.sample)?;
@@ -1253,20 +1428,43 @@ impl DevelopmentalResidentCohort {
                 .into_pyarray(py),
         )?;
         out.set_item("pending_tick", self.pending_tick.clone())?;
+        out.set_item(
+            "personal_goals",
+            self.personal_goals
+                .snapshot()
+                .map_err(PyValueError::new_err)?,
+        )?;
+        out.set_item("goal_credit_pending", self.goal_credit_pending.clone())?;
+        macro_rules! goal_f32 {
+            ($name:literal, $field:expr) => {
+                out.set_item($name, Array1::from_vec($field.clone()).into_pyarray(py))?;
+            };
+        }
+        goal_f32!("selected_goal_bias", self.selected_goal_bias);
+        goal_f32!("selected_goal_prediction", self.selected_goal_prediction);
+        goal_f32!("last_goal_reward", self.last_goal_reward);
+        goal_f32!("last_goal_return", self.last_goal_return);
+        out.set_item("last_goal_completed", self.last_goal_completed.clone())?;
+        out.set_item("last_goal_attributed", self.last_goal_attributed.clone())?;
+        out.set_item("last_goal_learned", self.last_goal_learned.clone())?;
         Ok(out)
     }
 
-    fn observe_consequences(
+    fn observe_consequences<'py>(
         &mut self,
+        py: Python<'py>,
         ticks: PyReadonlyArray1<'_, u64>,
         before: PyReadonlyArray2<'_, f32>,
         after: PyReadonlyArray2<'_, f32>,
         executed: PyReadonlyArray2<'_, f32>,
-    ) -> PyResult<()> {
+        effort: PyReadonlyArray1<'_, f32>,
+        dt: f64,
+    ) -> PyResult<Bound<'py, PyDict>> {
         if ticks.shape() != [self.batch]
             || before.shape() != [self.batch, 6]
             || after.shape() != [self.batch, 6]
             || executed.shape() != [self.batch, PREVIOUS]
+            || effort.shape() != [self.batch]
         {
             return Err(PyValueError::new_err("consequence outcome shapes differ"));
         }
@@ -1274,7 +1472,8 @@ impl DevelopmentalResidentCohort {
         let b = before.as_slice()?;
         let a = after.as_slice()?;
         let x = executed.as_slice()?;
-        if b.iter().chain(a).chain(x).any(|v| !v.is_finite()) {
+        let e = effort.as_slice()?;
+        if b.iter().chain(a).chain(x).chain(e).any(|v| !v.is_finite()) {
             return Err(PyValueError::new_err("consequence receipt must be finite"));
         }
         let mut targets = Vec::with_capacity(self.batch);
@@ -1297,13 +1496,109 @@ impl DevelopmentalResidentCohort {
             }
             targets.push(target);
         }
+        let goal_transitions: Vec<_> = (0..self.batch)
+            .filter(|row| self.goal_credit_pending[*row])
+            .map(|row| GoalTransition {
+                resident: row,
+                transition_tick: t[row],
+                before: [
+                    b[row * 6] as f64,
+                    b[row * 6 + 1] as f64,
+                    b[row * 6 + 2] as f64,
+                ],
+                after: [
+                    a[row * 6] as f64,
+                    a[row * 6 + 1] as f64,
+                    a[row * 6 + 2] as f64,
+                ],
+                effort: e[row] as f64,
+                dt,
+            })
+            .collect();
+        let goal_outcomes = self
+            .personal_goals
+            .observe_transitions(&goal_transitions)
+            .map_err(PyValueError::new_err)?;
+        self.last_goal_completed.fill(false);
+        self.last_goal_attributed.fill(false);
+        self.last_goal_learned.fill(false);
+        for (transition, outcome) in goal_transitions.iter().zip(goal_outcomes) {
+            let row = transition.resident;
+            self.last_goal_reward[row] = outcome.reward;
+            if let Some(receipt) = outcome.receipt {
+                self.goal_credit_pending[row] = false;
+                self.last_goal_return[row] = receipt.summed_objective_return as f32;
+                self.last_goal_completed[row] = true;
+                self.last_goal_attributed[row] = receipt.attributed;
+                self.last_goal_learned[row] = receipt.learned;
+            }
+        }
         for row in 0..self.batch {
             self.consequences
                 .observe(row, t[row], &targets[row])
                 .map_err(PyValueError::new_err)?;
             self.pending_tick[row] = None;
         }
-        Ok(())
+        let out = PyDict::new(py);
+        out.set_item(
+            "reward",
+            Array1::from_vec(self.last_goal_reward.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "completed",
+            Array1::from_vec(self.last_goal_completed.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "summed_return",
+            Array1::from_vec(self.last_goal_return.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "attributed",
+            Array1::from_vec(self.last_goal_attributed.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "learned",
+            Array1::from_vec(self.last_goal_learned.clone()).into_pyarray(py),
+        )?;
+        let stats: Vec<_> = (0..self.batch)
+            .map(|row| self.personal_goals.stats(row))
+            .collect::<Result<_, _>>()
+            .map_err(PyValueError::new_err)?;
+        out.set_item(
+            "completed_total",
+            Array1::from_vec(stats.iter().map(|value| value.completed_goals).collect())
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "learned_total",
+            Array1::from_vec(stats.iter().map(|value| value.learned_goals).collect())
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "frozen_total",
+            Array1::from_vec(stats.iter().map(|value| value.frozen_goals).collect())
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "skipped_total",
+            Array1::from_vec(
+                stats
+                    .iter()
+                    .map(|value| value.skipped_replaced_goals)
+                    .collect(),
+            )
+            .into_pyarray(py),
+        )?;
+        out.set_item(
+            "cancelled_total",
+            Array1::from_vec(stats.iter().map(|value| value.cancelled_goals).collect())
+                .into_pyarray(py),
+        )?;
+        Ok(out)
+    }
+
+    fn set_personal_goal_learning(&mut self, enabled: bool) {
+        self.personal_goals.set_learning_enabled(enabled);
     }
 
     fn restore(&mut self, value: &Bound<'_, PyDict>) -> PyResult<()> {
@@ -1313,7 +1608,7 @@ impl DevelopmentalResidentCohort {
             })
         };
         if get("format")?.extract::<String>()? != FORMAT
-            || get("version")?.extract::<u8>()? != 3
+            || get("version")?.extract::<u8>()? != 4
             || get("batch")?.extract::<usize>()? != self.batch
             || get("conditioned")?.extract::<bool>()? != self.conditioned
             || get("sample")?.extract::<bool>()? != self.sample
@@ -1385,6 +1680,42 @@ impl DevelopmentalResidentCohort {
         self.pending_physiology
             .copy_from_slice(pending_physiology.as_slice()?);
         self.pending_tick = get("pending_tick")?.extract()?;
+        let personal_goals = get("personal_goals")?.extract::<String>()?;
+        self.personal_goals = PersonalGoalAssociations::restore(
+            &personal_goals,
+            &PersonalGoalConfig::current(true),
+            self.batch,
+        )
+        .map_err(PyValueError::new_err)?;
+        self.goal_credit_pending = get("goal_credit_pending")?.extract()?;
+        macro_rules! restore_goal_f32 {
+            ($name:literal, $field:expr) => {{
+                let values: PyReadonlyArray1<'_, f32> = get($name)?.extract()?;
+                if values.shape() != [self.batch]
+                    || values.as_slice()?.iter().any(|value| !value.is_finite())
+                {
+                    return Err(PyValueError::new_err(concat!(
+                        "invalid developmental snapshot field: ",
+                        $name
+                    )));
+                }
+                $field.copy_from_slice(values.as_slice()?);
+            }};
+        }
+        restore_goal_f32!("selected_goal_bias", self.selected_goal_bias);
+        restore_goal_f32!("selected_goal_prediction", self.selected_goal_prediction);
+        restore_goal_f32!("last_goal_reward", self.last_goal_reward);
+        restore_goal_f32!("last_goal_return", self.last_goal_return);
+        self.last_goal_completed = get("last_goal_completed")?.extract()?;
+        self.last_goal_attributed = get("last_goal_attributed")?.extract()?;
+        self.last_goal_learned = get("last_goal_learned")?.extract()?;
+        if self.goal_credit_pending.len() != self.batch
+            || self.last_goal_completed.len() != self.batch
+            || self.last_goal_attributed.len() != self.batch
+            || self.last_goal_learned.len() != self.batch
+        {
+            return Err(PyValueError::new_err("private goal snapshot shapes differ"));
+        }
         self.state.copy_from_slice(h);
         self.previous_action.copy_from_slice(p);
         self.action_rng.copy_from_slice(r);

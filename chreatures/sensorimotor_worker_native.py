@@ -12,7 +12,40 @@ from typing import Any
 
 import numpy as np
 
-DEVELOPMENTAL_FORMAT = "chreatures-native-developmental-resident-rich-v2"
+DEVELOPMENTAL_FORMAT = "chreatures-native-developmental-resident-rich-v3"
+PERSONAL_GOAL_CONTRACT = {
+    "format": "chreatures-private-goal-associations-v1",
+    "objective": {
+        "format": "chreatures-finite-energy-homeostasis-v1",
+        "sha256": "01ae937a153a056c8cc5fa5be4d55cdfb38dbfcede4dbceb16ec33e19c5f4d00",
+        "config": {
+            "version": 1,
+            "assimilation_efficiency": 0.84,
+            "reserve_target": 0.85,
+            "reserve_temperature": 0.08,
+            "fatigue_energy_weight": 0.08,
+            "gut_comfort": 0.55,
+            "gut_overload_energy_weight": 0.08,
+            "effort_energy_rate": 0.0042,
+            "effort_extra_weight": 0.25,
+            "reward_per_energy": 12.0,
+            "max_interval_seconds": 2.0,
+        },
+    },
+    "features": [
+        "bias",
+        "two_energy_minus_one",
+        "two_gut_minus_one",
+        "two_fatigue_minus_one",
+    ],
+    "slots": 128,
+    "horizon_ticks": 10,
+    "return_scale": 0.01,
+    "learning_rate": 0.05,
+    "weight_norm_limit": 4.0,
+    "logit_gain": 0.35,
+    "learning_default_enabled": True,
+}
 PREDICTOR_ORDER = (
     "input.mean",
     "input.scale",
@@ -246,9 +279,9 @@ class DevelopmentalResidentCohort:
             )
             if (
                 metadata.get("format") != DEVELOPMENTAL_FORMAT
-                or metadata.get("version") != 2
+                or metadata.get("version") != 3
                 or metadata.get("execution")
-                != "developmental-resident-native-rich-predictive-v2"
+                != "developmental-resident-native-rich-predictive-personal-goals-v3"
                 or metadata.get("pack_order") != list(order)
                 or set(archive.files) != set(order) | {"metadata"}
             ):
@@ -277,6 +310,8 @@ class DevelopmentalResidentCohort:
                 arrays[name] = value
         if _artifact_identity(metadata, arrays) != metadata.get("artifact_sha256"):
             raise ValueError("developmental resident artifact identity differs")
+        if metadata.get("personal_goal_associations") != PERSONAL_GOAL_CONTRACT:
+            raise ValueError("personal goal association contract differs")
         temporal = metadata.get("temporal_contract", {})
         if (
             temporal.get("observation_interval_seconds") != 0.05
@@ -371,6 +406,12 @@ class DevelopmentalResidentCohort:
             "file_sha256": file_hash,
             "mode": "rich-achieved-goal",
             "execution": metadata["execution"],
+            "personal_goal_contract_sha256": hashlib.sha256(
+                _canonical(PERSONAL_GOAL_CONTRACT)
+            ).hexdigest(),
+            "finite_energy_objective_sha256": PERSONAL_GOAL_CONTRACT["objective"][
+                "sha256"
+            ],
         }
         trained = metadata.get("training_identity", {})
         self.neural_contract = {
@@ -463,9 +504,23 @@ class DevelopmentalResidentCohort:
             "goal_changed": (self.batch_size,),
             "goal_recorded_tick": (self.batch_size,),
             "goal_recorded_time": (self.batch_size,),
+            "goal_generation": (self.batch_size,),
             "goal_remaining_ticks": (self.batch_size,),
             "goal_key": (self.batch_size, 64),
             "goal_window": (self.batch_size, 4, 4453),
+            "personal_goal_selected_bias": (self.batch_size,),
+            "personal_goal_prediction": (self.batch_size,),
+            "personal_goal_last_reward": (self.batch_size,),
+            "personal_goal_last_return": (self.batch_size,),
+            "personal_goal_completed": (self.batch_size,),
+            "personal_goal_attributed": (self.batch_size,),
+            "personal_goal_learned": (self.batch_size,),
+            "personal_goal_completed_total": (self.batch_size,),
+            "personal_goal_learned_total": (self.batch_size,),
+            "personal_goal_frozen_total": (self.batch_size,),
+            "personal_goal_skipped_total": (self.batch_size,),
+            "personal_goal_cancelled_total": (self.batch_size,),
+            "personal_goal_learning_enabled": (),
         }
         if set(result) != set(expected):
             raise RuntimeError("native developmental result fields differ")
@@ -480,19 +535,59 @@ class DevelopmentalResidentCohort:
         return result
 
     def observe_consequences(
-        self, ticks, before_physiology, after_physiology, executed_actions_plus_oral
+        self,
+        ticks,
+        before_physiology,
+        after_physiology,
+        executed_actions_plus_oral,
+        effort,
+        *,
+        dt: float,
     ):
-        self._native.observe_consequences(
+        result = self._native.observe_consequences(
             np.ascontiguousarray(ticks, dtype=np.uint64),
             np.ascontiguousarray(before_physiology, dtype=np.float32),
             np.ascontiguousarray(after_physiology, dtype=np.float32),
             np.ascontiguousarray(executed_actions_plus_oral, dtype=np.float32),
+            np.ascontiguousarray(effort, dtype=np.float32),
+            float(dt),
         )
+        result = {name: np.asarray(value) for name, value in result.items()}
+        expected = {
+            "reward": (self.batch_size,),
+            "completed": (self.batch_size,),
+            "summed_return": (self.batch_size,),
+            "attributed": (self.batch_size,),
+            "learned": (self.batch_size,),
+            "completed_total": (self.batch_size,),
+            "learned_total": (self.batch_size,),
+            "frozen_total": (self.batch_size,),
+            "skipped_total": (self.batch_size,),
+            "cancelled_total": (self.batch_size,),
+        }
+        if set(result) != set(expected):
+            raise RuntimeError("native personal goal receipt fields differ")
+        for name, shape in expected.items():
+            if result[name].shape != shape:
+                raise RuntimeError(
+                    f"native personal goal receipt shape differs: {name}"
+                )
+            if (
+                np.issubdtype(result[name].dtype, np.floating)
+                and not np.isfinite(result[name]).all()
+            ):
+                raise RuntimeError(f"native personal goal receipt is nonfinite: {name}")
+        return result
+
+    def set_personal_goal_learning(self, enabled: bool) -> None:
+        if type(enabled) is not bool:
+            raise TypeError("enabled must be boolean")
+        self._native.set_personal_goal_learning(enabled)
 
     def snapshot_value(self) -> dict[str, Any]:
         return {
-            "format": "chreatures-developmental-resident-rich-snapshot-v2",
-            "version": 2,
+            "format": "chreatures-developmental-resident-rich-snapshot-v3",
+            "version": 3,
             "model_identity": copy.deepcopy(self.model_identity),
             "batch_size": self.batch_size,
             "observation_contract": copy.deepcopy(self.observation_contract),
@@ -507,8 +602,8 @@ class DevelopmentalResidentCohort:
         if (
             not isinstance(value, dict)
             or value.get("format")
-            != "chreatures-developmental-resident-rich-snapshot-v2"
-            or value.get("version") != 2
+            != "chreatures-developmental-resident-rich-snapshot-v3"
+            or value.get("version") != 3
         ):
             raise ValueError("unsupported developmental resident snapshot")
         instance = cls(
