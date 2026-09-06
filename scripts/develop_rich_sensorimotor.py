@@ -398,7 +398,9 @@ def reset_worlds(pool, brain, worlds: int, residents: int, seed: int, episode: i
             {
                 "seed": seed + episode * 1009 + index,
                 "held_out": False,
-                "stage": min(2, episode),
+                # This runner constructs chemical-nursery profile v3, whose
+                # exchange ecology has no staged feeder-placement curriculum.
+                "stage": 0,
             }
             for index in range(worlds)
         ],
