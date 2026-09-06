@@ -17,7 +17,6 @@ data = ["pyarrow>=18", "pandas>=2.2"]
 
 [project.scripts]
 chreatures = "chreatures.server:main"
-chreatures3d = "chreatures.server:main3d"
 
 [tool.hatch.build.targets.wheel]
 packages = ["chreatures"]

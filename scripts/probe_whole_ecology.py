@@ -15,7 +15,7 @@ from pathlib import Path
 import time
 from typing import Any
 
-from chreatures.runtime import canonical
+from chreatures.checkpoint import canonical
 from chreatures.runtime3d import Habitat3D
 
 

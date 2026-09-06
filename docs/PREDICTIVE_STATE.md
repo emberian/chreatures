@@ -77,6 +77,22 @@ Unknown provenance stays explicitly unknown for research-only artifacts. Native
 snapshots bind the immutable artifact, tensor manifest, and input identity, so a
 same-shaped different model cannot restore them.
 
+Complete exports embed the upstream PPO `count`, `mean`, and `m2`
+in float64. Their artifact and canonical moment hashes must match the recorded
+training-input identity before export and again when the native adapter loads the
+archive. `normalize_source_features(raw[B,384])` reproduces the original PPO
+transform, including `m2 / max(count, 1)`, the `1e-5` variance floor, and
+`[-5,5]` clipping, and returns contiguous float32. This lets a fresh resident
+start from raw MaleCNS readouts without depending on a coincidentally matching
+motor checkpoint. Version-1 artifacts remain readable for recorded normalized
+sequences but reject raw-source normalization explicitly.
+
+The current version-3 artifact also binds its cadence directly to the hashed
+collector manifest: physics steps are `0.05` seconds, five physics steps form one
+predictor observation, and the predictor interval is therefore `0.25` seconds.
+The native adapter rejects a version-3 archive if this temporal contract is
+missing, differs, or names another dataset-manifest hash.
+
 `NativePredictiveCohort.observe(features, physiology, previous_action, reset)`
 updates private experienced state. `query_from_snapshot(snapshot, actions)`
 accepts actions shaped `[T,Bq,8]`, with `1 <= Bq <= cohort capacity`; a B1

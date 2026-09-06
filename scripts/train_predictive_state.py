@@ -107,7 +107,10 @@ def main() -> None:
     a.output.mkdir(parents=True, exist_ok=True)
     checkpoint = trainer.checkpoint(a.output / "predictive-state.pt")
     immutable = trainer.export(
-        a.output / "predictive-state-rust.npz", training_input_identity=identity
+        a.output / "predictive-state-rust.npz",
+        training_input_identity=identity,
+        source_normalizer_path=a.dataset / "normalizer.npz",
+        source_dataset_manifest_path=manifest_path,
     )
     keys = [
         k

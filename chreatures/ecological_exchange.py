@@ -354,6 +354,7 @@ class EcologicalExchange:
         return {
             "kind": FORMAT,
             "sha256": self.sha256,
+            "pools": list(self.web.chemistry.pools),
             "egested": copy.deepcopy(self.egested),
             "acquired": copy.deepcopy(self.acquired),
             "capacity_blocked": self.capacity_blocked.copy(),

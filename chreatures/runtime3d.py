@@ -18,9 +18,9 @@ from pathlib import Path
 
 import numpy as np
 
+from .checkpoint import canonical
 from .cognition import AdaptiveOrgan
 from .neural_client import NeuralClient
-from .runtime import canonical
 from .visitor_events import VisitorPerformances
 
 
@@ -52,6 +52,7 @@ class Habitat3D:
         perception_url=None,
         physics_backend=None,
         personal_plasticity=False,
+        predictive_model=None,
     ):
         from .acoustics import Acoustics
         from .ecology import Ecology
@@ -72,12 +73,19 @@ class Habitat3D:
             raise ValueError(
                 "Personal motor plasticity requires a personal memory organ"
             )
+        if predictive_model is not None and not personal_memory:
+            raise ValueError(
+                "Predictive foresight requires the personal contextual motor organ"
+            )
         if resources is not None and biosphere is not None:
             raise ValueError(
                 "Legacy resources and the developmental biosphere are mutually exclusive"
             )
         self.personal_memory = bool(personal_memory)
         self.personal_plasticity = bool(personal_plasticity)
+        self.predictive_model = (
+            None if predictive_model is None else str(Path(predictive_model).resolve())
+        )
         if spec is None:
             spec = json.loads(
                 (
@@ -116,6 +124,8 @@ class Habitat3D:
         self.neural = NeuralClient(brain_url)
         self.motor_artifact = None
         self.motors = {}
+        self.foresights = {}
+        self.foresight_deployment = None
         if motor_genome is not None:
             from .motor_inheritance import MotorArtifact, MotorOrgan
 
@@ -145,6 +155,31 @@ class Habitat3D:
                 self.motors[body.id] = motor_type(
                     self.motor_artifact, seed=private_seed, **options
                 )
+            if self.predictive_model is not None:
+                from .foresight import ForesightConfig, ResidentForesight
+
+                for i, body in enumerate(self.world.bodies):
+                    self.foresights[body.id] = ResidentForesight(
+                        self.predictive_model,
+                        config=ForesightConfig(seed=seed * 1009 + i + 7919),
+                    )
+                self._validate_foresight_interface()
+                training = next(iter(self.foresights.values())).experienced.metadata[
+                    "training_input_identity"
+                ]
+                self.foresight_deployment = {
+                    "status": "cross-environment-research-transfer",
+                    "source_dataset_manifest_sha256": training[
+                        "dataset_manifest_sha256"
+                    ],
+                    "deployed_body": self.body_mode,
+                    "deployed_ecology": ecology,
+                    "deployed_biosphere": biosphere is not None,
+                    "evidence": (
+                        "neural graph, ports, feature preprocessing, actions and timing "
+                        "match; physical ecology equivalence is not claimed"
+                    ),
+                }
         self.id = str(uuid.uuid4())
         self.tick = 0
         self.paused = False
@@ -200,7 +235,10 @@ class Habitat3D:
             )
         self.note(
             "hatched",
-            f"{len(self.world.bodies)} new residents entered the habitat with full MaleCNS circuits.",
+            f"{len(self.world.bodies)} new residents entered the habitat with connectome-based circuits.",
+            neurons=int(self.neural.graph["neurons"]),
+            graph_sha256=self.neural.graph["sha256"],
+            dataset=self.neural.metadata["brain"].get("dataset", "unknown"),
         )
         if self.motor_artifact is not None:
             self.note(
@@ -208,6 +246,12 @@ class Habitat3D:
                 "Inherited a population-trained motor interface and private working context.",
                 artifact_sha256=self.motor_artifact.sha256,
                 training=self.motor_artifact.metadata["training_provenance"],
+            )
+        if self.foresight_deployment is not None:
+            self.note(
+                "foresight",
+                "Enabled private predictive candidate evidence as a research transfer.",
+                deployment=copy.deepcopy(self.foresight_deployment),
             )
 
     def _validate_motor_interface(self):
@@ -224,6 +268,24 @@ class Habitat3D:
             raise ValueError(
                 "Inherited motor anatomy or neural interface differs from this world"
             )
+
+    def _validate_foresight_interface(self):
+        if not self.foresights:
+            return
+        expected_graph = self.neural.graph["sha256"]
+        expected_ports = self.neural.metadata["brain"].get("ports", {}).get("spec_hash")
+        for organ in self.foresights.values():
+            record = organ.experienced.input_identity["record"][
+                "training_input_identity"
+            ]
+            if (
+                record.get("graph_sha256") != expected_graph
+                or record.get("port_spec_sha256") != expected_ports
+                or organ.experienced.feature_dim != len(self.neural.output_names)
+            ):
+                raise ValueError(
+                    "Predictive foresight anatomy or neural interface differs from this world"
+                )
 
     def memory_count(self, body_id):
         if self.personal_memory:
@@ -247,6 +309,17 @@ class Habitat3D:
                         "prediction_error": organ.motor.last_prediction_error or 0.0,
                         "learning_progress": 0.0,
                     },
+                    **({
+                        "foresight": {
+                            "status": self.foresights[key].status,
+                            "observations": self.foresights[key].observation_count,
+                            "model_artifact_sha256": self.foresights[key]
+                            .experienced.model_identity["artifact_sha256"],
+                            "input_identity_sha256": self.foresights[key]
+                            .experienced.input_identity["sha256"],
+                            "deployment": copy.deepcopy(self.foresight_deployment),
+                        }
+                    } if key in self.foresights else {}),
                 }
                 for key, organ in self.motors.items()
             }
@@ -298,6 +371,54 @@ class Habitat3D:
             }
         )
 
+    @staticmethod
+    def _combined_candidate_evidence(*callbacks):
+        active = tuple(callback for callback in callbacks if callback is not None)
+        if not active:
+            return None
+        if len(active) == 1:
+            return active[0]
+
+        def combined(candidates):
+            reports = [callback(candidates) for callback in active]
+            count = len(candidates)
+            corrections = np.zeros(count, dtype=np.float32)
+            diagnostics = [dict() for _ in candidates]
+            sources = []
+            independent = True
+            for report in reports:
+                source = report.get("source")
+                values = np.asarray(report.get("corrections"), dtype=np.float32)
+                items = report.get("diagnostics")
+                if (
+                    not isinstance(source, str)
+                    or values.shape != (count,)
+                    or not np.isfinite(values).all()
+                    or not isinstance(items, (list, tuple))
+                    or len(items) != count
+                ):
+                    raise ValueError("combined candidate evidence is malformed")
+                sources.append(source)
+                corrections += values
+                independent &= (
+                    report.get("proposal_credit_contract")
+                    == "candidate-and-frozen-state-only-v1"
+                )
+                for index, item in enumerate(items):
+                    diagnostics[index][source] = copy.deepcopy(item)
+            result = {
+                "source": "private-foresight+visual-evidence-v1",
+                "corrections": corrections.astype(float).tolist(),
+                "diagnostics": diagnostics,
+            }
+            if independent:
+                result["proposal_credit_contract"] = (
+                    "candidate-and-frozen-state-only-v1"
+                )
+            return result
+
+        return combined
+
     def step(self, steps=1):
         dt = 0.05
         if self.pending_step is not None:
@@ -344,6 +465,35 @@ class Habitat3D:
                 local_body["support"] = float(response["support"])
                 if self.motors:
                     if self.personal_memory:
+                        motor = self.motors[body_id]
+                        foresight = self.foresights.get(body_id)
+                        macro_boundary = motor.motor.held_ticks in (0, 5)
+                        if foresight is not None and macro_boundary:
+                            previous_action = (
+                                np.zeros(8, dtype=np.float32)
+                                if motor.pending is None
+                                else np.asarray(motor.pending["action"], dtype=np.float32)
+                            )
+                            foresight.observe(
+                                features,
+                                motor.motor.physiology_vector(local_body),
+                                previous_action,
+                                reset=foresight.observation_count == 0,
+                            )
+                        visual_evidence = (
+                            self.vision.candidate_evidence(
+                                body_id,
+                                self.tick,
+                                local_body,
+                                motor.refiner.config,
+                            )
+                            if self.vision is not None
+                            else None
+                        )
+                        evidence = self._combined_candidate_evidence(
+                            foresight.candidate_evidence if foresight is not None else None,
+                            visual_evidence,
+                        )
                         maturation = self.motors[body_id].variance_maturation
                         maturation_queued = (
                             maturation is not None and maturation["status"] == "queued"
@@ -353,15 +503,13 @@ class Habitat3D:
                             local_body,
                             self.outcomes[body_id] if self.tick else None,
                             dt,
-                            candidate_evidence=self.vision.candidate_evidence(
-                                body_id,
-                                self.tick,
-                                local_body,
-                                self.motors[body_id].refiner.config,
-                            )
-                            if self.vision is not None
-                            else None,
+                            candidate_evidence=evidence,
                         )
+                        if foresight is not None and macro_boundary:
+                            foresight.commit_executed(tuple(action[name] for name in (
+                                "thrust", "yaw", "gaze_pitch", "grip",
+                                "signal_low", "signal_mid", "signal_high", "posture",
+                            )))
                         if maturation_queued and maturation["status"] == "applied":
                             self.note(
                                 "development",
@@ -602,6 +750,11 @@ class Habitat3D:
             "resident_physiology_coupled": self.biosphere.mobility is not None,
             "mobile_physiology": self.biosphere.mobility.view() if self.biosphere.mobility is not None else None,
             "whole_food_web": False,
+            "exchange": (
+                self.biosphere.exchange.view()
+                if getattr(self.biosphere, "exchange", None) is not None
+                else None
+            ),
         }
 
     def save(self, path):
@@ -660,6 +813,12 @@ class Habitat3D:
                 k: v.tolist() for k, v in self.feature_variance.items()
             },
         }
+        if self.foresights:
+            state.update({
+                "predictive_model": self.predictive_model,
+                "foresights": {key: organ.snapshot() for key, organ in self.foresights.items()},
+                "foresight_deployment": copy.deepcopy(self.foresight_deployment),
+            })
         digest = hashlib.sha256(canonical(state)).hexdigest()
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -741,6 +900,11 @@ class Habitat3D:
         }
         instance.motor_artifact = None
         instance.motors = {}
+        instance.foresights = {}
+        instance.predictive_model = value.get("predictive_model")
+        instance.foresight_deployment = copy.deepcopy(
+            value.get("foresight_deployment")
+        )
         instance.personal_memory = bool(value.get("personal_memory", False))
         instance.personal_plasticity = bool(value.get("personal_plasticity", False))
         if value.get("motor_artifact") is not None:
@@ -759,7 +923,7 @@ class Habitat3D:
             if (
                 set(instance.motors) != {body.id for body in instance.world.bodies}
                 or instance.organs
-            ):
+                ):
                 raise ValueError(
                     "Saved motor controllers do not match the physical cohort"
                 )
@@ -770,8 +934,22 @@ class Habitat3D:
                 raise ValueError(
                     "Saved personal plasticity selector differs from its organs"
                 )
+        if value.get("foresights"):
+            from .foresight import ResidentForesight
+
+            if instance.predictive_model is None or not instance.personal_memory:
+                raise ValueError("Saved foresight lacks its predictive model selector")
+            instance.foresights = {
+                key: ResidentForesight.restore(instance.predictive_model, state)
+                for key, state in value["foresights"].items()
+            }
+            if set(instance.foresights) != set(instance.motors):
+                raise ValueError("Saved foresight organs do not match motor residents")
+            if not isinstance(instance.foresight_deployment, dict):
+                raise ValueError("Saved foresight lacks deployment transfer provenance")
         instance.neural = NeuralClient(brain_url or value["brain_url"])
         instance._validate_motor_interface()
+        instance._validate_foresight_interface()
         if instance.neural.graph["sha256"] != value["graph_sha256"]:
             raise ValueError("Remote anatomy differs from saved resident anatomy")
         if (

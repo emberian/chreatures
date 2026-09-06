@@ -21,7 +21,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from chreatures.metal_circuit import SAFE_NAME
-from chreatures.runtime import canonical
+from chreatures.checkpoint import canonical
 
 
 def migrate(source, output, snapshots, target_kernel, physics_backend=None):

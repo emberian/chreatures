@@ -20,6 +20,8 @@ The newer live world runs six-legged bodies with twelve physical hinges, conserv
 
 **This is a synthetic species experiment, not a recovered fly.** Anatomy is measured; rate dynamics, physiological laws, body mechanics and sensory/motor mappings contain explicit modeling assumptions. Personal learning mechanisms are running, but durable individuality, useful learned manipulation and reciprocal social skills remain research targets.
 
+Fresh [recycling worlds](docs/ECOLOGICAL_EXCHANGE.md) now return mobile material through body-local outlets into finite physical deposits. Constructed roots acquire mineral and carbon through actual contact with those objects. A coupled experiment transferred material under contact and none in its separated control, with exact continuation and chemical accounting. This supplies another ecological interaction; learned nutrient delivery and a stable food web remain open.
+
 The new [ecological substrate](docs/ECOLOGICAL_COMMONS.md) joins a conserved synthetic chemistry to resource-funded developmental grammars. Three related colonies built over 1,600 physical parts in a 180-second non-neural experiment; removed leaf material entered another compartment’s digestion, and exact checkpoint continuation preserved chemistry, geometry and growth. Static construction and removal also change chemical transport. The existing live reef retains its original mobile physiology. Fresh chemical-reef worlds now bind private mobile body/gut compartments to the same reactor, gate active forces and signals with ATP, and acquire finite material through physical mouth contact. Digestive enzymes liberate reserves; shared stores divide competing requests proportionally. A full spatial food web and reproduction remain open. [Biosphere implementation and scope](docs/BIOSPHERE.md).
 
 [Inherited body traits](docs/BODY_INHERITANCE.md) now change actual articulated geometry and motor parameters. A [circuit blueprint compiler](docs/CIRCUIT_BLUEPRINT.md) can derive new recurrent architectures from the measured graph while retaining edge ancestry. A second structural generation with 172,376 neurons has executed on AMD hardware; inherited blueprints now compile actual descendants with bounded module and edge variation. Improved behavior is not established. Dependent young, embodied reproduction and [eusocial organization](docs/SOCIAL_ECOLOGIES.md) remain open implementation and research directions.
@@ -33,36 +35,27 @@ Two projects are central to where this is going:
 
 Both native libraries have been executed, not merely named in an architecture diagram. See [the integration contracts and receipts](docs/LIBRARIES.md). Their warnings and limitations are retained with their results.
 
-## Try the compact reference
+## The archived first habitat
 
-The smallest runnable version needs no GPU or model service:
-
-```sh
-git clone https://github.com/emberian/chreatures.git
-cd chreatures
-uv sync --extra dev
-uv run chreatures
-```
-
-Open **http://127.0.0.1:8765**. Place food, toys and shelter; drag objects; use **A / S / D** to sing, **Space** to pause, and the inspection panel to see local sensory and neural state. Whole-world state saves under `runs/` and resumes on restart.
-
-This compact **2D reference uses a female FlyWire v783 subset of 6,789 neurons**, not MaleCNS. Its attraction/avoidance and association rules are explicit bootstrap mechanisms. It remains useful for reproducible development while the larger world grows. [Data selection and provenance](docs/CONNECTOME.md).
+The earlier 2D habitat used a **female FlyWire v783 subset of 6,789 neurons**, not MaleCNS. Its runtime and browser are preserved in the [compact 2D archive release](https://github.com/emberian/chreatures/tree/archive/compact-2d-flywire-v1). The running original world was handed over to an isolated archive checkout with its exact saved identity and stochastic state. Current development has one 3D launcher, `chreatures`; the female data and [provenance](docs/CONNECTOME.md) remain available for research.
 
 ## Run the full 3D habitat
 
 The full graph is downloaded separately; large arrays and checkpoints do not belong in Git. The neural service can use PyTorch on AMD or the local Rust/Metal backend on Apple Silicon. The habitat/browser can run separately from it.
 
+Clone the repository and run `uv sync --extra dev` to prepare the application environment.
+
 1. Build the required [native world kernels](native/world-kernels/README.md) with `uv run python native/world-kernels/build_extension.py`. Then follow [MaleCNS acquisition](docs/MALECNS.md) and choose the [persistent accelerator service](docs/REMOTE_BRAIN.md) or the [local Apple Metal backend](docs/METAL_BRAIN.md). Both use the [rich retinal port setup](docs/NEURAL_PORTS.md).
 2. Reach that service over localhost or an SSH forward, then run:
 
 ```sh
-uv run chreatures3d --port 8768 --brain-url http://127.0.0.1:18767 \
+uv run chreatures --port 8768 --brain-url http://127.0.0.1:18767 \
   --checkpoint runs/articulated-garden.json
 ```
 
 Open **http://127.0.0.1:8768**. The example assumes the rich neural service is forwarded to local port 18767. A 3D checkpoint contains physics, personal cognitive state and the checksum of a server-side neural snapshot. Preserve both parts. Restore checks anatomy and sensory-interface identity; a failed distributed step pauses instead of blindly advancing again.
 
-Actual circuit workloads have run on an AMD RX 6750 XT and Radeon 890M. [GPU results](docs/GPU_NURSERY.md), [developmental training](docs/DEVELOPMENT.md), [3D direction](docs/THREE_DIMENSIONS.md), [articulated body](docs/ARTICULATED.md), [chemical fields](docs/FIELDS.md), [retinal ports](docs/NEURAL_PORTS.md).
+Actual circuit workloads have run on an AMD RX 6750 XT and Radeon 890M. [Native GPU results](docs/FAST_CIRCUIT.md), [developmental training](docs/DEVELOPMENT.md), [3D direction](docs/THREE_DIMENSIONS.md), [articulated body](docs/ARTICULATED.md), [chemical fields](docs/FIELDS.md), [retinal ports](docs/NEURAL_PORTS.md).
 
 Development uses a shared predictive actor–critic with private recurrent state, articulated environments in persistent worker processes, and the full neural graph on every physical tick. The native AMD kernel improved a paired 48-resident neural benchmark by **5.84×**. The 20,000-step stage increased held-out ingestion from 0.372 to 2.859 in its evaluation, but movement cost increased and overall bodily return worsened. Removing neural features reduced ingestion to 2.173; a matched rewired graph produced more ingestion under the same policy in a larger probe. These results show sensory and topological effects, without establishing an advantage for the biological wiring. [Learning protocol](docs/LEARNING.md), [measured sparse-loop optimization](docs/FAST_CIRCUIT.md), and [physical throughput](docs/PHYSICAL_THROUGHPUT.md).
 
@@ -82,7 +75,7 @@ The newer [terrarium](docs/TERRARIUM.md) adds connected terraces, an underdeck, 
 The latest **learning garden** adds a [passive pressure lift and coupled gate](docs/MECHANICAL_ASSEMBLIES.md), an inherited finite-energy policy, and [private lifetime motor plasticity](docs/PERSONAL_PLASTICITY.md). Reed, Tansy and Sorrel have separate motor means, state-dependent exploration, value parameters and eligibility traces. Their actual five-tick bodily consequences update their own motor tendencies; contextual and visual evidence use the same versioned physiological objective. For a new world with its own neural service:
 
 ```sh
-uv run chreatures3d --port 8771 --brain-url http://127.0.0.1:18768 \
+uv run chreatures --port 8771 --brain-url http://127.0.0.1:18768 \
   --checkpoint runs/learning-garden.json \
   --habitat data/habitats/learning-garden.json \
   --motor-genome data/genomes/nursery-20000-finite-energy.npz \
