@@ -90,12 +90,71 @@ class Acoustics:
         self._ledger = {name: 0.0 for name in _LEDGER_FIELDS}
         self._initial_energy = self._stored_energy()
         self.time = 0.0
+        self._native_revision = -1
+        self._bind_native()
         topology = {
             "config": self.config,
             "bindings": sorted((key, value["entity"], value["drive"]) for key, value in self._emitters.items()),
         }
         self._signature = hashlib.sha256(_canonical(topology)).hexdigest()
         self.world.attach_acoustics(self)
+
+    def _bind_native(self) -> None:
+        """Resolve model-local addresses while preserving oscillator state."""
+        from .native_world import load_world_kernels
+
+        values = list(self._emitters.values())
+        bodies, dofs = [], []
+        for emitter in values:
+            entity = emitter["entity"]
+            bodies.append(int(self.world._entity_mj[entity]))
+            dofs.append(
+                int(self.world.model.jnt_dofadr[self.world._entity_joint[entity]])
+                if emitter["drive"] in {"hinge", "both"} else -1
+            )
+        tones = []
+        energy = []
+        for emitter_id, emitter in self._emitters.items():
+            weights = np.asarray(emitter["tones"], dtype=float)
+            weights /= weights.sum()
+            tones.extend(weights.tolist())
+            energy.extend(self._states[emitter_id]["energy"])
+        self._native = load_world_kernels().AcousticEngine(
+            bodies, dofs,
+            [v for emitter in values for v in emitter["source_offset"]], tones,
+            [v["energy_capacity"] for v in values],
+            [v["capture_efficiency"] for v in values],
+            [v["impact_threshold"] for v in values],
+            [v["min_impact_speed"] for v in values],
+            [v["cooldown"] for v in values], [v["decay_time"] for v in values],
+            [v["radiative_fraction"] for v in values], [v["gain"] for v in values],
+            [v["reference_energy"] for v in values], [v["range"] for v in values],
+            [v["occlusion"] for v in values], [v["hinge_damping"] for v in values],
+            [v["max_hinge_torque"] for v in values],
+            [v["drive"] in {"contact", "both"} for v in values], energy,
+        )
+        self._native.restore_state(
+            energy,
+            [self._states[key]["cooldown"] for key in self._emitters],
+            [self._states[key]["event_count"] for key in self._emitters],
+            [self._ledger[key] for key in _LEDGER_FIELDS],
+        )
+        self._native_revision = self.world.model_revision
+
+    def _ensure_native_binding(self) -> None:
+        if self._native_revision != self.world.model_revision:
+            self._sync_native_state()
+            self._bind_native()
+
+    def _sync_native_state(self) -> None:
+        energy, cooldown, events, ledger = self._native.state()
+        energy = np.asarray(energy).reshape((-1, 3))
+        for index, emitter_id in enumerate(self._emitters):
+            self._states[emitter_id] = {
+                "energy": energy[index].astype(float).tolist(),
+                "cooldown": float(cooldown[index]), "event_count": int(events[index]),
+            }
+        self._ledger = dict(zip(_LEDGER_FIELDS, map(float, ledger), strict=True))
 
     @staticmethod
     def _load(config: dict[str, Any] | str | Path | None) -> dict[str, Any]:
@@ -188,89 +247,46 @@ class Acoustics:
     def _stored_energy(self) -> float:
         return sum(sum(state["energy"]) for state in self._states.values())
 
-    def _harvest(self, emitter_id: str, mechanical_work: float) -> None:
-        emitter = self._emitters[emitter_id]
-        state = self._states[emitter_id]
-        available = mechanical_work * emitter["capture_efficiency"]
-        room = max(0.0, emitter["energy_capacity"] - sum(state["energy"]))
-        captured = min(available, room)
-        rejected = max(0.0, available - captured)
-        weights = np.asarray(emitter["tones"], dtype=float)
-        weights /= weights.sum()
-        state["energy"] = (np.asarray(state["energy"]) + weights * captured).tolist()
-        self._ledger["captured_energy"] += captured
-        self._ledger["capacity_rejected"] += rejected
-        self._ledger["transduction_loss"] += mechanical_work - captured
-
-    def ingest_contact(self, event: dict[str, Any]) -> None:
-        """Receive one anonymous, bounded contact-work event from the world."""
-        if not isinstance(event, dict):
-            raise TypeError("contact event must be a mapping")
-        emitter_id = self._by_entity.get(event.get("entity"))
-        if emitter_id is None or self._emitters[emitter_id]["drive"] not in {"contact", "both"}:
-            return
-        emitter = self._emitters[emitter_id]
-        state = self._states[emitter_id]
-        work = _number(event.get("impact_work"), "impact work", 0.0, 5.0)
-        speed = _number(event.get("relative_normal_speed"), "impact speed", 0.0, 100.0)
-        self._ledger["contact_work_observed"] += work
-        if state["cooldown"] > 0.0 or work < emitter["impact_threshold"] or speed < emitter["min_impact_speed"]:
-            self._ledger["transduction_loss"] += work
-            return
-        self._harvest(emitter_id, work)
-        state["cooldown"] = emitter["cooldown"]
-        state["event_count"] += 1
+    def ingest_contacts(self, events: list[dict[str, Any]]) -> None:
+        self._ensure_native_binding()
+        indices, work, speed = [], [], []
+        ids = {key: index for index, key in enumerate(self._emitters)}
+        for event in events:
+            emitter_id = self._by_entity.get(event.get("entity"))
+            if emitter_id is None:
+                continue
+            indices.append(ids[emitter_id])
+            work.append(_number(event.get("impact_work"), "impact work", 0.0, 5.0))
+            speed.append(_number(event.get("relative_normal_speed"), "impact speed", 0.0, 100.0))
+        self._native.ingest_contacts(
+            np.asarray(indices, dtype=np.int32), np.asarray(work), np.asarray(speed)
+        )
 
     def before_substep(self, dt: float) -> None:
         """Apply energy-removing hinge loads before one MuJoCo substep."""
         step = _number(dt, "acoustic substep", 1e-7, 0.1)
-        for emitter_id, emitter in self._emitters.items():
-            if emitter["drive"] not in {"hinge", "both"} or emitter["hinge_damping"] <= 0.0:
-                continue
-            physical = self.world.acoustic_entity_state(emitter["entity"])
-            velocity = float(physical["joint_velocity"])
-            torque = float(np.clip(
-                -emitter["hinge_damping"] * velocity,
-                -emitter["max_hinge_torque"], emitter["max_hinge_torque"],
-            ))
-            self.world.apply_acoustic_hinge_torque(emitter["entity"], torque)
-            work = max(0.0, -torque * velocity * step)
-            self._ledger["hinge_work_extracted"] += work
-            self._harvest(emitter_id, work)
+        self._ensure_native_binding()
+        self._native.before_substep(
+            int(self.world.model._address), int(self.world.data._address), step
+        )
 
     def advance(self, dt: float) -> dict[str, Any]:
         """Radiate and decay oscillator energy over a completed world interval."""
         duration = _number(dt, "acoustic dt", 1e-6, 60.0)
-        for emitter_id, emitter in self._emitters.items():
-            state = self._states[emitter_id]
-            state["cooldown"] = max(0.0, state["cooldown"] - duration)
-            energy = np.asarray(state["energy"], dtype=float)
-            loss = energy * -math.expm1(-duration / emitter["decay_time"])
-            radiated = loss * emitter["radiative_fraction"]
-            internal = loss - radiated
-            state["energy"] = (energy - loss).tolist()
-            self._ledger["radiated_energy"] += float(radiated.sum())
-            self._ledger["oscillator_loss"] += float(internal.sum())
+        self._ensure_native_binding()
+        self._native.advance(duration)
+        self._sync_native_state()
         self.time += duration
         return self.view()
 
     def sample(self, listener: np.ndarray, exclude_body: int) -> list[float]:
         """Sample current three-tone pressure amplitudes at a local point."""
-        point = np.asarray(listener, dtype=float)
-        result = np.zeros(3, dtype=float)
-        for emitter_id, emitter in self._emitters.items():
-            energy = np.asarray(self._states[emitter_id]["energy"], dtype=float)
-            if float(energy.sum()) <= 0.0:
-                continue
-            physical = self.world.acoustic_entity_state(emitter["entity"])
-            source = np.asarray(physical["position"], dtype=float) + _rotation(physical["quaternion"]) @ np.asarray(emitter["source_offset"], dtype=float)
-            distance = float(np.linalg.norm(source - point))
-            visibility = self.world.acoustic_visibility(
-                point, source, emitter["entity"], exclude_body, emitter["occlusion"],
-            )
-            amplitude = emitter["gain"] * np.sqrt(energy / emitter["reference_energy"])
-            result += visibility * amplitude / (1.0 + (distance / emitter["range"]) ** 2)
-        return np.clip(result, 0.0, 2.0).tolist()
+        self._ensure_native_binding()
+        point = np.ascontiguousarray(listener, dtype=np.float64)
+        return np.asarray(self._native.sample(
+            int(self.world.model._address), int(self.world.data._address), point,
+            int(exclude_body),
+        )).astype(float).tolist()
 
     def _energy_residual(self) -> float:
         expected = self._initial_energy + self._ledger["captured_energy"] - self._ledger["radiated_energy"] - self._ledger["oscillator_loss"]
@@ -281,6 +297,7 @@ class Acoustics:
         return observed - self._ledger["captured_energy"] - self._ledger["transduction_loss"]
 
     def view(self) -> dict[str, Any]:
+        self._sync_native_state()
         sources = []
         for emitter_id, emitter in self._emitters.items():
             physical = self.world.acoustic_entity_state(emitter["entity"])
@@ -296,6 +313,7 @@ class Acoustics:
         }
 
     def snapshot(self) -> dict[str, Any]:
+        self._sync_native_state()
         return {
             "version": 1, "signature": self._signature, "config": copy.deepcopy(self.config),
             "time": self.time, "states": copy.deepcopy(self._states), "ledger": self._ledger.copy(),
@@ -338,6 +356,7 @@ class Acoustics:
             engine._ledger = {key: _number(ledger[key], f"acoustic ledger {key}", 0.0, 1e15) for key in _LEDGER_FIELDS}
             engine._initial_energy = _number(snapshot.get("initial_energy"), "initial acoustic energy", 0.0, 1e9)
             engine.time = _number(snapshot.get("time"), "acoustic time", 0.0, 1e12)
+            engine._bind_native()
             if abs(engine._energy_residual()) > 1e-8 or abs(engine._mechanical_residual()) > 1e-8:
                 raise ValueError("acoustic snapshot violates its energy ledger")
             return engine

@@ -29,6 +29,17 @@ reusable capacity and returns each result as one contiguous NumPy allocation.
 Model and data pointers are borrowed only for the duration of the call, so model
 rebuilds cannot leave cached native pointers.
 
+`AcousticEngine` owns finite oscillator energy, cooldowns, transduction,
+radiation and their ledgers. Hinge loads and contact work enter through batches;
+native pose transforms and MuJoCo visibility rays turn oscillator state into
+body-local three-tone input. Bindings are rebuilt when physical topology changes.
+The C bridge validates every index before writing forces. Hinge extraction stays
+at the physical substep, while cooldown and radiative decay remain at the
+completed-world interval. The seven-resonator Living Reef comparison preserved
+physical trajectories and oscillator state exactly, with sound differences below
+`2.8e-17`. Complete-path timing varied from 0.94× to 1.08× on the busy laptop;
+no stable speedup is established by this port.
+
 `TransportSolver` owns reusable flux and change arrays for a complete
 multichannel chemical grid. Each call processes conservative diffusion and
 upwind advection across all x/y/z faces, including solids, heterogeneous

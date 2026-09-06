@@ -500,6 +500,7 @@ def main() -> int:
         dict(ports.spec),
         profile.to_value(),
         args.physical_backend,
+        args.residents_per_world,
     )
     critic = Critic().to(device)
     manager = SlowGoalManager().to(device)

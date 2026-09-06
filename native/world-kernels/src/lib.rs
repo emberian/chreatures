@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+mod acoustics;
 mod actuation;
 mod biosphere_tissue;
 mod contacts;
@@ -14,6 +15,7 @@ mod transport;
 #[pymodule]
 fn _world_kernels(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<actuation::ActuationCohort>()?;
+    module.add_class::<acoustics::AcousticEngine>()?;
     module.add_class::<contacts::ContactBatch>()?;
     module.add_class::<biosphere_tissue::BiosphereTissue>()?;
     module.add_class::<environment::LightEnvironment>()?;
