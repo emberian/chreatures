@@ -9,6 +9,7 @@ mod growth;
 mod habitat_family;
 mod illumination;
 mod lifecycle;
+mod material_overlap;
 mod metabolism;
 mod population_trajectory;
 mod sensorium;
@@ -26,6 +27,10 @@ fn _world_kernels(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<habitat_family::HabitatFamily>()?;
     module.add_class::<illumination::SolarCycle>()?;
     module.add_class::<lifecycle::LifecycleCohort>()?;
+    module.add_function(wrap_pyfunction!(
+        material_overlap::guaranteed_sphere_overlap_batch,
+        module
+    )?)?;
     module.add_class::<metabolism::MetabolicCohort>()?;
     module.add_class::<population_trajectory::PopulationTrajectory>()?;
     module.add_class::<somatic::SomaticCohort>()?;

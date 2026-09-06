@@ -120,3 +120,37 @@ construction, then full physical episodes with heterogeneous candidates and rich
 worlds, actual AMD/Metal costs, complete coupled restoration, and retained failures.
 Useful ecology, inheritance and learning are empirical results, not properties
 conferred by this architecture document.
+
+## Material packet performance receipt
+
+On an Apple M2 running macOS 26.6.1, Python 3.12.14 and MuJoCo 3.12.0, an
+eight-resident `terraced-delta` region (seed 2026090602, 130 chemistry rows) was
+advanced for three warm-up and twenty measured 0.05-second steps. Each resident
+requested release 0.1, secretion 0.2 and allocation 0.3. The original compiled
+clearance path spent 56.62 ms per biosphere step on average (138.76 ms p95).
+The native conservative packet-overlap path spent 6.01 ms on average (11.18 ms
+p95). Commands were:
+
+```text
+PYTHONPATH=/tmp/chreatures-regional-family-v8:/Users/ember/dev/chreatures .venv/bin/python /tmp/profile_biosphere.py
+PYTHONPATH=/tmp/chreatures-material-overlap-native2:/Users/ember/dev/chreatures .venv/bin/python /tmp/profile_biosphere.py
+```
+
+The final source hashes were `bf0317e541e03fac5e0175f98129ae2fa400bfa9e9b14d68de8b855a54625b2e`
+for `chreatures/material_objects.py`,
+`ea8d86447a4857f0ddfb6e987fd9bc39a0726701a8b023cfd6a6d185a7a51c2f`
+for `native/world-kernels/src/material_overlap.rs`, and
+`65b5e8a3d15bc39aa4e7a107e0c4b1ae9e838465dd6a02f5cf107332471fa8a2`
+for the native module registry. The test extension SHA-256 was
+`e713c58a207ba12ae3b5d02b787a99af7a5b9b122893c980361167413ab85866`.
+
+A 90-step optimized-versus-forced-compiled comparison was bit-identical for
+both the complete biosphere snapshot
+(`89c2acfcf2ff30ba1b23032c4e60795a2daf183e56385fb5f43e7ec38cfec7b0`)
+and physical-world snapshot
+(`a5fe7dd996a5a2c9f3d2fc9ca55826b0e1a22f3ac6af2b84fae0898ea7556f17`).
+An overlapping request with an empty donor retained receiver limiters, reported
+the donor limitation and created no boundary. Two funded edges targeting the
+same obstructed dormant entity were both blocked and matched the compiled path
+exactly, including snapshot SHA-256
+`bbbe2040c2ed47c5286678b52588598e94ac3205c0f437fb3b1cc837da76614d`.
