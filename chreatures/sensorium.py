@@ -229,17 +229,24 @@ def encode_rich_physical_senses(
 
 
 def serialize_rich_retina(senses: Mapping[str, Any]) -> dict[str, Any]:
-    """Copy rich native arrays to lists at an explicit JSON/view boundary."""
-    result = copy.copy(dict(senses))
-    rich = senses.get("rich_retina")
-    if not isinstance(rich, Mapping):
-        return result
-    result["rich_retina"] = {
-        "peripheral": np.asarray(rich["peripheral"], dtype=np.float32).tolist(),
-        "foveal": np.asarray(rich["foveal"], dtype=np.float32).tolist(),
-        "profile": copy.deepcopy(rich["profile"]),
-    }
-    return result
+    """Serialize native senses only at the explicit JSON/view boundary.
+
+    The pooled retina is a native array too. Internal control and collection
+    retain arrays; both retinal resolutions must cross a public/checkpoint
+    boundary as JSON values.
+    """
+    def value(item: Any) -> Any:
+        if isinstance(item, np.ndarray):
+            return item.tolist()
+        if isinstance(item, np.generic):
+            return item.item()
+        if isinstance(item, Mapping):
+            return {key: value(child) for key, child in item.items()}
+        if isinstance(item, (list, tuple)):
+            return [value(child) for child in item]
+        return item
+
+    return value(senses)
 
 
 class BatchedRaySensoriumMixin:
