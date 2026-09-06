@@ -31,6 +31,8 @@ A resident's current control loop combines:
 
 Eating is an explicit current action. Physical mouth contact, available material and digestive chemistry determine its consequences. Remembered goals are previously experienced states, not guarantees of present reachability. The first v4 cold inheritance conservatively initializes new action heads and extends the sensory interface; that initialization does not supply competence with the new organs. Useful navigation, durable learned habits and reciprocal interaction are still being developed.
 
+The current **controller v5** adds trainable pathways from all twelve physiology channels into recurrent state and from the policy into the four new organ actions. Achieved-goal encoding stays fixed. This repairs a limitation of the first frozen v4 inheritance, whose new sensory columns and actuator weights could not learn in the population training configuration. The public regional recording remains that earlier, explicitly pinned v4 life. [Current organ implementation](docs/development/POPULATION_V5_NATIVE.md).
+
 ## GAM × Universal Weave
 
 [**SauersML/gam**](https://github.com/SauersML/gam) is part of the mechanism, not just a plotting dependency. Native GAM fits compress experienced nonlinear body responses into small, immutable consequence models. Rust evaluates these models while the resident compares motor proposals with the bodily component of a remembered sensory goal. Each resident learns its own bounded corrections from its own experience; shared inherited predictions remain unchanged. Out-of-domain candidates retain the underlying actor's support without receiving a GAM refinement. This is an explicitly engineered control layer, not a happiness measure or proof of causal understanding. [Implementation and fitted data](docs/GAM_MECHANISMS.md).
@@ -65,7 +67,7 @@ uv run python native/cognitive-core/build_extension.py
 
 Acquire the [MaleCNS graph](docs/MALECNS.md), build the current [retinal-v2 port bundle](docs/NEURAL_PORTS.md), and start a dedicated [AMD neural service](docs/REMOTE_BRAIN.md) or [Apple Metal service](docs/METAL_BRAIN.md) with sufficient cohort capacity. New worlds require the **same graph and port identities** as the resident artifact. Existing frozen lives keep their loaded engine and service.
 
-Current worlds require a population-v4 native controller, matching candidate genomes and a birth manifest referencing their compiled neural phenotypes. The tracked `developmental-resident-rich-grandchild-update160-v3.npz` is an ancestor artifact; it cannot directly launch the current runtime. Export a current training checkpoint with:
+Current worlds require a population-v5 native controller, matching candidate genomes and a birth manifest referencing their compiled neural phenotypes. The body interface remains v4. The tracked `developmental-resident-rich-grandchild-update160-v3.npz` is an ancestor artifact; it cannot directly launch the current runtime. Export a current training checkpoint with:
 
 ```sh
 python scripts/export_developmental_resident.py --help
@@ -77,7 +79,7 @@ Follow the [population birth export guide](docs/development/POPULATION_BIRTH.md)
 uv run chreatures --port 8790 \
   --brain-url http://127.0.0.1:18790 \
   --body articulated --ecology diffusion --physics-backend vectorized \
-  --resident-artifact /path/to/developmental-resident-population-v4.npz \
+  --resident-artifact /path/to/developmental-resident-population-v5.npz \
   --population-birth /path/to/export/resident-birth.json \
   --habitat /path/to/export/habitat.json \
   --biosphere /path/to/export/biosphere.json \
