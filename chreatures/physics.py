@@ -834,7 +834,7 @@ class PhysicsWorld:
     def attach_acoustics(self, engine: Any | None) -> None:
         """Attach one optional local acoustic transducer engine."""
         if engine is not None and (
-            not callable(getattr(engine, "ingest_contact", None))
+            not callable(getattr(engine, "ingest_contacts", None))
             or not callable(getattr(engine, "before_substep", None))
             or not callable(getattr(engine, "sample", None))
             or not callable(getattr(engine, "handles", None))
@@ -1397,6 +1397,7 @@ class PhysicsWorld:
         self.data.xfrc_applied[mj_body, :3] += force
 
     def _collect_contacts(self, contacted_entities: dict[str, set[str]]) -> None:
+        acoustic_events: list[dict[str, Any]] = []
         (
             first_ids, second_ids, points, normals, relative_speeds, impulses, impact_work,
             contact_force_norm,
@@ -1446,7 +1447,7 @@ class PhysicsWorld:
                     value for value in (self._geom_entity.get(first), self._geom_entity.get(second))
                     if value is not None
                 }:
-                    self._acoustics.ingest_contact({
+                    acoustic_events.append({
                         "entity": entity_id, "position": point.astype(float).tolist(),
                         "normal_impulse": float(impulses[index]),
                         "relative_normal_speed": float(relative_speeds[index]),
@@ -1476,6 +1477,8 @@ class PhysicsWorld:
                     self._contact_normals[resident_id].append((rotation.T @ normal).astype(float).tolist())
                 if entity_id:
                     self._resonance[entity_id] = max(self._resonance.get(entity_id, 0.0), strength)
+        if self._acoustics is not None and acoustic_events:
+            self._acoustics.ingest_contacts(acoustic_events)
 
     def _excite_hinges(self) -> None:
         for entity_id, joint_id in self._entity_joint.items():

@@ -305,6 +305,8 @@ class EmbodiedTrainingProfile:
             "native_build": ROOT / "native/world-kernels/build.rs",
             "native_lib": ROOT / "native/world-kernels/src/lib.rs",
             "native_contacts": ROOT / "native/world-kernels/src/contacts.rs",
+            "native_acoustics": ROOT / "native/world-kernels/src/acoustics.rs",
+            "native_acoustics_shim": ROOT / "native/world-kernels/src/acoustics_shim.c",
             "native_growth": ROOT / "native/world-kernels/src/growth.rs",
             "native_environment": ROOT / "native/world-kernels/src/environment.rs",
             "native_environment_shim": ROOT / "native/world-kernels/src/environment_shim.c",
