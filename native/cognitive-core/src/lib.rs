@@ -10,6 +10,7 @@ mod developmental;
 pub mod gam_law;
 mod goal_memory;
 pub mod personal_consequences;
+mod predictive_sensory;
 
 #[derive(Clone)]
 pub(crate) struct Linear {
@@ -563,5 +564,6 @@ fn _cognitive_core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PredictiveCohort>()?;
     module.add_class::<developmental::DevelopmentalResidentCohort>()?;
     module.add_class::<goal_memory::AchievedGoalMemoryCohort>()?;
+    module.add_class::<predictive_sensory::PredictiveSensoryEnsemble>()?;
     Ok(())
 }

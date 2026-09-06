@@ -138,3 +138,24 @@ On the M2 Max with the authenticated synthetic rich fixture, the complete B3
 step plus consequence-receipt path averaged 1.74 ms before caching and 0.704 ms
 afterward over 40 ticks. This is execution evidence, not trained-behavior
 evidence.
+
+The next rich-v2 artifact additionally embeds a three-member sensory
+consequence ensemble. Each candidate receives the chronological four cached
+frame codes, current neural readouts, previous executed action plus oral, and
+candidate action plus native oral command. The read-only ensemble predicts the
+next 256-value frame-code delta and six physiology deltas; predictions never
+write resident history. Native goal projection shifts the real code window and
+inserts each member's predicted next code. Candidate progress is the reduction
+in RMS distance to the actually selected 64-value achieved key, centered across
+the four valid candidates. Its bounded tilt is attenuated by member key-space
+disagreement and disabled for clipped predictor inputs. The empirical goal RMS
+`0.0544858871` is an error scale from held-out forecasts, not confidence or
+value.
+
+Against three held-out actual transitions, native maximum absolute differences
+were `2.76e-7` for member raw deltas, `1.44e-7` for the ensemble mean, and
+`1.50e-7` for disagreement; input clipping flags matched exactly. The source
+predictor's held-out scaled RMSE was `0.74122` versus `0.97518` for zero-delta
+prediction and `1.35946` with permuted candidate actions. These measurements
+support numerical integration and action sensitivity, not causal control
+benefit.
