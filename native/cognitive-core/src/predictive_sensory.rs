@@ -18,7 +18,8 @@ struct Member {
     second: Linear,
     output: Linear,
 }
-#[pyclass]
+#[pyclass(skip_from_py_object)]
+#[derive(Clone)]
 pub(crate) struct PredictiveSensoryEnsemble {
     input_mean: Vec<f32>,
     input_scale: Vec<f32>,

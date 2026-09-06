@@ -1,3 +1,4 @@
+use crate::contextual_episodic::{ContextualEpisodicLearner, CONTEXT};
 use crate::gam_law::{
     desired_goal_consequences, transition_targets, CandidateAction, DecisionContext, LawBank,
 };
@@ -19,24 +20,25 @@ use numpy::{
 };
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 
-const OBS: usize = 4453;
+const OBS: usize = 4459;
 const RICH: usize = 4096;
-const BODY: usize = 357;
-const PREVIOUS: usize = 9;
-const ACTIONS: usize = 8;
+const BODY: usize = 363;
+const PREVIOUS: usize = 12;
+const ACTIONS: usize = 12;
 const WINDOW: usize = 4;
 const GOAL: usize = 64;
 const HIDDEN: usize = 128;
 const POLICY: usize = 256;
 const NEURAL: usize = 384;
-const PHYSIOLOGY: usize = 6;
+const PHYSIOLOGY: usize = 12;
 const RESERVOIR: usize = 128;
-const SIGNED: [usize; 4] = [0, 1, 2, 7];
-const POSITIVE: [usize; 4] = [3, 4, 5, 6];
-const FORMAT: &str = "chreatures-developmental-resident-native-rich-v3";
+const SIGNED: [usize; 4] = [0, 1, 2, 3];
+const POSITIVE: [usize; 8] = [4, 5, 6, 7, 8, 9, 10, 11];
+const FORMAT: &str = "chreatures-developmental-resident-native-population-v4";
 const CANDIDATES: usize = 4;
 const TILT: f64 = 0.5;
 
+#[derive(Clone)]
 struct Core {
     mean: Vec<f32>,
     scale: Vec<f32>,
@@ -60,7 +62,8 @@ struct Core {
     query_gain: f32,
 }
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
+#[derive(Clone)]
 pub(crate) struct DevelopmentalResidentCohort {
     batch: usize,
     conditioned: bool,
@@ -128,15 +131,33 @@ pub(crate) struct DevelopmentalResidentCohort {
     last_goal_completed: Vec<bool>,
     last_goal_attributed: Vec<bool>,
     last_goal_learned: Vec<bool>,
+    contextual: ContextualEpisodicLearner,
+    contextual_bias: Vec<f32>,
+    candidate_sha256: Vec<String>,
+    loci_sha256: Vec<String>,
+    recurrent_gain: Vec<f32>,
+    learning_rate_gain: Vec<f32>,
+    action_gain: Vec<f32>,
+    action_temperature_offset: Vec<f32>,
+    recurrent_adapter: Vec<f32>,
+    policy_adapter_count: usize,
+    policy_adapter_rank: usize,
+    policy_adapter_down: Vec<f32>,
+    policy_adapter_up: Vec<f32>,
+    policy_adapter_bias: Vec<f32>,
+    policy_adapter_index: Vec<usize>,
 }
 
-fn categorical(logits: &[f32], state: &mut [u64]) -> usize {
+fn categorical(logits: &[f32], inverse_temperature: f32, state: &mut [u64]) -> usize {
     let maximum = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    let total: f64 = logits.iter().map(|x| ((*x - maximum) as f64).exp()).sum();
+    let total: f64 = logits
+        .iter()
+        .map(|x| (((*x - maximum) * inverse_temperature) as f64).exp())
+        .sum();
     let threshold = unit_f64(state) * total;
     let mut cumulative = 0.0;
     for (index, value) in logits.iter().enumerate() {
-        cumulative += ((*value - maximum) as f64).exp();
+        cumulative += (((*value - maximum) * inverse_temperature) as f64).exp();
         if threshold < cumulative {
             return index;
         }
@@ -145,6 +166,296 @@ fn categorical(logits: &[f32], state: &mut [u64]) -> usize {
 }
 
 impl DevelopmentalResidentCohort {
+    #[allow(clippy::too_many_arguments)]
+    fn expanded_inner(
+        &self,
+        goal_seed: u64,
+        action_seed: u64,
+        candidate_sha256: Vec<String>,
+        loci_sha256: Vec<String>,
+        policy_adapter_index: PyReadonlyArray1<'_, u16>,
+        recurrent_gain: PyReadonlyArray1<'_, f32>,
+        learning_rate_gain: PyReadonlyArray1<'_, f32>,
+        action_gain: PyReadonlyArray2<'_, f32>,
+        action_temperature_offset: PyReadonlyArray2<'_, f32>,
+    ) -> PyResult<Self> {
+        let additions = candidate_sha256.len();
+        let indices = policy_adapter_index.as_slice()?;
+        let recurrent = recurrent_gain.as_slice()?;
+        let learning = learning_rate_gain.as_slice()?;
+        let gains = action_gain.as_slice()?;
+        let temperatures = action_temperature_offset.as_slice()?;
+        let valid_hash = |value: &str| {
+            value.len() == 64
+                && value
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        };
+        if additions == 0
+            || self.batch.checked_add(additions).is_none()
+            || self.batch + additions > 4096
+            || loci_sha256.len() != additions
+            || indices.len() != additions
+            || recurrent.len() != additions
+            || learning.len() != additions
+            || gains.len() != additions * ACTIONS
+            || temperatures.len() != additions * ACTIONS
+            || candidate_sha256.iter().any(|value| !valid_hash(value))
+            || loci_sha256.iter().any(|value| !valid_hash(value))
+            || indices
+                .iter()
+                .any(|value| *value as usize >= self.policy_adapter_count)
+            || recurrent
+                .iter()
+                .any(|value| !value.is_finite() || !(0.8..=1.2).contains(value))
+            || learning
+                .iter()
+                .any(|value| !value.is_finite() || !(0.5..=1.5).contains(value))
+            || gains
+                .iter()
+                .any(|value| !value.is_finite() || !(0.75..=1.25).contains(value))
+            || temperatures
+                .iter()
+                .any(|value| !value.is_finite() || !(-0.5..=0.5).contains(value))
+        {
+            return Err(PyValueError::new_err(
+                "candidate cohort expansion contract differs",
+            ));
+        }
+        let old_batch = self.batch;
+        let new_batch = old_batch + additions;
+        let mut result = self.clone();
+        result.grow_to(new_batch, goal_seed)?;
+        for index in 0..additions {
+            let row = old_batch + index;
+            let mut state = action_seed ^ (row as u64).wrapping_mul(0xa076_1d64_78bd_642f);
+            for word in &mut result.action_rng[row * 4..(row + 1) * 4] {
+                *word = splitmix64(&mut state);
+            }
+            result.candidate_sha256[row] = candidate_sha256[index].clone();
+            result.loci_sha256[row] = loci_sha256[index].clone();
+            result.policy_adapter_index[row] = indices[index] as usize;
+            result.recurrent_gain[row] = recurrent[index];
+            result.learning_rate_gain[row] = learning[index];
+            result.action_gain[row * ACTIONS..(row + 1) * ACTIONS]
+                .copy_from_slice(&gains[index * ACTIONS..(index + 1) * ACTIONS]);
+            result.action_temperature_offset[row * ACTIONS..(row + 1) * ACTIONS]
+                .copy_from_slice(&temperatures[index * ACTIONS..(index + 1) * ACTIONS]);
+        }
+        Ok(result)
+    }
+
+    fn grow_to(&mut self, new_batch: usize, goal_seed: u64) -> PyResult<()> {
+        if new_batch <= self.batch || new_batch > 4096 {
+            return Err(PyValueError::new_err(
+                "developmental growth must append within 4096 rows",
+            ));
+        }
+        self.memory.grow(new_batch, goal_seed)?;
+        self.consequences
+            .grow(new_batch)
+            .map_err(PyValueError::new_err)?;
+        self.personal_goals
+            .grow(new_batch)
+            .map_err(PyValueError::new_err)?;
+        self.contextual
+            .grow(new_batch)
+            .map_err(PyValueError::new_err)?;
+
+        macro_rules! resize_f32 {
+            ($field:ident, $stride:expr) => {
+                self.$field.resize(new_batch * $stride, 0.0)
+            };
+        }
+        resize_f32!(state, HIDDEN);
+        resize_f32!(previous_action, ACTIONS);
+        self.action_rng.resize(new_batch * 4, 0);
+        resize_f32!(normalized, OBS);
+        resize_f32!(recent_codes, WINDOW * 256);
+        self.recent_code_cursor.resize(new_batch, 0);
+        self.recent_code_count.resize(new_batch, 0);
+        resize_f32!(observation_input, 256 + PREVIOUS);
+        resize_f32!(encoded, HIDDEN);
+        resize_f32!(gx, 3 * HIDDEN);
+        resize_f32!(gh, 3 * HIDDEN);
+        resize_f32!(next_state, HIDDEN);
+        resize_f32!(goal_flat, WINDOW * 256);
+        resize_f32!(goal_middle, POLICY);
+        resize_f32!(manager_input, HIDDEN + NEURAL + PHYSIOLOGY);
+        resize_f32!(manager_hidden, HIDDEN);
+        resize_f32!(query, GOAL);
+        resize_f32!(logits, RESERVOIR);
+        resize_f32!(policy_input, HIDDEN + GOAL + 1 + ACTIONS);
+        resize_f32!(policy_hidden, POLICY);
+        resize_f32!(signed_logits, 4 * 65);
+        resize_f32!(active_logits, 8);
+        resize_f32!(positive_logits, 8 * 32);
+        resize_f32!(pending_action, PREVIOUS);
+        resize_f32!(pending_physiology, PHYSIOLOGY);
+        self.pending_tick.resize(new_batch, None);
+        resize_f32!(candidate_scores, CANDIDATES);
+        self.candidate_ood.resize(new_batch * CANDIDATES, false);
+        self.selected_candidate.resize(new_batch, -1);
+        resize_f32!(selected_correction, 3);
+        self.personal_updates.resize(new_batch, 0);
+        resize_f32!(forecast_progress, CANDIDATES);
+        resize_f32!(forecast_disagreement, CANDIDATES);
+        self.forecast_clipped.resize(new_batch * CANDIDATES, false);
+        resize_f32!(forecast_tilt, CANDIDATES);
+        self.goal_credit_pending.resize(new_batch, false);
+        resize_f32!(selected_goal_bias, 1);
+        resize_f32!(selected_goal_prediction, 1);
+        resize_f32!(last_goal_reward, 1);
+        resize_f32!(last_goal_return, 1);
+        self.last_goal_completed.resize(new_batch, false);
+        self.last_goal_attributed.resize(new_batch, false);
+        self.last_goal_learned.resize(new_batch, false);
+        resize_f32!(contextual_bias, 1);
+        self.candidate_sha256.resize(new_batch, String::new());
+        self.loci_sha256.resize(new_batch, String::new());
+        resize_f32!(recurrent_gain, 1);
+        resize_f32!(learning_rate_gain, 1);
+        resize_f32!(action_gain, ACTIONS);
+        resize_f32!(action_temperature_offset, ACTIONS);
+        resize_f32!(recurrent_adapter, HIDDEN);
+        self.policy_adapter_index.resize(new_batch, 0);
+        self.batch = new_batch;
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn hatch_slots_inner(
+        &mut self,
+        rows: PyReadonlyArray1<'_, u16>,
+        goal_seeds: PyReadonlyArray1<'_, u64>,
+        action_seeds: PyReadonlyArray1<'_, u64>,
+        candidate_sha256: Vec<String>,
+        loci_sha256: Vec<String>,
+        policy_adapter_index: PyReadonlyArray1<'_, u16>,
+        recurrent_gain: PyReadonlyArray1<'_, f32>,
+        learning_rate_gain: PyReadonlyArray1<'_, f32>,
+        action_gain: PyReadonlyArray2<'_, f32>,
+        action_temperature_offset: PyReadonlyArray2<'_, f32>,
+    ) -> PyResult<()> {
+        let rows = rows.as_slice()?;
+        let goal_seeds = goal_seeds.as_slice()?;
+        let action_seeds = action_seeds.as_slice()?;
+        let adapter_index = policy_adapter_index.as_slice()?;
+        let recurrent_gain = recurrent_gain.as_slice()?;
+        let learning_rate_gain = learning_rate_gain.as_slice()?;
+        let action_gain = action_gain.as_slice()?;
+        let temperature = action_temperature_offset.as_slice()?;
+        let count = rows.len();
+        if count == 0
+            || goal_seeds.len() != count
+            || action_seeds.len() != count
+            || candidate_sha256.len() != count
+            || loci_sha256.len() != count
+            || adapter_index.len() != count
+            || recurrent_gain.len() != count
+            || learning_rate_gain.len() != count
+            || action_gain.len() != count * ACTIONS
+            || temperature.len() != count * ACTIONS
+        {
+            return Err(PyValueError::new_err("hatch slot shapes differ"));
+        }
+        let mut seen = vec![false; self.batch];
+        for index in 0..count {
+            let row = rows[index] as usize;
+            let digest_ok = |value: &str| {
+                value.len() == 64
+                    && value
+                        .bytes()
+                        .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+            };
+            if row >= self.batch
+                || std::mem::replace(&mut seen[row], true)
+                || !digest_ok(&candidate_sha256[index])
+                || !digest_ok(&loci_sha256[index])
+                || adapter_index[index] as usize >= self.policy_adapter_count
+                || !recurrent_gain[index].is_finite()
+                || !(0.8..=1.2).contains(&recurrent_gain[index])
+                || !learning_rate_gain[index].is_finite()
+                || !(0.5..=1.5).contains(&learning_rate_gain[index])
+                || action_gain[index * ACTIONS..(index + 1) * ACTIONS]
+                    .iter()
+                    .any(|value| !value.is_finite() || !(0.75..=1.25).contains(value))
+                || temperature[index * ACTIONS..(index + 1) * ACTIONS]
+                    .iter()
+                    .any(|value| !value.is_finite() || !(-0.5..=0.5).contains(value))
+            {
+                return Err(PyValueError::new_err("invalid hatch slot request"));
+            }
+        }
+        for index in 0..count {
+            let row = rows[index] as usize;
+            self.memory.clear_resident(row, goal_seeds[index])?;
+            self.personal_goals
+                .clear_resident(row)
+                .map_err(PyValueError::new_err)?;
+            self.consequences
+                .clear_resident(row)
+                .map_err(PyValueError::new_err)?;
+            self.contextual
+                .clear_resident(row)
+                .map_err(PyValueError::new_err)?;
+
+            self.state[row * HIDDEN..(row + 1) * HIDDEN].fill(0.0);
+            self.previous_action[row * ACTIONS..(row + 1) * ACTIONS].fill(0.0);
+            self.recurrent_adapter[row * HIDDEN..(row + 1) * HIDDEN].fill(0.0);
+            self.recent_codes[row * WINDOW * 256..(row + 1) * WINDOW * 256].fill(0.0);
+            self.recent_code_cursor[row] = 0;
+            self.recent_code_count[row] = 0;
+            self.pending_action[row * PREVIOUS..(row + 1) * PREVIOUS].fill(0.0);
+            self.pending_physiology[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY].fill(0.0);
+            self.pending_tick[row] = None;
+            self.goal_credit_pending[row] = false;
+            self.selected_goal_bias[row] = 0.0;
+            self.selected_goal_prediction[row] = 0.0;
+            self.last_goal_reward[row] = 0.0;
+            self.last_goal_return[row] = 0.0;
+            self.last_goal_completed[row] = false;
+            self.last_goal_attributed[row] = false;
+            self.last_goal_learned[row] = false;
+            self.contextual_bias[row] = 0.0;
+            self.candidate_scores[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0.0);
+            self.candidate_ood[row * CANDIDATES..(row + 1) * CANDIDATES].fill(false);
+            self.forecast_progress[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0.0);
+            self.forecast_disagreement[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0.0);
+            self.forecast_clipped[row * CANDIDATES..(row + 1) * CANDIDATES].fill(false);
+            self.forecast_tilt[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0.0);
+            self.selected_candidate[row] = -1;
+            self.selected_correction[row * 3..(row + 1) * 3].fill(0.0);
+            self.personal_updates[row] = 0;
+
+            let mut state = action_seeds[index] ^ (row as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15);
+            for word in &mut self.action_rng[row * 4..(row + 1) * 4] {
+                *word = splitmix64(&mut state);
+            }
+            self.candidate_sha256[row] = candidate_sha256[index].clone();
+            self.loci_sha256[row] = loci_sha256[index].clone();
+            self.policy_adapter_index[row] = adapter_index[index] as usize;
+            self.recurrent_gain[row] = recurrent_gain[index];
+            self.learning_rate_gain[row] = learning_rate_gain[index];
+            self.action_gain[row * ACTIONS..(row + 1) * ACTIONS]
+                .copy_from_slice(&action_gain[index * ACTIONS..(index + 1) * ACTIONS]);
+            self.action_temperature_offset[row * ACTIONS..(row + 1) * ACTIONS]
+                .copy_from_slice(&temperature[index * ACTIONS..(index + 1) * ACTIONS]);
+        }
+        Ok(())
+    }
+
+    fn episodic_context(&self, row: usize, physiology: &[f32]) -> [f64; CONTEXT] {
+        let mut context = [0.0; CONTEXT];
+        for index in 0..PHYSIOLOGY {
+            context[index] = physiology[row * PHYSIOLOGY + index] as f64;
+        }
+        for index in 0..(CONTEXT - PHYSIOLOGY) {
+            context[PHYSIOLOGY + index] = self.state[row * HIDDEN + index * 31] as f64;
+        }
+        context
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn conv_stage(
         input: &[f32],
@@ -370,6 +681,7 @@ impl DevelopmentalResidentCohort {
         for row in 0..self.batch {
             if reset[row] {
                 self.state[row * HIDDEN..(row + 1) * HIDDEN].fill(0.0);
+                self.recurrent_adapter[row * HIDDEN..(row + 1) * HIDDEN].fill(0.0);
             }
             for j in 0..OBS {
                 self.normalized[row * OBS + j] =
@@ -445,6 +757,8 @@ impl DevelopmentalResidentCohort {
         self.logits.fill(0.0);
         let (keys, counts) = self.memory.key_rows();
         let (recorded_ticks, generations) = self.memory.slot_identities();
+        let recorded_ticks = recorded_ticks.to_vec();
+        let generations = generations.to_vec();
         for row in 0..self.batch {
             for slot in 0..counts[row] as usize {
                 let mut dot = 0.0f32;
@@ -466,8 +780,16 @@ impl DevelopmentalResidentCohort {
                     ],
                 )
                 .map_err(PyValueError::new_err)?;
+            let episodic = self
+                .contextual
+                .biases(
+                    row,
+                    &generations[row * RESERVOIR..(row + 1) * RESERVOIR],
+                    &self.episodic_context(row, physiology),
+                )
+                .map_err(PyValueError::new_err)?;
             for slot in 0..counts[row] as usize {
-                self.logits[row * RESERVOIR + slot] += biases[slot] as f32;
+                self.logits[row * RESERVOIR + slot] += (biases[slot] + episodic[slot]) as f32;
             }
         }
         let selection = self.memory.choose_inner(&self.logits, 1.0, ticks)?;
@@ -500,6 +822,20 @@ impl DevelopmentalResidentCohort {
             self.goal_credit_pending[row] = true;
             self.selected_goal_bias[row] = estimate.logit_bias as f32;
             self.selected_goal_prediction[row] = estimate.predicted_normalized_return as f32;
+            let slot = selection.slot[row] as usize;
+            let context = self.episodic_context(row, physiology);
+            let episodic = self
+                .contextual
+                .biases(
+                    row,
+                    &generations[row * RESERVOIR..(row + 1) * RESERVOIR],
+                    &context,
+                )
+                .map_err(PyValueError::new_err)?;
+            self.contextual_bias[row] = episodic[slot] as f32;
+            self.contextual
+                .begin(row, slot, selection.generation[row], context)
+                .map_err(PyValueError::new_err)?;
         }
         Ok(selection)
     }
@@ -510,6 +846,12 @@ impl DevelopmentalResidentCohort {
             let offset = row * width;
             self.policy_input[offset..offset + HIDDEN]
                 .copy_from_slice(&self.state[row * HIDDEN..(row + 1) * HIDDEN]);
+            for j in 0..HIDDEN {
+                let state = self.state[row * HIDDEN + j];
+                let adapter = &mut self.recurrent_adapter[row * HIDDEN + j];
+                *adapter = 0.95 * *adapter + 0.05 * (self.recurrent_gain[row] - 1.0) * state;
+                self.policy_input[offset + j] += *adapter;
+            }
             if self.conditioned {
                 self.policy_input[offset + HIDDEN..offset + HIDDEN + GOAL]
                     .copy_from_slice(&goal[row * GOAL..(row + 1) * GOAL]);
@@ -532,6 +874,27 @@ impl DevelopmentalResidentCohort {
             &mut self.policy_hidden,
         );
         tanh_all(&mut self.policy_hidden);
+        let mut low_rank = vec![0.0f32; self.policy_adapter_rank];
+        for row in 0..self.batch {
+            let adapter = self.policy_adapter_index[row];
+            low_rank.fill(0.0);
+            for (rank, inner) in low_rank.iter_mut().enumerate() {
+                let down = (adapter * self.policy_adapter_rank + rank) * POLICY;
+                *inner = (0..POLICY)
+                    .map(|j| {
+                        self.policy_hidden[row * POLICY + j] * self.policy_adapter_down[down + j]
+                    })
+                    .sum();
+            }
+            for j in 0..POLICY {
+                let up = (adapter * POLICY + j) * self.policy_adapter_rank;
+                let delta = self.policy_adapter_bias[adapter * POLICY + j]
+                    + (0..self.policy_adapter_rank)
+                        .map(|rank| self.policy_adapter_up[up + rank] * low_rank[rank])
+                        .sum::<f32>();
+                self.policy_hidden[row * POLICY + j] += delta;
+            }
+        }
         gemm_into(
             &self.policy_hidden,
             self.batch,
@@ -562,7 +925,11 @@ impl DevelopmentalResidentCohort {
                     let values =
                         &self.signed_logits[(row * 4 + head) * 65..(row * 4 + head + 1) * 65];
                     let index = if self.sample {
-                        categorical(values, rng)
+                        categorical(
+                            values,
+                            (-self.action_temperature_offset[row * ACTIONS + axis]).exp(),
+                            rng,
+                        )
                     } else {
                         values
                             .iter()
@@ -571,17 +938,24 @@ impl DevelopmentalResidentCohort {
                             .unwrap()
                             .0
                     };
-                    result[base + axis] = index as f32 / 32.0 - 1.0;
+                    result[base + axis] = ((index as f32 / 32.0 - 1.0)
+                        * self.action_gain[row * ACTIONS + axis])
+                        .clamp(-1.0, 1.0);
                 }
                 for (head, axis) in POSITIVE.iter().enumerate() {
+                    let inverse_temperature =
+                        (-self.action_temperature_offset[row * ACTIONS + axis]).exp();
                     let active = if self.sample {
                         unit_f64(rng)
-                            < (1.0 / (1.0 + (-self.active_logits[row * 4 + head]).exp())) as f64
+                            < (1.0
+                                / (1.0
+                                    + (-self.active_logits[row * 8 + head] * inverse_temperature)
+                                        .exp())) as f64
                     } else {
                         let values =
-                            &self.positive_logits[(row * 4 + head) * 32..(row * 4 + head + 1) * 32];
+                            &self.positive_logits[(row * 8 + head) * 32..(row * 8 + head + 1) * 32];
                         let maximum = values.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-                        self.active_logits[row * 4 + head]
+                        self.active_logits[row * 8 + head]
                             - values
                                 .iter()
                                 .map(|x| (*x - maximum).exp())
@@ -591,9 +965,9 @@ impl DevelopmentalResidentCohort {
                     };
                     if active {
                         let values =
-                            &self.positive_logits[(row * 4 + head) * 32..(row * 4 + head + 1) * 32];
+                            &self.positive_logits[(row * 8 + head) * 32..(row * 8 + head + 1) * 32];
                         let index = if self.sample {
-                            categorical(values, rng)
+                            categorical(values, inverse_temperature, rng)
                         } else {
                             values
                                 .iter()
@@ -602,7 +976,9 @@ impl DevelopmentalResidentCohort {
                                 .unwrap()
                                 .0
                         };
-                        result[base + axis] = (index + 1) as f32 / 32.0;
+                        result[base + axis] = (((index + 1) as f32 / 32.0)
+                            * self.action_gain[row * ACTIONS + axis])
+                            .clamp(0.0, 1.0);
                     } else if self.sample {
                         // Keep RNG position independent of the active hurdle outcome.
                         let _ = random_u64(rng);
@@ -623,9 +999,8 @@ impl DevelopmentalResidentCohort {
         current_key: &[f32],
         ticks: &[u64],
         reset: &[bool],
-    ) -> PyResult<(Vec<f32>, Vec<f32>)> {
+    ) -> PyResult<Vec<f32>> {
         let mut actions = vec![0.0; self.batch * ACTIONS];
-        let mut oral = vec![0.0; self.batch];
         let rows = self.batch * CANDIDATES;
         let mut predictor_input = vec![0.0; rows * PREDICTOR_INPUT];
         for row in 0..self.batch {
@@ -639,14 +1014,15 @@ impl DevelopmentalResidentCohort {
                 }
                 predictor_input[dst + 1024..dst + 1408]
                     .copy_from_slice(&neural[row * NEURAL..(row + 1) * NEURAL]);
-                predictor_input[dst + 1408..dst + 1417]
-                    .copy_from_slice(&previous[row * PREVIOUS..(row + 1) * PREVIOUS]);
-                predictor_input[dst + 1417..dst + 1425].copy_from_slice(
-                    &candidates
-                        [(row * CANDIDATES + k) * ACTIONS..(row * CANDIDATES + k + 1) * ACTIONS],
-                );
-                let p: &[f32] = &physiology[row * 6..(row + 1) * 6];
-                predictor_input[dst + 1425] = ((1.0 - p[1]) * (1.1 - p[0])).clamp(0.0, 1.0);
+                const H1_ACTION_MAP: [usize; 9] = [0, 1, 2, 4, 5, 6, 7, 3, 8];
+                for (old, current) in H1_ACTION_MAP.iter().enumerate() {
+                    predictor_input[dst + 1408 + old] = previous[row * PREVIOUS + current];
+                }
+                for (old, current) in H1_ACTION_MAP[..8].iter().enumerate() {
+                    predictor_input[dst + 1417 + old] =
+                        candidates[(row * CANDIDATES + k) * ACTIONS + current];
+                }
+                predictor_input[dst + 1425] = candidates[(row * CANDIDATES + k) * ACTIONS + 8];
             }
         }
         let (member_delta, _, _, forecast_clipped) =
@@ -698,13 +1074,15 @@ impl DevelopmentalResidentCohort {
                     .map_err(PyValueError::new_err)?;
                 self.pending_tick[row] = None;
             }
-            let current: [f32; 6] = physiology[row * 6..(row + 1) * 6].try_into().unwrap();
+            let current: [f32; 6] = physiology[row * PHYSIOLOGY..row * PHYSIOLOGY + 6]
+                .try_into()
+                .unwrap();
             let neural_row: &[f32; 384] =
                 neural[row * NEURAL..(row + 1) * NEURAL].try_into().unwrap();
-            oral[row] = ((1.0 - current[1]) * (1.1 - current[0])).clamp(0.0, 1.0);
             let desired = if selection.valid[row] && selection.remaining[row] > 0 {
                 let end = (row * WINDOW + WINDOW - 1) * OBS;
-                let goal: [f32; 6] = selection.window[end + OBS - 6..end + OBS]
+                let goal: [f32; 6] = selection.window
+                    [end + OBS - PHYSIOLOGY..end + OBS - PHYSIOLOGY + 6]
                     .try_into()
                     .unwrap();
                 Some(
@@ -722,10 +1100,18 @@ impl DevelopmentalResidentCohort {
             let mut forecast_disagreement = [0.0f32; CANDIDATES];
             let mut forecast_valid = [false; CANDIDATES];
             for k in 0..CANDIDATES {
-                let action: &[f32; 8] = candidates
-                    [(row * CANDIDATES + k) * ACTIONS..(row * CANDIDATES + k + 1) * ACTIONS]
-                    .try_into()
-                    .unwrap();
+                let candidate = &candidates
+                    [(row * CANDIDATES + k) * ACTIONS..(row * CANDIDATES + k + 1) * ACTIONS];
+                let action = [
+                    candidate[0],
+                    candidate[1],
+                    candidate[2],
+                    candidate[4],
+                    candidate[5],
+                    candidate[6],
+                    candidate[7],
+                    candidate[3],
+                ];
                 let raw = self
                     .law
                     .fitted_features(
@@ -734,8 +1120,8 @@ impl DevelopmentalResidentCohort {
                             neural: neural_row,
                         },
                         &CandidateAction {
-                            action,
-                            oral: oral[row],
+                            action: &action,
+                            oral: candidate[8],
                         },
                     )
                     .map_err(PyValueError::new_err)?;
@@ -874,6 +1260,7 @@ impl DevelopmentalResidentCohort {
             let chosen = if self.sample {
                 categorical(
                     &self.candidate_scores[row * CANDIDATES..(row + 1) * CANDIDATES],
+                    1.0,
                     &mut self.action_rng[row * 4..(row + 1) * 4],
                 )
             } else {
@@ -889,9 +1276,8 @@ impl DevelopmentalResidentCohort {
             );
             self.pending_action[row * PREVIOUS..row * PREVIOUS + ACTIONS]
                 .copy_from_slice(&actions[row * ACTIONS..(row + 1) * ACTIONS]);
-            self.pending_action[row * PREVIOUS + ACTIONS] = oral[row];
             self.pending_physiology[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY]
-                .copy_from_slice(&current);
+                .copy_from_slice(&physiology[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY]);
             self.pending_tick[row] = Some(ticks[row]);
             let f: Vec<f64> = features_all[chosen].iter().map(|x| f64::from(*x)).collect();
             self.consequences
@@ -904,12 +1290,66 @@ impl DevelopmentalResidentCohort {
                 )
                 .map_err(PyValueError::new_err)?;
         }
-        Ok((actions, oral))
+        Ok(actions)
     }
 }
 
 #[pymethods]
 impl DevelopmentalResidentCohort {
+    #[allow(clippy::too_many_arguments)]
+    fn expanded(
+        &self,
+        goal_seed: u64,
+        action_seed: u64,
+        candidate_sha256: Vec<String>,
+        loci_sha256: Vec<String>,
+        policy_adapter_index: PyReadonlyArray1<'_, u16>,
+        recurrent_gain: PyReadonlyArray1<'_, f32>,
+        learning_rate_gain: PyReadonlyArray1<'_, f32>,
+        action_gain: PyReadonlyArray2<'_, f32>,
+        action_temperature_offset: PyReadonlyArray2<'_, f32>,
+    ) -> PyResult<Self> {
+        self.expanded_inner(
+            goal_seed,
+            action_seed,
+            candidate_sha256,
+            loci_sha256,
+            policy_adapter_index,
+            recurrent_gain,
+            learning_rate_gain,
+            action_gain,
+            action_temperature_offset,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn hatch_slots(
+        &mut self,
+        rows: PyReadonlyArray1<'_, u16>,
+        goal_seeds: PyReadonlyArray1<'_, u64>,
+        action_seeds: PyReadonlyArray1<'_, u64>,
+        candidate_sha256: Vec<String>,
+        loci_sha256: Vec<String>,
+        policy_adapter_index: PyReadonlyArray1<'_, u16>,
+        recurrent_gain: PyReadonlyArray1<'_, f32>,
+        learning_rate_gain: PyReadonlyArray1<'_, f32>,
+        action_gain: PyReadonlyArray2<'_, f32>,
+        action_temperature_offset: PyReadonlyArray2<'_, f32>,
+    ) -> PyResult<()> {
+        self.hatch_slots_inner(
+            rows,
+            goal_seeds,
+            action_seeds,
+            candidate_sha256,
+            loci_sha256,
+            policy_adapter_index,
+            recurrent_gain,
+            learning_rate_gain,
+            action_gain,
+            action_temperature_offset,
+        )
+    }
+
     #[new]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -926,9 +1366,19 @@ impl DevelopmentalResidentCohort {
         innovation_limit: f64,
         predictor_packed: PyReadonlyArray1<'_, f32>,
         forecast_goal_rms: f32,
+        policy_adapter_packed: PyReadonlyArray1<'_, f32>,
+        policy_adapter_count: usize,
+        policy_adapter_rank: usize,
+        policy_adapter_index: PyReadonlyArray1<'_, u16>,
+        candidate_sha256: Vec<String>,
+        loci_sha256: Vec<String>,
+        recurrent_gain: PyReadonlyArray1<'_, f32>,
+        learning_rate_gain: PyReadonlyArray1<'_, f32>,
+        action_gain: PyReadonlyArray2<'_, f32>,
+        action_temperature_offset: PyReadonlyArray2<'_, f32>,
     ) -> PyResult<Self> {
         if batch == 0
-            || batch > 256
+            || batch > 4096
             || artifact_mode != "rich-achieved-goal"
             || !matches!(action_mode, "sample" | "map")
         {
@@ -968,6 +1418,67 @@ impl DevelopmentalResidentCohort {
             return Err(PyValueError::new_err("forecast goal RMS differs"));
         }
         let predictor = PredictiveSensoryEnsemble::from_flat(predictor_packed.as_slice()?)?;
+        if policy_adapter_count == 0 || policy_adapter_rank == 0 || policy_adapter_rank > 256 {
+            return Err(PyValueError::new_err(
+                "population policy adapter dimensions differ",
+            ));
+        }
+        let policy_flat = policy_adapter_packed.as_slice()?;
+        let expected_policy = policy_adapter_count
+            .checked_mul(policy_adapter_rank * POLICY + POLICY * policy_adapter_rank + POLICY)
+            .ok_or_else(|| PyValueError::new_err("population policy adapter size overflow"))?;
+        if policy_flat.len() != expected_policy
+            || policy_flat.iter().any(|value| !value.is_finite())
+        {
+            return Err(PyValueError::new_err(
+                "population policy adapter weights differ",
+            ));
+        }
+        let down_end = policy_adapter_count * policy_adapter_rank * POLICY;
+        let up_end = down_end + policy_adapter_count * POLICY * policy_adapter_rank;
+        let policy_adapter_down = policy_flat[..down_end].to_vec();
+        let policy_adapter_up = policy_flat[down_end..up_end].to_vec();
+        let policy_adapter_bias = policy_flat[up_end..].to_vec();
+        let policy_adapter_index: Vec<usize> = policy_adapter_index
+            .as_slice()?
+            .iter()
+            .map(|value| *value as usize)
+            .collect();
+        let recurrent_gain = recurrent_gain.as_slice()?.to_vec();
+        let learning_rate_gain = learning_rate_gain.as_slice()?.to_vec();
+        let action_gain = action_gain.as_slice()?.to_vec();
+        let action_temperature_offset = action_temperature_offset.as_slice()?.to_vec();
+        let valid_hash =
+            |value: &str| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit());
+        if candidate_sha256.len() != batch
+            || loci_sha256.len() != batch
+            || candidate_sha256.iter().any(|value| !valid_hash(value))
+            || loci_sha256.iter().any(|value| !valid_hash(value))
+            || recurrent_gain.len() != batch
+            || learning_rate_gain.len() != batch
+            || action_gain.len() != batch * ACTIONS
+            || action_temperature_offset.len() != batch * ACTIONS
+            || policy_adapter_index.len() != batch
+            || policy_adapter_index
+                .iter()
+                .any(|index| *index >= policy_adapter_count)
+            || recurrent_gain
+                .iter()
+                .any(|value| !value.is_finite() || !(0.8..=1.2).contains(value))
+            || learning_rate_gain
+                .iter()
+                .any(|value| !value.is_finite() || !(0.5..=1.5).contains(value))
+            || action_gain
+                .iter()
+                .any(|value| !value.is_finite() || !(0.75..=1.25).contains(value))
+            || action_temperature_offset
+                .iter()
+                .any(|value| !value.is_finite() || !(-0.5..=0.5).contains(value))
+        {
+            return Err(PyValueError::new_err(
+                "candidate controller adapter contract differs",
+            ));
+        }
         if flat.iter().any(|x| !x.is_finite()) {
             return Err(PyValueError::new_err(
                 "developmental weights must be finite",
@@ -995,8 +1506,8 @@ impl DevelopmentalResidentCohort {
             history: gru(flat, &mut c, HIDDEN, HIDDEN)?,
             policy: linear(flat, &mut c, POLICY, HIDDEN + GOAL + 1 + ACTIONS)?,
             signed: linear(flat, &mut c, 4 * 65, POLICY)?,
-            active: linear(flat, &mut c, 4, POLICY)?,
-            positive: linear(flat, &mut c, 4 * 32, POLICY)?,
+            active: linear(flat, &mut c, 8, POLICY)?,
+            positive: linear(flat, &mut c, 8 * 32, POLICY)?,
             manager0: linear(flat, &mut c, HIDDEN, HIDDEN + NEURAL + PHYSIOLOGY)?,
             manager2: linear(flat, &mut c, GOAL, HIDDEN)?,
             query_gain: *flat
@@ -1056,8 +1567,8 @@ impl DevelopmentalResidentCohort {
             policy_input: vec![0.0; batch * (HIDDEN + GOAL + 1 + ACTIONS)],
             policy_hidden: vec![0.0; batch * POLICY],
             signed_logits: vec![0.0; batch * 4 * 65],
-            active_logits: vec![0.0; batch * 4],
-            positive_logits: vec![0.0; batch * 4 * 32],
+            active_logits: vec![0.0; batch * 8],
+            positive_logits: vec![0.0; batch * 8 * 32],
             law,
             consequences,
             pending_action: vec![0.0; batch * PREVIOUS],
@@ -1084,6 +1595,22 @@ impl DevelopmentalResidentCohort {
             last_goal_completed: vec![false; batch],
             last_goal_attributed: vec![false; batch],
             last_goal_learned: vec![false; batch],
+            contextual: ContextualEpisodicLearner::new(batch, RESERVOIR)
+                .map_err(PyValueError::new_err)?,
+            contextual_bias: vec![0.0; batch],
+            candidate_sha256,
+            loci_sha256,
+            recurrent_gain,
+            learning_rate_gain,
+            action_gain,
+            action_temperature_offset,
+            recurrent_adapter: vec![0.0; batch * HIDDEN],
+            policy_adapter_count,
+            policy_adapter_rank,
+            policy_adapter_down,
+            policy_adapter_up,
+            policy_adapter_bias,
+            policy_adapter_index,
         })
     }
 
@@ -1128,12 +1655,13 @@ impl DevelopmentalResidentCohort {
                 "developmental cohort requires one shared model tick",
             ));
         }
-        let (inserted, selection, actions, oral) = py.detach(|| -> PyResult<_> {
+        let (inserted, selection, actions) = py.detach(|| -> PyResult<_> {
             for (row, should_reset) in rst.iter().enumerate() {
                 if *should_reset {
                     self.personal_goals
                         .cancel_pending(row)
                         .map_err(PyValueError::new_err)?;
+                    self.contextual.cancel(row).map_err(PyValueError::new_err)?;
                     self.goal_credit_pending[row] = false;
                     self.selected_goal_bias[row] = 0.0;
                     self.selected_goal_prediction[row] = 0.0;
@@ -1175,11 +1703,21 @@ impl DevelopmentalResidentCohort {
             self.personal_goals
                 .replace_slots(&replacements)
                 .map_err(PyValueError::new_err)?;
+            for replacement in &replacements {
+                self.contextual
+                    .replace(
+                        replacement.resident,
+                        replacement.slot,
+                        replacement.identity.generation,
+                        self.episodic_context(replacement.resident, p),
+                    )
+                    .map_err(PyValueError::new_err)?;
+            }
             let selection = self.manager_selection(n, p, t)?;
             let candidates = self.policy_actions(&selection.key, &selection.remaining);
-            let (actions, oral) =
+            let actions =
                 self.refine_candidates(&candidates, &selection, p, n, a, &keys, t, rst)?;
-            Ok((remembered.slots, selection, actions, oral))
+            Ok((remembered.slots, selection, actions))
         })?;
         let out = PyDict::new(py);
         out.set_item(
@@ -1188,7 +1726,6 @@ impl DevelopmentalResidentCohort {
                 .unwrap()
                 .into_pyarray(py),
         )?;
-        out.set_item("oral_command", Array1::from_vec(oral).into_pyarray(py))?;
         out.set_item(
             "candidate_scores",
             Array2::from_shape_vec((self.batch, CANDIDATES), self.candidate_scores.clone())
@@ -1372,13 +1909,21 @@ impl DevelopmentalResidentCohort {
             "personal_goal_learning_enabled",
             self.personal_goals.config().learning_enabled,
         )?;
+        out.set_item(
+            "contextual_retrieval_bias",
+            Array1::from_vec(self.contextual_bias.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "contextual_episodic_updates",
+            Array1::from_vec(self.contextual.updates().to_vec()).into_pyarray(py),
+        )?;
         Ok(out)
     }
 
     fn snapshot<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let out = PyDict::new(py);
         out.set_item("format", FORMAT)?;
-        out.set_item("version", 4)?;
+        out.set_item("version", 5)?;
         out.set_item("batch", self.batch)?;
         out.set_item("conditioned", self.conditioned)?;
         out.set_item("sample", self.sample)?;
@@ -1447,6 +1992,48 @@ impl DevelopmentalResidentCohort {
         out.set_item("last_goal_completed", self.last_goal_completed.clone())?;
         out.set_item("last_goal_attributed", self.last_goal_attributed.clone())?;
         out.set_item("last_goal_learned", self.last_goal_learned.clone())?;
+        out.set_item("candidate_sha256", self.candidate_sha256.clone())?;
+        out.set_item("loci_sha256", self.loci_sha256.clone())?;
+        out.set_item("policy_adapter_count", self.policy_adapter_count)?;
+        out.set_item("policy_adapter_rank", self.policy_adapter_rank)?;
+        out.set_item("policy_adapter_index", self.policy_adapter_index.clone())?;
+        out.set_item(
+            "recurrent_gain",
+            Array1::from_vec(self.recurrent_gain.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "learning_rate_gain",
+            Array1::from_vec(self.learning_rate_gain.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "action_gain",
+            Array2::from_shape_vec((self.batch, ACTIONS), self.action_gain.clone())
+                .unwrap()
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "action_temperature_offset",
+            Array2::from_shape_vec(
+                (self.batch, ACTIONS),
+                self.action_temperature_offset.clone(),
+            )
+            .unwrap()
+            .into_pyarray(py),
+        )?;
+        out.set_item(
+            "recurrent_adapter",
+            Array2::from_shape_vec((self.batch, HIDDEN), self.recurrent_adapter.clone())
+                .unwrap()
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "contextual_episodic",
+            self.contextual.snapshot().map_err(PyValueError::new_err)?,
+        )?;
+        out.set_item(
+            "contextual_bias",
+            Array1::from_vec(self.contextual_bias.clone()).into_pyarray(py),
+        )?;
         Ok(out)
     }
 
@@ -1461,8 +2048,8 @@ impl DevelopmentalResidentCohort {
         dt: f64,
     ) -> PyResult<Bound<'py, PyDict>> {
         if ticks.shape() != [self.batch]
-            || before.shape() != [self.batch, 6]
-            || after.shape() != [self.batch, 6]
+            || before.shape() != [self.batch, PHYSIOLOGY]
+            || after.shape() != [self.batch, PHYSIOLOGY]
             || executed.shape() != [self.batch, PREVIOUS]
             || effort.shape() != [self.batch]
         {
@@ -1488,8 +2075,12 @@ impl DevelopmentalResidentCohort {
                     "executed consequence receipt differs",
                 ));
             }
-            let bb: [f32; 6] = b[row * 6..(row + 1) * 6].try_into().unwrap();
-            let aa: [f32; 6] = a[row * 6..(row + 1) * 6].try_into().unwrap();
+            let bb: [f32; 6] = b[row * PHYSIOLOGY..row * PHYSIOLOGY + 6]
+                .try_into()
+                .unwrap();
+            let aa: [f32; 6] = a[row * PHYSIOLOGY..row * PHYSIOLOGY + 6]
+                .try_into()
+                .unwrap();
             let target = transition_targets(&bb, &aa);
             if target.iter().any(|v| !v.is_finite()) {
                 return Err(PyValueError::new_err("consequence target is nonfinite"));
@@ -1502,14 +2093,14 @@ impl DevelopmentalResidentCohort {
                 resident: row,
                 transition_tick: t[row],
                 before: [
-                    b[row * 6] as f64,
-                    b[row * 6 + 1] as f64,
-                    b[row * 6 + 2] as f64,
+                    b[row * PHYSIOLOGY] as f64,
+                    b[row * PHYSIOLOGY + 1] as f64,
+                    b[row * PHYSIOLOGY + 2] as f64,
                 ],
                 after: [
-                    a[row * 6] as f64,
-                    a[row * 6 + 1] as f64,
-                    a[row * 6 + 2] as f64,
+                    a[row * PHYSIOLOGY] as f64,
+                    a[row * PHYSIOLOGY + 1] as f64,
+                    a[row * PHYSIOLOGY + 2] as f64,
                 ],
                 effort: e[row] as f64,
                 dt,
@@ -1526,6 +2117,14 @@ impl DevelopmentalResidentCohort {
             let row = transition.resident;
             self.last_goal_reward[row] = outcome.reward;
             if let Some(receipt) = outcome.receipt {
+                self.contextual
+                    .observe(
+                        row,
+                        receipt.normalized_target,
+                        receipt.attributed,
+                        self.learning_rate_gain[row] as f64,
+                    )
+                    .map_err(PyValueError::new_err)?;
                 self.goal_credit_pending[row] = false;
                 self.last_goal_return[row] = receipt.summed_objective_return as f32;
                 self.last_goal_completed[row] = true;
@@ -1608,7 +2207,7 @@ impl DevelopmentalResidentCohort {
             })
         };
         if get("format")?.extract::<String>()? != FORMAT
-            || get("version")?.extract::<u8>()? != 4
+            || get("version")?.extract::<u8>()? != 5
             || get("batch")?.extract::<usize>()? != self.batch
             || get("conditioned")?.extract::<bool>()? != self.conditioned
             || get("sample")?.extract::<bool>()? != self.sample
@@ -1716,6 +2315,70 @@ impl DevelopmentalResidentCohort {
         {
             return Err(PyValueError::new_err("private goal snapshot shapes differ"));
         }
+        if get("candidate_sha256")?.extract::<Vec<String>>()? != self.candidate_sha256
+            || get("loci_sha256")?.extract::<Vec<String>>()? != self.loci_sha256
+            || get("policy_adapter_count")?.extract::<usize>()? != self.policy_adapter_count
+            || get("policy_adapter_rank")?.extract::<usize>()? != self.policy_adapter_rank
+            || get("policy_adapter_index")?.extract::<Vec<usize>>()? != self.policy_adapter_index
+        {
+            return Err(PyValueError::new_err(
+                "candidate adapter snapshot identity differs",
+            ));
+        }
+        macro_rules! require_adapter {
+            ($name:literal, $expected:expr, $shape:expr) => {{
+                let values: PyReadonlyArray2<'_, f32> = get($name)?.extract()?;
+                if values.shape() != $shape || values.as_slice()? != $expected.as_slice() {
+                    return Err(PyValueError::new_err(concat!(
+                        "candidate adapter snapshot differs: ",
+                        $name
+                    )));
+                }
+            }};
+        }
+        let recurrent: PyReadonlyArray1<'_, f32> = get("recurrent_gain")?.extract()?;
+        let learning: PyReadonlyArray1<'_, f32> = get("learning_rate_gain")?.extract()?;
+        if recurrent.shape() != [self.batch]
+            || learning.shape() != [self.batch]
+            || recurrent.as_slice()? != self.recurrent_gain
+            || learning.as_slice()? != self.learning_rate_gain
+        {
+            return Err(PyValueError::new_err(
+                "candidate scalar adapter snapshot differs",
+            ));
+        }
+        require_adapter!("action_gain", self.action_gain, [self.batch, ACTIONS]);
+        require_adapter!(
+            "action_temperature_offset",
+            self.action_temperature_offset,
+            [self.batch, ACTIONS]
+        );
+        let adapter: PyReadonlyArray2<'_, f32> = get("recurrent_adapter")?.extract()?;
+        if adapter.shape() != [self.batch, HIDDEN]
+            || adapter.as_slice()?.iter().any(|value| !value.is_finite())
+        {
+            return Err(PyValueError::new_err(
+                "private recurrent adapter snapshot differs",
+            ));
+        }
+        self.recurrent_adapter.copy_from_slice(adapter.as_slice()?);
+        self.contextual = ContextualEpisodicLearner::restore(
+            &get("contextual_episodic")?.extract::<String>()?,
+            self.batch,
+            RESERVOIR,
+        )
+        .map_err(PyValueError::new_err)?;
+        let contextual_bias: PyReadonlyArray1<'_, f32> = get("contextual_bias")?.extract()?;
+        if contextual_bias.shape() != [self.batch]
+            || contextual_bias
+                .as_slice()?
+                .iter()
+                .any(|value| !value.is_finite())
+        {
+            return Err(PyValueError::new_err("contextual bias snapshot differs"));
+        }
+        self.contextual_bias
+            .copy_from_slice(contextual_bias.as_slice()?);
         self.state.copy_from_slice(h);
         self.previous_action.copy_from_slice(p);
         self.action_rng.copy_from_slice(r);

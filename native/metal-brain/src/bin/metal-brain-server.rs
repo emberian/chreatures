@@ -57,6 +57,19 @@ fn copy<T: Copy>(b: &Buffer, n: usize) -> Vec<T> {
 #[derive(Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
 enum Request {
+    BindPhenotypes {
+        slots: Vec<u32>,
+        input_gain: Vec<f32>,
+        readout_gain: Vec<f32>,
+        excitability_gain: Vec<f32>,
+        recurrent_source_gain: Vec<f32>,
+        recurrent_target_gain: Vec<f32>,
+        learning_rate_gain: Vec<f32>,
+        modulator_gain: Vec<f32>,
+    },
+    UnbindPhenotypes {
+        mask: u32,
+    },
     Step {
         dt: f32,
         active_mask: u32,
@@ -77,6 +90,7 @@ enum Request {
     },
     Restore {
         path: String,
+        mask: u32,
     },
     Metadata,
     Shutdown,
@@ -111,6 +125,14 @@ struct Engine {
     channels: Buffer,
     output: Buffer,
     partial: Buffer,
+    input_gain: Buffer,
+    readout_gain: Buffer,
+    excitability_gain: Buffer,
+    recurrent_source_gain: Buffer,
+    recurrent_target_gain: Buffer,
+    learning_rate_gain: Buffer,
+    modulator_gain: Buffer,
+    phenotype_bound_mask: u32,
     k_in: ComputePipelineState,
     k_rec: ComputePipelineState,
     k_out: ComputePipelineState,
@@ -169,6 +191,14 @@ impl Engine {
             channels: zeros(&d, INPUTS * tiles),
             output: zeros(&d, OUTPUTS * tiles),
             partial: zeros(&d, n.div_ceil(256) * tiles * 3),
+            input_gain: buf(&d, &vec![[1f32; 4]; INPUTS * tiles]),
+            readout_gain: buf(&d, &vec![[1f32; 4]; 384 * tiles]),
+            excitability_gain: buf(&d, &ones),
+            recurrent_source_gain: buf(&d, &ones),
+            recurrent_target_gain: buf(&d, &ones),
+            learning_rate_gain: buf(&d, &ones),
+            modulator_gain: buf(&d, &ones),
+            phenotype_bound_mask: 0,
             k_in: pipeline("project_inputs"),
             k_rec: pipeline(if simd_rows {
                 "csr_rate_simd"
@@ -219,6 +249,9 @@ impl Engine {
         };
         if mask & !valid_mask != 0 {
             return Err("active mask exceeds configured capacity".into());
+        }
+        if mask & !self.phenotype_bound_mask != 0 {
+            return Err("active resident slot has no bound neural phenotype".into());
         }
         if ch.len() != INPUTS * self.capacity {
             return Err(format!("channels must have shape [351,{}]", self.capacity));
@@ -314,6 +347,7 @@ impl Engine {
                     &self.input[2],
                     &self.channels,
                     &self.drive,
+                    &self.input_gain,
                 ],
             );
             e.set_buffer(8, Some(&pb0), 0);
@@ -349,6 +383,9 @@ impl Engine {
                 e.set_buffer(9, Some(target_buffer.as_ref().unwrap()), 0);
                 e.set_buffer(10, Some(correction_buffer.as_ref().unwrap()), 0);
             }
+            e.set_buffer(11, Some(&self.recurrent_source_gain), 0);
+            e.set_buffer(12, Some(&self.recurrent_target_gain), 0);
+            e.set_buffer(13, Some(&self.excitability_gain), 0);
             if self.simd_rows {
                 e.dispatch_threads(
                     MTLSize::new((self.n * self.tiles) as u64 * 32, 1, 1),
@@ -371,6 +408,7 @@ impl Engine {
                     &self.readout[2],
                     &self.rate[0],
                     &self.output,
+                    &self.readout_gain,
                 ],
             );
             e.set_buffer(8, Some(&pb1), 0);
@@ -427,6 +465,168 @@ impl Engine {
         }
         Ok((out, selected_out, ms))
     }
+    fn bind_phenotypes(
+        &mut self,
+        slots: &[u32],
+        input_gain: &[f32],
+        readout_gain: &[f32],
+        excitability_gain: &[f32],
+        recurrent_source_gain: &[f32],
+        recurrent_target_gain: &[f32],
+        learning_rate_gain: &[f32],
+        modulator_gain: &[f32],
+    ) -> Result<(), String> {
+        if slots.is_empty() || slots.iter().any(|&slot| slot as usize >= self.capacity) || {
+            let mut unique = slots.to_vec();
+            unique.sort_unstable();
+            unique.dedup();
+            unique.len() != slots.len()
+        } {
+            return Err("phenotype slots must be nonempty, unique, and within capacity".into());
+        }
+        let mask = slots.iter().fold(0u32, |mask, &slot| mask | (1u32 << slot));
+        if mask & self.phenotype_bound_mask != 0 {
+            return Err("cannot change a bound resident phenotype in place".into());
+        }
+        let residents = slots.len();
+        for (name, values, rows) in [
+            ("input_gain", input_gain, INPUTS),
+            ("readout_gain", readout_gain, 384),
+            ("excitability_gain", excitability_gain, self.n),
+            ("recurrent_source_gain", recurrent_source_gain, self.n),
+            ("recurrent_target_gain", recurrent_target_gain, self.n),
+            ("learning_rate_gain", learning_rate_gain, self.n),
+            ("modulator_gain", modulator_gain, self.n),
+        ] {
+            if values.len() != rows * residents
+                || values
+                    .iter()
+                    .any(|value| !value.is_finite() || !(0.05..=4.0).contains(value))
+            {
+                return Err(format!(
+                    "{name} must be finite [row,resident] values in [0.05,4.0]"
+                ));
+            }
+        }
+        unsafe fn install(
+            buffer: &Buffer,
+            rows: usize,
+            tiles: usize,
+            slots: &[u32],
+            values: &[f32],
+        ) {
+            let target = buffer.contents() as *mut [f32; 4];
+            for row in 0..rows {
+                for (column, &slot) in slots.iter().enumerate() {
+                    (*target.add(row * tiles + slot as usize / 4))[slot as usize % 4] =
+                        values[row * slots.len() + column];
+                }
+            }
+        }
+        unsafe {
+            install(&self.input_gain, INPUTS, self.tiles, slots, input_gain);
+            install(&self.readout_gain, 384, self.tiles, slots, readout_gain);
+            install(
+                &self.excitability_gain,
+                self.n,
+                self.tiles,
+                slots,
+                excitability_gain,
+            );
+            install(
+                &self.recurrent_source_gain,
+                self.n,
+                self.tiles,
+                slots,
+                recurrent_source_gain,
+            );
+            install(
+                &self.recurrent_target_gain,
+                self.n,
+                self.tiles,
+                slots,
+                recurrent_target_gain,
+            );
+            install(
+                &self.learning_rate_gain,
+                self.n,
+                self.tiles,
+                slots,
+                learning_rate_gain,
+            );
+            install(
+                &self.modulator_gain,
+                self.n,
+                self.tiles,
+                slots,
+                modulator_gain,
+            );
+        }
+        self.phenotype_bound_mask |= mask;
+        Ok(())
+    }
+    fn unbind_phenotypes(&mut self, mask: u32) -> Result<(), String> {
+        if mask & !self.phenotype_bound_mask != 0 {
+            return Err("cannot unbind an empty phenotype slot".into());
+        }
+        unsafe fn neutralize(
+            buffer: &Buffer,
+            rows: usize,
+            tiles: usize,
+            capacity: usize,
+            mask: u32,
+        ) {
+            let target = buffer.contents() as *mut [f32; 4];
+            for row in 0..rows {
+                for slot in 0..capacity {
+                    if mask & (1u32 << slot) != 0 {
+                        (*target.add(row * tiles + slot / 4))[slot % 4] = 1.0;
+                    }
+                }
+            }
+        }
+        unsafe {
+            neutralize(&self.input_gain, INPUTS, self.tiles, self.capacity, mask);
+            neutralize(&self.readout_gain, 384, self.tiles, self.capacity, mask);
+            neutralize(
+                &self.excitability_gain,
+                self.n,
+                self.tiles,
+                self.capacity,
+                mask,
+            );
+            neutralize(
+                &self.recurrent_source_gain,
+                self.n,
+                self.tiles,
+                self.capacity,
+                mask,
+            );
+            neutralize(
+                &self.recurrent_target_gain,
+                self.n,
+                self.tiles,
+                self.capacity,
+                mask,
+            );
+            neutralize(
+                &self.learning_rate_gain,
+                self.n,
+                self.tiles,
+                self.capacity,
+                mask,
+            );
+            neutralize(
+                &self.modulator_gain,
+                self.n,
+                self.tiles,
+                self.capacity,
+                mask,
+            );
+        }
+        self.phenotype_bound_mask &= !mask;
+        Ok(())
+    }
     fn reset(&mut self, mask: u32) {
         unsafe {
             let r = self.rate[0].contents() as *mut [f32; 4];
@@ -460,26 +660,70 @@ impl Engine {
         f.sync_all().unwrap();
         std::fs::rename(tmp, path).unwrap()
     }
-    fn restore(&mut self, path: &str) -> String {
-        let mut f = File::open(path).unwrap();
+    fn restore(&mut self, path: &str, mask: u32) -> Result<String, String> {
+        let valid_mask = if self.capacity == 32 {
+            u32::MAX
+        } else {
+            (1_u32 << self.capacity) - 1
+        };
+        if mask == 0 || mask & !valid_mask != 0 || mask & !self.phenotype_bound_mask != 0 {
+            return Err("restore mask must select bound phenotype slots within capacity".into());
+        }
+        let mut f = File::open(path).map_err(|error| format!("open snapshot: {error}"))?;
         let mut magic = [0u8; 8];
-        f.read_exact(&mut magic).unwrap();
-        assert_eq!(&magic, b"MBST1\0\0\0");
+        f.read_exact(&mut magic)
+            .map_err(|error| format!("read snapshot header: {error}"))?;
+        if &magic != b"MBST1\0\0\0" {
+            return Err("snapshot state header differs".into());
+        }
         let mut l = [0u8; 8];
-        f.read_exact(&mut l).unwrap();
-        let mut m = vec![0u8; u64::from_le_bytes(l) as usize];
-        f.read_exact(&mut m).unwrap();
-        for b in [&self.rate[0], &self.adapt, &self.support] {
-            let v = read_vec::<[f32; 4]>(&mut f, self.n * self.tiles);
-            unsafe {
-                std::ptr::copy_nonoverlapping(
-                    v.as_ptr(),
-                    b.contents() as *mut [f32; 4],
-                    self.n * self.tiles,
+        f.read_exact(&mut l)
+            .map_err(|error| format!("read snapshot metadata length: {error}"))?;
+        let metadata_len = usize::try_from(u64::from_le_bytes(l))
+            .map_err(|_| "snapshot metadata length exceeds this platform")?;
+        if metadata_len > 2_000_000 {
+            return Err("snapshot metadata is too large".into());
+        }
+        let mut m = vec![0u8; metadata_len];
+        f.read_exact(&mut m)
+            .map_err(|error| format!("read snapshot metadata: {error}"))?;
+        let metadata = String::from_utf8(m).map_err(|_| "snapshot metadata is not UTF-8")?;
+        let mut state = Vec::with_capacity(3);
+        for _ in 0..3 {
+            let mut values = vec![[0f32; 4]; self.n * self.tiles];
+            f.read_exact(unsafe {
+                std::slice::from_raw_parts_mut(
+                    values.as_mut_ptr() as *mut u8,
+                    std::mem::size_of_val(&*values),
                 )
+            })
+            .map_err(|error| format!("read snapshot state: {error}"))?;
+            state.push(values);
+        }
+        let mut trailing = [0u8; 1];
+        if f.read(&mut trailing)
+            .map_err(|error| format!("read snapshot trailer: {error}"))?
+            != 0
+        {
+            return Err("snapshot has trailing state bytes".into());
+        }
+        for (b, values) in [&self.rate[0], &self.adapt, &self.support]
+            .into_iter()
+            .zip(state)
+        {
+            unsafe {
+                let target = b.contents() as *mut [f32; 4];
+                for row in 0..self.n {
+                    for slot in 0..self.capacity {
+                        if mask & (1u32 << slot) != 0 {
+                            let index = row * self.tiles + slot / 4;
+                            (*target.add(index))[slot % 4] = values[index][slot % 4];
+                        }
+                    }
+                }
             }
         }
-        String::from_utf8(m).unwrap()
+        Ok(metadata)
     }
 }
 fn main() {
@@ -499,11 +743,65 @@ fn main() {
     let mut x = Engine::load(Path::new(&path), simd_rows, capacity);
     println!(
         "{}",
-        serde_json::json!({"ok":true,"device":x.device.name(),"neurons":x.n,"inputs":INPUTS,"readouts":384,"kernel":if simd_rows{"simd"}else{"row"},"capacity":x.capacity,"storage_tiles":x.tiles})
+        serde_json::json!({"ok":true,"device":x.device.name(),"neurons":x.n,"inputs":INPUTS,"readouts":384,"kernel":if simd_rows{"simd"}else{"row"},"capacity":x.capacity,"storage_tiles":x.tiles,"phenotype_binding":"neural-variant-metal-v1"})
     );
     let stdin = io::stdin();
     for line in stdin.lock().lines() {
         let response = match serde_json::from_str::<Request>(&line.unwrap()) {
+            Ok(Request::BindPhenotypes {
+                slots,
+                input_gain,
+                readout_gain,
+                excitability_gain,
+                recurrent_source_gain,
+                recurrent_target_gain,
+                learning_rate_gain,
+                modulator_gain,
+            }) => match x.bind_phenotypes(
+                &slots,
+                &input_gain,
+                &readout_gain,
+                &excitability_gain,
+                &recurrent_source_gain,
+                &recurrent_target_gain,
+                &learning_rate_gain,
+                &modulator_gain,
+            ) {
+                Ok(()) => Reply {
+                    ok: true,
+                    combined: None,
+                    gpu_ms: None,
+                    selected_rates: None,
+                    metadata: None,
+                    error: None,
+                },
+                Err(e) => Reply {
+                    ok: false,
+                    combined: None,
+                    gpu_ms: None,
+                    selected_rates: None,
+                    metadata: None,
+                    error: Some(e),
+                },
+            },
+            Ok(Request::UnbindPhenotypes { mask }) => match x.unbind_phenotypes(mask) {
+                Ok(()) => Reply {
+                    ok: true,
+                    combined: None,
+                    gpu_ms: None,
+                    selected_rates: None,
+                    metadata: None,
+                    error: None,
+                },
+                Err(e) => Reply {
+                    ok: false,
+                    combined: None,
+                    gpu_ms: None,
+                    selected_rates: None,
+                    metadata: None,
+                    error: Some(e),
+                },
+            },
             Ok(Request::Step {
                 dt,
                 active_mask,
@@ -564,13 +862,23 @@ fn main() {
                     error: None,
                 }
             }
-            Ok(Request::Restore { path }) => Reply {
-                ok: true,
-                combined: None,
-                gpu_ms: None,
-                selected_rates: None,
-                metadata: Some(x.restore(&path)),
-                error: None,
+            Ok(Request::Restore { path, mask }) => match x.restore(&path, mask) {
+                Ok(metadata) => Reply {
+                    ok: true,
+                    combined: None,
+                    gpu_ms: None,
+                    selected_rates: None,
+                    metadata: Some(metadata),
+                    error: None,
+                },
+                Err(e) => Reply {
+                    ok: false,
+                    combined: None,
+                    gpu_ms: None,
+                    selected_rates: None,
+                    metadata: None,
+                    error: Some(e),
+                },
             },
             Ok(Request::Metadata) => Reply {
                 ok: true,

@@ -13,6 +13,8 @@ struct Params {
     recovery: f32,
     final_step: u32,
     active_mask: u32,
+    capacity: u32,
+    tiles: u32,
 }
 
 fn read_vec<T: Copy + Default>(r: &mut File, len: usize) -> Vec<T> {
@@ -39,6 +41,7 @@ fn dispatch(
     queue: &metal::CommandQueueRef,
     pipeline: &metal::ComputePipelineStateRef,
     bufs: &[&Buffer],
+    phenotype: [&Buffer; 3],
     p: Params,
 ) -> f64 {
     let pb = queue.device().new_buffer_with_data(
@@ -53,6 +56,9 @@ fn dispatch(
         enc.set_buffer(i as u64, Some(b), 0);
     }
     enc.set_buffer(8, Some(&pb), 0);
+    enc.set_buffer(11, Some(phenotype[0]), 0);
+    enc.set_buffer(12, Some(phenotype[1]), 0);
+    enc.set_buffer(13, Some(phenotype[2]), 0);
     let w = pipeline.thread_execution_width();
     enc.dispatch_threads(MTLSize::new(p.n as u64, 1, 1), MTLSize::new(w, 1, 1));
     enc.end_encoding();
@@ -160,6 +166,8 @@ fn main() {
     let su = buffer(&device, &supports);
     let dr = buffer(&device, &drive);
     let all = [&rp, &ci, &wt, &r0, &r1, &ad, &su, &dr];
+    let neutral_gain = buffer(&device, &vec![[1f32; 4]; n]);
+    let phenotype = [&neutral_gain, &neutral_gain, &neutral_gain];
     let dt = 0.05;
     let alpha = dt / 2.0 / 0.16;
     let one = |fin| Params {
@@ -170,10 +178,12 @@ fn main() {
         recovery: 0.024,
         final_step: fin,
         active_mask: 7,
+        capacity: 3,
+        tiles: 1,
     };
-    dispatch(&q, &pipe, &all, one(0));
+    dispatch(&q, &pipe, &all, phenotype, one(0));
     let all2 = [&rp, &ci, &wt, &r1, &r0, &ad, &su, &dr];
-    dispatch(&q, &pipe, &all2, one(1));
+    dispatch(&q, &pipe, &all2, phenotype, one(1));
     let gpu = copy_out::<[f32; 4]>(&r0, n);
     let mut cr = initial.clone();
     let mut ca = adaptations.clone();
@@ -185,22 +195,22 @@ fn main() {
     let snap_r = copy_out::<[f32; 4]>(&r0, n);
     let snap_a = copy_out::<[f32; 4]>(&ad, n);
     let snap_s = copy_out::<[f32; 4]>(&su, n);
-    dispatch(&q, &pipe, &all, one(0));
-    dispatch(&q, &pipe, &all2, one(1));
+    dispatch(&q, &pipe, &all, phenotype, one(0));
+    dispatch(&q, &pipe, &all2, phenotype, one(1));
     let replay_expected = copy_out::<[f32; 4]>(&r0, n);
     unsafe {
         std::ptr::copy_nonoverlapping(snap_r.as_ptr(), r0.contents() as *mut [f32; 4], n);
         std::ptr::copy_nonoverlapping(snap_a.as_ptr(), ad.contents() as *mut [f32; 4], n);
         std::ptr::copy_nonoverlapping(snap_s.as_ptr(), su.contents() as *mut [f32; 4], n);
     }
-    dispatch(&q, &pipe, &all, one(0));
-    dispatch(&q, &pipe, &all2, one(1));
+    dispatch(&q, &pipe, &all, phenotype, one(0));
+    dispatch(&q, &pipe, &all2, phenotype, one(1));
     let replay = max_delta(&replay_expected, &copy_out(&r0, n));
     let mut samples = Vec::new();
     for _ in 0..iterations {
         let t = Instant::now();
-        dispatch(&q, &pipe, &all, one(0));
-        dispatch(&q, &pipe, &all2, one(1));
+        dispatch(&q, &pipe, &all, phenotype, one(0));
+        dispatch(&q, &pipe, &all2, phenotype, one(1));
         samples.push(t.elapsed().as_secs_f64() * 1000.0);
     }
     samples.sort_by(|a, b| a.total_cmp(b));

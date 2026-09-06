@@ -25,18 +25,22 @@ inline float4 hold_inactive(float4 next, float4 old, constant Params &p, uint ti
     return next;
 }
 
-kernel void project_inputs(device const uint *ptr [[buffer(0)]], device const uint *cols [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *channels [[buffer(3)]], device float4 *drive [[buffer(4)]], constant Params &p [[buffer(8)]], uint gid [[thread_position_in_grid]]) {
+kernel void project_inputs(device const uint *ptr [[buffer(0)]], device const uint *cols [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *channels [[buffer(3)]], device float4 *drive [[buffer(4)]], device const float4 *input_gain [[buffer(5)]], constant Params &p [[buffer(8)]], uint gid [[thread_position_in_grid]]) {
     uint row = gid / p.tiles, tile = gid % p.tiles;
     if (row >= p.n) return;
     float4 x = 0.0f;
-    for (uint edge = ptr[row]; edge < ptr[row + 1]; ++edge) x += weights[edge] * channels[cols[edge] * p.tiles + tile];
+    for (uint edge = ptr[row]; edge < ptr[row + 1]; ++edge) {
+        uint channel = cols[edge];
+        x += weights[edge] * input_gain[channel * p.tiles + tile] * channels[channel * p.tiles + tile];
+    }
     drive[gid] = x;
 }
 
-inline void rate_update(uint row, uint tile, float4 recurrent, device const float4 *rate_in, device float4 *rate_out, device float4 *adapt, device float4 *support, device const float4 *drive, constant Params &p) {
+inline void rate_update(uint row, uint tile, float4 recurrent, device const float4 *rate_in, device float4 *rate_out, device float4 *adapt, device float4 *support, device const float4 *drive, device const float4 *target_gain, device const float4 *excitability, constant Params &p) {
     uint index = row * p.tiles + tile;
     float4 old = rate_in[index], a = adapt[index], s = support[index];
-    float4 target = max(tanh(0.005f + drive[index] + p.gain * recurrent - 0.10f * a), 0.0f);
+    float4 regulated_drive = drive[index] + p.gain * target_gain[index] * recurrent;
+    float4 target = max(tanh(0.005f + excitability[index] * regulated_drive - 0.10f * a), 0.0f);
     float4 next = hold_inactive(old + p.alpha * (target * s - old), old, p, tile);
     rate_out[index] = next;
     if (p.final_step) {
@@ -47,22 +51,28 @@ inline void rate_update(uint row, uint tile, float4 recurrent, device const floa
     }
 }
 
-kernel void csr_rate(device const uint *rowptr [[buffer(0)]], device const uint *columns [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *rate_in [[buffer(3)]], device float4 *rate_out [[buffer(4)]], device float4 *adapt [[buffer(5)]], device float4 *support [[buffer(6)]], device const float4 *drive [[buffer(7)]], constant Params &p [[buffer(8)]], uint gid [[thread_position_in_grid]]) {
+kernel void csr_rate(device const uint *rowptr [[buffer(0)]], device const uint *columns [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *rate_in [[buffer(3)]], device float4 *rate_out [[buffer(4)]], device float4 *adapt [[buffer(5)]], device float4 *support [[buffer(6)]], device const float4 *drive [[buffer(7)]], constant Params &p [[buffer(8)]], device const float4 *source_gain [[buffer(11)]], device const float4 *target_gain [[buffer(12)]], device const float4 *excitability [[buffer(13)]], uint gid [[thread_position_in_grid]]) {
     uint row = gid / p.tiles, tile = gid % p.tiles;
     if (row >= p.n) return;
     float4 recurrent = 0.0f;
-    for (uint edge = rowptr[row]; edge < rowptr[row + 1]; ++edge) recurrent += weights[edge] * rate_in[columns[edge] * p.tiles + tile];
-    rate_update(row, tile, recurrent, rate_in, rate_out, adapt, support, drive, p);
+    for (uint edge = rowptr[row]; edge < rowptr[row + 1]; ++edge) {
+        uint source = columns[edge];
+        recurrent += weights[edge] * source_gain[source * p.tiles + tile] * rate_in[source * p.tiles + tile];
+    }
+    rate_update(row, tile, recurrent, rate_in, rate_out, adapt, support, drive, target_gain, excitability, p);
 }
 
-kernel void csr_rate_simd(device const uint *rowptr [[buffer(0)]], device const uint *columns [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *rate_in [[buffer(3)]], device float4 *rate_out [[buffer(4)]], device float4 *adapt [[buffer(5)]], device float4 *support [[buffer(6)]], device const float4 *drive [[buffer(7)]], constant Params &p [[buffer(8)]], uint gid [[thread_position_in_grid]], uint lane [[thread_index_in_simdgroup]]) {
+kernel void csr_rate_simd(device const uint *rowptr [[buffer(0)]], device const uint *columns [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *rate_in [[buffer(3)]], device float4 *rate_out [[buffer(4)]], device float4 *adapt [[buffer(5)]], device float4 *support [[buffer(6)]], device const float4 *drive [[buffer(7)]], constant Params &p [[buffer(8)]], device const float4 *source_gain [[buffer(11)]], device const float4 *target_gain [[buffer(12)]], device const float4 *excitability [[buffer(13)]], uint gid [[thread_position_in_grid]], uint lane [[thread_index_in_simdgroup]]) {
     uint row_tile = gid >> 5, row = row_tile / p.tiles, tile = row_tile % p.tiles;
     if (row >= p.n) return;
     float4 recurrent = 0.0f;
-    for (uint edge = rowptr[row] + lane; edge < rowptr[row + 1]; edge += 32) recurrent += weights[edge] * rate_in[columns[edge] * p.tiles + tile];
+    for (uint edge = rowptr[row] + lane; edge < rowptr[row + 1]; edge += 32) {
+        uint source = columns[edge];
+        recurrent += weights[edge] * source_gain[source * p.tiles + tile] * rate_in[source * p.tiles + tile];
+    }
     recurrent = float4(simd_sum(recurrent.x), simd_sum(recurrent.y), simd_sum(recurrent.z), simd_sum(recurrent.w));
     if (lane) return;
-    rate_update(row, tile, recurrent, rate_in, rate_out, adapt, support, drive, p);
+    rate_update(row, tile, recurrent, rate_in, rate_out, adapt, support, drive, target_gain, excitability, p);
 }
 
 inline float4 correction_for(uint row, uint tile, device const uint *targets, device const float4 *corrections, constant Params &p) {
@@ -71,24 +81,30 @@ inline float4 correction_for(uint row, uint tile, device const uint *targets, de
     return 0.0f;
 }
 
-kernel void csr_rate_corrected(device const uint *rowptr [[buffer(0)]], device const uint *columns [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *rate_in [[buffer(3)]], device float4 *rate_out [[buffer(4)]], device float4 *adapt [[buffer(5)]], device float4 *support [[buffer(6)]], device const float4 *drive [[buffer(7)]], constant Params &p [[buffer(8)]], device const uint *targets [[buffer(9)]], device const float4 *corrections [[buffer(10)]], uint gid [[thread_position_in_grid]]) {
+kernel void csr_rate_corrected(device const uint *rowptr [[buffer(0)]], device const uint *columns [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *rate_in [[buffer(3)]], device float4 *rate_out [[buffer(4)]], device float4 *adapt [[buffer(5)]], device float4 *support [[buffer(6)]], device const float4 *drive [[buffer(7)]], constant Params &p [[buffer(8)]], device const uint *targets [[buffer(9)]], device const float4 *corrections [[buffer(10)]], device const float4 *source_gain [[buffer(11)]], device const float4 *target_gain [[buffer(12)]], device const float4 *excitability [[buffer(13)]], uint gid [[thread_position_in_grid]]) {
     uint row = gid / p.tiles, tile = gid % p.tiles;
     if (row >= p.n) return;
     float4 recurrent = 0.0f;
-    for (uint edge = rowptr[row]; edge < rowptr[row + 1]; ++edge) recurrent += weights[edge] * rate_in[columns[edge] * p.tiles + tile];
+    for (uint edge = rowptr[row]; edge < rowptr[row + 1]; ++edge) {
+        uint source = columns[edge];
+        recurrent += weights[edge] * source_gain[source * p.tiles + tile] * rate_in[source * p.tiles + tile];
+    }
     recurrent += correction_for(row, tile, targets, corrections, p);
-    rate_update(row, tile, recurrent, rate_in, rate_out, adapt, support, drive, p);
+    rate_update(row, tile, recurrent, rate_in, rate_out, adapt, support, drive, target_gain, excitability, p);
 }
 
-kernel void csr_rate_simd_corrected(device const uint *rowptr [[buffer(0)]], device const uint *columns [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *rate_in [[buffer(3)]], device float4 *rate_out [[buffer(4)]], device float4 *adapt [[buffer(5)]], device float4 *support [[buffer(6)]], device const float4 *drive [[buffer(7)]], constant Params &p [[buffer(8)]], device const uint *targets [[buffer(9)]], device const float4 *corrections [[buffer(10)]], uint gid [[thread_position_in_grid]], uint lane [[thread_index_in_simdgroup]]) {
+kernel void csr_rate_simd_corrected(device const uint *rowptr [[buffer(0)]], device const uint *columns [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *rate_in [[buffer(3)]], device float4 *rate_out [[buffer(4)]], device float4 *adapt [[buffer(5)]], device float4 *support [[buffer(6)]], device const float4 *drive [[buffer(7)]], constant Params &p [[buffer(8)]], device const uint *targets [[buffer(9)]], device const float4 *corrections [[buffer(10)]], device const float4 *source_gain [[buffer(11)]], device const float4 *target_gain [[buffer(12)]], device const float4 *excitability [[buffer(13)]], uint gid [[thread_position_in_grid]], uint lane [[thread_index_in_simdgroup]]) {
     uint row_tile = gid >> 5, row = row_tile / p.tiles, tile = row_tile % p.tiles;
     if (row >= p.n) return;
     float4 recurrent = 0.0f;
-    for (uint edge = rowptr[row] + lane; edge < rowptr[row + 1]; edge += 32) recurrent += weights[edge] * rate_in[columns[edge] * p.tiles + tile];
+    for (uint edge = rowptr[row] + lane; edge < rowptr[row + 1]; edge += 32) {
+        uint source = columns[edge];
+        recurrent += weights[edge] * source_gain[source * p.tiles + tile] * rate_in[source * p.tiles + tile];
+    }
     recurrent = float4(simd_sum(recurrent.x), simd_sum(recurrent.y), simd_sum(recurrent.z), simd_sum(recurrent.w));
     if (lane) return;
     recurrent += correction_for(row, tile, targets, corrections, p);
-    rate_update(row, tile, recurrent, rate_in, rate_out, adapt, support, drive, p);
+    rate_update(row, tile, recurrent, rate_in, rate_out, adapt, support, drive, target_gain, excitability, p);
 }
 
 kernel void gather_rates(device const float4 *rates [[buffer(0)]], device const uint *indices [[buffer(1)]], device float4 *selected [[buffer(2)]], constant Params &p [[buffer(8)]], uint gid [[thread_position_in_grid]]) {
@@ -96,12 +112,12 @@ kernel void gather_rates(device const float4 *rates [[buffer(0)]], device const 
     selected[gid] = rates[indices[row] * p.tiles + tile];
 }
 
-kernel void project_readouts(device const uint *ptr [[buffer(0)]], device const uint *cols [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *rates [[buffer(3)]], device float4 *output [[buffer(4)]], constant Params &p [[buffer(8)]], uint gid [[thread_position_in_grid]]) {
+kernel void project_readouts(device const uint *ptr [[buffer(0)]], device const uint *cols [[buffer(1)]], device const float *weights [[buffer(2)]], device const float4 *rates [[buffer(3)]], device float4 *output [[buffer(4)]], device const float4 *readout_gain [[buffer(5)]], constant Params &p [[buffer(8)]], uint gid [[thread_position_in_grid]]) {
     uint row = gid / p.tiles, tile = gid % p.tiles;
     if (row >= 384) return;
     float4 x = 0.0f;
     for (uint edge = ptr[row]; edge < ptr[row + 1]; ++edge) x += weights[edge] * rates[cols[edge] * p.tiles + tile];
-    output[gid] = x;
+    output[gid] = readout_gain[gid] * x;
 }
 
 kernel void physiology_partials(device const float4 *rates [[buffer(0)]], device const float4 *support [[buffer(1)]], device float4 *partial [[buffer(2)]], constant Params &p [[buffer(8)]], uint lane [[thread_index_in_threadgroup]], uint group [[threadgroup_position_in_grid]]) {

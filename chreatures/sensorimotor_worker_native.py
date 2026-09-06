@@ -12,7 +12,9 @@ from typing import Any
 
 import numpy as np
 
-DEVELOPMENTAL_FORMAT = "chreatures-native-developmental-resident-rich-v3"
+from .organism_interface import ACTION_DIM, OBSERVATION_DIM, PHYSIOLOGY_DIM, identity
+
+DEVELOPMENTAL_FORMAT = "chreatures-native-developmental-resident-population-v4"
 PERSONAL_GOAL_CONTRACT = {
     "format": "chreatures-private-goal-associations-v1",
     "objective": {
@@ -64,6 +66,11 @@ PREDICTOR_ORDER = (
         "output.bias",
     )
 )
+POPULATION_ADAPTER_ORDER = (
+    "population_adapter.down",
+    "population_adapter.up",
+    "population_adapter.bias",
+)
 PREDICTOR_ENCODER_NAMES = (
     "visual.peripheral.first.weight",
     "visual.peripheral.first.bias",
@@ -84,6 +91,13 @@ PREDICTOR_ENCODER_NAMES = (
     "goal_encoder.2.weight",
     "goal_encoder.2.bias",
 )
+PREDICTOR_ENCODER_ORDER = tuple(
+    "predictor.encoder." + name for name in PREDICTOR_ENCODER_NAMES
+) + (
+    "predictor.observation_normalizer.mean",
+    "predictor.observation_normalizer.scale",
+)
+PREDICTOR_MLP_ORDER = tuple("predictor." + name for name in PREDICTOR_ORDER)
 PREDICTOR_SHAPES = {
     "input.mean": (1426,),
     "input.scale": (1426,),
@@ -146,8 +160,8 @@ RICH_DEVELOPMENTAL_ORDER = (
     "model.positive_head.bias",
 ) + MANAGER_ORDER
 RICH_DEVELOPMENTAL_SHAPES = {
-    "normalizer.mean": (4453,),
-    "normalizer.scale": (4453,),
+    "normalizer.mean": (4459,),
+    "normalizer.scale": (4459,),
     "model.visual.peripheral.first.weight": (16, 4, 3, 3),
     "model.visual.peripheral.first.bias": (16,),
     "model.visual.peripheral.second.weight": (24, 16, 3, 3),
@@ -160,27 +174,27 @@ RICH_DEVELOPMENTAL_SHAPES = {
     "model.visual.peripheral_projection.0.bias": (64,),
     "model.visual.foveal_projection.0.weight": (64, 2304),
     "model.visual.foveal_projection.0.bias": (64,),
-    "model.body.0.weight": (128, 357),
+    "model.body.0.weight": (128, 363),
     "model.body.0.bias": (128,),
     "model.goal_encoder.0.weight": (256, 1024),
     "model.goal_encoder.0.bias": (256,),
     "model.goal_encoder.2.weight": (64, 256),
     "model.goal_encoder.2.bias": (64,),
-    "model.observation_projection.0.weight": (128, 265),
+    "model.observation_projection.0.weight": (128, 268),
     "model.observation_projection.0.bias": (128,),
     "model.history.weight_ih_l0": (384, 128),
     "model.history.weight_hh_l0": (384, 128),
     "model.history.bias_ih_l0": (384,),
     "model.history.bias_hh_l0": (384,),
-    "model.policy_trunk.0.weight": (256, 201),
+    "model.policy_trunk.0.weight": (256, 205),
     "model.policy_trunk.0.bias": (256,),
     "model.signed_head.weight": (260, 256),
     "model.signed_head.bias": (260,),
-    "model.active_head.weight": (4, 256),
-    "model.active_head.bias": (4,),
-    "model.positive_head.weight": (128, 256),
-    "model.positive_head.bias": (128,),
-    "manager.query.0.weight": (128, 518),
+    "model.active_head.weight": (8, 256),
+    "model.active_head.bias": (8,),
+    "model.positive_head.weight": (256, 256),
+    "model.positive_head.bias": (256,),
+    "manager.query.0.weight": (128, 524),
     "manager.query.0.bias": (128,),
     "manager.query.2.weight": (64, 128),
     "manager.query.2.bias": (64,),
@@ -269,19 +283,23 @@ class DevelopmentalResidentCohort:
         action_mode: str,
         goal_seed: int,
         action_seed: int,
+        candidate_adapters: list[dict[str, Any]],
     ) -> None:
         path = Path(artifact).expanduser().resolve()
         file_hash = hashlib.sha256(path.read_bytes()).hexdigest()
         with np.load(path, allow_pickle=False) as archive:
             metadata = json.loads(str(archive["metadata"]))
-            order = RICH_DEVELOPMENTAL_ORDER + tuple(
-                "predictor." + x for x in PREDICTOR_ORDER
+            order = (
+                RICH_DEVELOPMENTAL_ORDER
+                + POPULATION_ADAPTER_ORDER
+                + PREDICTOR_ENCODER_ORDER
+                + PREDICTOR_MLP_ORDER
             )
             if (
                 metadata.get("format") != DEVELOPMENTAL_FORMAT
-                or metadata.get("version") != 3
+                or metadata.get("version") != 4
                 or metadata.get("execution")
-                != "developmental-resident-native-rich-predictive-personal-goals-v3"
+                != "developmental-resident-native-population-v4"
                 or metadata.get("pack_order") != list(order)
                 or set(archive.files) != set(order) | {"metadata"}
             ):
@@ -297,7 +315,7 @@ class DevelopmentalResidentCohort:
                         and value.shape != RICH_DEVELOPMENTAL_SHAPES[name]
                     )
                     or (
-                        name.startswith("predictor.")
+                        name in PREDICTOR_MLP_ORDER
                         and value.shape != PREDICTOR_SHAPES[name[10:]]
                     )
                     or list(value.shape) != receipt.get("shape")
@@ -310,19 +328,21 @@ class DevelopmentalResidentCohort:
                 arrays[name] = value
         if _artifact_identity(metadata, arrays) != metadata.get("artifact_sha256"):
             raise ValueError("developmental resident artifact identity differs")
-        if metadata.get("personal_goal_associations") != PERSONAL_GOAL_CONTRACT:
+        runtime = metadata.get("runtime_contract", {})
+        if runtime.get("personal_goal_associations") != PERSONAL_GOAL_CONTRACT:
             raise ValueError("personal goal association contract differs")
-        temporal = metadata.get("temporal_contract", {})
+        temporal = runtime.get("temporal", {})
         if (
             temporal.get("observation_interval_seconds") != 0.05
             or temporal.get("manager_commit_ticks") != 10
         ):
             raise ValueError("developmental resident timing differs")
-        refinement = metadata.get("consequence_refinement", {})
-        law_bank = refinement.get("law_bank")
+        refinement = runtime.get("consequence_refinement", {})
+        laws = metadata.get("consequence_laws", {})
+        law_bank = laws.get("value")
         if (
             not isinstance(law_bank, dict)
-            or refinement.get("law_content_sha256")
+            or laws.get("content_sha256")
             != hashlib.sha256(_canonical(law_bank)).hexdigest()
             or [
                 refinement.get(x)
@@ -337,31 +357,61 @@ class DevelopmentalResidentCohort:
             != [4, 0.5, 0.05, 0.99, 4.0]
         ):
             raise ValueError("developmental consequence refinement differs")
-        predictor = metadata.get("predictor", {})
-        predictor_order = tuple(predictor.get("pack_order", ()))
-        predictor_metadata = predictor.get("metadata", {})
-        predictor_identity = predictor.get("artifact_identity")
-        goal_rms = predictor.get("goal_forecast_rms")
-        predictor_arrays = {
-            name: arrays["predictor." + name] for name in PREDICTOR_ORDER
-        }
-        predictor_arrays.update(
-            {
-                "encoder." + name: arrays["model." + name]
-                for name in PREDICTOR_ENCODER_NAMES
-            }
-        )
-        predictor_arrays.update(
-            {
-                "observation_normalizer.mean": arrays["normalizer.mean"],
-                "observation_normalizer.scale": arrays["normalizer.scale"],
-            }
-        )
+        predictor = metadata.get("inherited_h1_predictor", {})
+        population_adapters = metadata.get("population_adapters", {})
+        adapter_count = population_adapters.get("count")
+        adapter_rank = population_adapters.get("rank")
         if (
-            predictor_order != tuple("predictor." + x for x in PREDICTOR_ORDER)
+            type(adapter_count) is not int
+            or type(adapter_rank) is not int
+            or not 1 <= adapter_count <= 256
+            or not 1 <= adapter_rank <= 256
+            or arrays["population_adapter.down"].shape
+            != (adapter_count, adapter_rank, 256)
+            or arrays["population_adapter.up"].shape
+            != (adapter_count, 256, adapter_rank)
+            or arrays["population_adapter.bias"].shape != (adapter_count, 256)
+        ):
+            raise ValueError("population policy adapter contract differs")
+        predictor_metadata = predictor.get("metadata", {})
+        predictor_order = tuple(predictor_metadata.get("pack_order", ()))
+        predictor_identity = predictor_metadata.get("artifact_identity")
+        goal_rms = predictor_metadata.get("validation", {}).get(
+            "runtime_empirical_goal_error_scale"
+        )
+        predictor_arrays = {
+            name.removeprefix("predictor."): arrays[name]
+            for name in PREDICTOR_ENCODER_ORDER + PREDICTOR_MLP_ORDER
+        }
+        shared_h1_arrays = {
+            "encoder." + name: arrays["model." + name]
+            for name in PREDICTOR_ENCODER_NAMES
+        }
+        shared_h1_arrays["encoder.body.0.weight"] = arrays[
+            "model.body.0.weight"
+        ][:, :357]
+        shared_h1_arrays["observation_normalizer.mean"] = arrays[
+            "normalizer.mean"
+        ][:4453]
+        shared_h1_arrays["observation_normalizer.scale"] = arrays[
+            "normalizer.scale"
+        ][:4453]
+        if any(
+            not np.array_equal(predictor_arrays[name], shared)
+            for name, shared in shared_h1_arrays.items()
+        ):
+            raise ValueError("shared v4 front differs from frozen H1 encoder")
+        source_predictor_metadata = copy.deepcopy(predictor_metadata)
+        source_pack_order = source_predictor_metadata.pop("source_pack_order", None)
+        if source_pack_order is None:
+            source_predictor_metadata.pop("pack_order", None)
+        else:
+            source_predictor_metadata["pack_order"] = source_pack_order
+        if (
+            predictor_order != PREDICTOR_ENCODER_ORDER + PREDICTOR_MLP_ORDER
             or not isinstance(predictor_identity, str)
             or len(predictor_identity) != 64
-            or _predictor_identity(predictor_metadata, predictor_arrays)
+            or _predictor_identity(source_predictor_metadata, predictor_arrays)
             != predictor_identity
             or not isinstance(goal_rms, (int, float))
             or not np.isfinite(goal_rms)
@@ -377,9 +427,9 @@ class DevelopmentalResidentCohort:
         if (
             not isinstance(batch_size, int)
             or isinstance(batch_size, bool)
-            or not 1 <= batch_size <= 256
+            or not 1 <= batch_size <= 4096
         ):
-            raise ValueError("batch_size must be an integer in 1..256")
+            raise ValueError("batch_size must be an integer in 1..4096")
         for name, seed in (("goal_seed", goal_seed), ("action_seed", action_seed)):
             if (
                 not isinstance(seed, int)
@@ -387,6 +437,45 @@ class DevelopmentalResidentCohort:
                 or not 0 <= seed < 2**64
             ):
                 raise ValueError(f"{name} must be an unsigned 64-bit integer")
+        if not isinstance(candidate_adapters, list) or len(candidate_adapters) != batch_size:
+            raise ValueError("candidate adapters must contain one row per resident")
+        candidate_sha256 = []
+        loci_sha256 = []
+        recurrent_gain = np.empty(batch_size, dtype=np.float32)
+        learning_rate_gain = np.empty(batch_size, dtype=np.float32)
+        action_gain = np.empty((batch_size, ACTION_DIM), dtype=np.float32)
+        temperature = np.empty((batch_size, ACTION_DIM), dtype=np.float32)
+        required = {
+            "candidate_sha256",
+            "loci_sha256",
+            "recurrent_gain",
+            "learning_rate_gain",
+            "action_gain",
+            "action_logit_temperature_offset",
+            "policy_adapter_index",
+        }
+        for row, adapter in enumerate(candidate_adapters):
+            if not isinstance(adapter, dict) or set(adapter) != required:
+                raise ValueError("candidate adapter fields differ")
+            for name in ("candidate_sha256", "loci_sha256"):
+                digest = adapter[name]
+                if (
+                    not isinstance(digest, str)
+                    or len(digest) != 64
+                    or any(char not in "0123456789abcdef" for char in digest)
+                ):
+                    raise ValueError(f"invalid candidate adapter {name}")
+            candidate_sha256.append(adapter["candidate_sha256"])
+            loci_sha256.append(adapter["loci_sha256"])
+            recurrent_gain[row] = adapter["recurrent_gain"]
+            learning_rate_gain[row] = adapter["learning_rate_gain"]
+            action_gain[row] = adapter["action_gain"]
+            temperature[row] = adapter["action_logit_temperature_offset"]
+            if (
+                type(adapter["policy_adapter_index"]) is not int
+                or not 0 <= adapter["policy_adapter_index"] < adapter_count
+            ):
+                raise ValueError("candidate policy adapter index differs")
         packed = np.ascontiguousarray(
             np.concatenate(
                 [arrays[name].reshape(-1) for name in RICH_DEVELOPMENTAL_ORDER]
@@ -394,12 +483,20 @@ class DevelopmentalResidentCohort:
             dtype=np.float32,
         )
         predictor_packed = np.ascontiguousarray(
-            np.concatenate([arrays[name].reshape(-1) for name in predictor_order]),
+            np.concatenate([arrays[name].reshape(-1) for name in PREDICTOR_MLP_ORDER]),
+            dtype=np.float32,
+        )
+        policy_adapter_packed = np.ascontiguousarray(
+            np.concatenate(
+                [arrays[name].reshape(-1) for name in POPULATION_ADAPTER_ORDER]
+            ),
             dtype=np.float32,
         )
         self.artifact_path = path
         self.batch_size = batch_size
         self.action_mode = action_mode
+        self._policy_adapter_count = adapter_count
+        self.candidate_adapters = copy.deepcopy(candidate_adapters)
         self.model_identity = {
             "format": DEVELOPMENTAL_FORMAT,
             "artifact_sha256": metadata["artifact_sha256"],
@@ -427,23 +524,8 @@ class DevelopmentalResidentCohort:
             raise ValueError(
                 "developmental artifact lacks its trained neural substrate"
             )
-        self.observation_contract = copy.deepcopy(metadata.get("observation_contract"))
-        if self.observation_contract != {
-            "format": "chreatures-rich-sensorimotor-observation-v1",
-            "observation_dim": 4453,
-            "rich_body_dim": 4096,
-            "rich_profile_sha256": "c71380718ba5535dbaebdeaf8aa2e88cc45cf218312a03e13507877f02a5554e",
-            "rich_channel_names_sha256": "b4c6b328116d820143e16ee922ccffd7b950dbe008efc580ad93056e01349bfa",
-            "observation_order": [
-                "rich_body_v1_4096",
-                "canonical_channels_351",
-                "physiology_6",
-            ],
-            "source_sense_dim": 351,
-            "physiology_dim": 6,
-            "neural_readout_dim": 384,
-            "previous_action_plus_oral_dim": 9,
-        }:
+        self.observation_contract = copy.deepcopy(metadata.get("organism_interface"))
+        if self.observation_contract != identity():
             raise ValueError("developmental resident observation contract differs")
         self._native = _extension().DevelopmentalResidentCohort(
             batch_size,
@@ -453,20 +535,219 @@ class DevelopmentalResidentCohort:
             action_seed,
             packed,
             _canonical(law_bank).decode(),
-            refinement["law_file_sha256"],
+            laws["file_sha256"],
             refinement["learning_rate"],
             refinement["error_decay"],
             refinement["innovation_limit"],
             predictor_packed,
-            predictor["goal_forecast_rms"],
+            goal_rms,
+            policy_adapter_packed,
+            adapter_count,
+            adapter_rank,
+            np.asarray(
+                [adapter["policy_adapter_index"] for adapter in candidate_adapters],
+                dtype=np.uint16,
+            ),
+            candidate_sha256,
+            loci_sha256,
+            recurrent_gain,
+            learning_rate_gain,
+            action_gain,
+            temperature,
         )
+
+    def hatch_slots(
+        self,
+        rows,
+        candidate_adapters: list[dict[str, Any]],
+        *,
+        goal_seeds,
+        action_seeds,
+    ) -> None:
+        rows = np.asarray(rows)
+        if (
+            rows.ndim != 1
+            or rows.size == 0
+            or not np.issubdtype(rows.dtype, np.integer)
+            or np.issubdtype(rows.dtype, np.bool_)
+        ):
+            raise ValueError("hatch rows must be a nonempty integer vector")
+        row_values = [int(value) for value in rows]
+        if (
+            len(set(row_values)) != len(row_values)
+            or any(not 0 <= row < self.batch_size for row in row_values)
+            or len(candidate_adapters) != len(row_values)
+        ):
+            raise ValueError("hatch rows or candidate adapters differ")
+        count = len(row_values)
+        goal_seeds = np.asarray(goal_seeds)
+        action_seeds = np.asarray(action_seeds)
+        if goal_seeds.shape != (count,) or action_seeds.shape != (count,):
+            raise ValueError("hatch seed shapes differ")
+        if not all(
+            isinstance(value, (int, np.integer))
+            and not isinstance(value, (bool, np.bool_))
+            and 0 <= int(value) < 2**64
+            for value in (*goal_seeds.tolist(), *action_seeds.tolist())
+        ):
+            raise ValueError("hatch seeds must be unsigned 64-bit integers")
+        required = {
+            "candidate_sha256",
+            "loci_sha256",
+            "recurrent_gain",
+            "learning_rate_gain",
+            "action_gain",
+            "action_logit_temperature_offset",
+            "policy_adapter_index",
+        }
+        recurrent = np.empty(count, dtype=np.float32)
+        learning = np.empty(count, dtype=np.float32)
+        gains = np.empty((count, ACTION_DIM), dtype=np.float32)
+        temperatures = np.empty((count, ACTION_DIM), dtype=np.float32)
+        indices = np.empty(count, dtype=np.uint16)
+        candidate_hashes = []
+        loci_hashes = []
+        for index, adapter in enumerate(candidate_adapters):
+            if not isinstance(adapter, dict) or set(adapter) != required:
+                raise ValueError("candidate adapter fields differ")
+            for name, target in (
+                ("candidate_sha256", candidate_hashes),
+                ("loci_sha256", loci_hashes),
+            ):
+                digest = adapter[name]
+                if (
+                    not isinstance(digest, str)
+                    or len(digest) != 64
+                    or any(char not in "0123456789abcdef" for char in digest)
+                ):
+                    raise ValueError(f"invalid candidate adapter {name}")
+                target.append(digest)
+            adapter_index = adapter["policy_adapter_index"]
+            if (
+                type(adapter_index) is not int
+                or not 0 <= adapter_index < self._policy_adapter_count
+            ):
+                raise ValueError("candidate policy adapter index differs")
+            indices[index] = adapter_index
+            recurrent[index] = adapter["recurrent_gain"]
+            learning[index] = adapter["learning_rate_gain"]
+            gains[index] = adapter["action_gain"]
+            temperatures[index] = adapter["action_logit_temperature_offset"]
+        self._native.hatch_slots(
+            np.asarray(row_values, dtype=np.uint16),
+            np.ascontiguousarray(goal_seeds, dtype=np.uint64),
+            np.ascontiguousarray(action_seeds, dtype=np.uint64),
+            candidate_hashes,
+            loci_hashes,
+            indices,
+            recurrent,
+            learning,
+            gains,
+            temperatures,
+        )
+        for row, adapter in zip(row_values, candidate_adapters, strict=True):
+            self.candidate_adapters[row] = copy.deepcopy(adapter)
+
+    def expanded(
+        self,
+        new_candidate_adapters: list[dict[str, Any]],
+        *,
+        goal_seed: int,
+        action_seed: int,
+    ) -> DevelopmentalResidentCohort:
+        if not isinstance(new_candidate_adapters, list) or not new_candidate_adapters:
+            raise ValueError("new candidate adapters must be a nonempty list")
+        if self.batch_size + len(new_candidate_adapters) > 4096:
+            raise ValueError("expanded cohort exceeds 4096 residents")
+        for name, seed in (("goal_seed", goal_seed), ("action_seed", action_seed)):
+            if (
+                not isinstance(seed, int)
+                or isinstance(seed, bool)
+                or not 0 <= seed < 2**64
+            ):
+                raise ValueError(f"{name} must be an unsigned 64-bit integer")
+        required = {
+            "candidate_sha256",
+            "loci_sha256",
+            "recurrent_gain",
+            "learning_rate_gain",
+            "action_gain",
+            "action_logit_temperature_offset",
+            "policy_adapter_index",
+        }
+        for adapter in new_candidate_adapters:
+            if not isinstance(adapter, dict) or set(adapter) != required:
+                raise ValueError("candidate adapter fields differ")
+            for name in ("candidate_sha256", "loci_sha256"):
+                digest = adapter[name]
+                if (
+                    not isinstance(digest, str)
+                    or len(digest) != 64
+                    or any(char not in "0123456789abcdef" for char in digest)
+                ):
+                    raise ValueError(f"invalid candidate adapter {name}")
+            adapter_index = adapter["policy_adapter_index"]
+            if (
+                type(adapter_index) is not int
+                or not 0 <= adapter_index < self._policy_adapter_count
+            ):
+                raise ValueError("candidate policy adapter index differs")
+        candidate_hashes = [value["candidate_sha256"] for value in new_candidate_adapters]
+        loci_hashes = [value["loci_sha256"] for value in new_candidate_adapters]
+        indices = np.asarray(
+            [value["policy_adapter_index"] for value in new_candidate_adapters],
+            dtype=np.uint16,
+        )
+        recurrent = np.asarray(
+            [value["recurrent_gain"] for value in new_candidate_adapters],
+            dtype=np.float32,
+        )
+        learning = np.asarray(
+            [value["learning_rate_gain"] for value in new_candidate_adapters],
+            dtype=np.float32,
+        )
+        gains = np.asarray(
+            [value["action_gain"] for value in new_candidate_adapters],
+            dtype=np.float32,
+        )
+        temperatures = np.asarray(
+            [
+                value["action_logit_temperature_offset"]
+                for value in new_candidate_adapters
+            ],
+            dtype=np.float32,
+        )
+        expanded_native = self._native.expanded(
+            goal_seed,
+            action_seed,
+            candidate_hashes,
+            loci_hashes,
+            indices,
+            recurrent,
+            learning,
+            gains,
+            temperatures,
+        )
+        result = object.__new__(type(self))
+        result.artifact_path = self.artifact_path
+        result.batch_size = self.batch_size + len(new_candidate_adapters)
+        result.action_mode = self.action_mode
+        result._policy_adapter_count = self._policy_adapter_count
+        result.candidate_adapters = copy.deepcopy(
+            self.candidate_adapters + new_candidate_adapters
+        )
+        result.model_identity = copy.deepcopy(self.model_identity)
+        result.neural_contract = copy.deepcopy(self.neural_contract)
+        result.observation_contract = copy.deepcopy(self.observation_contract)
+        result._native = expanded_native
+        return result
 
     def step(
         self,
         observations,
         neural,
         physiology,
-        actual_previous_plus_oral,
+        actual_previous_actions,
         ticks,
         times,
         reset,
@@ -475,15 +756,14 @@ class DevelopmentalResidentCohort:
             np.ascontiguousarray(observations, dtype=np.float32),
             np.ascontiguousarray(neural, dtype=np.float32),
             np.ascontiguousarray(physiology, dtype=np.float32),
-            np.ascontiguousarray(actual_previous_plus_oral, dtype=np.float32),
+            np.ascontiguousarray(actual_previous_actions, dtype=np.float32),
             np.ascontiguousarray(ticks, dtype=np.uint64),
             np.ascontiguousarray(times, dtype=np.float64),
             np.ascontiguousarray(reset, dtype=np.bool_),
         )
         result = {name: np.asarray(value) for name, value in result.items()}
         expected = {
-            "proposed_action": (self.batch_size, 8),
-            "oral_command": (self.batch_size,),
+            "proposed_action": (self.batch_size, ACTION_DIM),
             "candidate_scores": (self.batch_size, 4),
             "candidate_out_of_domain": (self.batch_size, 4),
             "selected_candidate": (self.batch_size,),
@@ -494,9 +774,9 @@ class DevelopmentalResidentCohort:
             "forecast_input_clipped": (self.batch_size, 4),
             "forecast_tilt": (self.batch_size, 4),
             "forecast_goal_rms": (),
-            "actual_previous_action": (self.batch_size, 8),
+            "actual_previous_action": (self.batch_size, ACTION_DIM),
             "hidden": (self.batch_size, 128),
-            "physiology": (self.batch_size, 6),
+            "physiology": (self.batch_size, PHYSIOLOGY_DIM),
             "memory_inserted_slot": (self.batch_size,),
             "memory_count": (self.batch_size,),
             "goal_slot": (self.batch_size,),
@@ -507,7 +787,7 @@ class DevelopmentalResidentCohort:
             "goal_generation": (self.batch_size,),
             "goal_remaining_ticks": (self.batch_size,),
             "goal_key": (self.batch_size, 64),
-            "goal_window": (self.batch_size, 4, 4453),
+            "goal_window": (self.batch_size, 4, OBSERVATION_DIM),
             "personal_goal_selected_bias": (self.batch_size,),
             "personal_goal_prediction": (self.batch_size,),
             "personal_goal_last_reward": (self.batch_size,),
@@ -521,6 +801,8 @@ class DevelopmentalResidentCohort:
             "personal_goal_skipped_total": (self.batch_size,),
             "personal_goal_cancelled_total": (self.batch_size,),
             "personal_goal_learning_enabled": (),
+            "contextual_retrieval_bias": (self.batch_size,),
+            "contextual_episodic_updates": (self.batch_size,),
         }
         if set(result) != set(expected):
             raise RuntimeError("native developmental result fields differ")
@@ -539,7 +821,7 @@ class DevelopmentalResidentCohort:
         ticks,
         before_physiology,
         after_physiology,
-        executed_actions_plus_oral,
+        executed_actions,
         effort,
         *,
         dt: float,
@@ -548,7 +830,7 @@ class DevelopmentalResidentCohort:
             np.ascontiguousarray(ticks, dtype=np.uint64),
             np.ascontiguousarray(before_physiology, dtype=np.float32),
             np.ascontiguousarray(after_physiology, dtype=np.float32),
-            np.ascontiguousarray(executed_actions_plus_oral, dtype=np.float32),
+            np.ascontiguousarray(executed_actions, dtype=np.float32),
             np.ascontiguousarray(effort, dtype=np.float32),
             float(dt),
         )
@@ -586,12 +868,13 @@ class DevelopmentalResidentCohort:
 
     def snapshot_value(self) -> dict[str, Any]:
         return {
-            "format": "chreatures-developmental-resident-rich-snapshot-v3",
-            "version": 3,
+            "format": "chreatures-developmental-resident-population-snapshot-v4",
+            "version": 4,
             "model_identity": copy.deepcopy(self.model_identity),
             "batch_size": self.batch_size,
             "observation_contract": copy.deepcopy(self.observation_contract),
             "action_mode": self.action_mode,
+            "candidate_adapters": copy.deepcopy(self.candidate_adapters),
             "native": _encode(dict(self._native.snapshot())),
         }
 
@@ -602,8 +885,8 @@ class DevelopmentalResidentCohort:
         if (
             not isinstance(value, dict)
             or value.get("format")
-            != "chreatures-developmental-resident-rich-snapshot-v3"
-            or value.get("version") != 3
+            != "chreatures-developmental-resident-population-snapshot-v4"
+            or value.get("version") != 4
         ):
             raise ValueError("unsupported developmental resident snapshot")
         instance = cls(
@@ -612,6 +895,7 @@ class DevelopmentalResidentCohort:
             action_mode=value["action_mode"],
             goal_seed=0,
             action_seed=0,
+            candidate_adapters=value["candidate_adapters"],
         )
         if (
             value.get("model_identity") != instance.model_identity

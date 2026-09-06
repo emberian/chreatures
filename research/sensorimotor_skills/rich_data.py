@@ -13,15 +13,23 @@ from typing import Any
 
 import numpy as np
 
-DATASET_FORMAT = "chreatures-sensorimotor-play-rich-v2"
-SCHEMA_ID = "chreatures-sensorimotor-play-rich-trajectory-v2"
-SCHEMA_PATH = Path(__file__).with_name("trajectory-schema-rich-v2.json")
+from chreatures.organism_interface import (
+    ACTION_DIM,
+    OBSERVATION_DIM,
+    OBSERVATION_ORDER,
+    PHYSIOLOGY_DIM,
+    PREVIOUS_DIM,
+    RECTIFIED_AXES,
+)
+
+DATASET_FORMAT = "chreatures-sensorimotor-play-rich-v3"
+SCHEMA_ID = "chreatures-sensorimotor-play-rich-trajectory-v3"
+SCHEMA_PATH = Path(__file__).with_name("trajectory-schema-rich-v3.json")
 PROFILE_SHA256 = "c71380718ba5535dbaebdeaf8aa2e88cc45cf218312a03e13507877f02a5554e"
 CHANNEL_NAMES_SHA256 = (
     "b4c6b328116d820143e16ee922ccffd7b950dbe008efc580ad93056e01349bfa"
 )
-NORMALIZER_FORMAT = "chreatures-rich-observation-normalizer-v1"
-OBSERVATION_DIM = 4453
+NORMALIZER_FORMAT = "chreatures-rich-observation-normalizer-v4"
 OUTCOME_ORDER = (
     "nutrition",
     "contact",
@@ -33,7 +41,8 @@ OUTCOME_ORDER = (
     "homeostatic_reward",
 )
 _PARTITION = re.compile(
-    r"episode-(?P<episode>[0-9]{3})/world-(?P<world>[0-9]{3})/resident-(?P<resident>[0-9]{2})\Z"
+    r"episode-(?P<episode>[0-9]{3})/"
+    r"world-(?P<world>[0-9]{3})/resident-(?P<resident>[0-9]{2})\Z"
 )
 
 
@@ -70,7 +79,6 @@ class RichEpisode:
     world_slots: np.ndarray
     observation: np.ndarray
     actions: np.ndarray
-    oral: np.ndarray
     reset: np.ndarray
     outcomes: np.ndarray
     canonical: np.ndarray
@@ -78,14 +86,15 @@ class RichEpisode:
 
     @property
     def previous(self) -> np.ndarray:
-        value = np.zeros((*self.observation.shape[:2], 9), dtype=np.float32)
-        value[1:, :, :8] = self.actions
-        value[1:, :, 8] = self.oral
+        value = np.zeros(
+            (*self.observation.shape[:2], PREVIOUS_DIM), dtype=np.float32
+        )
+        value[1:] = self.actions
         return value
 
 
 class RichPlayDataset:
-    """Verify every receipt before exposing direct 4453-column observations."""
+    """Verify every receipt before exposing direct 4459-column observations."""
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path).expanduser().resolve()
@@ -96,7 +105,7 @@ class RichPlayDataset:
         expected_content = body.pop("content_sha256", None)
         if (
             manifest.get("format") != DATASET_FORMAT
-            or manifest.get("version") != 2
+            or manifest.get("version") != 3
             or expected_content != canonical_sha256(body)
         ):
             raise ValueError("rich dataset manifest identity differs")
@@ -113,6 +122,7 @@ class RichPlayDataset:
         if (
             identity.get("rich_profile_sha256") != PROFILE_SHA256
             or identity.get("rich_channel_names_sha256") != CHANNEL_NAMES_SHA256
+            or tuple(identity.get("observation_order", ())) != OBSERVATION_ORDER
         ):
             raise ValueError("rich sensor profile identity differs")
         if tuple(manifest.get("transition_outcome_order", ())) != OUTCOME_ORDER:
@@ -157,7 +167,6 @@ class RichPlayDataset:
             required = {
                 "observation",
                 "executed_actions",
-                "oral_command",
                 "reset",
                 "dt_seconds",
                 "transition_outcomes",
@@ -168,9 +177,8 @@ class RichPlayDataset:
             arrays = {name: np.asarray(value[name]) for name in value.files}
         t, n = self.steps_per_episode, self.world_count * self.residents_per_world
         shapes = {
-            "observation": (t + 1, n, 4453),
-            "executed_actions": (t, n, 8),
-            "oral_command": (t, n),
+            "observation": (t + 1, n, OBSERVATION_DIM),
+            "executed_actions": (t, n, ACTION_DIM),
             "reset": (t + 1, n),
             "dt_seconds": (),
             "transition_outcomes": (t, n, 8),
@@ -212,25 +220,35 @@ class RichPlayDataset:
             raise ValueError("embedded canonical channels differ")
         if np.any((observation[..., :4447] < 0) | (observation[..., :4447] > 1)):
             raise ValueError("rich or canonical channels exceed [0,1]")
-        physiology = observation[..., 4447:]
+        physiology = observation[..., -PHYSIOLOGY_DIM:]
         if (
             np.any((physiology[..., :3] < 0) | (physiology[..., :3] > 1))
             or np.any((physiology[..., 3:5] < -1) | (physiology[..., 3:5] > 1))
-            or np.any((physiology[..., 5] < 0) | (physiology[..., 5] > 1))
+            or np.any((physiology[..., 5:] < 0) | (physiology[..., 5:] > 1))
         ):
             raise ValueError("rich physiology bounds differ")
         actions = arrays["executed_actions"]
-        if np.any((actions < -1) | (actions > 1)) or np.any(actions[..., 3:7] < 0):
+        if np.any((actions < -1) | (actions > 1)) or np.any(
+            actions[..., RECTIFIED_AXES] < 0
+        ):
             raise ValueError("rich action bounds differ")
         partitions = receipt.get("resident_partitions")
         if not isinstance(partitions, list) or len(partitions) != n:
             raise ValueError("rich resident partitions differ")
         slots = []
+        residents = []
         for value in partitions:
             match = _PARTITION.fullmatch(str(value))
             if match is None or int(match.group("episode")) != number:
                 raise ValueError("rich partition key differs")
             slots.append(int(match.group("world")))
+            residents.append(int(match.group("resident")))
+        if slots != np.repeat(
+            np.arange(self.world_count), self.residents_per_world
+        ).tolist() or residents != np.tile(
+            np.arange(self.residents_per_world), self.world_count
+        ).tolist():
+            raise ValueError("rich resident partition order differs")
         return RichEpisode(
             number,
             int(receipt["stage"]),
@@ -239,7 +257,6 @@ class RichPlayDataset:
             readonly(np.asarray(slots, dtype=np.int64)),
             readonly(observation),
             readonly(actions),
-            readonly(arrays["oral_command"]),
             readonly(arrays["reset"]),
             readonly(arrays["transition_outcomes"]),
             readonly(arrays["canonical_channels"]),
@@ -267,23 +284,48 @@ class RichNormalizer:
         self.mean = readonly(np.ascontiguousarray(mean, dtype=np.float32))
         self.scale = readonly(np.ascontiguousarray(scale, dtype=np.float32))
         if (
-            self.mean.shape != (4453,)
-            or self.scale.shape != (4453,)
+            self.mean.shape != (OBSERVATION_DIM,)
+            or self.scale.shape != (OBSERVATION_DIM,)
             or np.any(self.scale < 0.02)
         ):
             raise ValueError("rich normalizer arrays differ")
         self.training_statistics = copy.deepcopy(dict(training_statistics))
 
     @classmethod
+    def cold_inherit_v3(cls, value: Mapping[str, Any]) -> "RichNormalizer":
+        """Extend the six-physiology v3 normalizer at an explicit cold birth."""
+        source = copy.deepcopy(dict(value))
+        expected = source.pop("sha256", None)
+        if (
+            source.get("format") != "chreatures-rich-observation-normalizer-v1"
+            or source.get("version") != 1
+            or expected != canonical_sha256(source)
+        ):
+            raise ValueError("v3 normalizer identity differs")
+        mean = np.asarray(source["mean"], dtype=np.float32)
+        scale = np.asarray(source["scale"], dtype=np.float32)
+        if mean.shape != (4453,) or scale.shape != (4453,):
+            raise ValueError("v3 normalizer dimensions differ")
+        return cls(
+            np.concatenate((mean, np.zeros(6, dtype=np.float32))),
+            np.concatenate((scale, np.ones(6, dtype=np.float32))),
+            {
+                "scope": "explicit v3-to-v4 cold inheritance",
+                "source": copy.deepcopy(dict(source.get("training_statistics", {}))),
+                "new_physiology": "identity normalization pending v4 train-only fit",
+            },
+        )
+
+    @classmethod
     def fit(cls, dataset: RichPlayDataset, training_world_slots: Sequence[int]):
         columns = dataset.columns(training_world_slots)
         count = 0
-        mean = np.zeros(4453, dtype=np.float64)
-        m2 = np.zeros(4453, dtype=np.float64)
+        mean = np.zeros(OBSERVATION_DIM, dtype=np.float64)
+        m2 = np.zeros(OBSERVATION_DIM, dtype=np.float64)
         for episode in dataset.episodes:
             for start in range(0, len(episode.observation), 64):
                 rows = episode.observation[start : start + 64, columns].reshape(
-                    -1, 4453
+                    -1, OBSERVATION_DIM
                 )
                 batch_mean = rows.mean(0, dtype=np.float64)
                 centered = rows.astype(np.float64) - batch_mean
@@ -308,14 +350,14 @@ class RichNormalizer:
 
     def normalize(self, observation) -> np.ndarray:
         value = np.asarray(observation, dtype=np.float32)
-        if value.shape[-1] != 4453 or not np.isfinite(value).all():
-            raise ValueError("rich observations must be finite [...,4453]")
+        if value.shape[-1] != OBSERVATION_DIM or not np.isfinite(value).all():
+            raise ValueError("rich observations must be finite [...,4459]")
         return np.clip((value - self.mean) / self.scale, -8, 8).astype(np.float32)
 
     def to_value(self) -> dict[str, Any]:
         body = {
             "format": NORMALIZER_FORMAT,
-            "version": 1,
+            "version": 4,
             "mean": self.mean.astype(float).tolist(),
             "scale": self.scale.astype(float).tolist(),
             "training_statistics": self.training_statistics,
@@ -326,8 +368,10 @@ class RichNormalizer:
     def from_value(cls, value: Mapping[str, Any]):
         body = dict(value)
         expected = body.pop("sha256", None)
-        if body.get("format") != NORMALIZER_FORMAT or expected != canonical_sha256(
-            body
+        if (
+            body.get("format") != NORMALIZER_FORMAT
+            or body.get("version") != 4
+            or expected != canonical_sha256(body)
         ):
             raise ValueError("rich normalizer identity differs")
         return cls(body["mean"], body["scale"], body["training_statistics"])

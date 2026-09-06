@@ -29,28 +29,22 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from chreatures.homeostasis import FiniteEnergyConfig, FiniteEnergyObjective
-from research.sensorimotor_skills.online_model import (
+from chreatures.organism_interface import ACTION_DIM, ACTION_NAMES, PHYSIOLOGY_DIM
+from research.sensorimotor_skills.rich_online import (
     SlowGoalManager,
+    cold_inherit_v3_manager,
     sample_worker_actions,
 )
 from research.sensorimotor_skills.rich_data import RichNormalizer
 from research.sensorimotor_skills.rich_model import (
     RICH_CHANNEL_NAMES_SHA256,
     RICH_PROFILE_SHA256,
+    PopulationAdapterBank,
     RichSensorimotorModel,
+    cold_inherit_v3_model,
 )
 
-FORMAT = "chreatures-rich-online-sensorimotor-development-v1"
-ACTIONS = (
-    "thrust",
-    "yaw",
-    "gaze_pitch",
-    "grip",
-    "signal_low",
-    "signal_mid",
-    "signal_high",
-    "posture",
-)
+FORMAT = "chreatures-rich-online-sensorimotor-development-v4"
 
 
 def sha256(path: Path) -> str:
@@ -83,6 +77,7 @@ def atomic_npz(path: Path, arrays: dict[str, np.ndarray]) -> None:
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bootstrap-worker", type=Path, required=True)
+    parser.add_argument("--cold-inherit-v3", action="store_true")
     parser.add_argument("--initialize-from-development", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--graph", type=Path, required=True)
@@ -110,6 +105,9 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--goal-progress-coefficient", type=float, default=0.01)
     parser.add_argument("--checkpoint-every-updates", type=int, default=20)
     parser.add_argument("--learning-rate", type=float, default=1e-4)
+    parser.add_argument("--candidate-count", type=int, default=1)
+    parser.add_argument("--candidate-adapter-rank", type=int, default=8)
+    parser.add_argument("--candidate-variation-scale", type=float, default=0.01)
     parser.add_argument("--discount", type=float, default=0.997)
     parser.add_argument("--gae-lambda", type=float, default=0.95)
     parser.add_argument("--clip-ratio", type=float, default=0.2)
@@ -137,6 +135,12 @@ def validate(args: argparse.Namespace) -> None:
         raise SystemExit("invalid episode or PPO schedule")
     if args.goal_sticky_steps < 1 or args.goal_reservoir_size < 4:
         raise SystemExit("invalid private goal schedule")
+    if not 1 <= args.candidate_count <= args.worlds * args.residents_per_world:
+        raise SystemExit("candidate count exceeds the resident cohort")
+    if not 1 <= args.candidate_adapter_rank <= 32:
+        raise SystemExit("candidate adapter rank must be 1..32")
+    if not 0 <= args.candidate_variation_scale <= 0.1:
+        raise SystemExit("candidate variation scale must be in [0,0.1]")
     if not 0 <= args.goal_progress_coefficient <= 1:
         raise SystemExit("goal progress coefficient must be in [0,1]")
     if args.output.exists() and any(args.output.iterdir()):
@@ -159,44 +163,51 @@ class GoalAdapter:
         return self.model.state_dict()
 
 
-def load_bootstrap(path: Path, device: torch.device):
+def load_bootstrap(path: Path, device: torch.device, *, cold_inherit_v3: bool):
     with torch.serialization.safe_globals([torch.torch_version.TorchVersion]):
         value = torch.load(path, map_location=device, weights_only=True)
-    if value.get("format") != "chreatures-rich-sensorimotor-bootstrap-v1":
+    source_format = value.get("format")
+    inherited_formats = {
+        "chreatures-rich-sensorimotor-bootstrap-v1",
+        "chreatures-rich-online-sensorimotor-development-v1",
+    }
+    if cold_inherit_v3 != (source_format in inherited_formats):
+        raise ValueError(
+            "bootstrap format requires an explicit cold inheritance choice"
+        )
+    if source_format not in {
+        *inherited_formats,
+        "chreatures-rich-sensorimotor-bootstrap-v4",
+    }:
         raise ValueError("rich bootstrap format differs")
     identity = value["identity"]
     model = RichSensorimotorModel().to(device)
-    model.load_state_dict(value["model"], strict=True)
-    normalizer = RichNormalizer.from_value(identity["normalizer"])
+    inherited_manager = None
+    if cold_inherit_v3:
+        model.load_state_dict(cold_inherit_v3_model(value["model"]), strict=True)
+        normalizer = RichNormalizer.cold_inherit_v3(identity["normalizer"])
+        identity = copy.deepcopy(identity)
+        identity["cold_inheritance"] = {
+            "source_format": source_format,
+            "source_sha256": sha256(path),
+            "new_action_axes": ["eat", "release", "secrete", "allocate"],
+            "new_physiology_columns": 6,
+        }
+        if "goal_manager" in value:
+            inherited_manager = cold_inherit_v3_manager(value["goal_manager"])
+    else:
+        model.load_state_dict(value["model"], strict=True)
+        normalizer = RichNormalizer.from_value(identity["normalizer"])
     for module in (model.visual, model.body, model.goal_encoder, model.goal_decoder):
         module.requires_grad_(False)
         module.eval()
-    return GoalAdapter(model), model, normalizer, identity
-
-
-def physiology(bodies, circuit: np.ndarray) -> np.ndarray:
-    rows = []
-    index = 0
-    for world in bodies:
-        for body in world:
-            rows.append(
-                (
-                    body["energy"],
-                    body["gut"],
-                    body["fatigue"],
-                    math.tanh(float(body["speed"]) / 2),
-                    math.tanh(float(body["angular_velocity"]) / 4),
-                    circuit[index, 2],
-                )
-            )
-            index += 1
-    return np.asarray(rows, dtype=np.float32)
+    return GoalAdapter(model), model, normalizer, identity, inherited_manager
 
 
 def observe(pool, brain, normalizer):
     rich, canonical, bodies = pool.observe_arrays()
     neural, circuit, _ = brain.step_channels(canonical, 0.05)
-    physical = physiology(bodies, circuit)
+    physical = pool.physiology_array(circuit[:, 2])
     raw = np.ascontiguousarray(
         np.concatenate((rich, canonical, physical), axis=1), dtype=np.float32
     )
@@ -219,10 +230,6 @@ def rich_summary(raw: np.ndarray) -> np.ndarray:
     return np.concatenate(values, axis=1).astype(np.float32)
 
 
-def oral(body) -> float:
-    return float(np.clip((1.0 - body["gut"]) * (1.1 - body["energy"]), 0, 1))
-
-
 def action_payload(actions: np.ndarray, bodies) -> list[dict[str, object]]:
     payloads = []
     row = 0
@@ -230,33 +237,24 @@ def action_payload(actions: np.ndarray, bodies) -> list[dict[str, object]]:
         mapped = {}
         for body in world:
             values = dict(
-                zip(ACTIONS, actions[row].astype(float).tolist(), strict=True)
+                zip(ACTION_NAMES, actions[row].astype(float).tolist(), strict=True)
             )
-            values["eat"] = oral(body)
             mapped[str(body["id"])] = values
             row += 1
         payloads.append({"actions": mapped, "dt": 0.05})
     return payloads
 
 
-def physical_reward(objective, before, after_bodies, outcomes):
-    after = np.asarray(
-        [
-            (body["energy"], body["gut"], body["fatigue"])
-            for world in after_bodies
-            for body in world
-        ],
-        dtype=np.float32,
-    )
+def physical_reward(objective, before, after, outcomes, bodies):
     nutrition, effort = [], []
-    for world_bodies, world_outcomes in zip(after_bodies, outcomes, strict=True):
+    for world_bodies, world_outcomes in zip(bodies, outcomes, strict=True):
         for body in world_bodies:
             outcome = world_outcomes[body["id"]]
             nutrition.append(outcome["nutrition"])
             effort.append(outcome["effort"])
     reward, terms = objective.transition(
         before[:, :3],
-        after,
+        after[:, :3],
         nutrition=nutrition,
         effort=effort,
         dt=0.05,
@@ -423,6 +421,7 @@ def save_development(
     encoder,
     critic,
     manager,
+    adapters,
     optimizer,
     hidden,
     previous,
@@ -450,6 +449,7 @@ def save_development(
         "model": worker.state_dict(),
         "critic": critic.state_dict(),
         "goal_manager": manager.state_dict(),
+        "candidate_adapters": adapters.state_dict(),
         "optimizer": optimizer.state_dict(),
         "private_worker_hidden": hidden.cpu(),
         "private_previous_action": previous,
@@ -490,9 +490,10 @@ def main() -> int:
     )
     from chreatures.training_environment import EmbodiedTrainingProfile
 
-    encoder, worker, normalizer, bootstrap_identity = load_bootstrap(
+    encoder, worker, normalizer, bootstrap_identity, inherited_manager = load_bootstrap(
         args.bootstrap_worker.resolve(),
         device,
+        cold_inherit_v3=args.cold_inherit_v3,
     )
     profile = EmbodiedTrainingProfile.nursery_family(
         args.chemical_habitat,
@@ -500,7 +501,7 @@ def main() -> int:
         args.nursery_family_config,
         args.nursery_family_schedule,
     )
-    if int(profile.component("version")) != 5:
+    if int(profile.component("version")) != 6:
         raise ValueError("constructed environment profile version differs")
     objective = FiniteEnergyObjective(
         FiniteEnergyConfig.from_value(profile.component("homeostasis"))
@@ -508,7 +509,7 @@ def main() -> int:
     graph = load_training_graph(args.graph)
     ports = NeuralPortBundle.load(args.port_bundle, graph)
     if len(ports.input_names) != 351:
-        raise ValueError("development v1 requires the pinned 351 sensory channels")
+        raise ValueError("development v4 requires the pinned 351 sensory channels")
     profile_residents = len(profile.component("habitat")["bodies"])
     if profile_residents != args.residents_per_world:
         raise ValueError("profile resident count differs from the requested cohort")
@@ -517,16 +518,16 @@ def main() -> int:
         "residents": profile_residents,
         "rich": 4096,
         "physical": len(ports.input_names),
-        "physiology": 6,
+        "physiology": PHYSIOLOGY_DIM,
         "controller": worker.config.observation_dim,
         "readouts": len(ports.readout_names),
     }
     expected_transport = {
-        "residents": 6,
+        "residents": args.residents_per_world,
         "rich": 4096,
         "physical": 351,
-        "physiology": 6,
-        "controller": 4453,
+        "physiology": PHYSIOLOGY_DIM,
+        "controller": worker.config.observation_dim,
         "readouts": 384,
     }
     if (
@@ -534,7 +535,7 @@ def main() -> int:
         or actual_transport != expected_transport
     ):
         raise ValueError(
-            "nursery-family-v5 transport differs from the active rich interfaces"
+            "current nursery-family transport differs from the active rich interfaces"
         )
     count = args.worlds * args.residents_per_world
     brain = TrainingCohortBrain(
@@ -553,8 +554,29 @@ def main() -> int:
     )
     critic = Critic().to(device)
     manager = SlowGoalManager().to(device)
+    if inherited_manager is not None:
+        manager.load_state_dict(inherited_manager, strict=True)
+    adapters = PopulationAdapterBank(
+        args.candidate_count, args.candidate_adapter_rank
+    ).to(device)
+    if args.candidate_count > 1:
+        worker.requires_grad_(False)
+        adapters.vary(
+            torch.arange(1, args.candidate_count, device=device),
+            seed=args.seed ^ 0xADA7,
+            scale=args.candidate_variation_scale,
+        )
     optimizer = torch.optim.AdamW(
-        [*worker.parameters(), *critic.parameters(), *manager.parameters()],
+        [
+            *[
+                parameter
+                for parameter in worker.parameters()
+                if parameter.requires_grad
+            ],
+            *adapters.parameters(),
+            *critic.parameters(),
+            *manager.parameters(),
+        ],
         lr=args.learning_rate,
     )
     initialization = None
@@ -581,6 +603,7 @@ def main() -> int:
         worker.load_state_dict(checkpoint["model"], strict=True)
         critic.load_state_dict(checkpoint["critic"], strict=True)
         manager.load_state_dict(checkpoint["goal_manager"], strict=True)
+        adapters.load_state_dict(checkpoint["candidate_adapters"], strict=True)
         optimizer.load_state_dict(checkpoint["optimizer"])
         initialization = {
             "path": str(initialization_path),
@@ -606,8 +629,7 @@ def main() -> int:
         "rich_channel_names_sha256": RICH_CHANNEL_NAMES_SHA256,
         "seed": args.seed,
         "dt_seconds": 0.05,
-        "action_order": list(ACTIONS),
-        "oral_action": "supplied body physiology law",
+        "action_order": list(ACTION_NAMES),
         "graph_sha256": str(graph.hash),
         "port_spec_sha256": ports.spec_hash,
         "port_bundle_sha256": sha256(args.port_bundle.resolve()),
@@ -615,6 +637,16 @@ def main() -> int:
         "bootstrap_path": str(args.bootstrap_worker.resolve()),
         "bootstrap_sha256": sha256(args.bootstrap_worker.resolve()),
         "bootstrap_identity": bootstrap_identity,
+        "population_adapters": {
+            "format": "chreatures-population-controller-adapters-v1",
+            "candidates": args.candidate_count,
+            "rank": args.candidate_adapter_rank,
+            "variation_seed": args.seed ^ 0xADA7,
+            "variation_scale": args.candidate_variation_scale,
+            "candidate_assignment": "resident_index_mod_candidate_count",
+            "shared_base_trainable": args.candidate_count == 1,
+            "private_state_at_birth": "zero",
+        },
         "telemetry": {
             "format": "chreatures-rich-development-transition-telemetry-v1",
             "storage": "one compressed NPZ per PPO rollout; time-major then resident",
@@ -645,7 +677,10 @@ def main() -> int:
     observation, physical, neural, bodies, raw_observation = observe(
         pool, brain, normalizer
     )
-    previous = np.zeros((count, 9), dtype=np.float32)
+    previous = np.zeros((count, ACTION_DIM), dtype=np.float32)
+    candidate_index = torch.as_tensor(
+        np.arange(count, dtype=np.int64) % args.candidate_count, device=device
+    )
     hidden = torch.zeros((1, count, 128), device=device)
     current_code = goals.record(observation, encoder, device)
     manager_events: list[dict[str, object]] = []
@@ -690,7 +725,6 @@ def main() -> int:
                     "rich_summary",
                     "canonical",
                     "executed_action",
-                    "oral",
                     "next_physiology",
                     "outcomes",
                 )
@@ -772,10 +806,12 @@ def main() -> int:
                         state[0],
                         goal_tensor,
                         horizon,
-                        torch.as_tensor(previous[:, :8], device=device),
+                        torch.as_tensor(previous, device=device),
+                        adapters,
+                        candidate_index,
                     )
                     private_uniforms = np.stack(
-                        [rng.random(12, dtype=np.float32) for rng in goals.rng]
+                        [rng.random(20, dtype=np.float32) for rng in goals.rng]
                     )
                     action = sample_worker_actions(
                         worker,
@@ -785,19 +821,17 @@ def main() -> int:
                     log_probability, _ = policy_terms(worker, logits, action)
                     value = critic(state[0], goal_tensor, horizon)
                 action_np = action.cpu().numpy()
-                executed_oral = np.asarray(
-                    [oral(body) for world in bodies for body in world],
-                    dtype=np.float32,
-                )
                 before = physical.copy()
                 advanced = pool.advance(action_payload(action_np, bodies))
                 outcomes = [item[0] for item in advanced]
                 bodies = [item[1] for item in advanced]
-                base_reward, _ = physical_reward(objective, before, bodies, outcomes)
-                outcome_rows = transition_outcome_rows(outcomes, bodies, base_reward)
                 next_observation, physical, next_neural, bodies, next_raw = observe(
                     pool, brain, normalizer
                 )
+                base_reward, _ = physical_reward(
+                    objective, before, physical, outcomes, bodies
+                )
+                outcome_rows = transition_outcome_rows(outcomes, bodies, base_reward)
                 # Credit the whole transition against the pre-action sticky goal.
                 frozen_goal = goals.codes.copy()
                 next_code = goals.record(next_observation, encoder, device)
@@ -825,7 +859,6 @@ def main() -> int:
                     ("rich_summary", rich_summary(raw_observation)),
                     ("canonical", raw_observation[:, 4096:4447]),
                     ("executed_action", action_np),
-                    ("oral", executed_oral),
                     ("next_physiology", physical),
                     ("outcomes", outcome_rows),
                 ):
@@ -852,13 +885,7 @@ def main() -> int:
                     ("done", done),
                 ):
                     arrays[name].append(np.asarray(value_np))
-                previous = np.concatenate(
-                    (
-                        action_np,
-                        executed_oral[:, None],
-                    ),
-                    axis=1,
-                ).astype(np.float32)
+                previous = action_np.astype(np.float32, copy=True)
                 observation = next_observation
                 raw_observation = next_raw
                 neural = next_neural
@@ -941,7 +968,9 @@ def main() -> int:
                     states,
                     goal_tensor,
                     horizon,
-                    torch.as_tensor(batch["previous"][..., :8], device=device),
+                    torch.as_tensor(batch["previous"], device=device),
+                    adapters,
+                    candidate_index.expand(args.rollout_steps, -1),
                 )
                 new_logp, entropy = policy_terms(
                     worker,
@@ -967,7 +996,12 @@ def main() -> int:
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
                 nn.utils.clip_grad_norm_(
-                    [*worker.parameters(), *critic.parameters()], 1.0
+                    [
+                        *worker.parameters(),
+                        *adapters.parameters(),
+                        *critic.parameters(),
+                    ],
+                    1.0,
                 )
                 optimizer.step()
                 metrics = {
@@ -1077,6 +1111,7 @@ def main() -> int:
                     encoder=encoder,
                     critic=critic,
                     manager=manager,
+                    adapters=adapters,
                     optimizer=optimizer,
                     hidden=hidden,
                     previous=previous,
@@ -1101,6 +1136,7 @@ def main() -> int:
             encoder=encoder,
             critic=critic,
             manager=manager,
+            adapters=adapters,
             optimizer=optimizer,
             hidden=hidden,
             previous=previous,

@@ -14,6 +14,8 @@ from typing import Any
 
 import numpy as np
 
+from .neural_genotype import NEURAL_VARIANT_ARRAYS, PHENOTYPE_FORMAT
+
 SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}\Z")
 CANONICAL_ARTIFACT_SHA256 = (
     "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0"
@@ -37,6 +39,20 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(8 << 20), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _canonical(value: Any) -> bytes:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode()
+
+
+def _array_sha256(value: np.ndarray) -> str:
+    return hashlib.sha256(np.ascontiguousarray(value).tobytes()).hexdigest()
 
 
 class MetalCircuit:
@@ -107,6 +123,7 @@ class MetalCircuit:
         self._input_position = {n: i for i, n in enumerate(self.input_names)}
         self._slots = {}
         self._resident_for_slot = [None] * capacity
+        self._phenotype_for_slot = [None] * capacity
         self.times = np.zeros(capacity, dtype=np.float64)
         artifact = Path(artifact)
         manifest_path = (
@@ -177,6 +194,7 @@ class MetalCircuit:
             or ready.get("kernel") != kernel
             or ready.get("capacity") != capacity
             or ready.get("storage_tiles") != (capacity + 3) // 4
+            or ready.get("phenotype_binding") != "neural-variant-metal-v1"
         ):
             self.close()
             raise RuntimeError(f"Metal backend failed startup: {ready}")
@@ -198,8 +216,93 @@ class MetalCircuit:
                 raise RuntimeError(result.get("error", "native request failed"))
             return result
 
-    def add_residents(self, resident_ids: Sequence[str]):
-        ids = [str(x) for x in resident_ids]
+    def _load_phenotype(self, reference: Mapping[str, Any]):
+        required = {
+            "artifact_path",
+            "artifact_sha256",
+            "phenotype_sha256",
+            "graph_sha256",
+            "port_spec_sha256",
+            "port_bundle_sha256",
+        }
+        if not isinstance(reference, Mapping) or set(reference) != required:
+            raise ValueError(f"neural phenotype reference fields must be {sorted(required)}")
+        path = Path(str(reference["artifact_path"])).expanduser().resolve()
+        file_sha = str(reference["artifact_sha256"])
+        if not re.fullmatch(r"[0-9a-f]{64}", file_sha) or _sha256(path) != file_sha:
+            raise ValueError("neural phenotype artifact checksum differs")
+        with np.load(path, allow_pickle=False) as artifact:
+            if set(artifact.files) != {"metadata", *NEURAL_VARIANT_ARRAYS}:
+                raise ValueError("neural phenotype artifact arrays differ")
+            metadata = json.loads(str(artifact["metadata"]))
+            arrays = {
+                name: np.ascontiguousarray(artifact[name])
+                for name in NEURAL_VARIANT_ARRAYS
+            }
+        identities = {
+            "phenotype_sha256": metadata.get("phenotype_sha256"),
+            "graph_sha256": metadata.get("active_graph_sha256"),
+            "port_spec_sha256": metadata.get("port_spec_sha256"),
+            "port_bundle_sha256": metadata.get("port_bundle_sha256"),
+        }
+        if any(str(reference[name]) != value for name, value in identities.items()):
+            raise ValueError("neural phenotype reference identity differs from artifact")
+        if (
+            metadata.get("format") != PHENOTYPE_FORMAT
+            or identities["graph_sha256"] != self.graph_hash
+            or identities["port_spec_sha256"] != self.port_spec_hash
+            or identities["port_bundle_sha256"] != CANONICAL_PORT_BUNDLE_SHA256
+            or metadata.get("input_names") != self.input_names
+            or metadata.get("readout_names") != self.readout_names
+        ):
+            raise ValueError("neural phenotype belongs to a different graph or port interface")
+        expected_shapes = {
+            "input_gain": (351,),
+            "readout_gain": (384,),
+            **{name: (self.n,) for name in NEURAL_VARIANT_ARRAYS[2:]},
+        }
+        for name, array in arrays.items():
+            if (
+                array.dtype != np.float32
+                or array.shape != expected_shapes[name]
+                or not np.isfinite(array).all()
+                or np.any((array < 0.05) | (array > 4.0))
+            ):
+                raise ValueError(f"neural phenotype array {name} differs")
+        receipt = metadata.get("receipt")
+        if not isinstance(receipt, dict) or (
+            receipt.get("array_sha256")
+            != {name: _array_sha256(value) for name, value in arrays.items()}
+            or hashlib.sha256(_canonical(receipt)).hexdigest()
+            != identities["phenotype_sha256"]
+        ):
+            raise ValueError("neural phenotype receipt differs")
+        stored = {
+            "artifact_path": str(path),
+            "artifact_sha256": file_sha,
+            **identities,
+            "compatibility_group": metadata.get("compatibility_group"),
+            "genotype_sha256": metadata.get("genotype_sha256"),
+            "learning_rate_gain": "inactive:no_native_learning_delta_path",
+            "modulator_gain": "inactive:no_native_modulator_path",
+        }
+        return stored, arrays
+
+    def _bind_phenotypes(self, slots, arrays):
+        packed = {}
+        for name in NEURAL_VARIANT_ARRAYS:
+            packed[name] = np.ascontiguousarray(
+                np.stack([item[name] for item in arrays], axis=1), dtype=np.float32
+            ).ravel().tolist()
+        self._call({"op": "bind_phenotypes", "slots": slots, **packed})
+
+    def add_residents(self, residents: Sequence[Mapping[str, Any]]):
+        if not isinstance(residents, Sequence) or isinstance(residents, (str, bytes)):
+            raise TypeError("residents must be a sequence of birth records")
+        records = list(residents)
+        if any(not isinstance(item, Mapping) or set(item) != {"id", "neural_phenotype"} for item in records):
+            raise ValueError("each birth record requires exactly id and neural_phenotype")
+        ids = [str(x["id"]) for x in records]
         if (
             not ids
             or len(set(ids)) != len(ids)
@@ -215,12 +318,21 @@ class MetalCircuit:
             raise ValueError("resident capacity exceeded")
         assigned = dict(zip(ids, free[: len(ids)], strict=True))
         mask = 0
-        for rid, slot in assigned.items():
+        loaded = [self._load_phenotype(item["neural_phenotype"]) for item in records]
+        slots = list(assigned.values())
+        self._bind_phenotypes(slots, [value[1] for value in loaded])
+        try:
+            for slot in slots:
+                mask |= 1 << slot
+            self._call({"op": "reset", "mask": mask})
+        except Exception:
+            self._call({"op": "unbind_phenotypes", "mask": mask})
+            raise
+        for (rid, slot), (identity, _) in zip(assigned.items(), loaded, strict=True):
             self._slots[rid] = slot
             self._resident_for_slot[slot] = rid
+            self._phenotype_for_slot[slot] = identity
             self.times[slot] = 0
-            mask |= 1 << slot
-        self._call({"op": "reset", "mask": mask})
         if self._mushroom_mode:
             self._mushroom_cohort.reset_slots(mask)
         return assigned
@@ -233,11 +345,15 @@ class MetalCircuit:
             raise KeyError("resident does not exist")
         mask = 0
         for rid in ids:
-            slot = self._slots.pop(rid)
-            self._resident_for_slot[slot] = None
-            self.times[slot] = 0
+            slot = self._slots[rid]
             mask |= 1 << slot
         self._call({"op": "reset", "mask": mask})
+        self._call({"op": "unbind_phenotypes", "mask": mask})
+        for rid in ids:
+            slot = self._slots.pop(rid)
+            self._resident_for_slot[slot] = None
+            self._phenotype_for_slot[slot] = None
+            self.times[slot] = 0
         if self._mushroom_mode:
             self._mushroom_cohort.reset_slots(mask)
 
@@ -317,6 +433,9 @@ class MetalCircuit:
             vector = combined[:384, slot].tolist()
             result = {
                 "id": rid,
+                "neural_phenotype_sha256": self._phenotype_for_slot[slot][
+                    "phenotype_sha256"
+                ],
                 "time": float(self.times[slot]),
                 "features": vector,
                 "readout_vector": vector,
@@ -357,12 +476,27 @@ class MetalCircuit:
             },
             "capacity": self.capacity,
             "residents": self.resident_ids,
+            "neural_phenotypes": {
+                rid: self._phenotype_for_slot[self._slots[rid]]
+                for rid in self.resident_ids
+            },
             "dynamics": {
                 "tau": self.tau,
                 "gain": self.gain,
                 "support_recovery": self.support_recovery,
                 "substeps": 2,
                 "kernel": self.kernel,
+            },
+            "neural_modulation": {
+                "format": PHENOTYPE_FORMAT,
+                "binding": "immutable_per_resident_at_birth",
+                "input_gain": "active",
+                "readout_gain": "active",
+                "excitability_gain": "active",
+                "recurrent_source_gain": "active",
+                "recurrent_target_gain": "active",
+                "learning_rate_gain": "inactive:no_native_learning_delta_path",
+                "modulator_gain": "inactive:no_native_modulator_path",
             },
             "inputs": self.input_names,
             "readouts": self.readout_names,
@@ -409,7 +543,7 @@ class MetalCircuit:
         path.parent.mkdir(parents=True, exist_ok=True)
         metadata = json.dumps(
             {
-                "version": 5,
+                "version": 6,
                 "state_layout": "neuron-major-float4-tiles-v1",
                 "capacity": self.capacity,
                 "graph_sha256": self.graph_hash,
@@ -418,6 +552,7 @@ class MetalCircuit:
                 "port_spec_hash": self.port_spec_hash,
                 "kernel": self.kernel,
                 "resident_ids": self._resident_for_slot,
+                "neural_phenotypes": self._phenotype_for_slot,
                 "times": self.times.tolist(),
                 "input_names": self.input_names,
                 "readout_names": self.readout_names,
@@ -453,7 +588,7 @@ class MetalCircuit:
                 raise ValueError("snapshot metadata is too large")
             meta = json.loads(handle.read(length))
         if (
-            meta.get("version") != 5
+            meta.get("version") != 6
             or meta.get("state_layout") != "neuron-major-float4-tiles-v1"
             or meta.get("capacity") != self.capacity
             or ("mushroom_research" in meta) != self._mushroom_mode
@@ -483,26 +618,113 @@ class MetalCircuit:
             )
             restored_cohort.restore(meta.get("mushroom_research", {}))
         slots = meta["resident_ids"]
-        active = [x for x in slots if x is not None]
-        if resident_ids is not None and list(map(str, resident_ids)) != active:
-            raise ValueError("restore resident IDs differ")
-        restored = json.loads(
-            self._call({"op": "restore", "path": str(path)})["metadata"]
+        phenotype_slots = meta.get("neural_phenotypes")
+        if (
+            not isinstance(slots, list)
+            or len(slots) != self.capacity
+            or not isinstance(phenotype_slots, list)
+            or len(phenotype_slots) != self.capacity
+            or any(
+                (rid is None) != (phenotype is None)
+                for rid, phenotype in zip(slots, phenotype_slots, strict=True)
+            )
+        ):
+            raise ValueError("snapshot resident and phenotype slots differ")
+        checkpoint_residents = [x for x in slots if x is not None]
+        if (
+            any(
+                not isinstance(rid, str) or not rid or len(rid) > 128
+                for rid in checkpoint_residents
+            )
+            or len(set(checkpoint_residents)) != len(checkpoint_residents)
+            or not isinstance(meta.get("times"), list)
+            or len(meta["times"]) != self.capacity
+            or not np.isfinite(np.asarray(meta["times"], dtype=np.float64)).all()
+        ):
+            raise ValueError("snapshot resident identity or time state differs")
+        requested = (
+            checkpoint_residents
+            if resident_ids is None
+            else [str(value) for value in resident_ids]
         )
-        if restored != meta:
-            raise ValueError("native snapshot metadata changed during restore")
-        self._resident_for_slot = slots
-        self._slots = {rid: i for i, rid in enumerate(slots) if rid is not None}
-        self.times = np.asarray(meta["times"], dtype=np.float64)
+        if (
+            not requested
+            or len(set(requested)) != len(requested)
+            or any(rid not in checkpoint_residents for rid in requested)
+        ):
+            raise ValueError("restore resident IDs must be a nonempty checkpoint subset")
+        checkpoint_slot = {
+            rid: slot for slot, rid in enumerate(slots) if rid is not None
+        }
+        loaded_by_slot = {}
+        new_slots = []
+        for rid in requested:
+            slot = checkpoint_slot[rid]
+            identity = phenotype_slots[slot]
+            current_rid = self._resident_for_slot[slot]
+            if rid in self._slots and self._slots[rid] != slot:
+                raise ValueError("resident occupies a different slot than its checkpoint")
+            if current_rid not in (None, rid):
+                raise ValueError("checkpoint slot is occupied by another resident")
+            if current_rid == rid:
+                current_identity = dict(self._phenotype_for_slot[slot])
+                checkpoint_identity = dict(identity)
+                current_identity.pop("artifact_path", None)
+                checkpoint_identity.pop("artifact_path", None)
+                if current_identity != checkpoint_identity:
+                    raise ValueError("active resident phenotype differs from its checkpoint")
+            reference = {
+                name: identity[name]
+                for name in (
+                    "artifact_path",
+                    "artifact_sha256",
+                    "phenotype_sha256",
+                    "graph_sha256",
+                    "port_spec_sha256",
+                    "port_bundle_sha256",
+                )
+            }
+            observed, arrays = self._load_phenotype(reference)
+            if observed != identity:
+                raise ValueError("snapshot neural phenotype identity differs from artifact")
+            loaded_by_slot[slot] = arrays
+            if current_rid is None:
+                new_slots.append(slot)
+        mask = sum(1 << checkpoint_slot[rid] for rid in requested)
+        new_mask = sum(1 << slot for slot in new_slots)
+        if new_slots:
+            self._bind_phenotypes(
+                new_slots, [loaded_by_slot[slot] for slot in new_slots]
+            )
+        try:
+            restored = json.loads(
+                self._call({"op": "restore", "path": str(path), "mask": mask})[
+                    "metadata"
+                ]
+            )
+            if restored != meta:
+                raise ValueError("native snapshot metadata changed during restore")
+        except Exception:
+            if new_slots:
+                self._call({"op": "unbind_phenotypes", "mask": new_mask})
+            raise
+        for rid in requested:
+            slot = checkpoint_slot[rid]
+            self._resident_for_slot[slot] = rid
+            self._phenotype_for_slot[slot] = phenotype_slots[slot]
+            self._slots[rid] = slot
+            self.times[slot] = float(meta["times"][slot])
         if restored_cohort is not None:
-            self._mushroom_cohort = restored_cohort
+            for rid in requested:
+                slot = checkpoint_slot[rid]
+                self._mushroom_cohort._slots[slot] = restored_cohort._slots[slot]
         return {
             "name": name,
             "sha256": digest,
             "artifact_sha256": self.artifact_sha256,
             "bytes": path.stat().st_size,
-            "scope": "all",
-            "residents": active,
+            "scope": "selected",
+            "residents": requested,
         }
 
     def close(self):

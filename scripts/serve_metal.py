@@ -122,7 +122,7 @@ class Sequenced:
 def handler_type(state):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
-        server_version = "ChreaturesMetalCNS/1"
+        server_version = "ChreaturesMetalCNS/3"
 
         def setup(self):
             super().setup()
@@ -193,7 +193,7 @@ def handler_type(state):
                     self.send_json(
                         200,
                         {
-                            "backend": "metal-local-v2",
+                            "backend": "metal-local-v3",
                             "next_seq": state.next_sequence,
                             "brain": state.brain.metadata(),
                             "service_incarnation": state.incarnation,
@@ -244,7 +244,7 @@ def handler_type(state):
                         lambda: {
                             "seq": seq,
                             "slots": state.brain.add_residents(
-                                q.get("resident_ids", [])
+                                q.get("residents", [])
                             ),
                         },
                     )
@@ -273,6 +273,7 @@ def handler_type(state):
                         if q.get("compact") is True:
                             keys = (
                                 "id",
+                                "neural_phenotype_sha256",
                                 "time",
                                 "features",
                                 "activity",
