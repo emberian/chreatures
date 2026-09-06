@@ -731,8 +731,9 @@ behavior remain empirical work.
 
 The full campaign subsequently closed with 1,033,824 committed resident
 transitions: 16 lives completed 24,000 ticks, and 64 retained the two shared
-engine failures. Twelve completed candidates remain in the bounded search
-archive. No additional candidates were silently requested. Completion here
+engine failures. Twelve evaluations received archive admission; nine members
+remain after subsequent replacement. No additional candidates were silently
+requested. Completion here
 means reaching the allotted simulation horizon; the completed cohort did not
 demonstrate sustained acquisition or energy regulation.
 
