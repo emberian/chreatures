@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 from research.sensorimotor_skills.rich_data import RichNormalizer, RichPlayDataset
 from research.sensorimotor_skills.rich_model import RichSensorimotorModel
 
-FORMAT = "chreatures-rich-sensorimotor-bootstrap-v1"
+FORMAT = "chreatures-rich-sensorimotor-bootstrap-v4"
 BUCKETS = ((1, 2), (3, 5), (6, 10), (11, 20), (21, 40))
 
 
@@ -134,7 +134,7 @@ def main() -> int:
                 Path(__file__).resolve(),
                 ROOT / "research/sensorimotor_skills/rich_model.py",
                 ROOT / "research/sensorimotor_skills/rich_data.py",
-                ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v2.json",
+                ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v3.json",
             )
         },
     }
@@ -203,9 +203,7 @@ def main() -> int:
                 )
                 hidden = hidden.detach()
                 goal, horizon = sample_goals(codes, start, stop, rng)
-                logits = model.policy(
-                    states, goal, horizon, previous[start:stop, :, :8]
-                )
+                logits = model.policy(states, goal, horizon, previous[start:stop])
                 loss = model.action_nll(logits, action[start:stop]).mean()
                 if not torch.isfinite(loss):
                     raise RuntimeError("nonfinite rich worker loss")
