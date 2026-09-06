@@ -18,18 +18,51 @@ const quat=q=>new THREE.Quaternion(q[1],q[2],q[3],q[0]);
 function toast(message,error=false){$('toast').textContent=message;$('toast').classList.toggle('error',error);$('toast').classList.add('visible');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('toast').classList.remove('visible'),3500);}
 async function command(data){try{const r=await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const d=await r.json();if(!r.ok)throw Error(d.detail||'Interaction rejected');visitor?.capture(data,state?.time);return d;}catch(e){toast(e.message,true);return null;}}
 visitor=mountVisitorPanel({getModelTime:()=>state?.time,getCursor:()=>({x:cursor.x,y:cursor.y,z:Math.max(.12,cursor.z)}),perform:command});
-const geometries=new Map();function shapeGeometry(type,size){const key=type+JSON.stringify(size);if(geometries.has(key))return geometries.get(key);let g;if(type==='box')g=new THREE.BoxGeometry(size[0]*2,size[1]*2,size[2]*2);else if(type==='sphere')g=new THREE.SphereGeometry(size[0],24,16);else if(type==='ellipsoid'){g=new THREE.SphereGeometry(1,28,18);g.scale(...size);}else if(type==='cylinder'){g=new THREE.CylinderGeometry(size[0],size[0],size[1]*2,24);g.rotateX(Math.PI/2);}else if(type==='capsule'){g=new THREE.CapsuleGeometry(size[0],size[1]*2,6,16);g.rotateX(Math.PI/2);}else g=new THREE.BoxGeometry(.1,.1,.1);geometries.set(key,g);return g;}
-function makeMesh(type,size,color,roughness=.85){const m=new THREE.Mesh(shapeGeometry(type,size),new THREE.MeshStandardMaterial({color,roughness,metalness:.025}));m.castShadow=true;m.receiveShadow=true;scene.add(m);return m;}
+function shapeDimensions(shape){
+ const size=shape.size.map(Number);
+ // PhysicsWorld normally resolves `fromto` capsules to radius/half-length,
+ // position and quaternion. Keep raw structural records correct as well.
+ if((shape.type==='capsule'||shape.type==='cylinder')&&Array.isArray(shape.fromto)&&shape.fromto.length===6){
+  const length=Math.hypot(shape.fromto[3]-shape.fromto[0],shape.fromto[4]-shape.fromto[1],shape.fromto[5]-shape.fromto[2]);
+  if(size.length===1)size.push(length/2);else size[1]=length/2;
+ }
+ return size;
+}
+function shapeGeometrySignature(shape){
+ const size=shapeDimensions(shape),unit=Math.abs(size[0])||1;
+ // Uniform ecology scaling reuses the mesh; a changed aspect or capsule
+ // length rebuilds its baked geometry. Precision removes division noise only.
+ return `${shape.type}:${size.length}:${size.map(value=>(value/unit).toPrecision(12)).join(',')}`;
+}
+const geometries=new Map();
+function acquireGeometry(type,size){
+ const key=type+JSON.stringify(size);
+ let entry=geometries.get(key);
+ if(!entry){
+  let geometry;
+  if(type==='box')geometry=new THREE.BoxGeometry(size[0]*2,size[1]*2,size[2]*2);
+  else if(type==='sphere')geometry=new THREE.SphereGeometry(size[0],24,16);
+  else if(type==='ellipsoid'){geometry=new THREE.SphereGeometry(1,28,18);geometry.scale(...size);}
+  else if(type==='cylinder'){geometry=new THREE.CylinderGeometry(size[0],size[0],size[1]*2,24);geometry.rotateX(Math.PI/2);}
+  else if(type==='capsule'){geometry=new THREE.CapsuleGeometry(size[0],size[1]*2,6,16);geometry.rotateX(Math.PI/2);}
+  else geometry=new THREE.BoxGeometry(.1,.1,.1);
+  entry={geometry,uses:0};geometries.set(key,entry);
+ }
+ entry.uses+=1;return {key,geometry:entry.geometry};
+}
+function releaseGeometry(key){const entry=geometries.get(key);if(!entry)return;entry.uses-=1;if(entry.uses===0){entry.geometry.dispose();geometries.delete(key);}}
+function makeMesh(type,size,color,roughness=.85){const acquired=acquireGeometry(type,size),m=new THREE.Mesh(acquired.geometry,new THREE.MeshStandardMaterial({color,roughness,metalness:.025}));m.userData.geometryKey=acquired.key;m.castShadow=true;m.receiveShadow=true;scene.add(m);return m;}
+function disposeMesh(mesh){mesh.parent?.remove(mesh);if(Array.isArray(mesh.material))mesh.material.forEach(material=>material.dispose());else mesh.material.dispose();releaseGeometry(mesh.userData.geometryKey);}
 function label(text,color){const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.font='500 26px system-ui';x.textAlign='center';x.fillStyle=color;x.fillText(text,128,39);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthTest:false}));sprite.scale.set(.70,.175,1);return sprite;}
 const selectRing=new THREE.Mesh(new THREE.RingGeometry(.155,.164,48),new THREE.MeshBasicMaterial({color:'#ddeb9d',side:THREE.DoubleSide,transparent:true,opacity:.8}));scene.add(selectRing);
 const handMesh=new THREE.Mesh(new THREE.SphereGeometry(.07,16,12),new THREE.MeshPhysicalMaterial({color:'#e4dfa9',roughness:.12,metalness:.05,transparent:true,opacity:.65}));scene.add(handMesh);handMesh.visible=false;
-function updateScene(){if(!state)return;const alive=new Set();for(const e of state.entities){e.shapes.forEach((s,i)=>{const id=e.id+':'+i;alive.add(id);let m=objects.get(id);if(!m){m=makeMesh(s.type,s.size,s.color,e.physical_material==='timber'?.7:.90);m.userData={id:e.id,mobility:e.mobility,type:'object',baseSize:s.size.slice()};objects.set(id,m);}m.userData.target=new THREE.Vector3(...s.position);m.userData.rotation=quat(s.quaternion);if(!m.userData.initialized){m.position.copy(m.userData.target);m.quaternion.copy(m.userData.rotation);m.userData.initialized=true;}m.scale.setScalar(s.size[0]/m.userData.baseSize[0]);m.material.color.set(s.color);if(e.id.endsWith('wall')){m.material.transparent=true;m.material.opacity=.32;m.castShadow=false;}});}for(const[id,m]of objects)if(!alive.has(id)){scene.remove(m);m.material.dispose();objects.delete(id);}
+function updateScene(){if(!state)return;const alive=new Set();for(const e of state.entities){e.shapes.forEach((s,i)=>{const id=e.id+':'+i,dimensions=shapeDimensions(s),signature=shapeGeometrySignature(s);alive.add(id);let m=objects.get(id);if(m&&m.userData.geometrySignature!==signature){disposeMesh(m);objects.delete(id);m=null;}if(!m){m=makeMesh(s.type,dimensions,s.color,e.physical_material==='timber'?.7:.90);Object.assign(m.userData,{id:e.id,mobility:e.mobility,type:'object',baseSize:dimensions.slice(),geometrySignature:signature});objects.set(id,m);}m.userData.target=new THREE.Vector3(...s.position);m.userData.rotation=quat(s.quaternion);if(!m.userData.initialized){m.position.copy(m.userData.target);m.quaternion.copy(m.userData.rotation);m.userData.initialized=true;}m.scale.setScalar(dimensions[0]/m.userData.baseSize[0]);m.material.color.set(s.color);if(e.id.endsWith('wall')){m.material.transparent=true;m.material.opacity=.32;m.castShadow=false;}});}for(const[id,m]of objects)if(!alive.has(id)){disposeMesh(m);objects.delete(id);}
  for(const b of state.bodies){
    let group=bodies.get(b.id);
    if(!group){group=new THREE.Group();group.userData={id:b.id,type:'resident',parts:[]};scene.add(group);const name=label(b.name,'#e7eccf');name.position.z=.27;group.add(name);bodies.set(b.id,group);}
    const position=new THREE.Vector3(b.x,b.y,b.z),rotation=quat(b.quaternion),inverse=rotation.clone().invert();
    const shapes=b.shapes||[{type:b.shape,size:b.size,color:b.color,position:[b.x,b.y,b.z],quaternion:b.quaternion}];
-   shapes.forEach((shape,i)=>{let part=group.userData.parts[i];if(!part){part=makeMesh(shape.type,shape.size,shape.color,.42);part.userData={id:b.id,type:'resident'};group.add(part);group.userData.parts[i]=part;}part.position.copy(new THREE.Vector3(...shape.position).sub(position).applyQuaternion(inverse));part.quaternion.copy(inverse.clone().multiply(quat(shape.quaternion)));});
+   shapes.forEach((shape,i)=>{let part=group.userData.parts[i];if(!part){part=makeMesh(shape.type,shape.size,shape.color,.42);Object.assign(part.userData,{id:b.id,type:'resident'});group.add(part);group.userData.parts[i]=part;}part.position.copy(new THREE.Vector3(...shape.position).sub(position).applyQuaternion(inverse));part.quaternion.copy(inverse.clone().multiply(quat(shape.quaternion)));});
    group.userData.target=position;group.userData.rotation=rotation;
    if(!group.userData.initialized){group.position.copy(position);group.quaternion.copy(rotation);group.userData.initialized=true;}
  }

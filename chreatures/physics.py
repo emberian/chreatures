@@ -1708,6 +1708,7 @@ class PhysicsWorld:
         return {
             "version": 1, "dimension": 3, "engine": {"name": "MuJoCo", "version": mujoco.__version__},
             "model_signature": self._model_signature, "seed": self.seed, "spec": copy.deepcopy(self.spec),
+            "model_revision": self.model_revision,
             "mj_state_spec": int(STATE_SPEC), "mj_state": state.tolist(),
             "model_mutable": {name: getattr(self.model, name).tolist() for name in _MUTABLE_MODEL_FIELDS},
             "bodies": [body.to_dict() for body in self.bodies], "components": copy.deepcopy(self._components),
@@ -1729,6 +1730,9 @@ class PhysicsWorld:
         raw_spec = snapshot.get("spec")
         if not isinstance(raw_spec, dict):
             raise ValueError("snapshot habitat specification is invalid")
+        model_revision = snapshot.get("model_revision", 0)
+        if isinstance(model_revision, bool) or not isinstance(model_revision, int) or model_revision < 0:
+            raise ValueError("snapshot model revision is invalid")
         restore_spec = copy.deepcopy(raw_spec)
         # Early v1 checkpoints were written through a canonical JSON encoder
         # that sorted mapping keys, while the original compiler emitted visual
@@ -1762,6 +1766,7 @@ class PhysicsWorld:
                 if recovered and not unmatched:
                     restore_spec["materials"] = {name: materials[name] for name in recovered}
         world = cls(seed=snapshot["seed"], spec=restore_spec)
+        world.model_revision = model_revision
         if snapshot.get("model_signature") != world._model_signature or snapshot.get("mj_state_spec") != int(STATE_SPEC):
             raise ValueError("snapshot model or integration state contract differs")
         state = np.asarray(snapshot.get("mj_state"), dtype=float)
