@@ -1,9 +1,7 @@
-use numpy::{
-    ndarray::{Array2, Array3},
-    IntoPyArray, PyArray1, PyArray2, PyArray3, PyReadonlyArray1,
-};
+use numpy::{ndarray::Array2, IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use std::collections::HashSet;
 
 unsafe extern "C" {
     fn chreatures_mujoco_header_version() -> i32;
@@ -32,7 +30,6 @@ unsafe extern "C" {
         participant_resident: *mut i32,
         participant_entity: *mut i32,
         participant_side: *mut i8,
-        participant_normal: *mut f64,
     ) -> i32;
 }
 
@@ -48,11 +45,21 @@ pub struct ContactBatch {
     contact_force_norm: Vec<f64>,
     geom_resident: Vec<i32>,
     geom_entity: Vec<i32>,
+    geom_shape: Vec<i32>,
     resident_body: Vec<i32>,
     participant_resident: Vec<i32>,
     participant_entity: Vec<i32>,
     participant_side: Vec<i8>,
-    participant_normal: Vec<f64>,
+    tick_limit: usize,
+    tick_keys: HashSet<(i32, i32, i32, i64, i64, i64)>,
+    tick_resident: Vec<i32>,
+    tick_counterpart_resident: Vec<i32>,
+    tick_counterpart_entity: Vec<i32>,
+    tick_shape: Vec<i32>,
+    tick_point: Vec<f64>,
+    tick_impulse: Vec<f64>,
+    tick_work: Vec<f64>,
+    tick_speed: Vec<f64>,
 }
 
 impl ContactBatch {
@@ -68,7 +75,6 @@ impl ContactBatch {
         self.participant_resident.resize(count * 2, -1);
         self.participant_entity.resize(count * 2, -1);
         self.participant_side.resize(count * 2, -1);
-        self.participant_normal.resize(count * 6, 0.0);
     }
 }
 
@@ -104,11 +110,21 @@ impl ContactBatch {
             contact_force_norm: Vec::new(),
             geom_resident: Vec::new(),
             geom_entity: Vec::new(),
+            geom_shape: Vec::new(),
             resident_body: Vec::new(),
             participant_resident: Vec::new(),
             participant_entity: Vec::new(),
             participant_side: Vec::new(),
-            participant_normal: Vec::new(),
+            tick_limit: 0,
+            tick_keys: HashSet::new(),
+            tick_resident: Vec::new(),
+            tick_counterpart_resident: Vec::new(),
+            tick_counterpart_entity: Vec::new(),
+            tick_shape: Vec::new(),
+            tick_point: Vec::new(),
+            tick_impulse: Vec::new(),
+            tick_work: Vec::new(),
+            tick_speed: Vec::new(),
         };
         value.reserve(capacity);
         Ok(value)
@@ -118,26 +134,48 @@ impl ContactBatch {
         &mut self,
         geom_resident: PyReadonlyArray1<'_, i32>,
         geom_entity: PyReadonlyArray1<'_, i32>,
+        geom_shape: PyReadonlyArray1<'_, i32>,
         resident_body: PyReadonlyArray1<'_, i32>,
     ) -> PyResult<()> {
         let geom_resident = geom_resident.as_slice()?;
         let geom_entity = geom_entity.as_slice()?;
+        let geom_shape = geom_shape.as_slice()?;
         let resident_body = resident_body.as_slice()?;
         if geom_resident.is_empty()
             || geom_resident.len() != geom_entity.len()
+            || geom_resident.len() != geom_shape.len()
             || resident_body.is_empty()
-            || resident_body.len() > 4096
+            || resident_body.len() > 32
             || geom_resident
                 .iter()
                 .any(|value| *value < -1 || (*value >= 0 && *value as usize >= resident_body.len()))
             || geom_entity.iter().any(|value| *value < -1)
+            || geom_shape.iter().any(|value| *value < -1)
             || resident_body.iter().any(|value| *value < 0)
         {
             return Err(PyValueError::new_err("invalid contact metadata binding"));
         }
         self.geom_resident = geom_resident.to_vec();
         self.geom_entity = geom_entity.to_vec();
+        self.geom_shape = geom_shape.to_vec();
         self.resident_body = resident_body.to_vec();
+        Ok(())
+    }
+
+    fn begin_tick(&mut self, limit: usize) -> PyResult<()> {
+        if limit == 0 || limit > 65_536 {
+            return Err(PyValueError::new_err("invalid packed contact limit"));
+        }
+        self.tick_limit = limit;
+        self.tick_keys.clear();
+        self.tick_resident.clear();
+        self.tick_counterpart_resident.clear();
+        self.tick_counterpart_entity.clear();
+        self.tick_shape.clear();
+        self.tick_point.clear();
+        self.tick_impulse.clear();
+        self.tick_work.clear();
+        self.tick_speed.clear();
         Ok(())
     }
 
@@ -164,7 +202,6 @@ impl ContactBatch {
         Bound<'py, PyArray2<i32>>,
         Bound<'py, PyArray2<i32>>,
         Bound<'py, PyArray2<i8>>,
-        Bound<'py, PyArray3<f64>>,
     )> {
         let resident_z = resident_z.as_slice()?;
         if model_address == 0 || data_address == 0 {
@@ -215,7 +252,6 @@ impl ContactBatch {
                 self.participant_resident.as_mut_ptr(),
                 self.participant_entity.as_mut_ptr(),
                 self.participant_side.as_mut_ptr(),
-                self.participant_normal.as_mut_ptr(),
             )
         };
         if count < 0 || count as usize != contact_count {
@@ -224,6 +260,46 @@ impl ContactBatch {
             )));
         }
         let n = count as usize;
+        if self.tick_limit > 0 {
+            for index in 0..n {
+                for side in 0..2 {
+                    if self.tick_resident.len() >= self.tick_limit {
+                        break;
+                    }
+                    let resident = self.participant_resident[index * 2 + side];
+                    if resident < 0 {
+                        continue;
+                    }
+                    let key = (
+                        resident,
+                        self.geom1[index],
+                        self.geom2[index],
+                        (self.positions[index * 3] * 10_000.0).round_ties_even() as i64,
+                        (self.positions[index * 3 + 1] * 10_000.0).round_ties_even() as i64,
+                        (self.positions[index * 3 + 2] * 10_000.0).round_ties_even() as i64,
+                    );
+                    if !self.tick_keys.insert(key) {
+                        continue;
+                    }
+                    let other_geom = if side == 0 {
+                        self.geom2[index]
+                    } else {
+                        self.geom1[index]
+                    };
+                    self.tick_resident.push(resident);
+                    self.tick_counterpart_resident
+                        .push(self.geom_resident[other_geom as usize]);
+                    self.tick_counterpart_entity
+                        .push(self.geom_entity[other_geom as usize]);
+                    self.tick_shape.push(self.geom_shape[other_geom as usize]);
+                    self.tick_point
+                        .extend_from_slice(&self.positions[index * 3..index * 3 + 3]);
+                    self.tick_impulse.push(self.impulse[index]);
+                    self.tick_work.push(self.impact_work[index]);
+                    self.tick_speed.push(self.relative_speed[index]);
+                }
+            }
+        }
         let positions = Array2::from_shape_vec((n, 3), self.positions[..n * 3].to_vec())
             .map_err(|error| PyValueError::new_err(error.to_string()))?;
         let normals = Array2::from_shape_vec((n, 3), self.normals[..n * 3].to_vec())
@@ -237,9 +313,6 @@ impl ContactBatch {
         let participant_side =
             Array2::from_shape_vec((n, 2), self.participant_side[..n * 2].to_vec())
                 .map_err(|error| PyValueError::new_err(error.to_string()))?;
-        let participant_normal =
-            Array3::from_shape_vec((n, 2, 3), self.participant_normal[..n * 6].to_vec())
-                .map_err(|error| PyValueError::new_err(error.to_string()))?;
         Ok((
             PyArray1::from_slice(py, &self.geom1[..n]),
             PyArray1::from_slice(py, &self.geom2[..n]),
@@ -252,7 +325,35 @@ impl ContactBatch {
             participant_resident.into_pyarray(py),
             participant_entity.into_pyarray(py),
             participant_side.into_pyarray(py),
-            participant_normal.into_pyarray(py),
+        ))
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn finish_tick<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<(
+        Bound<'py, PyArray1<i32>>,
+        Bound<'py, PyArray1<i32>>,
+        Bound<'py, PyArray1<i32>>,
+        Bound<'py, PyArray1<i32>>,
+        Bound<'py, PyArray2<f64>>,
+        Bound<'py, PyArray1<f64>>,
+        Bound<'py, PyArray1<f64>>,
+        Bound<'py, PyArray1<f64>>,
+    )> {
+        let count = self.tick_resident.len();
+        let points = Array2::from_shape_vec((count, 3), self.tick_point.clone())
+            .map_err(|error| PyValueError::new_err(error.to_string()))?;
+        Ok((
+            PyArray1::from_slice(py, &self.tick_resident),
+            PyArray1::from_slice(py, &self.tick_counterpart_resident),
+            PyArray1::from_slice(py, &self.tick_counterpart_entity),
+            PyArray1::from_slice(py, &self.tick_shape),
+            points.into_pyarray(py),
+            PyArray1::from_slice(py, &self.tick_impulse),
+            PyArray1::from_slice(py, &self.tick_work),
+            PyArray1::from_slice(py, &self.tick_speed),
         ))
     }
 }

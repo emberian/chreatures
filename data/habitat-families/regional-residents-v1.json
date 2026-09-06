@@ -1,0 +1,4277 @@
+{
+  "format": "chreatures-regional-residents-v1",
+  "residents": [
+    {
+      "body": {
+        "id": "mica",
+        "name": "Mica",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 0.05,
+        "material": "mica",
+        "energy": 0.8,
+        "gut": 0.1,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.56
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.42,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.016,
+        "release_rate": 0.024,
+        "allocation_rate": 0.018,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "fern",
+        "name": "Fern",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.75,
+        "material": "fern",
+        "energy": 0.76,
+        "gut": 0.16,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.06,
+          "dorsal_capture_fraction": 0.5
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00076,
+        "activation_rate": 0.0062499999999999995,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.445,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.017,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.0195,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00035
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "pip",
+        "name": "Pip",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 3.15,
+        "material": "pip",
+        "energy": 0.82,
+        "gut": 0.08,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.64
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.69,
+        "reserve_capacity": 1.53,
+        "maintenance_rate": 0.0008,
+        "activation_rate": 0.0066,
+        "absorption_rate": 0.036,
+        "digestive_atp_rate": 0.0088,
+        "bite_rate": 0.076,
+        "maximum_bite": 0.038,
+        "mouth_radius": 0.047,
+        "fatigue_rise": 0.046,
+        "fatigue_recovery": 0.027999999999999997,
+        "structural_capacity": 0.36,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.47,
+        "gland_synthesis_rate": 0.0050999999999999995,
+        "secretion_rate": 0.018000000000000002,
+        "release_rate": 0.028,
+        "allocation_rate": 0.020999999999999998,
+        "brood_maturation_rate": 0.0022,
+        "brood_material_target": 0.26,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.061,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.12,
+          0.3,
+          0.58
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 3.0,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.028,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0119
+          },
+          "pools": {
+            "reserve": 1.27,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.036,
+            "tough_digestion": 0.009000000000000001,
+            "detritus_digestion": 0.01
+          },
+          "pools": {
+            "soft_tissue": 0.018000000000000002
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "lumen",
+        "name": "Lumen",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 1.65,
+        "material": "lumen",
+        "energy": 0.79,
+        "gut": 0.11,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 1.04,
+          "axial_scale": 0.94,
+          "leg_length_scale": 1.18,
+          "antenna_length_scale": 1.32,
+          "frequency_scale": 0.94
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.42,
+          "dorsal_capture_fraction": 0.8
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.725,
+        "reserve_capacity": 1.35,
+        "maintenance_rate": 0.00084,
+        "activation_rate": 0.0052,
+        "absorption_rate": 0.039,
+        "digestive_atp_rate": 0.007,
+        "bite_rate": 0.081,
+        "maximum_bite": 0.041,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.049,
+        "fatigue_recovery": 0.022,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.495,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.019,
+        "release_rate": 0.024,
+        "allocation_rate": 0.0225,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0126,
+            "carbon_fixation": 0.0028
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.039,
+            "tough_digestion": 0.006,
+            "detritus_digestion": 0.012
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "silt",
+        "name": "Silt",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 3.65,
+        "material": "silt",
+        "energy": 0.77,
+        "gut": 0.13,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 1.18,
+          "radial_scale": 1.12,
+          "density_scale": 1.17,
+          "friction_scale": 1.26,
+          "torque_scale": 1.14,
+          "frequency_scale": 0.82
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.19,
+          "dorsal_capture_fraction": 0.62
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00088,
+        "activation_rate": 0.005549999999999999,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.42,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.016,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.018,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105,
+            "carbon_fixation": 0.0011
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "bramble",
+        "name": "Bramble",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.15,
+        "material": "bramble",
+        "energy": 0.81,
+        "gut": 0.09,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 0.86,
+          "axial_scale": 1.12,
+          "leg_radius_scale": 0.86,
+          "antenna_spread_scale": 1.38,
+          "sweep_scale": 1.16,
+          "frequency_scale": 1.16
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.035,
+          "dorsal_capture_fraction": 0.42
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.047,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.36,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.445,
+        "gland_synthesis_rate": 0.0050999999999999995,
+        "secretion_rate": 0.017,
+        "release_rate": 0.028,
+        "allocation_rate": 0.0195,
+        "brood_maturation_rate": 0.0022,
+        "brood_material_target": 0.26,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.061,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.12,
+          0.3,
+          0.58
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 3.0,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.028,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00018
+          },
+          "pools": {
+            "reserve": 1.27,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.018000000000000002
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "cairn",
+        "name": "Cairn",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 0.05,
+        "material": "mica",
+        "energy": 0.8,
+        "gut": 0.1,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.56
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.47,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.018000000000000002,
+        "release_rate": 0.024,
+        "allocation_rate": 0.020999999999999998,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "moss",
+        "name": "Moss",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.75,
+        "material": "fern",
+        "energy": 0.76,
+        "gut": 0.16,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.06,
+          "dorsal_capture_fraction": 0.5
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00076,
+        "activation_rate": 0.0062499999999999995,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.495,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.019,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.0225,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00035
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-09",
+        "name": "Regional 09",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 0.05,
+        "material": "mica",
+        "energy": 0.8,
+        "gut": 0.1,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.56
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.42,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.016,
+        "release_rate": 0.024,
+        "allocation_rate": 0.018,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-10",
+        "name": "Regional 10",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.75,
+        "material": "fern",
+        "energy": 0.76,
+        "gut": 0.16,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.06,
+          "dorsal_capture_fraction": 0.5
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00076,
+        "activation_rate": 0.0062499999999999995,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.445,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.017,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.0195,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00035
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-11",
+        "name": "Regional 11",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 3.15,
+        "material": "pip",
+        "energy": 0.82,
+        "gut": 0.08,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.64
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.69,
+        "reserve_capacity": 1.53,
+        "maintenance_rate": 0.0008,
+        "activation_rate": 0.0066,
+        "absorption_rate": 0.036,
+        "digestive_atp_rate": 0.0088,
+        "bite_rate": 0.076,
+        "maximum_bite": 0.038,
+        "mouth_radius": 0.047,
+        "fatigue_rise": 0.046,
+        "fatigue_recovery": 0.027999999999999997,
+        "structural_capacity": 0.36,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.47,
+        "gland_synthesis_rate": 0.0050999999999999995,
+        "secretion_rate": 0.018000000000000002,
+        "release_rate": 0.028,
+        "allocation_rate": 0.020999999999999998,
+        "brood_maturation_rate": 0.0022,
+        "brood_material_target": 0.26,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.061,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.12,
+          0.3,
+          0.58
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 3.0,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.028,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0119
+          },
+          "pools": {
+            "reserve": 1.27,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.036,
+            "tough_digestion": 0.009000000000000001,
+            "detritus_digestion": 0.01
+          },
+          "pools": {
+            "soft_tissue": 0.018000000000000002
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-12",
+        "name": "Regional 12",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 1.65,
+        "material": "lumen",
+        "energy": 0.79,
+        "gut": 0.11,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 1.04,
+          "axial_scale": 0.94,
+          "leg_length_scale": 1.18,
+          "antenna_length_scale": 1.32,
+          "frequency_scale": 0.94
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.42,
+          "dorsal_capture_fraction": 0.8
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.725,
+        "reserve_capacity": 1.35,
+        "maintenance_rate": 0.00084,
+        "activation_rate": 0.0052,
+        "absorption_rate": 0.039,
+        "digestive_atp_rate": 0.007,
+        "bite_rate": 0.081,
+        "maximum_bite": 0.041,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.049,
+        "fatigue_recovery": 0.022,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.495,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.019,
+        "release_rate": 0.024,
+        "allocation_rate": 0.0225,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0126,
+            "carbon_fixation": 0.0028
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.039,
+            "tough_digestion": 0.006,
+            "detritus_digestion": 0.012
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-13",
+        "name": "Regional 13",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 3.65,
+        "material": "silt",
+        "energy": 0.77,
+        "gut": 0.13,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 1.18,
+          "radial_scale": 1.12,
+          "density_scale": 1.17,
+          "friction_scale": 1.26,
+          "torque_scale": 1.14,
+          "frequency_scale": 0.82
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.19,
+          "dorsal_capture_fraction": 0.62
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00088,
+        "activation_rate": 0.005549999999999999,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.42,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.016,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.018,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105,
+            "carbon_fixation": 0.0011
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-14",
+        "name": "Regional 14",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.15,
+        "material": "bramble",
+        "energy": 0.81,
+        "gut": 0.09,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 0.86,
+          "axial_scale": 1.12,
+          "leg_radius_scale": 0.86,
+          "antenna_spread_scale": 1.38,
+          "sweep_scale": 1.16,
+          "frequency_scale": 1.16
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.035,
+          "dorsal_capture_fraction": 0.42
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.047,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.36,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.445,
+        "gland_synthesis_rate": 0.0050999999999999995,
+        "secretion_rate": 0.017,
+        "release_rate": 0.028,
+        "allocation_rate": 0.0195,
+        "brood_maturation_rate": 0.0022,
+        "brood_material_target": 0.26,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.061,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.12,
+          0.3,
+          0.58
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 3.0,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.028,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00018
+          },
+          "pools": {
+            "reserve": 1.27,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.018000000000000002
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-15",
+        "name": "Regional 15",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 0.05,
+        "material": "mica",
+        "energy": 0.8,
+        "gut": 0.1,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.56
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.47,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.018000000000000002,
+        "release_rate": 0.024,
+        "allocation_rate": 0.020999999999999998,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-16",
+        "name": "Regional 16",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.75,
+        "material": "fern",
+        "energy": 0.76,
+        "gut": 0.16,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.06,
+          "dorsal_capture_fraction": 0.5
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00076,
+        "activation_rate": 0.0062499999999999995,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.495,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.019,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.0225,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00035
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-17",
+        "name": "Regional 17",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 0.05,
+        "material": "mica",
+        "energy": 0.8,
+        "gut": 0.1,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.56
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.42,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.016,
+        "release_rate": 0.024,
+        "allocation_rate": 0.018,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-18",
+        "name": "Regional 18",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.75,
+        "material": "fern",
+        "energy": 0.76,
+        "gut": 0.16,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.06,
+          "dorsal_capture_fraction": 0.5
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00076,
+        "activation_rate": 0.0062499999999999995,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.445,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.017,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.0195,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00035
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-19",
+        "name": "Regional 19",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 3.15,
+        "material": "pip",
+        "energy": 0.82,
+        "gut": 0.08,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.64
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.69,
+        "reserve_capacity": 1.53,
+        "maintenance_rate": 0.0008,
+        "activation_rate": 0.0066,
+        "absorption_rate": 0.036,
+        "digestive_atp_rate": 0.0088,
+        "bite_rate": 0.076,
+        "maximum_bite": 0.038,
+        "mouth_radius": 0.047,
+        "fatigue_rise": 0.046,
+        "fatigue_recovery": 0.027999999999999997,
+        "structural_capacity": 0.36,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.47,
+        "gland_synthesis_rate": 0.0050999999999999995,
+        "secretion_rate": 0.018000000000000002,
+        "release_rate": 0.028,
+        "allocation_rate": 0.020999999999999998,
+        "brood_maturation_rate": 0.0022,
+        "brood_material_target": 0.26,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.061,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.12,
+          0.3,
+          0.58
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 3.0,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.028,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0119
+          },
+          "pools": {
+            "reserve": 1.27,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.036,
+            "tough_digestion": 0.009000000000000001,
+            "detritus_digestion": 0.01
+          },
+          "pools": {
+            "soft_tissue": 0.018000000000000002
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-20",
+        "name": "Regional 20",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 1.65,
+        "material": "lumen",
+        "energy": 0.79,
+        "gut": 0.11,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 1.04,
+          "axial_scale": 0.94,
+          "leg_length_scale": 1.18,
+          "antenna_length_scale": 1.32,
+          "frequency_scale": 0.94
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.42,
+          "dorsal_capture_fraction": 0.8
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.725,
+        "reserve_capacity": 1.35,
+        "maintenance_rate": 0.00084,
+        "activation_rate": 0.0052,
+        "absorption_rate": 0.039,
+        "digestive_atp_rate": 0.007,
+        "bite_rate": 0.081,
+        "maximum_bite": 0.041,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.049,
+        "fatigue_recovery": 0.022,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.495,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.019,
+        "release_rate": 0.024,
+        "allocation_rate": 0.0225,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0126,
+            "carbon_fixation": 0.0028
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.039,
+            "tough_digestion": 0.006,
+            "detritus_digestion": 0.012
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-21",
+        "name": "Regional 21",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 3.65,
+        "material": "silt",
+        "energy": 0.77,
+        "gut": 0.13,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 1.18,
+          "radial_scale": 1.12,
+          "density_scale": 1.17,
+          "friction_scale": 1.26,
+          "torque_scale": 1.14,
+          "frequency_scale": 0.82
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.19,
+          "dorsal_capture_fraction": 0.62
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00088,
+        "activation_rate": 0.005549999999999999,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.42,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.016,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.018,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105,
+            "carbon_fixation": 0.0011
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-22",
+        "name": "Regional 22",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.15,
+        "material": "bramble",
+        "energy": 0.81,
+        "gut": 0.09,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 0.86,
+          "axial_scale": 1.12,
+          "leg_radius_scale": 0.86,
+          "antenna_spread_scale": 1.38,
+          "sweep_scale": 1.16,
+          "frequency_scale": 1.16
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.035,
+          "dorsal_capture_fraction": 0.42
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.047,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.36,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.445,
+        "gland_synthesis_rate": 0.0050999999999999995,
+        "secretion_rate": 0.017,
+        "release_rate": 0.028,
+        "allocation_rate": 0.0195,
+        "brood_maturation_rate": 0.0022,
+        "brood_material_target": 0.26,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.061,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.12,
+          0.3,
+          0.58
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 3.0,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.028,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00018
+          },
+          "pools": {
+            "reserve": 1.27,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.018000000000000002
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-23",
+        "name": "Regional 23",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 0.05,
+        "material": "mica",
+        "energy": 0.8,
+        "gut": 0.1,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.56
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.47,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.018000000000000002,
+        "release_rate": 0.024,
+        "allocation_rate": 0.020999999999999998,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-24",
+        "name": "Regional 24",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.75,
+        "material": "fern",
+        "energy": 0.76,
+        "gut": 0.16,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.06,
+          "dorsal_capture_fraction": 0.5
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00076,
+        "activation_rate": 0.0062499999999999995,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.495,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.019,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.0225,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00035
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-25",
+        "name": "Regional 25",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 0.05,
+        "material": "mica",
+        "energy": 0.8,
+        "gut": 0.1,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.56
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.42,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.016,
+        "release_rate": 0.024,
+        "allocation_rate": 0.018,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-26",
+        "name": "Regional 26",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.75,
+        "material": "fern",
+        "energy": 0.76,
+        "gut": 0.16,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.06,
+          "dorsal_capture_fraction": 0.5
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00076,
+        "activation_rate": 0.0062499999999999995,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.445,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.017,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.0195,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00035
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-27",
+        "name": "Regional 27",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 3.15,
+        "material": "pip",
+        "energy": 0.82,
+        "gut": 0.08,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.64
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.69,
+        "reserve_capacity": 1.53,
+        "maintenance_rate": 0.0008,
+        "activation_rate": 0.0066,
+        "absorption_rate": 0.036,
+        "digestive_atp_rate": 0.0088,
+        "bite_rate": 0.076,
+        "maximum_bite": 0.038,
+        "mouth_radius": 0.047,
+        "fatigue_rise": 0.046,
+        "fatigue_recovery": 0.027999999999999997,
+        "structural_capacity": 0.36,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.47,
+        "gland_synthesis_rate": 0.0050999999999999995,
+        "secretion_rate": 0.018000000000000002,
+        "release_rate": 0.028,
+        "allocation_rate": 0.020999999999999998,
+        "brood_maturation_rate": 0.0022,
+        "brood_material_target": 0.26,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.061,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.12,
+          0.3,
+          0.58
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 3.0,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.028,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0119
+          },
+          "pools": {
+            "reserve": 1.27,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.036,
+            "tough_digestion": 0.009000000000000001,
+            "detritus_digestion": 0.01
+          },
+          "pools": {
+            "soft_tissue": 0.018000000000000002
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-28",
+        "name": "Regional 28",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 1.65,
+        "material": "lumen",
+        "energy": 0.79,
+        "gut": 0.11,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 1.04,
+          "axial_scale": 0.94,
+          "leg_length_scale": 1.18,
+          "antenna_length_scale": 1.32,
+          "frequency_scale": 0.94
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.42,
+          "dorsal_capture_fraction": 0.8
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.725,
+        "reserve_capacity": 1.35,
+        "maintenance_rate": 0.00084,
+        "activation_rate": 0.0052,
+        "absorption_rate": 0.039,
+        "digestive_atp_rate": 0.007,
+        "bite_rate": 0.081,
+        "maximum_bite": 0.041,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.049,
+        "fatigue_recovery": 0.022,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.495,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.019,
+        "release_rate": 0.024,
+        "allocation_rate": 0.0225,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0126,
+            "carbon_fixation": 0.0028
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.039,
+            "tough_digestion": 0.006,
+            "detritus_digestion": 0.012
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-29",
+        "name": "Regional 29",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 3.65,
+        "material": "silt",
+        "energy": 0.77,
+        "gut": 0.13,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 1.18,
+          "radial_scale": 1.12,
+          "density_scale": 1.17,
+          "friction_scale": 1.26,
+          "torque_scale": 1.14,
+          "frequency_scale": 0.82
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.19,
+          "dorsal_capture_fraction": 0.62
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00088,
+        "activation_rate": 0.005549999999999999,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.42,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.016,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.018,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105,
+            "carbon_fixation": 0.0011
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-30",
+        "name": "Regional 30",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.15,
+        "material": "bramble",
+        "energy": 0.81,
+        "gut": 0.09,
+        "fatigue": 0.04,
+        "articulated_traits": {
+          "body_scale": 0.86,
+          "axial_scale": 1.12,
+          "leg_radius_scale": 0.86,
+          "antenna_spread_scale": 1.38,
+          "sweep_scale": 1.16,
+          "frequency_scale": 1.16
+        },
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.035,
+          "dorsal_capture_fraction": 0.42
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.047,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.36,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.445,
+        "gland_synthesis_rate": 0.0050999999999999995,
+        "secretion_rate": 0.017,
+        "release_rate": 0.028,
+        "allocation_rate": 0.0195,
+        "brood_maturation_rate": 0.0022,
+        "brood_material_target": 0.26,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.061,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.12,
+          0.3,
+          0.58
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 3.0,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.028,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00018
+          },
+          "pools": {
+            "reserve": 1.27,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.018000000000000002
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-31",
+        "name": "Regional 31",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 0.05,
+        "material": "mica",
+        "energy": 0.8,
+        "gut": 0.1,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.0,
+          "dorsal_capture_fraction": 0.56
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.62,
+        "reserve_capacity": 1.4100000000000001,
+        "maintenance_rate": 0.00072,
+        "activation_rate": 0.0059,
+        "absorption_rate": 0.03,
+        "digestive_atp_rate": 0.0076,
+        "bite_rate": 0.066,
+        "maximum_bite": 0.044,
+        "mouth_radius": 0.043,
+        "fatigue_rise": 0.04,
+        "fatigue_recovery": 0.024,
+        "structural_capacity": 0.32,
+        "gland_capacity": 0.12,
+        "brood_capacity": 0.47,
+        "gland_synthesis_rate": 0.0045,
+        "secretion_rate": 0.018000000000000002,
+        "release_rate": 0.024,
+        "allocation_rate": 0.020999999999999998,
+        "brood_maturation_rate": 0.0018,
+        "brood_material_target": 0.24,
+        "brood_energy_target": 0.18,
+        "release_radius": 0.055,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.62,
+          0.28,
+          0.1
+        ],
+        "allocation_weights": {
+          "structure": 0.38,
+          "gland": 0.22,
+          "brood": 0.4
+        }
+      },
+      "exchange": {
+        "interval": 2.5,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.024,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0105
+          },
+          "pools": {
+            "reserve": 1.15,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.03,
+            "tough_digestion": 0.007,
+            "detritus_digestion": 0.014
+          },
+          "pools": {
+            "soft_tissue": 0.016
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    },
+    {
+      "body": {
+        "id": "regional-32",
+        "name": "Regional 32",
+        "position": [
+          0,
+          0,
+          0.2
+        ],
+        "heading": 5.75,
+        "material": "fern",
+        "energy": 0.76,
+        "gut": 0.16,
+        "fatigue": 0.04,
+        "metabolic_traits": {
+          "phototrophic_absorptivity": 0.06,
+          "dorsal_capture_fraction": 0.5
+        }
+      },
+      "mobile": {
+        "gut_capacity": 0.655,
+        "reserve_capacity": 1.4700000000000002,
+        "maintenance_rate": 0.00076,
+        "activation_rate": 0.0062499999999999995,
+        "absorption_rate": 0.033,
+        "digestive_atp_rate": 0.0082,
+        "bite_rate": 0.07100000000000001,
+        "maximum_bite": 0.047,
+        "mouth_radius": 0.045,
+        "fatigue_rise": 0.043000000000000003,
+        "fatigue_recovery": 0.026,
+        "structural_capacity": 0.34,
+        "gland_capacity": 0.13,
+        "brood_capacity": 0.495,
+        "gland_synthesis_rate": 0.0048,
+        "secretion_rate": 0.019,
+        "release_rate": 0.026000000000000002,
+        "allocation_rate": 0.0225,
+        "brood_maturation_rate": 0.002,
+        "brood_material_target": 0.25,
+        "brood_energy_target": 0.19,
+        "release_radius": 0.058,
+        "eat_activity_cost": 0.0014,
+        "secrete_activity_cost": 0.0018,
+        "allocate_activity_cost": 0.0016,
+        "exchange_load_decay_rate": 0.22,
+        "secretion_profile": [
+          0.2,
+          0.65,
+          0.15
+        ],
+        "allocation_weights": {
+          "structure": 0.42,
+          "gland": 0.22,
+          "brood": 0.36000000000000004
+        }
+      },
+      "exchange": {
+        "interval": 2.75,
+        "minimum_mass": 0.0012,
+        "maximum_mass": 0.026000000000000002,
+        "offset_radii": [
+          -1.7,
+          0.0,
+          -0.2
+        ],
+        "gut_rates": {
+          "mineral": 0.16,
+          "inorganic_carbon": 0.18,
+          "soft_tissue": 0.005,
+          "tough_tissue": 0.004,
+          "detritus": 0.032,
+          "reserve": 0.0025
+        },
+        "body_rates": {
+          "inorganic_carbon": 0.18
+        }
+      },
+      "founders": {
+        "body": {
+          "enzymes": {
+            "respiration": 0.0112,
+            "carbon_fixation": 0.00035
+          },
+          "pools": {
+            "reserve": 1.21,
+            "soft_tissue": 0.08,
+            "tough_tissue": 0.04,
+            "inorganic_carbon": 0.02
+          },
+          "atp": 0.78,
+          "atp_capacity": 1.05
+        },
+        "gut": {
+          "enzymes": {
+            "soft_digestion": 0.033,
+            "tough_digestion": 0.008,
+            "detritus_digestion": 0.016
+          },
+          "pools": {
+            "soft_tissue": 0.017
+          },
+          "atp": 0.07,
+          "atp_capacity": 0.17
+        },
+        "structure": {
+          "enzymes": {},
+          "pools": {
+            "tough_tissue": 0.025,
+            "soft_tissue": 0.006
+          },
+          "atp": 0.01,
+          "atp_capacity": 0.08
+        },
+        "gland": {
+          "enzymes": {},
+          "pools": {
+            "soft_tissue": 0.012,
+            "reserve": 0.006
+          },
+          "atp": 0.015,
+          "atp_capacity": 0.06
+        },
+        "brood": {
+          "enzymes": {},
+          "pools": {},
+          "atp": 0.0,
+          "atp_capacity": 0.5
+        }
+      }
+    }
+  ]
+}

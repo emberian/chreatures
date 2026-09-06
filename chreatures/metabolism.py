@@ -233,6 +233,28 @@ class MetabolicWeb:
     def split(self, parent: int, child: int, fraction: float) -> None:
         self._native.split(parent, child, float(fraction))
 
+    def expanded(
+        self,
+        enzymes: Sequence[Mapping[str, float]],
+        atp_capacity: Sequence[float],
+    ) -> MetabolicWeb:
+        """Return a private owner with appended empty rows and exact old state."""
+        if not 1 <= len(enzymes) <= 5 or len(atp_capacity) != len(enzymes):
+            raise ValueError("metabolic expansion requires 1..5 aligned rows")
+        capacities = np.ascontiguousarray(atp_capacity, dtype=np.float64)
+        if not np.isfinite(capacities).all() or np.any(capacities < 0):
+            raise ValueError("expanded ATP capacities must be finite and nonnegative")
+        instance = object.__new__(type(self))
+        instance.chemistry = self.chemistry
+        instance.count = self.count + len(enzymes)
+        instance._native = self._native.expanded(
+            self.chemistry.enzymes(enzymes), capacities
+        )
+        instance.program_sha256 = str(instance._native.program_sha256)
+        if instance.program_sha256 != self.program_sha256:
+            raise RuntimeError("metabolic program changed during row expansion")
+        return instance
+
     def pay_work(self, row: int, amount: float) -> None:
         self._native.pay_work(row, float(amount))
 

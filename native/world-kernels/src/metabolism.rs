@@ -264,6 +264,66 @@ impl MetabolicCohort {
         self.time
     }
 
+    fn expanded(
+        &self,
+        enzyme_activity: PyReadonlyArray2<'_, f64>,
+        atp_capacity: PyReadonlyArray1<'_, f64>,
+    ) -> PyResult<Self> {
+        let shape = enzyme_activity.shape();
+        if shape.len() != 2
+            || shape[1] != self.r
+            || !(1..=5).contains(&shape[0])
+            || self.n + shape[0] > 4096
+            || atp_capacity.shape() != [shape[0]]
+        {
+            return Err(PyValueError::new_err(
+                "metabolism expansion dimensions differ",
+            ));
+        }
+        let new_enzymes = enzyme_activity.as_slice()?;
+        let new_capacity = atp_capacity.as_slice()?;
+        if !finite_nonnegative(new_enzymes) || !finite_nonnegative(new_capacity) {
+            return Err(PyValueError::new_err(
+                "metabolism expansion values must be finite and nonnegative",
+            ));
+        }
+        let added = shape[0];
+        let mut enzymes = self.enzyme_activity.clone();
+        enzymes.extend_from_slice(new_enzymes);
+        let mut pools = self.pools.clone();
+        pools.resize((self.n + added) * self.k, 0.0);
+        let mut atp = self.atp.clone();
+        atp.resize(self.n + added, 0.0);
+        let mut capacities = self.atp_capacity.clone();
+        capacities.extend_from_slice(new_capacity);
+        let mut ledger = self.cumulative_ledger.clone();
+        ledger.resize((self.n + added) * 6, 0.0);
+        Ok(Self {
+            n: self.n + added,
+            r: self.r,
+            k: self.k,
+            e: self.e,
+            stoich: self.stoich.clone(),
+            elements: self.elements.clone(),
+            chemical_energy: self.chemical_energy.clone(),
+            atp_cost: self.atp_cost.clone(),
+            atp_yield: self.atp_yield.clone(),
+            photon_cost: self.photon_cost.clone(),
+            half_saturation: self.half_saturation.clone(),
+            base_rates: self.base_rates.clone(),
+            reaction_heat: self.reaction_heat.clone(),
+            enzyme_activity: enzymes,
+            pools,
+            atp,
+            atp_capacity: capacities,
+            bulk_pool: self.bulk_pool.clone(),
+            bulk_atp: self.bulk_atp,
+            time: self.time,
+            cumulative_ledger: ledger,
+            program_sha256: self.program_sha256.clone(),
+        })
+    }
+
     #[getter]
     fn cumulative_ledger<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray2<f64>> {
         Array2::from_shape_vec((self.n, 6), self.cumulative_ledger.clone())

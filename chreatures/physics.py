@@ -24,6 +24,7 @@ import numpy as np
 
 from .mechanics import assembly_view, equality_xml, normalize_assemblies
 from .native_world import NativeContactBatch
+from .organism_interface import ACTION_NAMES
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -42,6 +43,10 @@ _MUTABLE_MODEL_FIELDS = (
 )
 
 
+class BirthSpaceOccupied(ValueError):
+    """A legal newborn cannot occupy the proposed local physical pose."""
+
+
 @dataclass
 class TopologyTransaction:
     """A validated, precompiled topology replacement awaiting atomic commit."""
@@ -50,7 +55,10 @@ class TopologyTransaction:
     expected_revision: int
     candidate: "PhysicsWorld"
     operations: tuple[dict[str, Any], ...]
+    expected_state_sha256: str
+    born_resident_id: str | None = None
     _committed: bool = False
+    _discarded: bool = False
 
     def penetrations(
         self, entity_ids: set[str] | list[str] | tuple[str, ...], tolerance: float = 1e-6,
@@ -62,8 +70,8 @@ class TopologyTransaction:
         detection so a cold authored pose cannot decide whether a new object can
         be inserted into a developed world.
         """
-        if self._committed:
-            raise RuntimeError("topology transaction was already committed")
+        if self._committed or self._discarded:
+            raise RuntimeError("topology transaction is no longer active")
         tolerance = _number(tolerance, "penetration tolerance", 0.0, 0.05)
         selected = set(entity_ids)
         if not selected or any(
@@ -126,10 +134,12 @@ class TopologyTransaction:
         return hits
 
     def commit(self) -> dict[str, Any]:
-        if self._committed:
-            raise RuntimeError("topology transaction was already committed")
+        if self._committed or self._discarded:
+            raise RuntimeError("topology transaction is no longer active")
         if self.world.model_revision != self.expected_revision:
             raise RuntimeError("topology transaction is stale")
+        if self.world._integration_state_sha256() != self.expected_state_sha256:
+            raise RuntimeError("topology transaction is stale after physical state changed")
         replaced = {
             operation["id"] for operation in self.operations if operation["op"] == "replace"
         }
@@ -139,7 +149,15 @@ class TopologyTransaction:
             "model_revision": self.world.model_revision,
             "model_signature": self.world._model_signature,
             "entity_count": len(self.world._entities),
+            "resident_id": self.born_resident_id,
+            "resident_count": len(self.world.bodies),
         }
+
+    def rollback(self) -> None:
+        """Discard a prepared candidate; the active world was never modified."""
+        if self._committed or self._discarded:
+            raise RuntimeError("topology transaction is no longer active")
+        self._discarded = True
 
 
 def _number(value: Any, name: str, low: float | None = None, high: float | None = None) -> float:
@@ -197,6 +215,12 @@ class PhysicsBody:
     energy: float = 0.78
     gut: float = 0.12
     fatigue: float = 0.05
+    structural_integrity: float = 1.0
+    development_fraction: float = 0.0
+    gland_fill: float = 0.0
+    brood_fill: float = 0.0
+    reproductive_maturity: float = 0.0
+    exchange_load: float = 0.0
     speed: float = 0.0
     angular_velocity: float = 0.0
     age: float = 0.0
@@ -268,6 +292,7 @@ class PhysicsWorld:
         self._physiology: Any | None = None
         self._active_effort_scale = {body["id"]: 1.0 for body in self.spec["bodies"]}
         self._step_contact_samples: dict[tuple[Any, ...], dict[str, Any]] = {}
+        self._action_cohort = np.empty((len(self.spec["bodies"]), len(ACTION_NAMES)), dtype=np.float32)
         self.model_revision = 0
         self._light = {"position": [6.0, 4.0, 3.0], "intensity": 0.0, "remaining": 0.0, "color": [1.0, 0.94, 0.78]}
         self._compile_model()
@@ -704,6 +729,7 @@ class PhysicsWorld:
         entity_slot = {value: index for index, value in enumerate(self._contact_entity_ids)}
         geom_resident = np.full(self.model.ngeom, -1, dtype=np.int32)
         geom_entity = np.full(self.model.ngeom, -1, dtype=np.int32)
+        geom_shape = np.full(self.model.ngeom, -1, dtype=np.int32)
         self._contact_geom_names: list[str] = []
         self._contact_shape_indices: list[int | None] = []
         for geom_id in range(self.model.ngeom):
@@ -715,11 +741,13 @@ class PhysicsWorld:
                 geom_resident[geom_id] = resident_slot[resident_id]
             if entity_id is not None:
                 geom_entity[geom_id] = entity_slot[entity_id]
-                self._contact_shape_indices.append(int(name.rsplit(":", 1)[1]))
+                shape_index = int(name.rsplit(":", 1)[1])
+                geom_shape[geom_id] = shape_index
+                self._contact_shape_indices.append(shape_index)
             else:
                 self._contact_shape_indices.append(None)
         self._native_contacts.bind_metadata(
-            geom_resident, geom_entity,
+            geom_resident, geom_entity, geom_shape,
             np.asarray([self._body_mj[value] for value in self._contact_resident_ids], dtype=np.int32),
         )
 
@@ -1200,51 +1228,52 @@ class PhysicsWorld:
         if set(actions) - ids:
             raise ValueError("action refers to an unknown body")
         limits = {
-            "forward": (-1.0, 1.0), "thrust": (-1.0, 1.0),
-            "turn": (-1.0, 1.0), "yaw": (-1.0, 1.0), "eat": (0.0, 1.0),
-            "grip": (0.0, 1.0), "gaze_pitch": (-1.0, 1.0),
-            "lift": (-1.0, 1.0), "vertical": (-1.0, 1.0), "posture": (-1.0, 1.0),
+            "thrust": (-1.0, 1.0), "yaw": (-1.0, 1.0),
+            "gaze_pitch": (-1.0, 1.0), "posture": (-1.0, 1.0),
+            "grip": (0.0, 1.0),
             "signal_low": (0.0, 1.0), "signal_mid": (0.0, 1.0), "signal_high": (0.0, 1.0),
+            "eat": (0.0, 1.0), "release": (0.0, 1.0),
+            "secrete": (0.0, 1.0), "allocate": (0.0, 1.0),
         }
         clean: dict[str, dict[str, Any]] = {}
         for body_id, action in actions.items():
-            if not isinstance(action, dict) or set(action) - (set(limits) | {"signal"}):
-                raise ValueError("invalid action schema")
+            if not isinstance(action, dict) or set(action) != set(ACTION_NAMES):
+                raise ValueError("resident action must provide the twelve current channels")
             clean[body_id] = {}
             for name, value in action.items():
-                if name == "signal":
-                    if isinstance(value, (list, tuple)):
-                        clean[body_id][name] = [
-                            _number(v, f"signal[{index}]", 0.0, 1.0)
-                            for index, v in enumerate(_vector(value, 3, "signal", 1.0))
-                        ]
-                    else:
-                        clean[body_id][name] = _number(value, name, 0.0, 1.0)
-                    continue
                 low, high = limits[name]
                 clean[body_id][name] = _number(value, name, low, high)
-            if "lift" in action and "vertical" in action:
-                raise ValueError("use either lift or vertical, not both")
-            if "forward" in action and "thrust" in action:
-                raise ValueError("use either forward or thrust, not both")
-            if "turn" in action and "yaw" in action:
-                raise ValueError("use either turn or yaw, not both")
-            if "signal" in action and set(action) & {"signal_low", "signal_mid", "signal_high"}:
-                raise ValueError("use either signal vector or named signal channels")
         return clean, step
 
     def advance(self, actions: dict[str, dict[str, Any]], dt: float = MODEL_DT) -> dict[str, dict[str, float]]:
         clean, step = self._validate_actions(actions, dt)
+        if self._action_cohort.shape != (len(self.bodies), len(ACTION_NAMES)):
+            self._action_cohort = np.empty(
+                (len(self.bodies), len(ACTION_NAMES)), dtype=np.float32,
+            )
+        for row, body in enumerate(self.bodies):
+            action = clean.get(body.id, {})
+            self._action_cohort[row] = (
+                action.get("thrust", action.get("forward", 0.0)),
+                action.get("yaw", action.get("turn", 0.0)),
+                action.get("gaze_pitch", 0.0),
+                action.get("posture", action.get("vertical", action.get("lift", 0.0))),
+                action.get("grip", 0.0),
+                action.get("signal_low", 0.0),
+                action.get("signal_mid", 0.0),
+                action.get("signal_high", 0.0),
+                action.get("eat", 0.0), action.get("release", 0.0),
+                action.get("secrete", 0.0), action.get("allocate", 0.0),
+            )
         if self._physiology is None:
             self._active_effort_scale = {body.id: 1.0 for body in self.bodies}
         else:
-            scales = self._physiology.begin_step(copy.deepcopy(clean), step)
-            ids = {body.id for body in self.bodies}
-            if not isinstance(scales, dict) or set(scales) != ids:
-                raise ValueError("physiology begin_step must return every resident effort scale")
+            scales = np.asarray(self._physiology.begin_step(self._action_cohort, step), dtype=np.float64)
+            if scales.shape != (len(self.bodies),) or not np.isfinite(scales).all():
+                raise ValueError("physiology begin_step must return one finite scale per resident")
             self._active_effort_scale = {
-                body_id: _number(value, "physiology effort scale", 0.0, 1.0)
-                for body_id, value in scales.items()
+                body.id: _number(scales[index], "physiology effort scale", 0.0, 1.0)
+                for index, body in enumerate(self.bodies)
             }
         starts = {body.id: np.array([body.x, body.y, body.z]) for body in self.bodies}
         outcomes = {
@@ -1255,6 +1284,9 @@ class PhysicsWorld:
         self._contact_normals = {body.id: [] for body in self.bodies}
         contacted_entities = {body.id: set() for body in self.bodies}
         self._step_contact_samples = {}
+        self._native_contacts.begin_tick(
+            int(self.spec.get("limits", {}).get("contact_samples", 512))
+        )
         mechanical_work = {body.id: 0.0 for body in self.bodies}
         self.signals = [signal for signal in self.signals if self._age_signal(signal, step)]
         for body in self.bodies:
@@ -1330,6 +1362,7 @@ class PhysicsWorld:
         # describe the same instant as the integration state.
         mujoco.mj_forward(self.model, self.data)
         self._sync_public_state()
+        self._packed_contacts = self._native_contacts.finish_tick()
 
         for body in self.bodies:
             action = clean.get(body.id, {})
@@ -1362,8 +1395,25 @@ class PhysicsWorld:
             if self._physiology is not None:
                 outcomes[body.id]["mechanical_work"] = mechanical_work[body.id]
         if self._physiology is not None:
+            position = np.asarray(
+                [self.data.xpos[self._body_mj[body.id]] for body in self.bodies], dtype=np.float64,
+            )
+            rotation = np.asarray(
+                [self.data.xmat[self._body_mj[body.id]].reshape(3, 3) for body in self.bodies],
+                dtype=np.float64,
+            )
+            velocity = np.asarray([body.linear_velocity for body in self.bodies], dtype=np.float64)
+            angular = np.asarray([body.angular_velocity3d for body in self.bodies], dtype=np.float64)
+            speed = np.einsum("bi,bi->b", velocity, rotation[:, :, 0])
+            turn = angular[:, 2]
             self._physiology.finish_step(
-                copy.deepcopy(clean), outcomes, list(self._step_contact_samples.values()), step,
+                self._action_cohort, outcomes, contacts=self._packed_contacts,
+                kinematics=(
+                    position, rotation,
+                    np.asarray([body.radius for body in self.bodies], dtype=np.float64),
+                    speed, turn,
+                ),
+                dt=step,
             )
         self.time = float(self.data.time)
         self._sync_public_state()
@@ -1503,7 +1553,7 @@ class PhysicsWorld:
         (
             first_ids, second_ids, points, normals, relative_speeds, impulses, impact_work,
             contact_force_norm, participant_resident, participant_entity,
-            participant_side, _participant_normals,
+            participant_side,
         ) = self._native_contacts.evaluate(
             self.model, self.data, self.model.opt.timestep,
             float(self.spec.get("limits", {}).get("acoustic_impulse", 10.0)),
@@ -1514,32 +1564,6 @@ class PhysicsWorld:
             first, second = int(first_ids[index]), int(second_ids[index])
             point = points[index]
             world_normal = normals[index]
-            resident_ids = sorted({
-                self._contact_resident_ids[slot] for slot in participant_resident[index]
-                if slot >= 0
-            })
-            if self._physiology is not None and resident_ids and len(self._step_contact_samples) < int(
-                self.spec.get("limits", {}).get("contact_samples", 512)
-            ):
-                names = [self._contact_geom_names[first], self._contact_geom_names[second]]
-                entity_ids = [self._geom_entity.get(first), self._geom_entity.get(second)]
-                shape_indices = [self._contact_shape_indices[first], self._contact_shape_indices[second]]
-                for resident_id in resident_ids:
-                    if len(self._step_contact_samples) >= int(
-                        self.spec.get("limits", {}).get("contact_samples", 512)
-                    ):
-                        break
-                    key = (
-                        resident_id, first, second,
-                        *(round(float(value), 4) for value in point),
-                    )
-                    self._step_contact_samples.setdefault(key, {
-                        "resident_id": resident_id,
-                        "participant_resident_ids": resident_ids,
-                        "geom_ids": [first, second], "geom_names": names,
-                        "entity_ids": entity_ids, "entity_shape_indices": shape_indices,
-                        "point": point.astype(float).tolist(),
-                    })
             if self._acoustics is not None:
                 for entity_id in {
                     value for value in (self._geom_entity.get(first), self._geom_entity.get(second))
@@ -1634,6 +1658,82 @@ class PhysicsWorld:
         candidate = type(self)(seed=self.seed, spec=candidate_spec)
         return TopologyTransaction(
             self, self.model_revision, candidate, tuple(copy.deepcopy(operations)),
+            self._integration_state_sha256(),
+        )
+
+    def _integration_state_sha256(self) -> str:
+        """Fingerprint MuJoCo integration state for prepared-transaction staleness."""
+        state = np.empty(mujoco.mj_stateSize(self.model, STATE_SPEC), dtype=np.float64)
+        mujoco.mj_getState(self.model, self.data, state, STATE_SPEC)
+        return hashlib.sha256(state.tobytes()).hexdigest()
+
+    def _copy_current_joint_state_to(self, candidate: "PhysicsWorld") -> None:
+        """Copy all shared named joints into a private compiled candidate."""
+        for joint_id in range(self.model.njnt):
+            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_JOINT, joint_id)
+            if not name:
+                continue
+            target = mujoco.mj_name2id(candidate.model, mujoco.mjtObj.mjOBJ_JOINT, name)
+            if target < 0:
+                continue
+            joint_type = int(self.model.jnt_type[joint_id])
+            qn = 7 if joint_type == int(mujoco.mjtJoint.mjJNT_FREE) else 4 if joint_type == int(mujoco.mjtJoint.mjJNT_BALL) else 1
+            vn = 6 if joint_type == int(mujoco.mjtJoint.mjJNT_FREE) else 3 if joint_type == int(mujoco.mjtJoint.mjJNT_BALL) else 1
+            qa, da = int(self.model.jnt_qposadr[joint_id]), int(self.model.jnt_dofadr[joint_id])
+            tq, td = int(candidate.model.jnt_qposadr[target]), int(candidate.model.jnt_dofadr[target])
+            candidate.data.qpos[tq : tq + qn] = self.data.qpos[qa : qa + qn]
+            candidate.data.qvel[td : td + vn] = self.data.qvel[da : da + vn]
+        candidate.data.time = self.data.time
+
+    def prepare_resident_birth(self, body_spec: dict[str, Any]) -> TopologyTransaction:
+        """Precompile one appended resident and reject an occupied birth pose.
+
+        Preparation is private and does not debit biology or mutate the active
+        world. The caller may discard the returned transaction freely. Commit
+        is guarded by both model revision and MuJoCo integration state.
+        """
+        from .organism_interface import MAX_RESIDENTS
+
+        if not isinstance(body_spec, dict):
+            raise ValueError("resident birth requires a body specification")
+        if len(self.spec["bodies"]) >= MAX_RESIDENTS:
+            raise ValueError("resident capacity exceeded")
+        resident_id = body_spec.get("id")
+        if (
+            not isinstance(resident_id, str) or not _ID.match(resident_id)
+            or resident_id in self._body_mj or resident_id in self._entity_mj
+        ):
+            raise ValueError("resident birth requires one new valid id")
+        candidate_spec = copy.deepcopy(self.spec)
+        candidate_spec["bodies"].append(copy.deepcopy(body_spec))
+        candidate = type(self)(seed=self.seed, spec=candidate_spec)
+        self._copy_current_joint_state_to(candidate)
+        mujoco.mj_forward(candidate.model, candidate.data)
+        new_geoms = {
+            geom_id for geom_id, owner in candidate._geom_resident.items()
+            if owner == resident_id
+        }
+        collisions = []
+        for index in range(candidate.data.ncon):
+            contact = candidate.data.contact[index]
+            first, second = int(contact.geom1), int(contact.geom2)
+            if (
+                float(contact.dist) < -1e-6
+                and (first in new_geoms) != (second in new_geoms)
+            ):
+                other = second if first in new_geoms else first
+                collisions.append(
+                    mujoco.mj_id2name(candidate.model, mujoco.mjtObj.mjOBJ_GEOM, other)
+                    or f"geom:{other}"
+                )
+        if collisions:
+            raise BirthSpaceOccupied(
+                f"resident birth pose is occupied by {', '.join(sorted(set(collisions)))}"
+            )
+        operation = {"op": "birth", "body": copy.deepcopy(body_spec)}
+        return TopologyTransaction(
+            self, self.model_revision, candidate, (operation,),
+            self._integration_state_sha256(), resident_id,
         )
 
     def _adopt_topology_candidate(
@@ -1693,9 +1793,19 @@ class PhysicsWorld:
             setattr(self, name, getattr(candidate, name))
         if hasattr(candidate, "_leg_joints"):
             self._leg_joints = candidate._leg_joints
+        for name in (
+            "_resident_articulation", "_resident_morphology_hashes", "_leg_joints",
+            "_tarsus_geoms", "_articulated_links", "_articulated_sites",
+        ):
+            if hasattr(candidate, name):
+                setattr(self, name, getattr(candidate, name))
+        old_grips = self._grips
         self._grips = {
-            body_id: entity_id if entity_id in self._entity_mj else None
-            for body_id, entity_id in self._grips.items()
+            body["id"]: (
+                old_grips.get(body["id"])
+                if old_grips.get(body["id"]) in self._entity_mj else None
+            )
+            for body in self.spec["bodies"]
         }
         if self._hand is not None and self._hand.get("entity_id") not in self._entity_mj:
             self._hand = None
@@ -1718,8 +1828,24 @@ class PhysicsWorld:
         self.bodies = self._make_bodies()
         for body in self.bodies:
             if body.id in old_bodies:
-                for key in ("energy", "gut", "fatigue", "age", "gaze_pitch"):
+                for key in (
+                    "energy", "gut", "fatigue", "structural_integrity",
+                    "development_fraction", "gland_fill", "brood_fill",
+                    "reproductive_maturity", "exchange_load", "age", "gaze_pitch",
+                ):
                     setattr(body, key, old_bodies[body.id][key])
+        body_ids = [body.id for body in self.bodies]
+        self._touch = {body_id: self._touch.get(body_id, [0.0, 0.0]) for body_id in body_ids}
+        self._contact_normals = {
+            body_id: self._contact_normals.get(body_id, []) for body_id in body_ids
+        }
+        self._signal_cooldown = {
+            body_id: self._signal_cooldown.get(body_id, 0.0) for body_id in body_ids
+        }
+        self._active_effort_scale = {
+            body_id: self._active_effort_scale.get(body_id, 1.0) for body_id in body_ids
+        }
+        self._action_cohort = np.empty((len(body_ids), len(ACTION_NAMES)), dtype=np.float32)
         self._components = {entity["id"]: copy.deepcopy(entity.get("components", [])) for entity in self._entities}
         for entity_id in (self._components.keys() & old_components.keys()) - replaced_entities:
             self._components[entity_id] = old_components[entity_id]
@@ -1739,7 +1865,11 @@ class PhysicsWorld:
         mujoco.mj_forward(self.model, self.data)
         self._sync_public_state()
         self.model_revision += 1
+        self._native_contacts = NativeContactBatch(max(256, int(self.model.nconmax)))
         self._bind_contact_metadata()
+        native_actuation_hook = getattr(self, "_prepare_native_actuation", None)
+        if callable(native_actuation_hook):
+            native_actuation_hook()
         hook = getattr(self, "_prepare_fast_articulation", None)
         if callable(hook):
             hook()
@@ -1884,7 +2014,11 @@ class PhysicsWorld:
         self.bodies = self._make_bodies()
         for body in self.bodies:
             if body.id in old_bodies:
-                for key in ("energy", "gut", "fatigue", "age", "gaze_pitch"):
+                for key in (
+                    "energy", "gut", "fatigue", "structural_integrity",
+                    "development_fraction", "gland_fill", "brood_fill",
+                    "reproductive_maturity", "exchange_load", "age", "gaze_pitch",
+                ):
                     setattr(body, key, old_bodies[body.id][key])
         self._components = {entity["id"]: copy.deepcopy(entity.get("components", [])) for entity in self._entities}
         for entity_id in self._components.keys() & old_components.keys():
@@ -2041,7 +2175,15 @@ class PhysicsWorld:
         if set(world._components) != entity_ids or set(world._resonance) != entity_ids:
             raise ValueError("snapshot entity component identities differ")
         for body in world.bodies:
-            if any(not 0.0 <= _number(getattr(body, field), field) <= 1.0 for field in ("energy", "gut", "fatigue")):
+            normalized_body_fields = (
+                "energy", "gut", "fatigue", "structural_integrity",
+                "development_fraction", "gland_fill", "brood_fill",
+                "reproductive_maturity", "exchange_load",
+            )
+            if any(
+                not 0.0 <= _number(getattr(body, field), field) <= 1.0
+                for field in normalized_body_fields
+            ):
                 raise ValueError("snapshot physiology is outside [0, 1]")
             _number(body.age, "age", 0.0, 1e12)
             _number(body.gaze_pitch, "gaze pitch", -1.0, 1.0)

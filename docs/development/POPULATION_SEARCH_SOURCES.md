@@ -65,19 +65,25 @@ This makes these edges distinct:
   records reject checkpoint, RNG, optimizer, memory, history, rates, and other
   private-state fields. An optional `inherited_law_fit` edge can name a completed
   prior GAM fit; this records an explicit later genome birth rather than changing
-  the evaluated resident in place.
+  the evaluated resident in place. Candidate fields retain the current graph,
+  ports, base controller, developmental base, population-adapter bank, organism
+  interface, and adapter shape identities from native `population-core`.
 - `environment_parent` joins immutable topology/resource/profile artifacts.
 - `physical_parent_birth` records embodied reproduction, while
   `experimental_initialization` births have no physical-parent edge.
 - `life_continuation` is a single non-branching chain from birth through zero or
   more checkpoints to one terminal evaluation. A terminal evaluation ID can
   appear only once as `evaluation_completed` or `evaluation_failed`.
+- A pre-allocation `evaluation_failed` has `allocation_status: not_allocated`
+  and a `planned_campaign` edge in place of `life_continuation`. It retains the
+  planned life identity without inventing a birth.
 
 Descriptor epochs form an immediate predecessor chain. Each
 `environment_probe_panel` belongs to one epoch and carries the ordered, unique
 policy-artifact hashes. Environments and evaluations identify that frozen panel.
 Archive decisions point to terminal evaluations, including explicit rejection of
-failed candidates. Transfer trials point to separate source and target terminal
+failed candidates. Every terminal evaluation has exactly one archive decision.
+Transfer trials point to separate source and target terminal
 evaluations and assert that the target result was measured before fine-tuning.
 Completed and failed GAM fits are both retained; only a completed fit may carry a
 `gam_law` blob.
@@ -87,6 +93,14 @@ search snapshots, trajectories, fitted laws, and arrays remain external. Their
 ledger entries use `urn:sha256:<digest>` blob references with sizes and media
 types where known. Weave publication is read-only evidence processing and cannot
 advance, merge, or restore a life.
+
+A terminal evaluation carries both `evaluation_result` and `evaluation_trace`
+blob roles. The trace is the canonical per-life receipt hashed by the evaluator:
+it joins the planned life fields to the verified trajectory snapshot and metrics
+for a completion, or to the partial trajectory, checkpoint, and traceback
+receipts for a failure. A failure before any committed tick remains terminal with
+`committed_ticks: 0`, no birth, and no `descriptor`, `cell`, or `quality`. A
+completed evaluation must have at least one committed tick.
 
 Campaign workers emit append-only batch files with format
 `chreatures-population-evidence-batch-v1`. A build applies each `batch_id` once,
@@ -113,7 +127,26 @@ fails if a successful or failed candidate was omitted, relabeled, attached to a
 different genome/environment, or given a different admission result.
 
 The native population search state has no wall clock or life/checkpoint ownership.
-The Python normalizers can convert authenticated native Genome, EnvironmentGenome,
-and terminal Evaluation material, but the campaign coordinator must supply the
-actual evidence time, life ID, birth, continuation edge, and blob receipt. Missing
-life provenance is never invented from archive state.
+`record_population_campaign.py` joins it to sealed evaluator outputs and their
+checkpoint directories. Pass the campaign manifest as `--probe-panel`; the
+recorder extracts and authenticates the exact panel whose content hash is frozen
+in the native search config:
+
+```sh
+python scripts/record_population_campaign.py \
+  --search-state runs/population/wave-1/search.json \
+  --probe-panel runs/population/wave-1/campaign.json \
+  --evaluation-run runs/population/evaluations/batch-000000 \
+  --ledger runs/population/wave-1/evidence.json \
+  --campaign-id population-wave-1 \
+  --description "Population wave 1 physical evidence"
+```
+
+The recorder verifies the native state, evaluator identity and terminal content
+hashes, the immutable failure copy, every checkpoint component, the latest
+pointer, environment identity, and each per-life trace preimage. A step-zero
+coupled checkpoint is the allocation proof that creates a `birth`; an identity
+plan alone never does. Each content
+batch is applied at most once, and rerunning the same inputs reports `unchanged`.
+The native adapter then serializes and reloads the full graph before the ledger is
+replaced. Missing life provenance is never inferred from archive state.

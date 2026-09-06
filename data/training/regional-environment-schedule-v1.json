@@ -1,0 +1,20 @@
+{
+  "format": "chreatures-regional-environment-schedule-v1",
+  "version": 1,
+  "selector": "environment-genome-round-robin-v1",
+  "resident_count": 8,
+  "training": [
+    {"archetype": "terraced-delta", "seed": 20260920, "epoch": 0, "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"},
+    {"archetype": "vaulted-courts", "seed": 20260921, "epoch": 0, "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"},
+    {"archetype": "braided-ridges", "seed": 20260922, "epoch": 0, "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"},
+    {"archetype": "sheltered-basin", "seed": 20260923, "epoch": 0, "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"},
+    {"archetype": "terraced-delta", "seed": 20260924, "epoch": 0, "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"},
+    {"archetype": "braided-ridges", "seed": 20260925, "epoch": 0, "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"}
+  ],
+  "heldout": [
+    {"archetype": "terraced-delta", "seed": 31260920, "epoch": 0, "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"},
+    {"archetype": "vaulted-courts", "seed": 31260921, "epoch": 0, "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"},
+    {"archetype": "braided-ridges", "seed": 31260922, "epoch": 0, "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"},
+    {"archetype": "sheltered-basin", "seed": 31260923, "epoch": 0, "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"}
+  ]
+}

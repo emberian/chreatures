@@ -1,36 +1,61 @@
-//! Seeded build-time generation of connected nursery habitats.
+//! Native build-time generation of inherited regional habitat genomes.
 //!
-//! Runtime organisms never receive the designer graph.  This kernel transforms
-//! exact immutable habitat and biosphere templates and emits separate analyst
-//! metadata for reproducibility and reachability review.
+//! Geometry, finite resource founders, and resident placement are emitted into
+//! ordinary physical/biosphere templates. The designer graph and ancestry record
+//! are returned separately and are never controller inputs.
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 
-const FORMAT: &str = "chreatures-nursery-family-v1";
-const ANALYST_FORMAT: &str = "chreatures-nursery-analyst-v1";
-const MAX_NODES: usize = 32;
-const MAX_EDGES: usize = 64;
+const FORMAT: &str = "chreatures-regional-habitat-family-v1";
+const GENOME_FORMAT: &str = "chreatures-environment-genome-v1";
+const RESIDENT_FORMAT: &str = "chreatures-regional-residents-v1";
+const ANALYST_FORMAT: &str = "chreatures-regional-analyst-v1";
+const RECORD_FORMAT: &str = "chreatures-environment-record-v1";
+const MAX_REGIONS: usize = 48;
+const MAX_EDGES: usize = 128;
+const MAX_RESIDENTS: usize = 32;
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Variation {
-    horizontal_jitter_m: f64,
-    elevation_jitter_m: f64,
+struct ScalarRange {
+    min: f64,
+    max: f64,
 }
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Limits {
-    minimum_ramp_width_m: f64,
+struct IntegerRange {
+    min: usize,
+    max: usize,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Capacity {
+    residents: IntegerRange,
+    regions: IntegerRange,
+    width_m: ScalarRange,
+    height_m: ScalarRange,
+    depth_m: ScalarRange,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Geometry {
+    margin_m: f64,
+    platform_half_size_m: ScalarRange,
+    platform_thickness_m: f64,
+    ramp_width_m: ScalarRange,
     maximum_rise_over_run: f64,
     minimum_underpass_clearance_m: f64,
-    platform_thickness_m: f64,
     minimum_spawn_clearance_m: f64,
+    boundary_height_m: f64,
+    boundary_thickness_m: f64,
 }
 
 #[derive(Clone, Deserialize)]
@@ -38,7 +63,7 @@ struct Limits {
 struct CatchmentSpec {
     id: String,
     surface_height_m: f64,
-    half_size_m: [f64; 2],
+    margin_m: f64,
     thickness_m: f64,
     wall_height_m: f64,
     material: String,
@@ -47,35 +72,48 @@ struct CatchmentSpec {
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct NodeSpec {
-    position_m: [f64; 3],
-    half_size_m: [f64; 2],
+struct MutationSpec {
+    operator: String,
+    recipe_sha256: String,
+    scalar_fraction: f64,
+    integer_delta: usize,
+    resident_delta: usize,
 }
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct EdgeSpec {
-    nodes: [usize; 2],
-    width_m: f64,
+struct MechanismCluster {
+    entity_ids: Vec<String>,
+    anchor_m: [f64; 3],
 }
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct FamilySpec {
+struct Archetype {
     id: String,
-    nodes: Vec<NodeSpec>,
-    edges: Vec<EdgeSpec>,
-    underpass_nodes: Vec<usize>,
-    canopy_nodes: Vec<usize>,
-    landmark_nodes: Vec<usize>,
-    gate_node: usize,
+    region_count: IntegerRange,
+    lane_count: IntegerRange,
+    width_m: ScalarRange,
+    height_m: ScalarRange,
+    depth_m: ScalarRange,
+    elevation_span_m: ScalarRange,
+    loop_fraction: ScalarRange,
+    shelter_fraction: ScalarRange,
+    underpass_fraction: ScalarRange,
+    landmark_fraction: ScalarRange,
+    resource_scale: ScalarRange,
+    movable_count: IntegerRange,
+    terrace_bias: ScalarRange,
 }
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct TrainingVariant {
-    family: String,
+struct TrainingSeed {
+    archetype: String,
     seed: u64,
+    resident_count: usize,
+    epoch: u64,
+    profile_sha256: String,
 }
 
 #[derive(Clone, Deserialize)]
@@ -84,29 +122,97 @@ struct Config {
     format: String,
     habitat_template_sha256: String,
     biosphere_template_sha256: String,
-    terrain_entity_ids: Vec<String>,
-    variation: Variation,
-    limits: Limits,
+    replace_entity_ids: Vec<String>,
+    mechanism_clusters: Vec<MechanismCluster>,
+    movable_template_ids: Vec<String>,
+    capacity: Capacity,
+    geometry: Geometry,
     catchment: CatchmentSpec,
-    families: Vec<FamilySpec>,
-    training_variants: Vec<TrainingVariant>,
+    mutation: MutationSpec,
+    archetypes: Vec<Archetype>,
+    training_genomes: Vec<TrainingSeed>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Variation {
+    operator: String,
+    seed: u64,
+    recipe_sha256: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Parameters {
+    archetype: String,
+    seed: u64,
+    resident_count: usize,
+    dimensions_m: [f64; 3],
+    region_count: usize,
+    lane_count: usize,
+    elevation_span_m: f64,
+    loop_fraction: f64,
+    shelter_fraction: f64,
+    underpass_fraction: f64,
+    landmark_fraction: f64,
+    resource_scale: f64,
+    movable_count: usize,
+    terrace_bias: f64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Genome {
+    format: String,
+    version: u64,
+    sha256: String,
+    parents: Vec<String>,
+    variation: Variation,
+    epoch: u64,
+    profile_sha256: String,
+    parameters: Parameters,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ResidentBundle {
+    format: String,
+    residents: Vec<ResidentFounder>,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ResidentFounder {
+    body: Value,
+    mobile: Value,
+    exchange: Value,
+    founders: FounderCompartments,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct FounderCompartments {
+    body: Value,
+    gut: Value,
+    structure: Value,
+    gland: Value,
+    brood: Value,
 }
 
 #[derive(Clone)]
 struct Node {
     position: [f64; 3],
     half_size: [f64; 2],
+    lane: usize,
 }
 
 struct SplitMix64 {
     state: u64,
 }
-
 impl SplitMix64 {
     fn new(seed: u64) -> Self {
         Self { state: seed }
     }
-
     fn next_u64(&mut self) -> u64 {
         self.state = self.state.wrapping_add(0x9E3779B97F4A7C15);
         let mut value = self.state;
@@ -114,309 +220,370 @@ impl SplitMix64 {
         value = (value ^ (value >> 27)).wrapping_mul(0x94D049BB133111EB);
         value ^ (value >> 31)
     }
-
-    fn symmetric(&mut self, extent: f64) -> f64 {
-        let unit = (self.next_u64() >> 11) as f64 * (1.0 / ((1_u64 << 53) as f64));
-        extent * (2.0 * unit - 1.0)
+    fn unit(&mut self) -> f64 {
+        (self.next_u64() >> 11) as f64 / ((1_u64 << 53) as f64)
+    }
+    fn symmetric(&mut self) -> f64 {
+        self.unit() * 2.0 - 1.0
+    }
+    fn range(&mut self, range: &ScalarRange) -> f64 {
+        range.min + self.unit() * (range.max - range.min)
+    }
+    fn integer(&mut self, range: &IntegerRange) -> usize {
+        range.min + (self.next_u64() as usize % (range.max - range.min + 1))
     }
 }
 
-fn sha256(value: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(value))
+fn sha256(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
 }
-
-fn finite(value: f64) -> bool {
-    value.is_finite()
+fn valid_sha(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
 }
-
 fn identifier(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 64
         && value
             .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
 }
-
+fn valid_range(value: &ScalarRange, low: f64, high: f64) -> bool {
+    value.min.is_finite()
+        && value.max.is_finite()
+        && low <= value.min
+        && value.min <= value.max
+        && value.max <= high
+}
+fn valid_integer(value: &IntegerRange, low: usize, high: usize) -> bool {
+    low <= value.min && value.min <= value.max && value.max <= high
+}
+fn object<'a>(value: &'a Value, label: &str) -> PyResult<&'a Map<String, Value>> {
+    value
+        .as_object()
+        .ok_or_else(|| PyValueError::new_err(format!("{label} must be an object")))
+}
 fn object_mut<'a>(value: &'a mut Value, label: &str) -> PyResult<&'a mut Map<String, Value>> {
     value
         .as_object_mut()
         .ok_or_else(|| PyValueError::new_err(format!("{label} must be an object")))
 }
-
 fn array_mut<'a>(value: &'a mut Value, key: &str) -> PyResult<&'a mut Vec<Value>> {
     object_mut(value, "document")?
         .get_mut(key)
         .and_then(Value::as_array_mut)
         .ok_or_else(|| PyValueError::new_err(format!("document requires array {key}")))
 }
-
 fn id(value: &Value) -> Option<&str> {
     value.as_object()?.get("id")?.as_str()
 }
-
-fn position_mut(value: &mut Value) -> PyResult<&mut Vec<Value>> {
-    value
-        .as_object_mut()
-        .and_then(|item| item.get_mut("position"))
-        .and_then(Value::as_array_mut)
-        .filter(|value| value.len() == 3)
-        .ok_or_else(|| PyValueError::new_err("physical entity requires position[3]"))
+fn canonical<T: Serialize>(value: &T) -> PyResult<String> {
+    serde_json::to_string(value).map_err(|error| PyValueError::new_err(error.to_string()))
 }
-
-fn set_position(entity: &mut Value, position: [f64; 3]) -> PyResult<()> {
-    *position_mut(entity)? = position.into_iter().map(Value::from).collect();
+fn genome_hash(genome: &Genome) -> PyResult<String> {
+    let mut unsigned = genome.clone();
+    unsigned.sha256.clear();
+    let value =
+        serde_json::to_value(unsigned).map_err(|error| PyValueError::new_err(error.to_string()))?;
+    Ok(sha256(canonical(&value)?.as_bytes()))
+}
+fn parse_genome(text: &str) -> PyResult<Genome> {
+    let value: Genome = serde_json::from_str(text)
+        .map_err(|e| PyValueError::new_err(format!("invalid environment genome: {e}")))?;
+    if value.format != GENOME_FORMAT
+        || value.version != 1
+        || !valid_sha(&value.sha256)
+        || !valid_sha(&value.profile_sha256)
+        || value.parents.len() > 2
+        || value.parents.iter().any(|v| !valid_sha(v))
+        || genome_hash(&value)? != value.sha256
+    {
+        return Err(PyValueError::new_err("environment genome identity differs"));
+    }
+    Ok(value)
+}
+fn pretty<T: Serialize>(value: &T) -> PyResult<String> {
+    let mut result =
+        serde_json::to_string_pretty(value).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    result.push('\n');
+    Ok(result)
+}
+fn set_position(value: &mut Value, position: [f64; 3]) -> PyResult<()> {
+    let target = object_mut(value, "physical entity")?
+        .get_mut("position")
+        .and_then(Value::as_array_mut)
+        .filter(|v| v.len() == 3)
+        .ok_or_else(|| PyValueError::new_err("physical entity requires position[3]"))?;
+    *target = position.into_iter().map(Value::from).collect();
     Ok(())
 }
-
-fn translate_entity(entity: &mut Value, delta: [f64; 3]) -> PyResult<()> {
-    let position = position_mut(entity)?;
+fn translate(value: &mut Value, delta: [f64; 3]) -> PyResult<()> {
+    let map = object_mut(value, "physical entity")?;
+    let target = map
+        .get_mut("position")
+        .and_then(Value::as_array_mut)
+        .filter(|v| v.len() == 3)
+        .ok_or_else(|| PyValueError::new_err("physical entity requires position[3]"))?;
     for axis in 0..3 {
-        let value = position[axis]
-            .as_f64()
-            .ok_or_else(|| PyValueError::new_err("entity position must be numeric"))?;
-        position[axis] = Value::from(value + delta[axis]);
+        target[axis] = Value::from(
+            target[axis]
+                .as_f64()
+                .ok_or_else(|| PyValueError::new_err("position must be numeric"))?
+                + delta[axis],
+        );
     }
     Ok(())
 }
-
-fn entity_index(entities: &[Value]) -> HashMap<String, usize> {
-    entities
+fn entity_index(values: &[Value]) -> HashMap<String, usize> {
+    values
         .iter()
         .enumerate()
-        .filter_map(|(index, entity)| id(entity).map(|name| (name.to_owned(), index)))
+        .filter_map(|(i, v)| id(v).map(|s| (s.to_owned(), i)))
         .collect()
 }
-
 fn ramp_quaternion(dx: f64, dy: f64, dz: f64) -> [f64; 4] {
     let yaw = dy.atan2(dx);
     let pitch = -dz.atan2((dx * dx + dy * dy).sqrt());
-    let (sy, cy) = (0.5 * yaw).sin_cos();
-    let (sp, cp) = (0.5 * pitch).sin_cos();
+    let (sy, cy) = (yaw * 0.5).sin_cos();
+    let (sp, cp) = (pitch * 0.5).sin_cos();
     [cy * cp, -sy * sp, cy * sp, sy * cp]
 }
 
 fn validate_config(config: &Config) -> PyResult<()> {
     if config.format != FORMAT
-        || config.families.len() < 3
-        || config.families.len() > 8
-        || config.terrain_entity_ids.is_empty()
-        || config.terrain_entity_ids.len() > 64
-        || config.habitat_template_sha256.len() != 64
-        || config.biosphere_template_sha256.len() != 64
-        || !finite(config.variation.horizontal_jitter_m)
-        || !(0.0..=0.25).contains(&config.variation.horizontal_jitter_m)
-        || !finite(config.variation.elevation_jitter_m)
-        || !(0.0..=0.08).contains(&config.variation.elevation_jitter_m)
-        || !finite(config.limits.minimum_ramp_width_m)
-        || !(0.45..=2.0).contains(&config.limits.minimum_ramp_width_m)
-        || !finite(config.limits.maximum_rise_over_run)
-        || !(0.05..=0.4).contains(&config.limits.maximum_rise_over_run)
-        || !finite(config.limits.minimum_underpass_clearance_m)
-        || !(0.35..=1.5).contains(&config.limits.minimum_underpass_clearance_m)
-        || !finite(config.limits.platform_thickness_m)
-        || !(0.03..=0.15).contains(&config.limits.platform_thickness_m)
-        || !finite(config.limits.minimum_spawn_clearance_m)
-        || !(0.35..=2.0).contains(&config.limits.minimum_spawn_clearance_m)
+        || !valid_sha(&config.habitat_template_sha256)
+        || !valid_sha(&config.biosphere_template_sha256)
+        || !valid_integer(&config.capacity.residents, 1, MAX_RESIDENTS)
+        || !valid_integer(&config.capacity.regions, 6, MAX_REGIONS)
+        || !valid_range(&config.capacity.width_m, 8.0, 30.0)
+        || !valid_range(&config.capacity.height_m, 6.0, 24.0)
+        || !valid_range(&config.capacity.depth_m, 3.0, 8.0)
+        || config.replace_entity_ids.is_empty()
+        || config.replace_entity_ids.len() > 96
+        || config.mechanism_clusters.is_empty()
+        || config.mechanism_clusters.len() > 16
+        || config.movable_template_ids.is_empty()
+        || !valid_range(&config.geometry.platform_half_size_m, 0.45, 2.5)
+        || !valid_range(&config.geometry.ramp_width_m, 0.45, 2.5)
+        || !(0.8..=2.5).contains(&config.geometry.margin_m)
+        || !(0.03..=0.2).contains(&config.geometry.platform_thickness_m)
+        || !(0.08..=0.4).contains(&config.geometry.maximum_rise_over_run)
+        || !(0.35..=1.8).contains(&config.geometry.minimum_underpass_clearance_m)
+        || !(0.24..=1.5).contains(&config.geometry.minimum_spawn_clearance_m)
+        || !(0.2..=2.0).contains(&config.geometry.boundary_height_m)
+        || !(0.03..=0.25).contains(&config.geometry.boundary_thickness_m)
         || !identifier(&config.catchment.id)
-        || !finite(config.catchment.surface_height_m)
-        || !(-2.0..=-0.2).contains(&config.catchment.surface_height_m)
-        || config
-            .catchment
-            .half_size_m
-            .iter()
-            .any(|value| !finite(*value) || !(8.0..=20.0).contains(value))
-        || !finite(config.catchment.thickness_m)
-        || !(0.03..=0.2).contains(&config.catchment.thickness_m)
-        || !finite(config.catchment.wall_height_m)
-        || !(0.2..=2.0).contains(&config.catchment.wall_height_m)
+        || !(-2.5..=-0.2).contains(&config.catchment.surface_height_m)
+        || !(2.0..=12.0).contains(&config.catchment.margin_m)
+        || !(0.03..=0.25).contains(&config.catchment.thickness_m)
+        || !(0.2..=2.5).contains(&config.catchment.wall_height_m)
         || !identifier(&config.catchment.material)
         || !identifier(&config.catchment.physical_material)
+        || config.mutation.operator != "bounded-regional-perturbation-v1"
+        || !valid_sha(&config.mutation.recipe_sha256)
+        || !(0.0..=0.3).contains(&config.mutation.scalar_fraction)
+        || config.mutation.integer_delta > 8
+        || config.mutation.resident_delta > 8
+        || config.archetypes.len() < 3
+        || config.archetypes.len() > 12
+        || config.training_genomes.is_empty()
+        || config.training_genomes.len() > 256
     {
         return Err(PyValueError::new_err(
-            "invalid nursery-family configuration",
+            "invalid regional habitat-family configuration",
         ));
     }
-    let mut names = HashSet::new();
-    for family in &config.families {
-        if !identifier(&family.id)
-            || !names.insert(family.id.clone())
-            || family.nodes.len() < 6
-            || family.nodes.len() > MAX_NODES
-            || family.edges.len() < family.nodes.len() - 1
-            || family.edges.len() > MAX_EDGES
-            || family.gate_node >= family.nodes.len()
-        {
-            return Err(PyValueError::new_err("invalid nursery topology family"));
-        }
-        for node in &family.nodes {
-            if node.position_m.iter().any(|value| !finite(*value))
-                || node.half_size_m.iter().any(|value| !finite(*value))
-                || !(0.0..12.0).contains(&node.position_m[0])
-                || !(0.0..8.0).contains(&node.position_m[1])
-                || !(0.08..=1.4).contains(&node.position_m[2])
-                || node
-                    .half_size_m
-                    .iter()
-                    .any(|value| !(0.55..=1.4).contains(value))
-                || node.position_m[0] - node.half_size_m[0] < 0.15
-                || node.position_m[0] + node.half_size_m[0] > 11.85
-                || node.position_m[1] - node.half_size_m[1] < 0.15
-                || node.position_m[1] + node.half_size_m[1] > 7.85
-            {
-                return Err(PyValueError::new_err(
-                    "nursery platform exceeds habitat bounds",
-                ));
-            }
-        }
-        let mut adjacency = vec![Vec::new(); family.nodes.len()];
-        let mut edges = HashSet::new();
-        for edge in &family.edges {
-            let [a, b] = edge.nodes;
-            if a >= family.nodes.len()
-                || b >= family.nodes.len()
-                || a == b
-                || !finite(edge.width_m)
-                || edge.width_m < config.limits.minimum_ramp_width_m
-                || !edges.insert((a.min(b), a.max(b)))
-            {
-                return Err(PyValueError::new_err("invalid nursery ramp edge"));
-            }
-            let first = &family.nodes[a].position_m;
-            let second = &family.nodes[b].position_m;
-            let run = ((second[0] - first[0]).powi(2) + (second[1] - first[1]).powi(2)).sqrt();
-            let slope = (second[2] - first[2]).abs() / run;
-            if !slope.is_finite() || slope > config.limits.maximum_rise_over_run * 0.85 {
-                return Err(PyValueError::new_err(
-                    "base nursery ramp is too steep for jitter",
-                ));
-            }
-            adjacency[a].push(b);
-            adjacency[b].push(a);
-        }
-        let mut reached = vec![false; family.nodes.len()];
-        let mut queue = VecDeque::from([0]);
-        reached[0] = true;
-        while let Some(node) = queue.pop_front() {
-            for &next in &adjacency[node] {
-                if !reached[next] {
-                    reached[next] = true;
-                    queue.push_back(next);
-                }
-            }
-        }
-        if reached.iter().any(|value| !value)
-            || family
-                .underpass_nodes
+    let mut ids = HashSet::new();
+    for value in config
+        .replace_entity_ids
+        .iter()
+        .chain(
+            config
+                .mechanism_clusters
                 .iter()
-                .chain(&family.canopy_nodes)
-                .chain(&family.landmark_nodes)
-                .any(|node| *node >= family.nodes.len())
-            || family.underpass_nodes.iter().any(|node| {
-                family.nodes[*node].position_m[2] - config.limits.platform_thickness_m
-                    < config.limits.minimum_underpass_clearance_m
-            })
-        {
-            return Err(PyValueError::new_err("nursery designer graph is invalid"));
+                .flat_map(|v| v.entity_ids.iter()),
+        )
+        .chain(&config.movable_template_ids)
+    {
+        if !identifier(value) {
+            return Err(PyValueError::new_err("invalid configured entity id"));
         }
     }
-    if config.training_variants.is_empty()
-        || config.training_variants.len() > 256
-        || config
-            .training_variants
-            .iter()
-            .any(|value| !names.contains(&value.family))
-        || config
-            .training_variants
-            .iter()
-            .map(|value| (&value.family, value.seed))
-            .collect::<HashSet<_>>()
-            .len()
-            != config.training_variants.len()
-    {
-        return Err(PyValueError::new_err("invalid nursery training variants"));
+    if config.mechanism_clusters.iter().any(|cluster| {
+        cluster.entity_ids.is_empty()
+            || cluster.entity_ids.len() > 12
+            || cluster.anchor_m.iter().any(|v| !v.is_finite())
+    }) {
+        return Err(PyValueError::new_err("invalid mechanism cluster"));
+    }
+    for a in &config.archetypes {
+        let resident_capacity_regions =
+            (config.capacity.residents.max + 3) / 4 + config.mechanism_clusters.len() + 4;
+        if !identifier(&a.id)
+            || !ids.insert(a.id.clone())
+            || !valid_integer(
+                &a.region_count,
+                config.capacity.regions.min,
+                config.capacity.regions.max,
+            )
+            || !valid_integer(&a.lane_count, 2, 6)
+            || !valid_range(
+                &a.width_m,
+                config.capacity.width_m.min,
+                config.capacity.width_m.max,
+            )
+            || !valid_range(
+                &a.height_m,
+                config.capacity.height_m.min,
+                config.capacity.height_m.max,
+            )
+            || !valid_range(
+                &a.depth_m,
+                config.capacity.depth_m.min,
+                config.capacity.depth_m.max,
+            )
+            || !valid_range(&a.elevation_span_m, 0.15, 2.4)
+            || !valid_range(&a.loop_fraction, 0.0, 0.8)
+            || !valid_range(&a.shelter_fraction, 0.0, 0.8)
+            || !valid_range(&a.underpass_fraction, 0.0, 0.8)
+            || !valid_range(&a.landmark_fraction, 0.0, 0.8)
+            || !valid_range(&a.resource_scale, 0.5, 1.6)
+            || !valid_integer(&a.movable_count, 1, 24)
+            || !valid_range(&a.terrace_bias, -1.0, 1.0)
+            || a.region_count.max < resident_capacity_regions
+        {
+            return Err(PyValueError::new_err("invalid regional archetype"));
+        }
+    }
+    let mut variants = HashSet::new();
+    for t in &config.training_genomes {
+        if !ids.contains(&t.archetype)
+            || !valid_sha(&t.profile_sha256)
+            || t.resident_count < config.capacity.residents.min
+            || t.resident_count > config.capacity.residents.max
+            || !variants.insert((t.archetype.clone(), t.seed, t.resident_count))
+        {
+            return Err(PyValueError::new_err("invalid regional training genome"));
+        }
     }
     Ok(())
 }
 
-fn platform_entity(index: usize, node: &Node, thickness: f64, material: &str) -> Value {
-    let mut shapes = vec![json!({
-        "type": "box",
-        "size": [node.half_size[0], node.half_size[1], thickness * 0.5],
-        "position": [0.0, 0.0, node.position[2] - thickness * 0.5]
-    })];
-    if node.position[2] > thickness + 0.12 {
-        let support_half = 0.045;
-        let support_height = (node.position[2] - thickness) * 0.5;
+fn clamp(value: f64, range: &ScalarRange) -> f64 {
+    value.max(range.min).min(range.max)
+}
+fn perturb(value: f64, range: &ScalarRange, fraction: f64, rng: &mut SplitMix64) -> f64 {
+    clamp(
+        value + rng.symmetric() * (range.max - range.min) * fraction,
+        range,
+    )
+}
+fn perturb_integer(
+    value: usize,
+    range: &IntegerRange,
+    delta: usize,
+    rng: &mut SplitMix64,
+) -> usize {
+    let d = (rng.next_u64() % (2 * delta as u64 + 1)) as isize - delta as isize;
+    (value as isize + d).clamp(range.min as isize, range.max as isize) as usize
+}
+
+fn platform_entity(index: usize, node: &Node, g: &Geometry, material: &str) -> Value {
+    let mut shapes = vec![
+        json!({"type":"box","size":[node.half_size[0],node.half_size[1],g.platform_thickness_m*0.5],"position":[0,0,node.position[2]-g.platform_thickness_m*0.5]}),
+    ];
+    if node.position[2] > g.platform_thickness_m + 0.12 {
+        let h = (node.position[2] - g.platform_thickness_m) * 0.5;
         for x in [-0.78, 0.78] {
             for y in [-0.72, 0.72] {
-                shapes.push(json!({
-                    "type": "box",
-                    "size": [support_half, support_half, support_height],
-                    "position": [x * node.half_size[0], y * node.half_size[1], support_height]
-                }));
+                shapes.push(json!({"type":"box","size":[0.05,0.05,h],"position":[x*node.half_size[0],y*node.half_size[1],h]}));
             }
         }
     }
-    json!({
-        "id": format!("family-platform-{index:02}"),
-        "mobility": "static", "material": material,
-        "physical_material": "masonry",
-        "position": [node.position[0], node.position[1], 0.0],
-        "shapes": shapes, "components": []
-    })
+    json!({"id":format!("region-platform-{index:02}"),"mobility":"static","material":material,"physical_material":"masonry","position":[node.position[0],node.position[1],0],"shapes":shapes,"components":[]})
 }
-
 fn ramp_entity(
     index: usize,
-    first: &Node,
-    second: &Node,
+    a: &Node,
+    b: &Node,
     width: f64,
-    thickness: f64,
+    g: &Geometry,
     material: &str,
 ) -> Value {
-    let dx = second.position[0] - first.position[0];
-    let dy = second.position[1] - first.position[1];
-    let dz = second.position[2] - first.position[2];
-    let length = (dx * dx + dy * dy + dz * dz).sqrt();
-    json!({
-        "id": format!("family-ramp-{index:02}"),
-        "mobility": "static", "material": material,
-        "physical_material": "masonry",
-        "position": [
-            0.5 * (first.position[0] + second.position[0]),
-            0.5 * (first.position[1] + second.position[1]),
-            0.5 * (first.position[2] + second.position[2]) - thickness * 0.5
-        ],
-        "quaternion": ramp_quaternion(dx, dy, dz),
-        "shapes": [{"type":"box", "size":[length * 0.5, width * 0.5, thickness * 0.5]}],
-        "components": []
-    })
+    let dx = b.position[0] - a.position[0];
+    let dy = b.position[1] - a.position[1];
+    let dz = b.position[2] - a.position[2];
+    let len = (dx * dx + dy * dy + dz * dz).sqrt();
+    json!({"id":format!("region-ramp-{index:02}"),"mobility":"static","material":material,"physical_material":"masonry","position":[(a.position[0]+b.position[0])*0.5,(a.position[1]+b.position[1])*0.5,(a.position[2]+b.position[2])*0.5-g.platform_thickness_m*0.5],"quaternion":ramp_quaternion(dx,dy,dz),"shapes":[{"type":"box","size":[len*0.5,width*0.5,g.platform_thickness_m*0.5]}],"components":[]})
 }
-
-fn canopy_entity(index: usize, node: &Node) -> Value {
-    let clearance = 0.58;
+fn canopy_entity(index: usize, node: &Node, clearance: f64) -> Value {
     let roof = node.position[2] + clearance;
-    json!({
-        "id": format!("family-canopy-{index:02}"),
-        "mobility": "static", "material": "leaf", "physical_material": "timber",
-        "position": [node.position[0], node.position[1], 0.0],
-        "shapes": [
-            {"type":"box", "size":[0.045,0.045,clearance*0.5], "position":[-node.half_size[0]*0.72,0.0,node.position[2]+clearance*0.5]},
-            {"type":"box", "size":[0.045,0.045,clearance*0.5], "position":[ node.half_size[0]*0.72,0.0,node.position[2]+clearance*0.5]},
-            {"type":"box", "size":[node.half_size[0]*0.78,node.half_size[1]*0.42,0.035], "position":[0.0,0.0,roof]}
-        ],
-        "components": [{"type":"shade", "radius":node.half_size[0], "strength":0.52}]
-    })
+    json!({"id":format!("region-shelter-{index:02}"),"mobility":"static","material":"leaf","physical_material":"timber","position":[node.position[0],node.position[1],0],"shapes":[
+      {"type":"box","size":[0.05,0.05,clearance*0.5],"position":[-node.half_size[0]*0.72,0,node.position[2]+clearance*0.5]},
+      {"type":"box","size":[0.05,0.05,clearance*0.5],"position":[node.half_size[0]*0.72,0,node.position[2]+clearance*0.5]},
+      {"type":"box","size":[node.half_size[0]*0.82,node.half_size[1]*0.48,0.04],"position":[0,0,roof]}],"components":[{"type":"shade","radius":node.half_size[0],"strength":0.55}]})
+}
+fn landmark_entity(index: usize, node: &Node, material: &str) -> Value {
+    json!({"id":format!("region-landmark-{index:02}"),"mobility":"static","material":material,"physical_material":"timber","position":[node.position[0],node.position[1],0],"shapes":[{"type":"cylinder","size":[0.055,0.3],"position":[node.half_size[0]*0.65,0,node.position[2]+0.3]}],"components":[]})
+}
+fn boundary_entities(width: f64, height: f64, g: &Geometry) -> Vec<Value> {
+    vec![
+        json!({"id":"region-ground","mobility":"static","material":"loam","physical_material":"earth","position":[width*0.5,height*0.5,-0.04],"shapes":[{"type":"box","size":[width*0.5,height*0.5,0.04]}],"components":[]}),
+        json!({"id":"region-west-wall","mobility":"static","material":"darkstone","physical_material":"masonry","position":[0,height*0.5,g.boundary_height_m*0.5],"shapes":[{"type":"box","size":[g.boundary_thickness_m*0.5,height*0.5,g.boundary_height_m*0.5]}],"components":[]}),
+        json!({"id":"region-east-wall","mobility":"static","material":"darkstone","physical_material":"masonry","position":[width,height*0.5,g.boundary_height_m*0.5],"shapes":[{"type":"box","size":[g.boundary_thickness_m*0.5,height*0.5,g.boundary_height_m*0.5]}],"components":[]}),
+        json!({"id":"region-south-wall","mobility":"static","material":"darkstone","physical_material":"masonry","position":[width*0.5,0,g.boundary_height_m*0.5],"shapes":[{"type":"box","size":[width*0.5,g.boundary_thickness_m*0.5,g.boundary_height_m*0.5]}],"components":[]}),
+        json!({"id":"region-north-wall","mobility":"static","material":"darkstone","physical_material":"masonry","position":[width*0.5,height,g.boundary_height_m*0.5],"shapes":[{"type":"box","size":[width*0.5,g.boundary_thickness_m*0.5,g.boundary_height_m*0.5]}],"components":[]}),
+    ]
+}
+fn catchment_entity(width: f64, height: f64, c: &CatchmentSpec) -> Value {
+    let hx = width * 0.5 + c.margin_m;
+    let hy = height * 0.5 + c.margin_m;
+    let x = width * 0.5;
+    let y = height * 0.5;
+    let wh = c.wall_height_m * 0.5;
+    let t = c.thickness_m * 0.5;
+    json!({"id":c.id,"mobility":"static","material":c.material,"physical_material":c.physical_material,"position":[x,y,0],"shapes":[
+      {"type":"box","size":[hx,hy,t],"position":[0,0,c.surface_height_m-t]},
+      {"type":"box","size":[t,hy,wh],"position":[-hx,0,c.surface_height_m+wh]},
+      {"type":"box","size":[t,hy,wh],"position":[hx,0,c.surface_height_m+wh]},
+      {"type":"box","size":[hx,t,wh],"position":[0,-hy,c.surface_height_m+wh]},
+      {"type":"box","size":[hx,t,wh],"position":[0,hy,c.surface_height_m+wh]}],"components":[]})
 }
 
-fn landmark_entity(index: usize, node: &Node, material: &str) -> Value {
-    json!({
-        "id": format!("family-landmark-{index:02}"),
-        "mobility":"static", "material":material, "physical_material":"timber",
-        "position":[node.position[0], node.position[1], 0.0],
-        "shapes":[{"type":"box", "size":[0.035,0.24,0.24], "position":[node.half_size[0]*0.72,0.0,node.position[2]+0.24]}],
-        "components":[]
-    })
+fn remap_rows(value: &mut Value, map: &HashMap<usize, usize>) -> PyResult<()> {
+    match value {
+        Value::Object(items) => {
+            for (key, nested) in items {
+                if (key == "row" || key.ends_with("_row")) && nested.is_u64() {
+                    let old = nested.as_u64().unwrap() as usize;
+                    if let Some(new) = map.get(&old) {
+                        *nested = Value::from(*new);
+                    }
+                } else {
+                    remap_rows(nested, map)?;
+                }
+            }
+        }
+        Value::Array(items) => {
+            for nested in items {
+                remap_rows(nested, map)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+fn validate_compartment(value: &Value) -> PyResult<()> {
+    let keys: HashSet<&str> = object(value, "founder compartment")?
+        .keys()
+        .map(String::as_str)
+        .collect();
+    if keys != HashSet::from(["enzymes", "pools", "atp", "atp_capacity"]) {
+        return Err(PyValueError::new_err("founder compartment fields differ"));
+    }
+    Ok(())
 }
 
 #[pyclass]
@@ -430,487 +597,944 @@ impl HabitatFamily {
     #[new]
     fn new(config_json: String, config_sha256: String) -> PyResult<Self> {
         if sha256(config_json.as_bytes()) != config_sha256 {
-            return Err(PyValueError::new_err(
-                "nursery-family configuration hash differs",
-            ));
+            return Err(PyValueError::new_err("regional configuration hash differs"));
         }
-        let config: Config = serde_json::from_str(&config_json).map_err(|error| {
-            PyValueError::new_err(format!("invalid nursery-family JSON: {error}"))
-        })?;
+        let config: Config = serde_json::from_str(&config_json)
+            .map_err(|e| PyValueError::new_err(format!("invalid regional configuration: {e}")))?;
         validate_config(&config)?;
         Ok(Self {
             config,
             config_sha256,
         })
     }
-
-    fn families(&self) -> Vec<String> {
+    fn archetypes(&self) -> Vec<String> {
         self.config
-            .families
+            .archetypes
             .iter()
-            .map(|value| value.id.clone())
+            .map(|v| v.id.clone())
             .collect()
     }
-
-    fn training_variants(&self) -> Vec<(String, u64)> {
+    fn training_genomes(&self) -> Vec<(String, u64, usize, u64, String)> {
         self.config
-            .training_variants
+            .training_genomes
             .iter()
-            .map(|value| (value.family.clone(), value.seed))
+            .map(|v| {
+                (
+                    v.archetype.clone(),
+                    v.seed,
+                    v.resident_count,
+                    v.epoch,
+                    v.profile_sha256.clone(),
+                )
+            })
             .collect()
     }
-
+    fn initial_genome(
+        &self,
+        seed: u64,
+        archetype: String,
+        resident_count: usize,
+        profile_sha256: String,
+        epoch: u64,
+    ) -> PyResult<String> {
+        if !valid_sha(&profile_sha256)
+            || resident_count < self.config.capacity.residents.min
+            || resident_count > self.config.capacity.residents.max
+        {
+            return Err(PyValueError::new_err(
+                "invalid environment founder identity",
+            ));
+        }
+        let a = self
+            .config
+            .archetypes
+            .iter()
+            .find(|v| v.id == archetype)
+            .ok_or_else(|| PyValueError::new_err("unknown regional archetype"))?;
+        let mut rng = SplitMix64::new(
+            seed ^ archetype
+                .bytes()
+                .fold(0u64, |x, b| x.wrapping_mul(131).wrapping_add(b as u64)),
+        );
+        let minimum_regions = (resident_count + 3) / 4 + self.config.mechanism_clusters.len() + 4;
+        let parameters = Parameters {
+            archetype,
+            seed,
+            resident_count,
+            dimensions_m: [
+                rng.range(&a.width_m),
+                rng.range(&a.height_m),
+                rng.range(&a.depth_m),
+            ],
+            region_count: rng.integer(&a.region_count).max(minimum_regions),
+            lane_count: rng.integer(&a.lane_count),
+            elevation_span_m: rng.range(&a.elevation_span_m),
+            loop_fraction: rng.range(&a.loop_fraction),
+            shelter_fraction: rng.range(&a.shelter_fraction),
+            underpass_fraction: rng.range(&a.underpass_fraction),
+            landmark_fraction: rng.range(&a.landmark_fraction),
+            resource_scale: rng.range(&a.resource_scale),
+            movable_count: rng.integer(&a.movable_count),
+            terrace_bias: rng.range(&a.terrace_bias),
+        };
+        let mut genome = Genome {
+            format: GENOME_FORMAT.into(),
+            version: 1,
+            sha256: String::new(),
+            parents: vec![],
+            variation: Variation {
+                operator: "initial-regional-sample-v1".into(),
+                seed,
+                recipe_sha256: self.config.mutation.recipe_sha256.clone(),
+            },
+            epoch,
+            profile_sha256,
+            parameters,
+        };
+        self.validate_parameters(&genome.parameters)?;
+        genome.sha256 = genome_hash(&genome)?;
+        pretty(&genome)
+    }
+    fn mutate_genome(&self, parent_json: String, variation_seed: u64) -> PyResult<String> {
+        let parent = parse_genome(&parent_json)?;
+        self.validate_parameters(&parent.parameters)?;
+        let a = self
+            .config
+            .archetypes
+            .iter()
+            .find(|v| v.id == parent.parameters.archetype)
+            .ok_or_else(|| PyValueError::new_err("unknown parent archetype"))?;
+        let mut rng = SplitMix64::new(
+            variation_seed ^ u64::from_str_radix(&parent.sha256[..16], 16).unwrap(),
+        );
+        let mut p = parent.parameters.clone();
+        p.seed = variation_seed;
+        p.resident_count = perturb_integer(
+            p.resident_count,
+            &self.config.capacity.residents,
+            self.config.mutation.resident_delta,
+            &mut rng,
+        );
+        p.dimensions_m = [
+            perturb(
+                p.dimensions_m[0],
+                &a.width_m,
+                self.config.mutation.scalar_fraction,
+                &mut rng,
+            ),
+            perturb(
+                p.dimensions_m[1],
+                &a.height_m,
+                self.config.mutation.scalar_fraction,
+                &mut rng,
+            ),
+            perturb(
+                p.dimensions_m[2],
+                &a.depth_m,
+                self.config.mutation.scalar_fraction,
+                &mut rng,
+            ),
+        ];
+        p.region_count = perturb_integer(
+            p.region_count,
+            &a.region_count,
+            self.config.mutation.integer_delta,
+            &mut rng,
+        );
+        p.region_count = p
+            .region_count
+            .max((p.resident_count + 3) / 4 + self.config.mechanism_clusters.len() + 4);
+        p.lane_count = perturb_integer(p.lane_count, &a.lane_count, 1, &mut rng);
+        p.elevation_span_m = perturb(
+            p.elevation_span_m,
+            &a.elevation_span_m,
+            self.config.mutation.scalar_fraction,
+            &mut rng,
+        );
+        p.loop_fraction = perturb(
+            p.loop_fraction,
+            &a.loop_fraction,
+            self.config.mutation.scalar_fraction,
+            &mut rng,
+        );
+        p.shelter_fraction = perturb(
+            p.shelter_fraction,
+            &a.shelter_fraction,
+            self.config.mutation.scalar_fraction,
+            &mut rng,
+        );
+        p.underpass_fraction = perturb(
+            p.underpass_fraction,
+            &a.underpass_fraction,
+            self.config.mutation.scalar_fraction,
+            &mut rng,
+        );
+        p.landmark_fraction = perturb(
+            p.landmark_fraction,
+            &a.landmark_fraction,
+            self.config.mutation.scalar_fraction,
+            &mut rng,
+        );
+        p.resource_scale = perturb(
+            p.resource_scale,
+            &a.resource_scale,
+            self.config.mutation.scalar_fraction,
+            &mut rng,
+        );
+        p.movable_count = perturb_integer(
+            p.movable_count,
+            &a.movable_count,
+            self.config.mutation.integer_delta,
+            &mut rng,
+        );
+        p.terrace_bias = perturb(
+            p.terrace_bias,
+            &a.terrace_bias,
+            self.config.mutation.scalar_fraction,
+            &mut rng,
+        );
+        let mut genome = Genome {
+            format: GENOME_FORMAT.into(),
+            version: 1,
+            sha256: String::new(),
+            parents: vec![parent.sha256],
+            variation: Variation {
+                operator: self.config.mutation.operator.clone(),
+                seed: variation_seed,
+                recipe_sha256: self.config.mutation.recipe_sha256.clone(),
+            },
+            epoch: parent.epoch,
+            profile_sha256: parent.profile_sha256,
+            parameters: p,
+        };
+        self.validate_parameters(&genome.parameters)?;
+        genome.sha256 = genome_hash(&genome)?;
+        pretty(&genome)
+    }
     fn generate(
         &self,
         habitat_json: String,
         biosphere_json: String,
-        seed: u64,
-        family_id: String,
+        genome_json: String,
+        residents_json: String,
     ) -> PyResult<(String, String, String)> {
         if sha256(habitat_json.as_bytes()) != self.config.habitat_template_sha256
             || sha256(biosphere_json.as_bytes()) != self.config.biosphere_template_sha256
         {
             return Err(PyValueError::new_err(
-                "nursery source template hash differs",
+                "regional source template hash differs",
             ));
         }
-        let family = self
-            .config
-            .families
-            .iter()
-            .find(|value| value.id == family_id)
-            .ok_or_else(|| PyValueError::new_err("unknown nursery topology family"))?;
-        let mut habitat: Value = serde_json::from_str(&habitat_json)
-            .map_err(|error| PyValueError::new_err(format!("invalid habitat template: {error}")))?;
-        let biosphere: Value = serde_json::from_str(&biosphere_json).map_err(|error| {
-            PyValueError::new_err(format!("invalid biosphere template: {error}"))
-        })?;
-        if habitat.get("version").and_then(Value::as_u64) != Some(1)
-            || biosphere.get("format").and_then(Value::as_str)
-                != Some("chreatures-biosphere-birth-v5")
+        let genome = parse_genome(&genome_json)?;
+        self.validate_parameters(&genome.parameters)?;
+        let residents: ResidentBundle = serde_json::from_str(&residents_json)
+            .map_err(|e| PyValueError::new_err(format!("invalid resident bundle: {e}")))?;
+        if residents.format != RESIDENT_FORMAT
+            || residents.residents.len() != genome.parameters.resident_count
         {
             return Err(PyValueError::new_err(
-                "nursery templates use unsupported current schemas",
+                "resident bundle count differs from environment genome",
             ));
         }
+        self.generate_values(habitat_json, biosphere_json, genome, residents)
+    }
+}
 
-        let family_hash = family_id.bytes().fold(0_u64, |value, byte| {
-            value.wrapping_mul(131).wrapping_add(byte as u64)
-        });
-        let mut rng = SplitMix64::new(seed ^ family_hash.rotate_left(17));
-        let mut nodes = Vec::with_capacity(family.nodes.len());
-        for source in &family.nodes {
+impl HabitatFamily {
+    fn validate_parameters(&self, p: &Parameters) -> PyResult<()> {
+        let a = self
+            .config
+            .archetypes
+            .iter()
+            .find(|v| v.id == p.archetype)
+            .ok_or_else(|| PyValueError::new_err("unknown regional archetype"))?;
+        let minimum_regions = (p.resident_count + 3) / 4 + self.config.mechanism_clusters.len() + 4;
+        if p.resident_count < self.config.capacity.residents.min
+            || p.resident_count > self.config.capacity.residents.max
+            || p.region_count < a.region_count.min
+            || p.region_count > a.region_count.max
+            || p.region_count < minimum_regions
+            || p.lane_count < a.lane_count.min
+            || p.lane_count > a.lane_count.max
+            || !p.dimensions_m.iter().all(|v| v.is_finite())
+            || !(a.width_m.min..=a.width_m.max).contains(&p.dimensions_m[0])
+            || !(a.height_m.min..=a.height_m.max).contains(&p.dimensions_m[1])
+            || !(a.depth_m.min..=a.depth_m.max).contains(&p.dimensions_m[2])
+            || !(a.elevation_span_m.min..=a.elevation_span_m.max).contains(&p.elevation_span_m)
+            || !(a.loop_fraction.min..=a.loop_fraction.max).contains(&p.loop_fraction)
+            || !(a.shelter_fraction.min..=a.shelter_fraction.max).contains(&p.shelter_fraction)
+            || !(a.underpass_fraction.min..=a.underpass_fraction.max)
+                .contains(&p.underpass_fraction)
+            || !(a.landmark_fraction.min..=a.landmark_fraction.max).contains(&p.landmark_fraction)
+            || !(a.resource_scale.min..=a.resource_scale.max).contains(&p.resource_scale)
+            || p.movable_count < a.movable_count.min
+            || p.movable_count > a.movable_count.max
+            || !(a.terrace_bias.min..=a.terrace_bias.max).contains(&p.terrace_bias)
+        {
+            return Err(PyValueError::new_err(
+                "environment genome parameters exceed archetype",
+            ));
+        }
+        Ok(())
+    }
+
+    fn generate_values(
+        &self,
+        habitat_json: String,
+        biosphere_json: String,
+        genome: Genome,
+        residents: ResidentBundle,
+    ) -> PyResult<(String, String, String)> {
+        let p = &genome.parameters;
+        let width = p.dimensions_m[0];
+        let height = p.dimensions_m[1];
+        let mut rng = SplitMix64::new(p.seed ^ 0xC6A4A7935BD1E995);
+        let columns = (p.region_count + p.lane_count - 1) / p.lane_count;
+        let margin = self.config.geometry.margin_m;
+        let usable_x = width - 2.0 * margin;
+        let usable_y = height - 2.0 * margin;
+        if columns < 2 || usable_x <= 0.0 || usable_y <= 0.0 {
+            return Err(PyValueError::new_err(
+                "regional dimensions cannot place connected graph",
+            ));
+        }
+        let mut nodes = Vec::with_capacity(p.region_count);
+        for index in 0..p.region_count {
+            let lane = index % p.lane_count;
+            let column = index / p.lane_count;
+            let xn = column as f64 / (columns - 1) as f64;
+            let yn = (lane as f64 + 0.5) / p.lane_count as f64;
+            let x = margin + xn * usable_x + rng.symmetric() * (usable_x / columns as f64) * 0.12;
+            let y =
+                margin + yn * usable_y + rng.symmetric() * (usable_y / p.lane_count as f64) * 0.12;
+            let wave = ((xn * std::f64::consts::PI * 2.0) + (lane as f64 * 0.73)).sin() * 0.18;
+            let terrace = (xn * 3.0 + p.terrace_bias).floor() / 3.0;
+            let z = 0.1
+                + p.elevation_span_m
+                    * (0.58 * terrace.max(0.0) + wave + 0.16 * (lane % 2) as f64).clamp(0.0, 1.0);
+            let size = rng.range(&self.config.geometry.platform_half_size_m);
             nodes.push(Node {
-                position: [
-                    source.position_m[0] + rng.symmetric(self.config.variation.horizontal_jitter_m),
-                    source.position_m[1] + rng.symmetric(self.config.variation.horizontal_jitter_m),
-                    (source.position_m[2]
-                        + rng.symmetric(self.config.variation.elevation_jitter_m))
-                    .max(0.08),
+                position: [x, y, z],
+                half_size: [
+                    size,
+                    (size * (0.78 + 0.2 * rng.unit()))
+                        .min(self.config.geometry.platform_half_size_m.max),
                 ],
-                half_size: source.half_size_m,
+                lane,
             });
         }
-        for node in &nodes {
-            if node.position[0] - node.half_size[0] < 0.1
-                || node.position[0] + node.half_size[0] > 11.9
-                || node.position[1] - node.half_size[1] < 0.1
-                || node.position[1] + node.half_size[1] > 7.9
-            {
-                return Err(PyValueError::new_err(
-                    "seeded platform jitter exceeds habitat",
-                ));
+        let mut edges: Vec<(usize, usize)> = Vec::new();
+        for lane in 0..p.lane_count {
+            let lane_nodes: Vec<usize> = (0..p.region_count)
+                .filter(|i| i % p.lane_count == lane)
+                .collect();
+            for pair in lane_nodes.windows(2) {
+                edges.push((pair[0], pair[1]));
             }
         }
-        if family.underpass_nodes.iter().any(|index| {
-            nodes[*index].position[2] - self.config.limits.platform_thickness_m
-                < self.config.limits.minimum_underpass_clearance_m
-        }) {
+        for column in 0..columns {
+            let base = column * p.lane_count;
+            let end = (base + p.lane_count).min(p.region_count);
+            for i in base..end.saturating_sub(1) {
+                if (column + i) % 2 == 0 || rng.unit() < 0.55 {
+                    edges.push((i, i + 1));
+                }
+            }
+        }
+        // Connect any component to its nearest reached node, then add bounded loops.
+        loop {
+            let reached = reachable(p.region_count, &edges);
+            if reached.iter().all(|v| *v) {
+                break;
+            }
+            let b = reached.iter().position(|v| !*v).unwrap();
+            let (a, _) = nodes
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| reached[*i])
+                .filter(|(i, _)| {
+                    segment_clears_other_nodes(
+                        *i,
+                        b,
+                        &nodes,
+                        self.config.geometry.ramp_width_m.max * 0.5 + 0.15,
+                    )
+                })
+                .map(|(i, n)| (i, dist2(n, &nodes[b])))
+                .min_by(|x, y| x.1.total_cmp(&y.1))
+                .ok_or_else(|| {
+                    PyValueError::new_err("regional graph cannot connect without crossing a region")
+                })?;
+            edges.push((a, b));
+        }
+        let possible = (p.region_count * (p.region_count - 1) / 2).min(MAX_EDGES);
+        let target = (edges.len()
+            + ((possible - edges.len()) as f64 * p.loop_fraction * 0.12) as usize)
+            .min(MAX_EDGES);
+        let mut loop_attempts = 0usize;
+        while edges.len() < target && loop_attempts < MAX_EDGES * 8 {
+            loop_attempts += 1;
+            let a = rng.next_u64() as usize % p.region_count;
+            let b = rng.next_u64() as usize % p.region_count;
+            if a != b
+                && !edges
+                    .iter()
+                    .any(|(x, y)| (*x == a && *y == b) || (*x == b && *y == a))
+                && dist2(&nodes[a], &nodes[b]).sqrt() < width.max(height) * 0.42
+                && segment_clears_other_nodes(
+                    a,
+                    b,
+                    &nodes,
+                    self.config.geometry.ramp_width_m.max * 0.5 + 0.15,
+                )
+            {
+                edges.push((a, b));
+            }
+        }
+        // Relax adjacent elevations until every physical ramp is within slope.
+        for _ in 0..24 {
+            let mut changed = false;
+            for &(a, b) in &edges {
+                let dx = nodes[b].position[0] - nodes[a].position[0];
+                let dy = nodes[b].position[1] - nodes[a].position[1];
+                let run = (dx * dx + dy * dy).sqrt();
+                let limit = run * self.config.geometry.maximum_rise_over_run * 0.88;
+                let dz = nodes[b].position[2] - nodes[a].position[2];
+                if dz.abs() > limit {
+                    let excess = (dz.abs() - limit) * 0.5;
+                    let sign = dz.signum();
+                    nodes[a].position[2] += sign * excess;
+                    nodes[b].position[2] -= sign * excess;
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        let underpasses: BTreeSet<usize> = nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, n)| {
+                n.position[2]
+                    >= self.config.geometry.minimum_underpass_clearance_m
+                        + self.config.geometry.platform_thickness_m
+            })
+            .filter(|_| rng.unit() < p.underpass_fraction)
+            .map(|(i, _)| i)
+            .collect();
+        let mechanism_nodes: BTreeSet<usize> = (0..self.config.mechanism_clusters.len())
+            .map(|i| (i * 7 + 3) % nodes.len())
+            .collect();
+        let ecology_nodes: Vec<usize> = (0..nodes.len())
+            .filter(|i| !mechanism_nodes.contains(i))
+            .collect();
+        let spawn_node_count = (p.resident_count + 3) / 4;
+        if ecology_nodes.len() < spawn_node_count {
             return Err(PyValueError::new_err(
-                "seeded underpass violates its clearance limit",
+                "regional graph lacks collision-clear resident regions",
             ));
         }
-        let mut edge_metadata = Vec::new();
-        for (index, edge) in family.edges.iter().enumerate() {
-            let first = &nodes[edge.nodes[0]];
-            let second = &nodes[edge.nodes[1]];
-            let dx = second.position[0] - first.position[0];
-            let dy = second.position[1] - first.position[1];
-            let dz = second.position[2] - first.position[2];
-            let run = (dx * dx + dy * dy).sqrt();
-            let slope = dz.abs() / run;
-            if slope > self.config.limits.maximum_rise_over_run {
-                return Err(PyValueError::new_err("seeded ramp exceeds slope limit"));
-            }
-            edge_metadata.push(json!({
-                "id":format!("family-ramp-{index:02}"), "nodes":edge.nodes,
-                "run_m":run, "rise_m":dz, "rise_over_run":slope, "width_m":edge.width_m
-            }));
+        let spawn_nodes: Vec<usize> = ecology_nodes[..spawn_node_count].to_vec();
+        let spawn_node_set: BTreeSet<usize> = spawn_nodes.iter().copied().collect();
+        let content_nodes: Vec<usize> = ecology_nodes
+            .iter()
+            .copied()
+            .filter(|i| !spawn_node_set.contains(i))
+            .collect();
+        if content_nodes.len() < 4 {
+            return Err(PyValueError::new_err(
+                "regional graph lacks structure-free ecology regions",
+            ));
         }
+        let shelters: BTreeSet<usize> = (0..p.region_count)
+            .filter(|i| !mechanism_nodes.contains(i) && !spawn_node_set.contains(i))
+            .filter(|_| rng.unit() < p.shelter_fraction)
+            .collect();
+        let landmarks: BTreeSet<usize> = (0..p.region_count)
+            .filter(|i| !mechanism_nodes.contains(i) && !spawn_node_set.contains(i))
+            .filter(|_| rng.unit() < p.landmark_fraction)
+            .collect();
 
-        let terrain: HashSet<&str> = self
+        let mut habitat: Value = serde_json::from_str(&habitat_json)
+            .map_err(|e| PyValueError::new_err(format!("invalid habitat template: {e}")))?;
+        let mut biosphere: Value = serde_json::from_str(&biosphere_json)
+            .map_err(|e| PyValueError::new_err(format!("invalid biosphere template: {e}")))?;
+        object_mut(&mut habitat, "habitat")?.insert("size".into(), json!(p.dimensions_m));
+        let entities = array_mut(&mut habitat, "entities")?;
+        let existing: HashSet<String> = entities.iter().filter_map(id).map(str::to_owned).collect();
+        if self
             .config
-            .terrain_entity_ids
+            .replace_entity_ids
+            .iter()
+            .any(|v| !existing.contains(v))
+            || self
+                .config
+                .mechanism_clusters
+                .iter()
+                .flat_map(|v| v.entity_ids.iter())
+                .any(|v| !existing.contains(v))
+            || self
+                .config
+                .movable_template_ids
+                .iter()
+                .any(|v| !existing.contains(v))
+            || existing.contains(&self.config.catchment.id)
+        {
+            return Err(PyValueError::new_err(
+                "regional template identities are missing or duplicated",
+            ));
+        }
+        let solar_components = entities
+            .iter()
+            .find(|value| id(value) == Some("ground"))
+            .and_then(Value::as_object)
+            .and_then(|value| value.get("components"))
+            .and_then(Value::as_array)
+            .filter(|components| {
+                components.iter().any(|component| {
+                    component.get("type").and_then(Value::as_str) == Some("light")
+                        && component.get("directional").and_then(Value::as_bool) == Some(true)
+                })
+            })
+            .cloned()
+            .ok_or_else(|| PyValueError::new_err("regional template solar light is missing"))?;
+        let replacement: HashSet<&str> = self
+            .config
+            .replace_entity_ids
             .iter()
             .map(String::as_str)
             .collect();
-        let entities = array_mut(&mut habitat, "entities")?;
-        let existing: HashSet<String> = entities.iter().filter_map(id).map(str::to_owned).collect();
-        if existing.len() != entities.len()
-            || terrain.iter().any(|name| !existing.contains(*name))
-            || existing.contains(&self.config.catchment.id)
-            || (0..nodes.len())
-                .any(|index| existing.contains(&format!("family-platform-{index:02}")))
-            || (0..family.edges.len())
-                .any(|index| existing.contains(&format!("family-ramp-{index:02}")))
-        {
-            return Err(PyValueError::new_err(
-                "nursery template identities are missing or duplicated",
-            ));
-        }
-        entities.retain(|entity| id(entity).is_none_or(|name| !terrain.contains(name)));
-        entities.push(json!({
-            "id": self.config.catchment.id,
-            "mobility": "static",
-            "material": self.config.catchment.material,
-            "physical_material": self.config.catchment.physical_material,
-            "position": [6.0, 4.0, 0.0],
-            "shapes": [
-                {
-                    "type": "box",
-                    "size": [
-                        self.config.catchment.half_size_m[0],
-                        self.config.catchment.half_size_m[1],
-                        self.config.catchment.thickness_m * 0.5
-                    ],
-                    "position": [
-                        0.0,
-                        0.0,
-                        self.config.catchment.surface_height_m
-                            - self.config.catchment.thickness_m * 0.5
-                    ]
-                },
-                {
-                    "type": "box",
-                    "size": [
-                        self.config.catchment.thickness_m * 0.5,
-                        self.config.catchment.half_size_m[1],
-                        self.config.catchment.wall_height_m * 0.5
-                    ],
-                    "position": [
-                        -self.config.catchment.half_size_m[0], 0.0,
-                        self.config.catchment.surface_height_m
-                            + self.config.catchment.wall_height_m * 0.5
-                    ]
-                },
-                {
-                    "type": "box",
-                    "size": [
-                        self.config.catchment.thickness_m * 0.5,
-                        self.config.catchment.half_size_m[1],
-                        self.config.catchment.wall_height_m * 0.5
-                    ],
-                    "position": [
-                        self.config.catchment.half_size_m[0], 0.0,
-                        self.config.catchment.surface_height_m
-                            + self.config.catchment.wall_height_m * 0.5
-                    ]
-                },
-                {
-                    "type": "box",
-                    "size": [
-                        self.config.catchment.half_size_m[0],
-                        self.config.catchment.thickness_m * 0.5,
-                        self.config.catchment.wall_height_m * 0.5
-                    ],
-                    "position": [
-                        0.0, -self.config.catchment.half_size_m[1],
-                        self.config.catchment.surface_height_m
-                            + self.config.catchment.wall_height_m * 0.5
-                    ]
-                },
-                {
-                    "type": "box",
-                    "size": [
-                        self.config.catchment.half_size_m[0],
-                        self.config.catchment.thickness_m * 0.5,
-                        self.config.catchment.wall_height_m * 0.5
-                    ],
-                    "position": [
-                        0.0, self.config.catchment.half_size_m[1],
-                        self.config.catchment.surface_height_m
-                            + self.config.catchment.wall_height_m * 0.5
-                    ]
-                }
-            ],
-            "components": []
-        }));
-        let materials = ["terracotta", "limestone", "darkstone"];
-        for (index, node) in nodes.iter().enumerate() {
+        entities.retain(|v| id(v).is_none_or(|name| !replacement.contains(name)));
+        entities.extend(boundary_entities(width, height, &self.config.geometry));
+        let ground = entities
+            .iter_mut()
+            .find(|value| id(value) == Some("region-ground"))
+            .and_then(Value::as_object_mut)
+            .ok_or_else(|| PyValueError::new_err("generated regional ground is missing"))?;
+        ground.insert("components".into(), Value::Array(solar_components));
+        entities.push(catchment_entity(width, height, &self.config.catchment));
+        let mats = ["terracotta", "limestone", "darkstone"];
+        for (i, node) in nodes.iter().enumerate() {
             entities.push(platform_entity(
-                index,
+                i,
                 node,
-                self.config.limits.platform_thickness_m,
-                materials[(index + (rng.next_u64() as usize)) % materials.len()],
+                &self.config.geometry,
+                mats[(i + rng.next_u64() as usize) % 3],
             ));
         }
-        for (index, edge) in family.edges.iter().enumerate() {
+        let mut edge_meta = Vec::new();
+        for (i, &(a, b)) in edges.iter().enumerate() {
+            let dx = nodes[b].position[0] - nodes[a].position[0];
+            let dy = nodes[b].position[1] - nodes[a].position[1];
+            let dz = nodes[b].position[2] - nodes[a].position[2];
+            let run = (dx * dx + dy * dy).sqrt();
+            let slope = dz.abs() / run;
+            if slope > self.config.geometry.maximum_rise_over_run {
+                return Err(PyValueError::new_err("generated ramp exceeds slope bound"));
+            }
+            let rw = self.config.geometry.ramp_width_m.min
+                + rng.unit()
+                    * (self.config.geometry.ramp_width_m.max
+                        - self.config.geometry.ramp_width_m.min);
             entities.push(ramp_entity(
-                index,
-                &nodes[edge.nodes[0]],
-                &nodes[edge.nodes[1]],
-                edge.width_m,
-                self.config.limits.platform_thickness_m,
-                materials[(index + 1) % materials.len()],
+                i,
+                &nodes[a],
+                &nodes[b],
+                rw,
+                &self.config.geometry,
+                mats[(i + 1) % 3],
+            ));
+            edge_meta.push(json!({"id":format!("region-ramp-{i:02}"),"nodes":[a,b],"run_m":run,"rise_m":dz,"rise_over_run":slope,"width_m":rw}));
+        }
+        for &i in &shelters {
+            entities.push(canopy_entity(
+                i,
+                &nodes[i],
+                self.config.geometry.minimum_underpass_clearance_m,
             ));
         }
-        for (index, &node) in family.canopy_nodes.iter().enumerate() {
-            entities.push(canopy_entity(index, &nodes[node]));
-        }
-        for (index, &node) in family.landmark_nodes.iter().enumerate() {
+        for &i in &landmarks {
             entities.push(landmark_entity(
-                index,
-                &nodes[node],
-                if index % 2 == 0 { "violet" } else { "cyan" },
+                i,
+                &nodes[i],
+                if i % 2 == 0 { "violet" } else { "cyan" },
             ));
         }
         let indices = entity_index(entities);
-        let required = [
-            "lift-approach",
-            "pressure-lift",
-            "passage-gate",
-            "lift-frame",
-            "counterweight-block",
-            "balance-plank",
-            "balance-fulcrum",
-            "bell-frame",
-            "rain-bell",
-            "leaf-gate",
-            "underdeck-light",
-            "terrace-light",
-        ];
-        if required.iter().any(|name| !indices.contains_key(*name)) {
-            return Err(PyValueError::new_err(
-                "nursery mechanism identity is missing",
-            ));
-        }
-
-        let gate = &nodes[family.gate_node];
-        let gate_target = [gate.position[0], gate.position[1], gate.position[2]];
-        let gate_delta = [gate_target[0] - 7.5, gate_target[1] - 3.85, gate_target[2]];
-        for name in [
-            "lift-approach",
-            "pressure-lift",
-            "passage-gate",
-            "lift-frame",
-            "counterweight-block",
-        ] {
-            translate_entity(&mut entities[indices[name]], gate_delta)?;
-        }
-        let cluster_specs = [
-            (
-                ["balance-plank", "balance-fulcrum"].as_slice(),
-                [5.05, 6.55, 0.0],
-                (family.gate_node + 2) % nodes.len(),
-            ),
-            (
-                ["bell-frame", "rain-bell"].as_slice(),
-                [1.4, 6.25, 0.0],
-                (family.gate_node + 4) % nodes.len(),
-            ),
-        ];
-        for (names, origin, target_index) in cluster_specs {
-            let target = &nodes[target_index];
+        // Relocate physical mechanisms as coherent clusters around graph regions.
+        for (offset, cluster) in self.config.mechanism_clusters.iter().enumerate() {
+            let n = &nodes[(offset * 7 + 3) % nodes.len()];
             let delta = [
-                target.position[0] - origin[0],
-                target.position[1] - origin[1],
-                target.position[2],
+                n.position[0] - cluster.anchor_m[0],
+                n.position[1] - cluster.anchor_m[1],
+                n.position[2] - cluster.anchor_m[2],
             ];
-            for name in names {
-                translate_entity(&mut entities[indices[*name]], delta)?;
+            for name in &cluster.entity_ids {
+                let idx = *indices
+                    .get(name)
+                    .ok_or_else(|| PyValueError::new_err("mechanism identity vanished"))?;
+                translate(&mut entities[idx], delta)?;
             }
         }
-        let leaf_target = &nodes[(family.gate_node + 1) % nodes.len()];
-        set_position(
-            &mut entities[indices["leaf-gate"]],
-            [
-                leaf_target.position[0],
-                leaf_target.position[1],
-                leaf_target.position[2] + 0.34,
-            ],
-        )?;
-        let low_light_node = family.underpass_nodes.first().copied().unwrap_or(0);
-        let low = &nodes[low_light_node];
-        set_position(
-            &mut entities[indices["underdeck-light"]],
-            [
-                low.position[0],
-                low.position[1],
-                (low.position[2] - 0.24).max(0.12),
-            ],
-        )?;
-        let high_index = nodes
+        // Retain a bounded set of template movable objects and clone additional
+        // construction pieces from those same physical definitions.
+        let movable_templates: Vec<Value> = self
+            .config
+            .movable_template_ids
             .iter()
-            .enumerate()
-            .max_by(|a, b| a.1.position[2].total_cmp(&b.1.position[2]))
-            .map(|value| value.0)
-            .unwrap_or(0);
-        let high = &nodes[high_index];
-        set_position(
-            &mut entities[indices["terrace-light"]],
-            [high.position[0], high.position[1], high.position[2] + 0.42],
-        )?;
-        let _ = entities;
-
-        let bodies = array_mut(&mut habitat, "bodies")?;
-        if bodies.len() != 6 {
-            return Err(PyValueError::new_err(
-                "nursery requires six existing resident genotypes",
-            ));
-        }
-        let spawn_nodes: Vec<usize> = (0..nodes.len())
-            .filter(|index| *index != family.gate_node)
+            .map(|name| entities[*indices.get(name).unwrap()].clone())
             .collect();
-        if spawn_nodes.len() < bodies.len() {
-            return Err(PyValueError::new_err(
-                "nursery topology has too few gate-clear spawn platforms",
-            ));
+        for (i, name) in self.config.movable_template_ids.iter().enumerate() {
+            if i >= p.movable_count {
+                entities.retain(|v| id(v) != Some(name));
+            } else {
+                let n = &nodes[content_nodes[(i * 5 + 1) % content_nodes.len()]];
+                let idx = entity_index(entities)[name];
+                set_position(
+                    &mut entities[idx],
+                    [n.position[0], n.position[1], n.position[2] + 0.18],
+                )?;
+            }
         }
-        let mut spawn_metadata = Vec::new();
-        for (index, body) in bodies.iter_mut().enumerate() {
-            let node_index = spawn_nodes[index];
+        for i in self.config.movable_template_ids.len()..p.movable_count {
+            let mut value = movable_templates[i % movable_templates.len()].clone();
+            let clone_id = format!("regional-building-{i:02}");
+            let map = object_mut(&mut value, "movable clone")?;
+            map.insert("id".into(), Value::String(clone_id.clone()));
+            if let Some(components) = map.get_mut("components").and_then(Value::as_array_mut) {
+                for (component_index, component) in components.iter_mut().enumerate() {
+                    if let Some(component) = component.as_object_mut() {
+                        if component.contains_key("id") {
+                            component.insert(
+                                "id".into(),
+                                Value::String(format!("{clone_id}-component-{component_index:02}")),
+                            );
+                        }
+                    }
+                }
+            }
+            let n = &nodes[content_nodes[(i * 5 + 1) % content_nodes.len()]];
+            set_position(
+                &mut value,
+                [n.position[0], n.position[1], n.position[2] + 0.18],
+            )?;
+            entities.push(value);
+        }
+
+        // Bind the existing conserved chemistry to this region: colony and
+        // material entities move; resource scale changes only declared founder
+        // pools, never runtime replenishment.
+        let indices = entity_index(entities);
+        let colonies = object(&biosphere, "biosphere")?
+            .get("colonies")
+            .and_then(Value::as_array)
+            .ok_or_else(|| PyValueError::new_err("biosphere colonies missing"))?
+            .clone();
+        let colony_count = colonies.len();
+        for (i, colony) in colonies.iter().enumerate() {
+            let cid = object(colony, "colony")?
+                .get("id")
+                .and_then(Value::as_str)
+                .ok_or_else(|| PyValueError::new_err("colony id missing"))?;
+            let n = &nodes[content_nodes[(i * 11 + 2) % content_nodes.len()]];
+            for role in ["branches", "roots", "leaves"] {
+                let eid = format!("{cid}-{role}");
+                let idx = *indices
+                    .get(&eid)
+                    .ok_or_else(|| PyValueError::new_err("colony physical binding missing"))?;
+                set_position(
+                    &mut entities[idx],
+                    [n.position[0], n.position[1], n.position[2] + 0.025],
+                )?;
+            }
+        }
+        let material_objects = object(&biosphere, "biosphere")?
+            .get("material_objects")
+            .and_then(Value::as_object)
+            .and_then(|v| v.get("objects"))
+            .and_then(Value::as_array)
+            .ok_or_else(|| PyValueError::new_err("material objects missing"))?
+            .clone();
+        let active_packets: Vec<(String, usize)> = material_objects
+            .iter()
+            .filter_map(|v| {
+                let m = v.as_object()?;
+                let e = m.get("entity")?.as_str()?;
+                if e.starts_with("living-packet-") {
+                    Some((e.to_owned(), m.get("row")?.as_u64()? as usize))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let active_packet_count = active_packets.len();
+        for (i, (eid, _)) in active_packets.iter().enumerate() {
+            let n = &nodes[content_nodes[(i * 13 + 5) % content_nodes.len()]];
+            let idx = *indices
+                .get(eid)
+                .ok_or_else(|| PyValueError::new_err("finite packet physical binding missing"))?;
+            set_position(
+                &mut entities[idx],
+                [
+                    n.position[0] + if i % 2 == 0 { 0.62 } else { -0.62 },
+                    n.position[1] + 0.5,
+                    n.position[2] + 0.14,
+                ],
+            )?;
+        }
+
+        // Replace resident rows transactionally in the birth document. Colony
+        // rows stay first; all non-mobile rows are shifted consistently.
+        let old_mobiles = object(&biosphere, "biosphere")?
+            .get("mobiles")
+            .and_then(Value::as_array)
+            .ok_or_else(|| PyValueError::new_err("biosphere mobiles missing"))?;
+        let mut old_mobile_rows = HashSet::new();
+        for mobile in old_mobiles {
+            let m = object(mobile, "mobile")?;
+            for key in [
+                "body_row",
+                "gut_row",
+                "structure_row",
+                "gland_row",
+                "brood_row",
+            ] {
+                if let Some(row) = m.get(key).and_then(Value::as_u64) {
+                    old_mobile_rows.insert(row as usize);
+                }
+            }
+        }
+        let old_compartments = object(&biosphere, "biosphere")?
+            .get("compartments")
+            .and_then(Value::as_array)
+            .ok_or_else(|| PyValueError::new_err("biosphere compartments missing"))?
+            .clone();
+        let colony_limit = colonies
+            .iter()
+            .flat_map(|v| {
+                let m = v.as_object().unwrap();
+                [m.get("body_row"), m.get("structure_row")]
+            })
+            .filter_map(|v| v.and_then(Value::as_u64))
+            .max()
+            .ok_or_else(|| PyValueError::new_err("colony rows missing"))?
+            as usize;
+        let mut new_compartments = old_compartments[..=colony_limit].to_vec();
+        let mut row_map: HashMap<usize, usize> = (0..=colony_limit).map(|i| (i, i)).collect();
+        let mut new_mobiles = Vec::new();
+        let mut new_exchange = Vec::new();
+        let mut new_bodies = Vec::new();
+        let mut resident_ids = HashSet::new();
+        for founder in residents.residents {
+            for c in [
+                &founder.founders.body,
+                &founder.founders.gut,
+                &founder.founders.structure,
+                &founder.founders.gland,
+                &founder.founders.brood,
+            ] {
+                validate_compartment(c)?;
+            }
+            let body = founder.body;
+            let rid = id(&body)
+                .ok_or_else(|| PyValueError::new_err("resident body id missing"))?
+                .to_owned();
+            if !identifier(&rid) || !resident_ids.insert(rid.clone()) {
+                return Err(PyValueError::new_err(
+                    "resident ids are invalid or duplicated",
+                ));
+            }
+            let mut mobile = founder.mobile;
+            let mm = object_mut(&mut mobile, "mobile")?;
+            if mm.keys().any(|k| k.ends_with("_row")) || mm.get("id").is_some() {
+                return Err(PyValueError::new_err(
+                    "resident mobile rows/id are generator-owned",
+                ));
+            }
+            mm.insert("id".into(), Value::String(rid.clone()));
+            for (key, c) in [
+                ("body_row", founder.founders.body),
+                ("gut_row", founder.founders.gut),
+                ("structure_row", founder.founders.structure),
+                ("gland_row", founder.founders.gland),
+                ("brood_row", founder.founders.brood),
+            ] {
+                mm.insert(key.into(), Value::from(new_compartments.len()));
+                new_compartments.push(c);
+            }
+            let mut exchange = founder.exchange;
+            let em = object_mut(&mut exchange, "exchange mobile")?;
+            if em.get("id").is_some() || em.keys().any(|k| k.ends_with("_row")) {
+                return Err(PyValueError::new_err(
+                    "resident exchange identity/rows are generator-owned",
+                ));
+            }
+            em.insert("id".into(), Value::String(rid));
+            new_bodies.push(body);
+            new_mobiles.push(mobile);
+            new_exchange.push(exchange);
+        }
+        for (old, value) in old_compartments.iter().enumerate().skip(colony_limit + 1) {
+            if old_mobile_rows.contains(&old) {
+                continue;
+            }
+            row_map.insert(old, new_compartments.len());
+            new_compartments.push(value.clone());
+        }
+        remap_rows(&mut biosphere, &row_map)?;
+        let bm = object_mut(&mut biosphere, "biosphere")?;
+        bm.insert(
+            "format".into(),
+            Value::String("chreatures-biosphere-birth-v6".into()),
+        );
+        bm.insert("compartments".into(), Value::Array(new_compartments));
+        bm.insert("mobiles".into(), Value::Array(new_mobiles));
+        let illumination = object_mut(
+            bm.get_mut("illumination_cycle")
+                .ok_or_else(|| PyValueError::new_err("illumination cycle missing"))?,
+            "illumination cycle",
+        )?;
+        illumination.insert("light_entity".into(), Value::String("region-ground".into()));
+        illumination.insert("center_m".into(), json!([width * 0.5, height * 0.5, 0.0]));
+        let exchange = object_mut(
+            bm.get_mut("exchange")
+                .ok_or_else(|| PyValueError::new_err("exchange missing"))?,
+            "exchange",
+        )?;
+        exchange.insert(
+            "format".into(),
+            Value::String("chreatures-ecological-exchange-v3".into()),
+        );
+        exchange.insert("mobiles".into(), Value::Array(new_exchange));
+        // Apply resource scale after row remapping.
+        let objects = bm
+            .get("material_objects")
+            .and_then(Value::as_object)
+            .and_then(|v| v.get("objects"))
+            .and_then(Value::as_array)
+            .unwrap()
+            .clone();
+        let compartments = bm
+            .get_mut("compartments")
+            .and_then(Value::as_array_mut)
+            .unwrap();
+        for item in objects {
+            let m = item.as_object().unwrap();
+            let eid = m.get("entity").and_then(Value::as_str).unwrap_or("");
+            if eid.starts_with("living-packet-") {
+                let row = m.get("row").and_then(Value::as_u64).unwrap() as usize;
+                let pools = object_mut(&mut compartments[row], "packet compartment")?
+                    .get_mut("pools")
+                    .and_then(Value::as_object_mut)
+                    .unwrap();
+                for amount in pools.values_mut() {
+                    *amount = Value::from(amount.as_f64().unwrap() * p.resource_scale);
+                }
+            }
+        }
+
+        // Place arbitrary resident cohorts on the structure-free regions reserved
+        // before any canopies, landmarks, or mechanism clusters were emitted.
+        // The pairwise distance check is a hard geometric precondition before
+        // MuJoCo construction.
+        let slots = [[0.0, -0.4], [-0.45, 0.0], [0.45, 0.0], [0.0, 0.45]];
+        let mut spawn_meta = Vec::new();
+        let mut spawn_positions = Vec::new();
+        for (index, body) in new_bodies.iter_mut().enumerate() {
+            let node_index = spawn_nodes[index % spawn_nodes.len()];
+            let layer = index / spawn_nodes.len();
+            if layer >= slots.len() {
+                return Err(PyValueError::new_err(
+                    "regional platforms cannot place resident capacity",
+                ));
+            }
             let node = &nodes[node_index];
-            let lateral = if index % 2 == 0 { -0.22 } else { 0.22 };
             let position = [
-                node.position[0],
-                node.position[1] + lateral,
-                node.position[2] + 0.12,
+                node.position[0] + slots[layer][0],
+                node.position[1] + slots[layer][1],
+                node.position[2] + 0.22,
             ];
             set_position(body, position)?;
-            spawn_metadata
-                .push(json!({"resident":id(body), "node":node_index, "position_m":position}));
+            spawn_positions.push(position);
+            spawn_meta.push(json!({"resident":id(body),"node":node_index,"position_m":position}));
         }
-        for first in 0..spawn_metadata.len() {
-            for second in first + 1..spawn_metadata.len() {
-                let a = spawn_metadata[first]["position_m"].as_array().unwrap();
-                let b = spawn_metadata[second]["position_m"].as_array().unwrap();
-                let dx = a[0].as_f64().unwrap() - b[0].as_f64().unwrap();
-                let dy = a[1].as_f64().unwrap() - b[1].as_f64().unwrap();
-                if (dx * dx + dy * dy).sqrt() < self.config.limits.minimum_spawn_clearance_m {
+        for a in 0..spawn_positions.len() {
+            for b in a + 1..spawn_positions.len() {
+                let dx = spawn_positions[a][0] - spawn_positions[b][0];
+                let dy = spawn_positions[a][1] - spawn_positions[b][1];
+                if (dx * dx + dy * dy).sqrt() < self.config.geometry.minimum_spawn_clearance_m {
                     return Err(PyValueError::new_err(
-                        "seeded resident spawns are not clear",
+                        "generated resident spawns are not collision-clear",
                     ));
                 }
             }
         }
-
-        let entities = array_mut(&mut habitat, "entities")?;
-        let indices = entity_index(entities);
-        let colony_slots: [[f64; 2]; 2] = [[-0.42, 0.34], [0.42, -0.34]];
-        let mut colony_metadata = Vec::new();
-        for colony in 0..12 {
-            let node_index = (colony + 2) % nodes.len();
-            let node = &nodes[node_index];
-            let slot = colony_slots[(colony / nodes.len()) % colony_slots.len()];
-            let position = [
-                node.position[0]
-                    + slot[0].clamp(-node.half_size[0] * 0.55, node.half_size[0] * 0.55),
-                node.position[1]
-                    + slot[1].clamp(-node.half_size[1] * 0.55, node.half_size[1] * 0.55),
-                node.position[2] + 0.025,
-            ];
-            for suffix in ["branches", "roots", "leaves"] {
-                let name = format!("reef-{:02}-{suffix}", colony + 1);
-                let index = *indices.get(&name).ok_or_else(|| {
-                    PyValueError::new_err("colony attachment identity is missing")
-                })?;
-                set_position(&mut entities[index], position)?;
-            }
-            colony_metadata.push(json!({"colony":format!("reef-{:02}",colony+1), "node":node_index, "position_m":position}));
-        }
-        let packet_slots = [[0.0, 0.0], [0.28, 0.24], [-0.28, -0.24]];
-        let mut resource_metadata = Vec::new();
-        for packet in 0..12 {
-            let node_index = (packet + 5) % nodes.len();
-            let node = &nodes[node_index];
-            let slot = packet_slots[(packet / nodes.len()) % packet_slots.len()];
-            let position = [
-                node.position[0] + slot[0],
-                node.position[1] + slot[1],
-                node.position[2] + 0.10,
-            ];
-            let name = format!("living-packet-{packet:02}");
-            let index = *indices
-                .get(&name)
-                .ok_or_else(|| PyValueError::new_err("finite material entity is missing"))?;
-            set_position(&mut entities[index], position)?;
-            resource_metadata
-                .push(json!({"entity":name, "node":node_index, "position_m":position}));
-        }
-        for (offset, name) in [
-            "tone-ball",
-            "cyan-ball",
-            "rattle-block",
-            "stack-block-a",
-            "stack-block-b",
-        ]
-        .iter()
-        .enumerate()
-        {
-            if let Some(&index) = indices.get(*name) {
-                let node = &nodes[(offset + 3) % nodes.len()];
-                set_position(
-                    &mut entities[index],
-                    [
-                        node.position[0],
-                        node.position[1],
-                        node.position[2] + 0.16 + 0.12 * (offset == 4) as u8 as f64,
-                    ],
-                )?;
-            }
-        }
-
-        object_mut(&mut habitat, "habitat")?.insert(
-            "name".to_owned(),
-            Value::String(format!("nursery-{}-{seed}", family.id)),
+        *array_mut(&mut habitat, "bodies")? = new_bodies;
+        let hm = object_mut(&mut habitat, "habitat")?;
+        hm.insert(
+            "name".into(),
+            Value::String(format!("regional-{}-{}", p.archetype, &genome.sha256[..12])),
         );
-        let node_metadata: Vec<Value> = nodes
-            .iter()
-            .enumerate()
-            .map(|(index, node)| json!({
-                "id":format!("family-platform-{index:02}"), "position_m":node.position,
-                "half_size_m":node.half_size, "underpass":family.underpass_nodes.contains(&index)
-            }))
-            .collect();
-        let analyst = json!({
-            "format":ANALYST_FORMAT, "family":family.id, "seed":seed,
-            "generator_config_sha256":self.config_sha256,
-            "runtime_visible":false,
-            "graph":{"nodes":node_metadata,"edges":edge_metadata,"connected":true},
-            "underpass_nodes":family.underpass_nodes,
-            "canopy_nodes":family.canopy_nodes,
-            "landmark_nodes":family.landmark_nodes,
-            "gate_node":family.gate_node,
-            "resident_spawns":spawn_metadata,
-            "colony_attachments":colony_metadata,
-            "finite_resources":resource_metadata,
-            "limits":{
-                "maximum_rise_over_run":self.config.limits.maximum_rise_over_run,
-                "minimum_ramp_width_m":self.config.limits.minimum_ramp_width_m,
-                "minimum_underpass_clearance_m":self.config.limits.minimum_underpass_clearance_m,
-                "minimum_spawn_clearance_m":self.config.limits.minimum_spawn_clearance_m
-            }
-        });
-        let mut habitat_output = serde_json::to_string_pretty(&habitat)
-            .map_err(|error| PyValueError::new_err(error.to_string()))?;
-        // The biosphere is an immutable source template. Preserve its exact
-        // decimal spellings so build-time layout generation cannot shift a
-        // chemical coefficient by a serialization round trip.
-        let biosphere_output = biosphere_json;
-        let mut analyst_output = serde_json::to_string_pretty(&analyst)
-            .map_err(|error| PyValueError::new_err(error.to_string()))?;
-        habitat_output.push('\n');
-        analyst_output.push('\n');
-        Ok((habitat_output, biosphere_output, analyst_output))
+
+        let node_meta:Vec<Value>=nodes.iter().enumerate().map(|(i,n)|json!({"id":format!("region-platform-{i:02}"),"position_m":n.position,"half_size_m":n.half_size,"lane":n.lane,"underpass":underpasses.contains(&i),"sheltered":shelters.contains(&i)})).collect();
+        let habitat_output = pretty(&habitat)?;
+        let biosphere_output = pretty(&biosphere)?;
+        let topology_sha256 = sha256(habitat_output.as_bytes());
+        let resource_sha256 = sha256(biosphere_output.as_bytes());
+        let mut record = json!({"format":RECORD_FORMAT,"sha256":"","parents":genome.parents.clone(),"variation":genome.variation.clone(),"topology_sha256":topology_sha256,"resource_sha256":resource_sha256,"profile_sha256":genome.profile_sha256.clone(),"epoch":genome.epoch});
+        let record_sha = sha256(serde_json::to_string(&record).unwrap().as_bytes());
+        record["sha256"] = Value::String(record_sha);
+        let analyst = json!({"format":ANALYST_FORMAT,"runtime_visible":false,"environment_genome":genome,"environment_record":record,"graph":{"nodes":node_meta,"edges":edge_meta,"connected":true},"resident_spawns":spawn_meta,"underpass_nodes":underpasses,"shelter_nodes":shelters,"landmark_nodes":landmarks,"resource_budget":{"founder_scale":p.resource_scale,"finite_packets":active_packet_count,"colonies":colony_count,"movable_building_materials":p.movable_count},"limits":{"maximum_rise_over_run":self.config.geometry.maximum_rise_over_run,"minimum_underpass_clearance_m":self.config.geometry.minimum_underpass_clearance_m,"minimum_spawn_clearance_m":self.config.geometry.minimum_spawn_clearance_m},"generator_config_sha256":self.config_sha256});
+        Ok((habitat_output, biosphere_output, pretty(&analyst)?))
     }
+}
+
+fn dist2(a: &Node, b: &Node) -> f64 {
+    let dx = a.position[0] - b.position[0];
+    let dy = a.position[1] - b.position[1];
+    dx * dx + dy * dy
+}
+fn segment_clears_other_nodes(a: usize, b: usize, nodes: &[Node], clearance: f64) -> bool {
+    let ax = nodes[a].position[0];
+    let ay = nodes[a].position[1];
+    let bx = nodes[b].position[0];
+    let by = nodes[b].position[1];
+    let dx = bx - ax;
+    let dy = by - ay;
+    let length2 = dx * dx + dy * dy;
+    nodes.iter().enumerate().all(|(i, node)| {
+        if i == a || i == b {
+            return true;
+        }
+        let t = if length2 > 0.0 {
+            (((node.position[0] - ax) * dx + (node.position[1] - ay) * dy) / length2)
+                .clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        let rx = node.position[0] - (ax + t * dx);
+        let ry = node.position[1] - (ay + t * dy);
+        let required = node.half_size[0].max(node.half_size[1]) + clearance;
+        rx * rx + ry * ry >= required * required
+    })
+}
+fn reachable(count: usize, edges: &[(usize, usize)]) -> Vec<bool> {
+    let mut adjacent = vec![Vec::new(); count];
+    for &(a, b) in edges {
+        adjacent[a].push(b);
+        adjacent[b].push(a);
+    }
+    let mut reached = vec![false; count];
+    let mut q = VecDeque::from([0]);
+    reached[0] = true;
+    while let Some(a) = q.pop_front() {
+        for &b in &adjacent[a] {
+            if !reached[b] {
+                reached[b] = true;
+                q.push_back(b);
+            }
+        }
+    }
+    reached
 }

@@ -60,7 +60,11 @@ impl ActuationCohort {
         controller: Vec<f64>,
     ) -> PyResult<Self> {
         let residents = roots.len();
-        if residents == 0 || qpos.len() != dofs.len() || qpos.len() % (residents * 2) != 0 {
+        if residents == 0
+            || residents > 32
+            || qpos.len() != dofs.len()
+            || qpos.len() % (residents * 2) != 0
+        {
             return Err(PyValueError::new_err("invalid actuation cohort layout"));
         }
         let legs = qpos.len() / (residents * 2);
@@ -103,7 +107,11 @@ impl ActuationCohort {
     ) -> PyResult<()> {
         let dynamic = dynamic.as_slice()?;
         let grips = grips.as_slice()?;
-        if dynamic.len() != self.dynamic.len() || grips.len() != self.residents {
+        if dynamic.len() != self.dynamic.len()
+            || grips.len() != self.residents
+            || dynamic.iter().any(|value| !value.is_finite())
+            || grips.iter().any(|value| *value < -1)
+        {
             return Err(PyValueError::new_err(
                 "invalid dynamic actuation dimensions",
             ));
