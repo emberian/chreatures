@@ -79,6 +79,7 @@ class MaterialObjects:
         self.config = self._normalize_spec(spec)
         self.config_sha256 = hashlib.sha256(canonical(self.config)).hexdigest()
         self._validate_web_bindings()
+        self._prepare_runtime_cache()
         self._base_entities: dict[str, dict[str, Any]] = {}
         self._state: dict[str, dict[str, Any]] = {}
         for item in self.config["objects"]:
@@ -106,6 +107,58 @@ class MaterialObjects:
         self.last_receipt: dict[str, Any] | None = None
         self.last_geometry_sync: list[dict[str, Any]] = []
         self._check_physical_state()
+
+    def _prepare_runtime_cache(self) -> None:
+        """Cache immutable bindings and one compact material-row read."""
+        web = self._web()
+        names = web.chemistry.pools
+        pool_indices = {name: index for index, name in enumerate(names)}
+        self._items_by_entity = {
+            item["entity"]: item for item in self.config["objects"]
+        }
+        self._donor_rows = {
+            item["entity"]: item["row"] for item in self.config["objects"]
+        }
+        self._row_indices = np.asarray(
+            [item["row"] for item in self.config["objects"]], dtype=np.intp
+        )
+        self._capacity_matrix = np.asarray(
+            [
+                [item["capacities"].get(name, 0.0) for name in names]
+                for item in self.config["objects"]
+            ],
+            dtype=np.float64,
+        )
+        self._content_terms = {
+            item["entity"]: tuple(
+                (pool_indices[name], weight)
+                for name, weight in item["content_weights"].items()
+            )
+            for item in self.config["objects"]
+        }
+        self._surface_terms = {
+            item["entity"]: (
+                tuple(
+                    (pool_indices[name], np.asarray(coefficient, dtype=np.float64))
+                    for name, coefficient in item["surface"]["rgb_coefficients"].items()
+                ),
+                tuple(
+                    (pool_indices[name], np.asarray(coefficient, dtype=np.float64))
+                    for name, coefficient in item["surface"]["odor_coefficients"].items()
+                ),
+            )
+            for item in self.config["objects"]
+        }
+        self._expected_cache: dict[tuple[str, int], dict[str, Any]] = {}
+        self._physical_check_revision: int | None = None
+        self._inventory_cache = np.asarray(web.pools[self._row_indices]).copy()
+        self._surface_inventory_cache: np.ndarray | None = None
+        self._surface_cache: list[dict[str, Any]] | None = None
+
+    def _mark_inventory_current(self) -> None:
+        self._inventory_cache = np.asarray(
+            self._web().pools[self._row_indices]
+        ).copy()
 
     def _web(self) -> MetabolicWeb:
         candidate = self._web_access() if callable(self._web_access) else self._web_access
@@ -351,18 +404,20 @@ class MaterialObjects:
         if not isinstance(entity_id, str):
             raise ValueError("material entity must be a string")
         try:
-            return next(item for item in self.config["objects"] if item["entity"] == entity_id)
-        except StopIteration as exc:
+            return self._items_by_entity[entity_id]
+        except KeyError as exc:
             raise ValueError("unknown material entity") from exc
 
     @property
     def donor_rows(self) -> dict[str, int]:
         """Environment-only entity-to-compartment bindings."""
-        return {item["entity"]: item["row"] for item in self.config["objects"]}
+        return self._donor_rows.copy()
 
     def _content(self, item: Mapping[str, Any], pools: np.ndarray) -> float:
-        names = self._web().chemistry.pools
-        return float(sum(pools[names.index(name)] * weight for name, weight in item["content_weights"].items()))
+        return float(sum(
+            pools[index] * weight
+            for index, weight in self._content_terms[item["entity"]]
+        ))
 
     def _empty(self, pools: np.ndarray) -> bool:
         return bool(np.all(pools == 0.0))
@@ -394,8 +449,15 @@ class MaterialObjects:
         return result
 
     def _expected_entity(self, entity_id: str, boundary_index: int) -> dict[str, Any]:
-        item = self._item(entity_id)
-        return self._scaled_entity(self._base_entities[entity_id], item["boundaries"][boundary_index])
+        key = (entity_id, boundary_index)
+        expected = self._expected_cache.get(key)
+        if expected is None:
+            item = self._item(entity_id)
+            expected = self._scaled_entity(
+                self._base_entities[entity_id], item["boundaries"][boundary_index]
+            )
+            self._expected_cache[key] = expected
+        return expected
 
     def _deposit_position(self, value: Any) -> list[float]:
         position = _vector(value, 3, "material deposit position", -1e5, 1e5)
@@ -408,9 +470,12 @@ class MaterialObjects:
         return position
 
     def _existing_ids(self) -> set[str]:
-        return {entity["id"] for entity in self.world._entities}
+        return set(self.world._entity_mj)
 
     def _check_physical_state(self) -> None:
+        revision = int(self.world.model_revision)
+        if self._physical_check_revision == revision:
+            return
         existing = self._existing_ids()
         for entity_id, state in self._state.items():
             if state["active"]:
@@ -420,6 +485,7 @@ class MaterialObjects:
                     raise ValueError("material state and physical geometry differ")
             elif entity_id in existing:
                 raise ValueError("exhausted material entity remains physical")
+        self._physical_check_revision = revision
 
     def contact_entities(self, resident_id: str, contact_samples: Any) -> tuple[str, ...]:
         """Return material entities physically touched by one resident this step."""
@@ -696,6 +762,7 @@ class MaterialObjects:
             "stored_energy_residual": energy_residual,
         }
         self.last_receipt = copy.deepcopy(receipt)
+        self._mark_inventory_current()
         self._check_physical_state()
         return receipt
 
@@ -837,6 +904,7 @@ class MaterialObjects:
             "stored_energy_residual": energy_residual,
         }
         self.last_receipt = copy.deepcopy(receipt)
+        self._mark_inventory_current()
         self._check_physical_state()
         return receipt
 
@@ -1019,6 +1087,7 @@ class MaterialObjects:
             entity_id = change["entity"]
             if entity_id in new_bases:
                 self._base_entities[entity_id] = new_bases[entity_id]
+                self._expected_cache.clear()
             self._state[entity_id] = {
                 "active": change["boundary_after"] is not None,
                 "boundary": change["boundary_after"],
@@ -1050,23 +1119,25 @@ class MaterialObjects:
             "stored_energy_residual": energy_residual,
         }
         self.last_receipt = copy.deepcopy(receipt)
+        self._mark_inventory_current()
         self._check_physical_state()
         return receipt
 
     def sync_geometry(self) -> list[dict[str, Any]]:
         """Apply boundary changes caused by other operations on the shared web."""
         web = self._web()
+        material_pools = np.asarray(web.pools[self._row_indices])
+        if np.any(material_pools > self._capacity_matrix):
+            raise ValueError("material inventory exceeds declared capacity")
+        if np.array_equal(material_pools, self._inventory_cache):
+            self._check_physical_state()
+            return []
         operations = []
         changes = []
-        for item in self.config["objects"]:
+        for index, item in enumerate(self.config["objects"]):
             entity_id = item["entity"]
             state = self._state[entity_id]
-            capacity = np.asarray(
-                [item["capacities"].get(name, 0.0) for name in web.chemistry.pools]
-            )
-            if np.any(web.pools[item["row"]] > capacity):
-                raise ValueError("material inventory exceeds declared capacity")
-            boundary = self._boundary(item, web.pools[item["row"]])
+            boundary = self._boundary(item, material_pools[index])
             if (
                 state["boundary"] is None
                 and boundary is not None
@@ -1082,6 +1153,7 @@ class MaterialObjects:
                     "boundary_after": boundary,
                 })
         if not operations:
+            self._inventory_cache = material_pools.copy()
             self._check_physical_state()
             return []
         transaction = self.world.prepare_topology_batch(operations)
@@ -1093,6 +1165,7 @@ class MaterialObjects:
             }
         self.geometry_syncs += 1
         self.last_geometry_sync = copy.deepcopy(changes)
+        self._inventory_cache = material_pools.copy()
         self._check_physical_state()
         return changes
 
@@ -1103,24 +1176,40 @@ class MaterialObjects:
         receive only the resulting ray RGB and local odor samples.
         """
         web = self._web()
-        names = web.chemistry.pools
+        material_pools = np.asarray(web.pools[self._row_indices])
+        if (
+            self._surface_cache is not None
+            and self._surface_inventory_cache is not None
+            and np.array_equal(material_pools, self._surface_inventory_cache)
+        ):
+            return [
+                {
+                    "entity": cue["entity"],
+                    "rgb": cue["rgb"].copy(),
+                    "odor": cue["odor"].copy(),
+                }
+                for cue in self._surface_cache
+            ]
         result = []
-        for item in self.config["objects"]:
+        for index, item in enumerate(self.config["objects"]):
             if not self._state[item["entity"]]["active"]:
                 continue
-            pools = web.pools[item["row"]]
+            pools = material_pools[index]
             surface = item["surface"]
             rgb = np.asarray(surface["rgb_bias"], dtype=np.float64)
             odor = np.zeros(3, dtype=np.float64)
-            for name, coefficient in surface["rgb_coefficients"].items():
-                rgb += pools[names.index(name)] * np.asarray(coefficient)
-            for name, coefficient in surface["odor_coefficients"].items():
-                odor += pools[names.index(name)] * np.asarray(coefficient)
+            rgb_terms, odor_terms = self._surface_terms[item["entity"]]
+            for pool, coefficient in rgb_terms:
+                rgb += pools[pool] * coefficient
+            for pool, coefficient in odor_terms:
+                odor += pools[pool] * coefficient
             result.append({
                 "entity": item["entity"],
                 "rgb": np.clip(rgb, 0.0, 1.0).tolist(),
                 "odor": np.clip(odor, 0.0, 4.0).tolist(),
             })
+        self._surface_inventory_cache = material_pools.copy()
+        self._surface_cache = copy.deepcopy(result)
         return result
 
     def snapshot(self) -> dict[str, Any]:
@@ -1167,6 +1256,7 @@ class MaterialObjects:
         ):
             raise ValueError("material snapshot identity differs")
         instance._validate_web_bindings()
+        instance._prepare_runtime_cache()
         base_entities = value.get("base_entities")
         state = value.get("state")
         ids = {item["entity"] for item in instance.config["objects"]}
