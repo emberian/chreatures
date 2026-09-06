@@ -19,10 +19,15 @@ const ui = {
   goalErrorScale: $('#goal-error-scale'),
   proposalContract: $('#proposal-contract'), actionContract: $('#action-contract'),
   physiology: $('#physiology-values'), physiologyContract: $('#physiology-contract'), evidenceLink: $('#recording-evidence-link'),
+  resident: $('#resident-select'), residentCoverage: $('#resident-coverage'), events: $('#events'),
+  eventFilters: $('#event-filters'), eventContract: $('#event-contract'),
+  context: $('#context-diagnostics'), contextUnavailable: $('#context-unavailable'),
 };
 
-let renderer, scene, camera, controls, worldRoot, signalPoints, physicalSun, ambientFill, inspectionLights;
+let renderer, scene, camera, controls, worldRoot, signalPoints, physicalSun, ambientFill, inspectionLights, pathLine, gazeLine, eventPoints;
 let recording = null, cursor = 0, playing = false, lastClock = performance.now(), cameraMode = 'orbit';
+let activeBody = 0, activeEventKind = 'all';
+const overlayVisibility={path:true,gaze:true,signals:true,events:true};
 let pools = new Map();
 const dummy = new THREE.Object3D(), tint = new THREE.Color(), qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
 const pos = new THREE.Vector3(), posB = new THREE.Vector3(), look = new THREE.Vector3(), direction = new THREE.Vector3();
@@ -51,17 +56,20 @@ function validate(data) {
   if(!Array.isArray(actionOrder)||!actionOrder.length||!Array.isArray(proposalOrder))throw new Error('Recording action contract is invalid');
   for (const [index, frame] of data.frames.entries()) {
     if (!Number.isFinite(frame.model_time) || !Number.isInteger(frame.tick)) throw new Error(`Frame ${index} time is invalid`);
-    if (!Array.isArray(frame.bodies) || !Array.isArray(frame.entities) || !frame.selected) throw new Error(`Frame ${index} is incomplete`);
-    finiteArray(frame.selected.neural_readouts?.shape, 1, `Frame ${index} readout shape`);
-    if (frame.selected.neural_readouts.shape[0] !== 384) throw new Error(`Frame ${index} readouts are not 384 values`);
-    const selected=frame.selected, refinement=selected.consequence_refinement, forecast=selected.sensory_forecast;
-    if (!refinement || !forecast || !selected.sampled_proposal) throw new Error(`Frame ${index} has no recorded decision path`);
+    if (!Array.isArray(frame.bodies) || !Array.isArray(frame.entities)) throw new Error(`Frame ${index} is incomplete`);
+    const details=Array.isArray(frame.resident_details)?frame.resident_details:(frame.selected?[frame.selected]:[]);
+    for(const selected of details){
+    if(selected.neural_readouts){finiteArray(selected.neural_readouts.shape,1,`Frame ${index} readout shape`);if(selected.neural_readouts.shape[0]!==384)throw new Error(`Frame ${index} readouts are not 384 values`);}
+    const refinement=selected.consequence_refinement,forecast=selected.sensory_forecast;
+    if (!refinement && !forecast && !selected.sampled_proposal) continue;
+    if (!refinement || !forecast || !selected.sampled_proposal) throw new Error(`Frame ${index} has a partial decision path`);
     for(const [label,value] of [['GAM scores',refinement.candidate_scores],['GAM coverage',refinement.candidate_out_of_domain],['forecast progress',forecast.candidate_progress],['forecast disagreement',forecast.candidate_disagreement],['forecast clipping',forecast.candidate_input_clipped],['forecast tilt',forecast.candidate_logit_tilt]]){
       if(!Array.isArray(value)||value.length!==4)throw new Error(`Frame ${index} ${label} must have four candidates`);
     }
     if(!Array.isArray(refinement.selected_private_correction)||refinement.selected_private_correction.length!==3)throw new Error(`Frame ${index} private correction is invalid`);
     if(!proposalOrder.every(name=>Number.isFinite(selected.sampled_proposal[name]))||!actionOrder.every(name=>Number.isFinite(selected.committed_action[name])))throw new Error(`Frame ${index} action contract is invalid`);
     if(!Number.isInteger(refinement.selected_candidate)||refinement.selected_candidate<0||refinement.selected_candidate>3)throw new Error(`Frame ${index} selected candidate is invalid`);
+    }
   }
   return data;
 }
@@ -185,6 +193,11 @@ function makePools(data) {
   signalGeometry.setDrawRange(0, 0);
   signalPoints = new THREE.Points(signalGeometry, new THREE.PointsMaterial({size:.09, vertexColors:true, transparent:true, opacity:.8, depthWrite:false}));
   worldRoot.add(signalPoints);
+  pathLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:'#e8bf72',transparent:true,opacity:.86}));
+  gazeLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:'#d8ece2',transparent:true,opacity:.9}));
+  eventPoints=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({color:'#e88d61',size:.16,transparent:true,opacity:.9,depthWrite:false}));
+  worldRoot.add(pathLine,gazeLine,eventPoints);
+  rebuildResidentOverlays();
   frameHabitat();
 }
 
@@ -272,6 +285,7 @@ function updateLighting(a,b,alpha){
 
 function updateSignals(signals) {
   if (!signalPoints) return;
+  signalPoints.visible=overlayVisibility.signals;
   const positions = signalPoints.geometry.attributes.position.array;
   const colors = signalPoints.geometry.attributes.color.array;
   const palette = ['#d9794d','#b3c686','#72a6a1'];
@@ -284,6 +298,59 @@ function updateSignals(signals) {
   signalPoints.geometry.setDrawRange(0,count);
   signalPoints.geometry.attributes.position.needsUpdate = true;
   signalPoints.geometry.attributes.color.needsUpdate = true;
+}
+
+function residentIds(){
+  const ids=new Set();
+  for(const frame of recording.frames){
+    for(const body of frame.bodies||[])ids.add(body.body);
+    for(const detail of frame.resident_details||[])ids.add(detail.body);
+    if(frame.selected)ids.add(frame.selected.body);
+  }
+  return [...ids].sort((a,b)=>a-b);
+}
+
+function residentDetail(frame,body=activeBody){
+  const detail=(frame.resident_details||[]).find(value=>value.body===body)||(frame.selected?.body===body?frame.selected:null);
+  const trace=(frame.resident_traces||[]).find(value=>value.body===body);
+  return detail?{...trace,...detail}:trace||null;
+}
+
+function bodyPose(frame,body=activeBody){return (frame.bodies||[]).find(value=>value.body===body)||frame.bodies?.[body]||null;}
+
+function rebuildResidentOverlays(){
+  if(!recording||!pathLine)return;
+  const samples=recording.frames.map(frame=>bodyPose(frame)).filter(Boolean).map(body=>body.position);
+  pathLine.geometry.dispose();pathLine.geometry=new THREE.BufferGeometry().setFromPoints(samples.map(value=>new THREE.Vector3().fromArray(value)));
+  pathLine.geometry.setDrawRange(0,1);
+  const eventPositions=[];
+  for(const event of (recording.events||[]).filter(value=>activeEventKind==='all'||value.kind===activeEventKind)){
+    const frame=recording.frames.reduce((best,item,index)=>Math.abs(item.tick-event.tick)<Math.abs(recording.frames[best].tick-event.tick)?index:best,0);
+    const body=event.actors?.bodies?.[0],pose=body===undefined?null:bodyPose(recording.frames[frame],body);
+    const entityKey=event.actors?.entities?.[0],entity=entityKey===undefined?null:recording.frames[frame].entities.find(value=>value.entity===entityKey);
+    const marker=pose?.position||entity?.shapes?.[0]?.position;
+    if(marker)eventPositions.push(...marker);
+  }
+  eventPoints.geometry.dispose();eventPoints.geometry=new THREE.BufferGeometry();
+  eventPoints.geometry.setAttribute('position',new THREE.Float32BufferAttribute(eventPositions,3));
+}
+
+function updateResidentOverlays(frameIndex){
+  if(!pathLine)return;
+  pathLine.visible=overlayVisibility.path;pathLine.geometry.setDrawRange(0,Math.max(1,frameIndex+1));
+  const detail=residentDetail(recording.frames[frameIndex]);
+  const pose=detail?.retina_pose;
+  gazeLine.visible=overlayVisibility.gaze&&Boolean(pose);
+  if(pose){
+    const start=new THREE.Vector3().fromArray(pose.origin),end=start.clone().addScaledVector(new THREE.Vector3().fromArray(pose.forward).normalize(),1.25);
+    gazeLine.geometry.dispose();gazeLine.geometry=new THREE.BufferGeometry().setFromPoints([start,end]);
+  }
+  eventPoints.visible=overlayVisibility.events;
+}
+
+function clearCanvas(canvas,label){
+  const context=canvas.getContext('2d');context.fillStyle='#162920';context.fillRect(0,0,canvas.width,canvas.height);
+  context.fillStyle='#a9a58f';context.font='10px sans-serif';context.fillText(label,6,Math.max(12,canvas.height/2));
 }
 
 function base64Bytes(blob, expected) {
@@ -336,7 +403,8 @@ function makeActionBars() {
   const names=recording.organism_interface?.action_order||ACTIONS;ui.actionContract.textContent=`${names.length} committed channels`;
   ui.actions.replaceChildren(...names.map((name) => {
     const item=document.createElement('div'); item.className='action'; item.dataset.action=name;
-    item.innerHTML=`<div class="action-label"><span>${name.replaceAll('_',' ')}</span><span>0.00</span></div><div class="bar"><i></i></div>`;
+    const label=document.createElement('div'),title=document.createElement('span'),value=document.createElement('span'),bar=document.createElement('div'),fill=document.createElement('i');
+    label.className='action-label';title.textContent=name.replaceAll('_',' ');value.textContent='0.00';bar.className='bar';bar.append(fill);label.append(title,value);item.append(label,bar);
     return item;
   }));
 }
@@ -378,6 +446,25 @@ function paintDecision(selected){
   if(response)coverage.textContent=`Population GAM: last executed action ${response.executed_transition_in_domain?'within':'outside'} the fitted domain · ${response.in_domain_total.toLocaleString()} covered / ${response.out_of_domain_total.toLocaleString()} outside since birth. Coverage does not establish an effect on the selected action.`;
 }
 
+function setDecisionAvailable(available){
+  const section=ui.candidates.closest('section');section.classList.toggle('instrument-unavailable',!available);
+  if(!available){ui.decisionGoal.textContent='not recorded';ui.decisionChoice.textContent='unavailable';ui.correction.textContent='—';ui.privateUpdates.textContent='—';ui.goalErrorScale.textContent='—';for(const value of ui.proposal.querySelectorAll('span:last-child'))value.textContent='—';for(const row of ui.candidates.children)for(const value of row.querySelectorAll('[data-value]'))value.textContent='—';}
+}
+
+function paintContext(selected){
+  const streams=[['context',selected?.context],['sequence memory',selected?.sequence_memory],['action prediction',selected?.action_prediction]],rows=[];
+  for(const [stream,value] of streams){
+    if(value===undefined||value===null)continue;
+    const entries=typeof value==='object'&&!Array.isArray(value)?Object.entries(value):[['value',value]];
+    for(const [name,item] of entries){
+      const row=document.createElement('div'),label=document.createElement('span'),output=document.createElement('code');row.className='diagnostic-row';label.textContent=`${stream} · ${name.replaceAll('_',' ')}`;
+      output.textContent=Array.isArray(item)?item.map(value=>typeof value==='number'?formatNative(value):String(value)).join(' · '):typeof item==='number'?formatNative(item):String(item);
+      row.append(label,output);rows.push(row);
+    }
+  }
+  ui.context.replaceChildren(...rows);ui.contextUnavailable.hidden=rows.length>0;
+}
+
 function paintActions(values) {
   for(const item of ui.actions.children){
     const value=Math.max(-1,Math.min(1,Number(values[item.dataset.action])||0));
@@ -391,11 +478,13 @@ function paintHistory(frameIndex) {
   context.fillStyle='#162920'; context.fillRect(0,0,width,height);
   const names=[['energy','#efb36b'],['gut','#9bb98e'],['fatigue','#d86d55']];
   for(const [name,color] of names){
-    const values=recording.frames.map(frame=>frame.selected.metabolism[name]);
+    const values=recording.frames.map(frame=>residentDetail(frame)?.metabolism?.[name]).filter(Number.isFinite);
+    if(!values.length)continue;
     const low=Math.min(...values), high=Math.max(...values), span=Math.max(1e-7,high-low);
     context.beginPath(); context.strokeStyle=color; context.lineWidth=2;
     for(let i=0;i<=frameIndex;i++){
-      const x=i/Math.max(1,recording.frames.length-1)*width, y=height-7-(values[i]-low)/span*(height-14);
+      const value=residentDetail(recording.frames[i])?.metabolism?.[name];if(!Number.isFinite(value))continue;
+      const x=i/Math.max(1,recording.frames.length-1)*width, y=height-7-(value-low)/span*(height-14);
       i?context.lineTo(x,y):context.moveTo(x,y);
     }
     context.stroke();
@@ -407,21 +496,24 @@ function paintHistory(frameIndex) {
 function paintPhysiology(selected){const values=selected.recorded_body_state||selected.metabolism,names=recording.recorded_body_state?.fields?.map(field=>field.name)||Object.keys(values);ui.physiologyContract.textContent=`${names.length} post-physics channels`;ui.physiology.replaceChildren(...names.map(name=>{const row=document.createElement('div'),label=document.createElement('span'),value=document.createElement('b'),unit=recording.recorded_body_state?.fields?.find(field=>field.name===name)?.unit;label.textContent=name.replaceAll('_',' ');value.textContent=`${formatNative(values[name])}${unit?` · ${unit}`:''}`;row.append(label,value);return row}))}
 
 function updateInstruments(index) {
-  const frame=recording.frames[index], selected=frame.selected;
+  const frame=recording.frames[index], selected=residentDetail(frame);
   ui.time.textContent=`model time ${frame.model_time.toFixed(3)} s`;
   ui.frame.textContent=`${index+1} / ${recording.frames.length}`;
   ui.tick.textContent=`tick ${frame.tick}`;
-  paintRetina(ui.peripheral,selected.retina.peripheral);
-  paintRetina(ui.foveal,selected.retina.foveal);
-  paintReadouts(selected.neural_readouts);
-  ui.activity.textContent=selected.neural_summary.activity.toFixed(4);
-  ui.support.textContent=selected.neural_summary.support.toFixed(4);
-  ui.goalTime.textContent=selected.goal.valid?`${selected.goal.recorded_time.toFixed(3)} s`:'no valid record';
-  ui.goalLeft.textContent=selected.goal.valid?`${selected.goal.commit_remaining_ticks} ticks`:'—';
-  paintActions(selected.committed_action);
-  paintPhysiology(selected);
-  paintDecision(selected);
+  const detailed=Boolean(selected?.retina&&selected?.neural_readouts);
+  if(selected?.retina){paintRetina(ui.peripheral,selected.retina.peripheral);paintRetina(ui.foveal,selected.retina.foveal);}else{clearCanvas(ui.peripheral,'not recorded');clearCanvas(ui.foveal,'not recorded');}
+  if(selected?.neural_readouts)paintReadouts(selected.neural_readouts);else clearCanvas(ui.readouts,'population readouts not recorded for this resident');
+  ui.activity.textContent=Number.isFinite(selected?.neural_summary?.activity)?selected.neural_summary.activity.toFixed(4):'—';
+  ui.support.textContent=Number.isFinite(selected?.neural_summary?.support)?selected.neural_summary.support.toFixed(4):'—';
+  ui.goalTime.textContent=selected?.goal?.valid?`${selected.goal.recorded_time.toFixed(3)} s`:selected?.goal?'no valid record':'not recorded';
+  ui.goalLeft.textContent=selected?.goal?.valid?`${selected.goal.commit_remaining_ticks} ticks`:'—';
+  paintActions(selected?.committed_action||{});
+  if(selected?.recorded_body_state||selected?.metabolism)paintPhysiology(selected);else ui.physiology.replaceChildren();
+  const hasDecision=Boolean(selected?.consequence_refinement&&selected?.sensory_forecast&&selected?.sampled_proposal);setDecisionAvailable(hasDecision);if(hasDecision)paintDecision(selected);
+  paintContext(selected);
   paintHistory(index);
+  updateResidentOverlays(index);
+  ui.residentCoverage.textContent=detailed?'Retina, neural readouts and recorded controller detail are available at this frame.':'Physical trace available; detailed sensory and controller streams were not recorded for this resident at this frame.';
   for(const button of ui.moments.querySelectorAll('button')) button.setAttribute('aria-current',String(Number(button.dataset.frame)===index));
 }
 
@@ -429,15 +521,25 @@ function populateMoments() {
   ui.moments.replaceChildren(...(recording.phenomena_moments||[]).map((moment)=>{
     const item=document.createElement('li'), button=document.createElement('button');
     button.type='button'; button.dataset.frame=moment.frame;
-    button.innerHTML=`<time>${moment.model_time.toFixed(2)} s</time><span>${moment.phenomena.map(value=>value.replaceAll('-',' ')).join(' · ')}</span>`;
+    const time=document.createElement('time'),label=document.createElement('span');time.textContent=`${moment.model_time.toFixed(2)} s`;label.textContent=moment.phenomena.map(value=>value.replaceAll('-',' ')).join(' · ');button.append(time,label);
     button.addEventListener('click',()=>seek(moment.frame)); item.append(button); return item;
   }));
   if(!ui.moments.children.length){const item=document.createElement('li');item.textContent='No phenomena were indexed in this recording.';ui.moments.append(item);}
 }
 
+function populateEvents(){
+  const events=recording.events||[],kinds=['all',...new Set(events.map(event=>event.kind))];
+  ui.eventFilters.replaceChildren(...kinds.map(kind=>{const button=document.createElement('button');button.type='button';button.textContent=kind.replaceAll('_',' ');button.dataset.kind=kind;button.setAttribute('aria-pressed',String(kind===activeEventKind));button.addEventListener('click',()=>{activeEventKind=kind;populateEvents();rebuildResidentOverlays();});return button;}));
+  const shown=events.filter(event=>activeEventKind==='all'||event.kind===activeEventKind);
+  ui.events.replaceChildren(...shown.map(event=>{const item=document.createElement('li'),button=document.createElement('button'),time=document.createElement('time'),content=document.createElement('span'),title=document.createElement('span'),quantity=document.createElement('span');time.textContent=`${event.model_time.toFixed(2)} s`;title.textContent=event.kind.replaceAll('_',' ');quantity.className='event-quantity';quantity.textContent=(event.quantities||[]).map(value=>`${value.name.replaceAll('_',' ')} ${formatNative(value.value)} ${value.unit}`).join(' · ')||'recorded event receipt';content.append(title,quantity);button.append(time,content);button.addEventListener('click',()=>seek(nearestFrame(event.tick)));item.append(button);return item;}));
+  if(!shown.length){const item=document.createElement('li');item.textContent=events.length?'No events match this filter.':'This recording does not contain the world event stream.';ui.events.append(item);}
+  ui.eventContract.textContent=events.length?`${events.length} exact events`:'unavailable in this recording';
+}
+
+function nearestFrame(tick){let best=0;for(let index=1;index<recording.frames.length;index++)if(Math.abs(recording.frames[index].tick-tick)<Math.abs(recording.frames[best].tick-tick))best=index;return best;}
+
 function selectedPose(frame) {
-  const body=frame.bodies[frame.selected.body];
-  return body || frame.bodies[0];
+  return bodyPose(frame);
 }
 
 function updateCamera(a,b,alpha) {
@@ -451,7 +553,7 @@ function updateCamera(a,b,alpha) {
     look.copy(pos).add(new THREE.Vector3(0,0,.12));
     camera.position.lerp(pos.clone().add(direction),.09);controls.target.lerp(look,.11);
   }else{
-    const ar=a.selected.retina_pose,br=b.selected.retina_pose;
+    const ar=residentDetail(a)?.retina_pose,br=residentDetail(b)?.retina_pose;
     if(!ar||!br)return;
     pos.fromArray(ar.origin).lerp(posB.fromArray(br.origin),alpha);
     direction.fromArray(ar.forward).lerp(posB.fromArray(br.forward),alpha).normalize();
@@ -488,16 +590,23 @@ function animate(now) {
 
 export function loadRecording(data) {
   recording=validate(expandEntityDeltas(data));cursor=0;playing=false;
-  makePools(recording);makeActionBars();makeDecisionDisplay();populateMoments();
+  const ids=residentIds();activeBody=ids.includes(recording.frames[0].selected?.body)?recording.frames[0].selected.body:ids[0];
+  ui.resident.replaceChildren(...ids.map((id,index)=>{const option=document.createElement('option');option.value=String(id);option.textContent=`Resident ${index+1} · body ${id}`;return option;}));ui.resident.value=String(activeBody);ui.resident.disabled=false;
+  makePools(recording);makeActionBars();makeDecisionDisplay();populateMoments();populateEvents();
   ui.scrubber.max=String(recording.frames.length-1);ui.scrubber.value='0';
   ui.status.textContent=recording.status;
+  const detailCapability=recording.capabilities?.resident_details,eventCapability=recording.capabilities?.events;
+  if(detailCapability?.status==='unavailable')ui.residentCoverage.textContent=detailCapability.reason||'Multi-resident detailed streams are unavailable in this recording.';
+  if(eventCapability?.status==='unavailable')ui.eventContract.textContent=eventCapability.reason||'unavailable in this recording';
   const bodyButton=document.querySelector('[data-camera="body"]');
-  const hasRetinaPose=recording.frames.every(frame=>frame.selected.retina_pose);
+  const hasRetinaPose=recording.frames.some(frame=>residentDetail(frame)?.retina_pose);
   bodyButton.disabled=!hasRetinaPose;
   bodyButton.title=hasRetinaPose?'Recorded retinal viewpoint':'This recording has no retinal pose';
   ui.loading.hidden=true;ui.play.textContent='▶';ui.play.ariaLabel='Play recording';
   updateInstruments(0);return recording;
 }
+
+ui.resident.addEventListener('change',()=>{activeBody=Number(ui.resident.value);rebuildResidentOverlays();updateInstruments(Math.round(cursor));const bodyButton=document.querySelector('[data-camera="body"]'),hasPose=recording.frames.some(frame=>residentDetail(frame)?.retina_pose);bodyButton.disabled=!hasPose;bodyButton.title=hasPose?'Recorded retinal viewpoint':'This resident has no recorded retinal pose';});
 
 ui.play.addEventListener('click',()=>{
   if(!recording)return;if(cursor>=recording.frames.length-1)seek(0);
@@ -514,6 +623,7 @@ $('#inspection-light').addEventListener('click',event=>{
   inspectionLights.visible=!inspectionLights.visible;
   event.currentTarget.setAttribute('aria-pressed',String(inspectionLights.visible));
 });
+for(const button of document.querySelectorAll('[data-overlay]'))button.addEventListener('click',()=>{const key=button.dataset.overlay;overlayVisibility[key]=!overlayVisibility[key];button.setAttribute('aria-pressed',String(overlayVisibility[key]));});
 
 initThree();
 const recordingKey=new URLSearchParams(location.search).get('recording');

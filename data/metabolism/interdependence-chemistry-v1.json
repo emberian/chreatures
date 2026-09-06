@@ -1,0 +1,234 @@
+{
+  "format": "chreatures-common-chemistry-v1",
+  "description": "Synthetic conserved carbon-equivalent/mineral-equivalent chemistry with finite fermentate cross-feeding; not calibrated molecular biochemistry.",
+  "enzyme_budget": {
+    "maximum_expression": 0.06,
+    "row_sum": 0.1
+  },
+  "elements": [
+    "carbon_equivalent",
+    "mineral_equivalent"
+  ],
+  "pools": [
+    {
+      "name": "mineral",
+      "composition": [
+        0,
+        1
+      ],
+      "chemical_energy": 0.0
+    },
+    {
+      "name": "inorganic_carbon",
+      "composition": [
+        1,
+        0
+      ],
+      "chemical_energy": 0.0
+    },
+    {
+      "name": "reserve",
+      "composition": [
+        1,
+        0
+      ],
+      "chemical_energy": 1.0
+    },
+    {
+      "name": "fermentate",
+      "composition": [
+        1,
+        0
+      ],
+      "chemical_energy": 0.58
+    },
+    {
+      "name": "soft_tissue",
+      "composition": [
+        4,
+        1
+      ],
+      "chemical_energy": 3.6
+    },
+    {
+      "name": "tough_tissue",
+      "composition": [
+        4,
+        1
+      ],
+      "chemical_energy": 3.9
+    },
+    {
+      "name": "detritus",
+      "composition": [
+        4,
+        1
+      ],
+      "chemical_energy": 2.8
+    }
+  ],
+  "reactions": [
+    {
+      "name": "carbon_fixation",
+      "consume": {
+        "inorganic_carbon": 1
+      },
+      "produce": {
+        "reserve": 1
+      },
+      "atp_cost": 0.0,
+      "atp_yield": 0.0,
+      "photon_cost": 1.25,
+      "half_saturation": 0.2
+    },
+    {
+      "name": "respiration",
+      "consume": {
+        "reserve": 1
+      },
+      "produce": {
+        "inorganic_carbon": 1
+      },
+      "atp_cost": 0.0,
+      "atp_yield": 0.72,
+      "photon_cost": 0.0,
+      "half_saturation": 0.1
+    },
+    {
+      "name": "soft_growth",
+      "consume": {
+        "reserve": 4,
+        "mineral": 1
+      },
+      "produce": {
+        "soft_tissue": 1
+      },
+      "atp_cost": 0.2,
+      "atp_yield": 0.0,
+      "photon_cost": 0.0,
+      "half_saturation": 0.15
+    },
+    {
+      "name": "tough_growth",
+      "consume": {
+        "reserve": 4,
+        "mineral": 1
+      },
+      "produce": {
+        "tough_tissue": 1
+      },
+      "atp_cost": 1.0,
+      "atp_yield": 0.0,
+      "photon_cost": 0.0,
+      "half_saturation": 0.15
+    },
+    {
+      "name": "soft_turnover",
+      "consume": {
+        "soft_tissue": 1
+      },
+      "produce": {
+        "detritus": 1
+      },
+      "atp_cost": 0.0,
+      "atp_yield": 0.0,
+      "photon_cost": 0.0,
+      "half_saturation": 0.3
+    },
+    {
+      "name": "tough_turnover",
+      "consume": {
+        "tough_tissue": 1
+      },
+      "produce": {
+        "detritus": 1
+      },
+      "atp_cost": 0.0,
+      "atp_yield": 0.0,
+      "photon_cost": 0.0,
+      "half_saturation": 0.3
+    },
+    {
+      "name": "soft_digestion",
+      "consume": {
+        "soft_tissue": 1
+      },
+      "produce": {
+        "reserve": 4,
+        "mineral": 1
+      },
+      "atp_cost": 0.55,
+      "atp_yield": 0.0,
+      "photon_cost": 0.0,
+      "half_saturation": 0.08
+    },
+    {
+      "name": "tough_digestion",
+      "consume": {
+        "tough_tissue": 1
+      },
+      "produce": {
+        "reserve": 4,
+        "mineral": 1
+      },
+      "atp_cost": 1.8,
+      "atp_yield": 0.0,
+      "photon_cost": 0.0,
+      "half_saturation": 0.12
+    },
+    {
+      "name": "detritus_digestion",
+      "consume": {
+        "detritus": 1
+      },
+      "produce": {
+        "reserve": 4,
+        "mineral": 1
+      },
+      "atp_cost": 1.4,
+      "atp_yield": 0.0,
+      "photon_cost": 0.0,
+      "half_saturation": 0.06
+    },
+    {
+      "name": "reserve_fermentation",
+      "consume": {
+        "reserve": 1
+      },
+      "produce": {
+        "fermentate": 1
+      },
+      "atp_cost": 0.0,
+      "atp_yield": 0.28,
+      "photon_cost": 0.0,
+      "half_saturation": 0.08
+    },
+    {
+      "name": "fermentate_respiration",
+      "consume": {
+        "fermentate": 1
+      },
+      "produce": {
+        "inorganic_carbon": 1
+      },
+      "atp_cost": 0.0,
+      "atp_yield": 0.4,
+      "photon_cost": 0.0,
+      "half_saturation": 0.05
+    },
+    {
+      "name": "detritus_hydrolysis",
+      "consume": {
+        "detritus": 1
+      },
+      "produce": {
+        "fermentate": 4,
+        "mineral": 1
+      },
+      "atp_cost": 0.0,
+      "atp_yield": 0.25,
+      "photon_cost": 0.0,
+      "half_saturation": 0.07
+    }
+  ]
+}

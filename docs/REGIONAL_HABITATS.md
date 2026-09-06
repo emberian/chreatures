@@ -5,13 +5,20 @@ the three fixed eight-platform nursery layouts. An environment genome carries a
 bounded set of physical parameters: world dimensions, region and lane counts,
 elevation span, graph loop density, shelter and underpass fractions, landmark
 density, finite founder-resource scale, and movable construction-piece count.
+The same genome carries bounded multipliers for Growth-v4 guidance, transport,
+and local light/nutrient/support/competition responses. Generation applies the
+vector to every colony grammar before hashing the biosphere, so descendants can
+inherit different local construction laws without runtime scripts or named roles.
 Four supplied archetype ranges bias that same grammar toward terraced deltas,
 vaulted courts, braided ridges, or sheltered basins. They are parameter ranges,
 not separate runtime behavior scripts.
 
 `HabitatFamily.initial_genome` samples one immutable founder genome.
 `mutate_genome` applies the configured bounded perturbation recipe and records the
-parent genome hash, operator, seed, recipe hash, profile hash, and archive epoch.
+parent genome hash, registered parent environment-record hash, operator, seed,
+recipe hash, profile hash, and archive epoch. Genome `parents` and
+`environment_parents` remain separate SHA domains; the generated record copies
+only registered environment parents.
 Dimensions and every scalar or integer remain inside both global capacity and the
 selected archetype range. There is no load path for the former nursery-family
 format.
@@ -60,9 +67,18 @@ runtime inputs. The third is analyst-only metadata containing the designer graph
 spawn audit, resource budget, complete environment genome, and immutable record:
 
 ```text
-sha256, parents[0..2], variation, topology_sha256, resource_sha256,
-profile_sha256, epoch
+sha256, genome_sha256, genome_parents[0..2], parents[0..2], variation,
+topology_sha256, resource_sha256, profile_sha256, epoch, descriptors,
+generation_cost
 ```
+
+The five normalized descriptors are `regional_scale`, `elevation_relief`,
+`resource_density`, `renewal_rate`, and `connectivity`. They derive from actual
+generated dimensions and node elevations, finite material elemental equivalents,
+declared colony capture area and photon flux, and graph cycle rank. The structured
+generation cost retains raw physical-geom, region, edge, movable, and compartment
+counts plus their mean normalized cost against limits declared in the family
+configuration. These fields are archive and challenge-scheduling evidence only.
 
 The record matches the population archive boundary. Policy observations remain
 body-local rays, chemistry, contact, sound, and private physiology; region IDs,
@@ -71,11 +87,15 @@ sensory features.
 
 Current sources are:
 
-- `data/habitat-families/regional-v1.json`: bounds, archetypes, mutation recipe,
+- `data/habitat-families/regional-v2.json`: bounds, archetypes, mutation recipe,
   physical cluster definitions, and initial training genomes.
-- `data/habitat-families/regional-residents-v1.json`: the 32-resident capacity
+- `data/habitat-families/regional-residents-v2.json`: the 32-resident capacity
   bundle of somatic-v3 founders at the five-compartment boundary. A campaign
-  selects one fixed prefix from 1 through 32 residents.
+  selects one fixed prefix from 1 through 32 residents. Gut founders carry
+  bounded, lineage-varying fermentation, fermentate-respiration, and detritus-
+  hydrolysis enzyme allocations. The fermenting founders' initial gut reserve
+  is transferred from their own body founder pool, so generation does not add
+  chemical material.
 - `data/training/regional-environment-schedule-v1.json`: explicit current
   training and held-out environment founder seeds.
 - `chreatures/habitat_family.py`: the thin hash-checking host boundary.
@@ -96,6 +116,7 @@ An inherited environment uses the same command and grammar:
 uv run python scripts/generate_regional_family.py \
   --output runs/regional-child mutate \
   --parent-genome runs/regional-founder/environment.genome.json \
+  --parent-analyst runs/regional-founder/analyst.json \
   --variation-seed 20260907
 ```
 

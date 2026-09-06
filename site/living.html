@@ -7,6 +7,7 @@
   <title>Living Reef observatory — Chreatures</title>
   <link rel="stylesheet" href="living.css">
   <link rel="stylesheet" href="living-v2.css">
+  <link rel="stylesheet" href="living-observatory.css">
   <script type="importmap">{"imports":{"three":"./vendor/three/three.module.min.js"}}</script>
 </head>
 <body>
@@ -22,6 +23,12 @@
         <button type="button" data-camera="follow" aria-pressed="false">Follow</button>
         <button type="button" data-camera="body" aria-pressed="false">Body</button>
       </div>
+      <div class="overlay-controls" role="group" aria-label="Recorded overlays">
+        <button type="button" data-overlay="path" aria-pressed="true">Path</button>
+        <button type="button" data-overlay="gaze" aria-pressed="true">Gaze</button>
+        <button type="button" data-overlay="signals" aria-pressed="true">Signals</button>
+        <button type="button" data-overlay="events" aria-pressed="true">Events</button>
+      </div>
       <button id="inspection-light" class="inspection-light" type="button" aria-pressed="true" title="Additional light for inspecting the recording; the recorded retinal inputs remain in the instruments">Inspection light</button>
       <div id="loading" class="loading" role="status">Opening the public recording…</div>
       <div class="world-note">Recorded physical states · positions are interpolated for display · no live simulation</div>
@@ -32,6 +39,8 @@
         <p class="eyebrow">Resident observation</p>
         <h1>Inside one recorded life</h1>
         <p id="recording-status" class="status">Waiting for recording metadata.</p>
+        <label class="resident-picker" for="resident-select"><span>Recorded resident</span><select id="resident-select" disabled><option>Awaiting recording</option></select></label>
+        <p id="resident-coverage" class="resident-coverage">Detailed streams are checked per resident and frame.</p>
       </div>
 
       <section class="transport" aria-label="Recording playback">
@@ -57,6 +66,12 @@
       <section class="goal-section">
         <div class="section-title"><h2>Remembered goal</h2><span>content remains private</span></div>
         <div class="goal-grid"><div><small>recorded at</small><strong id="goal-time">—</strong></div><div><small>commitment left</small><strong id="goal-left">—</strong></div></div>
+      </section>
+
+      <section class="context-section">
+        <div class="section-title"><h2>Context &amp; sequence</h2><span>captured diagnostics only</span></div>
+        <div id="context-diagnostics" class="diagnostic-grid"></div>
+        <p id="context-unavailable" class="decision-note">No contextual or sequence diagnostic was captured at this frame.</p>
       </section>
 
       <section class="decision-section">
@@ -98,6 +113,12 @@
       <section class="moments-section">
         <div class="section-title"><h2>Recorded moments</h2><span>observed phenomena</span></div>
         <ol id="moments" class="moments"></ol>
+      </section>
+
+      <section class="events-section">
+        <div class="section-title"><h2>World evidence</h2><span id="event-contract">event stream</span></div>
+        <div id="event-filters" class="event-filters" aria-label="Event filters"></div>
+        <ol id="events" class="moments event-list"></ol>
       </section>
 
       <footer><span>Actual recording</span><span>Provided mechanics</span><span>Learned controller</span><a id="recording-evidence-link" href="https://github.com/emberian/chreatures/blob/main/integrations/artifacts/living-reef-biography/living-reef-biography.json" target="_parent">Earlier biography ↗</a></footer>

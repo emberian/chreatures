@@ -8,6 +8,16 @@ Inspired by *Creatures* and the changing societies and environments of *Children
 
 ## The current build
 
+The **reciprocal ecology wave** now couples recurrent full-body prediction,
+private sequence memory, material-funded local growth, seven-pool synthetic
+chemistry, and organism–environment search. Its native controller format is v6;
+the twelve-action body interface remains v4 and inherited Torch policy weights
+remain v5. Existing recorded lives keep their original mechanisms. A fresh
+predictor fit and joined neural deployment are in progress; the first joined
+physical run built 32 funded parts and released newly produced fermentate into
+physical packets. Recipient uptake and a sustained food web are not established.
+[Wave contract and implementation](docs/development/RECIPROCAL_ECOLOGY_WAVE.md).
+
 The current **v4 organism and population wave** exposes twelve explicit actions—thrust, yaw, gaze pitch, posture, grip, three signal bands, eating, release, secretion and allocation—against twelve measured physical channels spanning movement, energy, digestion, fatigue, neural support, structure, development, gland and brood stores, reproductive maturity and exchange load. Native cohort execution keeps learning, memory and recurrent state private to each life. Immutable candidate genomes can inherit full-MaleCNS interface gains and completed GAM law fits without inheriting that private state.
 
 Regional grammars generate connected physical habitats with variable elevation, cavities, ramps, finite resources and growing material. Clonal births debit a parent's actual brood stores and commit a new body with fresh private state. A native quality-diversity search evaluates genome–environment pairs and retains a bounded archive of varied candidates, including terminal failure records. The first campaign has closed **80 candidate lives across ten environments** on hbox: 16 completed their allotted run, while two shared engine faults ended the other 64. Twelve evaluations received archive admission; nine members remain after subsequent replacement. Separate 32-resident training populations run on hbox and persvati, and eight founders inhabit an interactive M2 world. The [population observatory](https://emberian.github.io/chreatures/population.html) publishes actual genomes, environments and recorded lives. Archive retention does not establish evolutionary improvement or ecological adaptation.
@@ -27,7 +37,8 @@ A resident's current control loop combines:
 - **Spatial perception and working memory:** a native convolutional visual front, body-state encoder and persistent private GRU process the 4,459-column current observation at each 50 ms physical tick.
 - **Experienced goals:** each individual retains a private reservoir of four-frame sensory encounters. A learned manager selects among those memories; the motor controller attempts to approach the selected sensory state. The current Rust controller also learns private, physiology-dependent goal preferences from the actual bodily return of completed attempts.
 - **Personal consequence learning:** inherited GAM predictions and private bounded residual learning estimate movement, energy-cost and fatigue consequences of motor proposals. Actual delivered actions and their subsequent physical outcomes supply the updates.
-- **Action-conditioned forecasts:** an inherited three-member neural ensemble predicts the next sensory change under candidate actions. Its contribution to goal-directed action selection is bounded; predicted states never enter the resident’s experienced-memory reservoir.
+- **Action-conditioned forecasts:** the current three-member recurrent ensemble predicts sensory and physiological changes across up to eight twelve-axis actions. The native planner compares four-tick hypotheses, delivers one physical tick, and replans from actual sensations. Its contribution to selection is bounded; predicted states never enter experienced memory. The newly fitted artifact is being prepared; older published lives retain their pinned one-step ensemble.
+- **Private sequence memory:** observed attempts, attainment and context build sparse transitions between remembered encounters. Lifetime and recent memory share a bounded store, so old residents can continue acquiring new experience. Past succession can bias a proposal, but does not establish present reachability.
 
 Eating is an explicit current action. Physical mouth contact, available material and digestive chemistry determine its consequences. Remembered goals are previously experienced states, not guarantees of present reachability. The first v4 cold inheritance conservatively initializes new action heads and extends the sensory interface; that initialization does not supply competence with the new organs. Useful navigation, durable learned habits and reciprocal interaction are still being developed.
 
@@ -40,6 +51,13 @@ The current **controller v5** adds trainable pathways from all twelve physiology
 [**transkatgirl/universal-weave**](https://github.com/transkatgirl/universal-weave) connects recorded development, model artifacts, snapshots, experiments and competing explanations. Its native adapter supplies stable event identities, multi-parent evidence records and deterministic serialization. The scientific archive is separate from the incomplete, private memory available to an organism. [Native integration](docs/LIBRARIES.md).
 
 Both upstream libraries have executed against actual project data. Their artifacts preserve sources, versions and limits.
+
+The newest GAM bank fits energy change, fatigue change and effort from 384,000
+transitions across 16 completed lives. Whole-life held-out errors improve over
+training-mean baselines; 95.93% of final held-out transitions lie inside all three
+declared domains. This is a compact inherited predictor of recorded responses,
+with private lifetime learning kept separate. It does not establish causal
+regulation or genotype–environment transfer. [Fit and support](docs/GAM_POPULATION_RESPONSE.md).
 
 ## What has run
 
@@ -79,7 +97,7 @@ uv run python native/cognitive-core/build_extension.py
 
 Acquire the [MaleCNS graph](docs/MALECNS.md), build the current [retinal-v2 port bundle](docs/NEURAL_PORTS.md), and start a dedicated [AMD neural service](docs/REMOTE_BRAIN.md) or [Apple Metal service](docs/METAL_BRAIN.md). Reserve 32 neural slots for an ecology world so its founders leave room for offspring. New worlds require the **same graph and port identities** as the resident artifact. Existing frozen lives keep their loaded engine and service.
 
-Current worlds require a population-v5 native controller, matching candidate genomes and a birth manifest referencing their compiled neural phenotypes. The body interface remains v4. The tracked `developmental-resident-rich-grandchild-update160-v3.npz` is an ancestor artifact; it cannot directly launch the current runtime. Export a current training checkpoint with:
+Current worlds require a reciprocal-v6 native controller, matching candidate genomes and a birth manifest referencing their compiled neural phenotypes. The body interface remains v4. The tracked `developmental-resident-rich-grandchild-update160-v3.npz` is an ancestor artifact; it cannot directly launch the current runtime. Export current v5 policy weights together with a fitted recurrent-v3 predictor using:
 
 ```sh
 python scripts/export_developmental_resident.py --help
@@ -91,7 +109,7 @@ Follow the [population birth export guide](docs/development/POPULATION_BIRTH.md)
 uv run chreatures --port 8790 \
   --brain-url http://127.0.0.1:18790 \
   --body articulated --ecology diffusion --physics-backend vectorized \
-  --resident-artifact /path/to/developmental-resident-population-v5.npz \
+  --resident-artifact /path/to/developmental-resident-reciprocal-v6.npz \
   --population-birth /path/to/export/resident-birth.json \
   --habitat /path/to/export/habitat.json \
   --biosphere /path/to/export/biosphere.json \

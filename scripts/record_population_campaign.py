@@ -645,10 +645,21 @@ def record_population_campaign(
                 raise PopulationEvidenceError(
                     f"life {life['life_id']} has not been ingested by native search"
                 )
+            expected_native_status = (
+                life.get("status")
+                if run["source_status"] == "success"
+                else "infrastructure-failure"
+            )
+            if expected_native_status not in {
+                "completed",
+                "organism-terminal",
+                "infrastructure-failure",
+            }:
+                raise PopulationEvidenceError("evaluator life has invalid terminal status")
             if (
                 native.get("candidate_sha256") != life.get("candidate_sha256")
                 or native.get("environment_sha256") != life.get("environment_sha256")
-                or native.get("status") != run["source_status"]
+                or native.get("status") != expected_native_status
                 or native.get("committed_ticks") != life.get("committed_ticks")
                 or native.get("trajectory_sha256") != life.get("trajectory_sha256")
             ):
@@ -663,7 +674,7 @@ def record_population_campaign(
             if run["latest"] is not None:
                 latest_step = run["latest"]["completed_steps"]
                 if latest_step > native["committed_ticks"] or (
-                    native["status"] == "success"
+                    native["status"] in {"completed", "organism-terminal"}
                     and latest_step != native["committed_ticks"]
                 ):
                     raise PopulationEvidenceError(
@@ -710,7 +721,7 @@ def record_population_campaign(
                 and receipt["completed_steps"] <= native["committed_ticks"]
             ]
             allocated = any(receipt["completed_steps"] == 0 for receipt, _ in life_checkpoints)
-            if native["status"] == "success" and not allocated:
+            if native["status"] in {"completed", "organism-terminal"} and not allocated:
                 raise PopulationEvidenceError("completed life has no step-zero allocation proof")
             if native["committed_ticks"] > 0 and not allocated:
                 raise PopulationEvidenceError("advanced life has no step-zero allocation proof")
@@ -811,7 +822,13 @@ def record_population_campaign(
                 "ask_count": int(state.get("ask_count", 0)),
                 "state_sha256": state_blob["sha256"],
                 "evaluation_count": len(evaluations),
-                "failure_count": sum(item.get("status") == "failure" for item in evaluations),
+                "infrastructure_failure_count": sum(
+                    item.get("status") == "infrastructure-failure"
+                    for item in evaluations
+                ),
+                "organism_terminal_count": sum(
+                    item.get("status") == "organism-terminal" for item in evaluations
+                ),
             },
         )
     )

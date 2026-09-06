@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "name": "reef-builder-v3",
   "cadence_seconds": 8.0,
   "initial_delay_seconds": 3.0,
@@ -68,7 +68,13 @@
           "azimuth_degrees": 18.0,
           "generation_phase_degrees": 137.5,
           "scale": 0.91,
-          "probability": 0.94
+          "probability": 0.94,
+          "response": {
+            "light": 0.58,
+            "nutrient": 0.31,
+            "support": 0.22,
+            "competition": -0.68
+          }
         },
         {
           "symbol": "shelf",
@@ -76,7 +82,13 @@
           "azimuth_degrees": 53.0,
           "generation_phase_degrees": 137.5,
           "scale": 0.72,
-          "probability": 0.62
+          "probability": 0.62,
+          "response": {
+            "light": 0.58,
+            "nutrient": 0.31,
+            "support": 0.22,
+            "competition": -0.68
+          }
         },
         {
           "symbol": "fork",
@@ -84,7 +96,13 @@
           "azimuth_degrees": -61.0,
           "generation_phase_degrees": 99.0,
           "scale": 0.67,
-          "probability": 0.48
+          "probability": 0.48,
+          "response": {
+            "light": 0.58,
+            "nutrient": 0.31,
+            "support": 0.22,
+            "competition": -0.68
+          }
         }
       ],
       "leaf": {
@@ -93,6 +111,17 @@
         "aspect": 1.35,
         "thickness": 0.005,
         "areal_density": 0.28
+      },
+      "guidance": {
+        "vertical_weight": 0.18,
+        "clearance_weight": 0.62,
+        "surface_weight": 0.16,
+        "surface_reach": 0.075,
+        "clearance_distance": 0.14
+      },
+      "transport": {
+        "conductivity": 3.4,
+        "half_resistance": 145.0
       }
     },
     "shelf": {
@@ -124,7 +153,13 @@
           "azimuth_degrees": 72.0,
           "generation_phase_degrees": 137.5,
           "scale": 0.82,
-          "probability": 0.78
+          "probability": 0.78,
+          "response": {
+            "light": 0.58,
+            "nutrient": 0.31,
+            "support": 0.22,
+            "competition": -0.68
+          }
         },
         {
           "symbol": "fork",
@@ -132,7 +167,13 @@
           "azimuth_degrees": -48.0,
           "generation_phase_degrees": 111.0,
           "scale": 0.65,
-          "probability": 0.46
+          "probability": 0.46,
+          "response": {
+            "light": 0.58,
+            "nutrient": 0.31,
+            "support": 0.22,
+            "competition": -0.68
+          }
         }
       ],
       "leaf": {
@@ -141,6 +182,17 @@
         "aspect": 1.7,
         "thickness": 0.005,
         "areal_density": 0.24
+      },
+      "guidance": {
+        "vertical_weight": 0.18,
+        "clearance_weight": 0.62,
+        "surface_weight": 0.16,
+        "surface_reach": 0.075,
+        "clearance_distance": 0.14
+      },
+      "transport": {
+        "conductivity": 3.4,
+        "half_resistance": 145.0
       }
     },
     "fork": {
@@ -172,7 +224,13 @@
           "azimuth_degrees": 67.0,
           "generation_phase_degrees": 137.5,
           "scale": 0.78,
-          "probability": 0.72
+          "probability": 0.72,
+          "response": {
+            "light": 0.58,
+            "nutrient": 0.31,
+            "support": 0.22,
+            "competition": -0.68
+          }
         },
         {
           "symbol": "shelf",
@@ -180,7 +238,13 @@
           "azimuth_degrees": -74.0,
           "generation_phase_degrees": 101.0,
           "scale": 0.62,
-          "probability": 0.43
+          "probability": 0.43,
+          "response": {
+            "light": 0.58,
+            "nutrient": 0.31,
+            "support": 0.22,
+            "competition": -0.68
+          }
         }
       ],
       "leaf": {
@@ -189,6 +253,17 @@
         "aspect": 1.45,
         "thickness": 0.0045,
         "areal_density": 0.25
+      },
+      "guidance": {
+        "vertical_weight": 0.18,
+        "clearance_weight": 0.62,
+        "surface_weight": 0.16,
+        "surface_reach": 0.075,
+        "clearance_distance": 0.14
+      },
+      "transport": {
+        "conductivity": 3.4,
+        "half_resistance": 145.0
       }
     },
     "anchor": {
@@ -220,7 +295,13 @@
           "azimuth_degrees": 38.0,
           "generation_phase_degrees": 109.0,
           "scale": 0.72,
-          "probability": 0.72
+          "probability": 0.72,
+          "response": {
+            "light": -0.25,
+            "nutrient": 0.72,
+            "support": 0.48,
+            "competition": -0.24
+          }
         },
         {
           "symbol": "anchor",
@@ -228,10 +309,27 @@
           "azimuth_degrees": -82.0,
           "generation_phase_degrees": 137.5,
           "scale": 0.52,
-          "probability": 0.18
+          "probability": 0.18,
+          "response": {
+            "light": -0.25,
+            "nutrient": 0.72,
+            "support": 0.48,
+            "competition": -0.24
+          }
         }
       ],
-      "leaf": null
+      "leaf": null,
+      "guidance": {
+        "vertical_weight": -0.32,
+        "clearance_weight": 0.16,
+        "surface_weight": 1.05,
+        "surface_reach": 0.24,
+        "clearance_distance": 0.16
+      },
+      "transport": {
+        "conductivity": 2.6,
+        "half_resistance": 180.0
+      }
     }
   },
   "axiom": [

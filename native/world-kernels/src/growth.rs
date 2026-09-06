@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
-type SuccessorInput = (String, f64, f64, f64, f64, f64);
+type SuccessorInput = (String, f64, f64, f64, f64, f64, [f64; 4]);
 type LeafInput = (f64, f64, f64, f64, f64);
 type RuleInput = (
     String,
@@ -24,11 +24,23 @@ type RuleInput = (
     [f64; 3],
     f64,
     Vec<SuccessorInput>,
-    Option<LeafInput>,
+    (Option<LeafInput>, [f64; 5], [f64; 2]),
 );
 type InitialBudInput = (String, [f64; 3], [f64; 3], [f64; 3], f64);
-type SignalInput = (u64, [f64; 4]);
-type SegmentOutput = (String, String, u64, [f64; 3], [f64; 3], f64, f64);
+type SignalInput = (u64, [f64; 4], [f64; 3], [f64; 3], f64, i32);
+type SegmentOutput = (
+    String,
+    String,
+    u64,
+    Option<String>,
+    [f64; 3],
+    [f64; 3],
+    f64,
+    f64,
+    f64,
+    i32,
+    [f64; 3],
+);
 type LeafOutput = (String, u64, [f64; 3], [f64; 4], [f64; 3], f64, f64);
 type ProposalOutput = (
     String,
@@ -51,6 +63,8 @@ type BudState = (
     [f64; 3],
     [f64; 3],
     [f64; 3],
+    Option<String>,
+    f64,
 );
 type KernelState = (u64, u64, u64, u32, f64, f64, [f64; 3], Vec<BudState>);
 type CommitReceipt = (String, Vec<f64>, f64, Vec<f64>, f64);
@@ -63,6 +77,7 @@ struct Successor {
     generation_phase: f64,
     scale: f64,
     probability: f64,
+    response: [f64; 4],
 }
 
 #[derive(Clone)]
@@ -88,6 +103,8 @@ struct Rule {
     competition_gain: f64,
     successors: Vec<Successor>,
     leaf: Option<LeafRule>,
+    guidance: [f64; 5],
+    transport: [f64; 2],
 }
 
 #[derive(Clone)]
@@ -100,6 +117,8 @@ struct Bud {
     forward: [f64; 3],
     up: [f64; 3],
     right: [f64; 3],
+    parent_part: Option<String>,
+    transport_resistance: f64,
 }
 
 #[derive(Clone)]
@@ -107,10 +126,14 @@ struct Segment {
     id: String,
     role: String,
     parent_bud: u64,
+    parent_part: Option<String>,
     from: [f64; 3],
     to: [f64; 3],
     radius: f64,
     biomass: f64,
+    transport_resistance: f64,
+    attachment_geom: i32,
+    attachment_point: [f64; 3],
 }
 
 #[derive(Clone)]
@@ -154,10 +177,14 @@ impl Proposal {
                         value.id.clone(),
                         value.role.clone(),
                         value.parent_bud,
+                        value.parent_part.clone(),
                         value.from,
                         value.to,
                         value.radius,
                         value.biomass,
+                        value.transport_resistance,
+                        value.attachment_geom,
+                        value.attachment_point,
                     )
                 })
                 .collect(),
@@ -310,8 +337,9 @@ impl GrowthKernel {
                 weights,
                 competition_gain,
                 successors,
-                leaf,
+                developmental,
             ) = value;
+            let (leaf, guidance, transport) = developmental;
             if !matches!(role.as_str(), "branch" | "root")
                 || !finite_range(*length, 0.001, 10.0)
                 || !finite_range(*radius, 0.0005, 1.0)
@@ -322,6 +350,14 @@ impl GrowthKernel {
                 || weights.iter().any(|item| !finite_range(*item, 0.0, 1.0))
                 || weights.iter().sum::<f64>() <= 0.0
                 || !finite_range(*competition_gain, 0.0, 20.0)
+                || !finite_range(guidance[0], -2.0, 2.0)
+                || guidance[1..3]
+                    .iter()
+                    .any(|item| !finite_range(*item, 0.0, 4.0))
+                || !finite_range(guidance[3], 0.002, 2.0)
+                || !finite_range(guidance[4], 0.002, 2.0)
+                || !finite_range(transport[0], 1.0e-12, 1.0e6)
+                || !finite_range(transport[1], 1.0e-12, 1.0e15)
                 || successors.len() > 16
             {
                 return Err(PyValueError::new_err("invalid growth rule parameters"));
@@ -336,6 +372,10 @@ impl GrowthKernel {
                     || !finite_range(successor.3, -1000.0, 1000.0)
                     || !finite_range(successor.4, 0.05, 4.0)
                     || !finite_range(successor.5, 0.0, 1.0)
+                    || successor
+                        .6
+                        .iter()
+                        .any(|item| !finite_range(*item, -8.0, 8.0))
                 {
                     return Err(PyValueError::new_err("invalid growth successor"));
                 }
@@ -346,6 +386,7 @@ impl GrowthKernel {
                     generation_phase: successor.3,
                     scale: successor.4,
                     probability: successor.5,
+                    response: successor.6,
                 });
             }
             let normalized_leaf = match leaf {
@@ -381,6 +422,8 @@ impl GrowthKernel {
                 competition_gain: *competition_gain,
                 successors: normalized_successors,
                 leaf: normalized_leaf,
+                guidance: *guidance,
+                transport: *transport,
             });
         }
 
@@ -412,6 +455,8 @@ impl GrowthKernel {
                 forward,
                 up,
                 right,
+                parent_part: None,
+                transport_resistance: 0.0,
             });
         }
         Ok(Self {
@@ -461,6 +506,30 @@ impl GrowthKernel {
             self.max_buds,
             self.max_buds - self.buds.len(),
         )
+    }
+
+    fn invalidate_parent_parts(&mut self, part_ids: Vec<String>) -> PyResult<Vec<u64>> {
+        if self.pending.is_some() {
+            return Err(PyRuntimeError::new_err(
+                "cannot invalidate attachment ancestry during a pending proposal",
+            ));
+        }
+        let parts: HashSet<String> = part_ids.into_iter().collect();
+        if parts.iter().any(|value| value.is_empty()) {
+            return Err(PyValueError::new_err("invalid developmental part identity"));
+        }
+        let mut removed = Vec::new();
+        self.buds.retain(|bud| {
+            let keep = bud
+                .parent_part
+                .as_ref()
+                .is_none_or(|part| !parts.contains(part));
+            if !keep {
+                removed.push(bud.id);
+            }
+            keep
+        });
+        Ok(removed)
     }
 
     fn proposal_metrics(&self) -> (usize, usize, usize, usize, usize, usize, f64) {
@@ -520,10 +589,25 @@ impl GrowthKernel {
         }
         let mut signal_map = HashMap::with_capacity(signals.len());
         let valid_buds: HashSet<u64> = self.buds.iter().map(|bud| bud.id).collect();
-        for (bud, values) in signals {
+        for (bud, values, surface_direction, world_up, surface_distance, surface_geom) in signals {
             if !valid_buds.contains(&bud)
                 || values.iter().any(|value| !finite_range(*value, 0.0, 1.0))
-                || signal_map.insert(bud, values).is_some()
+                || !valid_vector(surface_direction)
+                || !valid_vector(world_up)
+                || !finite_range(surface_distance, 0.0, 100.0)
+                || surface_geom < -1
+                || signal_map
+                    .insert(
+                        bud,
+                        (
+                            values,
+                            surface_direction,
+                            world_up,
+                            surface_distance,
+                            surface_geom,
+                        ),
+                    )
+                    .is_some()
             {
                 return Err(PyValueError::new_err(
                     "invalid or duplicate local bud signal",
@@ -547,11 +631,26 @@ impl GrowthKernel {
 
         let ordered = self.buds.clone();
         for bud in &ordered {
-            let Some(values) = signal_map.get(&bud.id) else {
+            let Some((values, surface_direction, world_up, surface_distance, surface_geom)) =
+                signal_map.get(&bud.id)
+            else {
                 continue;
             };
             let rule = &self.rules[bud.rule];
-            if values[..3]
+            let transport_fraction = if bud.transport_resistance == 0.0 {
+                1.0
+            } else {
+                1.0 / (1.0 + bud.transport_resistance / rule.transport[1])
+            };
+            let clearance_competition =
+                (1.0 - *surface_distance / rule.guidance[4]).clamp(0.0, 1.0);
+            let local_values = [
+                values[0],
+                values[1] * transport_fraction,
+                values[2],
+                values[3].max(clearance_competition),
+            ];
+            if local_values[..3]
                 .iter()
                 .zip(rule.minimum)
                 .any(|(value, minimum)| *value < minimum)
@@ -559,20 +658,38 @@ impl GrowthKernel {
                 continue;
             }
             let weight_sum = rule.weights.iter().sum::<f64>();
-            let local = values[..3]
+            let local = local_values[..3]
                 .iter()
                 .zip(rule.weights)
                 .map(|(value, weight)| *value * weight)
                 .sum::<f64>()
                 / weight_sum;
-            let vigor = (local * (-rule.competition_gain * values[3]).exp()).clamp(0.12, 1.0);
+            let vigor = (local * (-rule.competition_gain * local_values[3]).exp()).clamp(0.12, 1.0);
 
             let mut trial_rng = rng;
             let length_noise = (normal(&mut trial_rng) * self.variation[0] * 0.25).exp();
-            let length =
+            let mut length =
                 rule.length * bud.scale * self.genotype[0] * length_noise * (0.55 + 0.45 * vigor);
             let radius = scaled_radius(rule, bud.scale, self.genotype[0]);
-            let endpoint = add(bud.position, mul(bud.forward, length));
+            let surface_proximity = (1.0 - *surface_distance / rule.guidance[3]).clamp(0.0, 1.0);
+            let guidance = add(
+                add(bud.forward, mul(*world_up, rule.guidance[0])),
+                mul(
+                    *surface_direction,
+                    rule.guidance[2] * surface_proximity - rule.guidance[1] * clearance_competition,
+                ),
+            );
+            let steered = normalize(guidance)?;
+            let attach = *surface_geom >= 0
+                && rule.guidance[2] > 0.0
+                && *surface_distance <= rule.guidance[3].min(length + radius)
+                && dot(steered, *surface_direction) > 0.25;
+            let endpoint = if attach {
+                length = (*surface_distance - radius).max(self.minimum_feature_size);
+                add(bud.position, mul(*surface_direction, length))
+            } else {
+                add(bud.position, mul(steered, length))
+            };
             let volume = std::f64::consts::PI * radius * radius * length
                 + 4.0 * std::f64::consts::PI * radius.powi(3) / 3.0;
             let segment_biomass = volume * rule.density;
@@ -611,7 +728,14 @@ impl GrowthKernel {
             let aspect_ratio = length / (2.0 * radius);
             if aspect_ratio + 1.0e-14 >= rule.minimum_aspect_ratio {
                 for successor in &rule.successors {
-                    if uniform(&mut trial_rng) > successor.probability {
+                    let response = successor
+                        .response
+                        .iter()
+                        .zip(local_values)
+                        .map(|(weight, signal)| weight * (signal - 0.5))
+                        .sum::<f64>();
+                    let probability = (successor.probability * response.exp()).min(1.0);
+                    if uniform(&mut trial_rng) > probability {
                         continue;
                     }
                     let angle_noise = normal(&mut trial_rng) * self.variation[1] * 0.25;
@@ -644,6 +768,9 @@ impl GrowthKernel {
                         forward: child_forward,
                         up: child_up,
                         right: child_right,
+                        parent_part: Some(format!("{}-{next_part}", rule.role)),
+                        transport_resistance: bud.transport_resistance
+                            + length / (rule.transport[0] * std::f64::consts::PI * radius * radius),
                     });
                 }
             } else {
@@ -653,6 +780,15 @@ impl GrowthKernel {
             }
             let shape_count = 1 + trial_leaves.len();
             let resulting_buds = candidate_buds.len() - 1 + trial_children.len();
+            let transport_budget = if bud.transport_resistance == 0.0 {
+                f64::INFINITY
+            } else {
+                self.cadence / bud.transport_resistance
+            };
+            if trial_biomass > transport_budget + 1.0e-14 {
+                self.last_budget_rejections += 1;
+                continue;
+            }
             if biomass + trial_biomass > structural_budget + 1.0e-14 {
                 self.last_budget_rejections += 1;
                 continue;
@@ -678,10 +814,15 @@ impl GrowthKernel {
                 id: segment_id,
                 role: rule.role.clone(),
                 parent_bud: bud.id,
+                parent_part: bud.parent_part.clone(),
                 from: bud.position,
                 to: endpoint,
                 radius,
                 biomass: segment_biomass,
+                transport_resistance: bud.transport_resistance
+                    + length / (rule.transport[0] * std::f64::consts::PI * radius * radius),
+                attachment_geom: if attach { *surface_geom } else { -1 },
+                attachment_point: if attach { endpoint } else { [0.0; 3] },
             });
             leaves.extend(trial_leaves);
             biomass += trial_biomass;
@@ -856,7 +997,19 @@ impl GrowthKernel {
         let mut ids = HashSet::new();
         let mut restored = Vec::with_capacity(buds.len());
         for value in buds {
-            let (id, symbol, role, bud_generation, scale, position, forward, up, right) = value;
+            let (
+                id,
+                symbol,
+                role,
+                bud_generation,
+                scale,
+                position,
+                forward,
+                up,
+                right,
+                parent_part,
+                transport_resistance,
+            ) = value;
             let rule = *rule_names
                 .get(symbol.as_str())
                 .ok_or_else(|| PyValueError::new_err("growth state names an unknown rule"))?;
@@ -868,6 +1021,8 @@ impl GrowthKernel {
                     < self.minimum_feature_size
                 || !valid_vector(position)
                 || !orthonormal(forward, up, right)
+                || parent_part.as_ref().is_some_and(|value| value.is_empty())
+                || !finite_range(transport_resistance, 0.0, 1.0e15)
             {
                 return Err(PyValueError::new_err("invalid growth bud state"));
             }
@@ -880,6 +1035,8 @@ impl GrowthKernel {
                 forward,
                 up,
                 right,
+                parent_part,
+                transport_resistance,
             });
         }
         if ids.iter().any(|id| *id >= next_bud) {
@@ -913,6 +1070,8 @@ impl GrowthKernel {
                     bud.forward,
                     bud.up,
                     bud.right,
+                    bud.parent_part.clone(),
+                    bud.transport_resistance,
                 )
             })
             .collect()

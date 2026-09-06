@@ -6,9 +6,11 @@
     "visitor_materials_sha256": "31d0ef77dc34a2d4e17940b8ce53c62e3df98a54cfab8e78f6fba2570a553770"
   },
   "brain": {
+    "available_slots_at_receipt": 0,
     "capacity": 8,
     "device": "Apple M2 Max",
     "edges": 25563197,
+    "future_ecology_recommended_capacity": 32,
     "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
     "kernel": "simd",
     "neurons": 165122,
@@ -38,7 +40,7 @@
     "path": "run/world.json",
     "tick": 2441
   },
-  "content_sha256": "379d329032cc9252716cc0013f0d3c5f88cc49f1eae1b7dc1e630b83f354c184",
+  "content_sha256": "a953604cd2e4fd1d2ea28d5c22f644b1bfca4c272c43a729e8beddc8ba3b0e13",
   "controller": {
     "artifact_sha256": "8bad66b025c53b2a6e81419f7ac2fa0cad3a215c721d355568e95c79597da8cd",
     "file_sha256": "6f46a8c6f013d2e69b6baeae68c5746f494f07b3283dfee67dfbb07ba4919a84"
@@ -49,7 +51,8 @@
     "Population-response in-domain counters measure coverage of committed transitions, not causal choice changes.",
     "The visitor sequence used fixed habitat coordinates and did not inspect resident state.",
     "The recording is observational and does not establish learned competence or behavioral improvement.",
-    "This frozen research service has eight neural slots, all allocated; it cannot support another neural resident. New ecology deployments should reserve 32 slots. Current source defers funded hatching when the service is full; that later guard was not installed into this frozen life."
+    "This frozen research service has eight neural slots, all allocated; it cannot support another neural resident. New ecology deployments should reserve 32 slots. Current source defers funded hatching when the service is full; that later guard was not installed into this frozen life.",
+    "This recorded research deployment has neural capacity 8 with all 8 slots occupied; funded brood hatching cannot allocate a neural resident and must be deferred without mutation. Future ecology deployments should reserve capacity 32."
   ],
   "native": {
     "cognitive_core_sha256": "ab8d01be863494e32542f14346864cd5404c3557d565dcb07568a19abbc1b75f",

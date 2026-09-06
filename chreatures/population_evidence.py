@@ -35,6 +35,11 @@ RECORD_TYPES = frozenset(
         "transfer_trial",
         "population_snapshot",
         "gam_fit_attempt",
+        "embodied_recording",
+        "organism_transfer",
+        "development_event",
+        "environment_event",
+        "interaction_event",
     }
 )
 
@@ -115,6 +120,56 @@ _ROLE_RULES: dict[str, dict[str, tuple[frozenset[str], int, int | None]]] = {
             None,
         ),
     },
+    "embodied_recording": {
+        "campaign": (frozenset({"population_run"}), 1, 1),
+        "observed_environment": (frozenset({"environment_candidate"}), 1, 1),
+        "observed_life": (
+            frozenset({"birth", "life_checkpoint", "evaluation_completed"}),
+            1,
+            None,
+        ),
+        "associated_law_fit": (frozenset({"gam_fit_attempt"}), 0, None),
+    },
+    "organism_transfer": {
+        "recording": (frozenset({"embodied_recording"}), 1, 1),
+        "actor_life": (
+            frozenset({"birth", "life_checkpoint", "evaluation_completed"}),
+            0,
+            None,
+        ),
+        "observed_environment": (frozenset({"environment_candidate"}), 1, 1),
+        "associated_law_fit": (frozenset({"gam_fit_attempt"}), 0, None),
+    },
+    "development_event": {
+        "recording": (frozenset({"embodied_recording"}), 1, 1),
+        "actor_life": (
+            frozenset({"birth", "life_checkpoint", "evaluation_completed"}),
+            0,
+            None,
+        ),
+        "observed_environment": (frozenset({"environment_candidate"}), 1, 1),
+        "associated_law_fit": (frozenset({"gam_fit_attempt"}), 0, None),
+    },
+    "environment_event": {
+        "recording": (frozenset({"embodied_recording"}), 1, 1),
+        "actor_life": (
+            frozenset({"birth", "life_checkpoint", "evaluation_completed"}),
+            0,
+            None,
+        ),
+        "observed_environment": (frozenset({"environment_candidate"}), 1, 1),
+        "associated_law_fit": (frozenset({"gam_fit_attempt"}), 0, None),
+    },
+    "interaction_event": {
+        "recording": (frozenset({"embodied_recording"}), 1, 1),
+        "actor_life": (
+            frozenset({"birth", "life_checkpoint", "evaluation_completed"}),
+            0,
+            None,
+        ),
+        "observed_environment": (frozenset({"environment_candidate"}), 1, 1),
+        "associated_law_fit": (frozenset({"gam_fit_attempt"}), 0, None),
+    },
 }
 
 _REQUIRED_BLOBS = {
@@ -128,6 +183,7 @@ _REQUIRED_BLOBS = {
     "evaluation_failed": frozenset({"evaluation_result", "evaluation_trace"}),
     "population_snapshot": frozenset({"population_search_state"}),
     "gam_fit_attempt": frozenset({"gam_fit_report"}),
+    "embodied_recording": frozenset({"public_recording"}),
 }
 
 _HASH_FIELDS = {
@@ -154,6 +210,35 @@ _HASH_FIELDS = {
     "life_checkpoint": ("checkpoint_sha256",),
     "evaluation_completed": ("trajectory_sha256",),
     "evaluation_failed": ("trajectory_sha256",),
+    "embodied_recording": ("recording_sha256", "recording_content_sha256"),
+    "organism_transfer": (
+        "public_event_sha256", "source_event_sha256", "recording_content_sha256",
+    ),
+    "development_event": (
+        "public_event_sha256", "source_event_sha256", "recording_content_sha256",
+    ),
+    "environment_event": (
+        "public_event_sha256", "source_event_sha256", "recording_content_sha256",
+    ),
+    "interaction_event": (
+        "public_event_sha256", "source_event_sha256", "recording_content_sha256",
+    ),
+}
+
+_RECORDING_EVENT_TYPES = {
+    "root-material-acquisition": "organism_transfer",
+    "mobile-material-release": "organism_transfer",
+    "colony-material-emission": "organism_transfer",
+    "hatching": "development_event",
+    "goal_episode_completed": "development_event",
+    "developmental-growth-committed": "environment_event",
+    "developmental-attachment-invalidated": "environment_event",
+    "developmental-parts-removed": "environment_event",
+    "signal_emission": "interaction_event",
+    "contact_begin": "interaction_event",
+    "contact_end": "interaction_event",
+    "visitor_material": "environment_event",
+    "visitor_stimulus": "interaction_event",
 }
 
 _PRIVATE_GENOME_TOKENS = frozenset(
@@ -235,6 +320,253 @@ def evidence_record(
         "blob_refs": [dict(blob) for blob in blobs],
         "fields": body,
     }
+
+
+def recording_evidence_records(
+    recording: Mapping[str, Any],
+    *,
+    recording_artifact: Mapping[str, Any],
+    campaign_record_id: str,
+    environment_record_id: str,
+    body_life_record_ids: Mapping[int, str],
+    associated_law_fit_record_ids: Sequence[str] = (),
+    event_law_fit_record_ids: Mapping[str, Sequence[str]] | None = None,
+) -> list[dict[str, Any]]:
+    """Convert one authenticated public recording into typed evidence records.
+
+    Body indexes are public recording indexes.  The caller must bind every
+    recorded body to an existing birth/checkpoint/terminal record; this
+    function never infers a life from scene geometry or a display name.
+    """
+    if recording.get("format") != "chreatures-living-reef-public-recording-v2":
+        raise PopulationEvidenceError("unsupported embodied recording format")
+    content_sha256 = recording.get("content_sha256")
+    _valid_hash(content_sha256, "recording content identity")
+    authenticated = deepcopy(dict(recording))
+    authenticated.pop("content_sha256", None)
+    if hashlib.sha256(canonical_bytes(authenticated)).hexdigest() != content_sha256:
+        raise PopulationEvidenceError("recording content SHA-256 differs")
+    if recording_artifact.get("role") != "public_recording":
+        raise PopulationEvidenceError("recording artifact needs public_recording role")
+    _validate_blob(recording_artifact, "embodied recording")
+    recording_sha256 = recording_artifact.get("sha256")
+    frames = recording.get("frames")
+    events = recording.get("events")
+    if not isinstance(frames, list) or not frames:
+        raise PopulationEvidenceError("embodied recording has no frames")
+    if not isinstance(events, list):
+        raise PopulationEvidenceError("embodied recording events must be an array")
+    ticks = []
+    observed_bodies: set[int] = set()
+    for frame in frames:
+        if not isinstance(frame, Mapping):
+            raise PopulationEvidenceError("embodied recording frame is not an object")
+        tick = frame.get("tick")
+        if isinstance(tick, bool) or not isinstance(tick, int) or tick < 0:
+            raise PopulationEvidenceError("embodied recording frame has invalid tick")
+        ticks.append(tick)
+        details = frame.get("resident_details")
+        if not isinstance(details, list):
+            raise PopulationEvidenceError("embodied recording frame lacks resident details")
+        for detail in details:
+            body = detail.get("body") if isinstance(detail, Mapping) else None
+            if isinstance(body, bool) or not isinstance(body, int) or body < 0:
+                raise PopulationEvidenceError("recorded resident has invalid public body index")
+            observed_bodies.add(body)
+    if ticks != sorted(ticks) or len(set(ticks)) != len(ticks):
+        raise PopulationEvidenceError("embodied recording ticks are not strictly increasing")
+    bindings = dict(body_life_record_ids)
+    if set(bindings) != observed_bodies:
+        raise PopulationEvidenceError(
+            "public body-to-life bindings must exactly cover recorded residents"
+        )
+    if any(
+        isinstance(index, bool) or not isinstance(index, int) or index < 0
+        or not isinstance(record_id, str) or not record_id
+        for index, record_id in bindings.items()
+    ) or len(set(bindings.values())) != len(bindings):
+        raise PopulationEvidenceError("public body-to-life bindings are invalid")
+    laws = list(associated_law_fit_record_ids)
+    if any(not isinstance(value, str) or not value for value in laws) or len(
+        set(laws)
+    ) != len(laws):
+        raise PopulationEvidenceError("recording law-fit references are invalid")
+    event_laws = dict(event_law_fit_record_ids or {})
+    unknown_law_kinds = set(event_laws) - set(_RECORDING_EVENT_TYPES)
+    if unknown_law_kinds:
+        raise PopulationEvidenceError(
+            f"event law fits name unsupported kinds {sorted(unknown_law_kinds)}"
+        )
+    recording_id = f"embodied-recording:{content_sha256}"
+    recording_parents = {
+        campaign_record_id: "campaign",
+        environment_record_id: "observed_environment",
+    }
+    recording_parents.update(
+        {bindings[index]: "observed_life" for index in sorted(bindings)}
+    )
+    recording_parents.update({record_id: "associated_law_fit" for record_id in laws})
+    sampling = recording.get("sampling")
+    geometry = recording.get("geometry")
+    event_stream = recording.get("event_stream")
+    if not isinstance(sampling, Mapping) or not isinstance(geometry, Mapping):
+        raise PopulationEvidenceError("recording lacks sampling or geometry provenance")
+    if not isinstance(event_stream, Mapping):
+        raise PopulationEvidenceError("recording lacks event stream provenance")
+    records = [
+        evidence_record(
+            id=recording_id,
+            time={"domain": "model_tick", "value": ticks[-1]},
+            record_type="embodied_recording",
+            text="Authenticated multi-resident physical-world recording.",
+            parents=recording_parents,
+            blobs=[recording_artifact],
+            fields={
+                "recording_sha256": recording_sha256,
+                "recording_content_sha256": content_sha256,
+                "recording_format": recording["format"],
+                "first_tick": ticks[0],
+                "last_tick": ticks[-1],
+                "frame_count": len(frames),
+                "resident_count": len(observed_bodies),
+                "event_count": len(events),
+                "body_life_record_ids": {
+                    str(index): bindings[index] for index in sorted(bindings)
+                },
+                "world_dimension": geometry.get("dimension"),
+                "event_stream": deepcopy(dict(event_stream)),
+                "associated_law_fit_ids": laws,
+                "law_relationship": "descriptive_association_only",
+                "privacy_scope": "public indexes and bounded diagnostics; no private memory arrays",
+            },
+        )
+    ]
+    previous_sequence = None
+    previous_public_sha256 = "0" * 64
+    previous_source_sha256 = None
+    seen_event_ids: set[str] = set()
+    for event in events:
+        if not isinstance(event, Mapping):
+            raise PopulationEvidenceError("recording event is not an object")
+        kind = event.get("kind")
+        record_type = _RECORDING_EVENT_TYPES.get(kind)
+        if record_type is None:
+            raise PopulationEvidenceError(f"recording event kind {kind!r} is unsupported")
+        event_id = event.get("event_id")
+        event_sha256 = event.get("sha256")
+        source_receipt = event.get("source_receipt")
+        _valid_hash(event_sha256, "public recording event identity")
+        if not isinstance(source_receipt, Mapping):
+            raise PopulationEvidenceError("recording event lacks source receipt")
+        if set(source_receipt) != {"event_id_sha256", "previous_sha256", "sha256"}:
+            raise PopulationEvidenceError("recording event source receipt fields differ")
+        _valid_hash(source_receipt.get("event_id_sha256"), "source event id receipt")
+        _valid_hash(source_receipt.get("previous_sha256"), "source event predecessor")
+        source_event_sha256 = source_receipt.get("sha256")
+        _valid_hash(source_event_sha256, "source recording event identity")
+        if event.get("previous_sha256") != previous_public_sha256:
+            raise PopulationEvidenceError("public recording event hash chain has a gap")
+        if previous_source_sha256 is not None and source_receipt.get(
+            "previous_sha256"
+        ) != previous_source_sha256:
+            raise PopulationEvidenceError("source recording event hash chain has a gap")
+        public_event = deepcopy(dict(event))
+        public_event.pop("sha256", None)
+        if hashlib.sha256(canonical_bytes(public_event)).hexdigest() != event_sha256:
+            raise PopulationEvidenceError("public recording event SHA-256 differs")
+        previous_public_sha256 = event_sha256
+        previous_source_sha256 = source_event_sha256
+        if not isinstance(event_id, str) or not event_id or event_id in seen_event_ids:
+            raise PopulationEvidenceError("recording event identity is absent or duplicated")
+        seen_event_ids.add(event_id)
+        sequence = event.get("sequence")
+        tick = event.get("tick")
+        model_time = event.get("model_time")
+        if (
+            isinstance(sequence, bool)
+            or not isinstance(sequence, int)
+            or sequence < 1
+            or isinstance(tick, bool)
+            or not isinstance(tick, int)
+            or tick < 0
+            or isinstance(model_time, bool)
+            or not isinstance(model_time, (int, float))
+            or not math.isfinite(model_time)
+        ):
+            raise PopulationEvidenceError(f"recording event {event_id} has invalid time")
+        if previous_sequence is not None and sequence != previous_sequence + 1:
+            raise PopulationEvidenceError("recording event sequence has a gap")
+        previous_sequence = sequence
+        actors = event.get("actors")
+        quantities = event.get("quantities")
+        if not isinstance(actors, Mapping) or not isinstance(quantities, list):
+            raise PopulationEvidenceError(f"recording event {event_id} lacks evidence fields")
+        body_actors = actors.get("bodies")
+        if not isinstance(body_actors, list) or any(
+            isinstance(body, bool)
+            or not isinstance(body, int)
+            or body not in bindings
+            for body in body_actors
+        ):
+            raise PopulationEvidenceError(f"recording event {event_id} has an unbound body")
+        actor_lives = [bindings[body] for body in body_actors]
+        if len(set(actor_lives)) != len(actor_lives):
+            raise PopulationEvidenceError(f"recording event {event_id} repeats an actor life")
+        kind_laws = list(event_laws.get(kind, ()))
+        if any(not isinstance(value, str) or not value for value in kind_laws) or len(
+            set(kind_laws)
+        ) != len(kind_laws):
+            raise PopulationEvidenceError(f"recording event {event_id} law refs are invalid")
+        parents = {
+            recording_id: "recording",
+            environment_record_id: "observed_environment",
+        }
+        parents.update({record_id: "actor_life" for record_id in actor_lives})
+        parents.update({record_id: "associated_law_fit" for record_id in kind_laws})
+        records.append(
+            evidence_record(
+                id=f"embodied-event:{event_sha256}",
+                time={"domain": "model_tick", "value": tick},
+                record_type=record_type,
+                text=f"Committed physical event: {kind}.",
+                parents=parents,
+                fields={
+                    "public_event_id": event_id,
+                    "public_event_sha256": event_sha256,
+                    "source_event_sha256": source_event_sha256,
+                    "recording_content_sha256": content_sha256,
+                    "sequence": sequence,
+                    "tick": tick,
+                    "model_time": float(model_time),
+                    "kind": kind,
+                    "actors": deepcopy(dict(actors)),
+                    "quantities": deepcopy(quantities),
+                    "details": deepcopy(event.get("details", {})),
+                    "source": deepcopy(event.get("source", {})),
+                    "associated_law_fit_ids": kind_laws,
+                    "law_relationship": "descriptive_association_only",
+                },
+            )
+        )
+    if event_stream.get("status") == "recorded" and (
+        event_stream.get("captured_event_count") != len(events)
+        or event_stream.get("public_head_sha256") != previous_public_sha256
+        or (
+            events
+            and (
+                events[0]["source_receipt"]["previous_sha256"]
+                != event_stream.get("head_sha256")
+                or events[0]["sequence"] != event_stream.get("last_sequence", -1) + 1
+            )
+        )
+        or (
+            events
+            and event_stream.get("source_head_sha256_at_end")
+            != previous_source_sha256
+        )
+    ):
+        raise PopulationEvidenceError("recording event stream summary differs")
+    return records
 
 
 def empty_ledger(campaign_id: str, description: str) -> dict[str, Any]:
@@ -385,10 +717,11 @@ def evaluation_records_from_native(
     ):
         _valid_hash(digest, f"native {name} sha256")
     native_status = evaluation.get("status")
-    if native_status not in {"success", "failure"}:
-        raise PopulationEvidenceError("native evaluation status must be success or failure")
-    if native_status == "success" and not allocated:
-        raise PopulationEvidenceError("a completed evaluation must have allocated a life")
+    physical_terminal = native_status in {"completed", "organism-terminal"}
+    if not physical_terminal and native_status != "infrastructure-failure":
+        raise PopulationEvidenceError("native evaluation status is invalid")
+    if physical_terminal and not allocated:
+        raise PopulationEvidenceError("a physical terminal evaluation needs an allocated life")
     if allocated != (continuation_record_id is not None) or allocated == (
         campaign_record_id is not None
     ):
@@ -399,13 +732,13 @@ def evaluation_records_from_native(
     _valid_hash(trajectory_sha256, "native trajectory sha256")
     if trace_artifact.get("sha256") != trajectory_sha256:
         raise PopulationEvidenceError("trace blob differs from native evaluation")
-    record_type = "evaluation_completed" if native_status == "success" else "evaluation_failed"
+    record_type = "evaluation_completed" if physical_terminal else "evaluation_failed"
     fields: dict[str, Any] = {
         "evaluation_id": evaluation_id,
         "life_id": life_id,
         "genome_sha256": genome_sha,
         "environment_sha256": environment_sha,
-        "status": "completed" if native_status == "success" else "failed",
+        "status": native_status,
         "allocation_status": "allocated" if allocated else "not_allocated",
         "failure": evaluation.get("failure", ""),
         "metrics": dict(evaluation.get("metrics", {})),
@@ -415,7 +748,7 @@ def evaluation_records_from_native(
         "descriptor_epoch_id": descriptor_epoch_id,
         "probe_panel_sha256": probe_panel_sha256,
     }
-    if native_status == "success":
+    if physical_terminal:
         fields.update(
             descriptor=list(evaluation.get("descriptor", [])),
             cell=list(evaluation.get("cell", [])),
@@ -437,14 +770,20 @@ def evaluation_records_from_native(
         record_type=record_type,
         text=(
             "Complete physical population evaluation."
-            if native_status == "success"
-            else "Retained failed physical population evaluation."
+            if native_status == "completed"
+            else (
+                "Physically valid organism-terminal evaluation."
+                if native_status == "organism-terminal"
+                else "Retained infrastructure failure; no ecological metrics."
+            )
         ),
         parents=parents,
         blobs=[result_artifact, trace_artifact],
         fields=fields,
     )
     retained = bool(evaluation.get("archive_retained", False))
+    if not physical_terminal and retained:
+        raise PopulationEvidenceError("infrastructure failure cannot enter the archive")
     decision = evidence_record(
         id=f"archive-decision:{evaluation_id}",
         time=time,
@@ -459,8 +798,8 @@ def evaluation_records_from_native(
             "decision": "retained" if retained else "rejected",
             "descriptor_epoch_id": descriptor_epoch_id,
             "cell": list(evaluation.get("cell") or []),
-            "quality": evaluation.get("quality") if native_status == "success" else None,
-            "failure_retained": native_status == "failure",
+            "quality": evaluation.get("quality") if physical_terminal else None,
+            "infrastructure_failure_retained": native_status == "infrastructure-failure",
         },
     )
     return terminal, decision
@@ -501,7 +840,7 @@ def reconcile_population_state(
     records: Sequence[Mapping[str, Any]], state: Mapping[str, Any]
 ) -> dict[str, int]:
     """Require every terminal result in a native search snapshot to be retained."""
-    if state.get("format") != "chreatures-population-search-v1":
+    if state.get("format") != "chreatures-population-search-v2":
         raise PopulationEvidenceError("unsupported native population search state")
     evaluations = state.get("evaluations")
     if not isinstance(evaluations, list):
@@ -531,9 +870,25 @@ def reconcile_population_state(
             decisions[record.get("fields", {}).get("evaluation_id")] = record
         elif record.get("record_type") == "environment_candidate":
             environments[record.get("fields", {}).get("environment_sha256")] = record
-    failures = 0
+    infrastructure_failures = 0
+    organism_terminals = 0
     seen_evaluations: set[str] = set()
-    for raw in evaluations:
+    pair_expected: dict[str, dict[str, Any]] = {}
+    environment_expected = {
+        identity: {
+            "environment_sha256": identity,
+            "valid_evaluations": 0,
+            "infrastructure_failures": 0,
+            "organism_terminals": 0,
+            "quality_sum": 0.0,
+            "quality_square_sum": 0.0,
+            "candidate_sha256": set(),
+            "occupied_cells": set(),
+            "last_sequence": 0,
+        }
+        for identity in state.get("environments", {})
+    }
+    for sequence, raw in enumerate(evaluations, start=1):
         if not isinstance(raw, Mapping):
             raise PopulationEvidenceError("native population evaluation is not an object")
         evaluation_id = raw.get("evaluation_sha256")
@@ -544,12 +899,16 @@ def reconcile_population_state(
             )
         seen_evaluations.add(evaluation_id)
         status = raw.get("status")
-        if status not in {"success", "failure"}:
+        if status not in {"completed", "organism-terminal", "infrastructure-failure"}:
             raise PopulationEvidenceError(
                 f"native evaluation {evaluation_id} has invalid status"
             )
         terminal = terminals.get(evaluation_id)
-        expected_type = "evaluation_completed" if status == "success" else "evaluation_failed"
+        expected_type = (
+            "evaluation_completed"
+            if status in {"completed", "organism-terminal"}
+            else "evaluation_failed"
+        )
         if terminal is None or terminal.get("record_type") != expected_type:
             raise PopulationEvidenceError(
                 f"native evaluation {evaluation_id} is absent from terminal evidence"
@@ -561,6 +920,7 @@ def reconcile_population_state(
             or fields.get("environment_sha256") != raw.get("environment_sha256")
             or fields.get("trajectory_sha256") != raw.get("trajectory_sha256")
             or fields.get("probe_panel_sha256") != probe_panel_sha256
+            or fields.get("status") != status
         ):
             raise PopulationEvidenceError(
                 f"native evaluation {evaluation_id} identity differs from terminal evidence"
@@ -581,8 +941,112 @@ def reconcile_population_state(
             raise PopulationEvidenceError(
                 f"native evaluation {evaluation_id} archive decision is absent or differs"
             )
-        failures += int(status == "failure")
-    return {"evaluations": len(evaluations), "failed_evaluations": failures}
+        infrastructure_failures += int(status == "infrastructure-failure")
+        organism_terminals += int(status == "organism-terminal")
+        pair_key = f"{raw['candidate_sha256']}:{raw['environment_sha256']}"
+        pair = pair_expected.setdefault(
+            pair_key,
+            {
+                "candidate_sha256": raw["candidate_sha256"],
+                "environment_sha256": raw["environment_sha256"],
+                "valid_evaluations": 0,
+                "infrastructure_failures": 0,
+                "organism_terminals": 0,
+                "quality_sum": 0.0,
+                "best_quality": None,
+                "last_evaluation_sha256": "",
+                "last_sequence": 0,
+            },
+        )
+        environment_summary = environment_expected.get(raw["environment_sha256"])
+        if environment_summary is None:
+            raise PopulationEvidenceError("native evaluation environment lacks evidence row")
+        if status == "infrastructure-failure":
+            pair["infrastructure_failures"] += 1
+            environment_summary["infrastructure_failures"] += 1
+        else:
+            quality = raw.get("quality")
+            cell = raw.get("cell")
+            if isinstance(quality, bool) or not isinstance(quality, (int, float)) or not math.isfinite(quality):
+                raise PopulationEvidenceError("physical native evaluation has invalid quality")
+            if not isinstance(cell, list) or any(
+                isinstance(value, bool) or not isinstance(value, int) or value < 0
+                for value in cell
+            ):
+                raise PopulationEvidenceError("physical native evaluation has invalid cell")
+            pair["valid_evaluations"] += 1
+            pair["organism_terminals"] += int(status == "organism-terminal")
+            pair["quality_sum"] += quality
+            pair["best_quality"] = (
+                quality if pair["best_quality"] is None else max(pair["best_quality"], quality)
+            )
+            environment_summary["valid_evaluations"] += 1
+            environment_summary["organism_terminals"] += int(
+                status == "organism-terminal"
+            )
+            environment_summary["quality_sum"] += quality
+            environment_summary["quality_square_sum"] += quality * quality
+            environment_summary["candidate_sha256"].add(raw["candidate_sha256"])
+            environment_summary["occupied_cells"].add(":".join(map(str, cell)))
+        pair["last_evaluation_sha256"] = evaluation_id
+        pair["last_sequence"] = sequence
+        environment_summary["last_sequence"] = sequence
+    if state.get("evaluation_sequence") != len(evaluations):
+        raise PopulationEvidenceError("native evaluation sequence differs from terminal history")
+    if state.get("pair_histories") != pair_expected:
+        raise PopulationEvidenceError("native candidate-environment histories differ")
+    public_environment_expected = {
+        identity: {
+            **row,
+            "candidate_sha256": sorted(row["candidate_sha256"]),
+            "occupied_cells": sorted(row["occupied_cells"]),
+        }
+        for identity, row in environment_expected.items()
+    }
+    if state.get("environment_evidence") != public_environment_expected:
+        raise PopulationEvidenceError("native environment evidence summaries differ")
+    pending = state.get("pending_assignments")
+    pending_evidence = state.get("pending_evidence")
+    if not isinstance(pending, list) or not isinstance(pending_evidence, Mapping) or set(
+        pending
+    ) != set(pending_evidence):
+        raise PopulationEvidenceError("native pending assignment evidence differs")
+    selection_fields = {
+        "pair_valid_evaluations",
+        "candidate_valid_environments",
+        "environment_valid_evaluations",
+        "transfer_gap",
+        "environment_priority",
+        "analyst_score",
+    }
+    for key, row in pending_evidence.items():
+        if not isinstance(key, str) or ":" not in key or not isinstance(row, Mapping) or set(row) != selection_fields:
+            raise PopulationEvidenceError("native pending evidence row differs")
+        for name in ("pair_valid_evaluations", "candidate_valid_environments", "environment_valid_evaluations"):
+            if isinstance(row[name], bool) or not isinstance(row[name], int) or row[name] < 0:
+                raise PopulationEvidenceError("native pending evidence count is invalid")
+        for name in ("transfer_gap", "environment_priority"):
+            if isinstance(row[name], bool) or not isinstance(row[name], (int, float)) or not math.isfinite(row[name]):
+                raise PopulationEvidenceError("native pending evidence score is invalid")
+        analyst = row["analyst_score"]
+        if analyst is not None and (
+            isinstance(analyst, bool)
+            or not isinstance(analyst, (int, float))
+            or not math.isfinite(analyst)
+            or abs(analyst) > 1.0
+        ):
+            raise PopulationEvidenceError("native pending analyst score is invalid")
+    blocked = state.get("infrastructure_blocked")
+    if not isinstance(blocked, list) or any(
+        pair_expected.get(key, {}).get("infrastructure_failures", 0) < 1
+        for key in blocked
+    ):
+        raise PopulationEvidenceError("native infrastructure retry block differs")
+    return {
+        "evaluations": len(evaluations),
+        "infrastructure_failures": infrastructure_failures,
+        "organism_terminals": organism_terminals,
+    }
 
 
 def weave_request(ledger: Mapping[str, Any]) -> dict[str, Any]:
@@ -665,6 +1129,23 @@ def validate_records(records: Sequence[Mapping[str, Any]], *, campaign_id: str) 
             if life_id in life_ids:
                 raise PopulationEvidenceError(f"life_id {life_id} has more than one birth")
             life_ids.add(life_id)
+
+    embodied_counts: Counter[str] = Counter()
+    for record in records:
+        if record.get("record_type") in {
+            "organism_transfer",
+            "development_event",
+            "environment_event",
+            "interaction_event",
+        }:
+            embodied_counts[_single_parent(record, "recording")] += 1
+    for record in records:
+        if record.get("record_type") == "embodied_recording":
+            declared = _integer(record["fields"], "event_count", record["id"])
+            if embodied_counts[record["id"]] != declared:
+                raise PopulationEvidenceError(
+                    f"{record['id']} event count differs from linked event records"
+                )
 
     branched = [source for source, count in continuations.items() if count > 1]
     if branched:
@@ -873,7 +1354,12 @@ def _validate_type_fields(
         )
         if trace_blob["sha256"] != fields["trajectory_sha256"]:
             raise PopulationEvidenceError(f"{record_id} trace blob identity differs")
-        if fields.get("status") != ("completed" if record_type.endswith("completed") else "failed"):
+        expected_statuses = (
+            {"completed", "organism-terminal"}
+            if record_type == "evaluation_completed"
+            else {"infrastructure-failure"}
+        )
+        if fields.get("status") not in expected_statuses:
             raise PopulationEvidenceError(f"{record_id} terminal status differs from its type")
         metrics = fields.get("metrics")
         if not isinstance(metrics, Mapping) or any(
@@ -892,7 +1378,9 @@ def _validate_type_fields(
             if isinstance(quality, bool) or not isinstance(quality, (int, float)) or not math.isfinite(quality):
                 raise PopulationEvidenceError(f"{record_id} quality must be finite")
         elif not isinstance(fields.get("failure"), str) or not fields["failure"].strip():
-            raise PopulationEvidenceError(f"{record_id} failed evaluation lacks failure evidence")
+            raise PopulationEvidenceError(
+                f"{record_id} infrastructure failure lacks failure evidence"
+            )
         _validate_linked_identity(record, by_id)
         epoch = by_id[_single_parent(record, "descriptor_epoch")]
         panel = by_id[_single_parent(record, "probe_panel")]
@@ -957,6 +1445,113 @@ def _validate_type_fields(
             raise PopulationEvidenceError(f"{record_id} failed fit cannot mint a law")
         if status == "failed" and not str(fields.get("failure", "")).strip():
             raise PopulationEvidenceError(f"{record_id} failed fit lacks failure evidence")
+    elif record_type == "embodied_recording":
+        content_sha256 = _hash(fields, "recording_content_sha256", record_id)
+        recording_sha256 = _hash(fields, "recording_sha256", record_id)
+        if record_id != f"embodied-recording:{content_sha256}":
+            raise PopulationEvidenceError(f"{record_id} is not keyed by recording content")
+        recording_blob = next(
+            blob for blob in record["blob_refs"] if blob["role"] == "public_recording"
+        )
+        if recording_blob["sha256"] != recording_sha256:
+            raise PopulationEvidenceError(f"{record_id} recording blob identity differs")
+        if fields.get("recording_format") != "chreatures-living-reef-public-recording-v2":
+            raise PopulationEvidenceError(f"{record_id} has unsupported recording format")
+        first_tick = _integer(fields, "first_tick", record_id)
+        last_tick = _integer(fields, "last_tick", record_id)
+        if first_tick < 0 or last_tick < first_tick:
+            raise PopulationEvidenceError(f"{record_id} has invalid tick extent")
+        frame_count = _integer(fields, "frame_count", record_id)
+        resident_count = _integer(fields, "resident_count", record_id)
+        if frame_count < 1 or resident_count < 1:
+            raise PopulationEvidenceError(f"{record_id} has empty frame or resident extent")
+        bindings = fields.get("body_life_record_ids")
+        if not isinstance(bindings, Mapping) or len(bindings) != resident_count:
+            raise PopulationEvidenceError(f"{record_id} has invalid body-life bindings")
+        body_indexes = []
+        for key, value in bindings.items():
+            if not isinstance(key, str) or not key.isdecimal() or str(int(key)) != key:
+                raise PopulationEvidenceError(f"{record_id} has invalid public body index")
+            if not isinstance(value, str):
+                raise PopulationEvidenceError(f"{record_id} has invalid life record binding")
+            body_indexes.append(int(key))
+        if sorted(body_indexes) != list(range(resident_count)):
+            raise PopulationEvidenceError(f"{record_id} body indexes are not contiguous")
+        observed_lives = _parents_with_role(record, "observed_life")
+        ordered_bindings = [bindings[str(index)] for index in range(resident_count)]
+        if ordered_bindings != observed_lives or len(set(observed_lives)) != len(observed_lives):
+            raise PopulationEvidenceError(f"{record_id} life bindings differ from edges")
+        laws = _parents_with_role(record, "associated_law_fit")
+        if fields.get("associated_law_fit_ids") != laws:
+            raise PopulationEvidenceError(f"{record_id} law fits differ from edges")
+        if any(by_id[parent]["fields"].get("status") != "completed" for parent in laws):
+            raise PopulationEvidenceError(f"{record_id} cites an unsuccessful law fit")
+        if fields.get("law_relationship") != "descriptive_association_only":
+            raise PopulationEvidenceError(f"{record_id} overstates fitted-law evidence")
+        stream = fields.get("event_stream")
+        if not isinstance(stream, Mapping) or stream.get("status") not in {
+            "recorded",
+            "unavailable",
+        }:
+            raise PopulationEvidenceError(f"{record_id} has invalid event stream status")
+    elif record_type in {
+        "organism_transfer",
+        "development_event",
+        "environment_event",
+        "interaction_event",
+    }:
+        _hash(fields, "source_event_sha256", record_id)
+        public_sha256 = _hash(fields, "public_event_sha256", record_id)
+        if record_id != f"embodied-event:{public_sha256}":
+            raise PopulationEvidenceError(f"{record_id} is not keyed by public event")
+        _string(fields, "public_event_id", record_id)
+        kind = _string(fields, "kind", record_id)
+        if _RECORDING_EVENT_TYPES.get(kind) != record_type:
+            raise PopulationEvidenceError(f"{record_id} kind differs from record type")
+        sequence = _integer(fields, "sequence", record_id)
+        tick = _integer(fields, "tick", record_id)
+        model_time = fields.get("model_time")
+        if sequence < 1 or tick < 0 or isinstance(model_time, bool) or not isinstance(
+            model_time, (int, float)
+        ) or not math.isfinite(model_time):
+            raise PopulationEvidenceError(f"{record_id} has invalid event time")
+        recording = by_id[_single_parent(record, "recording")]
+        if fields.get("recording_content_sha256") != recording["fields"].get(
+            "recording_content_sha256"
+        ):
+            raise PopulationEvidenceError(f"{record_id} crosses recording identities")
+        if _single_parent(record, "observed_environment") != _single_parent(
+            recording, "observed_environment"
+        ):
+            raise PopulationEvidenceError(f"{record_id} crosses observed environments")
+        actors = fields.get("actors")
+        quantities = fields.get("quantities")
+        if not isinstance(actors, Mapping) or not isinstance(actors.get("bodies"), list):
+            raise PopulationEvidenceError(f"{record_id} has invalid public actors")
+        bindings = recording["fields"]["body_life_record_ids"]
+        try:
+            expected_lives = [bindings[str(int(body))] for body in actors["bodies"]]
+        except (KeyError, TypeError, ValueError):
+            raise PopulationEvidenceError(f"{record_id} has an unbound public body") from None
+        if expected_lives != _parents_with_role(record, "actor_life"):
+            raise PopulationEvidenceError(f"{record_id} actor lives differ from public bodies")
+        if not isinstance(quantities, list):
+            raise PopulationEvidenceError(f"{record_id} quantities must be an array")
+        for quantity in quantities:
+            if not isinstance(quantity, Mapping) or set(quantity) != {"name", "value", "unit"}:
+                raise PopulationEvidenceError(f"{record_id} has invalid physical quantity")
+            if not str(quantity["name"]).strip() or not str(quantity["unit"]).strip():
+                raise PopulationEvidenceError(f"{record_id} has an unnamed physical quantity")
+            value = quantity["value"]
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise PopulationEvidenceError(f"{record_id} has nonfinite physical quantity")
+        laws = _parents_with_role(record, "associated_law_fit")
+        if fields.get("associated_law_fit_ids") != laws:
+            raise PopulationEvidenceError(f"{record_id} law fits differ from edges")
+        if any(by_id[parent]["fields"].get("status") != "completed" for parent in laws):
+            raise PopulationEvidenceError(f"{record_id} cites an unsuccessful law fit")
+        if fields.get("law_relationship") != "descriptive_association_only":
+            raise PopulationEvidenceError(f"{record_id} overstates fitted-law evidence")
 
 
 def _validate_linked_identity(

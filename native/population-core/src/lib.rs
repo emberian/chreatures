@@ -2,11 +2,11 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
-pub const STATE_FORMAT: &str = "chreatures-population-search-v1";
-pub const GENOME_FORMAT: &str = "chreatures-population-genome-v1";
-pub const DESCRIPTOR_VERSION: &str = "physical-descriptor-v1";
-pub const QUALITY_VERSION: &str = "finite-life-quality-v1";
-pub const VARIATION_VERSION: &str = "bounded-genome-variation-v1";
+pub const STATE_FORMAT: &str = "chreatures-population-search-v2";
+pub const GENOME_FORMAT: &str = "chreatures-population-genome-v2";
+pub const DESCRIPTOR_VERSION: &str = "physical-descriptor-v2";
+pub const QUALITY_VERSION: &str = "finite-life-quality-v2";
+pub const VARIATION_VERSION: &str = "bounded-genome-variation-v2";
 
 fn default_capacity() -> usize {
     4
@@ -58,6 +58,8 @@ pub struct SearchConfig {
     pub variation_recipe_sha256: String,
     pub environment_probe_panel_sha256: String,
     pub environment_epoch: u64,
+    pub environment_novelty_weight: f64,
+    pub environment_cost_weight: f64,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -89,12 +91,16 @@ pub struct Genome {
 pub struct EnvironmentGenome {
     pub format: String,
     pub sha256: String,
+    pub genome_sha256: String,
+    pub genome_parents: Vec<String>,
     pub parents: Vec<String>,
     pub variation: EnvironmentVariation,
     pub topology_sha256: String,
     pub resource_sha256: String,
     pub profile_sha256: String,
     pub epoch: u64,
+    pub descriptors: BTreeMap<String, f64>,
+    pub generation_cost: EnvironmentGenerationCost,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -102,6 +108,16 @@ pub struct EnvironmentVariation {
     pub operator: String,
     pub seed: u64,
     pub recipe_sha256: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EnvironmentGenerationCost {
+    pub physical_geoms: u64,
+    pub regions: u64,
+    pub edges: u64,
+    pub movables: u64,
+    pub compartments: u64,
+    pub normalized: f64,
 }
 impl EnvironmentGenome {
     fn compute_hash(&self) -> Result<String, String> {
@@ -116,6 +132,17 @@ pub struct Assignment {
     pub candidate: Genome,
     pub environment_sha256: String,
     pub phase: String,
+    pub selection: AssignmentEvidence,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AssignmentEvidence {
+    pub pair_valid_evaluations: u64,
+    pub candidate_valid_environments: usize,
+    pub environment_valid_evaluations: u64,
+    pub transfer_gap: f64,
+    pub environment_priority: f64,
+    pub analyst_score: Option<f64>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -163,6 +190,59 @@ pub struct ArchiveMember {
     pub evaluation_sha256: String,
     pub quality: f64,
     pub descriptor: Vec<f64>,
+    pub environment_sha256: String,
+    pub valid_evaluation_count: u64,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PairHistory {
+    pub candidate_sha256: String,
+    pub environment_sha256: String,
+    pub valid_evaluations: u64,
+    pub infrastructure_failures: u64,
+    pub organism_terminals: u64,
+    pub quality_sum: f64,
+    pub best_quality: Option<f64>,
+    pub last_evaluation_sha256: String,
+    pub last_sequence: u64,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EnvironmentEvidence {
+    pub environment_sha256: String,
+    pub valid_evaluations: u64,
+    pub infrastructure_failures: u64,
+    pub organism_terminals: u64,
+    pub quality_sum: f64,
+    pub quality_square_sum: f64,
+    pub candidate_sha256: BTreeSet<String>,
+    pub occupied_cells: BTreeSet<String>,
+    pub last_sequence: u64,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EnvironmentFrontier {
+    pub environment_sha256: String,
+    pub parents: Vec<String>,
+    pub valid_evaluations: u64,
+    pub infrastructure_failures: u64,
+    pub organism_terminals: u64,
+    pub distinct_candidates: usize,
+    pub occupied_cells: usize,
+    pub mean_quality: Option<f64>,
+    pub quality_stddev: Option<f64>,
+    pub challenge_priority: f64,
+    pub novelty: f64,
+    pub descriptors: BTreeMap<String, f64>,
+    pub generation_cost: EnvironmentGenerationCost,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProposalScores {
+    pub format: String,
+    pub sha256: String,
+    pub artifact_sha256: String,
+    pub scores: BTreeMap<String, f64>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -175,11 +255,20 @@ pub struct SearchState {
     pub rng_state: u64,
     pub ask_count: u64,
     pub environment_cursor: u64,
+    pub challenge_cursor: u64,
+    pub evaluation_sequence: u64,
     pub genomes: BTreeMap<String, Genome>,
     pub environments: BTreeMap<String, EnvironmentGenome>,
     pub direct_completed: BTreeSet<String>,
     pub pending_assignments: BTreeSet<String>,
+    pub pending_evidence: BTreeMap<String, AssignmentEvidence>,
+    pub infrastructure_blocked: BTreeSet<String>,
     pub archive: BTreeMap<String, Vec<ArchiveMember>>,
+    pub pair_histories: BTreeMap<String, PairHistory>,
+    pub environment_evidence: BTreeMap<String, EnvironmentEvidence>,
+    pub proposal_artifact_sha256: Option<String>,
+    pub proposal_scores_sha256: Option<String>,
+    pub proposal_scores: BTreeMap<String, f64>,
     pub evaluations: Vec<Evaluation>,
 }
 fn hex(bytes: &[u8]) -> String {
@@ -257,6 +346,13 @@ impl SearchConfig {
             || self.policy_adapter_rank > 256
         {
             return Err("population adapter dimensions differ".into());
+        }
+        if !finite(self.environment_novelty_weight)
+            || !(0.0..=1.0).contains(&self.environment_novelty_weight)
+            || !finite(self.environment_cost_weight)
+            || !(0.0..=1.0).contains(&self.environment_cost_weight)
+        {
+            return Err("environment search weights differ".into());
         }
         let adapter = self
             .parameter_specs
@@ -471,11 +567,20 @@ impl SearchState {
             rng_state: seed,
             ask_count: 0,
             environment_cursor: 0,
+            challenge_cursor: 0,
+            evaluation_sequence: 0,
             genomes,
             environments: BTreeMap::new(),
             direct_completed: BTreeSet::new(),
             pending_assignments: BTreeSet::new(),
+            pending_evidence: BTreeMap::new(),
+            infrastructure_blocked: BTreeSet::new(),
             archive: BTreeMap::new(),
+            pair_histories: BTreeMap::new(),
+            environment_evidence: BTreeMap::new(),
+            proposal_artifact_sha256: None,
+            proposal_scores_sha256: None,
+            proposal_scores: BTreeMap::new(),
             evaluations: vec![],
         })
     }
@@ -489,7 +594,13 @@ impl SearchState {
         }
         self.config.validate()?;
         for g in self.genomes.values() {
-            g.validate(&self.config)?
+            g.validate(&self.config)?;
+            if g.parents
+                .iter()
+                .any(|parent| parent == &g.sha256 || !self.genomes.contains_key(parent))
+            {
+                return Err("saved genome ancestry differs".into());
+            }
         }
         for (identity, environment) in &self.environments {
             if identity != &environment.sha256
@@ -499,13 +610,108 @@ impl SearchState {
                 return Err("saved environment identity differs".into());
             }
         }
+        for (key, history) in &self.pair_histories {
+            if key
+                != &format!(
+                    "{}:{}",
+                    history.candidate_sha256, history.environment_sha256
+                )
+                || !self.genomes.contains_key(&history.candidate_sha256)
+                || !self.environments.contains_key(&history.environment_sha256)
+                || !finite(history.quality_sum)
+            {
+                return Err("saved candidate-environment history differs".into());
+            }
+        }
+        for (identity, evidence) in &self.environment_evidence {
+            if identity != &evidence.environment_sha256
+                || !self.environments.contains_key(identity)
+                || !finite(evidence.quality_sum)
+                || !finite(evidence.quality_square_sum)
+            {
+                return Err("saved environment evidence differs".into());
+            }
+        }
+        if self.environment_evidence.len() != self.environments.len() {
+            return Err("environment evidence coverage differs".into());
+        }
+        if self.pending_assignments.len() != self.pending_evidence.len()
+            || self
+                .pending_assignments
+                .iter()
+                .any(|key| !self.pending_evidence.contains_key(key))
+            || self.pending_evidence.iter().any(|(key, evidence)| {
+                !key.contains(':')
+                    || !finite(evidence.transfer_gap)
+                    || !finite(evidence.environment_priority)
+                    || evidence
+                        .analyst_score
+                        .is_some_and(|score| !finite(score) || score.abs() > 1.0)
+            })
+        {
+            return Err("pending assignment evidence differs".into());
+        }
+        if self.infrastructure_blocked.iter().any(|key| {
+            self.pair_histories
+                .get(key)
+                .is_none_or(|history| history.infrastructure_failures == 0)
+        }) {
+            return Err("infrastructure retry block differs".into());
+        }
+        for (niche, members) in &self.archive {
+            if members.len() > self.config.archive_members_per_cell
+                || members.iter().any(|member| {
+                    !niche.starts_with(&format!("{}:", member.environment_sha256))
+                        || !self.genomes.contains_key(&member.candidate_sha256)
+                        || !self.environments.contains_key(&member.environment_sha256)
+                        || !finite(member.quality)
+                })
+            {
+                return Err("saved niche archive differs".into());
+            }
+        }
+        if self
+            .proposal_artifact_sha256
+            .as_deref()
+            .is_some_and(|x| !valid_hash(x))
+            || self.proposal_artifact_sha256.is_some() != self.proposal_scores_sha256.is_some()
+            || self.proposal_artifact_sha256.is_some() != !self.proposal_scores.is_empty()
+            || self.proposal_scores.iter().any(|(key, score)| {
+                let Some((candidate, environment)) = key.split_once(':') else {
+                    return true;
+                };
+                !finite(*score)
+                    || score.abs() > 1.0
+                    || !self.genomes.contains_key(candidate)
+                    || !self.environments.contains_key(environment)
+            })
+        {
+            return Err("saved analyst proposal scores differ".into());
+        }
+        if self
+            .proposal_scores_sha256
+            .as_deref()
+            .is_some_and(|value| !valid_hash(value))
+        {
+            return Err("saved analyst proposal receipt differs".into());
+        }
         Ok(())
     }
     pub fn register_environment(&mut self, e: EnvironmentGenome) -> Result<(), String> {
-        if e.format != "chreatures-environment-record-v1"
+        let descriptor_names = BTreeSet::from([
+            "regional_scale".to_string(),
+            "elevation_relief".to_string(),
+            "resource_density".to_string(),
+            "renewal_rate".to_string(),
+            "connectivity".to_string(),
+        ]);
+        if e.format != "chreatures-environment-record-v2"
             || !valid_hash(&e.sha256)
+            || !valid_hash(&e.genome_sha256)
             || e.parents.len() > 2
+            || e.genome_parents.len() != e.parents.len()
             || e.parents.iter().any(|x| !valid_hash(x))
+            || e.genome_parents.iter().any(|x| !valid_hash(x))
             || ![
                 &e.topology_sha256,
                 &e.resource_sha256,
@@ -514,30 +720,154 @@ impl SearchState {
             ]
             .iter()
             .all(|x| valid_hash(x))
+            || e.descriptors.keys().cloned().collect::<BTreeSet<_>>() != descriptor_names
+            || e.descriptors
+                .values()
+                .any(|value| !finite(*value) || !(0.0..=1.0).contains(value))
+            || !finite(e.generation_cost.normalized)
+            || !(0.0..=1.0).contains(&e.generation_cost.normalized)
         {
             return Err("invalid environment identity".into());
         }
         if e.epoch != self.config.environment_epoch {
             return Err("environment belongs to a different search epoch".into());
         }
+        for (parent_record, parent_genome) in e.parents.iter().zip(&e.genome_parents) {
+            let Some(registered_parent) = self.environments.get(parent_record) else {
+                return Err("environment ancestry is unavailable or cyclic".into());
+            };
+            if parent_record == &e.sha256 || &registered_parent.genome_sha256 != parent_genome {
+                return Err("environment record and genome ancestry differ".into());
+            }
+        }
         if e.compute_hash()? != e.sha256 {
             return Err("environment content hash differs".into());
         }
+        let identity = e.sha256.clone();
+        self.environment_evidence
+            .entry(identity.clone())
+            .or_insert_with(|| EnvironmentEvidence {
+                environment_sha256: identity.clone(),
+                valid_evaluations: 0,
+                infrastructure_failures: 0,
+                organism_terminals: 0,
+                quality_sum: 0.0,
+                quality_square_sum: 0.0,
+                candidate_sha256: BTreeSet::new(),
+                occupied_cells: BTreeSet::new(),
+                last_sequence: 0,
+            });
         self.environments.insert(e.sha256.clone(), e);
         Ok(())
     }
+    pub fn register_proposal_scores(&mut self, scores: ProposalScores) -> Result<(), String> {
+        if scores.format != "chreatures-population-challenge-scores-v1"
+            || !valid_hash(&scores.sha256)
+            || !valid_hash(&scores.artifact_sha256)
+            || scores.scores.is_empty()
+            || scores
+                .scores
+                .values()
+                .any(|value| !finite(*value) || value.abs() > 1.0)
+        {
+            return Err("invalid analyst proposal scores".into());
+        }
+        let mut body = scores.clone();
+        body.sha256.clear();
+        if digest(&body)? != scores.sha256 {
+            return Err("analyst proposal score content hash differs".into());
+        }
+        for key in scores.scores.keys() {
+            let Some((candidate, environment)) = key.split_once(':') else {
+                return Err("analyst proposal pair key differs".into());
+            };
+            if !self.genomes.contains_key(candidate) || !self.environments.contains_key(environment)
+            {
+                return Err("analyst proposal references unknown pair".into());
+            }
+        }
+        self.proposal_artifact_sha256 = Some(scores.artifact_sha256);
+        self.proposal_scores_sha256 = Some(scores.sha256);
+        self.proposal_scores = scores.scores;
+        Ok(())
+    }
+    pub fn authorize_infrastructure_retry(
+        &mut self,
+        candidate: &str,
+        environment: &str,
+    ) -> Result<(), String> {
+        let key = format!("{candidate}:{environment}");
+        if !self.genomes.contains_key(candidate)
+            || !self.environments.contains_key(environment)
+            || !self.infrastructure_blocked.remove(&key)
+        {
+            return Err("infrastructure retry pair is not blocked".into());
+        }
+        Ok(())
+    }
+    fn candidate_robustness(&self, candidate: &str) -> (usize, f64) {
+        let means: Vec<_> = self
+            .pair_histories
+            .values()
+            .filter(|history| {
+                history.candidate_sha256 == candidate && history.valid_evaluations > 0
+            })
+            .map(|history| history.quality_sum / history.valid_evaluations as f64)
+            .collect();
+        let worst = means
+            .iter()
+            .copied()
+            .reduce(f64::min)
+            .unwrap_or(f64::NEG_INFINITY);
+        (means.len(), worst)
+    }
+    fn assignment_evidence(&self, candidate: &str, environment: &str) -> AssignmentEvidence {
+        let key = format!("{candidate}:{environment}");
+        let history = self.pair_histories.get(&key);
+        let pair_mean = history
+            .filter(|item| item.valid_evaluations > 0)
+            .map_or(0.0, |item| item.quality_sum / item.valid_evaluations as f64);
+        AssignmentEvidence {
+            pair_valid_evaluations: history.map_or(0, |item| item.valid_evaluations),
+            candidate_valid_environments: self.candidate_robustness(candidate).0,
+            environment_valid_evaluations: self
+                .environment_evidence
+                .get(environment)
+                .map_or(0, |item| item.valid_evaluations),
+            transfer_gap: self.candidate_mean_quality(candidate) - pair_mean,
+            environment_priority: self.environment_priority(environment),
+            analyst_score: self.proposal_scores.get(&key).copied(),
+        }
+    }
     fn parents(&self) -> Vec<Genome> {
-        let mut members: Vec<_> = self.archive.values().flatten().collect();
-        members.sort_by(|a, b| {
-            b.quality
-                .total_cmp(&a.quality)
-                .then(a.candidate_sha256.cmp(&b.candidate_sha256))
-        });
-        let hashes: Vec<_> = if members.is_empty() {
+        // One representative per environment-conditioned niche comes first;
+        // additional members follow by rank. This prevents a globally high
+        // quality niche from exhausting the reproductive pool.
+        let depth = self.archive.values().map(Vec::len).max().unwrap_or(0);
+        let mut ordered = Vec::new();
+        for rank in 0..depth {
+            let mut layer = Vec::new();
+            for members in self.archive.values() {
+                if let Some(member) = members.get(rank) {
+                    layer.push(member)
+                }
+            }
+            layer.sort_by(|a, b| {
+                let a_robust = self.candidate_robustness(&a.candidate_sha256);
+                let b_robust = self.candidate_robustness(&b.candidate_sha256);
+                b_robust
+                    .0
+                    .cmp(&a_robust.0)
+                    .then_with(|| b_robust.1.total_cmp(&a_robust.1))
+                    .then(a.candidate_sha256.cmp(&b.candidate_sha256))
+            });
+            ordered.extend(layer);
+        }
+        let hashes: Vec<_> = if ordered.is_empty() {
             self.genomes.keys().cloned().collect()
         } else {
             let mut seen = BTreeSet::new();
-            members
+            ordered
                 .iter()
                 .filter_map(|member| {
                     seen.insert(member.candidate_sha256.clone())
@@ -677,12 +1007,15 @@ impl SearchState {
             } else {
                 "direct-transfer"
             };
+            let selection = self.assignment_evidence(&g.sha256, &env);
+            self.pending_assignments.insert(key.clone());
+            self.pending_evidence.insert(key, selection.clone());
             out.push(Assignment {
                 candidate: g,
                 environment_sha256: env,
                 phase: phase.into(),
+                selection: selection.clone(),
             });
-            self.pending_assignments.insert(key);
             self.ask_count += 1;
         }
         self.rng_state = rng.0;
@@ -711,13 +1044,18 @@ impl SearchState {
         for candidate_sha256 in candidate_hashes {
             for environment_sha256 in &environments {
                 let key = format!("{candidate_sha256}:{environment_sha256}");
-                if self.direct_completed.contains(&key) || self.pending_assignments.contains(&key) {
+                if self.direct_completed.contains(&key)
+                    || self.pending_assignments.contains(&key)
+                    || self.infrastructure_blocked.contains(&key)
+                {
                     continue;
                 }
+                let selection = self.assignment_evidence(&candidate_sha256, environment_sha256);
                 proposed.push(Assignment {
                     candidate: self.genomes[&candidate_sha256].clone(),
                     environment_sha256: (*environment_sha256).clone(),
                     phase: "direct-transfer".into(),
+                    selection: selection.clone(),
                 });
                 *counts.entry((*environment_sha256).clone()).or_default() += 1;
             }
@@ -736,12 +1074,183 @@ impl SearchState {
         }
         proposed.truncate(balanced_len);
         for assignment in &proposed {
-            self.pending_assignments.insert(format!(
+            let key = format!(
                 "{}:{}",
                 assignment.candidate.sha256, assignment.environment_sha256
-            ));
+            );
+            self.pending_assignments.insert(key.clone());
+            self.pending_evidence
+                .insert(key, assignment.selection.clone());
         }
         Ok(proposed)
+    }
+    fn candidate_mean_quality(&self, candidate: &str) -> f64 {
+        let mut sum = 0.0;
+        let mut count = 0;
+        for history in self.pair_histories.values() {
+            if history.candidate_sha256 == candidate && history.valid_evaluations > 0 {
+                sum += history.quality_sum;
+                count += history.valid_evaluations;
+            }
+        }
+        if count == 0 {
+            0.0
+        } else {
+            sum / count as f64
+        }
+    }
+    fn environment_priority(&self, environment: &str) -> f64 {
+        let Some(evidence) = self.environment_evidence.get(environment) else {
+            return 0.0;
+        };
+        let novelty = self.environment_novelty(environment);
+        let cost = self.environments[environment].generation_cost.normalized;
+        if evidence.valid_evaluations == 0 {
+            return 1.0 + self.config.environment_novelty_weight * novelty
+                - self.config.environment_cost_weight * cost;
+        }
+        let count = evidence.valid_evaluations as f64;
+        let mean = evidence.quality_sum / count;
+        let variance = (evidence.quality_square_sum / count - mean * mean).max(0.0);
+        // Difficulty and discrimination both matter. Infrastructure failures
+        // are deliberately absent: they are execution evidence, not ecology.
+        evidence.organism_terminals as f64 / count
+            + variance.sqrt()
+            + (-mean).max(0.0)
+            + self.config.environment_novelty_weight * novelty
+            - self.config.environment_cost_weight * cost
+    }
+    fn environment_novelty(&self, environment: &str) -> f64 {
+        let current = &self.environments[environment].descriptors;
+        self.environments
+            .iter()
+            .filter(|(identity, _)| identity.as_str() != environment)
+            .map(|(_, other)| {
+                let squared: f64 = current
+                    .iter()
+                    .map(|(name, value)| (value - other.descriptors[name]).powi(2))
+                    .sum();
+                (squared / current.len() as f64).sqrt()
+            })
+            .reduce(f64::min)
+            .unwrap_or(1.0)
+    }
+    pub fn ask_challenges(&mut self, n: usize) -> Result<Vec<Assignment>, String> {
+        self.validate()?;
+        let environments: Vec<_> = self.environments.keys().cloned().collect();
+        if n == 0 || n > 4096 || environments.is_empty() || n % environments.len() != 0 {
+            return Err(
+                "challenge ask must request complete environment waves within 1..4096".into(),
+            );
+        }
+        let slots = n / environments.len();
+        let mut candidates: Vec<_> = self
+            .archive
+            .values()
+            .flatten()
+            .map(|member| member.candidate_sha256.clone())
+            .collect();
+        candidates.sort();
+        candidates.dedup();
+        if candidates.len() < slots {
+            return Err("challenge archive has too few distinct candidates".into());
+        }
+        let mut proposed = Vec::with_capacity(n);
+        for environment in environments {
+            let environment_priority = self.environment_priority(&environment);
+            let cursor = self.challenge_cursor;
+            let mut ranked: Vec<_> = candidates
+                .iter()
+                .filter(|candidate| {
+                    let key = format!("{candidate}:{environment}");
+                    !self.pending_assignments.contains(&key)
+                        && !self.infrastructure_blocked.contains(&key)
+                })
+                .map(|candidate| {
+                    let key = format!("{candidate}:{environment}");
+                    let history = self.pair_histories.get(&key);
+                    let repeats = history.map_or(0, |item| item.valid_evaluations);
+                    let pair_mean = history
+                        .filter(|item| item.valid_evaluations > 0)
+                        .map_or(0.0, |item| item.quality_sum / item.valid_evaluations as f64);
+                    let gap = self.candidate_mean_quality(candidate) - pair_mean;
+                    let analyst = self.proposal_scores.get(&key).copied().unwrap_or(0.0);
+                    let tie = hex(&Sha256::digest(format!("{cursor}:{key}").as_bytes()));
+                    (
+                        candidate.clone(),
+                        repeats,
+                        analyst,
+                        environment_priority + gap,
+                        tie,
+                    )
+                })
+                .collect();
+            ranked.sort_by(|a, b| {
+                a.1.cmp(&b.1)
+                    .then_with(|| b.2.total_cmp(&a.2))
+                    .then_with(|| b.3.total_cmp(&a.3))
+                    .then_with(|| a.4.cmp(&b.4))
+            });
+            if ranked.len() < slots {
+                return Err("challenge assignments collide with pending work".into());
+            }
+            for (candidate, ..) in ranked.into_iter().take(slots) {
+                let key = format!("{candidate}:{environment}");
+                let selection = self.assignment_evidence(&candidate, &environment);
+                proposed.push(Assignment {
+                    candidate: self.genomes[&candidate].clone(),
+                    environment_sha256: environment.clone(),
+                    phase: if self.pair_histories.contains_key(&key) {
+                        "history-challenge-repeat".into()
+                    } else {
+                        "history-challenge-transfer".into()
+                    },
+                    selection: selection.clone(),
+                });
+                self.pending_assignments.insert(key.clone());
+                self.pending_evidence.insert(key, selection);
+            }
+            self.challenge_cursor += 1;
+        }
+        Ok(proposed)
+    }
+    pub fn environment_frontier(&self) -> Vec<EnvironmentFrontier> {
+        let mut values: Vec<_> = self
+            .environments
+            .values()
+            .map(|environment| {
+                let evidence = &self.environment_evidence[&environment.sha256];
+                let (mean, stddev) = if evidence.valid_evaluations == 0 {
+                    (None, None)
+                } else {
+                    let count = evidence.valid_evaluations as f64;
+                    let mean = evidence.quality_sum / count;
+                    let variance = (evidence.quality_square_sum / count - mean * mean).max(0.0);
+                    (Some(mean), Some(variance.sqrt()))
+                };
+                EnvironmentFrontier {
+                    environment_sha256: environment.sha256.clone(),
+                    parents: environment.parents.clone(),
+                    valid_evaluations: evidence.valid_evaluations,
+                    infrastructure_failures: evidence.infrastructure_failures,
+                    organism_terminals: evidence.organism_terminals,
+                    distinct_candidates: evidence.candidate_sha256.len(),
+                    occupied_cells: evidence.occupied_cells.len(),
+                    mean_quality: mean,
+                    quality_stddev: stddev,
+                    challenge_priority: self.environment_priority(&environment.sha256),
+                    novelty: self.environment_novelty(&environment.sha256),
+                    descriptors: environment.descriptors.clone(),
+                    generation_cost: environment.generation_cost.clone(),
+                }
+            })
+            .collect();
+        values.sort_by(|a, b| {
+            b.challenge_priority
+                .total_cmp(&a.challenge_priority)
+                .then(a.environment_sha256.cmp(&b.environment_sha256))
+        });
+        values
     }
     pub fn tell(&mut self, input: EvaluationInput) -> Result<Evaluation, String> {
         self.validate()?;
@@ -754,8 +1263,9 @@ impl SearchState {
         if !valid_hash(&input.trajectory_sha256) {
             return Err("evaluation trajectory identity differs".into());
         }
-        if input.committed_ticks == 0 && input.status == "success" {
-            return Err("successful evaluation has no committed ticks".into());
+        let valid_trajectory = input.status == "completed" || input.status == "organism-terminal";
+        if input.committed_ticks == 0 && valid_trajectory {
+            return Err("valid ecological evaluation has no committed ticks".into());
         }
         if !self.genomes.contains_key(&input.candidate_sha256) {
             return Err("evaluation candidate is unknown".into());
@@ -776,13 +1286,21 @@ impl SearchState {
         if input.metrics.values().any(|v| !finite(*v)) {
             return Err("nonfinite metric".into());
         }
-        if input.status != "success" && input.status != "failure" {
-            return Err("status must be success or failure".into());
+        if !valid_trajectory && input.status != "infrastructure-failure" {
+            return Err("evaluation status differs".into());
+        }
+        if !valid_trajectory && !input.metrics.is_empty() {
+            return Err("infrastructure failure cannot carry ecological metrics".into());
+        }
+        if (input.status == "infrastructure-failure" && input.failure.is_empty())
+            || (input.status == "completed" && !input.failure.is_empty())
+        {
+            return Err("evaluation failure detail differs".into());
         }
         let mut descriptor = vec![];
         let mut cell = vec![];
         let mut quality = 0.0;
-        if input.status == "success" {
+        if valid_trajectory {
             for a in &self.config.descriptor_axes {
                 let v = *input
                     .metrics
@@ -805,9 +1323,17 @@ impl SearchState {
             cell = vec![0; descriptor.len()]
         }
         let assignment_key = format!("{}:{}", input.candidate_sha256, input.environment_sha256);
+        if !self.pending_assignments.contains(&assignment_key) {
+            return Err("evaluation has no pending candidate-environment assignment".into());
+        }
         self.pending_assignments.remove(&assignment_key);
-        if input.status == "success" {
+        self.pending_evidence.remove(&assignment_key);
+        if valid_trajectory {
             self.direct_completed.insert(assignment_key);
+            self.infrastructure_blocked.remove(&format!(
+                "{}:{}",
+                input.candidate_sha256, input.environment_sha256
+            ));
         }
         let key = cell
             .iter()
@@ -815,13 +1341,31 @@ impl SearchState {
             .collect::<Vec<_>>()
             .join(":");
         let mut retained = false;
-        if input.status == "success" {
-            let members = self.archive.entry(key).or_default();
+        if valid_trajectory {
+            let prior_valid = self
+                .pair_histories
+                .get(&format!(
+                    "{}:{}",
+                    input.candidate_sha256, input.environment_sha256
+                ))
+                .map_or(0, |history| history.valid_evaluations);
+            for members in self.archive.values_mut() {
+                for member in members
+                    .iter_mut()
+                    .filter(|member| member.candidate_sha256 == input.candidate_sha256)
+                {
+                    member.valid_evaluation_count = prior_valid + 1;
+                }
+            }
+            let niche_key = format!("{}:{key}", input.environment_sha256);
+            let members = self.archive.entry(niche_key).or_default();
             members.push(ArchiveMember {
                 candidate_sha256: input.candidate_sha256.clone(),
                 evaluation_sha256: input.evaluation_sha256.clone(),
                 quality,
                 descriptor: descriptor.clone(),
+                environment_sha256: input.environment_sha256.clone(),
+                valid_evaluation_count: prior_valid + 1,
             });
             members.sort_by(|a, b| {
                 b.quality
@@ -834,7 +1378,55 @@ impl SearchState {
                 .iter()
                 .any(|m| m.evaluation_sha256 == input.evaluation_sha256)
         }
-        let success = input.status == "success";
+        self.evaluation_sequence += 1;
+        let pair_key = format!("{}:{}", input.candidate_sha256, input.environment_sha256);
+        let history = self
+            .pair_histories
+            .entry(pair_key.clone())
+            .or_insert_with(|| PairHistory {
+                candidate_sha256: input.candidate_sha256.clone(),
+                environment_sha256: input.environment_sha256.clone(),
+                valid_evaluations: 0,
+                infrastructure_failures: 0,
+                organism_terminals: 0,
+                quality_sum: 0.0,
+                best_quality: None,
+                last_evaluation_sha256: String::new(),
+                last_sequence: 0,
+            });
+        if valid_trajectory {
+            history.valid_evaluations += 1;
+            history.quality_sum += quality;
+            history.best_quality =
+                Some(history.best_quality.map_or(quality, |old| old.max(quality)));
+            if input.status == "organism-terminal" {
+                history.organism_terminals += 1;
+            }
+        } else {
+            history.infrastructure_failures += 1;
+            self.infrastructure_blocked.insert(pair_key.clone());
+        }
+        history.last_evaluation_sha256 = input.evaluation_sha256.clone();
+        history.last_sequence = self.evaluation_sequence;
+        let evidence = self
+            .environment_evidence
+            .get_mut(&input.environment_sha256)
+            .unwrap();
+        if valid_trajectory {
+            evidence.valid_evaluations += 1;
+            evidence.quality_sum += quality;
+            evidence.quality_square_sum += quality * quality;
+            evidence
+                .candidate_sha256
+                .insert(input.candidate_sha256.clone());
+            evidence.occupied_cells.insert(key);
+            if input.status == "organism-terminal" {
+                evidence.organism_terminals += 1;
+            }
+        } else {
+            evidence.infrastructure_failures += 1;
+        }
+        evidence.last_sequence = self.evaluation_sequence;
         let e = Evaluation {
             evaluation_sha256: input.evaluation_sha256,
             life_id: input.life_id,
@@ -846,9 +1438,17 @@ impl SearchState {
             status: input.status,
             failure: input.failure,
             metrics: input.metrics,
-            descriptor: if success { Some(descriptor) } else { None },
-            cell: if success { Some(cell) } else { None },
-            quality: if success { Some(quality) } else { None },
+            descriptor: if valid_trajectory {
+                Some(descriptor)
+            } else {
+                None
+            },
+            cell: if valid_trajectory { Some(cell) } else { None },
+            quality: if valid_trajectory {
+                Some(quality)
+            } else {
+                None
+            },
             archive_retained: retained,
         };
         self.evaluations.push(e.clone());

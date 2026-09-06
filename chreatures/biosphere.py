@@ -22,7 +22,7 @@ from .growth import GrowthSystem
 from .metabolism import Chemistry, MetabolicWeb, canonical
 from .native_world import load_world_kernels
 
-FORMAT = "chreatures-biosphere-v7"
+FORMAT = "chreatures-biosphere-v8"
 KINDS = ("branch", "root", "leaf")
 
 
@@ -340,6 +340,8 @@ class Biosphere:
         self._environment_revision = -1
         self._environment_lights: tuple[np.ndarray, ...] | None = None
         self._development_light: dict[str, list[tuple[dict[str, Any], float]]] = {}
+        self._development_surface: dict[str, list[dict[str, Any]]] = {}
+        self._growth_evidence: list[dict[str, Any]] = []
         self._sync_solar_state(self._solar.state())
         if mobiles is not None:
             from .somatic import SomaticPhysiology
@@ -634,6 +636,73 @@ class Biosphere:
         self._development_light = {colony["id"]: [] for colony in self.config}
         for (name, bud), value in zip(ordered, np.asarray(bud_light), strict=True):
             self._development_light[name].append((bud, float(value)))
+        self._development_surface = {colony["id"]: [] for colony in self.config}
+        if ordered:
+            positions = []
+            rotations = []
+            colony_slots = []
+            for name, bud in ordered:
+                colony = self._colony(name)
+                body = self.world._entity_mj[colony["bindings"]["branch"]]
+                rotation = np.asarray(self.world.data.xmat[body]).reshape(3, 3)
+                rotations.append(rotation)
+                positions.append(
+                    np.asarray(self.world.data.xpos[body])
+                    + rotation @ np.asarray(bud["position"], dtype=float)
+                )
+                colony_slots.append(list(self.growth).index(name))
+            binding_owner = {
+                entity: index
+                for index, colony in enumerate(self.config)
+                for entity in colony["bindings"].values()
+            }
+            enabled = np.zeros(self.world.model.ngeom, dtype=np.bool_)
+            geom_colonies = np.full(self.world.model.ngeom, -1, dtype=np.int32)
+            for geom, entity_id in self.world._geom_entity.items():
+                entity = self.world._entity(entity_id)
+                enabled[geom] = entity["mobility"] == "static"
+                geom_colonies[geom] = binding_owner.get(entity_id, -1)
+            maximum_distance = max(
+                max(
+                    rule["guidance"]["surface_reach"],
+                    rule["guidance"]["clearance_distance"],
+                )
+                for growth in self.growth.values()
+                for rule in growth.grammar["rules"].values()
+            )
+            distances, directions, hits = load_world_kernels().developmental_surface_cues(
+                np.ascontiguousarray(positions, dtype=np.float64),
+                np.asarray(colony_slots, dtype=np.int32),
+                np.asarray(self.world.model.geom_type, dtype=np.int32),
+                np.asarray(self.world.data.geom_xpos, dtype=np.float64),
+                np.asarray(self.world.data.geom_xmat, dtype=np.float64),
+                np.asarray(self.world.model.geom_size, dtype=np.float64),
+                np.asarray(self.world.model.geom_rbound, dtype=np.float64),
+                enabled,
+                geom_colonies,
+                maximum_distance,
+            )
+            for (name, bud), rotation, distance, direction, hit in zip(
+                ordered,
+                rotations,
+                np.asarray(distances),
+                np.asarray(directions),
+                np.asarray(hits),
+                strict=True,
+            ):
+                local_direction = np.clip(rotation.T @ direction, -1.0, 1.0)
+                local_up = np.clip(
+                    rotation.T @ np.asarray([0.0, 0.0, 1.0]), -1.0, 1.0
+                )
+                self._development_surface[name].append(
+                    {
+                        "bud_id": bud["bud_id"],
+                        "surface_direction": local_direction.astype(float).tolist(),
+                        "world_up": local_up.astype(float).tolist(),
+                        "surface_distance": float(distance),
+                        "surface_geom": int(hit),
+                    }
+                )
         mobile_photons = np.asarray(mobile_photons, dtype=np.float64)
         if (
             mobile_photons.shape != (len(self._mobile_specs),)
@@ -651,16 +720,39 @@ class Biosphere:
         )
         nutrient = mineral / (mineral + colony["mineral_half_saturation"])
         result = []
+        surfaces = {
+            value["bud_id"]: value
+            for value in self._development_surface.get(colony["id"], [])
+        }
+        clearance_distance = max(
+            rule["guidance"]["clearance_distance"]
+            for rule in self.growth[colony["id"]].grammar["rules"].values()
+        )
         for bud, light in self._development_light.get(colony["id"], []):
-            # Buds are attached by construction; support is structural ancestry,
-            # not a claim that static branches have a fitted stress model.
+            surface = surfaces[bud["bud_id"]]
+            parent = bud["parent_part"]
+            parent_record = (
+                self.parts.get(f"{colony['id']}:{parent}") if parent is not None else None
+            )
+            support = 1.0
+            if parent_record is not None:
+                original = sum(parent_record["initial_resources"].values())
+                remaining = sum(parent_record["resources"].values())
+                support = min(1.0, remaining / original) if original > 0.0 else 0.0
+                attachment = parent_record.get("attachment")
+                if attachment is not None and not attachment["active"]:
+                    support *= 0.5
+            competition = max(
+                0.0, 1.0 - surface["surface_distance"] / clearance_distance
+            )
             result.append(
                 {
                     "bud_id": bud["bud_id"],
                     "light": light,
                     "nutrient": nutrient,
-                    "support": 1.0,
-                    "competition": 0.0,
+                    "support": support,
+                    "competition": competition,
+                    **surface,
                 }
             )
         return result
@@ -723,6 +815,8 @@ class Biosphere:
             "time": self.web.time,
             "captured_photons": float(ledger["photon_used"].sum()),
             "developments": reports,
+            "evidence_events": copy.deepcopy(self._growth_evidence)
+            + ([] if self.exchange is None else self.exchange.step_events),
             "parts": len(self.parts),
             "illumination": copy.deepcopy(self._solar_state),
             "mobile_phototrophy": self._mobile_photo_report(
@@ -732,6 +826,7 @@ class Biosphere:
             "exchange": self.exchange.view() if self.exchange is not None else None,
             "hatch_offers": self.hatch_offers(),
         }
+        self._growth_evidence.clear()
         return copy.deepcopy(self.last_report)
 
     def _sync_material_cues(self) -> None:
@@ -909,6 +1004,7 @@ class Biosphere:
         candidate.initial_totals = copy.deepcopy(saved["initial_totals"])
         candidate.initial_ledger = copy.deepcopy(saved["initial_ledger"])
         candidate.last_report = copy.deepcopy(saved["last_report"])
+        candidate._growth_evidence = copy.deepcopy(saved["growth_evidence"])
         candidate._bind_tissue()
 
         from .ecological_exchange import EcologicalExchange
@@ -986,6 +1082,48 @@ class Biosphere:
 
     def _check_structure(self) -> None:
         self._tissue.validate(self.web.pools)
+        for part_id, part in self.parts.items():
+            attachment = part.get("attachment")
+            if attachment is None or not attachment["active"]:
+                continue
+            geom = mujoco.mj_name2id(
+                self.world.model, mujoco.mjtObj.mjOBJ_GEOM, attachment["geom"]
+            )
+            target = (
+                self.world._entity(attachment["entity"])
+                if attachment["entity"] in self.world._entity_mj
+                else None
+            )
+            shape_index = attachment["shape_index"]
+            shape_valid = target is not None and (
+                0 <= shape_index < len(target["shapes"])
+                and hashlib.sha256(canonical(target["shapes"][shape_index])).hexdigest()
+                == attachment["shape_sha256"]
+            )
+            if (
+                geom < 0
+                or self.world._geom_entity.get(geom) != attachment["entity"]
+                or not shape_valid
+            ):
+                attachment["active"] = False
+                self._growth_evidence.append(
+                    {
+                        "kind": "developmental-attachment-invalidated",
+                        "actors": {
+                            "bodies": [],
+                            "entities": [part["entity"], attachment["entity"]],
+                        },
+                        "quantities": [],
+                        "details": {
+                            "part_id": part_id,
+                            "entity_roles": {
+                                part["entity"]: "constructed",
+                                attachment["entity"]: "attachment",
+                            },
+                        },
+                        "source": {"stream": "biosphere-growth"},
+                    }
+                )
 
     def _distribute_turnover(self, ledger: Mapping[str, Any]) -> None:
         # Turnover changes live tissue to detritus without removing its material
@@ -1017,6 +1155,7 @@ class Biosphere:
                 if proposal is None:
                     continue
                 pending.append((name, proposal["token"]))
+                self._resolve_attachments(colony, proposal)
                 request = proposal["request"]
                 vector = self.web.chemistry.resources(request["resources"])
                 if (
@@ -1063,14 +1202,78 @@ class Biosphere:
             self._bind_tissue()
             for colony, _, candidate in staged:
                 self.growth[colony["id"]] = candidate
-            return [
+            reports = [
                 {
                     "colony": colony["id"],
                     "request": proposal["request"],
                     "token": proposal["token"],
+                    "parts": [
+                        f"{colony['id']}:{part['id']}"
+                        for part in (
+                            *proposal["geometry"]["segments"],
+                            *proposal["geometry"]["leaves"],
+                        )
+                    ],
                 }
                 for colony, proposal, _ in staged
             ]
+            for (colony, proposal, _), report in zip(staged, reports, strict=True):
+                entity_roles = {
+                    colony["bindings"][part["kind"]]: "constructed"
+                    for part in proposal["geometry"]["segments"]
+                }
+                attachments = []
+                parents = []
+                for part in proposal["geometry"]["segments"]:
+                    if part["parent_part"] is not None:
+                        parents.append(f"{colony['id']}:{part['parent_part']}")
+                    if part["attachment"] is not None:
+                        attachment = part["attachment"]
+                        entity_roles[attachment["entity"]] = "attachment"
+                        attachments.append(copy.deepcopy(attachment))
+                self._growth_evidence.append(
+                    {
+                        "kind": "developmental-growth-committed",
+                        "actors": {
+                            "bodies": [],
+                            "entities": sorted(entity_roles),
+                        },
+                        "quantities": [
+                            {
+                                "name": name,
+                                "value": float(amount),
+                                "unit": "synthetic_pool_quantity",
+                            }
+                            for name, amount in proposal["request"]["resources"].items()
+                        ]
+                        + [
+                            {
+                                "name": "ATP",
+                                "value": float(proposal["request"]["atp"]),
+                                "unit": "synthetic_energy_quantity",
+                            },
+                            {
+                                "name": "biomass",
+                                "value": float(proposal["request"]["biomass"]),
+                                "unit": "synthetic_mass",
+                            },
+                        ],
+                        "details": {
+                            "colony": colony["id"],
+                            "token": proposal["token"],
+                            "new_part_ids": report["parts"],
+                            "removed_part_ids": [],
+                            "parent_part_ids": parents,
+                            "attachments": attachments,
+                            "entity_roles": entity_roles,
+                        },
+                        "source": {
+                            "stream": "biosphere-growth",
+                            "grammar_sha256": self.growth[colony["id"]].grammar_hash,
+                        },
+                    }
+                )
+            return reports
         except Exception:
             # Preparation/payment failures consume neither a developmental RNG
             # draw nor a bud. Unexpected physical failures propagate to the
@@ -1080,6 +1283,33 @@ class Biosphere:
                 if growth.snapshot()["pending"] is not None:
                     growth.reject(token)
             raise
+
+    def _resolve_attachments(self, colony, proposal) -> None:
+        """Resolve transient geom indices to stable identities before compilation."""
+        entity = colony["bindings"]["branch"]
+        body = self.world._entity_mj[entity]
+        rotation = np.asarray(self.world.data.xmat[body]).reshape(3, 3)
+        origin = np.asarray(self.world.data.xpos[body])
+        for part in proposal["geometry"]["segments"]:
+            geom = part.pop("attachment_geom")
+            local_point = np.asarray(part.pop("attachment_point"), dtype=float)
+            if geom < 0:
+                part["attachment"] = None
+                continue
+            name = mujoco.mj_id2name(self.world.model, mujoco.mjtObj.mjOBJ_GEOM, geom)
+            target = self.world._geom_entity.get(geom)
+            if not name or target is None or self.world._entity(target)["mobility"] != "static":
+                raise RuntimeError("developmental attachment target became invalid")
+            shape_index = int(name.rsplit(":", 1)[1])
+            target_shape = self.world._entity(target)["shapes"][shape_index]
+            part["attachment"] = {
+                "geom": name,
+                "entity": target,
+                "shape_index": shape_index,
+                "shape_sha256": hashlib.sha256(canonical(target_shape)).hexdigest(),
+                "point_world": (origin + rotation @ local_point).astype(float).tolist(),
+                "active": True,
+            }
 
     def _record_parts(self, colony, proposal, operations, destination):
         geometry = proposal["geometry"]
@@ -1114,7 +1344,32 @@ class Biosphere:
                         for i, name in enumerate(names)
                     },
                     "born": self.web.time,
+                    "parent_part": (
+                        f"{colony['id']}:{part['parent_part']}"
+                        if part.get("parent_part") is not None
+                        else None
+                    ),
+                    "transport_resistance": float(
+                        part.get("transport_resistance", 0.0)
+                    ),
+                    "attachment": copy.deepcopy(part.get("attachment")),
                 }
+                if kind == "leaf":
+                    parent_segment = next(
+                        (
+                            segment
+                            for segment in geometry["segments"]
+                            if segment["parent_bud"] == part["parent_bud"]
+                        ),
+                        None,
+                    )
+                    if parent_segment is not None:
+                        destination[part_id]["parent_part"] = (
+                            f"{colony['id']}:{parent_segment['id']}"
+                        )
+                        destination[part_id]["transport_resistance"] = float(
+                            parent_segment["transport_resistance"]
+                        )
                 destination[part_id]["initial_resources"] = destination[part_id][
                     "resources"
                 ].copy()
@@ -1147,6 +1402,15 @@ class Biosphere:
             ):
                 raise ValueError("invalid receiving compartment")
         removed = set(part_ids)
+        dangling = {
+            key
+            for key, part in self.parts.items()
+            if key not in removed and part.get("parent_part") in removed
+        }
+        if dangling:
+            raise ValueError(
+                "developmental removal must include directly dependent parts"
+            )
         entities = {self.parts[key]["entity"] for key in removed}
         operations = []
         next_parts = copy.deepcopy(self.parts)
@@ -1186,12 +1450,43 @@ class Biosphere:
             self.web = MetabolicWeb.restore(before)
             raise
         self.parts = next_parts
+        invalidated_buds = {}
+        for colony in self.config:
+            prefix = f"{colony['id']}:"
+            local = [key[len(prefix) :] for key in removed if key.startswith(prefix)]
+            invalidated_buds[colony["id"]] = self.growth[colony["id"]].invalidate_parts(
+                local
+            )
         self._bind_tissue()
-        return {
+        receipt = {
             "parts": part_ids,
             "receivers": dict(receivers),
             "resources": dict(zip(self.web.chemistry.pools, totals.tolist())),
+            "invalidated_buds": invalidated_buds,
         }
+        entities = sorted(entities)
+        self._growth_evidence.append(
+            {
+                "kind": "developmental-parts-removed",
+                "actors": {"bodies": [], "entities": entities},
+                "quantities": [
+                    {
+                        "name": name,
+                        "value": float(value),
+                        "unit": "synthetic_pool_quantity",
+                    }
+                    for name, value in receipt["resources"].items()
+                ],
+                "details": {
+                    "new_part_ids": [],
+                    "removed_part_ids": part_ids,
+                    "invalidated_buds": invalidated_buds,
+                    "entity_roles": dict.fromkeys(entities, "constructed"),
+                },
+                "source": {"stream": "biosphere-growth"},
+            }
+        )
+        return receipt
 
     def suspend_development(self, colony_id: str) -> None:
         """Stop new construction; existing structures and chemistry remain."""
@@ -1246,6 +1541,7 @@ class Biosphere:
             "initial_totals": copy.deepcopy(self.initial_totals),
             "initial_ledger": self.initial_ledger.copy(),
             "last_report": copy.deepcopy(self.last_report),
+            "growth_evidence": copy.deepcopy(self._growth_evidence),
             "material_objects": self.materials.snapshot()
             if self.materials is not None
             else None,
@@ -1316,6 +1612,7 @@ class Biosphere:
         instance.initial_totals = copy.deepcopy(snapshot["initial_totals"])
         instance.initial_ledger = copy.deepcopy(snapshot["initial_ledger"])
         instance.last_report = copy.deepcopy(snapshot["last_report"])
+        instance._growth_evidence = copy.deepcopy(snapshot["growth_evidence"])
         instance._bind_tissue()
         if instance.mobility is not None:
             instance.mobility.restore_state(mobile_state)

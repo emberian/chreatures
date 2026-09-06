@@ -11,8 +11,8 @@ import subprocess
 import tempfile
 from typing import Any, Mapping, Sequence
 
-FORMAT = "chreatures-population-search-v1"
-GENOME_FORMAT = "chreatures-population-genome-v1"
+FORMAT = "chreatures-population-search-v2"
+GENOME_FORMAT = "chreatures-population-genome-v2"
 ACTION_ORDER = (
     "thrust", "yaw", "gaze_pitch", "posture", "grip", "signal_low",
     "signal_mid", "signal_high", "eat", "release", "secrete", "allocate",
@@ -61,8 +61,16 @@ def current_parameter_recipe(
             f"somatic.secretion_profile.{index}",
             "simplex:secretion_profile", 0.0, 1.0, value, 0.04,
         )
-    for name, value in (("photosynthesis", 0.40), ("digestion", 0.60)):
-        add(f"metabolic.allocation.{name}", "simplex:metabolic_allocation", 0.0, 1.0, value, 0.04)
+    for name in (
+        "carbon_fixation",
+        "soft_digestion",
+        "tough_digestion",
+        "detritus_digestion",
+        "reserve_fermentation",
+        "fermentate_respiration",
+        "detritus_hydrolysis",
+    ):
+        add(f"metabolic.enzyme_activity_gain.{name}", "metabolic", 0.5, 1.5, 1.0, 0.06)
     for name, value in (("structure", 0.45), ("gland", 0.20), ("brood", 0.35)):
         add(f"developmental.allocation.{name}", "simplex:developmental_allocation", 0.0, 1.0, value, 0.04)
     for name in (
@@ -294,6 +302,40 @@ class PopulationSearch:
             assignment["candidate"] = CandidateGenome(assignment["candidate"])
         return values
 
+    def ask_challenges(self, count: int) -> list[dict[str, Any]]:
+        values = json.loads(_run(("ask-challenges", str(self.path), str(count))))
+        for assignment in values:
+            assignment["candidate"] = CandidateGenome(assignment["candidate"])
+        return values
+
+    def register_proposal_scores(self, value: Mapping[str, Any]) -> None:
+        body = dict(value)
+        body["sha256"] = body.get("sha256") or content_sha256(body)
+        with tempfile.NamedTemporaryFile("wb", delete=False, dir=self.path.parent) as stream:
+            stream.write(canonical_bytes(body))
+            temporary = Path(stream.name)
+        try:
+            _run(("register-proposal-scores", str(self.path), str(temporary)))
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    def environment_frontier(self) -> list[dict[str, Any]]:
+        return json.loads(_run(("environment-frontier", str(self.path))))
+
+    def authorize_infrastructure_retry(
+        self, candidate_sha256: str, environment_sha256: str
+    ) -> None:
+        _digest(candidate_sha256, "retry candidate")
+        _digest(environment_sha256, "retry environment")
+        _run(
+            (
+                "authorize-infrastructure-retry",
+                str(self.path),
+                candidate_sha256,
+                environment_sha256,
+            )
+        )
+
     def tell(self, result: Mapping[str, Any]) -> dict[str, Any]:
         result = dict(result)
         required = {"life_id", "evaluation_seed", "committed_ticks", "trajectory_sha256"}
@@ -372,25 +414,52 @@ def compose_population_birth(
             raise ValueError("candidate lacks secretion profile simplex")
         mobile["secretion_profile"] = [somatic[f"secretion_profile.{index}"] for index in range(3)]
         metabolism = candidate.loci("metabolic")
-        for row_name, fraction, neutral, enzyme_rule in (
-            ("body_row", metabolism["allocation.photosynthesis"], 0.4, lambda name: name == "carbon_fixation"),
-            ("gut_row", metabolism["allocation.digestion"], 0.6, lambda name: name.endswith("_digestion")),
-        ):
+        inherited_enzymes = {
+            "body_row": ("carbon_fixation", "fermentate_respiration"),
+            "gut_row": (
+                "soft_digestion",
+                "tough_digestion",
+                "detritus_digestion",
+                "reserve_fermentation",
+                "detritus_hydrolysis",
+            ),
+        }
+        compiled_enzymes = {}
+        for row_name, inherited_names in inherited_enzymes.items():
             row = mobile.get(row_name)
             if isinstance(row, bool) or not isinstance(row, int) or not 0 <= row < len(compartments):
                 raise ValueError(f"mobile {row_name} is invalid")
             enzymes = compartments[row].get("enzymes")
             if not isinstance(enzymes, dict):
                 raise ValueError("private founder enzymes differ")
-            for name in tuple(enzymes):
-                if enzyme_rule(name):
-                    enzymes[name] = float(enzymes[name]) * fraction / neutral
+            for name in inherited_names:
+                if name in enzymes:
+                    enzymes[name] = float(enzymes[name]) * metabolism[
+                        f"enzyme_activity_gain.{name}"
+                    ]
+            fixed = sum(
+                float(value)
+                for name, value in enzymes.items()
+                if name not in inherited_names
+            )
+            inherited = sum(float(enzymes.get(name, 0.0)) for name in inherited_names)
+            if fixed > 0.10 + 1e-12:
+                raise ValueError("non-heritable enzyme activity exceeds compartment budget")
+            if fixed + inherited > 0.10 and inherited > 0.0:
+                scale = (0.10 - fixed) / inherited
+                for name in inherited_names:
+                    if name in enzymes:
+                        enzymes[name] = float(enzymes[name]) * scale
+            if any(not 0.0 <= float(value) <= 0.06 for value in enzymes.values()):
+                raise ValueError("compiled enzyme activity exceeds reaction bound")
+            compiled_enzymes[row_name] = copy.deepcopy(enzymes)
         physical = {
             "body_id": body["id"],
             "body_traits": body["articulated_traits"],
             "somatic": {key: mobile[key] for key in (*rate_fields, "allocation_weights", "secretion_profile")},
             "metabolic_traits": traits,
-            "metabolic_allocation": metabolism,
+            "metabolic_enzyme_activity_gains": metabolism,
+            "compiled_enzyme_rows": compiled_enzymes,
         }
         receipts.append({
             "candidate_sha256": candidate.sha256,

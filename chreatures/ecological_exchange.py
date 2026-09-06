@@ -16,8 +16,9 @@ import mujoco
 import numpy as np
 
 from .metabolism import canonical
+from .native_world import load_world_kernels
 
-FORMAT = "chreatures-ecological-exchange-v3"
+FORMAT = "chreatures-ecological-exchange-v4"
 
 
 def _positive(value, name, *, zero=False):
@@ -194,11 +195,49 @@ class EcologicalExchange:
         self.emitter_attachment_unavailable = dict.fromkeys(self.emitters, 0)
         self.emitter_cursor = dict.fromkeys(self.emitters, 0)
         self.last = {
+            "step_index": 0,
+            "chemical_time_seconds": float(self.web.time),
+            "pool_names": list(names),
+            "resource_units": "synthetic_pool_quantity",
+            "mass_units": "synthetic_element_sum",
+            "evidence_events": [],
             "deposits": [],
             "root_transfers": [],
             "emitter_deposits": [],
         }
+        self.step_index = 0
         self.mass_weights = self.web.chemistry._arrays[1].sum(axis=1)
+        mobile_specs = list(self.mobiles.values())
+        self._mobile_rows = np.asarray(
+            [
+                [
+                    self.biosphere.mobility.residents[spec["id"]][f"{name}_row"]
+                    for name in ("gut", "body")
+                ]
+                for spec in mobile_specs
+            ],
+            dtype=np.int64,
+        ).reshape(len(mobile_specs), 2)
+        self._mobile_rates = np.asarray(
+            [
+                [
+                    [spec[f"{compartment}_rates"].get(name, 0.0) for name in names]
+                    for compartment in ("gut", "body")
+                ]
+                for spec in mobile_specs
+            ],
+            dtype=np.float64,
+        ).reshape(len(mobile_specs), 2, len(names))
+        self._mobile_intervals = np.asarray(
+            [spec["interval"] for spec in mobile_specs], dtype=np.float64,
+        )
+        self._mobile_minimum = np.asarray(
+            [spec["minimum_mass"] for spec in mobile_specs], dtype=np.float64,
+        )
+        self._mobile_maximum = np.asarray(
+            [spec["maximum_mass"] for spec in mobile_specs], dtype=np.float64,
+        )
+        self._native_mobile_candidates = load_world_kernels().mobile_release_candidates
 
     @classmethod
     def expanded_from(cls, previous, biosphere, config):
@@ -229,6 +268,7 @@ class EcologicalExchange:
                 raise ValueError("ecological nonmobile identity changed during birth")
             setattr(candidate, name, copy.deepcopy(getattr(previous, name)))
         candidate.last = copy.deepcopy(previous.last)
+        candidate.step_index = previous.step_index
         return candidate
 
     @staticmethod
@@ -245,6 +285,37 @@ class EcologicalExchange:
     @property
     def web(self):
         return self.biosphere.web
+
+    @property
+    def step_events(self):
+        """Committed material transfers from the most recent chemical step."""
+        return copy.deepcopy(self.last["evidence_events"])
+
+    def _record_event(self, kind, *, bodies=(), entities=(), resources, details):
+        vector = np.asarray(resources, dtype=np.float64)
+        if not np.any(vector > 0.0):
+            return
+        quantities = [
+            {"name": f"pool:{name}", "value": float(vector[index]), "unit": "pool_quantity"}
+            for index, name in enumerate(self.web.chemistry.pools)
+            if vector[index] > 0.0
+        ]
+        quantities.append({
+            "name": "element_weighted_mass",
+            "value": float(vector @ self.mass_weights),
+            "unit": "synthetic_element_sum",
+        })
+        self.last["evidence_events"].append({
+            "kind": kind,
+            "actors": {"bodies": list(bodies), "entities": list(entities)},
+            "quantities": quantities,
+            "details": copy.deepcopy(details),
+            "source": {
+                "stream": "ecological-exchange",
+                "step_index": self.step_index + 1,
+                "chemical_time_seconds": float(self.web.time),
+            },
+        })
 
     def _root_contacts(self):
         # MuJoCo contact geometry, including static roots against free deposits.
@@ -292,6 +363,12 @@ class EcologicalExchange:
 
     def before_reactions(self, dt):
         self.last = {
+            "step_index": self.step_index + 1,
+            "chemical_time_seconds": float(self.web.time + dt),
+            "pool_names": list(self.web.chemistry.pools),
+            "resource_units": "synthetic_pool_quantity",
+            "mass_units": "synthetic_element_sum",
+            "evidence_events": [],
             "deposits": [],
             "root_transfers": [],
             "emitter_deposits": [],
@@ -352,6 +429,10 @@ class EcologicalExchange:
                 self.last["root_transfers"].append(
                     {"colony": colony, "source": source, "resources": moved}
                 )
+                self._record_event(
+                    "root-material-acquisition", entities=(source,), resources=moved,
+                    details={"entity_roles": {source: "physical-donor"}, "colony": colony},
+                )
 
     def stage_mobile_release(self, budgets: Mapping[str, float]) -> None:
         """Accept one action-funded bolus budget for the next chemical boundary."""
@@ -378,30 +459,28 @@ class EcologicalExchange:
             for slot in self.config["deposit_slots"]
             if slot not in self.world._entity_mj
         ]
-        requests, recipients = [], []
-        for key, spec in self.mobiles.items():
-            budget = self._staged_release[key]
-            if budget > 0.0:
-                self.elapsed[key] = min(spec["interval"], self.elapsed[key] + dt)
-            self.release_credit[key] = min(
-                spec["maximum_mass"],
-                self.release_credit[key] + budget,
+        keys = tuple(self.mobiles)
+        if keys:
+            pools = self.web.pools[self._mobile_rows]
+            vectors, elapsed, credit, masses = self._native_mobile_candidates(
+                float(dt),
+                np.asarray([self.elapsed[key] for key in keys], dtype=np.float64),
+                np.asarray([self.release_credit[key] for key in keys], dtype=np.float64),
+                np.asarray([self._staged_release[key] for key in keys], dtype=np.float64),
+                np.ascontiguousarray(pools), self._mobile_rates,
+                self._mobile_intervals, self._mobile_minimum, self._mobile_maximum,
+                np.ascontiguousarray(self.mass_weights),
             )
-            if self.release_credit[key] < spec["minimum_mass"]:
-                continue
-            private = self.biosphere.mobility.residents[key]
-            vectors, rows = [], []
-            for compartment in ("gut", "body"):
-                row = private[f"{compartment}_row"]
-                rates = np.asarray(
-                    [spec[f"{compartment}_rates"].get(name, 0) for name in names]
-                )
-                vectors.append(
-                    self.web.pools[row] * (-np.expm1(-self.elapsed[key] * rates))
-                )
-                rows.append(row)
-            mass = sum(float(vector @ self.mass_weights) for vector in vectors)
-            if mass < spec["minimum_mass"]:
+            vectors = np.asarray(vectors)
+            for index, key in enumerate(keys):
+                self.elapsed[key] = float(elapsed[index])
+                self.release_credit[key] = float(credit[index])
+        else:
+            vectors = np.empty((0, 2, len(names)), dtype=np.float64)
+            masses = np.empty(0, dtype=np.float64)
+        requests, recipients = [], []
+        for index, (key, spec) in enumerate(self.mobiles.items()):
+            if float(masses[index]) <= 0.0:
                 continue
             if not free:
                 self.capacity_blocked[key] += 1
@@ -419,34 +498,48 @@ class EcologicalExchange:
                 self.capacity_blocked[key] += 1
                 free.insert(0, slot)
                 continue
-            factor = min(1.0, self.release_credit[key] / mass)
-            for row, vector in zip(rows, vectors, strict=True):
+            for row, vector in zip(self._mobile_rows[index], vectors[index], strict=True):
                 if np.any(vector > 0):
                     requests.append(
                         {
                             "entity": slot,
-                            "donor_row": row,
-                            "resources": dict(zip(names, (factor * vector).tolist())),
+                            "donor_row": int(row),
+                            "resources": dict(zip(names, vector.tolist())),
                             "position": position.tolist(),
                         }
                     )
                     recipients.append((key, slot))
         if requests:
             receipt = self.biosphere.materials.deposit_batch(requests)
+            blocked: set[tuple[str, str]] = set()
             for (key, slot), moved in zip(
                 recipients, receipt["moved_resources"], strict=True
             ):
-                self.egested[key] = (np.asarray(self.egested[key]) + moved).tolist()
                 mass = float(np.asarray(moved, dtype=np.float64) @ self.mass_weights)
+                if mass <= 0.0:
+                    if (key, slot) not in blocked:
+                        self.capacity_blocked[key] += 1
+                        blocked.add((key, slot))
+                    continue
+                self.egested[key] = (np.asarray(self.egested[key]) + moved).tolist()
                 self.release_receipt[key] += mass
                 self.release_credit[key] = max(0.0, self.release_credit[key] - mass)
                 self.elapsed[key] = 0.0
                 self.last["deposits"].append(
                     {"resident": key, "entity": slot, "resources": moved}
                 )
+                self._record_event(
+                    "mobile-material-release", bodies=(key,), entities=(slot,),
+                    resources=moved,
+                    details={
+                        "body_roles": {key: "donor"},
+                        "entity_roles": {slot: "physical-packet"},
+                    },
+                )
             self.biosphere.mobility.sync_bodies()
         self._staged_release = None
         self._emit_material(dt)
+        self.step_index += 1
 
     def _emit_material(self, dt):
         """Release donor-funded packets into emitter-reserved dormant slots."""
@@ -547,6 +640,18 @@ class EcologicalExchange:
                         "resources": moved,
                     }
                 )
+                self._record_event(
+                    "colony-material-emission", entities=(
+                        self.emitters[identity]["attachment_entity"], slot,
+                    ), resources=moved,
+                    details={
+                        "emitter": identity,
+                        "entity_roles": {
+                            self.emitters[identity]["attachment_entity"]: "donor",
+                            slot: "physical-packet",
+                        },
+                    },
+                )
         if transferred and self.biosphere.mobility is not None:
             self.biosphere.mobility.sync_bodies()
 
@@ -565,6 +670,7 @@ class EcologicalExchange:
             "capacity_blocked": self.capacity_blocked.copy(),
             "release_credit": self.release_credit.copy(),
             "release_receipt": self.release_receipt.copy(),
+            "step_index": self.step_index,
             "last": copy.deepcopy(self.last),
         }
         value.update(
@@ -592,6 +698,7 @@ class EcologicalExchange:
             "release_credit",
             "release_receipt",
             "last",
+            "step_index",
         }
         emitter_fields = {
             "emitter_elapsed",
@@ -660,12 +767,17 @@ class EcologicalExchange:
             setattr(instance, key, copy.deepcopy(value))
         canonical(snapshot["last"])
         instance.last = copy.deepcopy(snapshot["last"])
+        step_index = snapshot["step_index"]
+        if isinstance(step_index, bool) or not isinstance(step_index, int) or step_index < 0:
+            raise ValueError("ecological exchange step index is invalid")
+        instance.step_index = step_index
         return instance
 
     def view(self):
         return {
             "kind": self.config["format"],
             "sha256": self.sha256,
+            "step_index": self.step_index,
             "pools": list(self.web.chemistry.pools),
             "egested": copy.deepcopy(self.egested),
             "acquired": copy.deepcopy(self.acquired),

@@ -146,6 +146,49 @@ worlds, actual AMD/Metal costs, complete coupled restoration, and retained failu
 Useful ecology, inheritance and learning are empirical results, not properties
 conferred by this architecture document.
 
+## Paired search version 2
+
+The current native search archive keys each descriptor cell by environment as
+well as phenotype. It retains several candidates in each niche and constructs
+the reproductive pool one rank at a time across niches. A high score in one
+regional environment therefore cannot erase different partial capacities in
+another region.
+
+Every completed candidate/environment evaluation updates a durable pair history
+and an environment evidence row. A physically terminated organism remains valid
+partial evidence when it has an authenticated trajectory and metrics. An engine
+or transport failure is retained as `infrastructure-failure`, carries no
+ecological metrics, and never raises environment difficulty. Environment
+frontiers report ancestry, candidate and cell coverage, mean and dispersion of
+quality, and physical terminal counts. Environment record version 2 also carries
+five normalized analyst descriptors (regional scale, elevation relief, resource
+density, renewal rate, and connectivity) plus raw generation counts and a
+normalized generation cost. Search uses nearest-neighbor descriptor distance as
+novelty and reports the cost tradeoff explicitly. The world generator remains
+responsible for producing and authenticating environment descendants; parameter
+genome ancestry and registered environment-record ancestry remain separate.
+
+`ask-challenges` schedules complete environment waves from archive members. It
+prefers unseen or least-repeated pairs, then uses environment discrimination and
+candidate transfer gaps computed from complete histories. An optional bounded
+analyst score artifact can order otherwise eligible pairs; its artifact and
+pair keys are authenticated, and it cannot modify quality or archive retention.
+The campaign coordinator exposes this path explicitly:
+
+```text
+python scripts/population_campaign.py plan --output CAMPAIGN \
+  --worlds-per-batch 4 --candidate-waves 1 --selection challenge
+```
+
+Population genome version 2 also replaces the broad photosynthesis/digestion
+allocation switch with inherited gains for carbon fixation, fermentate
+respiration, three gut-digestion pathways, reserve fermentation, and detritus
+hydrolysis. Cold phenotype compilation applies gains only to reactions present
+in a founder row, caps each resulting coefficient at 0.06, and enforces a total
+enzyme activity budget of 0.10 per compartment. These are kinetic inheritance
+parameters; chemical inventory still comes only from funded founder or parent
+material.
+
 ## Material packet performance receipt
 
 On an Apple M2 running macOS 26.6.1, Python 3.12.14 and MuJoCo 3.12.0, an

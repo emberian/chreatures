@@ -1,0 +1,441 @@
+{
+  "format": "chreatures-regional-habitat-family-v2",
+  "habitat_template_sha256": "70d3659059564ee3ba75ccca91fe82cfc81d6c28ac2626141def38ec302628e7",
+  "biosphere_template_sha256": "7313420e6f8b507bf45b8ab2ec733064033af127897a3bab135a964fb519fe0e",
+  "replace_entity_ids": [
+    "ground",
+    "west-wall",
+    "east-wall",
+    "north-wall",
+    "south-wall",
+    "west-rise",
+    "middle-terrace",
+    "upper-rise",
+    "upper-terrace",
+    "garden-return",
+    "echo-arch",
+    "garden-screen"
+  ],
+  "mechanism_clusters": [
+    {
+      "entity_ids": [
+        "lift-approach",
+        "pressure-lift",
+        "passage-gate",
+        "lift-frame",
+        "counterweight-block"
+      ],
+      "anchor_m": [
+        7.5,
+        3.85,
+        0.0
+      ]
+    },
+    {
+      "entity_ids": [
+        "balance-plank",
+        "balance-fulcrum"
+      ],
+      "anchor_m": [
+        5.05,
+        6.55,
+        0.0
+      ]
+    },
+    {
+      "entity_ids": [
+        "bell-frame",
+        "rain-bell"
+      ],
+      "anchor_m": [
+        1.4,
+        6.25,
+        0.0
+      ]
+    },
+    {
+      "entity_ids": [
+        "leaf-gate"
+      ],
+      "anchor_m": [
+        7.02,
+        4.66,
+        0.34
+      ]
+    },
+    {
+      "entity_ids": [
+        "underdeck-light"
+      ],
+      "anchor_m": [
+        9.8,
+        1.8,
+        0.31
+      ]
+    },
+    {
+      "entity_ids": [
+        "terrace-light"
+      ],
+      "anchor_m": [
+        10.65,
+        1.08,
+        1.02
+      ]
+    }
+  ],
+  "movable_template_ids": [
+    "tone-ball",
+    "cyan-ball",
+    "rattle-block",
+    "stack-block-a",
+    "stack-block-b"
+  ],
+  "capacity": {
+    "residents": {
+      "min": 1,
+      "max": 32
+    },
+    "regions": {
+      "min": 10,
+      "max": 40
+    },
+    "width_m": {
+      "min": 10.0,
+      "max": 24.0
+    },
+    "height_m": {
+      "min": 7.0,
+      "max": 16.0
+    },
+    "depth_m": {
+      "min": 3.5,
+      "max": 6.0
+    }
+  },
+  "geometry": {
+    "margin_m": 1.25,
+    "platform_half_size_m": {
+      "min": 0.75,
+      "max": 1.25
+    },
+    "platform_thickness_m": 0.08,
+    "ramp_width_m": {
+      "min": 0.72,
+      "max": 1.4
+    },
+    "maximum_rise_over_run": 0.31,
+    "minimum_underpass_clearance_m": 0.52,
+    "minimum_spawn_clearance_m": 0.38,
+    "boundary_height_m": 0.9,
+    "boundary_thickness_m": 0.08
+  },
+  "catchment": {
+    "id": "regional-catchment",
+    "surface_height_m": -0.65,
+    "margin_m": 7.0,
+    "thickness_m": 0.08,
+    "wall_height_m": 1.1,
+    "material": "darkstone",
+    "physical_material": "masonry"
+  },
+  "mutation": {
+    "operator": "bounded-regional-perturbation-v2",
+    "recipe_sha256": "deaad04d9e6f0711457c49d6b88ab97106f734c1be805e945ad1e2762bd0224e",
+    "scalar_fraction": 0.12,
+    "integer_delta": 3,
+    "resident_delta": 0
+  },
+  "descriptor_normalization": {
+    "resource_mass_per_square_meter": 0.08,
+    "renewal_capacity_per_square_meter_second": 0.02,
+    "cycle_rank_per_region": 1.0,
+    "resident_physical_geoms": 22,
+    "generation_cost_limits": {
+      "physical_geoms": 1400,
+      "regions": 40,
+      "edges": 128,
+      "movables": 24,
+      "compartments": 512
+    }
+  },
+  "developmental_rule_alleles": {
+    "vertical_weight": {"min": 0.75, "max": 1.25},
+    "clearance_weight": {"min": 0.75, "max": 1.25},
+    "surface_weight": {"min": 0.75, "max": 1.25},
+    "surface_reach": {"min": 0.75, "max": 1.25},
+    "clearance_distance": {"min": 0.75, "max": 1.25},
+    "conductivity": {"min": 0.75, "max": 1.25},
+    "half_resistance": {"min": 0.75, "max": 1.25},
+    "response_light": {"min": 0.75, "max": 1.25},
+    "response_nutrient": {"min": 0.75, "max": 1.25},
+    "response_support": {"min": 0.75, "max": 1.25},
+    "response_competition": {"min": 0.75, "max": 1.25}
+  },
+  "archetypes": [
+    {
+      "id": "terraced-delta",
+      "region_count": {
+        "min": 16,
+        "max": 30
+      },
+      "lane_count": {
+        "min": 3,
+        "max": 5
+      },
+      "width_m": {
+        "min": 14.0,
+        "max": 22.0
+      },
+      "height_m": {
+        "min": 9.0,
+        "max": 15.0
+      },
+      "depth_m": {
+        "min": 4.0,
+        "max": 5.5
+      },
+      "elevation_span_m": {
+        "min": 0.8,
+        "max": 1.8
+      },
+      "loop_fraction": {
+        "min": 0.22,
+        "max": 0.55
+      },
+      "shelter_fraction": {
+        "min": 0.12,
+        "max": 0.34
+      },
+      "underpass_fraction": {
+        "min": 0.28,
+        "max": 0.58
+      },
+      "landmark_fraction": {
+        "min": 0.12,
+        "max": 0.28
+      },
+      "resource_scale": {
+        "min": 0.75,
+        "max": 1.3
+      },
+      "movable_count": {
+        "min": 6,
+        "max": 14
+      },
+      "terrace_bias": {
+        "min": 0.15,
+        "max": 0.75
+      }
+    },
+    {
+      "id": "vaulted-courts",
+      "region_count": {
+        "min": 14,
+        "max": 26
+      },
+      "lane_count": {
+        "min": 3,
+        "max": 4
+      },
+      "width_m": {
+        "min": 13.0,
+        "max": 20.0
+      },
+      "height_m": {
+        "min": 10.0,
+        "max": 16.0
+      },
+      "depth_m": {
+        "min": 4.0,
+        "max": 6.0
+      },
+      "elevation_span_m": {
+        "min": 0.65,
+        "max": 1.5
+      },
+      "loop_fraction": {
+        "min": 0.4,
+        "max": 0.7
+      },
+      "shelter_fraction": {
+        "min": 0.3,
+        "max": 0.58
+      },
+      "underpass_fraction": {
+        "min": 0.2,
+        "max": 0.46
+      },
+      "landmark_fraction": {
+        "min": 0.1,
+        "max": 0.24
+      },
+      "resource_scale": {
+        "min": 0.8,
+        "max": 1.4
+      },
+      "movable_count": {
+        "min": 8,
+        "max": 18
+      },
+      "terrace_bias": {
+        "min": -0.2,
+        "max": 0.35
+      }
+    },
+    {
+      "id": "braided-ridges",
+      "region_count": {
+        "min": 20,
+        "max": 38
+      },
+      "lane_count": {
+        "min": 4,
+        "max": 6
+      },
+      "width_m": {
+        "min": 17.0,
+        "max": 24.0
+      },
+      "height_m": {
+        "min": 9.0,
+        "max": 14.0
+      },
+      "depth_m": {
+        "min": 4.0,
+        "max": 5.5
+      },
+      "elevation_span_m": {
+        "min": 1.0,
+        "max": 2.2
+      },
+      "loop_fraction": {
+        "min": 0.46,
+        "max": 0.78
+      },
+      "shelter_fraction": {
+        "min": 0.08,
+        "max": 0.26
+      },
+      "underpass_fraction": {
+        "min": 0.35,
+        "max": 0.68
+      },
+      "landmark_fraction": {
+        "min": 0.14,
+        "max": 0.32
+      },
+      "resource_scale": {
+        "min": 0.65,
+        "max": 1.2
+      },
+      "movable_count": {
+        "min": 7,
+        "max": 16
+      },
+      "terrace_bias": {
+        "min": 0.35,
+        "max": 0.9
+      }
+    },
+    {
+      "id": "sheltered-basin",
+      "region_count": {
+        "min": 12,
+        "max": 24
+      },
+      "lane_count": {
+        "min": 2,
+        "max": 4
+      },
+      "width_m": {
+        "min": 12.0,
+        "max": 19.0
+      },
+      "height_m": {
+        "min": 8.0,
+        "max": 14.0
+      },
+      "depth_m": {
+        "min": 3.5,
+        "max": 5.0
+      },
+      "elevation_span_m": {
+        "min": 0.35,
+        "max": 1.0
+      },
+      "loop_fraction": {
+        "min": 0.18,
+        "max": 0.5
+      },
+      "shelter_fraction": {
+        "min": 0.38,
+        "max": 0.7
+      },
+      "underpass_fraction": {
+        "min": 0.12,
+        "max": 0.38
+      },
+      "landmark_fraction": {
+        "min": 0.08,
+        "max": 0.22
+      },
+      "resource_scale": {
+        "min": 0.95,
+        "max": 1.55
+      },
+      "movable_count": {
+        "min": 5,
+        "max": 12
+      },
+      "terrace_bias": {
+        "min": -0.75,
+        "max": 0.05
+      }
+    }
+  ],
+  "training_genomes": [
+    {
+      "archetype": "terraced-delta",
+      "seed": 20260920,
+      "resident_count": 8,
+      "epoch": 0,
+      "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"
+    },
+    {
+      "archetype": "vaulted-courts",
+      "seed": 20260921,
+      "resident_count": 8,
+      "epoch": 0,
+      "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"
+    },
+    {
+      "archetype": "braided-ridges",
+      "seed": 20260922,
+      "resident_count": 8,
+      "epoch": 0,
+      "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"
+    },
+    {
+      "archetype": "sheltered-basin",
+      "seed": 20260923,
+      "resident_count": 8,
+      "epoch": 0,
+      "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"
+    },
+    {
+      "archetype": "terraced-delta",
+      "seed": 20260924,
+      "resident_count": 8,
+      "epoch": 0,
+      "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"
+    },
+    {
+      "archetype": "braided-ridges",
+      "seed": 20260925,
+      "resident_count": 8,
+      "epoch": 0,
+      "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"
+    }
+  ]
+}

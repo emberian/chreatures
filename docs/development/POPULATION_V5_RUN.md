@@ -16,3 +16,7 @@ that later guard was not installed into this frozen life.
 or open the running local world at `http://127.0.0.1:8783`.
 
 See `data/development/population-v5-trained.receipt.json` for the compact authenticated record. The full private raw recording and neural snapshots remain in the operator deployment/archive; the public recording is sanitized separately.
+
+## Fixed-cohort capacity
+
+This recorded deployment launched the Metal service with capacity 8 and all eight slots are occupied. It is therefore a fixed-cohort research run: a funded brood birth cannot acquire a neural slot. The frozen process is not resized or restarted. Current and future runtimes must defer hatching before physical preparation when the brain reports no available slot. Future ecology deployments should launch the neural service with capacity 32 while retaining eight founders.

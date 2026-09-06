@@ -30,10 +30,20 @@ fn run() -> Result<(), String> {
             state.register_environment(read(args.get(3).ok_or("environment")?)?)?;
             write(path, &state)
         }
-        Some("ask") | Some("ask-transfers") => {
+        Some("register-proposal-scores") => {
             let path = args.get(2).ok_or("state")?;
             let mut state: SearchState = read(path)?;
-            let output = if args[1] == "ask" { state.ask(count(&args)?)? } else { state.ask_transfers(count(&args)?)? };
+            state.register_proposal_scores(read(args.get(3).ok_or("scores")?)?)?;
+            write(path, &state)
+        }
+        Some("ask") | Some("ask-transfers") | Some("ask-challenges") => {
+            let path = args.get(2).ok_or("state")?;
+            let mut state: SearchState = read(path)?;
+            let output = match args[1].as_str() {
+                "ask" => state.ask(count(&args)?)?,
+                "ask-transfers" => state.ask_transfers(count(&args)?)?,
+                _ => state.ask_challenges(count(&args)?)?,
+            };
             write(path, &state)?;
             println!("{}", serde_json::to_string(&output).unwrap());
             Ok(())
@@ -50,7 +60,22 @@ fn run() -> Result<(), String> {
             let state: SearchState = read(args.get(2).ok_or("state")?)?;
             state.validate()
         }
-        _ => Err("usage: init CONFIG STATE SEED | register-environment STATE ENV | ask STATE N | ask-transfers STATE N | tell STATE EVAL | validate STATE".into()),
+        Some("environment-frontier") => {
+            let state: SearchState = read(args.get(2).ok_or("state")?)?;
+            state.validate()?;
+            println!("{}", serde_json::to_string(&state.environment_frontier()).unwrap());
+            Ok(())
+        }
+        Some("authorize-infrastructure-retry") => {
+            let path = args.get(2).ok_or("state")?;
+            let mut state: SearchState = read(path)?;
+            state.authorize_infrastructure_retry(
+                args.get(3).ok_or("candidate")?,
+                args.get(4).ok_or("environment")?,
+            )?;
+            write(path, &state)
+        }
+        _ => Err("usage: init CONFIG STATE SEED | register-environment STATE ENV | register-proposal-scores STATE SCORES | ask STATE N | ask-transfers STATE N | ask-challenges STATE N | authorize-infrastructure-retry STATE CANDIDATE ENVIRONMENT | tell STATE EVAL | environment-frontier STATE | validate STATE".into()),
     }
 }
 fn main() {

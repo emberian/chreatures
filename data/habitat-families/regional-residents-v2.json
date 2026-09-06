@@ -1,5 +1,5 @@
 {
-  "format": "chreatures-regional-residents-v1",
+  "format": "chreatures-regional-residents-v2",
   "residents": [
     {
       "body": {
@@ -63,9 +63,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -73,10 +73,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -85,7 +87,7 @@
             "respiration": 0.0105
           },
           "pools": {
-            "reserve": 1.15,
+            "reserve": 1.11,
             "soft_tissue": 0.08,
             "tough_tissue": 0.04,
             "inorganic_carbon": 0.02
@@ -97,10 +99,14 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.025,
+            "fermentate_respiration": 0.003,
+            "detritus_hydrolysis": 0.002
           },
           "pools": {
-            "soft_tissue": 0.016
+            "soft_tissue": 0.016,
+            "reserve": 0.04
           },
           "atp": 0.07,
           "atp_capacity": 0.17
@@ -193,9 +199,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -203,10 +209,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -228,7 +236,10 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.003,
+            "fermentate_respiration": 0.025,
+            "detritus_hydrolysis": 0.005
           },
           "pools": {
             "soft_tissue": 0.017
@@ -324,9 +335,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.028,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -334,10 +345,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -358,7 +371,10 @@
           "enzymes": {
             "soft_digestion": 0.036,
             "tough_digestion": 0.009000000000000001,
-            "detritus_digestion": 0.01
+            "detritus_digestion": 0.01,
+            "reserve_fermentation": 0.003,
+            "fermentate_respiration": 0.006,
+            "detritus_hydrolysis": 0.025
           },
           "pools": {
             "soft_tissue": 0.018000000000000002
@@ -461,9 +477,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -471,10 +487,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -484,7 +502,7 @@
             "carbon_fixation": 0.0028
           },
           "pools": {
-            "reserve": 1.15,
+            "reserve": 1.11,
             "soft_tissue": 0.08,
             "tough_tissue": 0.04,
             "inorganic_carbon": 0.02
@@ -496,10 +514,14 @@
           "enzymes": {
             "soft_digestion": 0.039,
             "tough_digestion": 0.006,
-            "detritus_digestion": 0.012
+            "detritus_digestion": 0.012,
+            "reserve_fermentation": 0.021,
+            "fermentate_respiration": 0.005,
+            "detritus_hydrolysis": 0.003
           },
           "pools": {
-            "soft_tissue": 0.016
+            "soft_tissue": 0.016,
+            "reserve": 0.04
           },
           "atp": 0.07,
           "atp_capacity": 0.17
@@ -600,9 +622,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -610,10 +632,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -635,7 +659,10 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.004,
+            "fermentate_respiration": 0.022,
+            "detritus_hydrolysis": 0.006
           },
           "pools": {
             "soft_tissue": 0.017
@@ -739,9 +766,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.028,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -749,10 +776,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -774,7 +803,10 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.002,
+            "fermentate_respiration": 0.008,
+            "detritus_hydrolysis": 0.023
           },
           "pools": {
             "soft_tissue": 0.018000000000000002
@@ -870,9 +902,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -880,10 +912,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -892,7 +926,7 @@
             "respiration": 0.0105
           },
           "pools": {
-            "reserve": 1.15,
+            "reserve": 1.11,
             "soft_tissue": 0.08,
             "tough_tissue": 0.04,
             "inorganic_carbon": 0.02
@@ -904,10 +938,14 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.025,
+            "fermentate_respiration": 0.003,
+            "detritus_hydrolysis": 0.002
           },
           "pools": {
-            "soft_tissue": 0.016
+            "soft_tissue": 0.016,
+            "reserve": 0.04
           },
           "atp": 0.07,
           "atp_capacity": 0.17
@@ -1000,9 +1038,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -1010,10 +1048,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -1035,7 +1075,10 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.003,
+            "fermentate_respiration": 0.025,
+            "detritus_hydrolysis": 0.005
           },
           "pools": {
             "soft_tissue": 0.017
@@ -1131,9 +1174,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -1141,10 +1184,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -1165,7 +1210,10 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.003,
+            "fermentate_respiration": 0.006,
+            "detritus_hydrolysis": 0.025
           },
           "pools": {
             "soft_tissue": 0.016
@@ -1261,9 +1309,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -1271,10 +1319,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -1284,7 +1334,7 @@
             "carbon_fixation": 0.00035
           },
           "pools": {
-            "reserve": 1.21,
+            "reserve": 1.17,
             "soft_tissue": 0.08,
             "tough_tissue": 0.04,
             "inorganic_carbon": 0.02
@@ -1296,10 +1346,14 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.021,
+            "fermentate_respiration": 0.005,
+            "detritus_hydrolysis": 0.003
           },
           "pools": {
-            "soft_tissue": 0.017
+            "soft_tissue": 0.017,
+            "reserve": 0.04
           },
           "atp": 0.07,
           "atp_capacity": 0.17
@@ -1392,9 +1446,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.028,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -1402,10 +1456,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -1426,7 +1482,10 @@
           "enzymes": {
             "soft_digestion": 0.036,
             "tough_digestion": 0.009000000000000001,
-            "detritus_digestion": 0.01
+            "detritus_digestion": 0.01,
+            "reserve_fermentation": 0.004,
+            "fermentate_respiration": 0.022,
+            "detritus_hydrolysis": 0.006
           },
           "pools": {
             "soft_tissue": 0.018000000000000002
@@ -1529,9 +1588,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -1539,10 +1598,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -1564,7 +1625,10 @@
           "enzymes": {
             "soft_digestion": 0.039,
             "tough_digestion": 0.006,
-            "detritus_digestion": 0.012
+            "detritus_digestion": 0.012,
+            "reserve_fermentation": 0.002,
+            "fermentate_respiration": 0.008,
+            "detritus_hydrolysis": 0.023
           },
           "pools": {
             "soft_tissue": 0.016
@@ -1668,9 +1732,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -1678,10 +1742,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -1691,7 +1757,7 @@
             "carbon_fixation": 0.0011
           },
           "pools": {
-            "reserve": 1.21,
+            "reserve": 1.17,
             "soft_tissue": 0.08,
             "tough_tissue": 0.04,
             "inorganic_carbon": 0.02
@@ -1703,10 +1769,14 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.025,
+            "fermentate_respiration": 0.003,
+            "detritus_hydrolysis": 0.002
           },
           "pools": {
-            "soft_tissue": 0.017
+            "soft_tissue": 0.017,
+            "reserve": 0.04
           },
           "atp": 0.07,
           "atp_capacity": 0.17
@@ -1807,9 +1877,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.028,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -1817,10 +1887,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -1842,7 +1914,10 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.003,
+            "fermentate_respiration": 0.025,
+            "detritus_hydrolysis": 0.005
           },
           "pools": {
             "soft_tissue": 0.018000000000000002
@@ -1938,9 +2013,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -1948,10 +2023,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -1972,7 +2049,10 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.003,
+            "fermentate_respiration": 0.006,
+            "detritus_hydrolysis": 0.025
           },
           "pools": {
             "soft_tissue": 0.016
@@ -2068,9 +2148,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -2078,10 +2158,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -2091,7 +2173,7 @@
             "carbon_fixation": 0.00035
           },
           "pools": {
-            "reserve": 1.21,
+            "reserve": 1.17,
             "soft_tissue": 0.08,
             "tough_tissue": 0.04,
             "inorganic_carbon": 0.02
@@ -2103,10 +2185,14 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.021,
+            "fermentate_respiration": 0.005,
+            "detritus_hydrolysis": 0.003
           },
           "pools": {
-            "soft_tissue": 0.017
+            "soft_tissue": 0.017,
+            "reserve": 0.04
           },
           "atp": 0.07,
           "atp_capacity": 0.17
@@ -2199,9 +2285,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -2209,10 +2295,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -2233,7 +2321,10 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.004,
+            "fermentate_respiration": 0.022,
+            "detritus_hydrolysis": 0.006
           },
           "pools": {
             "soft_tissue": 0.016
@@ -2329,9 +2420,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -2339,10 +2430,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -2364,7 +2457,10 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.002,
+            "fermentate_respiration": 0.008,
+            "detritus_hydrolysis": 0.023
           },
           "pools": {
             "soft_tissue": 0.017
@@ -2460,9 +2556,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.028,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -2470,10 +2566,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -2482,7 +2580,7 @@
             "respiration": 0.0119
           },
           "pools": {
-            "reserve": 1.27,
+            "reserve": 1.23,
             "soft_tissue": 0.08,
             "tough_tissue": 0.04,
             "inorganic_carbon": 0.02
@@ -2494,10 +2592,14 @@
           "enzymes": {
             "soft_digestion": 0.036,
             "tough_digestion": 0.009000000000000001,
-            "detritus_digestion": 0.01
+            "detritus_digestion": 0.01,
+            "reserve_fermentation": 0.025,
+            "fermentate_respiration": 0.003,
+            "detritus_hydrolysis": 0.002
           },
           "pools": {
-            "soft_tissue": 0.018000000000000002
+            "soft_tissue": 0.018000000000000002,
+            "reserve": 0.04
           },
           "atp": 0.07,
           "atp_capacity": 0.17
@@ -2597,9 +2699,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -2607,10 +2709,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -2632,7 +2736,10 @@
           "enzymes": {
             "soft_digestion": 0.039,
             "tough_digestion": 0.006,
-            "detritus_digestion": 0.012
+            "detritus_digestion": 0.012,
+            "reserve_fermentation": 0.003,
+            "fermentate_respiration": 0.025,
+            "detritus_hydrolysis": 0.005
           },
           "pools": {
             "soft_tissue": 0.016
@@ -2736,9 +2843,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -2746,10 +2853,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -2771,7 +2880,10 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.003,
+            "fermentate_respiration": 0.006,
+            "detritus_hydrolysis": 0.025
           },
           "pools": {
             "soft_tissue": 0.017
@@ -2875,9 +2987,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.028,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -2885,10 +2997,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -2898,7 +3012,7 @@
             "carbon_fixation": 0.00018
           },
           "pools": {
-            "reserve": 1.27,
+            "reserve": 1.23,
             "soft_tissue": 0.08,
             "tough_tissue": 0.04,
             "inorganic_carbon": 0.02
@@ -2910,10 +3024,14 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.021,
+            "fermentate_respiration": 0.005,
+            "detritus_hydrolysis": 0.003
           },
           "pools": {
-            "soft_tissue": 0.018000000000000002
+            "soft_tissue": 0.018000000000000002,
+            "reserve": 0.04
           },
           "atp": 0.07,
           "atp_capacity": 0.17
@@ -3006,9 +3124,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -3016,10 +3134,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -3040,7 +3160,10 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.004,
+            "fermentate_respiration": 0.022,
+            "detritus_hydrolysis": 0.006
           },
           "pools": {
             "soft_tissue": 0.016
@@ -3136,9 +3259,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -3146,10 +3269,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -3171,7 +3296,10 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.002,
+            "fermentate_respiration": 0.008,
+            "detritus_hydrolysis": 0.023
           },
           "pools": {
             "soft_tissue": 0.017
@@ -3267,9 +3395,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -3277,10 +3405,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -3289,7 +3419,7 @@
             "respiration": 0.0105
           },
           "pools": {
-            "reserve": 1.15,
+            "reserve": 1.11,
             "soft_tissue": 0.08,
             "tough_tissue": 0.04,
             "inorganic_carbon": 0.02
@@ -3301,10 +3431,14 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.025,
+            "fermentate_respiration": 0.003,
+            "detritus_hydrolysis": 0.002
           },
           "pools": {
-            "soft_tissue": 0.016
+            "soft_tissue": 0.016,
+            "reserve": 0.04
           },
           "atp": 0.07,
           "atp_capacity": 0.17
@@ -3397,9 +3531,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -3407,10 +3541,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -3432,7 +3568,10 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.003,
+            "fermentate_respiration": 0.025,
+            "detritus_hydrolysis": 0.005
           },
           "pools": {
             "soft_tissue": 0.017
@@ -3528,9 +3667,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.028,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -3538,10 +3677,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -3562,7 +3703,10 @@
           "enzymes": {
             "soft_digestion": 0.036,
             "tough_digestion": 0.009000000000000001,
-            "detritus_digestion": 0.01
+            "detritus_digestion": 0.01,
+            "reserve_fermentation": 0.003,
+            "fermentate_respiration": 0.006,
+            "detritus_hydrolysis": 0.025
           },
           "pools": {
             "soft_tissue": 0.018000000000000002
@@ -3665,9 +3809,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -3675,10 +3819,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -3688,7 +3834,7 @@
             "carbon_fixation": 0.0028
           },
           "pools": {
-            "reserve": 1.15,
+            "reserve": 1.11,
             "soft_tissue": 0.08,
             "tough_tissue": 0.04,
             "inorganic_carbon": 0.02
@@ -3700,10 +3846,14 @@
           "enzymes": {
             "soft_digestion": 0.039,
             "tough_digestion": 0.006,
-            "detritus_digestion": 0.012
+            "detritus_digestion": 0.012,
+            "reserve_fermentation": 0.021,
+            "fermentate_respiration": 0.005,
+            "detritus_hydrolysis": 0.003
           },
           "pools": {
-            "soft_tissue": 0.016
+            "soft_tissue": 0.016,
+            "reserve": 0.04
           },
           "atp": 0.07,
           "atp_capacity": 0.17
@@ -3804,9 +3954,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -3814,10 +3964,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -3839,7 +3991,10 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.004,
+            "fermentate_respiration": 0.022,
+            "detritus_hydrolysis": 0.006
           },
           "pools": {
             "soft_tissue": 0.017
@@ -3943,9 +4098,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.028,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -3953,10 +4108,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -3978,7 +4135,10 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.002,
+            "fermentate_respiration": 0.008,
+            "detritus_hydrolysis": 0.023
           },
           "pools": {
             "soft_tissue": 0.018000000000000002
@@ -4074,9 +4234,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -4084,10 +4244,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -4096,7 +4258,7 @@
             "respiration": 0.0105
           },
           "pools": {
-            "reserve": 1.15,
+            "reserve": 1.11,
             "soft_tissue": 0.08,
             "tough_tissue": 0.04,
             "inorganic_carbon": 0.02
@@ -4108,10 +4270,14 @@
           "enzymes": {
             "soft_digestion": 0.03,
             "tough_digestion": 0.007,
-            "detritus_digestion": 0.014
+            "detritus_digestion": 0.014,
+            "reserve_fermentation": 0.025,
+            "fermentate_respiration": 0.003,
+            "detritus_hydrolysis": 0.002
           },
           "pools": {
-            "soft_tissue": 0.016
+            "soft_tissue": 0.016,
+            "reserve": 0.04
           },
           "atp": 0.07,
           "atp_capacity": 0.17
@@ -4204,9 +4370,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -4214,10 +4380,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       "founders": {
@@ -4239,7 +4407,10 @@
           "enzymes": {
             "soft_digestion": 0.033,
             "tough_digestion": 0.008,
-            "detritus_digestion": 0.016
+            "detritus_digestion": 0.016,
+            "reserve_fermentation": 0.003,
+            "fermentate_respiration": 0.025,
+            "detritus_hydrolysis": 0.005
           },
           "pools": {
             "soft_tissue": 0.017

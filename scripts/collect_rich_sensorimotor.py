@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
 import os
 import subprocess
 import sys
@@ -135,6 +134,7 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--nursery-family-config", type=Path, required=True)
     parser.add_argument("--nursery-family-schedule", type=Path, required=True)
     parser.add_argument("--worlds", type=int, default=4)
+    parser.add_argument("--validation-worlds", type=int, default=1)
     parser.add_argument("--heldout-worlds", type=int, default=1)
     parser.add_argument("--episodes", type=int, default=2)
     parser.add_argument("--steps", type=int, default=4096)
@@ -146,8 +146,13 @@ def arguments() -> argparse.Namespace:
 
 
 def validate(args: argparse.Namespace) -> None:
-    if not 2 <= args.worlds <= 16 or not 1 <= args.heldout_worlds < args.worlds:
-        raise SystemExit("world split requires 2..16 worlds and a nonempty holdout")
+    if (
+        not 3 <= args.worlds <= 16
+        or not 1 <= args.validation_worlds
+        or not 1 <= args.heldout_worlds
+        or args.validation_worlds + args.heldout_worlds >= args.worlds
+    ):
+        raise SystemExit("world split requires train, validation, and final holdout worlds")
     if not 1 <= args.episodes <= 64 or not 44 <= args.steps <= 100_000:
         raise SystemExit("episodes or steps outside bounded training-data range")
     if args.output.exists() and any(args.output.iterdir()):
@@ -225,7 +230,12 @@ def main() -> int:
         "readouts": len(ports.readout_names),
         "actions": ACTION_DIM,
     }
-    if int(profile.component("version")) != PROFILE_VERSION or transport != required:
+    if (
+        int(profile.component("version")) != PROFILE_VERSION
+        or any(transport.get(name) != value for name, value in required.items())
+        or type(transport.get("max_residents")) is not int
+        or transport["max_residents"] < residents_per_world
+    ):
         raise SystemExit("regional profile transport differs from collector interfaces")
     count = args.worlds * residents_per_world
     from chreatures.population import CandidateGenome
@@ -267,7 +277,15 @@ def main() -> int:
         "observation_order": list(OBSERVATION_ORDER),
         "transition_outcome_order": list(OUTCOME_FIELDS),
         "split": {
-            "train_world_slots": list(range(args.worlds - args.heldout_worlds)),
+            "train_world_slots": list(
+                range(args.worlds - args.validation_worlds - args.heldout_worlds)
+            ),
+            "validation_world_slots": list(
+                range(
+                    args.worlds - args.validation_worlds - args.heldout_worlds,
+                    args.worlds - args.heldout_worlds,
+                )
+            ),
             "heldout_world_slots": list(
                 range(args.worlds - args.heldout_worlds, args.worlds)
             ),
@@ -285,7 +303,7 @@ def main() -> int:
     started = time.perf_counter()
     try:
         for episode in range(args.episodes):
-            heldout_start = args.worlds - args.heldout_worlds
+            heldout_start = args.worlds - args.validation_worlds - args.heldout_worlds
             bodies = pool.reset(
                 [
                     {
@@ -324,12 +342,46 @@ def main() -> int:
             previous = np.zeros((count, PREVIOUS_DIM), dtype=np.float32)
             reset = np.ones(count, dtype=np.bool_)
             observation, canonical, physical, neural, bodies = observe(pool, brain, 0.05)
-            observations = [observation]
-            canonicals = [canonical]
-            neurals = [neural]
-            resets = [reset.copy()]
-            actions = []
-            outcomes_sequence = []
+            buffer_dir = args.output / f".episode-{episode:03d}.buffers"
+            buffer_dir.mkdir()
+
+            def episode_buffer(name, shape, dtype):
+                return np.lib.format.open_memmap(
+                    buffer_dir / f"{name}.npy", mode="w+", dtype=dtype, shape=shape
+                )
+
+            observations = episode_buffer(
+                "observation",
+                (args.steps + 1, count, OBSERVATION_DIM), dtype=np.float32
+            )
+            canonicals = episode_buffer(
+                "canonical_channels",
+                (args.steps + 1, count, len(ports.input_names)), dtype=np.float32
+            )
+            neurals = episode_buffer(
+                "neural_readouts",
+                (args.steps + 1, count, len(ports.readout_names)), dtype=np.float32
+            )
+            resets = episode_buffer(
+                "reset", (args.steps + 1, count), dtype=np.bool_
+            )
+            resets[:] = False
+            actions = episode_buffer(
+                "executed_actions", (args.steps, count, ACTION_DIM), dtype=np.float32
+            )
+            worker_contexts = episode_buffer(
+                "worker_recurrent_context",
+                (args.steps, count, 128),
+                dtype=np.float32,
+            )
+            outcomes_sequence = episode_buffer(
+                "transition_outcomes",
+                (args.steps, count, len(OUTCOME_FIELDS)), dtype=np.float32
+            )
+            observations[0] = observation
+            canonicals[0] = canonical
+            neurals[0] = neural
+            resets[0] = reset
             for tick in range(args.steps):
                 result = residents.step(
                     observation,
@@ -341,6 +393,13 @@ def main() -> int:
                     reset,
                 )
                 action = np.ascontiguousarray(result["proposed_action"], dtype=np.float32)
+                worker_context = np.ascontiguousarray(
+                    result["worker_recurrent_context"], dtype=np.float32
+                ).copy()
+                if worker_context.shape != (count, 128) or not np.isfinite(
+                    worker_context
+                ).all():
+                    raise RuntimeError("native effective worker context differs")
                 before = physical.copy()
                 advanced = pool.advance(action_payload(action, bodies))
                 world_outcomes = [value[0] for value in advanced]
@@ -366,30 +425,40 @@ def main() -> int:
                 )
                 previous = executed
                 reset = np.zeros(count, dtype=np.bool_)
-                observations.append(observation)
-                canonicals.append(canonical)
-                neurals.append(neural)
-                resets.append(reset.copy())
-                actions.append(action)
-                outcomes_sequence.append(outcome_rows(world_outcomes, bodies))
+                observations[tick + 1] = observation
+                canonicals[tick + 1] = canonical
+                neurals[tick + 1] = neural
+                resets[tick + 1] = reset
+                actions[tick] = action
+                worker_contexts[tick] = worker_context
+                outcomes_sequence[tick] = outcome_rows(world_outcomes, bodies)
             arrays = {
-                "observation": np.stack(observations).astype(np.float32),
-                "canonical_channels": np.stack(canonicals).astype(np.float32),
-                "neural_readouts": np.stack(neurals).astype(np.float32),
-                "executed_actions": np.stack(actions).astype(np.float32),
-                "transition_outcomes": np.stack(outcomes_sequence).astype(np.float32),
-                "reset": np.stack(resets).astype(np.bool_),
+                "observation": observations,
+                "canonical_channels": canonicals,
+                "neural_readouts": neurals,
+                "executed_actions": actions,
+                "worker_recurrent_context": worker_contexts,
+                "transition_outcomes": outcomes_sequence,
+                "reset": resets,
                 "dt_seconds": np.asarray(0.05, dtype=np.float64),
             }
+            for value in arrays.values():
+                if isinstance(value, np.memmap):
+                    value.flush()
+            array_shapes = {key: list(value.shape) for key, value in arrays.items()}
             packet = atomic_npz(args.output / f"episode-{episode:03d}.npz", arrays)
+            for value in arrays.values():
+                if isinstance(value, np.memmap):
+                    value._mmap.close()
+            for path in buffer_dir.iterdir():
+                path.unlink()
+            buffer_dir.rmdir()
             packets.append(
                 {
                     "episode": episode,
                     "stage": 0,
                     **packet,
-                    "model_array_shapes": {
-                        key: list(value.shape) for key, value in arrays.items()
-                    },
+                    "model_array_shapes": array_shapes,
                     "resident_partitions": resident_ids,
                 }
             )
@@ -426,6 +495,7 @@ def main() -> int:
             "steps_per_episode": args.steps,
             "dt_seconds": 0.05,
             "train_world_slots": identity["split"]["train_world_slots"],
+            "validation_world_slots": identity["split"]["validation_world_slots"],
             "heldout_world_slots": identity["split"]["heldout_world_slots"],
         },
         "schema": {

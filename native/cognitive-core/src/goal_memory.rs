@@ -7,8 +7,12 @@ use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 const WINDOW: usize = 4;
 const KEY: usize = 64;
 const CAPACITY: usize = 128;
+const LIFETIME_CAPACITY: usize = 64;
+const RECENT_CAPACITY: usize = CAPACITY - LIFETIME_CAPACITY;
+const ADMISSION_NOVELTY_RMS: f32 = 0.08;
+const ADMISSION_MAX_TICKS: u64 = 10;
 const HOLD_TICKS: u64 = 10;
-const FORMAT: &str = "chreatures-achieved-goal-memory-v2";
+const FORMAT: &str = "chreatures-achieved-goal-memory-v3";
 const MAX_BATCH: usize = 4096;
 const MAX_RESERVOIR_BYTES: usize = 64_usize << 30;
 
@@ -84,6 +88,11 @@ pub(crate) struct AchievedGoalMemoryCohort {
     slot_generation: Vec<u64>,
     count: Vec<u16>,
     seen: Vec<u64>,
+    admitted_count: Vec<u64>,
+    recent_cursor: Vec<u8>,
+    has_last_admitted: Vec<bool>,
+    last_admitted_key: Vec<f32>,
+    last_admitted_tick: Vec<u64>,
     rng: Vec<u64>,
     selected_valid: Vec<bool>,
     selected_slot: Vec<i32>,
@@ -132,6 +141,11 @@ impl AchievedGoalMemoryCohort {
         self.slot_generation.resize(new_batch * CAPACITY, 0);
         self.count.resize(new_batch, 0);
         self.seen.resize(new_batch, 0);
+        self.admitted_count.resize(new_batch, 0);
+        self.recent_cursor.resize(new_batch, 0);
+        self.has_last_admitted.resize(new_batch, false);
+        self.last_admitted_key.resize(new_batch * KEY, 0.0);
+        self.last_admitted_tick.resize(new_batch, 0);
         self.rng.resize(new_batch * 4, 0);
         self.selected_valid.resize(new_batch, false);
         self.selected_slot.resize(new_batch, -1);
@@ -171,6 +185,11 @@ impl AchievedGoalMemoryCohort {
         self.slot_generation[row * CAPACITY..(row + 1) * CAPACITY].fill(0);
         self.count[row] = 0;
         self.seen[row] = 0;
+        self.admitted_count[row] = 0;
+        self.recent_cursor[row] = 0;
+        self.has_last_admitted[row] = false;
+        self.last_admitted_key[row * KEY..(row + 1) * KEY].fill(0.0);
+        self.last_admitted_tick[row] = 0;
         let mut state = seed ^ (row as u64).wrapping_mul(0xd2b7_4407_b1ce_6e93);
         for word in &mut self.rng[row * 4..(row + 1) * 4] {
             *word = splitmix64(&mut state);
@@ -336,6 +355,27 @@ impl AchievedGoalMemoryCohort {
             if !include[row] {
                 continue;
             }
+            let key = &encoded_keys[row * KEY..(row + 1) * KEY];
+            let latest = (self.ring_cursor[row] as usize + WINDOW - 1) % WINDOW;
+            let current_tick = self.ring_tick[row * WINDOW + latest];
+            let novel = if self.has_last_admitted[row] {
+                let previous = &self.last_admitted_key[row * KEY..(row + 1) * KEY];
+                let rms = (key
+                    .iter()
+                    .zip(previous)
+                    .map(|(a, b)| (*a - *b) * (*a - *b))
+                    .sum::<f32>()
+                    / KEY as f32)
+                    .sqrt();
+                rms >= ADMISSION_NOVELTY_RMS
+                    || current_tick.saturating_sub(self.last_admitted_tick[row])
+                        >= ADMISSION_MAX_TICKS
+            } else {
+                true
+            };
+            if self.count[row] as usize == CAPACITY && !novel {
+                continue;
+            }
             self.seen[row] = self.seen[row]
                 .checked_add(1)
                 .ok_or_else(|| PyValueError::new_err("goal-memory reservoir count exhausted"))?;
@@ -346,7 +386,14 @@ impl AchievedGoalMemoryCohort {
             } else {
                 let state = &mut self.rng[row * 4..(row + 1) * 4];
                 let candidate = index_below(state, self.seen[row]);
-                (candidate < CAPACITY as u64).then_some(candidate as usize)
+                if candidate < LIFETIME_CAPACITY as u64 {
+                    Some(candidate as usize)
+                } else {
+                    let slot = LIFETIME_CAPACITY + self.recent_cursor[row] as usize;
+                    self.recent_cursor[row] =
+                        ((self.recent_cursor[row] as usize + 1) % RECENT_CAPACITY) as u8;
+                    Some(slot)
+                }
             };
             let Some(slot) = slot else { continue };
             let window_offset = self.window_offset(row, slot);
@@ -359,12 +406,16 @@ impl AchievedGoalMemoryCohort {
                     .copy_from_slice(&self.ring[source..source + self.observation_dim]);
             }
             let key_offset = Self::key_offset(row, slot);
-            self.keys[key_offset..key_offset + KEY]
-                .copy_from_slice(&encoded_keys[row * KEY..(row + 1) * KEY]);
-            let latest = (self.ring_cursor[row] as usize + WINDOW - 1) % WINDOW;
+            self.keys[key_offset..key_offset + KEY].copy_from_slice(key);
             self.recorded_tick[row * CAPACITY + slot] = self.ring_tick[row * WINDOW + latest];
             self.recorded_time[row * CAPACITY + slot] = self.ring_time[row * WINDOW + latest];
             self.slot_generation[row * CAPACITY + slot] = self.generation[row];
+            self.admitted_count[row] = self.admitted_count[row]
+                .checked_add(1)
+                .ok_or_else(|| PyValueError::new_err("goal-memory admission count exhausted"))?;
+            self.has_last_admitted[row] = true;
+            self.last_admitted_key[row * KEY..(row + 1) * KEY].copy_from_slice(key);
+            self.last_admitted_tick[row] = current_tick;
             slots[row] = slot as i32;
             generations[row] = self.generation[row];
         }
@@ -540,6 +591,11 @@ impl AchievedGoalMemoryCohort {
             slot_generation: vec![0; batch * CAPACITY],
             count: vec![0; batch],
             seen: vec![0; batch],
+            admitted_count: vec![0; batch],
+            recent_cursor: vec![0; batch],
+            has_last_admitted: vec![false; batch],
+            last_admitted_key: vec![0.0; batch * KEY],
+            last_admitted_tick: vec![0; batch],
             rng,
             selected_valid: vec![false; batch],
             selected_slot: vec![-1; batch],
@@ -644,6 +700,12 @@ impl AchievedGoalMemoryCohort {
                 .unwrap()
                 .into_pyarray(py),
         )?;
+        out.set_item("lifetime_capacity", LIFETIME_CAPACITY)?;
+        out.set_item("recent_capacity", RECENT_CAPACITY)?;
+        out.set_item("admission_novelty_rms", ADMISSION_NOVELTY_RMS)?;
+        out.set_item("admission_max_ticks", ADMISSION_MAX_TICKS)?;
+        out.set_item("admitted_count", self.admitted_count.clone())?;
+        out.set_item("eligible_admission_count", self.seen.clone())?;
         Ok(out)
     }
 
@@ -685,13 +747,17 @@ impl AchievedGoalMemoryCohort {
     pub(crate) fn snapshot<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let out = PyDict::new(py);
         out.set_item("format", FORMAT)?;
-        out.set_item("version", 2)?;
+        out.set_item("version", 3)?;
         out.set_item("batch", self.batch)?;
         out.set_item("capacity", CAPACITY)?;
         out.set_item("window", WINDOW)?;
         out.set_item("observation_dim", self.observation_dim)?;
         out.set_item("key_dim", KEY)?;
         out.set_item("hold_ticks", HOLD_TICKS)?;
+        out.set_item("lifetime_capacity", LIFETIME_CAPACITY)?;
+        out.set_item("recent_capacity", RECENT_CAPACITY)?;
+        out.set_item("admission_novelty_rms", ADMISSION_NOVELTY_RMS)?;
+        out.set_item("admission_max_ticks", ADMISSION_MAX_TICKS)?;
         macro_rules! put1 {
             ($name:literal, $value:expr) => {
                 out.set_item($name, $value.clone().into_pyarray(py))?
@@ -759,6 +825,16 @@ impl AchievedGoalMemoryCohort {
         )?;
         put1!("count", self.count);
         put1!("seen", self.seen);
+        put1!("admitted_count", self.admitted_count);
+        put1!("recent_cursor", self.recent_cursor);
+        put1!("has_last_admitted", self.has_last_admitted);
+        out.set_item(
+            "last_admitted_key",
+            Array2::from_shape_vec((self.batch, KEY), self.last_admitted_key.clone())
+                .unwrap()
+                .into_pyarray(py),
+        )?;
+        put1!("last_admitted_tick", self.last_admitted_tick);
         out.set_item(
             "rng",
             Array2::from_shape_vec((self.batch, 4), self.rng.clone())
@@ -794,13 +870,17 @@ impl AchievedGoalMemoryCohort {
 
     pub(crate) fn restore(&mut self, value: &Bound<'_, PyDict>) -> PyResult<()> {
         if required(value, "format")?.extract::<String>()? != FORMAT
-            || required(value, "version")?.extract::<u8>()? != 2
+            || required(value, "version")?.extract::<u8>()? != 3
             || required(value, "batch")?.extract::<usize>()? != self.batch
             || required(value, "capacity")?.extract::<usize>()? != CAPACITY
             || required(value, "window")?.extract::<usize>()? != WINDOW
             || required(value, "observation_dim")?.extract::<usize>()? != self.observation_dim
             || required(value, "key_dim")?.extract::<usize>()? != KEY
             || required(value, "hold_ticks")?.extract::<u64>()? != HOLD_TICKS
+            || required(value, "lifetime_capacity")?.extract::<usize>()? != LIFETIME_CAPACITY
+            || required(value, "recent_capacity")?.extract::<usize>()? != RECENT_CAPACITY
+            || required(value, "admission_novelty_rms")?.extract::<f32>()? != ADMISSION_NOVELTY_RMS
+            || required(value, "admission_max_ticks")?.extract::<u64>()? != ADMISSION_MAX_TICKS
         {
             return Err(PyValueError::new_err(
                 "goal-memory snapshot identity differs",
@@ -862,6 +942,23 @@ impl AchievedGoalMemoryCohort {
         );
         let count = array!("count", PyReadonlyArray1<'_, u16>, [self.batch]);
         let seen = array!("seen", PyReadonlyArray1<'_, u64>, [self.batch]);
+        let admitted_count = array!("admitted_count", PyReadonlyArray1<'_, u64>, [self.batch]);
+        let recent_cursor = array!("recent_cursor", PyReadonlyArray1<'_, u8>, [self.batch]);
+        let has_last_admitted = array!(
+            "has_last_admitted",
+            PyReadonlyArray1<'_, bool>,
+            [self.batch]
+        );
+        let last_admitted_key = array!(
+            "last_admitted_key",
+            PyReadonlyArray2<'_, f32>,
+            [self.batch, KEY]
+        );
+        let last_admitted_tick = array!(
+            "last_admitted_tick",
+            PyReadonlyArray1<'_, u64>,
+            [self.batch]
+        );
         let rng = array!("rng", PyReadonlyArray2<'_, u64>, [self.batch, 4]);
         let selected_valid = array!("selected_valid", PyReadonlyArray1<'_, bool>, [self.batch]);
         let selected_slot = array!("selected_slot", PyReadonlyArray1<'_, i32>, [self.batch]);
@@ -897,6 +994,7 @@ impl AchievedGoalMemoryCohort {
             || !finite_f64(&recorded_time)
             || !finite_f32(&selected_window)
             || !finite_f32(&selected_key)
+            || !finite_f32(&last_admitted_key)
             || !finite_f64(&selected_recorded_time)
         {
             return Err(PyValueError::new_err("goal-memory snapshot must be finite"));
@@ -918,6 +1016,11 @@ impl AchievedGoalMemoryCohort {
                 || consumed_generation[row] > generation[row]
                 || count[row] as usize > CAPACITY
                 || seen[row] < count[row] as u64
+                || admitted_count[row] != seen[row]
+                || recent_cursor[row] as usize >= RECENT_CAPACITY
+                || has_last_admitted[row] != (admitted_count[row] > 0)
+                || (has_last_admitted[row]
+                    && (!has_push[row] || last_admitted_tick[row] > last_push_tick[row]))
                 || rng[row * 4..(row + 1) * 4].iter().all(|word| *word == 0)
                 || (has_push[row] && generation[row] == 0)
                 || !occupied_generations_valid
@@ -957,6 +1060,11 @@ impl AchievedGoalMemoryCohort {
         self.slot_generation = slot_generation;
         self.count = count;
         self.seen = seen;
+        self.admitted_count = admitted_count;
+        self.recent_cursor = recent_cursor;
+        self.has_last_admitted = has_last_admitted;
+        self.last_admitted_key = last_admitted_key;
+        self.last_admitted_tick = last_admitted_tick;
         self.rng = rng;
         self.selected_valid = selected_valid;
         self.selected_slot = selected_slot;
@@ -982,6 +1090,53 @@ mod tests {
     };
 
     #[test]
+    fn stratified_memory_keeps_acquiring_and_episode_reset_preserves_lifetime() {
+        let mut memory = AchievedGoalMemoryCohort::new(1, 1, 0x9912).unwrap();
+        let key = vec![0.25_f32; KEY];
+        for tick in 1_u64..=131 {
+            memory
+                .push_inner(&[tick as f32], &[tick], &[tick as f64], &[false])
+                .unwrap();
+            memory
+                .remember_with_changes_inner(&key, &[tick >= WINDOW as u64])
+                .unwrap();
+        }
+        assert_eq!(memory.count[0], CAPACITY as u16);
+        assert_eq!(memory.admitted_count[0], CAPACITY as u64);
+
+        memory
+            .push_inner(&[132.0], &[132], &[132.0], &[false])
+            .unwrap();
+        assert_eq!(
+            memory
+                .remember_with_changes_inner(&key, &[true])
+                .unwrap()
+                .slots,
+            vec![-1]
+        );
+        memory
+            .push_inner(&[133.0], &[133], &[133.0], &[true])
+            .unwrap();
+        memory.remember_with_changes_inner(&key, &[false]).unwrap();
+        assert_eq!(memory.count[0], CAPACITY as u16);
+        for tick in 134_u64..=141 {
+            memory
+                .push_inner(&[tick as f32], &[tick], &[tick as f64], &[false])
+                .unwrap();
+            let result = memory
+                .remember_with_changes_inner(&key, &[tick >= 136])
+                .unwrap();
+            if tick < 141 {
+                assert_eq!(result.slots, vec![-1]);
+            } else {
+                assert!(result.slots[0] >= 0);
+            }
+        }
+        assert_eq!(memory.admitted_count[0], CAPACITY as u64 + 1);
+        assert_eq!(memory.last_admitted_tick[0], 141);
+    }
+
+    #[test]
     fn copied_identity_survives_actual_replacement_and_blocks_credit() {
         let mut memory = AchievedGoalMemoryCohort::new(1, 1, 0x51a7).unwrap();
         let key = vec![0.0_f32; KEY];
@@ -1000,8 +1155,12 @@ mod tests {
         // RNG. Selection consumes one draw before remember performs its draw.
         let mut preview_rng = memory.rng[0..4].to_vec();
         let _selection_draw = random_u64(&mut preview_rng);
-        let replacement_slot = index_below(&mut preview_rng, memory.seen[0] + 1) as usize;
-        assert!(replacement_slot < CAPACITY);
+        let draw = index_below(&mut preview_rng, memory.seen[0] + 1) as usize;
+        let replacement_slot = if draw < LIFETIME_CAPACITY {
+            draw
+        } else {
+            LIFETIME_CAPACITY + memory.recent_cursor[0] as usize
+        };
         let identity = GoalSlotIdentity {
             recorded_tick: memory.recorded_tick[replacement_slot],
             generation: memory.slot_generation[replacement_slot],
@@ -1031,10 +1190,14 @@ mod tests {
             }])
             .unwrap();
 
+        let mut novel_key = key.clone();
+        novel_key[0] = 1.0;
         memory
             .push_inner(&[132.0], &[132], &[6.6], &[false])
             .unwrap();
-        let replacement = memory.remember_with_changes_inner(&key, &[true]).unwrap();
+        let replacement = memory
+            .remember_with_changes_inner(&novel_key, &[true])
+            .unwrap();
         assert_eq!(replacement.slots, vec![replacement_slot as i32]);
         let replacement_identity = GoalSlotIdentity {
             recorded_tick: memory.recorded_tick[replacement_slot],

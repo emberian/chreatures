@@ -9,6 +9,7 @@
     "executed_actions",
     "transition_outcomes",
     "canonical_channels",
+    "worker_recurrent_context",
     "reset",
     "dt_seconds"
   ],
@@ -110,6 +111,15 @@
         "T+1",
         "N",
         384
+      ]
+    },
+    "worker_recurrent_context": {
+      "description": "float32 [T,N,128] exact private effective worker context after current observation encoding and recurrent-gain adaptation, used for executed action[t]",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": [
+        "T",
+        "N",
+        128
       ]
     }
   },

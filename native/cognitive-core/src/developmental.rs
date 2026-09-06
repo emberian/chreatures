@@ -14,8 +14,9 @@ use crate::population_response::{
     population_response_features, PopulationHistory, PopulationResponseBank,
 };
 use crate::predictive_sensory::{
-    PredictiveSensoryEnsemble, INPUT as PREDICTOR_INPUT, MEMBERS as PREDICTOR_MEMBERS,
+    PredictiveSensoryEnsemble, CONTEXT as PREDICTOR_CONTEXT, MEMBERS as PREDICTOR_MEMBERS,
 };
+use crate::sequence_memory::{GoalSequenceMemory, SequenceEpisode, SequenceNode};
 use crate::{gemm_into, gru, linear, take, tanh_all, Gru, Linear};
 use numpy::{
     ndarray::{Array1, Array2, Array3},
@@ -37,8 +38,11 @@ const PHYSIOLOGY: usize = 12;
 const RESERVOIR: usize = 128;
 const SIGNED: [usize; 4] = [0, 1, 2, 3];
 const POSITIVE: [usize; 8] = [4, 5, 6, 7, 8, 9, 10, 11];
-const FORMAT: &str = "chreatures-developmental-resident-native-population-v5";
+const FORMAT: &str = "chreatures-developmental-resident-native-population-v6";
+const GOAL_ATTAINMENT_RMS: f32 = 0.35;
+const SEQUENCE_CONSOLIDATION_BUDGET: usize = 4;
 const CANDIDATES: usize = 4;
+const FORECAST_HORIZON: usize = 4;
 const TILT: f64 = 0.5;
 
 #[derive(Clone)]
@@ -134,9 +138,20 @@ pub(crate) struct DevelopmentalResidentCohort {
     personal_updates: Vec<u64>,
     forecast_progress: Vec<f32>,
     forecast_disagreement: Vec<f32>,
-    forecast_clipped: Vec<bool>,
+    forecast_invalid: Vec<bool>,
     forecast_tilt: Vec<f32>,
     predictor: PredictiveSensoryEnsemble,
+    predictor_context: Vec<f32>,
+    predictor_actions: Vec<f32>,
+    predictor_member_delta: Vec<f32>,
+    predictor_mean_delta: Vec<f32>,
+    predictor_disagreement: Vec<f32>,
+    predictor_absolute_code: Vec<f32>,
+    predictor_absolute_physiology: Vec<f32>,
+    predictor_valid: Vec<bool>,
+    predictor_goal_windows: Vec<f32>,
+    predictor_goal_hidden: Vec<f32>,
+    predictor_goal_keys: Vec<f32>,
     forecast_goal_rms: f32,
     personal_goals: PersonalGoalAssociations,
     goal_credit_pending: Vec<bool>,
@@ -149,6 +164,22 @@ pub(crate) struct DevelopmentalResidentCohort {
     last_goal_learned: Vec<bool>,
     contextual: ContextualEpisodicLearner,
     contextual_bias: Vec<f32>,
+    sequence: GoalSequenceMemory,
+    goal_measurement_valid: Vec<bool>,
+    goal_measurement_slot: Vec<i32>,
+    goal_measurement_recorded_tick: Vec<u64>,
+    goal_measurement_generation: Vec<u64>,
+    goal_measurement_start_rms: Vec<f32>,
+    goal_measurement_min_rms: Vec<f32>,
+    goal_measurement_latest_rms: Vec<f32>,
+    goal_measurement_samples: Vec<u16>,
+    goal_measurement_last_observed_tick: Vec<u64>,
+    goal_measurement_context: Vec<f64>,
+    last_goal_attained: Vec<bool>,
+    last_goal_normalized_progress: Vec<f32>,
+    sequence_selected_bias: Vec<f32>,
+    sequence_experienced_path_depth: Vec<u8>,
+    sequence_selected_confidence: Vec<f32>,
     candidate_sha256: Vec<String>,
     loci_sha256: Vec<String>,
     recurrent_gain: Vec<f32>,
@@ -277,6 +308,9 @@ impl DevelopmentalResidentCohort {
         self.contextual
             .grow(new_batch)
             .map_err(PyValueError::new_err)?;
+        self.sequence
+            .grow(new_batch)
+            .map_err(PyValueError::new_err)?;
         if let Some(history) = &mut self.population_history {
             history.grow(new_batch).map_err(PyValueError::new_err)?;
         }
@@ -327,7 +361,7 @@ impl DevelopmentalResidentCohort {
         self.personal_updates.resize(new_batch, 0);
         resize_f32!(forecast_progress, CANDIDATES);
         resize_f32!(forecast_disagreement, CANDIDATES);
-        self.forecast_clipped.resize(new_batch * CANDIDATES, false);
+        self.forecast_invalid.resize(new_batch * CANDIDATES, false);
         resize_f32!(forecast_tilt, CANDIDATES);
         self.goal_credit_pending.resize(new_batch, false);
         resize_f32!(selected_goal_bias, 1);
@@ -338,6 +372,23 @@ impl DevelopmentalResidentCohort {
         self.last_goal_attributed.resize(new_batch, false);
         self.last_goal_learned.resize(new_batch, false);
         resize_f32!(contextual_bias, 1);
+        self.goal_measurement_valid.resize(new_batch, false);
+        self.goal_measurement_slot.resize(new_batch, -1);
+        self.goal_measurement_recorded_tick.resize(new_batch, 0);
+        self.goal_measurement_generation.resize(new_batch, 0);
+        resize_f32!(goal_measurement_start_rms, 1);
+        resize_f32!(goal_measurement_min_rms, 1);
+        resize_f32!(goal_measurement_latest_rms, 1);
+        self.goal_measurement_samples.resize(new_batch, 0);
+        self.goal_measurement_last_observed_tick
+            .resize(new_batch, 0);
+        self.goal_measurement_context
+            .resize(new_batch * CONTEXT, 0.0);
+        self.last_goal_attained.resize(new_batch, false);
+        resize_f32!(last_goal_normalized_progress, 1);
+        resize_f32!(sequence_selected_bias, 1);
+        self.sequence_experienced_path_depth.resize(new_batch, 0);
+        resize_f32!(sequence_selected_confidence, 1);
         self.candidate_sha256.resize(new_batch, String::new());
         self.loci_sha256.resize(new_batch, String::new());
         resize_f32!(recurrent_gain, 1);
@@ -426,6 +477,9 @@ impl DevelopmentalResidentCohort {
             self.contextual
                 .clear_resident(row)
                 .map_err(PyValueError::new_err)?;
+            self.sequence
+                .clear_resident(row)
+                .map_err(PyValueError::new_err)?;
 
             self.state[row * HIDDEN..(row + 1) * HIDDEN].fill(0.0);
             self.previous_action[row * ACTIONS..(row + 1) * ACTIONS].fill(0.0);
@@ -445,11 +499,17 @@ impl DevelopmentalResidentCohort {
             self.last_goal_attributed[row] = false;
             self.last_goal_learned[row] = false;
             self.contextual_bias[row] = 0.0;
+            self.clear_goal_measurement(row);
+            self.last_goal_attained[row] = false;
+            self.last_goal_normalized_progress[row] = 0.0;
+            self.sequence_selected_bias[row] = 0.0;
+            self.sequence_experienced_path_depth[row] = 0;
+            self.sequence_selected_confidence[row] = 0.0;
             self.candidate_scores[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0.0);
             self.candidate_ood[row * CANDIDATES..(row + 1) * CANDIDATES].fill(false);
             self.forecast_progress[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0.0);
             self.forecast_disagreement[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0.0);
-            self.forecast_clipped[row * CANDIDATES..(row + 1) * CANDIDATES].fill(false);
+            self.forecast_invalid[row * CANDIDATES..(row + 1) * CANDIDATES].fill(false);
             self.forecast_tilt[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0.0);
             self.selected_candidate[row] = -1;
             self.selected_correction[row * 3..(row + 1) * 3].fill(0.0);
@@ -767,6 +827,71 @@ impl DevelopmentalResidentCohort {
         std::mem::swap(&mut self.state, &mut self.next_state);
     }
 
+    fn clear_goal_measurement(&mut self, row: usize) {
+        self.goal_measurement_valid[row] = false;
+        self.goal_measurement_slot[row] = -1;
+        self.goal_measurement_recorded_tick[row] = 0;
+        self.goal_measurement_generation[row] = 0;
+        self.goal_measurement_start_rms[row] = 0.0;
+        self.goal_measurement_min_rms[row] = 0.0;
+        self.goal_measurement_latest_rms[row] = 0.0;
+        self.goal_measurement_samples[row] = 0;
+        self.goal_measurement_last_observed_tick[row] = 0;
+        self.goal_measurement_context[row * CONTEXT..(row + 1) * CONTEXT].fill(0.0);
+    }
+
+    fn goal_rms(current: &[f32], target: &[f32]) -> f32 {
+        (current
+            .iter()
+            .zip(target)
+            .map(|(a, b)| (*a - *b) * (*a - *b))
+            .sum::<f32>()
+            / GOAL as f32)
+            .sqrt()
+    }
+
+    fn sample_goal_codes(
+        &mut self,
+        selection: &SelectionArrays,
+        keys: &[f32],
+        physiology: &[f32],
+        ticks: &[u64],
+    ) {
+        for row in 0..self.batch {
+            if !selection.valid[row] {
+                continue;
+            }
+            let same = self.goal_measurement_valid[row]
+                && self.goal_measurement_slot[row] == selection.slot[row]
+                && self.goal_measurement_recorded_tick[row] == selection.recorded_tick[row]
+                && self.goal_measurement_generation[row] == selection.generation[row];
+            if !same {
+                self.clear_goal_measurement(row);
+                self.goal_measurement_valid[row] = true;
+                self.goal_measurement_slot[row] = selection.slot[row];
+                self.goal_measurement_recorded_tick[row] = selection.recorded_tick[row];
+                self.goal_measurement_generation[row] = selection.generation[row];
+            }
+            let rms = Self::goal_rms(
+                &keys[row * GOAL..(row + 1) * GOAL],
+                &selection.key[row * GOAL..(row + 1) * GOAL],
+            );
+            if self.goal_measurement_samples[row] == 0 {
+                self.goal_measurement_start_rms[row] = rms;
+                self.goal_measurement_min_rms[row] = rms;
+            } else {
+                self.goal_measurement_min_rms[row] = self.goal_measurement_min_rms[row].min(rms);
+            }
+            self.goal_measurement_latest_rms[row] = rms;
+            self.goal_measurement_samples[row] =
+                self.goal_measurement_samples[row].saturating_add(1);
+            self.goal_measurement_last_observed_tick[row] = ticks[row];
+            let context = self.episodic_context(row, physiology);
+            self.goal_measurement_context[row * CONTEXT..(row + 1) * CONTEXT]
+                .copy_from_slice(&context);
+        }
+    }
+
     fn manager_selection(
         &mut self,
         neural: &[f32],
@@ -806,6 +931,7 @@ impl DevelopmentalResidentCohort {
         let (recorded_ticks, generations) = self.memory.slot_identities();
         let recorded_ticks = recorded_ticks.to_vec();
         let generations = generations.to_vec();
+        let mut sequence_plans = Vec::with_capacity(self.batch);
         for row in 0..self.batch {
             for slot in 0..counts[row] as usize {
                 let mut dot = 0.0f32;
@@ -835,14 +961,37 @@ impl DevelopmentalResidentCohort {
                     &self.episodic_context(row, physiology),
                 )
                 .map_err(PyValueError::new_err)?;
+            let sequence = self
+                .sequence
+                .selection_biases(
+                    row,
+                    &recorded_ticks[row * RESERVOIR..(row + 1) * RESERVOIR],
+                    &generations[row * RESERVOIR..(row + 1) * RESERVOIR],
+                    &self.episodic_context(row, physiology),
+                )
+                .map_err(PyValueError::new_err)?;
             for slot in 0..counts[row] as usize {
-                self.logits[row * RESERVOIR + slot] += (biases[slot] + episodic[slot]) as f32;
+                self.logits[row * RESERVOIR + slot] +=
+                    (biases[slot] + episodic[slot] + sequence.biases[slot]) as f32;
             }
+            sequence_plans.push(sequence);
         }
         let selection = self.memory.choose_inner(&self.logits, 1.0, ticks)?;
         let mut starts = Vec::new();
         let mut start_rows = Vec::new();
         for row in 0..self.batch {
+            if selection.valid[row] {
+                let slot = selection.slot[row] as usize;
+                self.sequence_selected_bias[row] = sequence_plans[row].biases[slot] as f32;
+                self.sequence_experienced_path_depth[row] =
+                    sequence_plans[row].experienced_path_depth[slot];
+                self.sequence_selected_confidence[row] =
+                    sequence_plans[row].confidence[slot] as f32;
+            } else {
+                self.sequence_selected_bias[row] = 0.0;
+                self.sequence_experienced_path_depth[row] = 0;
+                self.sequence_selected_confidence[row] = 0.0;
+            }
             if selection.changed[row] && selection.valid[row] {
                 starts.push(GoalStart {
                     resident: row,
@@ -1074,71 +1223,83 @@ impl DevelopmentalResidentCohort {
     ) -> PyResult<Vec<f32>> {
         let mut actions = vec![0.0; self.batch * ACTIONS];
         let rows = self.batch * CANDIDATES;
-        let mut predictor_input = vec![0.0; rows * PREDICTOR_INPUT];
+        self.predictor_context
+            .resize(self.batch * PREDICTOR_CONTEXT, 0.0);
+        self.predictor_actions
+            .resize(rows * FORECAST_HORIZON * ACTIONS, 0.0);
         for row in 0..self.batch {
+            let dst = row * PREDICTOR_CONTEXT;
+            for frame in 0..WINDOW {
+                let slot = (self.recent_code_cursor[row] + frame) % WINDOW;
+                let src = (row * WINDOW + slot) * 256;
+                self.predictor_context[dst + frame * 256..dst + (frame + 1) * 256]
+                    .copy_from_slice(&self.recent_codes[src..src + 256]);
+            }
+            for channel in 0..HIDDEN {
+                self.predictor_context[dst + 1024 + channel] = self.state[row * HIDDEN + channel]
+                    + self.recurrent_adapter[row * HIDDEN + channel];
+            }
+            self.predictor_context[dst + 1152..dst + 1536]
+                .copy_from_slice(&neural[row * NEURAL..(row + 1) * NEURAL]);
+            self.predictor_context[dst + 1536..dst + 1548]
+                .copy_from_slice(&physiology[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY]);
+            self.predictor_context[dst + 1548..dst + 1560]
+                .copy_from_slice(&previous[row * PREVIOUS..(row + 1) * PREVIOUS]);
             for k in 0..CANDIDATES {
-                let dst = (row * CANDIDATES + k) * PREDICTOR_INPUT;
-                for frame in 0..WINDOW {
-                    let slot = (self.recent_code_cursor[row] + frame) % WINDOW;
-                    let src = (row * WINDOW + slot) * 256;
-                    predictor_input[dst + frame * 256..dst + (frame + 1) * 256]
-                        .copy_from_slice(&self.recent_codes[src..src + 256]);
+                for h in 0..FORECAST_HORIZON {
+                    let dst = ((row * CANDIDATES + k) * FORECAST_HORIZON + h) * ACTIONS;
+                    self.predictor_actions[dst..dst + ACTIONS].copy_from_slice(
+                        &candidates[(row * CANDIDATES + k) * ACTIONS
+                            ..(row * CANDIDATES + k + 1) * ACTIONS],
+                    );
                 }
-                predictor_input[dst + 1024..dst + 1408]
-                    .copy_from_slice(&neural[row * NEURAL..(row + 1) * NEURAL]);
-                const H1_ACTION_MAP: [usize; 9] = [0, 1, 2, 4, 5, 6, 7, 3, 8];
-                for (old, current) in H1_ACTION_MAP.iter().enumerate() {
-                    predictor_input[dst + 1408 + old] = previous[row * PREVIOUS + current];
-                }
-                for (old, current) in H1_ACTION_MAP[..8].iter().enumerate() {
-                    predictor_input[dst + 1417 + old] =
-                        candidates[(row * CANDIDATES + k) * ACTIONS + current];
-                }
-                predictor_input[dst + 1425] = candidates[(row * CANDIDATES + k) * ACTIONS + 8];
             }
         }
-        let (member_delta, _, _, forecast_clipped) =
-            self.predictor.forecast_into(&predictor_input, rows);
+        // Counterfactual hold, not a commitment: only the first action is
+        // delivered, and the next physical observation triggers a new decision.
+        self.predictor.forecast_sequences_into(
+            &self.predictor_context,
+            &self.predictor_actions,
+            physiology,
+            self.batch,
+            CANDIDATES,
+            FORECAST_HORIZON,
+            &mut self.predictor_member_delta,
+            &mut self.predictor_mean_delta,
+            &mut self.predictor_disagreement,
+            &mut self.predictor_absolute_code,
+            &mut self.predictor_absolute_physiology,
+            &mut self.predictor_valid,
+        )?;
         let forecast_rows = rows * PREDICTOR_MEMBERS;
-        let mut forecast_windows = vec![0.0; forecast_rows * 1024];
-        for row in 0..self.batch {
-            for k in 0..CANDIDATES {
-                for m in 0..PREDICTOR_MEMBERS {
-                    let outrow = (row * CANDIDATES + k) * PREDICTOR_MEMBERS + m;
-                    for frame in 0..3 {
-                        let slot = (self.recent_code_cursor[row] + frame + 1) % WINDOW;
-                        let src = (row * WINDOW + slot) * 256;
-                        forecast_windows
-                            [outrow * 1024 + frame * 256..outrow * 1024 + (frame + 1) * 256]
-                            .copy_from_slice(&self.recent_codes[src..src + 256]);
-                    }
-                    let current =
-                        (row * WINDOW + (self.recent_code_cursor[row] + WINDOW - 1) % WINDOW) * 256;
-                    let delta = ((row * CANDIDATES + k) * PREDICTOR_MEMBERS + m) * 262;
-                    for j in 0..256 {
-                        forecast_windows[outrow * 1024 + 768 + j] =
-                            self.recent_codes[current + j] + member_delta[delta + j];
-                    }
-                }
+        self.predictor_goal_windows
+            .resize(forecast_rows * 1024, 0.0);
+        for outrow in 0..forecast_rows {
+            // H4's goal window consists of four successively predicted frame
+            // codes, each cumulatively anchored to the actual current code.
+            for frame in 0..WINDOW {
+                let src = (outrow * FORECAST_HORIZON + frame) * 256;
+                let dst = outrow * 1024 + frame * 256;
+                self.predictor_goal_windows[dst..dst + 256]
+                    .copy_from_slice(&self.predictor_absolute_code[src..src + 256]);
             }
         }
-        let mut fm = Vec::new();
         gemm_into(
-            &forecast_windows,
+            &self.predictor_goal_windows,
             forecast_rows,
             1024,
             &self.core.goal0,
-            &mut fm,
+            &mut self.predictor_goal_hidden,
         );
-        tanh_all(&mut fm);
-        let mut forecast_keys = Vec::new();
+        tanh_all(&mut self.predictor_goal_hidden);
         gemm_into(
-            &fm,
+            &self.predictor_goal_hidden,
             forecast_rows,
             256,
             &self.core.goal2,
-            &mut forecast_keys,
+            &mut self.predictor_goal_keys,
         );
+        let forecast_keys = &self.predictor_goal_keys;
         for row in 0..self.batch {
             if reset[row] {
                 self.consequences
@@ -1284,7 +1445,9 @@ impl DevelopmentalResidentCohort {
                 self.candidate_scores[row * CANDIDATES + k] += population_tilts[k];
                 if selection.valid[row]
                     && self.recent_code_count[row] == WINDOW
-                    && !forecast_clipped[row * CANDIDATES + k]
+                    && selection.remaining[row] >= FORECAST_HORIZON as u64
+                    && self.predictor_valid
+                        [(row * CANDIDATES + k) * FORECAST_HORIZON + FORECAST_HORIZON - 1]
                 {
                     let target = &selection.key[row * 64..(row + 1) * 64];
                     let current = (current_key[row * 64..(row + 1) * 64]
@@ -1357,8 +1520,8 @@ impl DevelopmentalResidentCohort {
             for k in 0..CANDIDATES {
                 self.forecast_progress[row * CANDIDATES + k] = forecast_progress[k];
                 self.forecast_disagreement[row * CANDIDATES + k] = forecast_disagreement[k];
-                self.forecast_clipped[row * CANDIDATES + k] =
-                    forecast_clipped[row * CANDIDATES + k];
+                self.forecast_invalid[row * CANDIDATES + k] = !self.predictor_valid
+                    [(row * CANDIDATES + k) * FORECAST_HORIZON + FORECAST_HORIZON - 1];
                 if !forecast_valid[k] {
                     self.forecast_tilt[row * CANDIDATES + k] = 0.0;
                 }
@@ -1748,9 +1911,20 @@ impl DevelopmentalResidentCohort {
             personal_updates: vec![0; batch],
             forecast_progress: vec![0.0; batch * CANDIDATES],
             forecast_disagreement: vec![0.0; batch * CANDIDATES],
-            forecast_clipped: vec![false; batch * CANDIDATES],
+            forecast_invalid: vec![false; batch * CANDIDATES],
             forecast_tilt: vec![0.0; batch * CANDIDATES],
             predictor,
+            predictor_context: Vec::new(),
+            predictor_actions: Vec::new(),
+            predictor_member_delta: Vec::new(),
+            predictor_mean_delta: Vec::new(),
+            predictor_disagreement: Vec::new(),
+            predictor_absolute_code: Vec::new(),
+            predictor_absolute_physiology: Vec::new(),
+            predictor_valid: Vec::new(),
+            predictor_goal_windows: Vec::new(),
+            predictor_goal_hidden: Vec::new(),
+            predictor_goal_keys: Vec::new(),
             forecast_goal_rms,
             personal_goals: PersonalGoalAssociations::new(batch, PersonalGoalConfig::current(true))
                 .map_err(PyValueError::new_err)?,
@@ -1765,6 +1939,22 @@ impl DevelopmentalResidentCohort {
             contextual: ContextualEpisodicLearner::new(batch, RESERVOIR)
                 .map_err(PyValueError::new_err)?,
             contextual_bias: vec![0.0; batch],
+            sequence: GoalSequenceMemory::new(batch, RESERVOIR).map_err(PyValueError::new_err)?,
+            goal_measurement_valid: vec![false; batch],
+            goal_measurement_slot: vec![-1; batch],
+            goal_measurement_recorded_tick: vec![0; batch],
+            goal_measurement_generation: vec![0; batch],
+            goal_measurement_start_rms: vec![0.0; batch],
+            goal_measurement_min_rms: vec![0.0; batch],
+            goal_measurement_latest_rms: vec![0.0; batch],
+            goal_measurement_samples: vec![0; batch],
+            goal_measurement_last_observed_tick: vec![0; batch],
+            goal_measurement_context: vec![0.0; batch * CONTEXT],
+            last_goal_attained: vec![false; batch],
+            last_goal_normalized_progress: vec![0.0; batch],
+            sequence_selected_bias: vec![0.0; batch],
+            sequence_experienced_path_depth: vec![0; batch],
+            sequence_selected_confidence: vec![0.0; batch],
             candidate_sha256,
             loci_sha256,
             recurrent_gain,
@@ -1829,6 +2019,10 @@ impl DevelopmentalResidentCohort {
                         .cancel_pending(row)
                         .map_err(PyValueError::new_err)?;
                     self.contextual.cancel(row).map_err(PyValueError::new_err)?;
+                    self.sequence
+                        .cancel_chain(row)
+                        .map_err(PyValueError::new_err)?;
+                    self.clear_goal_measurement(row);
                     self.goal_credit_pending[row] = false;
                     self.selected_goal_bias[row] = 0.0;
                     self.selected_goal_prediction[row] = 0.0;
@@ -1870,6 +2064,9 @@ impl DevelopmentalResidentCohort {
             self.personal_goals
                 .replace_slots(&replacements)
                 .map_err(PyValueError::new_err)?;
+            self.sequence
+                .replace_slots(&replacements)
+                .map_err(PyValueError::new_err)?;
             for replacement in &replacements {
                 self.contextual
                     .replace(
@@ -1881,6 +2078,7 @@ impl DevelopmentalResidentCohort {
                     .map_err(PyValueError::new_err)?;
             }
             let selection = self.manager_selection(n, p, t)?;
+            self.sample_goal_codes(&selection, &keys, p, t);
             let candidates = self.policy_actions(&selection.key, &selection.remaining);
             let actions =
                 self.refine_candidates(&candidates, &selection, p, n, a, &keys, t, rst)?;
@@ -1892,6 +2090,19 @@ impl DevelopmentalResidentCohort {
             Array2::from_shape_vec((self.batch, ACTIONS), actions)
                 .unwrap()
                 .into_pyarray(py),
+        )?;
+        out.set_item(
+            "worker_recurrent_context",
+            Array2::from_shape_vec(
+                (self.batch, HIDDEN),
+                self.state
+                    .iter()
+                    .zip(&self.recurrent_adapter)
+                    .map(|(state, adapter)| state + adapter)
+                    .collect(),
+            )
+            .unwrap()
+            .into_pyarray(py),
         )?;
         out.set_item(
             "candidate_scores",
@@ -1932,8 +2143,8 @@ impl DevelopmentalResidentCohort {
                 .into_pyarray(py),
         )?;
         out.set_item(
-            "forecast_input_clipped",
-            Array2::from_shape_vec((self.batch, CANDIDATES), self.forecast_clipped.clone())
+            "forecast_invalid",
+            Array2::from_shape_vec((self.batch, CANDIDATES), self.forecast_invalid.clone())
                 .unwrap()
                 .into_pyarray(py),
         )?;
@@ -1944,6 +2155,26 @@ impl DevelopmentalResidentCohort {
                 .into_pyarray(py),
         )?;
         out.set_item("forecast_goal_rms", self.forecast_goal_rms)?;
+        out.set_item("forecast_horizon_ticks", FORECAST_HORIZON)?;
+        let mut predicted_body = vec![0.0f32; self.batch * CANDIDATES * PHYSIOLOGY];
+        for row in 0..self.batch * CANDIDATES {
+            for member in 0..PREDICTOR_MEMBERS {
+                let src =
+                    ((row * PREDICTOR_MEMBERS + member) * FORECAST_HORIZON + FORECAST_HORIZON - 1)
+                        * PHYSIOLOGY;
+                for channel in 0..PHYSIOLOGY {
+                    predicted_body[row * PHYSIOLOGY + channel] += self
+                        .predictor_absolute_physiology[src + channel]
+                        / PREDICTOR_MEMBERS as f32;
+                }
+            }
+        }
+        out.set_item(
+            "forecast_physiology",
+            Array3::from_shape_vec((self.batch, CANDIDATES, PHYSIOLOGY), predicted_body)
+                .unwrap()
+                .into_pyarray(py),
+        )?;
         out.set_item(
             "actual_previous_action",
             Array2::from_shape_vec((self.batch, ACTIONS), self.previous_action.clone())
@@ -2084,13 +2315,44 @@ impl DevelopmentalResidentCohort {
             "contextual_episodic_updates",
             Array1::from_vec(self.contextual.updates().to_vec()).into_pyarray(py),
         )?;
+        out.set_item("goal_attainment_rms_threshold", GOAL_ATTAINMENT_RMS)?;
+        out.set_item(
+            "goal_sequence_selected_bias",
+            Array1::from_vec(self.sequence_selected_bias.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "goal_sequence_experienced_path_depth",
+            Array1::from_vec(self.sequence_experienced_path_depth.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "goal_sequence_selected_confidence",
+            Array1::from_vec(self.sequence_selected_confidence.clone()).into_pyarray(py),
+        )?;
+        let sequence_stats: Vec<_> = (0..self.batch)
+            .map(|row| self.sequence.stats(row))
+            .collect::<Result<_, _>>()
+            .map_err(PyValueError::new_err)?;
+        out.set_item(
+            "goal_sequence_learned_transitions_total",
+            sequence_stats
+                .iter()
+                .map(|value| value.learned_transitions)
+                .collect::<Vec<_>>(),
+        )?;
+        out.set_item(
+            "goal_sequence_failed_attempts_total",
+            sequence_stats
+                .iter()
+                .map(|value| value.failed_attempts)
+                .collect::<Vec<_>>(),
+        )?;
         Ok(out)
     }
 
     fn snapshot<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let out = PyDict::new(py);
         out.set_item("format", FORMAT)?;
-        out.set_item("version", 5)?;
+        out.set_item("version", 6)?;
         out.set_item("batch", self.batch)?;
         out.set_item("conditioned", self.conditioned)?;
         out.set_item("sample", self.sample)?;
@@ -2202,6 +2464,58 @@ impl DevelopmentalResidentCohort {
             Array1::from_vec(self.contextual_bias.clone()).into_pyarray(py),
         )?;
         out.set_item(
+            "goal_sequence",
+            self.sequence.snapshot().map_err(PyValueError::new_err)?,
+        )?;
+        out.set_item(
+            "goal_measurement_valid",
+            self.goal_measurement_valid.clone(),
+        )?;
+        out.set_item("goal_measurement_slot", self.goal_measurement_slot.clone())?;
+        out.set_item(
+            "goal_measurement_recorded_tick",
+            self.goal_measurement_recorded_tick.clone(),
+        )?;
+        out.set_item(
+            "goal_measurement_generation",
+            self.goal_measurement_generation.clone(),
+        )?;
+        goal_f32!(
+            "goal_measurement_start_rms",
+            self.goal_measurement_start_rms
+        );
+        goal_f32!("goal_measurement_min_rms", self.goal_measurement_min_rms);
+        goal_f32!(
+            "goal_measurement_latest_rms",
+            self.goal_measurement_latest_rms
+        );
+        out.set_item(
+            "goal_measurement_samples",
+            self.goal_measurement_samples.clone(),
+        )?;
+        out.set_item(
+            "goal_measurement_last_observed_tick",
+            self.goal_measurement_last_observed_tick.clone(),
+        )?;
+        out.set_item(
+            "goal_measurement_context",
+            self.goal_measurement_context.clone(),
+        )?;
+        out.set_item("last_goal_attained", self.last_goal_attained.clone())?;
+        goal_f32!(
+            "last_goal_normalized_progress",
+            self.last_goal_normalized_progress
+        );
+        goal_f32!("sequence_selected_bias", self.sequence_selected_bias);
+        out.set_item(
+            "sequence_experienced_path_depth",
+            self.sequence_experienced_path_depth.clone(),
+        )?;
+        goal_f32!(
+            "sequence_selected_confidence",
+            self.sequence_selected_confidence
+        );
+        out.set_item(
             "population_response_identity",
             self.population_response
                 .as_ref()
@@ -2257,11 +2571,15 @@ impl DevelopmentalResidentCohort {
         if b.iter().chain(a).chain(x).chain(e).any(|v| !v.is_finite()) {
             return Err(PyValueError::new_err("consequence receipt must be finite"));
         }
+        let action_discontinuity: Vec<bool> = (0..self.batch)
+            .map(|row| {
+                self.pending_action[row * PREVIOUS..(row + 1) * PREVIOUS]
+                    != x[row * PREVIOUS..(row + 1) * PREVIOUS]
+            })
+            .collect();
         let mut targets = Vec::with_capacity(self.batch);
         for row in 0..self.batch {
             if self.pending_tick[row] != Some(t[row])
-                || self.pending_action[row * PREVIOUS..(row + 1) * PREVIOUS]
-                    != x[row * PREVIOUS..(row + 1) * PREVIOUS]
                 || self.pending_physiology[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY]
                     != b[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY]
             {
@@ -2280,6 +2598,19 @@ impl DevelopmentalResidentCohort {
                 return Err(PyValueError::new_err("consequence target is nonfinite"));
             }
             targets.push(target);
+        }
+        for row in 0..self.batch {
+            if action_discontinuity[row] {
+                self.personal_goals
+                    .cancel_pending(row)
+                    .map_err(PyValueError::new_err)?;
+                self.contextual.cancel(row).map_err(PyValueError::new_err)?;
+                self.sequence
+                    .cancel_chain(row)
+                    .map_err(PyValueError::new_err)?;
+                self.goal_credit_pending[row] = false;
+                self.clear_goal_measurement(row);
+            }
         }
         let goal_transitions: Vec<_> = (0..self.batch)
             .filter(|row| self.goal_credit_pending[*row])
@@ -2307,6 +2638,8 @@ impl DevelopmentalResidentCohort {
         self.last_goal_completed.fill(false);
         self.last_goal_attributed.fill(false);
         self.last_goal_learned.fill(false);
+        self.last_goal_attained.fill(false);
+        self.last_goal_normalized_progress.fill(0.0);
         for (transition, outcome) in goal_transitions.iter().zip(goal_outcomes) {
             let row = transition.resident;
             self.last_goal_reward[row] = outcome.reward;
@@ -2324,6 +2657,54 @@ impl DevelopmentalResidentCohort {
                 self.last_goal_completed[row] = true;
                 self.last_goal_attributed[row] = receipt.attributed;
                 self.last_goal_learned[row] = receipt.learned;
+                let measurement_matches = self.goal_measurement_valid[row]
+                    && self.goal_measurement_slot[row] == receipt.slot as i32
+                    && self.goal_measurement_recorded_tick[row] == receipt.identity.recorded_tick
+                    && self.goal_measurement_generation[row] == receipt.identity.generation
+                    && self.goal_measurement_samples[row] > 0;
+                let attained = measurement_matches
+                    && self.goal_measurement_min_rms[row] <= GOAL_ATTAINMENT_RMS;
+                let normalized_progress = if measurement_matches {
+                    let denominator = self.goal_measurement_start_rms[row]
+                        .max(GOAL_ATTAINMENT_RMS)
+                        .max(f32::EPSILON);
+                    ((self.goal_measurement_start_rms[row] - self.goal_measurement_latest_rms[row])
+                        / denominator)
+                        .clamp(-1.0, 1.0)
+                } else {
+                    0.0
+                };
+                self.last_goal_attained[row] = attained;
+                self.last_goal_normalized_progress[row] = normalized_progress;
+                if measurement_matches && self.personal_goals.config().learning_enabled {
+                    let context: [f64; CONTEXT] = self.goal_measurement_context
+                        [row * CONTEXT..(row + 1) * CONTEXT]
+                        .try_into()
+                        .unwrap();
+                    self.sequence
+                        .observe_episode(SequenceEpisode {
+                            resident: row,
+                            node: SequenceNode {
+                                slot: receipt.slot,
+                                identity: receipt.identity,
+                            },
+                            completed_tick: receipt.completed_at_tick,
+                            context,
+                            normalized_return: receipt.normalized_target,
+                            normalized_progress: normalized_progress as f64,
+                            attained,
+                            attributed: receipt.attributed,
+                        })
+                        .map_err(PyValueError::new_err)?;
+                    self.sequence
+                        .consolidate(row, SEQUENCE_CONSOLIDATION_BUDGET)
+                        .map_err(PyValueError::new_err)?;
+                }
+                self.goal_measurement_valid[row] = false;
+                self.goal_measurement_slot[row] = -1;
+                self.goal_measurement_recorded_tick[row] = 0;
+                self.goal_measurement_generation[row] = 0;
+                self.goal_measurement_context[row * CONTEXT..(row + 1) * CONTEXT].fill(0.0);
             }
         }
         for row in 0..self.batch {
@@ -2401,6 +2782,31 @@ impl DevelopmentalResidentCohort {
             "learned",
             Array1::from_vec(self.last_goal_learned.clone()).into_pyarray(py),
         )?;
+        out.set_item(
+            "actual_attained",
+            Array1::from_vec(self.last_goal_attained.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "observed_normalized_progress",
+            Array1::from_vec(self.last_goal_normalized_progress.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "measurement_start_rms",
+            Array1::from_vec(self.goal_measurement_start_rms.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "measurement_min_rms",
+            Array1::from_vec(self.goal_measurement_min_rms.clone()).into_pyarray(py),
+        )?;
+        out.set_item(
+            "measurement_latest_rms",
+            Array1::from_vec(self.goal_measurement_latest_rms.clone()).into_pyarray(py),
+        )?;
+        out.set_item("measurement_samples", self.goal_measurement_samples.clone())?;
+        out.set_item(
+            "measurement_window_ending_last_observed_tick",
+            self.goal_measurement_last_observed_tick.clone(),
+        )?;
         let stats: Vec<_> = (0..self.batch)
             .map(|row| self.personal_goals.stats(row))
             .collect::<Result<_, _>>()
@@ -2440,6 +2846,11 @@ impl DevelopmentalResidentCohort {
 
     fn set_personal_goal_learning(&mut self, enabled: bool) {
         self.personal_goals.set_learning_enabled(enabled);
+        if !enabled {
+            for row in 0..self.batch {
+                let _ = self.sequence.cancel_chain(row);
+            }
+        }
     }
 
     fn restore(&mut self, value: &Bound<'_, PyDict>) -> PyResult<()> {
@@ -2449,7 +2860,7 @@ impl DevelopmentalResidentCohort {
             })
         };
         if get("format")?.extract::<String>()? != FORMAT
-            || get("version")?.extract::<u8>()? != 5
+            || get("version")?.extract::<u8>()? != 6
             || get("batch")?.extract::<usize>()? != self.batch
             || get("conditioned")?.extract::<bool>()? != self.conditioned
             || get("sample")?.extract::<bool>()? != self.sample
@@ -2664,6 +3075,65 @@ impl DevelopmentalResidentCohort {
         }
         self.contextual_bias
             .copy_from_slice(contextual_bias.as_slice()?);
+        self.sequence = GoalSequenceMemory::restore(
+            &get("goal_sequence")?.extract::<String>()?,
+            self.batch,
+            RESERVOIR,
+        )
+        .map_err(PyValueError::new_err)?;
+        self.goal_measurement_valid = get("goal_measurement_valid")?.extract()?;
+        self.goal_measurement_slot = get("goal_measurement_slot")?.extract()?;
+        self.goal_measurement_recorded_tick = get("goal_measurement_recorded_tick")?.extract()?;
+        self.goal_measurement_generation = get("goal_measurement_generation")?.extract()?;
+        restore_goal_f32!(
+            "goal_measurement_start_rms",
+            self.goal_measurement_start_rms
+        );
+        restore_goal_f32!("goal_measurement_min_rms", self.goal_measurement_min_rms);
+        restore_goal_f32!(
+            "goal_measurement_latest_rms",
+            self.goal_measurement_latest_rms
+        );
+        self.goal_measurement_samples = get("goal_measurement_samples")?.extract()?;
+        self.goal_measurement_last_observed_tick =
+            get("goal_measurement_last_observed_tick")?.extract()?;
+        self.goal_measurement_context = get("goal_measurement_context")?.extract()?;
+        self.last_goal_attained = get("last_goal_attained")?.extract()?;
+        restore_goal_f32!(
+            "last_goal_normalized_progress",
+            self.last_goal_normalized_progress
+        );
+        restore_goal_f32!("sequence_selected_bias", self.sequence_selected_bias);
+        self.sequence_experienced_path_depth = get("sequence_experienced_path_depth")?.extract()?;
+        restore_goal_f32!(
+            "sequence_selected_confidence",
+            self.sequence_selected_confidence
+        );
+        if self.goal_measurement_valid.len() != self.batch
+            || self.goal_measurement_slot.len() != self.batch
+            || self.goal_measurement_recorded_tick.len() != self.batch
+            || self.goal_measurement_generation.len() != self.batch
+            || self.goal_measurement_samples.len() != self.batch
+            || self.goal_measurement_last_observed_tick.len() != self.batch
+            || self.goal_measurement_context.len() != self.batch * CONTEXT
+            || self
+                .goal_measurement_context
+                .iter()
+                .any(|value| !value.is_finite())
+            || self.last_goal_attained.len() != self.batch
+            || self.sequence_experienced_path_depth.len() != self.batch
+            || (0..self.batch).any(|row| {
+                self.goal_measurement_valid[row]
+                    && (self.goal_measurement_slot[row] < 0
+                        || self.goal_measurement_slot[row] as usize >= RESERVOIR
+                        || self.goal_measurement_generation[row] == 0
+                        || self.goal_measurement_samples[row] == 0)
+            })
+        {
+            return Err(PyValueError::new_err(
+                "goal sequence snapshot dimensions differ",
+            ));
+        }
         self.state.copy_from_slice(h);
         self.previous_action.copy_from_slice(p);
         self.action_rng.copy_from_slice(r);

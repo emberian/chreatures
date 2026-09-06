@@ -9,14 +9,14 @@ traction is an explicitly supplied motor capability, isolated in
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
 import copy
 import hashlib
 import html
 import json
 import math
-from pathlib import Path
 import re
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any
 
 import mujoco
@@ -25,7 +25,6 @@ import numpy as np
 from .mechanics import assembly_view, equality_xml, normalize_assemblies
 from .native_world import NativeContactBatch
 from .organism_interface import ACTION_NAMES
-
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SPEC = ROOT / "data/habitats/hollow-garden.json"
@@ -497,7 +496,7 @@ class PhysicsWorld:
                     if not isinstance(reservoir_id, str) or not _ID.match(reservoir_id):
                         raise ValueError("reservoir id is invalid")
                     material = _number(component.get("material", 0.0), "reservoir material", 0.0, 1e6)
-                    material_capacity = _number(component.get("material_capacity", material), "reservoir material capacity", material, 1e6)
+                    _number(component.get("material_capacity", material), "reservoir material capacity", material, 1e6)
                     energy = _number(component.get("energy", 0.0), "reservoir energy", 0.0, 1e6)
                     _number(component.get("energy_capacity", energy), "reservoir energy capacity", energy, 1e6)
                     _number(component.get("uptake_rate", 0.0), "reservoir uptake rate", 0.0, 1e3)
@@ -1302,7 +1301,8 @@ class PhysicsWorld:
                         break
                     funded_strength = strength * self._active_effort_scale[body.id]
                     if funded_strength > 0.0:
-                        self._emit_signal(body.x, body.y, body.z + 0.08, tone, funded_strength)
+                        signal = self._emit_signal(body.x, body.y, body.z + 0.08, tone, funded_strength)
+                        outcomes[body.id].setdefault("emitted_signals", []).append(signal.to_dict())
                         emitted = True
                 if emitted:
                     self._signal_cooldown[body.id] = 0.5
@@ -1390,6 +1390,7 @@ class PhysicsWorld:
                 body.gut = float(np.clip(body.gut, 0.0, 1.0))
             body.age += step
             outcomes[body.id]["contact"] = float(max(self._touch[body.id]))
+            outcomes[body.id]["contacted_entities"] = sorted(contacted_entities[body.id])
             outcomes[body.id]["distance"] = float(np.linalg.norm(np.array([body.x, body.y, body.z]) - starts[body.id]))
             outcomes[body.id]["effort"] = effort
             if self._physiology is not None:

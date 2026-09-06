@@ -56,7 +56,8 @@ profile, immutable configuration identities, and coordinator progress.
 .venv/bin/python scripts/population_campaign.py plan \
   --output /tank/chreatures/runs/population/wave-001 \
   --worlds-per-batch 4 \
-  --candidate-waves 2
+  --candidate-waves 2 \
+  --selection evolve
 ```
 
 One candidate wave asks for exactly one resident population for every pinned
@@ -110,6 +111,26 @@ retained genomes that have not yet been evaluated in any registered environment
 are assigned once to every environment. Native mutation/recombination fills the
 remaining resident slots. This makes cross-environment direct evaluation precede
 any later fine-tuning eligibility without moving selection into Python.
+
+Current plans require an explicit selection mode. `--selection evolve` performs
+those unseen transfers before native mutation. Once complete physical histories
+populate the paired archive, `--selection challenge` invokes the native history
+scheduler and emits complete environment waves with a recorded transfer or
+repeat phase. It does not mutate selected candidates, and infrastructure failures
+never count as environment difficulty.
+
+`environment-frontier --output CAMPAIGN` reports authenticated environment
+ancestry with physical coverage and difficulty evidence. The optional
+`register-challenge-scores --scores ARTIFACT` command installs bounded analyst
+pair scores after authenticating every candidate/environment key. Such scores
+only order eligible challenges; physical metrics still determine archive quality
+and retention.
+
+An infrastructure-failed pair remains blocked from automatic transfer and
+challenge scheduling. After the underlying execution fault is diagnosed, the
+coordinator can explicitly clear that one pair with
+`authorize-infrastructure-retry --candidate SHA --environment SHA`; the retained
+failure record remains in its history.
 
 ## Separate Torch training lineage
 

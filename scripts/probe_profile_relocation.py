@@ -55,7 +55,7 @@ def arguments() -> argparse.Namespace:
     parser.add_argument(
         "--family-config",
         type=Path,
-        default=ROOT / "data/habitat-families/regional-v1.json",
+        default=ROOT / "data/habitat-families/regional-v2.json",
     )
     parser.add_argument(
         "--schedule",

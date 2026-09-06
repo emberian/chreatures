@@ -303,6 +303,11 @@ const POPULATION_TYPES: &[&str] = &[
     "transfer_trial",
     "population_snapshot",
     "gam_fit_attempt",
+    "embodied_recording",
+    "organism_transfer",
+    "development_event",
+    "environment_event",
+    "interaction_event",
 ];
 
 fn population_fields<'a>(
@@ -502,6 +507,36 @@ fn role_rule(
         ("gam_fit_attempt", "source_evaluation") => {
             Some((&["evaluation_completed", "evaluation_failed"], 1, None))
         }
+        ("embodied_recording", "campaign") => Some((&["population_run"], 1, Some(1))),
+        ("embodied_recording", "observed_environment") => {
+            Some((&["environment_candidate"], 1, Some(1)))
+        }
+        ("embodied_recording", "observed_life") => Some((
+            &["birth", "life_checkpoint", "evaluation_completed"],
+            1,
+            None,
+        )),
+        ("embodied_recording", "associated_law_fit") => Some((&["gam_fit_attempt"], 0, None)),
+        (
+            "organism_transfer" | "development_event" | "environment_event" | "interaction_event",
+            "recording",
+        ) => Some((&["embodied_recording"], 1, Some(1))),
+        (
+            "organism_transfer" | "development_event" | "environment_event" | "interaction_event",
+            "actor_life",
+        ) => Some((
+            &["birth", "life_checkpoint", "evaluation_completed"],
+            0,
+            None,
+        )),
+        (
+            "organism_transfer" | "development_event" | "environment_event" | "interaction_event",
+            "observed_environment",
+        ) => Some((&["environment_candidate"], 1, Some(1))),
+        (
+            "organism_transfer" | "development_event" | "environment_event" | "interaction_event",
+            "associated_law_fit",
+        ) => Some((&["gam_fit_attempt"], 0, None)),
         _ => None,
     }
 }
@@ -532,6 +567,7 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
     let mut descriptor_epoch_ids = HashSet::new();
     let mut probe_panel_ids = HashSet::new();
     let mut epoch_indices: HashMap<u64, &ImportedEvidence> = HashMap::new();
+    let mut embodied_event_counts: HashMap<String, u64> = HashMap::new();
 
     for record in records {
         if !POPULATION_TYPES.contains(&record.record_type.as_str()) {
@@ -606,6 +642,11 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
             "target_evaluation",
             "target_environment",
             "archive_decision",
+            "observed_environment",
+            "observed_life",
+            "associated_law_fit",
+            "recording",
+            "actor_life",
         ];
         for role in possible_roles {
             if let Some((_, minimum, maximum)) = role_rule(&record.record_type, role) {
@@ -883,19 +924,20 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                         format!("evaluation {} provenance differs from edges", record.id).into(),
                     );
                 }
-                let expected = if record.record_type == "evaluation_completed" {
-                    "completed"
+                let status = required_string(record, "status")?;
+                let status_matches = if record.record_type == "evaluation_completed" {
+                    ["completed", "organism-terminal"].contains(&status)
                 } else {
-                    "failed"
+                    status == "infrastructure-failure"
                 };
-                if required_string(record, "status")? != expected {
+                if !status_matches {
                     return Err(format!(
                         "evaluation {} status differs from record type",
                         record.id
                     )
                     .into());
                 }
-                if expected == "failed" {
+                if status == "infrastructure-failure" {
                     required_string(record, "failure")?;
                     let valid_allocation = (allocation_status == "allocated"
                         && continuation_count == 1
@@ -1023,11 +1065,107 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
             "population_snapshot" => {
                 require_blob_role(record, "population_search_state")?;
             }
+            "embodied_recording" => {
+                let recording = required_sha256(record, "recording_sha256")?;
+                let content = required_sha256(record, "recording_content_sha256")?;
+                if record.id != format!("embodied-recording:{content}") {
+                    return Err(format!("recording {} is not keyed by content", record.id).into());
+                }
+                require_blob_role(record, "public_recording")?;
+                let blob = record
+                    .blob_refs
+                    .iter()
+                    .find(|blob| blob.role == "public_recording")
+                    .expect("required recording blob exists");
+                if blob.sha256 != recording {
+                    return Err(format!("recording {} blob identity differs", record.id).into());
+                }
+                if required_string(record, "recording_format")?
+                    != "chreatures-living-reef-public-recording-v2"
+                    || required_u64(record, "frame_count")? == 0
+                    || required_u64(record, "resident_count")? == 0
+                {
+                    return Err(format!("recording {} has invalid extent", record.id).into());
+                }
+                let laws = population_parents_for_role(record, "associated_law_fit")?;
+                for law in laws {
+                    if required_string(by_id[law.as_str()], "status")? != "completed" {
+                        return Err(
+                            format!("recording {} cites a failed law fit", record.id).into()
+                        );
+                    }
+                }
+                if required_string(record, "law_relationship")? != "descriptive_association_only" {
+                    return Err(format!("recording {} overstates fitted laws", record.id).into());
+                }
+            }
+            "organism_transfer" | "development_event" | "environment_event"
+            | "interaction_event" => {
+                let public = required_sha256(record, "public_event_sha256")?;
+                required_sha256(record, "source_event_sha256")?;
+                required_sha256(record, "recording_content_sha256")?;
+                if record.id != format!("embodied-event:{public}") {
+                    return Err(
+                        format!("event {} is not keyed by public receipt", record.id).into(),
+                    );
+                }
+                required_string(record, "public_event_id")?;
+                let kind = required_string(record, "kind")?;
+                let expected = match kind {
+                    "root-material-acquisition"
+                    | "mobile-material-release"
+                    | "colony-material-emission" => "organism_transfer",
+                    "hatching" | "goal_episode_completed" => "development_event",
+                    "developmental-growth-committed"
+                    | "developmental-attachment-invalidated"
+                    | "developmental-parts-removed"
+                    | "visitor_material" => "environment_event",
+                    "signal_emission" | "contact_begin" | "contact_end" | "visitor_stimulus" => {
+                        "interaction_event"
+                    }
+                    _ => return Err(format!("event {} has unsupported kind", record.id).into()),
+                };
+                if record.record_type != expected {
+                    return Err(format!("event {} kind differs from type", record.id).into());
+                }
+                required_u64(record, "sequence")?;
+                required_u64(record, "tick")?;
+                let recording_id = population_parent_for_role(record, "recording")?;
+                if required_sha256(record, "recording_content_sha256")?
+                    != required_sha256(by_id[recording_id.as_str()], "recording_content_sha256")?
+                    || population_parent_for_role(record, "observed_environment")?
+                        != population_parent_for_role(
+                            by_id[recording_id.as_str()],
+                            "observed_environment",
+                        )?
+                {
+                    return Err(format!("event {} crosses recording provenance", record.id).into());
+                }
+                *embodied_event_counts.entry(recording_id).or_default() += 1;
+                for law in population_parents_for_role(record, "associated_law_fit")? {
+                    if required_string(by_id[law.as_str()], "status")? != "completed" {
+                        return Err(format!("event {} cites a failed law fit", record.id).into());
+                    }
+                }
+                if required_string(record, "law_relationship")? != "descriptive_association_only" {
+                    return Err(format!("event {} overstates fitted laws", record.id).into());
+                }
+            }
             _ => {}
         }
     }
     if archive_decisions != terminal_evaluations {
         return Err("terminal evaluations and archive decisions do not match".into());
+    }
+    for record in records
+        .iter()
+        .filter(|record| record.record_type == "embodied_recording")
+    {
+        if required_u64(record, "event_count")?
+            != *embodied_event_counts.get(&record.id).unwrap_or(&0)
+        {
+            return Err(format!("recording {} event count differs", record.id).into());
+        }
     }
     for (index, record) in &epoch_indices {
         let previous = population_parents_for_role(record, "previous_descriptor_epoch")?;

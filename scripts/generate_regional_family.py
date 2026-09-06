@@ -83,12 +83,12 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=Path,
-        default=ROOT / "data/habitat-families/regional-v1.json",
+        default=ROOT / "data/habitat-families/regional-v2.json",
     )
     parser.add_argument(
         "--resident-bundle",
         type=Path,
-        default=ROOT / "data/habitat-families/regional-residents-v1.json",
+        default=ROOT / "data/habitat-families/regional-residents-v2.json",
     )
     parser.add_argument(
         "--habitat-template",
@@ -115,6 +115,7 @@ def _arguments() -> argparse.Namespace:
     initial.add_argument("--epoch", type=_uint64, default=0)
     mutate = modes.add_parser("mutate", help="derive an inherited environment genome")
     mutate.add_argument("--parent-genome", type=Path, required=True)
+    mutate.add_argument("--parent-analyst", type=Path, required=True)
     mutate.add_argument("--variation-seed", type=_uint64, required=True)
     return parser.parse_args()
 
@@ -144,21 +145,27 @@ def main() -> None:
         )
     else:
         parent = json.loads(args.parent_genome.resolve().read_text())
+        parent_analyst = json.loads(args.parent_analyst.resolve().read_text())
+        parent_record = parent_analyst.get("environment_record")
+        if not isinstance(parent_record, dict) or not isinstance(
+            parent_record.get("sha256"), str
+        ):
+            raise SystemExit("parent analyst omits its environment record")
         genome_text = family.mutate_genome(
-            _canonical(parent).decode(), args.variation_seed
+            _canonical(parent).decode(), parent_record["sha256"], args.variation_seed
         )
     genome = json.loads(genome_text)
     resident_count = genome["parameters"]["resident_count"]
     resident_values = residents.get("residents")
     if (
-        residents.get("format") != "chreatures-regional-residents-v1"
+        residents.get("format") != "chreatures-regional-residents-v2"
         or not isinstance(resident_values, list)
         or len(resident_values) < resident_count
     ):
         raise SystemExit("regional resident bundle lacks the requested capacity")
     selected_residents = _canonical(
         {
-            "format": "chreatures-regional-residents-v1",
+            "format": "chreatures-regional-residents-v2",
             "residents": resident_values[:resident_count],
         }
     ).decode()

@@ -1,0 +1,53 @@
+{
+  "format": "chreatures-interdependence-native-receipt-v1",
+  "scope": "A module-level finite detritus hydrolysis, native packed physical-release proposal, material transfer, and fermentate respiration path, plus one composed regional B8 world with growth and physical packets. No neural controller or field mass claim.",
+  "command": "PYTHONPATH=/tmp/chreatures-interdependence-native-v2:/Users/ember/dev/chreatures /Users/ember/dev/chreatures/.venv/bin/python scripts/probe_interdependence_cycle.py",
+  "result": {
+    "released_fermentate": 0.11815337548197341,
+    "native_release_mass": 0.11815337548197341,
+    "consumer_atp_gain": 0.014053048312983743,
+    "elements_before": {"carbon_equivalent": 4.0, "mineral_equivalent": 1.0},
+    "elements_after": {"carbon_equivalent": 4.0, "mineral_equivalent": 1.0}
+  },
+  "joined_command": "PYTHONPATH=/tmp/chreatures-reciprocal-regional-v6:/Users/ember/dev/chreatures /Users/ember/dev/chreatures/.venv/bin/python /tmp/probe_reciprocal_growth.py",
+  "joined_result": {
+    "residents": 8,
+    "steps": 90,
+    "dt_seconds": 0.05,
+    "fermentate_initial": 0.0,
+    "fermentate_final": 0.021463420177848434,
+    "fermentate_committed_to_physical_packets": 0.000529764175687119,
+    "first_packet_fermentate": 0.000022838160094522136,
+    "first_packet_element_weighted_mass": 0.00019826833830904536,
+    "first_packet_chemical_time_seconds": 0.25,
+    "exchange_events": 54,
+    "zero_exchange_events": 0,
+    "constructed_parts": 32,
+    "attachments": 12,
+    "parented_parts": 8,
+    "world_snapshot_exact": true,
+    "biosphere_snapshot_exact": true,
+    "world_snapshot_sha256": "75df818666ec019213b941870f728bf2fb1ae5dc67617f9ba6bcca407fd2e0ad",
+    "biosphere_snapshot_sha256": "02d9abccd456226b56670bf4b0e14e3a9ef3557b2e2a344a1695d6a238d523cf"
+  },
+  "joined_environment_sha256": {
+    "founder_habitat": "2c72c5d6645193b6edd32da4e4e5958c38f2ec55d2f4f5903dfca233c30424a0",
+    "founder_biosphere": "9df149122abb7d3cdf20117ee542d45774af2fa043cc913f6550c819d83c9b0e",
+    "founder_environment_record": "72350f1987ffd100b8ad1b47897e35266d59418cd6cc6ad3d5d3b4b83ea5c37e",
+    "child_habitat": "d06b1dc65b924249da7ff591b0c1d526fe7dbbb0c6a4cc515b149ff4650f4e03",
+    "child_biosphere": "3f59d56b4f483ffbd13d094b64e58aab5139a49085cdba697f560031bdb044ac"
+  },
+  "sha256": {
+    "native/world-kernels/src/ecological_exchange.rs": "b361b253bca2f2bd2446bfc3e47869ac664765dde245389c93dfffd45886ae4d",
+    "chreatures/ecological_exchange.py": "66ae3b67ec78f1f136819d170aac444ddac2b1a3b8dc133d80b29e93bec65785",
+    "chreatures/metabolism.py": "09cffbc53eea7ac72ea6cb2e3655a0f981a6177843c86880e40779ba6e648435",
+    "data/metabolism/interdependence-chemistry-v1.json": "7c452aafc93d8ef95b472ef2f309f983ba715d81d56e89dbe96aeff6a7af939c",
+    "data/biosphere/living-reef.json": "7313420e6f8b507bf45b8ab2ec733064033af127897a3bab135a964fb519fe0e",
+    "data/habitat-families/regional-residents-v2.json": "cfca86973dc039b3bffb4fac6b71e1d0eb92b34f411a7a57fc4f818f8b1e00a6",
+    "scripts/probe_interdependence_cycle.py": "e1843eee7a3c9fa08b6a920f094c3a20349c43c37a6123f9cf2291de4bf0451c",
+    "/tmp/chreatures-interdependence-native-v2/_world_kernels.cpython-312-darwin.so": "a88ae34950f089c00b079c09c7e119d1f182e12b1cdebdea09fe7ffb49d06711",
+    "/tmp/probe_reciprocal_growth.py": "e90609b5a46753a0f5c4b5121e33008426548fecf5baf9180e421b17a6bfc5bd",
+    "/tmp/reciprocal-growth-result-final.json": "90297cba93c944818599abd73e4f4fcc75392238495946b6da2f2008b06a597e",
+    "/tmp/chreatures-reciprocal-regional-v6/_world_kernels.cpython-312-darwin.so": "f941aebd5a227937b3d5f50451e25ce890c1b3afb78b584aba7d0b5ca2408d3d"
+  }
+}

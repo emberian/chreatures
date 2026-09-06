@@ -83,6 +83,7 @@ class RichEpisode:
     outcomes: np.ndarray
     canonical: np.ndarray
     neural: np.ndarray | None
+    worker_recurrent_context: np.ndarray
 
     @property
     def previous(self) -> np.ndarray:
@@ -171,6 +172,7 @@ class RichPlayDataset:
                 "dt_seconds",
                 "transition_outcomes",
                 "canonical_channels",
+                "worker_recurrent_context",
             }
             if set(value.files) not in (required, required | {"neural_readouts"}):
                 raise ValueError("rich packet arrays differ")
@@ -183,6 +185,7 @@ class RichPlayDataset:
             "dt_seconds": (),
             "transition_outcomes": (t, n, 8),
             "canonical_channels": (t + 1, n, 351),
+            "worker_recurrent_context": (t, n, 128),
         }
         if "neural_readouts" in arrays:
             shapes["neural_readouts"] = (t + 1, n, 384)
@@ -263,6 +266,7 @@ class RichPlayDataset:
             readonly(arrays["neural_readouts"])
             if "neural_readouts" in arrays
             else None,
+            readonly(arrays["worker_recurrent_context"]),
         )
 
     def columns(self, world_slots: Sequence[int]) -> np.ndarray:

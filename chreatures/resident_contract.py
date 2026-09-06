@@ -2,9 +2,9 @@
 
 BOOTSTRAP_FORMAT = "chreatures-rich-sensorimotor-bootstrap-v5"
 DEVELOPMENT_FORMAT = "chreatures-rich-online-sensorimotor-development-v5"
-NATIVE_POPULATION_FORMAT = "chreatures-native-developmental-resident-population-v5"
-NATIVE_EXECUTION = "developmental-resident-native-population-v5"
-NATIVE_POPULATION_VERSION = 5
+NATIVE_POPULATION_FORMAT = "chreatures-native-developmental-resident-population-v6"
+NATIVE_EXECUTION = "developmental-resident-native-population-v6"
+NATIVE_POPULATION_VERSION = 6
 TORCH_POPULATION_PLAN_FORMAT = "chreatures-torch-population-training-candidates-v2"
 TORCH_POPULATION_PLAN_VERSION = 2
 
