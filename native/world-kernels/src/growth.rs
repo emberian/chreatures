@@ -192,6 +192,7 @@ pub struct GrowthKernel {
     atp_per_biomass: [f64; 3],
     variation: [f64; 3],
     cadence: f64,
+    minimum_feature_size: f64,
     max_buds: usize,
     rng_state: u64,
     next_bud: u64,
@@ -202,6 +203,10 @@ pub struct GrowthKernel {
     genotype: [f64; 3],
     buds: Vec<Bud>,
     pending: Option<Pending>,
+    last_resolution_terminals: usize,
+    last_capacity_rejections: usize,
+    last_budget_rejections: usize,
+    last_shape_rejections: usize,
 }
 
 #[pymethods]
@@ -210,7 +215,7 @@ impl GrowthKernel {
     #[pyo3(signature = (
         grammar_json, grammar_hash, seed, rules, initial_buds, resource_names,
         resource_composition, atp_per_biomass, variation, cadence,
-        initial_delay, max_buds
+        initial_delay, max_buds, minimum_feature_size
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -226,6 +231,7 @@ impl GrowthKernel {
         cadence: f64,
         initial_delay: f64,
         max_buds: usize,
+        minimum_feature_size: f64,
     ) -> PyResult<Self> {
         let computed_hash = sha256_hex(grammar_json.as_bytes());
         if grammar_hash != computed_hash {
@@ -250,6 +256,7 @@ impl GrowthKernel {
                 .any(|value| !finite_range(*value, 0.0, 2.0))
             || !finite_range(cadence, 0.05, 1.0e9)
             || !finite_range(initial_delay, 0.0, 1.0e9)
+            || !finite_range(minimum_feature_size, 0.002, 1.0)
         {
             return Err(PyValueError::new_err(
                 "invalid growth grammar dimensions or limits",
@@ -378,7 +385,11 @@ impl GrowthKernel {
             let rule = *names
                 .get(&initial.0)
                 .ok_or_else(|| PyValueError::new_err("axiom names an unknown rule"))?;
-            if !valid_vector(initial.1) || !finite_range(initial.4, 0.01, 100.0) {
+            if !valid_vector(initial.1)
+                || !finite_range(initial.4, f64::MIN_POSITIVE, 100.0)
+                || normalized_rules[rule].radius * initial.4.sqrt() * genotype[0].sqrt()
+                    < minimum_feature_size
+            {
                 return Err(PyValueError::new_err("invalid initial bud"));
             }
             let (forward, up, right) = frame(initial.2, initial.3)?;
@@ -401,6 +412,7 @@ impl GrowthKernel {
             atp_per_biomass,
             variation,
             cadence,
+            minimum_feature_size,
             max_buds,
             rng_state,
             next_bud: buds.len() as u64 + 1,
@@ -411,6 +423,10 @@ impl GrowthKernel {
             genotype,
             buds,
             pending: None,
+            last_resolution_terminals: 0,
+            last_capacity_rejections: 0,
+            last_budget_rejections: 0,
+            last_shape_rejections: 0,
         })
     }
 
@@ -422,6 +438,31 @@ impl GrowthKernel {
     #[getter]
     fn resource_names(&self) -> Vec<String> {
         self.resource_names.clone()
+    }
+
+    #[getter]
+    fn is_due(&self) -> bool {
+        !self.buds.is_empty() && self.pending.is_none() && self.clock + 1.0e-12 >= self.next_due
+    }
+
+    fn capacity(&self) -> (usize, usize, usize) {
+        (
+            self.buds.len(),
+            self.max_buds,
+            self.max_buds - self.buds.len(),
+        )
+    }
+
+    fn proposal_metrics(&self) -> (usize, usize, usize, usize, usize, usize, f64) {
+        (
+            self.buds.len(),
+            self.max_buds,
+            self.last_resolution_terminals,
+            self.last_capacity_rejections,
+            self.last_budget_rejections,
+            self.last_shape_rejections,
+            self.minimum_feature_size,
+        )
     }
 
     fn elapse(&mut self, dt: f64) -> PyResult<f64> {
@@ -480,6 +521,10 @@ impl GrowthKernel {
             }
         }
 
+        self.last_resolution_terminals = 0;
+        self.last_capacity_rejections = 0;
+        self.last_budget_rejections = 0;
+        self.last_shape_rejections = 0;
         let mut candidate_buds = self.buds.clone();
         let mut rng = self.rng_state;
         let mut next_bud = self.next_bud;
@@ -531,20 +576,25 @@ impl GrowthKernel {
                     let full_width = (area / leaf_rule.aspect).sqrt();
                     let leaf_biomass = area * leaf_rule.areal_density;
                     let rotation = [bud.forward, bud.right, mul(bud.up, -1.0)];
-                    trial_leaves.push(Leaf {
-                        id: format!("leaf-{next_part}"),
-                        parent_bud: bud.id,
-                        position: endpoint,
-                        quaternion: matrix_quaternion(rotation),
-                        size: [
-                            0.5 * full_length,
-                            0.5 * full_width,
-                            0.5 * leaf_rule.thickness,
-                        ],
-                        area,
-                        biomass: leaf_biomass,
-                    });
-                    trial_biomass += leaf_biomass;
+                    let size = [
+                        0.5 * full_length,
+                        0.5 * full_width,
+                        0.5 * leaf_rule.thickness,
+                    ];
+                    if size.iter().all(|value| *value >= self.minimum_feature_size) {
+                        trial_leaves.push(Leaf {
+                            id: format!("leaf-{next_part}"),
+                            parent_bud: bud.id,
+                            position: endpoint,
+                            quaternion: matrix_quaternion(rotation),
+                            size,
+                            area,
+                            biomass: leaf_biomass,
+                        });
+                        trial_biomass += leaf_biomass;
+                    } else {
+                        self.last_resolution_terminals += 1;
+                    }
                 }
             }
             let mut trial_children = Vec::new();
@@ -566,11 +616,19 @@ impl GrowthKernel {
                 };
                 let child_right = normalize(cross(child_forward, preferred_up))?;
                 let child_up = normalize(cross(child_right, child_forward))?;
+                let child_scale = bud.scale * successor.scale;
+                let child_radius = self.rules[successor.rule].radius
+                    * child_scale.sqrt()
+                    * self.genotype[0].sqrt();
+                if child_radius < self.minimum_feature_size {
+                    self.last_resolution_terminals += 1;
+                    continue;
+                }
                 trial_children.push(Bud {
                     id: next_bud + trial_children.len() as u64,
                     rule: successor.rule,
                     generation: bud.generation.saturating_add(1),
-                    scale: bud.scale * successor.scale,
+                    scale: child_scale,
                     position: endpoint,
                     forward: child_forward,
                     up: child_up,
@@ -579,10 +637,16 @@ impl GrowthKernel {
             }
             let shape_count = 1 + trial_leaves.len();
             let resulting_buds = candidate_buds.len() - 1 + trial_children.len();
-            if biomass + trial_biomass > structural_budget + 1.0e-14
-                || segments.len() + leaves.len() + shape_count > max_new_shapes
-                || resulting_buds > self.max_buds
-            {
+            if biomass + trial_biomass > structural_budget + 1.0e-14 {
+                self.last_budget_rejections += 1;
+                continue;
+            }
+            if segments.len() + leaves.len() + shape_count > max_new_shapes {
+                self.last_shape_rejections += 1;
+                continue;
+            }
+            if resulting_buds > self.max_buds {
+                self.last_capacity_rejections += 1;
                 continue;
             }
             candidate_buds.retain(|value| value.id != bud.id);
@@ -783,7 +847,9 @@ impl GrowthKernel {
             if role != self.rules[rule].role
                 || id == 0
                 || !ids.insert(id)
-                || !finite_range(scale, 0.001, 100.0)
+                || !finite_range(scale, f64::MIN_POSITIVE, 100.0)
+                || self.rules[rule].radius * scale.sqrt() * self.genotype[0].sqrt()
+                    < self.minimum_feature_size
                 || !valid_vector(position)
                 || !orthonormal(forward, up, right)
             {

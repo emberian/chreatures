@@ -136,9 +136,9 @@ signals. This demonstrates the coupled mechanism. It does not establish that
 either genotype is viable over a lifetime or fitter in an ecosystem.
 
 The founder genome identity is
-`c4fdc0e72d0cc59292d9c0855daefa186c18db5793f2353ad02aeeab737dfc23`;
+`97275a9f249b1800bf985184499a9b2712604e31d992e1d5a3c6edf47b848c23`;
 the deterministic seed-37 child is
-`400b385034e94f808aae8f0c18b056a52e6f819fa3c82033cd5f187673d9eb5f`.
+`c5d55b4a6f6e04b0f6c6d2466528a476afb1db1715da58e7ff38beb456816c05`.
 With growth seed 19 and the same four local receptor values, the founder asked
 for `0.0565802650` biomass and `0.153578517` ATP. The child asked for
 `0.0664748052` biomass and `0.180434997` ATP, a 17.49% larger material request.

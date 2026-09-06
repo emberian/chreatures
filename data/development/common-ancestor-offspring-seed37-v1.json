@@ -10,13 +10,13 @@
     "geometry_reference_fraction": 0.22
   },
   "ancestry": {
-    "founder_sha256": "c4fdc0e72d0cc59292d9c0855daefa186c18db5793f2353ad02aeeab737dfc23",
+    "founder_sha256": "97275a9f249b1800bf985184499a9b2712604e31d992e1d5a3c6edf47b848c23",
     "mutation": {
       "operator": "bounded-related-offspring-v1",
       "scale": 0.08,
       "seed": 37
     },
-    "parent_sha256": "c4fdc0e72d0cc59292d9c0855daefa186c18db5793f2353ad02aeeab737dfc23"
+    "parent_sha256": "97275a9f249b1800bf985184499a9b2712604e31d992e1d5a3c6edf47b848c23"
   },
   "format": "chreatures-developmental-genome-v1",
   "generation": 1,
@@ -88,13 +88,13 @@
       }
     ]
   },
-  "sha256": "400b385034e94f808aae8f0c18b056a52e6f819fa3c82033cd5f187673d9eb5f",
+  "sha256": "c5d55b4a6f6e04b0f6c6d2466528a476afb1db1715da58e7ff38beb456816c05",
   "sources": {
     "chemistry_file_sha256": "006bcb89b9e9af4562c19b0e08ab0ebf82daa1cdcbc236276f88988b054ba9e9",
     "chemistry_sha256": "fc482774de2dd3c08e92cd9f6bdaf8298c39e41a8ef173e8430b7363841e9928",
     "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
-    "growth_grammar_file_sha256": "b07394eade1a57828b35daa7be2d24dd501a39f9f5bffe9adc8126233f0720bc",
-    "growth_grammar_sha256": "e907380d2e400b7861d5de67cdb7f30f4c26eb5fb63a219ab70581384f1a33c6",
+    "growth_grammar_file_sha256": "1a0f0b01de3e3002924f1e3ee11877ddc7eea7b089c31dc049ea9c5a11160390",
+    "growth_grammar_sha256": "1bff1ea60ece5ba1487842189e22a600917b23bc6398eaab36f9e794bb793617",
     "port_bundle_sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2",
     "port_spec_sha256": "fffb48c65bdb5bc2503ff8ad7c65b4419e12aa9ef5b58b9f36bc910f64dadb6f"
   }
