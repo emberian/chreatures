@@ -73,6 +73,13 @@ and state-conditioned variance parameters are transferred, while resident
 context, neural state, bodies, chemical state, and worlds are reset. Results
 must report this as transfer learning rather than exact continuation.
 
+Each completed held-out condition is atomically written under the run's
+`evaluations/` directory before the next condition starts. Its identity binds
+the policy genome, final training checkpoint, normalizer, graph, ports, profile,
+reward objective, source files, seed, and control switches. Restarting the
+evaluation phase reuses an exact matching receipt and rejects a stale or
+mismatched one. A crash can therefore lose only the condition in progress.
+
 The preceding short frozen-layout comparison has a sanitized public
 [`data/training/chemical-transfer-paired-v1.receipt.json`](../data/training/chemical-transfer-paired-v1.receipt.json)
 receipt. Its source bulk receipt has SHA-256
@@ -83,3 +90,34 @@ Neither canonical MaleCNS nor the derived G2 graph acquired a material packet in
 that assay. Its inherited deterministic evaluations therefore establish only a
 zero-acquisition transfer baseline, not autonomous chemical regulation or a
 causal anatomical advantage.
+
+## First staged result
+
+The first canonical v4 run completed 20,000 physical steps in four 250-second
+episodes. Training produced 23 ingestion-positive mouth-contact ticks,
+`0.360596` material mass ingested, and `0.313562` absorbed. The per-episode
+mouth-contact tick counts were 5, 2, 4, and 12 across curriculum stages 0, 1,
+2, and 2. A tick is evidence for one resident/material contact during one
+physical step; repeated ticks can belong to the same sustained encounter.
+
+In four held-out full-bearing worlds, the learned deterministic policy produced
+3 ingestion-positive mouth-contact ticks, ingested `0.092491`, and absorbed
+`0.080426`. The inherited comparison and the learned policy with its 384 neural
+features silenced both produced zero. This is bounded evidence for learned,
+neural-feature-dependent physical acquisition in this seed cohort.
+
+The same evaluation did not improve the overall homeostatic objective. Mean
+reward per macro step and resident was `-0.002760` for the learned policy versus
+`-0.002743` for the inherited comparison, and mean effort rose from `0.02793`
+to `0.03398`. The result therefore does not establish autonomous chemical
+regulation or general foraging skill.
+
+The Torch-free inherited artifact is
+[`data/genomes/chemical-encounters-v1-step20000.npz`](../data/genomes/chemical-encounters-v1-step20000.npz),
+with canonical identity
+`f0d3f9a43e242adc27ed58b7a30f728730013680aad8b80c42607696aac3b5ea`
+and file SHA-256
+`daba5662479ffcb94d7e61df7f129a76696499cda62c959219747eb5efa6ff9c`.
+The sanitized assay receipt is
+[`data/training/chemical-encounters-v1.receipt.json`](../data/training/chemical-encounters-v1.receipt.json)
+(SHA-256 `a6737f668d3f252021ba41079667ebe5285a82b9256a5664b4f6bb30c64d1710`).
