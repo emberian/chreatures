@@ -17,7 +17,6 @@ from fastapi.staticfiles import StaticFiles
 
 from .physics import MODEL_DT
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 log = logging.getLogger("chreatures")
@@ -96,7 +95,11 @@ def create_app(
                             habitat.paused = True
                             authority["error"] = str(exc)
                             log.exception("Paused after simulation error")
-                    if habitat and habitat.pending_step is None and time.monotonic() - last_save > 30:
+                    if (
+                        habitat and habitat.pending_step is None
+                        and not habitat.neural.uncertain
+                        and time.monotonic() - last_save > 30
+                    ):
                         try:
                             habitat.save(checkpoint)
                         except Exception as exc:

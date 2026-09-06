@@ -57,6 +57,26 @@ private GPU state plus resident slot order and times. `scripts/serve_metal.py`
 provides the same sequenced localhost HTTP endpoints as `serve_brain.py`
 without importing Torch.
 
+The service now advertises `chreatures-request-receipt-v1`. A per-process
+incarnation and the SHA-256 of the exact canonical method/path/body identify
+each request. The last 64 outcomes can be queried without executing the
+operation again. A client may continue after a lost reply only when that query
+returns the original committed response with matching incarnation, hash,
+sequence, and current authority sequence. In-progress, failed, unknown,
+evicted, restarted, or conflicting-authority outcomes remain uncertain and
+pause the world. A failed operation is never assumed to have made no changes.
+This recovery capability currently belongs to the Metal HTTP service; clients
+of services without it still pause on a lost reply.
+
+Snapshot and restore calls allow 60 seconds for durable storage, while ordinary
+neural requests retain their 10-second limit. Native snapshot `sync_all()` is
+unchanged. If a save still fails at a complete physical tick, the world writes
+its full local private state and request identity to an
+`*.interrupted-TICK.json` recovery artifact. That artifact cannot be loaded as
+a whole-world checkpoint without a verified corresponding neural snapshot;
+the preceding complete checkpoint remains intact. Autosave does not keep
+sending mutations after an uncertain response.
+
 The stable default remains `kernel="row"`. An explicitly selected
 `kernel="simd"` assigns one 32-lane SIMD group to each CSR row; lanes traverse
 the row at stride 32 and reduce the three resident accumulators with

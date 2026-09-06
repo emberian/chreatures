@@ -17,3 +17,12 @@ performance and `saved_at` are intentionally outside the causal-state contract.
 structural difference on failure. `receipt.json` is the compact provenance
 record with source artifact hashes, checkpoint identity, state evidence, owner
 hashes, and neural checksum.
+
+The [recycling receipt](../data/ecology/whole-recycling-replay-v1.receipt.json)
+records 70 ticks before saving and 12 ticks after. That fresh research world
+developed 12 physical parts, returned nonzero material, and accumulated 17
+predictive observations per resident. All 26 recorded sections and the native
+neural checksum matched exactly. Acoustics and the older resource mechanism
+were disabled in this run; their null sections do not validate those dynamics.
+This is a finite same-runtime continuation check, not cross-device equivalence
+or a claim about indefinitely long trajectories.
