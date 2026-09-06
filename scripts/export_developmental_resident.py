@@ -28,7 +28,6 @@ from chreatures.resident_contract import (
 FORMAT = NATIVE_POPULATION_FORMAT
 EXECUTION = NATIVE_EXECUTION
 CHECKPOINT_FORMAT = DEVELOPMENT_FORMAT
-V3_CHECKPOINT_FORMAT = "chreatures-rich-online-sensorimotor-development-v1"
 MODEL_NAMES = (
     "visual.peripheral.first.weight", "visual.peripheral.first.bias",
     "visual.peripheral.second.weight", "visual.peripheral.second.bias",
@@ -162,12 +161,6 @@ def main() -> None:
     parser.add_argument("--consequence-laws", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--trusted-checkpoint", action="store_true")
-    parser.add_argument("--cold-inherit-v3", action="store_true")
-    parser.add_argument("--candidate-count", type=int, default=1)
-    parser.add_argument("--candidate-adapter-rank", type=int, default=8)
-    parser.add_argument("--variation-seed", type=int, default=0)
-    parser.add_argument("--variation-scale", type=float, default=0.01)
-    parser.add_argument("--new-axis-active-probability", type=float, default=0.05)
     args = parser.parse_args()
     if not args.trusted_checkpoint:
         raise SystemExit("Torch deserialization requires --trusted-checkpoint")
@@ -177,67 +170,22 @@ def main() -> None:
 
     from research.sensorimotor_skills.rich_data import RichNormalizer
     from research.sensorimotor_skills.rich_model import (
-        PopulationAdapterBank,
         RichSensorimotorModel,
-        cold_inherit_v3_model,
     )
     from research.sensorimotor_skills.rich_online import (
         SlowGoalManager,
-        cold_inherit_v3_manager,
     )
 
     checkpoint_path = args.checkpoint.resolve()
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     source_format = checkpoint.get("format")
-    if args.cold_inherit_v3 != (source_format == V3_CHECKPOINT_FORMAT):
-        raise ValueError("checkpoint format and cold-inheritance selection differ")
-    if source_format not in {CHECKPOINT_FORMAT, V3_CHECKPOINT_FORMAT}:
+    if source_format != CHECKPOINT_FORMAT:
         raise ValueError("development checkpoint format differs")
     identity = copy.deepcopy(checkpoint["identity"])
-    if args.cold_inherit_v3:
-        if not 0 < args.new_axis_active_probability <= 0.5:
-            raise ValueError("new-axis active probability must be in (0,0.5]")
-        model = cold_inherit_v3_model(
-            checkpoint["model"],
-            new_axis_active_probability=args.new_axis_active_probability,
-        )
-        manager = cold_inherit_v3_manager(checkpoint["goal_manager"])
-        normalizer = RichNormalizer.cold_inherit_v3(identity["normalizer"])
-        adapters = PopulationAdapterBank(
-            args.candidate_count, args.candidate_adapter_rank
-        )
-        if args.candidate_count > 1:
-            adapters.vary(
-                torch.arange(1, args.candidate_count),
-                seed=args.variation_seed,
-                scale=args.variation_scale,
-            )
-        adapter_state = adapters.state_dict()
-        conversion = {
-            "format": "chreatures-v3-to-v4-cold-inheritance-v2",
-            "source_checkpoint_sha256": sha256(checkpoint_path),
-            "source_format": source_format,
-            "new_physiology_normalization": "mean-zero-scale-one",
-            "new_axis_active_probability": args.new_axis_active_probability,
-            "new_axis_active_logit": float(
-                torch.logit(torch.tensor(args.new_axis_active_probability))
-            ),
-            "new_axis_positive_magnitudes": "uniform-32-bin",
-            "shared_trainable_organs": [
-                "physiology_adapter",
-                "new_actuator_active",
-                "new_actuator_positive",
-            ],
-            "old_to_new_action_columns": [0, 1, 2, 4, 5, 6, 7, 3, 8],
-            "optimizer": "not inherited",
-            "private_state": "not inherited",
-        }
-    else:
-        model = checkpoint["model"]
-        manager = checkpoint["goal_manager"]
-        normalizer = RichNormalizer.from_value(identity["normalizer"])
-        adapter_state = checkpoint["candidate_adapters"]
-        conversion = None
+    model = checkpoint["model"]
+    manager = checkpoint["goal_manager"]
+    normalizer = RichNormalizer.from_value(identity["normalizer"])
+    adapter_state = checkpoint["candidate_adapters"]
     expected_model = RichSensorimotorModel().state_dict()
     for name in MODEL_NAMES:
         if name not in model or model[name].shape != expected_model[name].shape:
@@ -340,7 +288,6 @@ def main() -> None:
             "updates": int(checkpoint.get("updates", 0)),
             "physical_steps": int(checkpoint.get("physical_steps", 0)),
         },
-        "cold_inheritance": conversion,
         "training_identity": identity,
         "population_adapters": {
             "count": int(arrays["population_adapter.down"].shape[0]),
