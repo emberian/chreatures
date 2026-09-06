@@ -626,19 +626,23 @@ def main() -> int:
     declared_transport = profile.component("family")["transport"]
     actual_transport = {
         "residents": profile_residents,
+        "max_residents": MAX_RESIDENTS,
         "rich": 4096,
         "physical": len(ports.input_names),
         "physiology": PHYSIOLOGY_DIM,
         "controller": worker.config.observation_dim,
         "readouts": len(ports.readout_names),
+        "actions": ACTION_DIM,
     }
     expected_transport = {
         "residents": args.residents_per_world,
+        "max_residents": MAX_RESIDENTS,
         "rich": 4096,
         "physical": 351,
         "physiology": PHYSIOLOGY_DIM,
         "controller": worker.config.observation_dim,
         "readouts": 384,
+        "actions": ACTION_DIM,
     }
     if (
         declared_transport != expected_transport
