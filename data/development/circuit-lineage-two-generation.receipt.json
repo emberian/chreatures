@@ -1,0 +1,80 @@
+{
+  "founder_genome_sha256": "aaf842da666ab4c0c75faedf9494144be2fa8a25e03ea62daeca29658b4e5cd9",
+  "generation1": {
+    "artifacts": {
+      "developmental-genome.json": {
+        "bytes": 7605,
+        "sha256": "420096f8e2375864b95431900213a4f7b6b8ac82067d5930c7b65b54998a68f4"
+      },
+      "manifest.json": {
+        "bytes": 15215,
+        "sha256": "405c4e4f6a0459b5c1290722f2949e0191912e675c40364a8e22fc0bfc2553b1"
+      },
+      "native-csr-v2.bin": {
+        "bytes": 215270932,
+        "sha256": "649174a4ef0fecb75c43e1b452847233406b9b3b2d7582fea085e697779e18dc"
+      },
+      "ports.npz": {
+        "bytes": 419607,
+        "sha256": "316d28ba719b86a3e212ff97fa886fe95a71f57a7f94687855963d1cce0eb05b"
+      }
+    },
+    "blueprint_sha256": "0c5a3bd686d29a85b618b2e02d87c382241d8ce3f112bc36f1e3e92a67c8fcda",
+    "counts": {
+      "edges": 26557079,
+      "neurons": 168749,
+      "synapses": 126896266
+    },
+    "genome_sha256": "92cca40144b3aa0130bdc17c52a5b56cf290d148c74233bcab9bb03f1f60011e",
+    "graph_sha256": "5ce567fb10d391b560dc12a00a4d1595a41859ebfabed6d3b4bff1c6307f1e97",
+    "parent_graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "port_spec_sha256": "34f5dd4924929f7ab128edc48efb6c5142f85d80d2a4a9f90cd3a44fbf4c4512",
+    "storage": "/tank/chreatures/data/circuit-blueprints/lineage-g1-seed37",
+    "variation": {
+      "removed_edges": 1,
+      "reweighted_edges": 1,
+      "seed": 37
+    }
+  },
+  "generation2": {
+    "artifacts": {
+      "developmental-genome.json": {
+        "bytes": 7502,
+        "sha256": "3eed9b85c07287390fcd60b0bd5dde2609ebe1bd6ab150a12e261db44f2aaafb"
+      },
+      "manifest.json": {
+        "bytes": 15885,
+        "sha256": "42a781ac806733b8819c87fffa393f3759dcfb79170732869fa98d9da21302a2"
+      },
+      "native-csr-v2.bin": {
+        "bytes": 223280020,
+        "sha256": "635846693c4c8b81d9706c3eba7415a2238a35c01cdf1dbe5f9d68d530421b7f"
+      },
+      "ports.npz": {
+        "bytes": 425450,
+        "sha256": "01b0e6038de2ef41fc631d8d7f055d507ffad111430ae2b09d11ada327ed7d0e"
+      },
+      "validation-amd.json": {
+        "bytes": 2183,
+        "sha256": "fad93434cf75f9e5e9f65e4bcc5843d3ecd332e29ea68a84661af218e255a994"
+      }
+    },
+    "blueprint_sha256": "75e069cfbd61a8203415a1cbfd896057908471516c73a091fae4dbeedf2b670b",
+    "counts": {
+      "edges": 27550961,
+      "neurons": 172376,
+      "synapses": 129767490
+    },
+    "genome_sha256": "bf99155ad15744ea9f8481c066229c01e3a784da419a927c4c22fd446c3f5238",
+    "graph_sha256": "d4d927715b988e00249730dba3cb496210fc442b9fad5288cb2f0d8438331163",
+    "parent_graph_sha256": "5ce567fb10d391b560dc12a00a4d1595a41859ebfabed6d3b4bff1c6307f1e97",
+    "port_spec_sha256": "6717b9ddfb2cf2431da3139fbeddb2ae656658e9a2455057f1819e9f61006365",
+    "storage": "/tank/chreatures/data/circuit-blueprints/lineage-g2-seed40",
+    "variation": {
+      "removed_edges": 1,
+      "reweighted_edges": 1,
+      "seed": 40
+    }
+  },
+  "schema_version": 1
+}

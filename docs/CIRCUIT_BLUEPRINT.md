@@ -35,8 +35,8 @@ The derived loader presents the same `n`, `hash`, CSR arrays, neuron metadata,
 `matrix()`, and sparse-port boundary consumed by `RemoteBrain` and
 `NeuronMajorCircuit`. The compiler also emits the existing dimension-generic
 `metal-csr-v2` binary layout. Production `MetalCircuit` intentionally pins the
-canonical graph and is not weakened; a derived artifact needs a separately configured
-native service.
+canonical graph and is not weakened; a derived artifact needs a separately
+configured native service.
 
 A blueprint pins the parent graph, parent port semantics, and optionally the
 exact parent port file. Each module selects exact ancestral body IDs from a
@@ -52,12 +52,23 @@ references. Counts for additions and reweights are positive uint32 integers.
 These edits are model operations even when their endpoints descend from real
 neurons.
 
+`materialize_module_variation(...)` supplies the inheritance-facing path. It
+uses a pinned module template and PCG64 seed to choose bounded removals and
+integer reweights only among connections the new duplicate will create. It
+emits exact edge references as an ordinary blueprint before compilation, so no
+unresolved mutation probabilities remain in the graph artifact.
+
 Parent neuron indices and body IDs remain unchanged. Duplicate rows are
 appended. Each duplicate has a unique deterministic synthetic body ID and ID,
-plus `ancestral_indices`, `ancestral_body_ids`, `origin`, `module`, and
-`copy_index`. Its type, side, transmitter provenance, and sign are inherited
-from the named ancestral neuron; `origin=synthetic_duplicate` prevents those
-copied annotations from being mistaken for another reconstructed neuron.
+plus `birth_parent_indices` and `birth_parent_body_ids` for the direct neuron
+that was copied, root `ancestral_indices` and `ancestral_body_ids`,
+`lineage_depth`, `origin`, `module`, and `copy_index`. Birth-parent fields remain
+fixed after creation while each graph manifest records direct graph-to-graph
+descent. Type, side, transmitter provenance, and sign are inherited from the
+named parent neuron; `origin=synthetic_duplicate` prevents those copied
+annotations from being mistaken for another reconstructed neuron. When a
+derived graph is compiled again, every existing metadata row remains exact and
+the manifest appends the direct transition to `graph_ancestry`.
 
 With `ports=inherit`, an input row is copied to each descendant. Readout
 coefficients are split equally across an ancestor and its descendants, which

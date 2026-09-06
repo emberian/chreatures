@@ -10,15 +10,15 @@
     "geometry_reference_fraction": 0.22
   },
   "ancestry": {
-    "founder_sha256": "97275a9f249b1800bf985184499a9b2712604e31d992e1d5a3c6edf47b848c23",
+    "founder_sha256": "56d4beeefede48ff40972507870d48eb0d467a78406ff999e8b11f73cc5dcfca",
     "mutation": {
-      "operator": "bounded-related-offspring-v1",
+      "operator": "bounded-related-offspring-v2",
       "scale": 0.08,
       "seed": 37
     },
-    "parent_sha256": "97275a9f249b1800bf985184499a9b2712604e31d992e1d5a3c6edf47b848c23"
+    "parent_sha256": "56d4beeefede48ff40972507870d48eb0d467a78406ff999e8b11f73cc5dcfca"
   },
-  "format": "chreatures-developmental-genome-v1",
+  "format": "chreatures-developmental-genome-v2",
   "generation": 1,
   "growth": {
     "leaf_area": 0.8984082666581975,
@@ -51,6 +51,7 @@
   },
   "name": "related-offspring-g1-0000000000000025",
   "neural": {
+    "circuit": null,
     "input_gain_loci": [
       {
         "gain": 1.0960901912600483,
@@ -88,7 +89,7 @@
       }
     ]
   },
-  "sha256": "c5d55b4a6f6e04b0f6c6d2466528a476afb1db1715da58e7ff38beb456816c05",
+  "sha256": "b9b34b12b741be59ab90b7171efa01a9e4ddb7b06993453196a8c6483eeca19b",
   "sources": {
     "chemistry_file_sha256": "006bcb89b9e9af4562c19b0e08ab0ebf82daa1cdcbc236276f88988b054ba9e9",
     "chemistry_sha256": "fc482774de2dd3c08e92cd9f6bdaf8298c39e41a8ef173e8430b7363841e9928",

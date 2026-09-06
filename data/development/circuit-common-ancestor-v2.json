@@ -45,9 +45,32 @@
       "soma/respiration": 0.65
     }
   },
-  "name": "common-ancestor-v1",
+  "name": "circuit-common-ancestor-v2",
   "neural": {
-    "circuit": null,
+    "circuit": {
+      "bounds": {
+        "maximum_module_copies_per_birth": 1,
+        "maximum_removals": 8,
+        "maximum_reweights": 8,
+        "reweight_factor_max": 1.25,
+        "reweight_factor_min": 0.75
+      },
+      "last_birth": null,
+      "template": {
+        "boundary": "bidirectional",
+        "name": "gamma1pedc_kc_mbon11_ppl101",
+        "ports": "inherit",
+        "selector": {
+          "fields": [
+            "kc_body_ids",
+            "mbon_body_ids",
+            "dan_body_ids"
+          ],
+          "npz": "data/mushroom/gamma1pedc-kc-mbon11-v1.npz",
+          "sha256": "27bbc1adde8efe26d9f62e8e5674d4a3c9e787ab200b498f89ddc19c9101bdff"
+        }
+      }
+    },
     "input_gain_loci": [
       {
         "gain": 1.02,
@@ -85,7 +108,7 @@
       }
     ]
   },
-  "sha256": "56d4beeefede48ff40972507870d48eb0d467a78406ff999e8b11f73cc5dcfca",
+  "sha256": "aaf842da666ab4c0c75faedf9494144be2fa8a25e03ea62daeca29658b4e5cd9",
   "sources": {
     "chemistry_file_sha256": "006bcb89b9e9af4562c19b0e08ab0ebf82daa1cdcbc236276f88988b054ba9e9",
     "chemistry_sha256": "fc482774de2dd3c08e92cd9f6bdaf8298c39e41a8ef173e8430b7363841e9928",

@@ -238,6 +238,215 @@ def _resolve_modules(
     return resolved, references
 
 
+def _reservoir(
+    values: list[tuple[int, int, int]],
+    item: tuple[int, int, int],
+    seen: int,
+    capacity: int,
+    rng: np.random.Generator,
+) -> None:
+    if capacity <= 0:
+        return
+    if len(values) < capacity:
+        values.append(item)
+        return
+    replacement = int(rng.integers(0, seen))
+    if replacement < capacity:
+        values[replacement] = item
+
+
+def _cloned_edge_indices(graph: Any, resolved: dict[str, Any]) -> Any:
+    """Yield source, target, count for the exact edges one module will clone."""
+    spec = resolved["spec"]
+    ancestors = resolved["ancestor_indices"]
+    member = np.zeros(graph.n, dtype=bool)
+    member[ancestors] = True
+    for duplicate in resolved["copy_indices"]:
+        copy_of = np.full(graph.n, -1, dtype=np.int32)
+        copy_of[ancestors] = duplicate
+        for ancestor_target, duplicate_target in zip(ancestors, duplicate, strict=True):
+            start = int(graph.indptr[ancestor_target])
+            stop = int(graph.indptr[ancestor_target + 1])
+            sources = np.asarray(graph.indices[start:stop])
+            counts = np.asarray(graph.counts[start:stop])
+            keep = (
+                member[sources]
+                if spec["boundary"] == "internal"
+                else np.ones(len(sources), dtype=bool)
+            )
+            for source, count in zip(sources[keep], counts[keep], strict=True):
+                mapped_source = copy_of[source] if member[source] else source
+                yield int(mapped_source), int(duplicate_target), int(count)
+        if spec["boundary"] == "bidirectional":
+            for target in range(graph.n):
+                if member[target]:
+                    continue
+                start = int(graph.indptr[target])
+                stop = int(graph.indptr[target + 1])
+                sources = np.asarray(graph.indices[start:stop])
+                counts = np.asarray(graph.counts[start:stop])
+                for source, count in zip(
+                    sources[member[sources]], counts[member[sources]], strict=True
+                ):
+                    yield int(copy_of[source]), target, int(count)
+
+
+def _index_ref(
+    index: int,
+    graph: Any,
+    reverse_copies: Mapping[int, tuple[str, int, int]],
+) -> dict[str, Any]:
+    if index < graph.n:
+        return {"kind": "ancestor", "body_id": int(graph.body_ids[index])}
+    module, copy_index, ancestral_body_id = reverse_copies[index]
+    return {
+        "kind": "copy",
+        "module": module,
+        "copy_index": copy_index,
+        "body_id": ancestral_body_id,
+    }
+
+
+def materialize_module_variation(
+    parent: Any,
+    ports: NeuralPortBundle,
+    *,
+    name: str,
+    template: Mapping[str, Any],
+    bounds: Mapping[str, Any],
+    seed: int,
+    mutation_scale: float,
+    selector_root: str | Path = ".",
+    parent_port_sha256: str | None = None,
+) -> CircuitBlueprint:
+    """Materialize bounded variation as exact edits of cloned module edges.
+
+    Selection is deterministic for the parent graph, template, seed, and scale.
+    Only edges created by this duplication are eligible; ancestral-to-ancestral
+    measurements are never edited by this operator.
+    """
+    _clean_name(name, "blueprint name")
+    if isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed < 2**64:
+        raise ValueError("variation seed must be an unsigned 64-bit integer")
+    scale = float(mutation_scale)
+    if not np.isfinite(scale) or not 0 < scale <= 0.5:
+        raise ValueError("variation mutation_scale must be in (0, 0.5]")
+    required_bounds = {
+        "maximum_removals",
+        "maximum_reweights",
+        "reweight_factor_min",
+        "reweight_factor_max",
+    }
+    if set(bounds) != required_bounds:
+        raise ValueError(f"variation bounds must contain {sorted(required_bounds)}")
+    max_removals = int(bounds["maximum_removals"])
+    max_reweights = int(bounds["maximum_reweights"])
+    factor_min = float(bounds["reweight_factor_min"])
+    factor_max = float(bounds["reweight_factor_max"])
+    if (
+        isinstance(bounds["maximum_removals"], bool)
+        or isinstance(bounds["maximum_reweights"], bool)
+        or not 0 <= max_removals <= 64
+        or not 0 <= max_reweights <= 64
+        or not 0.5 <= factor_min < 1 < factor_max <= 2
+    ):
+        raise ValueError("variation bounds are outside compiler limits")
+    module = {
+        "name": _clean_name(template.get("name"), "template.name"),
+        "copies": 1,
+        "boundary": template.get("boundary"),
+        "ports": template.get("ports"),
+        "selector": template.get("selector"),
+    }
+    parent_record = {
+        "graph_sha256": parent.hash,
+        "port_spec_sha256": ports.spec_hash,
+    }
+    if parent_port_sha256 is not None:
+        parent_record["port_bundle_sha256"] = parent_port_sha256
+    base = CircuitBlueprint.from_value(
+        {
+            "schema_version": SCHEMA_VERSION,
+            "name": name,
+            "parent": parent_record,
+            "modules": [module],
+            "edits": {"add": [], "remove": [], "reweight": []},
+        }
+    )
+    resolved, references = _resolve_modules(parent, base, Path(selector_root).resolve())
+    reverse_copies = {index: key for key, index in references.items()}
+    rng = np.random.Generator(np.random.PCG64(seed))
+    removals = int(rng.binomial(max_removals, scale))
+    reweights = int(rng.binomial(max_reweights, scale))
+    removal_sample: list[tuple[int, int, int]] = []
+    reweight_sample: list[tuple[int, int, int]] = []
+    seen_removal = 0
+    seen_reweight = 0
+    for edge in _cloned_edge_indices(parent, resolved[0]):
+        seen_removal += 1
+        _reservoir(removal_sample, edge, seen_removal, removals, rng)
+        count = edge[2]
+        low = max(1, int(np.ceil(count * factor_min)))
+        high = min(np.iinfo(np.uint32).max, int(np.floor(count * factor_max)))
+        if low < count or high > count:
+            seen_reweight += 1
+            _reservoir(
+                reweight_sample,
+                edge,
+                seen_reweight,
+                reweights + removals,
+                rng,
+            )
+    removed_pairs = {(source, target) for source, target, _ in removal_sample}
+    reweight_sample = [
+        edge for edge in reweight_sample if (edge[0], edge[1]) not in removed_pairs
+    ][:reweights]
+
+    def refs(edge: tuple[int, int, int]) -> dict[str, Any]:
+        source, target, _ = edge
+        return {
+            "source": _index_ref(source, parent, reverse_copies),
+            "target": _index_ref(target, parent, reverse_copies),
+        }
+
+    remove_edits = [refs(edge) for edge in removal_sample]
+    reweight_edits = []
+    for edge in reweight_sample:
+        count = edge[2]
+        low = max(1, int(np.ceil(count * factor_min)))
+        high = min(np.iinfo(np.uint32).max, int(np.floor(count * factor_max)))
+        factor = float(np.clip(np.exp(rng.normal(0, scale)), factor_min, factor_max))
+        changed = int(np.clip(round(count * factor), low, high))
+        if changed == count:
+            changed = low if low < count else high
+        reweight_edits.append({**refs(edge), "count": changed})
+    document = base.document
+    document["description"] = (
+        "Inherited typed module duplication with deterministic bounded variation "
+        "restricted to the newly cloned edges."
+    )
+    document["model_boundary"] = {
+        "measured": "Ancestral annotations and copied edge directions/counts.",
+        "synthetic": "Duplication and every removed or reweighted cloned edge.",
+    }
+    document["edits"] = {
+        "add": [],
+        "remove": remove_edits,
+        "reweight": reweight_edits,
+    }
+    document["variation"] = {
+        "operator": "bounded-cloned-edge-variation-v1",
+        "seed": seed,
+        "mutation_scale": scale,
+        "bounds": dict(bounds),
+        "eligible_cloned_edges": seen_removal,
+        "eligible_reweight_edges": seen_reweight,
+        "removed_edges": len(remove_edits),
+        "reweighted_edges": len(reweight_edits),
+    }
+    return CircuitBlueprint.from_value(document)
+
+
 def _clone_edges(
     graph: Any, modules: list[dict[str, Any]], n: int
 ) -> tuple[sparse.csr_matrix, list[dict[str, Any]], set[int]]:
@@ -533,21 +742,56 @@ def _metadata(graph: Any, modules: list[dict[str, Any]]) -> dict[str, np.ndarray
         else:
             duplicate = parent[duplicate_sources]
         metadata[field] = np.concatenate((parent, duplicate))
+
+    def inherited(field: str, default: np.ndarray) -> np.ndarray:
+        if field in graph.metadata_fields:
+            return np.asarray(getattr(graph, field))
+        return default
+
+    root_indices = inherited(
+        "ancestral_indices", np.arange(graph.n, dtype=np.int32)
+    ).astype(np.int32, copy=False)
+    root_body_ids = inherited(
+        "ancestral_body_ids", np.asarray(graph.body_ids, dtype=np.int64)
+    ).astype(np.int64, copy=False)
+    birth_parent_indices = inherited(
+        "birth_parent_indices", np.arange(graph.n, dtype=np.int32)
+    ).astype(np.int32, copy=False)
+    birth_parent_body_ids = inherited(
+        "birth_parent_body_ids", np.asarray(graph.body_ids, dtype=np.int64)
+    ).astype(np.int64, copy=False)
+    parent_origin = inherited("origin", np.full(graph.n, "measured_ancestor")).astype(
+        str, copy=False
+    )
+    parent_module = inherited("module", np.full(graph.n, "")).astype(str, copy=False)
+    parent_copy = inherited("copy_index", np.zeros(graph.n, dtype=np.int16)).astype(
+        np.int16, copy=False
+    )
+    parent_depth = inherited("lineage_depth", np.zeros(graph.n, dtype=np.int16)).astype(
+        np.int16, copy=False
+    )
     metadata["ancestral_body_ids"] = np.concatenate(
-        (np.asarray(graph.body_ids), np.asarray(graph.body_ids)[duplicate_sources])
+        (root_body_ids, root_body_ids[duplicate_sources])
     ).astype(np.int64)
     metadata["ancestral_indices"] = np.concatenate(
-        (np.arange(graph.n, dtype=np.int32), duplicate_sources)
+        (root_indices, root_indices[duplicate_sources])
     )
+    metadata["birth_parent_body_ids"] = np.concatenate(
+        (birth_parent_body_ids, np.asarray(graph.body_ids)[duplicate_sources])
+    ).astype(np.int64)
+    metadata["birth_parent_indices"] = np.concatenate(
+        (birth_parent_indices, duplicate_sources)
+    ).astype(np.int32)
     metadata["origin"] = np.concatenate(
         (
-            np.full(graph.n, "measured_ancestor"),
+            parent_origin,
             np.full(len(duplicate_sources), "synthetic_duplicate"),
         )
     )
-    metadata["module"] = np.concatenate((np.full(graph.n, ""), module_names))
-    metadata["copy_index"] = np.concatenate(
-        (np.zeros(graph.n, dtype=np.int16), copy_numbers)
+    metadata["module"] = np.concatenate((parent_module, module_names))
+    metadata["copy_index"] = np.concatenate((parent_copy, copy_numbers))
+    metadata["lineage_depth"] = np.concatenate(
+        (parent_depth, parent_depth[duplicate_sources] + 1)
     )
     return metadata
 
@@ -832,6 +1076,23 @@ def compile_blueprint(
             ]
         )
         manifest = json.loads(_canonical_json(parent.manifest))
+        graph_ancestry = list(manifest.get("graph_ancestry", []))
+        if not graph_ancestry:
+            graph_ancestry.append(
+                {
+                    "graph_sha256": parent.hash,
+                    "kind": "measured_root",
+                    "blueprint_sha256": None,
+                }
+            )
+        graph_ancestry.append(
+            {
+                "graph_sha256": graph_hash,
+                "parent_graph_sha256": parent.hash,
+                "kind": "circuit_blueprint",
+                "blueprint_sha256": blueprint.sha256,
+            }
+        )
         manifest.update(
             {
                 "schema_version": max(3, int(manifest.get("schema_version", 1))),
@@ -854,8 +1115,10 @@ def compile_blueprint(
                 "source_graph": {
                     "dataset_hash": parent.hash,
                     "artifacts": parent.manifest["artifacts"],
+                    "manifest_sha256": _file_hash(Path(parent.path) / "manifest.json"),
                     "immutable": True,
                 },
+                "graph_ancestry": graph_ancestry,
                 "derivation": {
                     "kind": "circuit_blueprint",
                     "blueprint": document,
