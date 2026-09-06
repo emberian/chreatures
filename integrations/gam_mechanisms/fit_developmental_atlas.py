@@ -198,11 +198,14 @@ def fit(compact_path: Path, output: Path) -> dict:
     data = np.load(compact_path)
     x, y, episode, world = data["features"].astype(float), data["targets"].astype(float), data["episode"], data["world_slot"]
     residual_valid = data["residual_valid"].astype(bool)
-    if np.unique(episode).size >= 5:
-        test = episode % 5 == 0
-        validation = (~test) & ((episode * 131 + world) % 5 == 0)
+    if np.unique(episode).size >= 4:
+        heldout_episode = int(np.max(episode))
+        heldout_world = int(np.max(world))
+        test = episode == heldout_episode
+        validation = (~test) & (world == heldout_world)
         train = ~(test | validation)
-        split_label = "complete held-out episodes plus complete validation worlds"
+        split_label = (f"episodes before {heldout_episode}, worlds 0..{heldout_world - 1} train; "
+                       f"world {heldout_world} validates; complete episode {heldout_episode} held out")
     else:
         heldout_world = int(np.max(world))
         test = world == heldout_world
@@ -223,7 +226,7 @@ def fit(compact_path: Path, output: Path) -> dict:
               "split": split_label,
               "rows": {"train": int(train.sum()), "validation_worlds": int(validation.sum()), "held_out": int(test.sum())},
               "units": {"episodes_total": int(np.unique(episode).size),
-                        "episodes_held_out": int(np.unique(episode[test]).size) if np.unique(episode).size >= 5 else 0,
+                        "episodes_held_out": int(np.unique(episode[test]).size) if np.unique(episode).size >= 4 else 0,
                         "training_worlds": int(np.unique(world[train]).size),
                         "held_out_worlds": int(np.unique(world[test]).size),
                         "validation_episode_worlds": int(np.unique(np.column_stack((episode[validation], world[validation])), axis=0).shape[0])},
