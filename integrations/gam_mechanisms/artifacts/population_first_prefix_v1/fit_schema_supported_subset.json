@@ -1,0 +1,230 @@
+{
+  "basis_size": 9,
+  "budgets": [],
+  "candidate_score": {
+    "maximum_tilt": 0.25,
+    "terms": [
+      {
+        "mechanism": "expected_energy_state_delta",
+        "scale": 4.050710329788083e-05,
+        "weight": 1.0
+      },
+      {
+        "mechanism": "expected_effort",
+        "scale": 0.14611713609956242,
+        "weight": -0.5
+      }
+    ]
+  },
+  "feature_contract_sha256": "b4551169171bf4ab0a2389a6956cd99469e13a99d00b9f0b81963e31ed35a03d",
+  "features": [
+    {
+      "name": "energy",
+      "source": "physiology12[0]",
+      "unit": "physiology encoding"
+    },
+    {
+      "name": "gut",
+      "source": "physiology12[1]",
+      "unit": "physiology encoding"
+    },
+    {
+      "name": "fatigue",
+      "source": "physiology12[2]",
+      "unit": "physiology encoding"
+    },
+    {
+      "name": "speed",
+      "source": "physiology12[3]",
+      "unit": "tanh(signed body-forward velocity_m_per_s / 2)"
+    },
+    {
+      "name": "turn",
+      "source": "physiology12[4]",
+      "unit": "tanh(world-z angular_velocity_rad_per_s / 4)"
+    },
+    {
+      "name": "neural_support",
+      "source": "physiology12[5]",
+      "unit": "physiology encoding"
+    },
+    {
+      "name": "structural_integrity",
+      "source": "physiology12[6]",
+      "unit": "fraction"
+    },
+    {
+      "name": "development_fraction",
+      "source": "physiology12[7]",
+      "unit": "fraction"
+    },
+    {
+      "name": "gland_fill",
+      "source": "physiology12[8]",
+      "unit": "fraction"
+    },
+    {
+      "name": "brood_fill",
+      "source": "physiology12[9]",
+      "unit": "fraction"
+    },
+    {
+      "name": "reproductive_maturity",
+      "source": "physiology12[10]",
+      "unit": "fraction"
+    },
+    {
+      "name": "exchange_load",
+      "source": "physiology12[11]",
+      "unit": "physiology encoding"
+    },
+    {
+      "name": "history_energy_mean",
+      "source": "private bounded history",
+      "unit": "physiology encoding"
+    },
+    {
+      "name": "history_fatigue_mean",
+      "source": "private bounded history",
+      "unit": "physiology encoding"
+    },
+    {
+      "name": "history_integrity_delta",
+      "source": "private bounded history",
+      "unit": "fraction per history window"
+    },
+    {
+      "name": "history_development_delta",
+      "source": "private bounded history",
+      "unit": "fraction per history window"
+    },
+    {
+      "name": "thrust",
+      "source": "executed_actions12[0]",
+      "unit": "executed action encoding"
+    },
+    {
+      "name": "yaw",
+      "source": "executed_actions12[1]",
+      "unit": "executed action encoding"
+    },
+    {
+      "name": "gaze_pitch",
+      "source": "executed_actions12[2]",
+      "unit": "executed action encoding"
+    },
+    {
+      "name": "posture",
+      "source": "executed_actions12[3]",
+      "unit": "executed action encoding"
+    },
+    {
+      "name": "grip",
+      "source": "executed_actions12[4]",
+      "unit": "executed nonnegative action encoding"
+    },
+    {
+      "name": "signal_low",
+      "source": "executed_actions12[5]",
+      "unit": "executed nonnegative action encoding"
+    },
+    {
+      "name": "signal_mid",
+      "source": "executed_actions12[6]",
+      "unit": "executed nonnegative action encoding"
+    },
+    {
+      "name": "signal_high",
+      "source": "executed_actions12[7]",
+      "unit": "executed nonnegative action encoding"
+    },
+    {
+      "name": "eat",
+      "source": "executed_actions12[8]",
+      "unit": "executed nonnegative action encoding"
+    },
+    {
+      "name": "release",
+      "source": "executed_actions12[9]",
+      "unit": "executed nonnegative action encoding"
+    },
+    {
+      "name": "secrete",
+      "source": "executed_actions12[10]",
+      "unit": "executed nonnegative action encoding"
+    },
+    {
+      "name": "allocate",
+      "source": "executed_actions12[11]",
+      "unit": "executed nonnegative action encoding"
+    }
+  ],
+  "format": "chreatures-population-response-fit-v1",
+  "responses": [
+    {
+      "law": "energy_state_delta",
+      "mechanism": "expected_energy_state_delta",
+      "smooth_features": [
+        "energy",
+        "gut",
+        "fatigue",
+        "thrust",
+        "eat",
+        "allocate"
+      ],
+      "target_column": 0,
+      "transform": {
+        "kind": "signed_tanh",
+        "magnitude": 0.00047589540481567387
+      },
+      "unit": "dimensionless state delta"
+    },
+    {
+      "law": "effort",
+      "mechanism": "expected_effort",
+      "smooth_features": [
+        "fatigue",
+        "speed",
+        "thrust",
+        "yaw",
+        "posture",
+        "grip"
+      ],
+      "target_column": 2,
+      "transform": {
+        "ceiling": 0.9484010249376298,
+        "kind": "positive_softplus"
+      },
+      "unit": "training-cohort effort per 50 ms"
+    }
+  ],
+  "source_contract": {
+    "censored_after_complete_trace_tick": 9856,
+    "dt_seconds": 0.05,
+    "feature_identity_mapping": "numeric columns unchanged; fit metadata clarifies signed forward speed and world-z angular velocity encodings",
+    "fit_feature_contract_sha256": "b4551169171bf4ab0a2389a6956cd99469e13a99d00b9f0b81963e31ed35a03d",
+    "format": "chreatures-population-gam-trace-v1",
+    "history_window_ticks": 64,
+    "planned_physical_ticks": 24000,
+    "rows_receipt_sha256": "f6d43f755b40182799be45cf4319cb0b284b73624bd628410693f193d3df3c1d",
+    "rows_sha256": "d4bc523bbf33a1a7cde9ddd702f94e63a73dd835e0cf246e74f131e18def2210",
+    "source_status": "failed_cohort_trace_prefix",
+    "target_semantics": "observed one-step associations under executed actions; not causal effects",
+    "terminal_content_sha256": "8cf8a036ddf95b1baac506ffdcf341378018203748fc828c1717d053ec3b136c",
+    "trace_feature_contract_sha256": "ad39ac4e911447c1d99770930ba7105a1157426a4b2dec4f6d1b40f94c76e1d1",
+    "training_sampling": "target-blind tick modulo stride equals zero within every fit life"
+  },
+  "split": {
+    "heldout_candidates": [
+      "26b72fb9b173b5ec29d16cff8dbeab92ff293298d0956cc189f4c184e9f61a6d",
+      "10d5193b4df40603ec427319900b3c9be77e564d46654795ea79ac0606bc9623",
+      "2d86db81e08aca4de4e324f40598029c880095a379da8d6efc746dcc27a610cc"
+    ],
+    "heldout_environments": [
+      "53d0cf8a2cced47799feab68ea777da100f3256e402d368e1bd548836a1b63a7"
+    ],
+    "heldout_lineages": [],
+    "validation_world_mod": 5
+  },
+  "training_tick_stride": 8
+}

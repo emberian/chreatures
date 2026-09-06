@@ -1,0 +1,154 @@
+{
+  "bank_sha256": "e787c7936558319b8f07a9f54e308d995fa2ed27007a414e2831e4c2b3b7a426",
+  "fit_seconds": 15.86215583399462,
+  "format": "chreatures-population-response-fit-report-v1",
+  "models": {
+    "effort": {
+      "features_excluded_from_smooths": [
+        "energy",
+        "gut",
+        "turn",
+        "neural_support",
+        "structural_integrity",
+        "development_fraction",
+        "gland_fill",
+        "brood_fill",
+        "reproductive_maturity",
+        "exchange_load",
+        "history_energy_mean",
+        "history_fatigue_mean",
+        "history_integrity_delta",
+        "history_development_delta",
+        "gaze_pitch",
+        "signal_low",
+        "signal_mid",
+        "signal_high",
+        "eat",
+        "release",
+        "secrete",
+        "allocate"
+      ],
+      "formula": "response ~ s(fatigue, k=9) + s(speed, k=9) + s(thrust, k=9) + s(yaw, k=9) + s(posture, k=9) + s(grip, k=9)",
+      "metrics": {
+        "heldout_candidate": {
+          "aggregate_rmse": 0.0029562572789082835,
+          "complete_candidate_episode_world_units": 3,
+          "mean_baseline_rmse": 0.13144064768673028,
+          "rmse": 0.033457950583200224,
+          "rows": 29568,
+          "scale": "training-cohort effort per 50 ms"
+        },
+        "heldout_environment": {
+          "aggregate_rmse": 0.0037342789339092296,
+          "complete_candidate_episode_world_units": 8,
+          "mean_baseline_rmse": 0.12967448778822713,
+          "rmse": 0.03239992209479432,
+          "rows": 78848,
+          "scale": "training-cohort effort per 50 ms"
+        },
+        "heldout_union": {
+          "aggregate_rmse": 0.003539094446930029,
+          "complete_candidate_episode_world_units": 11,
+          "mean_baseline_rmse": 0.13015854453076345,
+          "rmse": 0.03269187136342991,
+          "rows": 108416,
+          "scale": "training-cohort effort per 50 ms"
+        },
+        "validation": {
+          "aggregate_rmse": 0.004143929429707942,
+          "complete_candidate_episode_world_units": 7,
+          "mean_baseline_rmse": 0.1305220774344848,
+          "rmse": 0.03402704487193536,
+          "rows": 68992,
+          "scale": "training-cohort effort per 50 ms"
+        }
+      },
+      "model_sha256": "3da83b7fc8b7e99ee763ddb0623eba3f45d6522dae8d6f7aeb54c8c72bbc6655",
+      "status": "fitted native GAM"
+    },
+    "energy_state_delta": {
+      "features_excluded_from_smooths": [
+        "speed",
+        "turn",
+        "neural_support",
+        "structural_integrity",
+        "development_fraction",
+        "gland_fill",
+        "brood_fill",
+        "reproductive_maturity",
+        "exchange_load",
+        "history_energy_mean",
+        "history_fatigue_mean",
+        "history_integrity_delta",
+        "history_development_delta",
+        "yaw",
+        "gaze_pitch",
+        "posture",
+        "grip",
+        "signal_low",
+        "signal_mid",
+        "signal_high",
+        "release",
+        "secrete"
+      ],
+      "formula": "response ~ s(energy, k=9) + s(gut, k=9) + s(fatigue, k=9) + s(thrust, k=9) + s(eat, k=9) + s(allocate, k=9)",
+      "metrics": {
+        "heldout_candidate": {
+          "aggregate_rmse": 3.975479441253766e-06,
+          "complete_candidate_episode_world_units": 3,
+          "mean_baseline_rmse": 3.225163785728863e-05,
+          "rmse": 2.2586148588752722e-05,
+          "rows": 29568,
+          "scale": "dimensionless state delta"
+        },
+        "heldout_environment": {
+          "aggregate_rmse": 7.0624028428164215e-06,
+          "complete_candidate_episode_world_units": 8,
+          "mean_baseline_rmse": 3.554824041916985e-05,
+          "rmse": 2.5938572305377955e-05,
+          "rows": 78848,
+          "scale": "dimensionless state delta"
+        },
+        "heldout_union": {
+          "aggregate_rmse": 6.3706256412984756e-06,
+          "complete_candidate_episode_world_units": 11,
+          "mean_baseline_rmse": 3.4680258477365745e-05,
+          "rmse": 2.5068775562349942e-05,
+          "rows": 108416,
+          "scale": "dimensionless state delta"
+        },
+        "validation": {
+          "aggregate_rmse": 6.4618161169192765e-06,
+          "complete_candidate_episode_world_units": 7,
+          "mean_baseline_rmse": 3.771369067359533e-05,
+          "rmse": 2.773535714408099e-05,
+          "rows": 68992,
+          "scale": "dimensionless state delta"
+        }
+      },
+      "model_sha256": "9830cf73ee47ff95ca9843f1ae247573d6579eb41949b4bb5342db1a2d422f63",
+      "status": "fitted native GAM"
+    }
+  },
+  "rows": {
+    "heldout": 108416,
+    "train": 17248,
+    "validation": 68992
+  },
+  "schema_sha256": "affafa1bc1583fe98d4deff89e4e6b60c03337ea1d59d58ef9c72ea8d4e44ef1",
+  "source_data_sha256": "d4bc523bbf33a1a7cde9ddd702f94e63a73dd835e0cf246e74f131e18def2210",
+  "status": "candidate for new genome births; no resident promotion",
+  "training_sampling": {
+    "fitted_rows": 17248,
+    "pool_rows": 137984,
+    "rule": "tick modulo stride equals zero per complete fit life",
+    "tick_stride": 8
+  },
+  "units": {
+    "candidate_unit": 32,
+    "environment_unit": 4,
+    "episode_unit": 1,
+    "lineage_unit": 1,
+    "world_unit": 4
+  }
+}

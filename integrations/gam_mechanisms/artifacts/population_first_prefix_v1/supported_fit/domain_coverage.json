@@ -1,0 +1,57 @@
+{
+  "bank_sha256": "e787c7936558319b8f07a9f54e308d995fa2ed27007a414e2831e4c2b3b7a426",
+  "coverage": {
+    "all_rows": {
+      "fraction": 0.958198051948052,
+      "in_domain_rows": 302208,
+      "rows": 315392
+    },
+    "final_heldout_union": {
+      "fraction": 0.9674771251475797,
+      "in_domain_rows": 104890,
+      "rows": 108416
+    },
+    "training_pool": {
+      "fraction": 0.9508566210575139,
+      "in_domain_rows": 131203,
+      "rows": 137984
+    },
+    "validation": {
+      "fraction": 0.958299512987013,
+      "in_domain_rows": 66115,
+      "rows": 68992
+    }
+  },
+  "diagnostic_all_28_ranges_all_rows": {
+    "fraction": 0.7787103033685064,
+    "in_domain_rows": 245599,
+    "rows": 315392
+  },
+  "format": "chreatures-population-gam-domain-report-v1",
+  "interpretation": "all-28 range coverage is diagnostic only and is not the Rust LawBank domain rule",
+  "modeled_feature_union": [
+    "energy",
+    "gut",
+    "fatigue",
+    "speed",
+    "thrust",
+    "yaw",
+    "posture",
+    "grip",
+    "eat",
+    "allocate"
+  ],
+  "per_law_all_rows": {
+    "effort": {
+      "fraction": 0.9685851258116883,
+      "in_domain_rows": 305484,
+      "rows": 315392
+    },
+    "energy_state_delta": {
+      "fraction": 0.9823616325081169,
+      "in_domain_rows": 309829,
+      "rows": 315392
+    }
+  },
+  "runtime_contract": "all 28 inputs must be finite; range rejection is evaluated only for each law smooth term; the bank rejects if either law rejects"
+}
