@@ -59,6 +59,12 @@ enum Request {
         dt: f32,
         active_mask: u32,
         channels: Vec<f32>,
+        #[serde(default)]
+        selected_neuron_indices: Vec<u32>,
+        #[serde(default)]
+        target_neuron_indices: Vec<u32>,
+        #[serde(default)]
+        target_recurrent_correction: Vec<f32>,
     },
     Reset {
         mask: u32,
@@ -80,6 +86,8 @@ struct Reply {
     combined: Option<Vec<f32>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     gpu_ms: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    selected_rates: Option<Vec<f32>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     metadata: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -104,6 +112,8 @@ struct Engine {
     k_out: ComputePipelineState,
     k_phys: ComputePipelineState,
     k_phys_final: ComputePipelineState,
+    k_rec_corrected: ComputePipelineState,
+    k_gather: ComputePipelineState,
     simd_rows: bool,
 }
 impl Engine {
@@ -155,6 +165,12 @@ impl Engine {
             k_out: pipeline("project_readouts"),
             k_phys: pipeline("physiology_partials"),
             k_phys_final: pipeline("physiology_final"),
+            k_rec_corrected: pipeline(if simd_rows {
+                "csr_rate_simd_corrected"
+            } else {
+                "csr_rate_corrected"
+            }),
+            k_gather: pipeline("gather_rates"),
             device: d,
             n,
             rec,
@@ -169,8 +185,60 @@ impl Engine {
             MTLSize::new(p.thread_execution_width(), 1, 1),
         )
     }
-    fn step(&mut self, dt: f32, mask: u32, ch: &[f32]) -> (Vec<f32>, f64) {
-        assert_eq!(ch.len(), INPUTS * B);
+    fn step(
+        &mut self,
+        dt: f32,
+        mask: u32,
+        ch: &[f32],
+        selected_indices: &[u32],
+        target_indices: &[u32],
+        corrections: &[f32],
+    ) -> Result<(Vec<f32>, Vec<f32>, f64), String> {
+        if ch.len() != INPUTS * B {
+            return Err("channels must have shape [351,3]".into());
+        }
+        if selected_indices.len() > 8192 || selected_indices.iter().any(|&x| x as usize >= self.n) {
+            return Err("selected neuron indices are invalid".into());
+        }
+        let mut unique = selected_indices.to_vec();
+        unique.sort_unstable();
+        unique.dedup();
+        if unique.len() != selected_indices.len() {
+            return Err("selected neuron indices must be unique".into());
+        }
+        let corrected = !target_indices.is_empty() || !corrections.is_empty();
+        if corrected
+            && (target_indices.len() != 2
+                || corrections.len() != 2 * B
+                || target_indices[0] == target_indices[1]
+                || target_indices.iter().any(|&x| x as usize >= self.n))
+        {
+            return Err("target correction requires two unique indices and shape [2,3]".into());
+        }
+        let target_buffer = if corrected {
+            Some(buf(&self.device, target_indices))
+        } else {
+            None
+        };
+        let correction_buffer = if corrected {
+            let mut packed = vec![[0f32; 4]; 2];
+            for i in 0..2 {
+                packed[i][..B].copy_from_slice(&corrections[i * B..i * B + B])
+            }
+            Some(buf(&self.device, &packed))
+        } else {
+            None
+        };
+        let selected_index_buffer = if selected_indices.is_empty() {
+            None
+        } else {
+            Some(buf(&self.device, selected_indices))
+        };
+        let selected_buffer = if selected_indices.is_empty() {
+            None
+        } else {
+            Some(zeros(&self.device, selected_indices.len()))
+        };
         let mut packed = vec![[0f32; 4]; INPUTS];
         for i in 0..INPUTS {
             packed[i][..B].copy_from_slice(&ch[i * B..i * B + B])
@@ -220,9 +288,14 @@ impl Engine {
             (true, &pb1, &self.rate[1], &self.rate[0]),
         ] {
             let e = cb.new_compute_command_encoder();
+            let recurrent_pipeline = if corrected {
+                &self.k_rec_corrected
+            } else {
+                &self.k_rec
+            };
             bind(
                 e,
-                &self.k_rec,
+                recurrent_pipeline,
                 &[
                     &self.rec[0],
                     &self.rec[1],
@@ -235,13 +308,17 @@ impl Engine {
                 ],
             );
             e.set_buffer(8, Some(pb), 0);
+            if corrected {
+                e.set_buffer(9, Some(target_buffer.as_ref().unwrap()), 0);
+                e.set_buffer(10, Some(correction_buffer.as_ref().unwrap()), 0);
+            }
             if self.simd_rows {
                 e.dispatch_threads(
                     MTLSize::new(self.n as u64 * 32, 1, 1),
                     MTLSize::new(256, 1, 1),
                 );
             } else {
-                Self::grid(e, &self.k_rec, self.n);
+                Self::grid(e, recurrent_pipeline, self.n);
             }
             e.end_encoding();
             let _ = final_step;
@@ -260,6 +337,12 @@ impl Engine {
                 ],
             );
             Self::grid(e, &self.k_out, 384);
+            e.end_encoding()
+        }
+        if let (Some(indices), Some(selected)) = (&selected_index_buffer, &selected_buffer) {
+            let e = cb.new_compute_command_encoder();
+            bind(e, &self.k_gather, &[&self.rate[0], indices, selected]);
+            Self::grid(e, &self.k_gather, selected_indices.len());
             e.end_encoding()
         }
         {
@@ -292,7 +375,13 @@ impl Engine {
         for x in raw {
             out.extend_from_slice(&x[..B])
         }
-        (out, ms)
+        let mut selected_out = Vec::with_capacity(selected_indices.len() * B);
+        if let Some(selected) = selected_buffer {
+            for x in copy::<[f32; 4]>(&selected, selected_indices.len()) {
+                selected_out.extend_from_slice(&x[..B])
+            }
+        }
+        Ok((out, selected_out, ms))
     }
     fn reset(&mut self, mask: u32) {
         unsafe {
@@ -360,14 +449,38 @@ fn main() {
                 dt,
                 active_mask,
                 channels,
+                selected_neuron_indices,
+                target_neuron_indices,
+                target_recurrent_correction,
             }) => {
-                let (o, m) = x.step(dt, active_mask, &channels);
-                Reply {
-                    ok: true,
-                    combined: Some(o),
-                    gpu_ms: Some(m),
-                    metadata: None,
-                    error: None,
+                match x.step(
+                    dt,
+                    active_mask,
+                    &channels,
+                    &selected_neuron_indices,
+                    &target_neuron_indices,
+                    &target_recurrent_correction,
+                ) {
+                    Ok((o, s, m)) => Reply {
+                        ok: true,
+                        combined: Some(o),
+                        gpu_ms: Some(m),
+                        selected_rates: if selected_neuron_indices.is_empty() {
+                            None
+                        } else {
+                            Some(s)
+                        },
+                        metadata: None,
+                        error: None,
+                    },
+                    Err(e) => Reply {
+                        ok: false,
+                        combined: None,
+                        gpu_ms: None,
+                        selected_rates: None,
+                        metadata: None,
+                        error: Some(e),
+                    },
                 }
             }
             Ok(Request::Reset { mask }) => {
@@ -376,6 +489,7 @@ fn main() {
                     ok: true,
                     combined: None,
                     gpu_ms: None,
+                    selected_rates: None,
                     metadata: None,
                     error: None,
                 }
@@ -386,6 +500,7 @@ fn main() {
                     ok: true,
                     combined: None,
                     gpu_ms: None,
+                    selected_rates: None,
                     metadata: None,
                     error: None,
                 }
@@ -394,6 +509,7 @@ fn main() {
                 ok: true,
                 combined: None,
                 gpu_ms: None,
+                selected_rates: None,
                 metadata: Some(x.restore(&path)),
                 error: None,
             },
@@ -401,6 +517,7 @@ fn main() {
                 ok: true,
                 combined: None,
                 gpu_ms: None,
+                selected_rates: None,
                 metadata: Some(x.device.name().to_string()),
                 error: None,
             },
@@ -411,6 +528,7 @@ fn main() {
                         ok: true,
                         combined: None,
                         gpu_ms: None,
+                        selected_rates: None,
                         metadata: None,
                         error: None
                     })
@@ -422,6 +540,7 @@ fn main() {
                 ok: false,
                 combined: None,
                 gpu_ms: None,
+                selected_rates: None,
                 metadata: None,
                 error: Some(e.to_string()),
             },

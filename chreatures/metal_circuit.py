@@ -36,6 +36,11 @@ class MetalCircuit:
         support_recovery: float = 0.024,
         kernel: str = "row",
         manifest: str | Path | None = None,
+        mushroom_substrate: Any | None = None,
+        mushroom_bridge: Any | None = None,
+        mushroom_modulator_mode: str = "synthetic",
+        mushroom_plasticity_enabled: bool = True,
+        mushroom_config: Any | None = None,
     ):
         if capacity != 3:
             raise ValueError("experimental Metal backend has fixed capacity 3")
@@ -56,6 +61,27 @@ class MetalCircuit:
         self.port_spec_hash = str(meta["spec_hash"])
         self.n = 165122
         self.edge_count = 25563197
+        if (mushroom_substrate is None) != (mushroom_bridge is None):
+            raise ValueError("mushroom substrate and bridge must be supplied together")
+        self._mushroom_spec = mushroom_bridge
+        self._mushroom_substrate = mushroom_substrate
+        self._mushroom_mode = mushroom_bridge is not None
+        self._mushroom_modulator_mode = mushroom_modulator_mode
+        self._mushroom_plasticity_enabled = bool(mushroom_plasticity_enabled)
+        self._mushroom_cohort = None
+        if self._mushroom_mode:
+            from .mushroom_plasticity import WholeBrainMushroomCohort
+
+            if mushroom_bridge.graph_hash != self.graph_hash:
+                raise ValueError("mushroom bridge belongs to a different graph")
+            self._mushroom_cohort = WholeBrainMushroomCohort(
+                mushroom_substrate,
+                mushroom_bridge,
+                capacity=capacity,
+                config=mushroom_config,
+                plasticity_enabled=self._mushroom_plasticity_enabled,
+                modulator_mode=mushroom_modulator_mode,
+            )
         self._input_position = {n: i for i, n in enumerate(self.input_names)}
         self._slots = {}
         self._resident_for_slot = [None] * 3
@@ -157,6 +183,8 @@ class MetalCircuit:
             self.times[slot] = 0
             mask |= 1 << slot
         self._call({"op": "reset", "mask": mask})
+        if self._mushroom_mode:
+            self._mushroom_cohort.reset_slots(mask)
         return assigned
 
     def remove_residents(self, resident_ids: Sequence[str]):
@@ -172,6 +200,8 @@ class MetalCircuit:
             self.times[slot] = 0
             mask |= 1 << slot
         self._call({"op": "reset", "mask": mask})
+        if self._mushroom_mode:
+            self._mushroom_cohort.reset_slots(mask)
 
     def step(self, residents: Sequence[Mapping[str, Any]], dt: float):
         if not np.isfinite(dt) or not 0 < dt <= 0.2:
@@ -197,22 +227,53 @@ class MetalCircuit:
                 if not np.isfinite(v) or not 0 <= v <= 1:
                     raise ValueError("sensory values must be finite in [0, 1]")
                 channels[self._input_position[name], slot] = v
-        response = self._call(
-            {
-                "op": "step",
-                "dt": dt,
-                "active_mask": mask,
-                "channels": channels.ravel().tolist(),
-            }
-        )
+        request = {
+            "op": "step",
+            "dt": dt,
+            "active_mask": mask,
+            "channels": channels.ravel().tolist(),
+        }
+        mushroom_modulator = None
+        if self._mushroom_mode:
+            corrections = self._mushroom_cohort.pending_correction
+            if self._mushroom_cohort.modulator_mode == "synthetic":
+                mushroom_modulator = np.zeros((2, 3), dtype=np.float32)
+                for item, rid in zip(residents, ids, strict=True):
+                    value = np.asarray(item.get("mushroom_modulator"), dtype=np.float32)
+                    if value.ndim == 0:
+                        value = np.full(2, value, dtype=np.float32)
+                    if value.shape != (2,) or not np.isfinite(value).all() or np.any(
+                        (value < 0) | (value > 1)
+                    ):
+                        raise ValueError(
+                            "mushroom_modulator must be a finite scalar or bilateral pair in [0, 1]"
+                        )
+                    mushroom_modulator[:, self._slots[rid]] = value
+            elif any(item.get("mushroom_modulator") is not None for item in residents):
+                raise ValueError(
+                    "actual_ppl101_rate mode does not accept mushroom_modulator"
+                )
+            request.update(
+                selected_neuron_indices=self._mushroom_spec.selected_neuron_indices.tolist(),
+                target_neuron_indices=self._mushroom_spec.target_neuron_indices.tolist(),
+                target_recurrent_correction=corrections.ravel().tolist(),
+            )
+        response = self._call(request)
         combined = np.asarray(response["combined"], dtype=np.float32).reshape(387, 3)
+        selected = None
+        if self._mushroom_mode:
+            selected = np.asarray(response["selected_rates"], dtype=np.float32).reshape(
+                self._mushroom_spec.selected_count, 3
+            )
+            bridge_steps = self._mushroom_cohort.advance(
+                selected, mushroom_modulator, mask, dt=dt
+            )
         out = []
-        for rid in ids:
+        for item, rid in zip(residents, ids, strict=True):
             slot = self._slots[rid]
             self.times[slot] += dt
             vector = combined[:384, slot].tolist()
-            out.append(
-                {
+            result = {
                     "id": rid,
                     "time": float(self.times[slot]),
                     "features": vector,
@@ -225,11 +286,19 @@ class MetalCircuit:
                     "support_mean": float(combined[386, slot]),
                     "gpu_ms": float(response["gpu_ms"]),
                 }
-            )
+            if self._mushroom_mode:
+                bridge_step = bridge_steps[slot]
+                result["selected_rates"] = selected[:, slot].tolist()
+                result["mushroom"] = {
+                    "target_recurrent_correction": bridge_step.target_recurrent_correction.tolist(),
+                    "actual_dan_rates": bridge_step.actual_dan_rates.tolist(),
+                    "actual_mbon_rates": bridge_step.actual_mbon_rates.tolist(),
+                }
+            out.append(result)
         return out
 
     def metadata(self):
-        return {
+        result = {
             "graph": {
                 "sha256": self.graph_hash,
                 "neurons": self.n,
@@ -261,6 +330,21 @@ class MetalCircuit:
                 "readout_count": 384,
             },
         }
+        if self._mushroom_mode:
+            result["research_mode"] = {
+                "format": "chreatures-metal-mushroom-research-v1",
+                "bridge_sha256": self._mushroom_spec.bridge_hash,
+                "selected_neuron_indices": self._mushroom_spec.selected_neuron_indices.tolist(),
+                "selected_body_ids": self._mushroom_spec.selected_body_ids.tolist(),
+                "target_neuron_indices": self._mushroom_spec.target_neuron_indices.tolist(),
+                "target_body_ids": self._mushroom_spec.target_body_ids.tolist(),
+                "modulator_mode": self._mushroom_cohort.modulator_mode,
+                "lag_steps": 1,
+                "plasticity_enabled": self._mushroom_cohort.plasticity_enabled,
+                "config": vars(self._mushroom_cohort.config),
+                "native_interface": "metal-mushroom-recurrent-correction-v1",
+            }
+        return result
 
     def _path(self, directory, name):
         if not SAFE_NAME.fullmatch(name) or name in {".", ".."}:
@@ -281,7 +365,7 @@ class MetalCircuit:
         path.parent.mkdir(parents=True, exist_ok=True)
         metadata = json.dumps(
             {
-                "version": 3,
+                "version": 4 if self._mushroom_mode else 3,
                 "graph_sha256": self.graph_hash,
                 "artifact_sha256": self.artifact_sha256,
                 "port_spec_hash": self.port_spec_hash,
@@ -290,6 +374,11 @@ class MetalCircuit:
                 "times": self.times.tolist(),
                 "input_names": self.input_names,
                 "readout_names": self.readout_names,
+                **(
+                    {"mushroom_research": self._mushroom_cohort.snapshot()}
+                    if self._mushroom_mode
+                    else {}
+                ),
             },
             separators=(",", ":"),
         )
@@ -323,9 +412,12 @@ class MetalCircuit:
             and self.graph_hash == CANONICAL_GRAPH_SHA256
             and self.port_spec_hash == CANONICAL_PORT_SPEC_SHA256
         )
+        mode_matches = (version == 4) == self._mushroom_mode
         if (
-            version not in {2, 3}
+            version not in {2, 3, 4}
+            or not mode_matches
             or (version == 3 and meta.get("artifact_sha256") != self.artifact_sha256)
+            or (version == 4 and meta.get("artifact_sha256") != self.artifact_sha256)
             or (version == 2 and not legacy_verified)
             or meta.get("graph_sha256") != self.graph_hash
             or meta.get("port_spec_hash") != self.port_spec_hash
@@ -336,6 +428,19 @@ class MetalCircuit:
             raise ValueError(
                 "snapshot is incompatible with this artifact, graph, port interface, or Metal kernel"
             )
+        restored_cohort = None
+        if self._mushroom_mode:
+            from .mushroom_plasticity import WholeBrainMushroomCohort
+
+            restored_cohort = WholeBrainMushroomCohort(
+                self._mushroom_substrate,
+                self._mushroom_spec,
+                capacity=self.capacity,
+                config=self._mushroom_cohort.config,
+                plasticity_enabled=self._mushroom_cohort.plasticity_enabled,
+                modulator_mode=self._mushroom_cohort.modulator_mode,
+            )
+            restored_cohort.restore(meta.get("mushroom_research", {}))
         slots = meta["resident_ids"]
         active = [x for x in slots if x is not None]
         if resident_ids is not None and list(map(str, resident_ids)) != active:
@@ -348,6 +453,8 @@ class MetalCircuit:
         self._resident_for_slot = slots
         self._slots = {rid: i for i, rid in enumerate(slots) if rid is not None}
         self.times = np.asarray(meta["times"], dtype=np.float64)
+        if restored_cohort is not None:
+            self._mushroom_cohort = restored_cohort
         return {
             "name": name,
             "sha256": digest,
