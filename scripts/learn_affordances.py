@@ -551,9 +551,48 @@ def _world_worker(
                 if world is None:
                     raise RuntimeError("world must be reset before observation")
                 physical_world = getattr(world, "world", world)
-                rich = np.asarray(
-                    physical_world.rich_retina_batch(refresh=True), dtype=np.float32,
-                )
+                try:
+                    rich = np.asarray(
+                        physical_world.rich_retina_batch(refresh=True), dtype=np.float32,
+                    )
+                except ValueError as error:
+                    # Preserve the complete bounded native precondition state.
+                    # A failed cohort barrier closes the pool, so this diagnostic
+                    # is the only chance to distinguish a pointer rebind from a
+                    # malformed body-local input without retrying a world step.
+                    import mujoco
+
+                    roots = [
+                        mujoco.mj_name2id(
+                            physical_world.model, mujoco.mjtObj.mjOBJ_GEOM,
+                            f"resident:{body.id}:geom:thorax",
+                        )
+                        for body in physical_world.bodies
+                    ]
+                    heads = [
+                        mujoco.mj_name2id(
+                            physical_world.model, mujoco.mjtObj.mjOBJ_GEOM,
+                            f"resident:{body.id}:geom:head",
+                        )
+                        for body in physical_world.bodies
+                    ]
+                    gaze = [float(body.gaze_pitch) for body in physical_world.bodies]
+                    illumination = [
+                        float(physical_world._illumination(body))
+                        for body in physical_world.bodies
+                    ]
+                    native = physical_world._native_retina
+                    raise RuntimeError(
+                        "native rich retina rejected its bound cohort: "
+                        f"world_index={world_index}, "
+                        f"model_address={int(physical_world.model._address)}, "
+                        f"data_address={int(physical_world.data._address)}, "
+                        f"roots={roots}, heads={heads}, gaze={gaze}, "
+                        f"illumination={illumination}, "
+                        f"native_residents={native.residents}, "
+                        f"native_rays={native.rays_per_resident}, "
+                        f"native_profile_sha256={native.profile_sha256}"
+                    ) from error
                 vectors = [
                     encode_physical_senses(world.sense(body.id), port_spec)[1]
                     for body in world.bodies
