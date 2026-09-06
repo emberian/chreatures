@@ -669,3 +669,62 @@ collection uses frozen source `762cc60`, before the subsequent physical catchmen
 repair, and makes no matched controller-benefit claim. The
 [collection receipt](../data/training/rich-family-v5-v1.receipt.json) preserves
 the exact sources, model, native binaries, data and private-state totals.
+
+## 2026-09-06, afternoon — populations, regional ecologies and trainable organs
+
+The new development goal replaced the earlier timed window with one substantial
+coupled implementation wave. Native population search now owns heritable body,
+metabolic, neural and controller variation, a bounded quality-diversity archive,
+transfer scheduling and persisted selection state. Regional genomes generate
+connected three-dimensional physical ecologies; the ten actual campaign worlds
+contain 15–35 platforms and 22–52 links. The body interface has twelve explicit
+actions and twelve physiology channels. Release, secretion and allocation spend
+finite private material; materially funded clonal hatching appends a real body,
+five chemical compartments and fresh private neural/controller state.
+
+The first physical campaign launched 80 candidate lives in ten environments on
+hbox under frozen source `dae1ebd`. Persvati separately trained 32 heterogeneous
+residents under `41804ef`, using four adapter variants. An eight-founder world
+born on the M2 from `8a801fc` supplies the actual 240-frame regional observatory
+recording. No earlier resident was upgraded. Two independent research copies of
+its tick-10020 checkpoint advanced 32 ticks and produced byte-identical complete
+world and neural state; the authoritative world continued untouched. Exact
+sources and scope are in the [continuation receipt](../research/continuity/population-v4-8a801fc/README.md).
+
+Batch 0 reached 9,967 committed ticks before a shared work-payment exception;
+batch 1 subsequently encountered the same invariant at tick 10,340. The native
+archive retained each allocated life as an engine failure, assigning no quality.
+These are cohort failures, not independent demonstrations of organism failure.
+Native Universal Weave records the actual ancestry, checkpoints, evidence and
+terminal events. The exact depleted case revealed a one-ULP overshoot when
+recombining maintenance and activation costs. The repair preserves a
+representable funded partition and atomically validates/pays the body cohort,
+without relaxing the metabolic conservation check or granting ATP.
+
+The main physical optimization avoids compiling an entire MuJoCo world to
+reject a provably obstructed material packet. A native geometry precheck runs
+after staged chemistry establishes that a packet would actually appear;
+ambiguous geometry and simultaneously altered colliders retain authoritative
+compiled validation. The actual joined eight-resident workload's biosphere
+phase fell from 56.62 ms to 6.01 ms, with exact matched physical and chemical
+snapshots in the retained 90-step comparison. This is a phase timing, not a
+ninefold claim for complete simulation or training throughput.
+
+The first cold controller also exposed a substantive learning gap: its new
+physiology columns were zero behind a frozen encoder, and its frozen zero
+actuator weights prevented contextual control of the new outputs. The strict
+controller-v5 successor adds trainable physiology-to-recurrence and new-actuator
+projections while leaving achieved-goal encoding fixed. One explicit converter
+records the new exploration recipe; the production paths accept only current
+artifacts. Native/Torch comparison exercises nonzero new organs, rather than
+checking only their initially zero contribution. The new organs are inherited
+shared training parameters, distinct from private lifetime memory. The
+[mechanism receipt](development/POPULATION_V5_NATIVE.md) does not claim learned
+regulation, reproduction or social behavior.
+
+Population GAM work uses the authenticated complete prefix of the failed first
+batch and a predeclared whole-candidate/environment split. Native fits, failed
+fits and any corrected schema recipes are retained separately; a fitted bank
+will enter only a new designated research birth. Larger populations and coupled
+organs are implemented, but useful ecological strategies and durable reciprocal
+behavior remain empirical work.
