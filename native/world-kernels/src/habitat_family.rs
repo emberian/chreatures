@@ -11,11 +11,11 @@ use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 
-const FORMAT: &str = "chreatures-regional-habitat-family-v1";
-const GENOME_FORMAT: &str = "chreatures-environment-genome-v1";
-const RESIDENT_FORMAT: &str = "chreatures-regional-residents-v1";
-const ANALYST_FORMAT: &str = "chreatures-regional-analyst-v1";
-const RECORD_FORMAT: &str = "chreatures-environment-record-v1";
+const FORMAT: &str = "chreatures-regional-habitat-family-v2";
+const GENOME_FORMAT: &str = "chreatures-environment-genome-v2";
+const RESIDENT_FORMAT: &str = "chreatures-regional-residents-v2";
+const ANALYST_FORMAT: &str = "chreatures-regional-analyst-v2";
+const RECORD_FORMAT: &str = "chreatures-environment-record-v2";
 const MAX_REGIONS: usize = 48;
 const MAX_EDGES: usize = 128;
 const MAX_RESIDENTS: usize = 32;
@@ -82,6 +82,58 @@ struct MutationSpec {
 
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
+struct GenerationCostLimits {
+    physical_geoms: usize,
+    regions: usize,
+    edges: usize,
+    movables: usize,
+    compartments: usize,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DescriptorNormalization {
+    resource_mass_per_square_meter: f64,
+    renewal_capacity_per_square_meter_second: f64,
+    cycle_rank_per_region: f64,
+    resident_physical_geoms: usize,
+    generation_cost_limits: GenerationCostLimits,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DevelopmentalRuleAlleles {
+    vertical_weight: f64,
+    clearance_weight: f64,
+    surface_weight: f64,
+    surface_reach: f64,
+    clearance_distance: f64,
+    conductivity: f64,
+    half_resistance: f64,
+    response_light: f64,
+    response_nutrient: f64,
+    response_support: f64,
+    response_competition: f64,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DevelopmentalRuleAlleleRanges {
+    vertical_weight: ScalarRange,
+    clearance_weight: ScalarRange,
+    surface_weight: ScalarRange,
+    surface_reach: ScalarRange,
+    clearance_distance: ScalarRange,
+    conductivity: ScalarRange,
+    half_resistance: ScalarRange,
+    response_light: ScalarRange,
+    response_nutrient: ScalarRange,
+    response_support: ScalarRange,
+    response_competition: ScalarRange,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct MechanismCluster {
     entity_ids: Vec<String>,
     anchor_m: [f64; 3],
@@ -129,6 +181,8 @@ struct Config {
     geometry: Geometry,
     catchment: CatchmentSpec,
     mutation: MutationSpec,
+    descriptor_normalization: DescriptorNormalization,
+    developmental_rule_alleles: DevelopmentalRuleAlleleRanges,
     archetypes: Vec<Archetype>,
     training_genomes: Vec<TrainingSeed>,
 }
@@ -158,6 +212,7 @@ struct Parameters {
     resource_scale: f64,
     movable_count: usize,
     terrace_bias: f64,
+    developmental_rules: DevelopmentalRuleAlleles,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -167,6 +222,7 @@ struct Genome {
     version: u64,
     sha256: String,
     parents: Vec<String>,
+    environment_parents: Vec<String>,
     variation: Variation,
     epoch: u64,
     profile_sha256: String,
@@ -293,11 +349,13 @@ fn parse_genome(text: &str) -> PyResult<Genome> {
     let value: Genome = serde_json::from_str(text)
         .map_err(|e| PyValueError::new_err(format!("invalid environment genome: {e}")))?;
     if value.format != GENOME_FORMAT
-        || value.version != 1
+        || value.version != 2
         || !valid_sha(&value.sha256)
         || !valid_sha(&value.profile_sha256)
         || value.parents.len() > 2
         || value.parents.iter().any(|v| !valid_sha(v))
+        || value.environment_parents.len() > 2
+        || value.environment_parents.iter().any(|v| !valid_sha(v))
         || genome_hash(&value)? != value.sha256
     {
         return Err(PyValueError::new_err("environment genome identity differs"));
@@ -381,11 +439,58 @@ fn validate_config(config: &Config) -> PyResult<()> {
         || !(0.2..=2.5).contains(&config.catchment.wall_height_m)
         || !identifier(&config.catchment.material)
         || !identifier(&config.catchment.physical_material)
-        || config.mutation.operator != "bounded-regional-perturbation-v1"
+        || config.mutation.operator != "bounded-regional-perturbation-v2"
         || !valid_sha(&config.mutation.recipe_sha256)
         || !(0.0..=0.3).contains(&config.mutation.scalar_fraction)
         || config.mutation.integer_delta > 8
         || config.mutation.resident_delta > 8
+        || !config
+            .descriptor_normalization
+            .resource_mass_per_square_meter
+            .is_finite()
+        || config
+            .descriptor_normalization
+            .resource_mass_per_square_meter
+            <= 0.0
+        || !config
+            .descriptor_normalization
+            .renewal_capacity_per_square_meter_second
+            .is_finite()
+        || config
+            .descriptor_normalization
+            .renewal_capacity_per_square_meter_second
+            <= 0.0
+        || !config
+            .descriptor_normalization
+            .cycle_rank_per_region
+            .is_finite()
+        || config.descriptor_normalization.cycle_rank_per_region <= 0.0
+        || !(1..=64).contains(&config.descriptor_normalization.resident_physical_geoms)
+        || config
+            .descriptor_normalization
+            .generation_cost_limits
+            .physical_geoms
+            < config.capacity.residents.max
+                * config.descriptor_normalization.resident_physical_geoms
+        || config
+            .descriptor_normalization
+            .generation_cost_limits
+            .regions
+            < config.capacity.regions.max
+        || config.descriptor_normalization.generation_cost_limits.edges < MAX_EDGES
+        || config
+            .descriptor_normalization
+            .generation_cost_limits
+            .movables
+            < 24
+        || config
+            .descriptor_normalization
+            .generation_cost_limits
+            .compartments
+            == 0
+        || allele_ranges(&config.developmental_rule_alleles)
+            .iter()
+            .any(|range| !valid_range(range, 0.5, 1.5))
         || config.archetypes.len() < 3
         || config.archetypes.len() > 12
         || config.training_genomes.is_empty()
@@ -488,6 +593,113 @@ fn perturb_integer(
 ) -> usize {
     let d = (rng.next_u64() % (2 * delta as u64 + 1)) as isize - delta as isize;
     (value as isize + d).clamp(range.min as isize, range.max as isize) as usize
+}
+
+fn allele_ranges(value: &DevelopmentalRuleAlleleRanges) -> [&ScalarRange; 11] {
+    [
+        &value.vertical_weight,
+        &value.clearance_weight,
+        &value.surface_weight,
+        &value.surface_reach,
+        &value.clearance_distance,
+        &value.conductivity,
+        &value.half_resistance,
+        &value.response_light,
+        &value.response_nutrient,
+        &value.response_support,
+        &value.response_competition,
+    ]
+}
+
+fn allele_values(value: &DevelopmentalRuleAlleles) -> [f64; 11] {
+    [
+        value.vertical_weight,
+        value.clearance_weight,
+        value.surface_weight,
+        value.surface_reach,
+        value.clearance_distance,
+        value.conductivity,
+        value.half_resistance,
+        value.response_light,
+        value.response_nutrient,
+        value.response_support,
+        value.response_competition,
+    ]
+}
+
+fn sample_developmental_rules(
+    ranges: &DevelopmentalRuleAlleleRanges,
+    rng: &mut SplitMix64,
+) -> DevelopmentalRuleAlleles {
+    DevelopmentalRuleAlleles {
+        vertical_weight: rng.range(&ranges.vertical_weight),
+        clearance_weight: rng.range(&ranges.clearance_weight),
+        surface_weight: rng.range(&ranges.surface_weight),
+        surface_reach: rng.range(&ranges.surface_reach),
+        clearance_distance: rng.range(&ranges.clearance_distance),
+        conductivity: rng.range(&ranges.conductivity),
+        half_resistance: rng.range(&ranges.half_resistance),
+        response_light: rng.range(&ranges.response_light),
+        response_nutrient: rng.range(&ranges.response_nutrient),
+        response_support: rng.range(&ranges.response_support),
+        response_competition: rng.range(&ranges.response_competition),
+    }
+}
+
+fn mutate_developmental_rules(
+    value: &DevelopmentalRuleAlleles,
+    ranges: &DevelopmentalRuleAlleleRanges,
+    fraction: f64,
+    rng: &mut SplitMix64,
+) -> DevelopmentalRuleAlleles {
+    DevelopmentalRuleAlleles {
+        vertical_weight: perturb(
+            value.vertical_weight,
+            &ranges.vertical_weight,
+            fraction,
+            rng,
+        ),
+        clearance_weight: perturb(
+            value.clearance_weight,
+            &ranges.clearance_weight,
+            fraction,
+            rng,
+        ),
+        surface_weight: perturb(value.surface_weight, &ranges.surface_weight, fraction, rng),
+        surface_reach: perturb(value.surface_reach, &ranges.surface_reach, fraction, rng),
+        clearance_distance: perturb(
+            value.clearance_distance,
+            &ranges.clearance_distance,
+            fraction,
+            rng,
+        ),
+        conductivity: perturb(value.conductivity, &ranges.conductivity, fraction, rng),
+        half_resistance: perturb(
+            value.half_resistance,
+            &ranges.half_resistance,
+            fraction,
+            rng,
+        ),
+        response_light: perturb(value.response_light, &ranges.response_light, fraction, rng),
+        response_nutrient: perturb(
+            value.response_nutrient,
+            &ranges.response_nutrient,
+            fraction,
+            rng,
+        ),
+        response_support: perturb(
+            value.response_support,
+            &ranges.response_support,
+            fraction,
+            rng,
+        ),
+        response_competition: perturb(
+            value.response_competition,
+            &ranges.response_competition,
+            fraction,
+            rng,
+        ),
+    }
 }
 
 fn platform_entity(index: usize, node: &Node, g: &Geometry, material: &str) -> Value {
@@ -676,14 +888,19 @@ impl HabitatFamily {
             resource_scale: rng.range(&a.resource_scale),
             movable_count: rng.integer(&a.movable_count),
             terrace_bias: rng.range(&a.terrace_bias),
+            developmental_rules: sample_developmental_rules(
+                &self.config.developmental_rule_alleles,
+                &mut rng,
+            ),
         };
         let mut genome = Genome {
             format: GENOME_FORMAT.into(),
-            version: 1,
+            version: 2,
             sha256: String::new(),
             parents: vec![],
+            environment_parents: vec![],
             variation: Variation {
-                operator: "initial-regional-sample-v1".into(),
+                operator: "initial-regional-sample-v2".into(),
                 seed,
                 recipe_sha256: self.config.mutation.recipe_sha256.clone(),
             },
@@ -695,8 +912,18 @@ impl HabitatFamily {
         genome.sha256 = genome_hash(&genome)?;
         pretty(&genome)
     }
-    fn mutate_genome(&self, parent_json: String, variation_seed: u64) -> PyResult<String> {
+    fn mutate_genome(
+        &self,
+        parent_json: String,
+        parent_environment_record_sha256: String,
+        variation_seed: u64,
+    ) -> PyResult<String> {
         let parent = parse_genome(&parent_json)?;
+        if !valid_sha(&parent_environment_record_sha256) {
+            return Err(PyValueError::new_err(
+                "parent environment record identity is invalid",
+            ));
+        }
         self.validate_parameters(&parent.parameters)?;
         let a = self
             .config
@@ -793,11 +1020,18 @@ impl HabitatFamily {
             self.config.mutation.scalar_fraction,
             &mut rng,
         );
+        p.developmental_rules = mutate_developmental_rules(
+            &p.developmental_rules,
+            &self.config.developmental_rule_alleles,
+            self.config.mutation.scalar_fraction,
+            &mut rng,
+        );
         let mut genome = Genome {
             format: GENOME_FORMAT.into(),
-            version: 1,
+            version: 2,
             sha256: String::new(),
             parents: vec![parent.sha256],
+            environment_parents: vec![parent_environment_record_sha256],
             variation: Variation {
                 operator: self.config.mutation.operator.clone(),
                 seed: variation_seed,
@@ -870,6 +1104,12 @@ impl HabitatFamily {
             || p.movable_count < a.movable_count.min
             || p.movable_count > a.movable_count.max
             || !(a.terrace_bias.min..=a.terrace_bias.max).contains(&p.terrace_bias)
+            || allele_values(&p.developmental_rules)
+                .iter()
+                .zip(allele_ranges(&self.config.developmental_rule_alleles))
+                .any(|(value, range)| {
+                    !value.is_finite() || !(range.min..=range.max).contains(value)
+                })
         {
             return Err(PyValueError::new_err(
                 "environment genome parameters exceed archetype",
@@ -1060,6 +1300,7 @@ impl HabitatFamily {
             .map_err(|e| PyValueError::new_err(format!("invalid habitat template: {e}")))?;
         let mut biosphere: Value = serde_json::from_str(&biosphere_json)
             .map_err(|e| PyValueError::new_err(format!("invalid biosphere template: {e}")))?;
+        apply_developmental_rules(&mut biosphere, &p.developmental_rules)?;
         object_mut(&mut habitat, "habitat")?.insert("size".into(), json!(p.dimensions_m));
         let entities = array_mut(&mut habitat, "entities")?;
         let existing: HashSet<String> = entities.iter().filter_map(id).map(str::to_owned).collect();
@@ -1404,7 +1645,7 @@ impl HabitatFamily {
         )?;
         exchange.insert(
             "format".into(),
-            Value::String("chreatures-ecological-exchange-v3".into()),
+            Value::String("chreatures-ecological-exchange-v4".into()),
         );
         exchange.insert("mobiles".into(), Value::Array(new_exchange));
         // Apply resource scale after row remapping.
@@ -1482,10 +1723,62 @@ impl HabitatFamily {
         let biosphere_output = pretty(&biosphere)?;
         let topology_sha256 = sha256(habitat_output.as_bytes());
         let resource_sha256 = sha256(biosphere_output.as_bytes());
-        let mut record = json!({"format":RECORD_FORMAT,"sha256":"","parents":genome.parents.clone(),"variation":genome.variation.clone(),"topology_sha256":topology_sha256,"resource_sha256":resource_sha256,"profile_sha256":genome.profile_sha256.clone(),"epoch":genome.epoch});
+        let area_m2 = width * height;
+        let finite_material = finite_material_mass(&biosphere)?;
+        let renewal = renewal_capacity(&biosphere)?;
+        let minimum_z = nodes
+            .iter()
+            .map(|node| node.position[2])
+            .fold(f64::INFINITY, f64::min);
+        let maximum_z = nodes
+            .iter()
+            .map(|node| node.position[2])
+            .fold(f64::NEG_INFINITY, f64::max);
+        let cycle_rank = edges.len().saturating_add(1).saturating_sub(nodes.len());
+        let normalization = &self.config.descriptor_normalization;
+        let descriptors = json!({
+            "regional_scale": (area_m2 / (self.config.capacity.width_m.max * self.config.capacity.height_m.max)).sqrt().clamp(0.0, 1.0),
+            "elevation_relief": ((maximum_z - minimum_z) / self.config.capacity.depth_m.max).clamp(0.0, 1.0),
+            "resource_density": (finite_material / area_m2 / normalization.resource_mass_per_square_meter).clamp(0.0, 1.0),
+            "renewal_rate": (renewal / area_m2 / normalization.renewal_capacity_per_square_meter_second).clamp(0.0, 1.0),
+            "connectivity": (cycle_rank as f64 / nodes.len() as f64 / normalization.cycle_rank_per_region).clamp(0.0, 1.0),
+        });
+        let physical_geoms =
+            declared_physical_geoms(&habitat, normalization.resident_physical_geoms)?;
+        let compartments = object(&biosphere, "biosphere")?
+            .get("compartments")
+            .and_then(Value::as_array)
+            .ok_or_else(|| PyValueError::new_err("biosphere compartments are missing"))?
+            .len();
+        let limits = &normalization.generation_cost_limits;
+        if physical_geoms > limits.physical_geoms
+            || nodes.len() > limits.regions
+            || edges.len() > limits.edges
+            || p.movable_count > limits.movables
+            || compartments > limits.compartments
+        {
+            return Err(PyValueError::new_err(
+                "generated regional environment exceeds declared generation cost",
+            ));
+        }
+        let normalized_cost = (physical_geoms as f64 / limits.physical_geoms as f64
+            + nodes.len() as f64 / limits.regions as f64
+            + edges.len() as f64 / limits.edges as f64
+            + p.movable_count as f64 / limits.movables as f64
+            + compartments as f64 / limits.compartments as f64)
+            / 5.0;
+        let generation_cost = json!({
+            "physical_geoms": physical_geoms,
+            "regions": nodes.len(),
+            "edges": edges.len(),
+            "movables": p.movable_count,
+            "compartments": compartments,
+            "normalized": normalized_cost,
+        });
+        let mut record = json!({"format":RECORD_FORMAT,"sha256":"","genome_sha256":genome.sha256.clone(),"genome_parents":genome.parents.clone(),"parents":genome.environment_parents.clone(),"variation":genome.variation.clone(),"topology_sha256":topology_sha256,"resource_sha256":resource_sha256,"profile_sha256":genome.profile_sha256.clone(),"epoch":genome.epoch,"descriptors":descriptors,"generation_cost":generation_cost});
         let record_sha = sha256(serde_json::to_string(&record).unwrap().as_bytes());
         record["sha256"] = Value::String(record_sha);
-        let analyst = json!({"format":ANALYST_FORMAT,"runtime_visible":false,"environment_genome":genome,"environment_record":record,"graph":{"nodes":node_meta,"edges":edge_meta,"connected":true},"resident_spawns":spawn_meta,"underpass_nodes":underpasses,"shelter_nodes":shelters,"landmark_nodes":landmarks,"resource_budget":{"founder_scale":p.resource_scale,"finite_packets":active_packet_count,"colonies":colony_count,"movable_building_materials":p.movable_count},"limits":{"maximum_rise_over_run":self.config.geometry.maximum_rise_over_run,"minimum_underpass_clearance_m":self.config.geometry.minimum_underpass_clearance_m,"minimum_spawn_clearance_m":self.config.geometry.minimum_spawn_clearance_m},"generator_config_sha256":self.config_sha256});
+        let analyst = json!({"format":ANALYST_FORMAT,"runtime_visible":false,"environment_genome":genome,"environment_record":record,"graph":{"nodes":node_meta,"edges":edge_meta,"connected":true},"resident_spawns":spawn_meta,"underpass_nodes":underpasses,"shelter_nodes":shelters,"landmark_nodes":landmarks,"resource_budget":{"founder_scale":p.resource_scale,"finite_material_element_equivalents":finite_material,"renewal_capacity_per_second":renewal,"finite_packets":active_packet_count,"colonies":colony_count,"movable_building_materials":p.movable_count},"limits":{"maximum_rise_over_run":self.config.geometry.maximum_rise_over_run,"minimum_underpass_clearance_m":self.config.geometry.minimum_underpass_clearance_m,"minimum_spawn_clearance_m":self.config.geometry.minimum_spawn_clearance_m},"generator_config_sha256":self.config_sha256});
         Ok((habitat_output, biosphere_output, pretty(&analyst)?))
     }
 }
@@ -1495,6 +1788,261 @@ fn dist2(a: &Node, b: &Node) -> f64 {
     let dy = a.position[1] - b.position[1];
     dx * dx + dy * dy
 }
+fn scale_grammar_number(
+    values: &mut Map<String, Value>,
+    key: &str,
+    factor: f64,
+    minimum: f64,
+    maximum: f64,
+) -> PyResult<()> {
+    let source = values
+        .get(key)
+        .and_then(Value::as_f64)
+        .ok_or_else(|| PyValueError::new_err(format!("growth grammar {key} is missing")))?;
+    let scaled = source * factor;
+    if !scaled.is_finite() || !(minimum..=maximum).contains(&scaled) {
+        return Err(PyValueError::new_err(format!(
+            "inherited growth grammar {key} exceeds its physical bound"
+        )));
+    }
+    values.insert(key.into(), Value::from(scaled));
+    Ok(())
+}
+
+fn apply_developmental_rules(
+    biosphere: &mut Value,
+    alleles: &DevelopmentalRuleAlleles,
+) -> PyResult<()> {
+    let colonies = object_mut(biosphere, "biosphere")?
+        .get_mut("colonies")
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| PyValueError::new_err("biosphere colonies are missing"))?;
+    for colony in colonies {
+        let grammar = object_mut(colony, "colony")?
+            .get_mut("grammar")
+            .and_then(Value::as_object_mut)
+            .ok_or_else(|| PyValueError::new_err("colony growth grammar is missing"))?;
+        if grammar.get("version").and_then(Value::as_u64) != Some(4) {
+            return Err(PyValueError::new_err(
+                "current regional colonies require growth grammar v4",
+            ));
+        }
+        let rules = grammar
+            .get_mut("rules")
+            .and_then(Value::as_object_mut)
+            .ok_or_else(|| PyValueError::new_err("growth grammar rules are missing"))?;
+        for rule in rules.values_mut() {
+            let rule = object_mut(rule, "growth rule")?;
+            let guidance = rule
+                .get_mut("guidance")
+                .and_then(Value::as_object_mut)
+                .ok_or_else(|| PyValueError::new_err("growth guidance is missing"))?;
+            scale_grammar_number(
+                guidance,
+                "vertical_weight",
+                alleles.vertical_weight,
+                -2.0,
+                2.0,
+            )?;
+            scale_grammar_number(
+                guidance,
+                "clearance_weight",
+                alleles.clearance_weight,
+                0.0,
+                4.0,
+            )?;
+            scale_grammar_number(guidance, "surface_weight", alleles.surface_weight, 0.0, 4.0)?;
+            scale_grammar_number(guidance, "surface_reach", alleles.surface_reach, 0.002, 2.0)?;
+            scale_grammar_number(
+                guidance,
+                "clearance_distance",
+                alleles.clearance_distance,
+                0.002,
+                2.0,
+            )?;
+            let transport = rule
+                .get_mut("transport")
+                .and_then(Value::as_object_mut)
+                .ok_or_else(|| PyValueError::new_err("growth transport is missing"))?;
+            scale_grammar_number(
+                transport,
+                "conductivity",
+                alleles.conductivity,
+                1.0e-12,
+                1.0e6,
+            )?;
+            scale_grammar_number(
+                transport,
+                "half_resistance",
+                alleles.half_resistance,
+                1.0e-12,
+                1.0e15,
+            )?;
+            let successors = rule
+                .get_mut("successors")
+                .and_then(Value::as_array_mut)
+                .ok_or_else(|| PyValueError::new_err("growth successors are missing"))?;
+            for successor in successors {
+                let response = object_mut(successor, "growth successor")?
+                    .get_mut("response")
+                    .and_then(Value::as_object_mut)
+                    .ok_or_else(|| PyValueError::new_err("growth response is missing"))?;
+                for (key, factor) in [
+                    ("light", alleles.response_light),
+                    ("nutrient", alleles.response_nutrient),
+                    ("support", alleles.response_support),
+                    ("competition", alleles.response_competition),
+                ] {
+                    scale_grammar_number(response, key, factor, -8.0, 8.0)?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn finite_material_mass(biosphere: &Value) -> PyResult<f64> {
+    let root = object(biosphere, "biosphere")?;
+    let pools = root
+        .get("chemistry")
+        .and_then(Value::as_object)
+        .and_then(|value| value.get("pools"))
+        .and_then(Value::as_array)
+        .ok_or_else(|| PyValueError::new_err("biosphere chemistry pools are missing"))?;
+    let mut weights = HashMap::new();
+    for pool in pools {
+        let pool = object(pool, "chemistry pool")?;
+        let name = pool
+            .get("name")
+            .and_then(Value::as_str)
+            .ok_or_else(|| PyValueError::new_err("chemistry pool name is missing"))?;
+        let composition = pool
+            .get("composition")
+            .and_then(Value::as_array)
+            .ok_or_else(|| PyValueError::new_err("chemistry pool composition is missing"))?;
+        let mut weight = 0.0;
+        for value in composition {
+            let amount = value
+                .as_f64()
+                .ok_or_else(|| PyValueError::new_err("pool composition must be numeric"))?;
+            if !amount.is_finite() || amount < 0.0 {
+                return Err(PyValueError::new_err("pool composition must be finite"));
+            }
+            weight += amount;
+        }
+        weights.insert(name, weight);
+    }
+    if !weights.contains_key("fermentate") {
+        return Err(PyValueError::new_err(
+            "current regional chemistry requires fermentate",
+        ));
+    }
+    let compartments = root
+        .get("compartments")
+        .and_then(Value::as_array)
+        .ok_or_else(|| PyValueError::new_err("biosphere compartments are missing"))?;
+    let objects = root
+        .get("material_objects")
+        .and_then(Value::as_object)
+        .and_then(|value| value.get("objects"))
+        .and_then(Value::as_array)
+        .ok_or_else(|| PyValueError::new_err("material objects are missing"))?;
+    let mut rows = HashSet::new();
+    let mut total = 0.0;
+    for item in objects {
+        let row = object(item, "material object")?
+            .get("row")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| PyValueError::new_err("material object row is missing"))?
+            as usize;
+        if row >= compartments.len() || !rows.insert(row) {
+            return Err(PyValueError::new_err(
+                "material object rows must be valid and distinct",
+            ));
+        }
+        let inventory = object(&compartments[row], "material compartment")?
+            .get("pools")
+            .and_then(Value::as_object)
+            .ok_or_else(|| PyValueError::new_err("material pools are missing"))?;
+        for (name, value) in inventory {
+            let amount = value
+                .as_f64()
+                .ok_or_else(|| PyValueError::new_err("material pool must be numeric"))?;
+            let weight = weights
+                .get(name.as_str())
+                .ok_or_else(|| PyValueError::new_err("material pool is not in chemistry"))?;
+            if !amount.is_finite() || amount < 0.0 {
+                return Err(PyValueError::new_err("material pool must be finite"));
+            }
+            total += amount * weight;
+        }
+    }
+    Ok(total)
+}
+
+fn renewal_capacity(biosphere: &Value) -> PyResult<f64> {
+    let colonies = object(biosphere, "biosphere")?
+        .get("colonies")
+        .and_then(Value::as_array)
+        .ok_or_else(|| PyValueError::new_err("biosphere colonies are missing"))?;
+    let mut total = 0.0;
+    for colony in colonies {
+        let colony = object(colony, "colony")?;
+        let grammar_version = colony
+            .get("grammar")
+            .and_then(Value::as_object)
+            .and_then(|grammar| grammar.get("version"))
+            .and_then(Value::as_u64);
+        if grammar_version != Some(4) {
+            return Err(PyValueError::new_err(
+                "current regional colonies require growth grammar v4",
+            ));
+        }
+        let area = colony.get("seed_capture_area").and_then(Value::as_f64);
+        let flux = colony.get("photon_flux").and_then(Value::as_f64);
+        match (area, flux) {
+            (Some(area), Some(flux))
+                if area.is_finite() && flux.is_finite() && area >= 0.0 && flux >= 0.0 =>
+            {
+                total += area * flux;
+            }
+            _ => return Err(PyValueError::new_err("colony renewal capacity is invalid")),
+        }
+    }
+    Ok(total)
+}
+
+fn declared_physical_geoms(habitat: &Value, resident_geoms: usize) -> PyResult<usize> {
+    let root = object(habitat, "habitat")?;
+    let entities = root
+        .get("entities")
+        .and_then(Value::as_array)
+        .ok_or_else(|| PyValueError::new_err("habitat entities are missing"))?;
+    let entity_geoms = entities.iter().try_fold(0usize, |total, entity| {
+        let entity = object(entity, "physical entity")?;
+        let count = match entity.get("shapes") {
+            None => 0,
+            Some(Value::Array(shapes)) => shapes.len(),
+            Some(_) => {
+                return Err(PyValueError::new_err(
+                    "physical entity shapes must be an array",
+                ))
+            }
+        };
+        total
+            .checked_add(count)
+            .ok_or_else(|| PyValueError::new_err("physical geom count overflow"))
+    })?;
+    let bodies = root
+        .get("bodies")
+        .and_then(Value::as_array)
+        .ok_or_else(|| PyValueError::new_err("habitat bodies are missing"))?
+        .len();
+    entity_geoms
+        .checked_add(bodies.saturating_mul(resident_geoms))
+        .ok_or_else(|| PyValueError::new_err("physical geom count overflow"))
+}
+
 fn segment_clears_other_nodes(a: usize, b: usize, nodes: &[Node], clearance: f64) -> bool {
     let ax = nodes[a].position[0];
     let ay = nodes[a].position[1];

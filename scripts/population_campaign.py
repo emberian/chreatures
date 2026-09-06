@@ -29,11 +29,11 @@ from chreatures.resident_contract import (
     NATIVE_POPULATION_VERSION,
 )
 
-FORMAT = "chreatures-population-campaign-v1"
-PLAN_FORMAT = "chreatures-population-campaign-plan-v1"
+FORMAT = "chreatures-population-campaign-v2"
+PLAN_FORMAT = "chreatures-population-campaign-plan-v2"
 ASSIGNMENT_FORMAT = "chreatures-population-evaluation-assignments-v1"
-DESCRIPTOR_RECIPE = "physical-population-descriptor-v1"
-QUALITY_RECIPE = "initial-regulation-quality-v1"
+DESCRIPTOR_RECIPE = "physical-population-descriptor-v2"
+QUALITY_RECIPE = "finite-life-quality-v2"
 SPATIAL_CELL_SCALE = 256.0
 
 
@@ -182,6 +182,8 @@ def init_command(args: argparse.Namespace) -> None:
         "variation_recipe_sha256": value_sha256(variation_receipt),
         "environment_probe_panel_sha256": value_sha256(probe_panel),
         "environment_epoch": epochs.pop(),
+        "environment_novelty_weight": 0.25,
+        "environment_cost_weight": 0.10,
     }
     destination.parent.mkdir(parents=True, exist_ok=True)
     root = destination.with_name(f".{destination.name}.init-{os.getpid()}")
@@ -205,7 +207,7 @@ def init_command(args: argparse.Namespace) -> None:
         }
     campaign = {
         "format": FORMAT,
-        "version": 1,
+        "version": 2,
         "status": "initialized",
         "seed": args.seed,
         "profile": {
@@ -264,7 +266,7 @@ def init_command(args: argparse.Namespace) -> None:
 
 def campaign(root: Path) -> tuple[dict[str, Any], PopulationSearch]:
     value = load_json(root / "campaign.json")
-    if value.get("format") != FORMAT or value.get("version") != 1:
+    if value.get("format") != FORMAT or value.get("version") != 2:
         raise ValueError("campaign format differs")
     return value, PopulationSearch(root / value["search_state"])
 
@@ -319,27 +321,37 @@ def plan_command(args: argparse.Namespace) -> None:
             "preexisting_genomes": sorted(state["genomes"]),
             "worlds_per_batch": args.worlds_per_batch,
             "candidate_waves": args.candidate_waves,
+            "selection": args.selection,
         }
         value["active_transaction"] = transaction
         atomic_json(root / "campaign.json", value)
-        assignments = search.ask_transfers(requested)
-        if len(assignments) < requested:
-            assignments.extend(search.ask(requested - len(assignments)))
+        if args.selection == "challenge":
+            assignments = search.ask_challenges(requested)
+        else:
+            assignments = search.ask_transfers(requested)
+            if len(assignments) < requested:
+                assignments.extend(search.ask(requested - len(assignments)))
     else:
         if (
             transaction["requested"] != requested
             or transaction["worlds_per_batch"] != args.worlds_per_batch
             or transaction["candidate_waves"] != args.candidate_waves
+            or transaction["selection"] != args.selection
         ):
             raise SystemExit("resume arguments differ from active plan transaction")
         state = search.snapshot_value()
         prior = set(transaction["preexisting_pending"])
         pairs = sorted(set(state["pending_assignments"]) - prior)
         if len(pairs) < requested:
-            # Native operations publish their whole state atomically. A short
-            # set therefore means the balanced transfer pass completed and the
-            # new-variant pass did not; completing the exact remainder is safe.
-            search.ask(requested - len(pairs))
+            if args.selection == "challenge":
+                if pairs:
+                    raise RuntimeError("interrupted challenge ask is not atomic")
+                search.ask_challenges(requested)
+            else:
+                # Native operations publish their whole state atomically. A
+                # short set means the transfer pass completed and mutation did
+                # not; completing that exact remainder is safe.
+                search.ask(requested - len(pairs))
             state = search.snapshot_value()
             pairs = sorted(set(state["pending_assignments"]) - prior)
         if len(pairs) != requested:
@@ -351,7 +363,14 @@ def plan_command(args: argparse.Namespace) -> None:
                 {
                     "candidate": state["genomes"][candidate_sha],
                     "environment_sha256": environment_sha,
-                    "phase": "direct-transfer",
+                    "phase": (
+                        "history-challenge-repeat"
+                        if args.selection == "challenge" and pair in state["pair_histories"]
+                        else "history-challenge-transfer"
+                        if args.selection == "challenge"
+                        else "direct-transfer"
+                    ),
+                    "selection": state["pending_evidence"][pair],
                 }
             )
     normalized = [
@@ -360,6 +379,8 @@ def plan_command(args: argparse.Namespace) -> None:
             if hasattr(item["candidate"], "to_value")
             else item["candidate"],
             "environment_sha256": item["environment_sha256"],
+            "phase": item["phase"],
+            "selection": item["selection"],
         }
         for item in assignments
     ]
@@ -374,7 +395,7 @@ def plan_command(args: argparse.Namespace) -> None:
         raise RuntimeError("native ask did not form complete environment populations")
     plan_identity = {
         "format": PLAN_FORMAT,
-        "version": 1,
+        "version": 2,
         "index": transaction["index"],
         "worlds_per_batch": args.worlds_per_batch,
         "candidate_waves": args.candidate_waves,
@@ -383,6 +404,11 @@ def plan_command(args: argparse.Namespace) -> None:
         "requested_candidates": requested,
         "retained_transfer_assignments": transfer_count,
         "new_variant_assignments": requested - transfer_count,
+        "selection": args.selection,
+        "selection_phases": {
+            phase: sum(item["phase"] == phase for item in normalized)
+            for phase in sorted({item["phase"] for item in normalized})
+        },
         "search_config_sha256": value["search_config_sha256"],
         "profile_sha256": value["profile"]["sha256"],
         "controller_file_sha256": value["controller"]["file_sha256"],
@@ -437,12 +463,21 @@ def plan_command(args: argparse.Namespace) -> None:
             )
     plan = {
         "format": PLAN_FORMAT,
-        "version": 1,
+        "version": 2,
         "identity": plan_identity,
         "identity_sha256": plan_sha,
         "status": "planned",
         "batches": batches,
         "assignment_pairs": sorted(assignment_pairs),
+        "selection_records": [
+            {
+                "candidate_sha256": item["candidate"]["sha256"],
+                "environment_sha256": item["environment_sha256"],
+                "phase": item["phase"],
+                "selection": item["selection"],
+            }
+            for item in normalized
+        ],
     }
     atomic_json(plan_dir / "plan.json", plan)
     value["plans"].append(
@@ -568,8 +603,12 @@ def ingest_command(args: argparse.Namespace) -> None:
             "trajectory_sha256": valid_sha(row["trajectory_sha256"], "trajectory"),
             "candidate_sha256": valid_sha(row["candidate_sha256"], "candidate"),
             "environment_sha256": environment_sha,
-            "status": "failure" if failure else "success",
-            "failure": str(row.get("failure", "")),
+            "status": "infrastructure-failure" if failure else "completed",
+            "failure": str(
+                row.get("failure")
+                or row.get("failure_trace_sha256")
+                or document.get("traceback_sha256", "")
+            ),
             "metrics": {} if failure else metric_row(row, meta),
         }
         result["evaluation_sha256"] = ""
@@ -610,6 +649,31 @@ def ingest_command(args: argparse.Namespace) -> None:
     )
 
 
+def scores_command(args: argparse.Namespace) -> None:
+    root = args.output.resolve()
+    _, search = campaign(root)
+    scores = load_json(args.scores.resolve())
+    search.register_proposal_scores(scores)
+    print(
+        json.dumps(
+            {"artifact": scores["artifact_sha256"], "pairs": len(scores["scores"])}
+        )
+    )
+
+
+def frontier_command(args: argparse.Namespace) -> None:
+    root = args.output.resolve()
+    _, search = campaign(root)
+    print(json.dumps(search.environment_frontier(), sort_keys=True))
+
+
+def retry_command(args: argparse.Namespace) -> None:
+    root = args.output.resolve()
+    _, search = campaign(root)
+    search.authorize_infrastructure_retry(args.candidate, args.environment)
+    print(json.dumps({"candidate": args.candidate, "environment": args.environment}))
+
+
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -622,9 +686,19 @@ def arguments() -> argparse.Namespace:
     plan.add_argument("--output", type=Path, required=True)
     plan.add_argument("--worlds-per-batch", type=int, required=True)
     plan.add_argument("--candidate-waves", type=int, required=True)
+    plan.add_argument("--selection", choices=("evolve", "challenge"), required=True)
     ingest = sub.add_parser("ingest")
     ingest.add_argument("--output", type=Path, required=True)
     ingest.add_argument("--result", type=Path, required=True)
+    scores = sub.add_parser("register-challenge-scores")
+    scores.add_argument("--output", type=Path, required=True)
+    scores.add_argument("--scores", type=Path, required=True)
+    frontier = sub.add_parser("environment-frontier")
+    frontier.add_argument("--output", type=Path, required=True)
+    retry = sub.add_parser("authorize-infrastructure-retry")
+    retry.add_argument("--output", type=Path, required=True)
+    retry.add_argument("--candidate", required=True)
+    retry.add_argument("--environment", required=True)
     return parser.parse_args()
 
 
@@ -634,8 +708,14 @@ def main() -> int:
         init_command(args)
     elif args.command == "plan":
         plan_command(args)
-    else:
+    elif args.command == "ingest":
         ingest_command(args)
+    elif args.command == "register-challenge-scores":
+        scores_command(args)
+    elif args.command == "environment-frontier":
+        frontier_command(args)
+    else:
+        retry_command(args)
     return 0
 
 

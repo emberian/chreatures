@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export one trusted v4 Torch population controller to immutable native NPZ."""
+"""Export one trusted current Torch population controller to immutable native NPZ."""
 
 from __future__ import annotations
 
@@ -60,21 +60,26 @@ ESTABLISHED_MODEL_NAMES = tuple(
 MANAGER_NAMES = (
     "query.0.weight", "query.0.bias", "query.2.weight", "query.2.bias", "query_gain",
 )
-PREDICTOR_ENCODER_NAMES = MODEL_NAMES[:18]
-PREDICTOR_MLP_NAMES = (
-    "input.mean", "input.scale", "target.mean", "target.scale", "residual.scale",
+PREDICTOR_NAMES = (
+    "context.mean",
+    "context.scale",
+    "action.mean",
+    "action.scale",
+    "target.mean",
+    "target.scale",
 ) + tuple(
     f"member.{member}.{part}"
     for member in range(3)
     for part in (
-        "layer0.weight", "layer0.bias", "layer1.weight", "layer1.bias",
-        "output.weight", "output.bias",
+        "context.weight",
+        "context.bias",
+        "transition.weight_ih",
+        "transition.weight_hh",
+        "transition.bias_ih",
+        "transition.bias_hh",
+        "output.weight",
+        "output.bias",
     )
-)
-PREDICTOR_NAMES = (
-    tuple("encoder." + name for name in PREDICTOR_ENCODER_NAMES)
-    + ("observation_normalizer.mean", "observation_normalizer.scale")
-    + PREDICTOR_MLP_NAMES
 )
 
 
@@ -147,7 +152,7 @@ def load_predictor(path: Path) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
     actual_identity = hashlib.sha256(
         canonical({"metadata": clean, "arrays": array_receipts})
     ).hexdigest()
-    if metadata.get("format") != "chreatures-rich-consequence-ensemble-v1":
+    if metadata.get("format") != "chreatures-rich-recurrent-consequence-ensemble-v3":
         raise ValueError("predictor format differs")
     if expected_identity != actual_identity:
         raise ValueError("predictor artifact identity differs")
@@ -235,21 +240,9 @@ def main() -> None:
         embedded_predictor_metadata.get("pack_order")
     )
     embedded_predictor_metadata["pack_order"] = list(predictor_arrays)
-    for name in PREDICTOR_ENCODER_NAMES:
-        inherited = predictor_arrays["predictor.encoder." + name]
-        shared = arrays["model." + name]
-        if name == "body.0.weight":
-            shared = shared[:, :357]
-        if not np.array_equal(inherited, shared):
-            raise ValueError(f"frozen H1/shared inherited encoder differs: {name}")
-    if not np.array_equal(
-        predictor_arrays["predictor.observation_normalizer.mean"],
-        arrays["normalizer.mean"][:4453],
-    ) or not np.array_equal(
-        predictor_arrays["predictor.observation_normalizer.scale"],
-        arrays["normalizer.scale"][:4453],
-    ):
-        raise ValueError("frozen H1/shared inherited normalizer differs")
+    representation = predictor_metadata.get("representation", {})
+    if representation.get("file_sha256") != sha256(checkpoint_path):
+        raise ValueError("predictor/resident recurrent representation differs")
     arrays.update(predictor_arrays)
     for name, value in arrays.items():
         if not value.flags.c_contiguous or not np.isfinite(value).all():
@@ -321,24 +314,21 @@ def main() -> None:
             },
             "personal_goal_associations": copy.deepcopy(PERSONAL_GOAL_CONTRACT),
         },
-        "inherited_h1_predictor": {
+        "recurrent_predictor": {
             "file_sha256": sha256(predictor_path),
             "artifact_identity": predictor_metadata["artifact_identity"],
-            "goal_forecast_rms": max(
-                float(
-                    predictor_metadata["validation"][
-                        "runtime_empirical_goal_error_scale"
-                    ]
-                ),
-                1e-4,
-            ),
             "pack_order": list(predictor_arrays),
             "metadata": embedded_predictor_metadata,
-            "projection": {
-                "observation": "rich4096+canonical351+physiology[0:6]",
-                "previous_v4_indices_to_v3": [0, 1, 2, 4, 5, 6, 7, 3, 8],
-                "unsupported_actions": ["release", "secrete", "allocate"],
-                "unsupported_physiology": list(organism_identity()["physiology"][6:]),
+            "context": "codes4x256+private_effective_worker_context128+neural384+raw_physiology12+previous_delivered_action12",
+            "candidate_actions": "[B,K,H,12], H=1..8, delivered canonical actions",
+            "outputs": "per-tick frame-code delta256 + raw physiology delta12",
+            "runtime_scoring": {
+                "horizon_ticks": 4,
+                "horizon_seconds": 0.2,
+                "proposal_suffix": "hold the proposed delivered action constant for four ticks",
+                "goal_error_rms": predictor_metadata["validation"][
+                    "goal_calibration"
+                ]["empirical_goal_rms_by_horizon"][3],
             },
         },
         "consequence_laws": {

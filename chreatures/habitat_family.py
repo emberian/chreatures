@@ -83,11 +83,17 @@ class RegionalHabitatFamily:
         )
 
     def mutate_genome(
-        self, parent: Mapping[str, Any], *, variation_seed: int
+        self,
+        parent: Mapping[str, Any],
+        *,
+        parent_environment_record_sha256: str,
+        variation_seed: int,
     ) -> Mapping[str, Any]:
         return json.loads(
             self._native.mutate_genome(
-                _canonical(parent).decode(), variation_seed
+                _canonical(parent).decode(),
+                parent_environment_record_sha256,
+                variation_seed,
             )
         )
 
@@ -99,13 +105,13 @@ class RegionalHabitatFamily:
         resident_count = int(genome["parameters"]["resident_count"])
         resident_values = residents.get("residents")
         if (
-            residents.get("format") != "chreatures-regional-residents-v1"
+            residents.get("format") != "chreatures-regional-residents-v2"
             or not isinstance(resident_values, list)
             or len(resident_values) < resident_count
         ):
             raise ValueError("regional resident bundle lacks requested capacity")
         selected_residents = {
-            "format": "chreatures-regional-residents-v1",
+            "format": "chreatures-regional-residents-v2",
             "residents": resident_values[:resident_count],
         }
         habitat_text, biosphere_text, analyst_text = self._native.generate(

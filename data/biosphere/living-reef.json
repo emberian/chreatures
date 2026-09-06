@@ -2,7 +2,11 @@
   "format": "chreatures-biosphere-birth-v5",
   "chemistry": {
     "format": "chreatures-common-chemistry-v1",
-    "description": "Synthetic conserved carbon-equivalent/mineral-equivalent chemistry; not calibrated molecular biochemistry.",
+    "description": "Synthetic conserved carbon-equivalent/mineral-equivalent chemistry with finite fermentate cross-feeding; not calibrated molecular biochemistry.",
+    "enzyme_budget": {
+      "maximum_expression": 0.06,
+      "row_sum": 0.1
+    },
     "elements": [
       "carbon_equivalent",
       "mineral_equivalent"
@@ -31,6 +35,14 @@
           0
         ],
         "chemical_energy": 1.0
+      },
+      {
+        "name": "fermentate",
+        "composition": [
+          1,
+          0
+        ],
+        "chemical_energy": 0.58
       },
       {
         "name": "soft_tissue",
@@ -179,6 +191,46 @@
         "atp_yield": 0.0,
         "photon_cost": 0.0,
         "half_saturation": 0.06
+      },
+      {
+        "name": "reserve_fermentation",
+        "consume": {
+          "reserve": 1
+        },
+        "produce": {
+          "fermentate": 1
+        },
+        "atp_cost": 0.0,
+        "atp_yield": 0.28,
+        "photon_cost": 0.0,
+        "half_saturation": 0.08
+      },
+      {
+        "name": "fermentate_respiration",
+        "consume": {
+          "fermentate": 1
+        },
+        "produce": {
+          "inorganic_carbon": 1
+        },
+        "atp_cost": 0.0,
+        "atp_yield": 0.4,
+        "photon_cost": 0.0,
+        "half_saturation": 0.05
+      },
+      {
+        "name": "detritus_hydrolysis",
+        "consume": {
+          "detritus": 1
+        },
+        "produce": {
+          "fermentate": 4,
+          "mineral": 1
+        },
+        "atp_cost": 0.0,
+        "atp_yield": 0.25,
+        "photon_cost": 0.0,
+        "half_saturation": 0.07
       }
     ]
   },
@@ -188,7 +240,8 @@
         "carbon_fixation": 0.022,
         "soft_growth": 0.011699999999999999,
         "tough_growth": 0.01145,
-        "respiration": 0.0282
+        "respiration": 0.0282,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.0,
@@ -214,7 +267,8 @@
         "carbon_fixation": 0.0232,
         "soft_growth": 0.0124,
         "tough_growth": 0.0121,
-        "respiration": 0.0293
+        "respiration": 0.0293,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.18,
@@ -240,7 +294,8 @@
         "carbon_fixation": 0.024399999999999998,
         "soft_growth": 0.013099999999999999,
         "tough_growth": 0.0095,
-        "respiration": 0.0304
+        "respiration": 0.0304,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.36,
@@ -266,7 +321,8 @@
         "carbon_fixation": 0.025599999999999998,
         "soft_growth": 0.0138,
         "tough_growth": 0.01015,
-        "respiration": 0.0315
+        "respiration": 0.0315,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.54,
@@ -292,7 +348,8 @@
         "carbon_fixation": 0.026799999999999997,
         "soft_growth": 0.011,
         "tough_growth": 0.0108,
-        "respiration": 0.026
+        "respiration": 0.026,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.0,
@@ -318,7 +375,8 @@
         "carbon_fixation": 0.027999999999999997,
         "soft_growth": 0.011699999999999999,
         "tough_growth": 0.01145,
-        "respiration": 0.0271
+        "respiration": 0.0271,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.18,
@@ -344,7 +402,8 @@
         "carbon_fixation": 0.022,
         "soft_growth": 0.0124,
         "tough_growth": 0.0121,
-        "respiration": 0.0282
+        "respiration": 0.0282,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.36,
@@ -370,7 +429,8 @@
         "carbon_fixation": 0.0232,
         "soft_growth": 0.013099999999999999,
         "tough_growth": 0.0095,
-        "respiration": 0.0293
+        "respiration": 0.0293,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.54,
@@ -396,7 +456,8 @@
         "carbon_fixation": 0.024399999999999998,
         "soft_growth": 0.0138,
         "tough_growth": 0.01015,
-        "respiration": 0.0304
+        "respiration": 0.0304,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.0,
@@ -422,7 +483,8 @@
         "carbon_fixation": 0.025599999999999998,
         "soft_growth": 0.011,
         "tough_growth": 0.0108,
-        "respiration": 0.0315
+        "respiration": 0.0315,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.18,
@@ -448,7 +510,8 @@
         "carbon_fixation": 0.026799999999999997,
         "soft_growth": 0.011699999999999999,
         "tough_growth": 0.01145,
-        "respiration": 0.026
+        "respiration": 0.026,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.36,
@@ -474,7 +537,8 @@
         "carbon_fixation": 0.027999999999999997,
         "soft_growth": 0.0124,
         "tough_growth": 0.0121,
-        "respiration": 0.0271
+        "respiration": 0.0271,
+        "fermentate_respiration": 0.006
       },
       "pools": {
         "mineral": 3.54,
@@ -497,10 +561,11 @@
     },
     {
       "enzymes": {
-        "respiration": 0.0105
+        "respiration": 0.0105,
+        "fermentate_respiration": 0.0018
       },
       "pools": {
-        "reserve": 1.15,
+        "reserve": 1.1099999999999999,
         "soft_tissue": 0.08,
         "tough_tissue": 0.04,
         "inorganic_carbon": 0.02
@@ -512,10 +577,14 @@
       "enzymes": {
         "soft_digestion": 0.03,
         "tough_digestion": 0.007,
-        "detritus_digestion": 0.014
+        "detritus_digestion": 0.014,
+        "reserve_fermentation": 0.025,
+        "fermentate_respiration": 0.003,
+        "detritus_hydrolysis": 0.002
       },
       "pools": {
-        "soft_tissue": 0.016
+        "soft_tissue": 0.016,
+        "reserve": 0.04
       },
       "atp": 0.07,
       "atp_capacity": 0.17
@@ -523,7 +592,8 @@
     {
       "enzymes": {
         "respiration": 0.0112,
-        "carbon_fixation": 0.00035
+        "carbon_fixation": 0.00035,
+        "fermentate_respiration": 0.015
       },
       "pools": {
         "reserve": 1.21,
@@ -538,7 +608,10 @@
       "enzymes": {
         "soft_digestion": 0.033,
         "tough_digestion": 0.008,
-        "detritus_digestion": 0.016
+        "detritus_digestion": 0.016,
+        "reserve_fermentation": 0.003,
+        "fermentate_respiration": 0.025,
+        "detritus_hydrolysis": 0.005
       },
       "pools": {
         "soft_tissue": 0.017
@@ -548,7 +621,8 @@
     },
     {
       "enzymes": {
-        "respiration": 0.0119
+        "respiration": 0.0119,
+        "fermentate_respiration": 0.0036
       },
       "pools": {
         "reserve": 1.27,
@@ -563,7 +637,10 @@
       "enzymes": {
         "soft_digestion": 0.036,
         "tough_digestion": 0.009000000000000001,
-        "detritus_digestion": 0.01
+        "detritus_digestion": 0.01,
+        "reserve_fermentation": 0.003,
+        "fermentate_respiration": 0.006,
+        "detritus_hydrolysis": 0.025
       },
       "pools": {
         "soft_tissue": 0.018000000000000002
@@ -574,10 +651,11 @@
     {
       "enzymes": {
         "respiration": 0.0126,
-        "carbon_fixation": 0.0028
+        "carbon_fixation": 0.0028,
+        "fermentate_respiration": 0.003
       },
       "pools": {
-        "reserve": 1.15,
+        "reserve": 1.1099999999999999,
         "soft_tissue": 0.08,
         "tough_tissue": 0.04,
         "inorganic_carbon": 0.02
@@ -589,10 +667,14 @@
       "enzymes": {
         "soft_digestion": 0.039,
         "tough_digestion": 0.006,
-        "detritus_digestion": 0.012
+        "detritus_digestion": 0.012,
+        "reserve_fermentation": 0.021,
+        "fermentate_respiration": 0.005,
+        "detritus_hydrolysis": 0.003
       },
       "pools": {
-        "soft_tissue": 0.016
+        "soft_tissue": 0.016,
+        "reserve": 0.04
       },
       "atp": 0.07,
       "atp_capacity": 0.17
@@ -600,7 +682,8 @@
     {
       "enzymes": {
         "respiration": 0.0105,
-        "carbon_fixation": 0.0011
+        "carbon_fixation": 0.0011,
+        "fermentate_respiration": 0.013199999999999998
       },
       "pools": {
         "reserve": 1.21,
@@ -615,7 +698,10 @@
       "enzymes": {
         "soft_digestion": 0.03,
         "tough_digestion": 0.007,
-        "detritus_digestion": 0.014
+        "detritus_digestion": 0.014,
+        "reserve_fermentation": 0.004,
+        "fermentate_respiration": 0.022,
+        "detritus_hydrolysis": 0.006
       },
       "pools": {
         "soft_tissue": 0.017
@@ -626,7 +712,8 @@
     {
       "enzymes": {
         "respiration": 0.0112,
-        "carbon_fixation": 0.00018
+        "carbon_fixation": 0.00018,
+        "fermentate_respiration": 0.0048
       },
       "pools": {
         "reserve": 1.27,
@@ -641,7 +728,10 @@
       "enzymes": {
         "soft_digestion": 0.033,
         "tough_digestion": 0.008,
-        "detritus_digestion": 0.016
+        "detritus_digestion": 0.016,
+        "reserve_fermentation": 0.002,
+        "fermentate_respiration": 0.008,
+        "detritus_hydrolysis": 0.023
       },
       "pools": {
         "soft_tissue": 0.018000000000000002
@@ -1105,7 +1195,7 @@
       "body_row": 0,
       "structure_row": 1,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-01",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -1174,7 +1264,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -1182,7 +1278,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -1190,7 +1292,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -1199,6 +1307,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.15,
+              "clearance_weight": 0.59,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.298,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -1230,7 +1349,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -1238,7 +1363,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -1247,6 +1378,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.16499999999999998,
+              "clearance_weight": 0.605,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.3489999999999998,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -1278,7 +1420,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -1286,7 +1434,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -1295,6 +1449,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.18,
+              "clearance_weight": 0.62,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -1326,7 +1491,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -1334,10 +1505,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.305,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.065,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.639,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -1465,7 +1653,7 @@
       "body_row": 2,
       "structure_row": 3,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-02",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -1534,7 +1722,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -1542,7 +1736,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -1550,7 +1750,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -1559,6 +1765,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.195,
+              "clearance_weight": 0.635,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4509999999999996,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -1590,7 +1807,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -1598,7 +1821,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -1607,6 +1836,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.21,
+              "clearance_weight": 0.65,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.502,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -1638,7 +1878,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -1646,7 +1892,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -1655,6 +1907,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.15,
+              "clearance_weight": 0.59,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.298,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -1686,7 +1949,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -1694,10 +1963,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.335,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.0350000000000001,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.561,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -1825,7 +2111,7 @@
       "body_row": 4,
       "structure_row": 5,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-03",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -1894,7 +2180,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -1902,7 +2194,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -1910,7 +2208,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -1919,6 +2223,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.16499999999999998,
+              "clearance_weight": 0.605,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.3489999999999998,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -1950,7 +2265,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -1958,7 +2279,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -1967,6 +2294,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.18,
+              "clearance_weight": 0.62,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -1998,7 +2336,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -2006,7 +2350,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -2015,6 +2365,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.195,
+              "clearance_weight": 0.635,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4509999999999996,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -2046,7 +2407,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -2054,10 +2421,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.29000000000000004,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.08,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.6780000000000004,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -2185,7 +2569,7 @@
       "body_row": 6,
       "structure_row": 7,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-04",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -2254,7 +2638,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -2262,7 +2652,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -2270,7 +2666,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -2279,6 +2681,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.21,
+              "clearance_weight": 0.65,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.502,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -2310,7 +2723,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -2318,7 +2737,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -2327,6 +2752,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.15,
+              "clearance_weight": 0.59,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.298,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -2358,7 +2794,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -2366,7 +2808,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -2375,6 +2823,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.16499999999999998,
+              "clearance_weight": 0.605,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.3489999999999998,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -2406,7 +2865,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -2414,10 +2879,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.32,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.05,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.6,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -2545,7 +3027,7 @@
       "body_row": 8,
       "structure_row": 9,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-05",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -2614,7 +3096,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -2622,7 +3110,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -2630,7 +3124,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -2639,6 +3139,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.18,
+              "clearance_weight": 0.62,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -2670,7 +3181,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -2678,7 +3195,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -2687,6 +3210,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.195,
+              "clearance_weight": 0.635,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4509999999999996,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -2718,7 +3252,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -2726,7 +3266,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -2735,6 +3281,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.21,
+              "clearance_weight": 0.65,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.502,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -2766,7 +3323,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -2774,10 +3337,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.35,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.02,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.522,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -2905,7 +3485,7 @@
       "body_row": 10,
       "structure_row": 11,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-06",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -2974,7 +3554,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -2982,7 +3568,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -2990,7 +3582,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -2999,6 +3597,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.15,
+              "clearance_weight": 0.59,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.298,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -3030,7 +3639,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -3038,7 +3653,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -3047,6 +3668,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.16499999999999998,
+              "clearance_weight": 0.605,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.3489999999999998,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -3078,7 +3710,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -3086,7 +3724,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -3095,6 +3739,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.18,
+              "clearance_weight": 0.62,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -3126,7 +3781,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -3134,10 +3795,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.305,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.065,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.639,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -3265,7 +3943,7 @@
       "body_row": 12,
       "structure_row": 13,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-07",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -3334,7 +4012,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -3342,7 +4026,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -3350,7 +4040,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -3359,6 +4055,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.195,
+              "clearance_weight": 0.635,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4509999999999996,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -3390,7 +4097,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -3398,7 +4111,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -3407,6 +4126,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.21,
+              "clearance_weight": 0.65,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.502,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -3438,7 +4168,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -3446,7 +4182,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -3455,6 +4197,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.15,
+              "clearance_weight": 0.59,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.298,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -3486,7 +4239,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -3494,10 +4253,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.335,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.0350000000000001,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.561,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -3625,7 +4401,7 @@
       "body_row": 14,
       "structure_row": 15,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-08",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -3694,7 +4470,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -3702,7 +4484,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -3710,7 +4498,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -3719,6 +4513,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.16499999999999998,
+              "clearance_weight": 0.605,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.3489999999999998,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -3750,7 +4555,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -3758,7 +4569,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -3767,6 +4584,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.18,
+              "clearance_weight": 0.62,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -3798,7 +4626,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -3806,7 +4640,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -3815,6 +4655,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.195,
+              "clearance_weight": 0.635,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4509999999999996,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -3846,7 +4697,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -3854,10 +4711,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.29000000000000004,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.08,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.6780000000000004,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -3985,7 +4859,7 @@
       "body_row": 16,
       "structure_row": 17,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-09",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -4054,7 +4928,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -4062,7 +4942,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -4070,7 +4956,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -4079,6 +4971,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.21,
+              "clearance_weight": 0.65,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.502,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -4110,7 +5013,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -4118,7 +5027,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -4127,6 +5042,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.15,
+              "clearance_weight": 0.59,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.298,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -4158,7 +5084,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -4166,7 +5098,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -4175,6 +5113,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.16499999999999998,
+              "clearance_weight": 0.605,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.3489999999999998,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -4206,7 +5155,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -4214,10 +5169,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.32,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.05,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.6,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -4345,7 +5317,7 @@
       "body_row": 18,
       "structure_row": 19,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-10",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -4414,7 +5386,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -4422,7 +5400,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -4430,7 +5414,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -4439,6 +5429,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.18,
+              "clearance_weight": 0.62,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -4470,7 +5471,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -4478,7 +5485,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -4487,6 +5500,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.195,
+              "clearance_weight": 0.635,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4509999999999996,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -4518,7 +5542,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -4526,7 +5556,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -4535,6 +5571,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.21,
+              "clearance_weight": 0.65,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.502,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -4566,7 +5613,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -4574,10 +5627,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.35,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.02,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.522,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -4705,7 +5775,7 @@
       "body_row": 20,
       "structure_row": 21,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-11",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -4774,7 +5844,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -4782,7 +5858,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -4790,7 +5872,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -4799,6 +5887,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.15,
+              "clearance_weight": 0.59,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.298,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -4830,7 +5929,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -4838,7 +5943,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -4847,6 +5958,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.16499999999999998,
+              "clearance_weight": 0.605,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.3489999999999998,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -4878,7 +6000,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -4886,7 +6014,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -4895,6 +6029,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.18,
+              "clearance_weight": 0.62,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -4926,7 +6071,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -4934,10 +6085,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.305,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.065,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.639,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -5065,7 +6233,7 @@
       "body_row": 22,
       "structure_row": 23,
       "grammar": {
-        "version": 3,
+        "version": 4,
         "name": "living-reef-12",
         "cadence_seconds": 7.5,
         "initial_delay_seconds": 2.5,
@@ -5134,7 +6302,13 @@
                 "azimuth_degrees": 18.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.91,
-                "probability": 0.94
+                "probability": 0.94,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -5142,7 +6316,13 @@
                 "azimuth_degrees": 53.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.72,
-                "probability": 0.62
+                "probability": 0.62,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -5150,7 +6330,13 @@
                 "azimuth_degrees": -61.0,
                 "generation_phase_degrees": 99.0,
                 "scale": 0.67,
-                "probability": 0.48
+                "probability": 0.48,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -5159,6 +6345,17 @@
               "aspect": 1.35,
               "thickness": 0.005,
               "areal_density": 0.28
+            },
+            "guidance": {
+              "vertical_weight": 0.195,
+              "clearance_weight": 0.635,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.4509999999999996,
+              "half_resistance": 145.0
             }
           },
           "shelf": {
@@ -5190,7 +6387,13 @@
                 "azimuth_degrees": 72.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.82,
-                "probability": 0.78
+                "probability": 0.78,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "fork",
@@ -5198,7 +6401,13 @@
                 "azimuth_degrees": -48.0,
                 "generation_phase_degrees": 111.0,
                 "scale": 0.65,
-                "probability": 0.46
+                "probability": 0.46,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -5207,6 +6416,17 @@
               "aspect": 1.7,
               "thickness": 0.005,
               "areal_density": 0.24
+            },
+            "guidance": {
+              "vertical_weight": 0.21,
+              "clearance_weight": 0.65,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.502,
+              "half_resistance": 145.0
             }
           },
           "fork": {
@@ -5238,7 +6458,13 @@
                 "azimuth_degrees": 67.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.78,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               },
               {
                 "symbol": "shelf",
@@ -5246,7 +6472,13 @@
                 "azimuth_degrees": -74.0,
                 "generation_phase_degrees": 101.0,
                 "scale": 0.62,
-                "probability": 0.43
+                "probability": 0.43,
+                "response": {
+                  "light": 0.58,
+                  "nutrient": 0.31,
+                  "support": 0.22,
+                  "competition": -0.68
+                }
               }
             ],
             "leaf": {
@@ -5255,6 +6487,17 @@
               "aspect": 1.45,
               "thickness": 0.0045,
               "areal_density": 0.25
+            },
+            "guidance": {
+              "vertical_weight": 0.15,
+              "clearance_weight": 0.59,
+              "surface_weight": 0.16,
+              "surface_reach": 0.075,
+              "clearance_distance": 0.14
+            },
+            "transport": {
+              "conductivity": 3.298,
+              "half_resistance": 145.0
             }
           },
           "anchor": {
@@ -5286,7 +6529,13 @@
                 "azimuth_degrees": 38.0,
                 "generation_phase_degrees": 109.0,
                 "scale": 0.72,
-                "probability": 0.72
+                "probability": 0.72,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               },
               {
                 "symbol": "anchor",
@@ -5294,10 +6543,27 @@
                 "azimuth_degrees": -82.0,
                 "generation_phase_degrees": 137.5,
                 "scale": 0.52,
-                "probability": 0.18
+                "probability": 0.18,
+                "response": {
+                  "light": -0.25,
+                  "nutrient": 0.72,
+                  "support": 0.48,
+                  "competition": -0.24
+                }
               }
             ],
-            "leaf": null
+            "leaf": null,
+            "guidance": {
+              "vertical_weight": -0.335,
+              "clearance_weight": 0.16,
+              "surface_weight": 1.0350000000000001,
+              "surface_reach": 0.24,
+              "clearance_distance": 0.16
+            },
+            "transport": {
+              "conductivity": 2.561,
+              "half_resistance": 180.0
+            }
           }
         },
         "axiom": [
@@ -5521,7 +6787,7 @@
   ],
   "material_objects": {
     "format": "chreatures-material-objects-v1",
-    "chemistry_sha256": "fc482774de2dd3c08e92cd9f6bdaf8298c39e41a8ef173e8430b7363841e9928",
+    "chemistry_sha256": "825a89e73332317beeefa39d80634ca64270c3c1741d0b701a536ff638773b53",
     "max_transfer": 1.0,
     "objects": [
       {
@@ -5533,7 +6799,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -5541,7 +6808,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -5584,6 +6852,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -5601,6 +6874,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -5614,7 +6892,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -5622,7 +6901,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -5665,6 +6945,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -5682,6 +6967,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -5695,7 +6985,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -5703,7 +6994,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -5746,6 +7038,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -5763,6 +7060,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -5776,7 +7078,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -5784,7 +7087,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -5827,6 +7131,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -5844,6 +7153,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -5857,7 +7171,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -5865,7 +7180,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -5908,6 +7224,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -5925,6 +7246,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -5938,7 +7264,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -5946,7 +7273,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -5989,6 +7317,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6006,6 +7339,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6019,7 +7357,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -6027,7 +7366,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -6070,6 +7410,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6087,6 +7432,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6100,7 +7450,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -6108,7 +7459,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -6151,6 +7503,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6168,6 +7525,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6181,7 +7543,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -6189,7 +7552,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -6232,6 +7596,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6249,6 +7618,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6262,7 +7636,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -6270,7 +7645,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -6313,6 +7689,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6330,6 +7711,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6343,7 +7729,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -6351,7 +7738,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -6394,6 +7782,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6411,6 +7804,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6424,7 +7822,8 @@
           "reserve": 0.55,
           "soft_tissue": 0.55,
           "tough_tissue": 0.55,
-          "detritus": 0.55
+          "detritus": 0.55,
+          "fermentate": 0.55
         },
         "content_weights": {
           "mineral": 1,
@@ -6432,7 +7831,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -6475,6 +7875,11 @@
               0.25,
               0.16,
               0.06
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6492,6 +7897,11 @@
               0.0,
               0.3,
               1.8
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6505,7 +7915,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -6513,7 +7924,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -6571,6 +7983,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6583,6 +8000,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6596,7 +8018,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -6604,7 +8027,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -6662,6 +8086,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6674,6 +8103,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6687,7 +8121,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -6695,7 +8130,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -6753,6 +8189,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6765,6 +8206,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6778,7 +8224,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -6786,7 +8233,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -6844,6 +8292,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6856,6 +8309,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6869,7 +8327,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -6877,7 +8336,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -6935,6 +8395,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -6947,6 +8412,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -6960,7 +8430,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -6968,7 +8439,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -7026,6 +8498,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -7038,6 +8515,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -7051,7 +8533,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -7059,7 +8542,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -7117,6 +8601,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -7129,6 +8618,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -7142,7 +8636,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -7150,7 +8645,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -7208,6 +8704,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -7220,6 +8721,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -7233,7 +8739,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -7241,7 +8748,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -7299,6 +8807,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -7311,6 +8824,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -7324,7 +8842,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -7332,7 +8851,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -7390,6 +8910,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -7402,6 +8927,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -7415,7 +8945,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -7423,7 +8954,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -7481,6 +9013,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -7493,6 +9030,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -7506,7 +9048,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -7514,7 +9057,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -7572,6 +9116,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -7584,6 +9133,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -7597,7 +9151,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -7605,7 +9160,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -7663,6 +9219,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -7675,6 +9236,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -7688,7 +9254,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -7696,7 +9263,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -7754,6 +9322,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -7766,6 +9339,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -7779,7 +9357,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -7787,7 +9366,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -7845,6 +9425,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -7857,6 +9442,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -7870,7 +9460,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -7878,7 +9469,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -7936,6 +9528,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -7948,6 +9545,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -7961,7 +9563,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -7969,7 +9572,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -8027,6 +9631,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -8039,6 +9648,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -8052,7 +9666,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -8060,7 +9675,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -8118,6 +9734,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -8130,6 +9751,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -8143,7 +9769,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -8151,7 +9778,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -8209,6 +9837,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -8221,6 +9854,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -8234,7 +9872,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -8242,7 +9881,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -8300,6 +9940,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -8312,6 +9957,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -8325,7 +9975,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -8333,7 +9984,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -8391,6 +10043,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -8403,6 +10060,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -8416,7 +10078,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -8424,7 +10087,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -8482,6 +10146,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -8494,6 +10163,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -8507,7 +10181,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -8515,7 +10190,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -8573,6 +10249,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -8585,6 +10266,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -8598,7 +10284,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -8606,7 +10293,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -8664,6 +10352,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -8676,6 +10369,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -8689,7 +10387,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -8697,7 +10396,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -8755,6 +10455,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -8767,6 +10472,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -8780,7 +10490,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -8788,7 +10499,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -8846,6 +10558,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -8858,6 +10575,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -8871,7 +10593,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -8879,7 +10602,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -8937,6 +10661,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -8949,6 +10678,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -8962,7 +10696,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -8970,7 +10705,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -9028,6 +10764,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -9040,6 +10781,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -9053,7 +10799,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -9061,7 +10808,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -9119,6 +10867,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -9131,6 +10884,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -9144,7 +10902,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -9152,7 +10911,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -9210,6 +10970,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -9222,6 +10987,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -9235,7 +11005,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -9243,7 +11014,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -9301,6 +11073,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -9313,6 +11090,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -9326,7 +11108,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -9334,7 +11117,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -9392,6 +11176,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -9404,6 +11193,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -9417,7 +11211,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -9425,7 +11220,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -9483,6 +11279,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -9495,6 +11296,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -9508,7 +11314,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -9516,7 +11323,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -9574,6 +11382,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -9586,6 +11399,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -9599,7 +11417,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -9607,7 +11426,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -9665,6 +11485,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -9677,6 +11502,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -9690,7 +11520,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -9698,7 +11529,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -9756,6 +11588,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -9768,6 +11605,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -9781,7 +11623,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -9789,7 +11632,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -9847,6 +11691,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -9859,6 +11708,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -9872,7 +11726,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -9880,7 +11735,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -9938,6 +11794,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -9950,6 +11811,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -9963,7 +11829,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -9971,7 +11838,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -10029,6 +11897,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -10041,6 +11914,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -10054,7 +11932,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -10062,7 +11941,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -10120,6 +12000,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -10132,6 +12017,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -10145,7 +12035,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -10153,7 +12044,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -10211,6 +12103,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -10223,6 +12120,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -10236,7 +12138,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -10244,7 +12147,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -10302,6 +12206,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -10314,6 +12223,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -10327,7 +12241,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -10335,7 +12250,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -10393,6 +12309,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -10405,6 +12326,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -10418,7 +12344,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -10426,7 +12353,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -10484,6 +12412,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -10496,6 +12429,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -10509,7 +12447,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -10517,7 +12456,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -10575,6 +12515,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -10587,6 +12532,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -10600,7 +12550,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -10608,7 +12559,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -10666,6 +12618,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -10678,6 +12635,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -10691,7 +12653,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -10699,7 +12662,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -10757,6 +12721,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -10769,6 +12738,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -10782,7 +12756,8 @@
           "reserve": 0.42,
           "soft_tissue": 0.42,
           "tough_tissue": 0.42,
-          "detritus": 0.42
+          "detritus": 0.42,
+          "fermentate": 0.42
         },
         "content_weights": {
           "mineral": 1,
@@ -10790,7 +12765,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -10848,6 +12824,11 @@
               0.25,
               0.15,
               0.05
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -10860,6 +12841,11 @@
               0.0,
               0.25,
               1.7
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -10873,7 +12859,8 @@
           "reserve": 0.5,
           "soft_tissue": 0.5,
           "tough_tissue": 0.5,
-          "detritus": 0.5
+          "detritus": 0.5,
+          "fermentate": 0.5
         },
         "content_weights": {
           "mineral": 1,
@@ -10881,7 +12868,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -10934,6 +12922,11 @@
               0.45,
               0.8,
               0.12
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -10946,6 +12939,11 @@
               0.15,
               1.4,
               0.04
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -10959,7 +12957,8 @@
           "reserve": 0.5,
           "soft_tissue": 0.5,
           "tough_tissue": 0.5,
-          "detritus": 0.5
+          "detritus": 0.5,
+          "fermentate": 0.5
         },
         "content_weights": {
           "mineral": 1,
@@ -10967,7 +12966,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -11020,6 +13020,11 @@
               0.45,
               0.8,
               0.12
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -11032,6 +13037,11 @@
               0.15,
               1.4,
               0.04
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -11045,7 +13055,8 @@
           "reserve": 0.5,
           "soft_tissue": 0.5,
           "tough_tissue": 0.5,
-          "detritus": 0.5
+          "detritus": 0.5,
+          "fermentate": 0.5
         },
         "content_weights": {
           "mineral": 1,
@@ -11053,7 +13064,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -11118,6 +13130,11 @@
               0.32,
               0.18,
               0.04
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -11135,6 +13152,11 @@
               0.0,
               0.3,
               1.9
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -11148,7 +13170,8 @@
           "reserve": 0.5,
           "soft_tissue": 0.5,
           "tough_tissue": 0.5,
-          "detritus": 0.5
+          "detritus": 0.5,
+          "fermentate": 0.5
         },
         "content_weights": {
           "mineral": 1,
@@ -11156,7 +13179,8 @@
           "reserve": 1,
           "soft_tissue": 5,
           "tough_tissue": 5,
-          "detritus": 5
+          "detritus": 5,
+          "fermentate": 1.0
         },
         "remove_when_empty": true,
         "boundaries": [
@@ -11221,6 +13245,11 @@
               0.32,
               0.18,
               0.04
+            ],
+            "fermentate": [
+              0.75,
+              0.32,
+              1.05
             ]
           },
           "odor_coefficients": {
@@ -11238,6 +13267,11 @@
               0.0,
               0.3,
               1.9
+            ],
+            "fermentate": [
+              0.42,
+              0.92,
+              0.16
             ]
           }
         }
@@ -11245,7 +13279,7 @@
     ]
   },
   "exchange": {
-    "format": "chreatures-ecological-exchange-v2",
+    "format": "chreatures-ecological-exchange-v4",
     "deposit_slots": [
       "living-deposit-00",
       "living-deposit-01",
@@ -11279,9 +13313,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -11289,10 +13323,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       {
@@ -11301,9 +13337,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -11311,10 +13347,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       {
@@ -11323,9 +13361,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.028,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -11333,10 +13371,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       {
@@ -11345,9 +13385,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.024,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -11355,10 +13395,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       {
@@ -11367,9 +13409,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.026000000000000002,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -11377,10 +13419,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       },
       {
@@ -11389,9 +13433,9 @@
         "minimum_mass": 0.0012,
         "maximum_mass": 0.028,
         "offset_radii": [
-          -1.7,
+          -3.2,
           0.0,
-          -0.2
+          0.2
         ],
         "gut_rates": {
           "mineral": 0.16,
@@ -11399,10 +13443,12 @@
           "soft_tissue": 0.005,
           "tough_tissue": 0.004,
           "detritus": 0.032,
-          "reserve": 0.0025
+          "reserve": 0.0025,
+          "fermentate": 0.055
         },
         "body_rates": {
-          "inorganic_carbon": 0.18
+          "inorganic_carbon": 0.18,
+          "fermentate": 0.12
         }
       }
     ],
@@ -11411,132 +13457,156 @@
         "colony": "reef-01",
         "rates_per_area": {
           "mineral": 0.56,
-          "inorganic_carbon": 0.82
+          "inorganic_carbon": 0.82,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       },
       {
         "colony": "reef-02",
         "rates_per_area": {
           "mineral": 0.5900000000000001,
-          "inorganic_carbon": 0.86
+          "inorganic_carbon": 0.86,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       },
       {
         "colony": "reef-03",
         "rates_per_area": {
           "mineral": 0.6200000000000001,
-          "inorganic_carbon": 0.9
+          "inorganic_carbon": 0.9,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       },
       {
         "colony": "reef-04",
         "rates_per_area": {
           "mineral": 0.65,
-          "inorganic_carbon": 0.74
+          "inorganic_carbon": 0.74,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       },
       {
         "colony": "reef-05",
         "rates_per_area": {
           "mineral": 0.68,
-          "inorganic_carbon": 0.78
+          "inorganic_carbon": 0.78,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       },
       {
         "colony": "reef-06",
         "rates_per_area": {
           "mineral": 0.56,
-          "inorganic_carbon": 0.82
+          "inorganic_carbon": 0.82,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       },
       {
         "colony": "reef-07",
         "rates_per_area": {
           "mineral": 0.5900000000000001,
-          "inorganic_carbon": 0.86
+          "inorganic_carbon": 0.86,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       },
       {
         "colony": "reef-08",
         "rates_per_area": {
           "mineral": 0.6200000000000001,
-          "inorganic_carbon": 0.9
+          "inorganic_carbon": 0.9,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       },
       {
         "colony": "reef-09",
         "rates_per_area": {
           "mineral": 0.65,
-          "inorganic_carbon": 0.74
+          "inorganic_carbon": 0.74,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       },
       {
         "colony": "reef-10",
         "rates_per_area": {
           "mineral": 0.68,
-          "inorganic_carbon": 0.78
+          "inorganic_carbon": 0.78,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       },
       {
         "colony": "reef-11",
         "rates_per_area": {
           "mineral": 0.56,
-          "inorganic_carbon": 0.82
+          "inorganic_carbon": 0.82,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       },
       {
         "colony": "reef-12",
         "rates_per_area": {
           "mineral": 0.5900000000000001,
-          "inorganic_carbon": 0.86
+          "inorganic_carbon": 0.86,
+          "fermentate": 0.48
         },
         "capacities": {
           "mineral": 8.0,
-          "inorganic_carbon": 24.0
+          "inorganic_carbon": 24.0,
+          "fermentate": 12.0
         }
       }
     ],

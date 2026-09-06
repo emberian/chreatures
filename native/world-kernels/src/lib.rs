@@ -4,6 +4,8 @@ mod acoustics;
 mod actuation;
 mod biosphere_tissue;
 mod contacts;
+mod developmental_cues;
+mod ecological_exchange;
 mod environment;
 mod growth;
 mod habitat_family;
@@ -21,6 +23,14 @@ fn _world_kernels(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<actuation::ActuationCohort>()?;
     module.add_class::<acoustics::AcousticEngine>()?;
     module.add_class::<contacts::ContactBatch>()?;
+    module.add_function(wrap_pyfunction!(
+        developmental_cues::developmental_surface_cues,
+        module
+    )?)?;
+    module.add_function(wrap_pyfunction!(
+        ecological_exchange::mobile_release_candidates,
+        module
+    )?)?;
     module.add_class::<biosphere_tissue::BiosphereTissue>()?;
     module.add_class::<environment::LightEnvironment>()?;
     module.add_class::<growth::GrowthKernel>()?;

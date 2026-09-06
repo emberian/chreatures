@@ -1,4 +1,3 @@
-use matrixmultiply::sgemm;
 use numpy::{
     ndarray::{Array2, Array3},
     IntoPyArray, PyArray2, PyArray3, PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3,
@@ -14,6 +13,7 @@ pub mod personal_consequences;
 pub mod personal_goals;
 pub mod population_response;
 mod predictive_sensory;
+mod sequence_memory;
 
 #[derive(Clone)]
 pub(crate) struct Linear {
@@ -32,51 +32,78 @@ pub(crate) struct Gru {
     pub(crate) b_hh: Vec<f32>,
 }
 
-pub(crate) fn gemm_into(
+#[cfg(target_os = "macos")]
+fn dense_sgemm(
     input: &[f32],
     rows: usize,
     cols: usize,
-    layer: &Linear,
-    output: &mut Vec<f32>,
+    weight: &[f32],
+    out: usize,
+    output: &mut [f32],
 ) {
-    assert_eq!(cols, layer.input);
-    output.resize(rows * layer.out, 0.0);
-    unsafe {
-        sgemm(
-            rows,
-            cols,
-            layer.out,
-            1.0,
-            input.as_ptr(),
-            cols as isize,
-            1,
-            layer.weight.as_ptr(),
-            1,
-            cols as isize,
-            0.0,
-            output.as_mut_ptr(),
-            layer.out as isize,
-            1,
+    use std::ffi::c_int;
+
+    const CBLAS_ROW_MAJOR: c_int = 101;
+    const CBLAS_NO_TRANS: c_int = 111;
+    const CBLAS_TRANS: c_int = 112;
+
+    #[link(name = "Accelerate", kind = "framework")]
+    unsafe extern "C" {
+        fn cblas_sgemm(
+            order: c_int,
+            transpose_a: c_int,
+            transpose_b: c_int,
+            rows: c_int,
+            out: c_int,
+            cols: c_int,
+            alpha: f32,
+            input: *const f32,
+            input_stride: c_int,
+            weight: *const f32,
+            weight_stride: c_int,
+            beta: f32,
+            output: *mut f32,
+            output_stride: c_int,
         );
     }
-    for row in output.chunks_exact_mut(layer.out) {
-        for (x, b) in row.iter_mut().zip(&layer.bias) {
-            *x += *b;
-        }
+
+    let rows = c_int::try_from(rows).expect("dense GEMM row count exceeds c_int");
+    let cols = c_int::try_from(cols).expect("dense GEMM column count exceeds c_int");
+    let out = c_int::try_from(out).expect("dense GEMM output count exceeds c_int");
+    unsafe {
+        // input is [rows, cols], weight is stored [out, cols], and output is
+        // [rows, out], all contiguous row-major. Transposing weight therefore
+        // computes input * weight^T without copying either operand.
+        cblas_sgemm(
+            CBLAS_ROW_MAJOR,
+            CBLAS_NO_TRANS,
+            CBLAS_TRANS,
+            rows,
+            out,
+            cols,
+            1.0,
+            input.as_ptr(),
+            cols,
+            weight.as_ptr(),
+            cols,
+            0.0,
+            output.as_mut_ptr(),
+            out,
+        );
     }
 }
-fn gemm_parts_into(
+
+#[cfg(not(target_os = "macos"))]
+fn dense_sgemm(
     input: &[f32],
     rows: usize,
     cols: usize,
-    out: usize,
     weight: &[f32],
-    bias: &[f32],
-    output: &mut Vec<f32>,
+    out: usize,
+    output: &mut [f32],
 ) {
-    output.resize(rows * out, 0.0);
     unsafe {
-        sgemm(
+        matrixmultiply::sgemm(
             rows,
             cols,
             out,
@@ -91,13 +118,77 @@ fn gemm_parts_into(
             output.as_mut_ptr(),
             out as isize,
             1,
-        )
+        );
+    }
+}
+
+fn gemm_bias_into(
+    input: &[f32],
+    rows: usize,
+    cols: usize,
+    out: usize,
+    weight: &[f32],
+    bias: &[f32],
+    output: &mut Vec<f32>,
+) {
+    assert_eq!(
+        input.len(),
+        rows.checked_mul(cols)
+            .expect("dense GEMM input size overflow")
+    );
+    assert_eq!(
+        weight.len(),
+        out.checked_mul(cols)
+            .expect("dense GEMM weight size overflow")
+    );
+    assert_eq!(bias.len(), out);
+    let output_len = rows
+        .checked_mul(out)
+        .expect("dense GEMM output size overflow");
+    output.resize(output_len, 0.0);
+    if out == 0 {
+        return;
+    }
+    if rows != 0 && cols != 0 {
+        dense_sgemm(input, rows, cols, weight, out, output);
+    } else {
+        output.fill(0.0);
     }
     for row in output.chunks_exact_mut(out) {
         for (x, b) in row.iter_mut().zip(bias) {
             *x += *b;
         }
     }
+}
+
+pub(crate) fn gemm_into(
+    input: &[f32],
+    rows: usize,
+    cols: usize,
+    layer: &Linear,
+    output: &mut Vec<f32>,
+) {
+    assert_eq!(cols, layer.input);
+    gemm_bias_into(
+        input,
+        rows,
+        cols,
+        layer.out,
+        &layer.weight,
+        &layer.bias,
+        output,
+    );
+}
+fn gemm_parts_into(
+    input: &[f32],
+    rows: usize,
+    cols: usize,
+    out: usize,
+    weight: &[f32],
+    bias: &[f32],
+    output: &mut Vec<f32>,
+) {
+    gemm_bias_into(input, rows, cols, out, weight, bias, output);
 }
 pub(crate) fn tanh_all(value: &mut [f32]) {
     for x in value {

@@ -54,22 +54,13 @@ PERSONAL_GOAL_CONTRACT = {
     "learning_default_enabled": True,
 }
 PREDICTOR_ORDER = (
-    "input.mean",
-    "input.scale",
-    "target.mean",
-    "target.scale",
-    "residual.scale",
+    "context.mean", "context.scale", "action.mean", "action.scale",
+    "target.mean", "target.scale",
 ) + tuple(
-    f"member.{member}.{part}"
-    for member in range(3)
-    for part in (
-        "layer0.weight",
-        "layer0.bias",
-        "layer1.weight",
-        "layer1.bias",
-        "output.weight",
-        "output.bias",
-    )
+    f"member.{member}.{part}" for member in range(3)
+    for part in ("context.weight", "context.bias", "transition.weight_ih",
+                 "transition.weight_hh", "transition.bias_ih", "transition.bias_hh",
+                 "output.weight", "output.bias")
 )
 POPULATION_ADAPTER_ORDER = (
     "population_adapter.down",
@@ -83,51 +74,38 @@ NEW_ACTUATOR_ORDER = (
     "model.new_actuator_positive.weight",
     "model.new_actuator_positive.bias",
 )
-PREDICTOR_ENCODER_NAMES = (
-    "visual.peripheral.first.weight",
-    "visual.peripheral.first.bias",
-    "visual.peripheral.second.weight",
-    "visual.peripheral.second.bias",
-    "visual.foveal.first.weight",
-    "visual.foveal.first.bias",
-    "visual.foveal.second.weight",
-    "visual.foveal.second.bias",
-    "visual.peripheral_projection.0.weight",
-    "visual.peripheral_projection.0.bias",
-    "visual.foveal_projection.0.weight",
-    "visual.foveal_projection.0.bias",
-    "body.0.weight",
-    "body.0.bias",
-    "goal_encoder.0.weight",
-    "goal_encoder.0.bias",
-    "goal_encoder.2.weight",
-    "goal_encoder.2.bias",
-)
-PREDICTOR_ENCODER_ORDER = tuple(
-    "predictor.encoder." + name for name in PREDICTOR_ENCODER_NAMES
-) + (
-    "predictor.observation_normalizer.mean",
-    "predictor.observation_normalizer.scale",
-)
-PREDICTOR_MLP_ORDER = tuple("predictor." + name for name in PREDICTOR_ORDER)
+PREDICTOR_RUNTIME_ORDER = tuple("predictor." + name for name in PREDICTOR_ORDER)
+PREDICTOR_CONTEXT_SEGMENTS = {
+    "frame_codes_t_minus_3_through_t": [0, 1024],
+    "private_effective_worker_context_t": [1024, 1152],
+    "neural_readouts_t": [1152, 1536],
+    "raw_physiology_t": [1536, 1548],
+    "previous_delivered_action": [1548, 1560],
+}
+PREDICTOR_PHYSIOLOGY_LINK = {
+    "proposal": "target-denormalized output head",
+    "formula": "up*tanh(qplus/max(up,1e-4))-down*tanh(qminus/max(down,1e-4))",
+    "signed_split": "stable qplus/qminus from sqrt(q*q+1e-8), epsilon=1e-4",
+    "anchor": "actual physiology at t, then member-private predicted state",
+    "epsilon": 1e-4,
+    "lower": [0, 0, 0, -1, -1, 0, 0, 0, 0, 0, 0, 0],
+    "upper": [1] * 12,
+    "clipping": False,
+}
 PREDICTOR_SHAPES = {
-    "input.mean": (1426,),
-    "input.scale": (1426,),
-    "target.mean": (262,),
-    "target.scale": (262,),
-    "residual.scale": (262,),
+    "context.mean": (1560,), "context.scale": (1560,),
+    "action.mean": (12,), "action.scale": (12,),
+    "target.mean": (268,), "target.scale": (268,),
 }
 for _member in range(3):
-    PREDICTOR_SHAPES.update(
-        {
-            f"member.{_member}.layer0.weight": (256, 1426),
-            f"member.{_member}.layer0.bias": (256,),
-            f"member.{_member}.layer1.weight": (256, 256),
-            f"member.{_member}.layer1.bias": (256,),
-            f"member.{_member}.output.weight": (262, 256),
-            f"member.{_member}.output.bias": (262,),
-        }
-    )
+    PREDICTOR_SHAPES.update({
+        f"member.{_member}.{part}": shape for part, shape in {
+            "context.weight": (256, 1560), "context.bias": (256,),
+            "transition.weight_ih": (768, 12), "transition.weight_hh": (768, 256),
+            "transition.bias_ih": (768,), "transition.bias_hh": (768,),
+            "output.weight": (268, 256), "output.bias": (268,),
+        }.items()
+    })
 MANAGER_ORDER = (
     "manager.query.0.weight",
     "manager.query.0.bias",
@@ -415,8 +393,7 @@ class DevelopmentalResidentCohort:
                 + PHYSIOLOGY_ADAPTER_ORDER
                 + POPULATION_ADAPTER_ORDER
                 + NEW_ACTUATOR_ORDER
-                + PREDICTOR_ENCODER_ORDER
-                + PREDICTOR_MLP_ORDER
+                + PREDICTOR_RUNTIME_ORDER
             )
             if (
                 metadata.get("format") != DEVELOPMENTAL_FORMAT
@@ -437,7 +414,7 @@ class DevelopmentalResidentCohort:
                         and value.shape != SUCCESSOR_SHAPES[name]
                     )
                     or (
-                        name in PREDICTOR_MLP_ORDER
+                        name in PREDICTOR_RUNTIME_ORDER
                         and value.shape != PREDICTOR_SHAPES[name[10:]]
                     )
                     or list(value.shape) != receipt.get("shape")
@@ -479,7 +456,7 @@ class DevelopmentalResidentCohort:
             != [4, 0.5, 0.05, 0.99, 4.0]
         ):
             raise ValueError("developmental consequence refinement differs")
-        predictor = metadata.get("inherited_h1_predictor", {})
+        predictor = metadata.get("recurrent_predictor", {})
         population_adapters = metadata.get("population_adapters", {})
         adapter_count = population_adapters.get("count")
         adapter_rank = population_adapters.get("rank")
@@ -498,52 +475,53 @@ class DevelopmentalResidentCohort:
         predictor_metadata = predictor.get("metadata", {})
         predictor_order = tuple(predictor_metadata.get("pack_order", ()))
         predictor_identity = predictor_metadata.get("artifact_identity")
-        goal_rms = predictor_metadata.get("validation", {}).get(
-            "runtime_empirical_goal_error_scale"
-        )
+        scoring = predictor.get("runtime_scoring", {})
+        calibration = predictor_metadata.get("validation", {}).get("goal_calibration", {}).get("empirical_goal_rms_by_horizon", [])
+        goal_rms = scoring.get("goal_error_rms")
         predictor_arrays = {
             name.removeprefix("predictor."): arrays[name]
-            for name in PREDICTOR_ENCODER_ORDER + PREDICTOR_MLP_ORDER
+            for name in PREDICTOR_RUNTIME_ORDER
         }
-        shared_h1_arrays = {
-            "encoder." + name: arrays["model." + name]
-            for name in PREDICTOR_ENCODER_NAMES
-        }
-        shared_h1_arrays["encoder.body.0.weight"] = arrays[
-            "model.body.0.weight"
-        ][:, :357]
-        shared_h1_arrays["observation_normalizer.mean"] = arrays[
-            "normalizer.mean"
-        ][:4453]
-        shared_h1_arrays["observation_normalizer.scale"] = arrays[
-            "normalizer.scale"
-        ][:4453]
-        if any(
-            not np.array_equal(predictor_arrays[name], shared)
-            for name, shared in shared_h1_arrays.items()
-        ):
-            raise ValueError("shared v4 front differs from frozen H1 encoder")
         source_predictor_metadata = copy.deepcopy(predictor_metadata)
-        source_pack_order = source_predictor_metadata.pop("source_pack_order", None)
-        if source_pack_order is None:
-            source_predictor_metadata.pop("pack_order", None)
-        else:
-            source_predictor_metadata["pack_order"] = source_pack_order
+        source_predictor_metadata["pack_order"] = source_predictor_metadata.pop("source_pack_order", None)
+        representation = predictor_metadata.get("representation", {})
+        temporal = predictor_metadata.get("temporal_contract", {})
+        input_contract = predictor_metadata.get("input_contract", {})
+        from .organism_interface import ACTION_NAMES, PHYSIOLOGY_NAMES
+        model_arrays = {name.removeprefix("model."): value for name, value in arrays.items() if name.startswith("model.")}
+        model_hash = hashlib.sha256()
+        for name in sorted(model_arrays):
+            value = np.ascontiguousarray(model_arrays[name], dtype="<f4")
+            model_hash.update(name.encode())
+            model_hash.update(b"\0")
+            model_hash.update(json.dumps(list(value.shape), separators=(",", ":")).encode())
+            model_hash.update(b"\0<f4\0")
+            model_hash.update(value.tobytes())
         if (
-            predictor_order != PREDICTOR_ENCODER_ORDER + PREDICTOR_MLP_ORDER
-            or not isinstance(predictor_identity, str)
-            or len(predictor_identity) != 64
-            or _predictor_identity(source_predictor_metadata, predictor_arrays)
-            != predictor_identity
-            or not isinstance(goal_rms, (int, float))
-            or not np.isfinite(goal_rms)
-            or goal_rms < 1e-4
-            or not isinstance(
-                predictor_metadata.get("source", {}).get("frame_encoder_sha256"), str
-            )
-            or len(predictor_metadata["source"]["frame_encoder_sha256"]) != 64
+            predictor_order != PREDICTOR_RUNTIME_ORDER
+            or source_predictor_metadata["pack_order"] != list(PREDICTOR_ORDER)
+            or predictor_metadata.get("format") != "chreatures-rich-recurrent-consequence-ensemble-v3"
+            or predictor_metadata.get("version") != 3
+            or not isinstance(predictor_identity, str) or len(predictor_identity) != 64
+            or predictor.get("artifact_identity") != predictor_identity
+            or _predictor_identity(source_predictor_metadata, predictor_arrays) != predictor_identity
+            or representation.get("file_sha256") != metadata.get("checkpoint", {}).get("sha256")
+            or representation.get("model_tensor_sha256") != model_hash.hexdigest()
+            or representation.get("identity", {}).get("normalizer") != metadata.get("training_identity", {}).get("normalizer")
+            or temporal.get("observation_interval_seconds") != 0.05
+            or temporal.get("horizons_ticks") != list(range(1, 9))
+            or input_contract.get("context_dim") != 1560
+            or input_contract.get("context_segments") != PREDICTOR_CONTEXT_SEGMENTS
+            or input_contract.get("worker_recurrent_context") != "native state plus recurrent_adapter after current observation and policy adapter update"
+            or predictor_metadata.get("output_contract", {}).get("physiology_link") != PREDICTOR_PHYSIOLOGY_LINK
+            or input_contract.get("action_names") != list(ACTION_NAMES)
+            or input_contract.get("physiology_names") != list(PHYSIOLOGY_NAMES)
+            or scoring.get("horizon_ticks") != 4 or scoring.get("horizon_seconds") != 0.2
+            or scoring.get("proposal_suffix") != "hold the proposed delivered action constant for four ticks"
+            or len(calibration) != 8 or goal_rms != calibration[3]
+            or not isinstance(goal_rms, (int, float)) or not np.isfinite(goal_rms) or goal_rms < 1e-4
         ):
-            raise ValueError("predictive consequence identity differs")
+            raise ValueError("recurrent predictive consequence contract differs")
         if action_mode not in {"sample", "map"}:
             raise ValueError("action_mode must be sample or map")
         if (
@@ -581,7 +559,7 @@ class DevelopmentalResidentCohort:
             dtype=np.float32,
         )
         predictor_packed = np.ascontiguousarray(
-            np.concatenate([arrays[name].reshape(-1) for name in PREDICTOR_MLP_ORDER]),
+            np.concatenate([arrays[name].reshape(-1) for name in PREDICTOR_RUNTIME_ORDER]),
             dtype=np.float32,
         )
         policy_adapter_packed = np.ascontiguousarray(
@@ -617,6 +595,8 @@ class DevelopmentalResidentCohort:
                 "sha256"
             ],
             "population_response": copy.deepcopy(self.population_response_artifact),
+            "recurrent_predictor": {"artifact_identity": predictor_identity, "horizon_ticks": 4,
+                                    "proposal_suffix": scoring["proposal_suffix"]},
         }
         trained = metadata.get("training_identity", {})
         self.neural_contract = {
@@ -820,8 +800,11 @@ class DevelopmentalResidentCohort:
             "selected_consequence_correction": (self.batch_size, 3),
             "personal_consequence_updates": (self.batch_size,),
             "forecast_progress": (self.batch_size, 4),
+            "worker_recurrent_context": (self.batch_size, 128),
+            "forecast_horizon_ticks": (),
+            "forecast_physiology": (self.batch_size, 4, 12),
             "forecast_disagreement": (self.batch_size, 4),
-            "forecast_input_clipped": (self.batch_size, 4),
+            "forecast_invalid": (self.batch_size, 4),
             "forecast_tilt": (self.batch_size, 4),
             "forecast_goal_rms": (),
             "actual_previous_action": (self.batch_size, ACTION_DIM),
@@ -852,6 +835,12 @@ class DevelopmentalResidentCohort:
             "personal_goal_cancelled_total": (self.batch_size,),
             "personal_goal_learning_enabled": (),
             "contextual_retrieval_bias": (self.batch_size,),
+            "goal_attainment_rms_threshold": (),
+            "goal_sequence_selected_bias": (self.batch_size,),
+            "goal_sequence_experienced_path_depth": (self.batch_size,),
+            "goal_sequence_selected_confidence": (self.batch_size,),
+            "goal_sequence_learned_transitions_total": (self.batch_size,),
+            "goal_sequence_failed_attempts_total": (self.batch_size,),
             "contextual_episodic_updates": (self.batch_size,),
         }
         if set(result) != set(expected):
@@ -896,6 +885,13 @@ class DevelopmentalResidentCohort:
             "frozen_total": (self.batch_size,),
             "skipped_total": (self.batch_size,),
             "cancelled_total": (self.batch_size,),
+            "actual_attained": (self.batch_size,),
+            "observed_normalized_progress": (self.batch_size,),
+            "measurement_start_rms": (self.batch_size,),
+            "measurement_min_rms": (self.batch_size,),
+            "measurement_latest_rms": (self.batch_size,),
+            "measurement_samples": (self.batch_size,),
+            "measurement_window_ending_last_observed_tick": (self.batch_size,),
         }
         if self.population_response_artifact is not None:
             expected.update({
@@ -933,8 +929,8 @@ class DevelopmentalResidentCohort:
 
     def snapshot_value(self) -> dict[str, Any]:
         return {
-            "format": "chreatures-developmental-resident-population-snapshot-v4",
-            "version": 4,
+            "format": "chreatures-developmental-resident-population-snapshot-v5",
+            "version": 5,
             "model_identity": copy.deepcopy(self.model_identity),
             "batch_size": self.batch_size,
             "observation_contract": copy.deepcopy(self.observation_contract),
@@ -954,8 +950,8 @@ class DevelopmentalResidentCohort:
         if (
             not isinstance(value, dict)
             or value.get("format")
-            != "chreatures-developmental-resident-population-snapshot-v4"
-            or value.get("version") != 4
+            != "chreatures-developmental-resident-population-snapshot-v5"
+            or value.get("version") != 5
         ):
             raise ValueError("unsupported developmental resident snapshot")
         instance = cls(

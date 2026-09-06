@@ -117,15 +117,21 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
 
     types = Counter(record["record_type"] for record in ledger["records"])
     terminal_count = types["evaluation_completed"] + types["evaluation_failed"]
+    statuses = Counter(
+        record.get("fields", {}).get("status")
+        for record in ledger["records"]
+        if record["record_type"] in {"evaluation_completed", "evaluation_failed"}
+    )
     receipt = {
-        "format": "chreatures-population-weave-build-receipt-v1",
+        "format": "chreatures-population-weave-build-receipt-v2",
         "schema": SCHEMA,
         "campaign_id": ledger["campaign_id"],
         "applied_batches": list(ledger["applied_batches"]),
         "record_count": len(ledger["records"]),
         "record_types": dict(sorted(types.items())),
         "terminal_evaluations": terminal_count,
-        "failed_evaluations_retained": types["evaluation_failed"],
+        "infrastructure_failures_retained": statuses["infrastructure-failure"],
+        "organism_terminal_evaluations": statuses["organism-terminal"],
         "reconciled_population_states": reconciled_states,
         "artifacts": {
             "ledger": {

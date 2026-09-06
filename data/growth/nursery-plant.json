@@ -1,17 +1,31 @@
 {
-  "version": 2,
+  "version": 4,
   "name": "nursery-common-plant",
   "cadence_seconds": 6.0,
   "initial_delay_seconds": 4.0,
   "max_buds": 192,
   "max_shapes_per_batch": 24,
-  "resolution": {"minimum_feature_size": 0.002},
+  "resolution": {
+    "minimum_feature_size": 0.002
+  },
   "resources": {
-    "names": ["soft_tissue", "tough_tissue"],
+    "names": [
+      "soft_tissue",
+      "tough_tissue"
+    ],
     "composition": {
-      "branch": [0.18, 0.82],
-      "root": [0.28, 0.72],
-      "leaf": [0.9, 0.1]
+      "branch": [
+        0.18,
+        0.82
+      ],
+      "root": [
+        0.28,
+        0.72
+      ],
+      "leaf": [
+        0.9,
+        0.1
+      ]
     },
     "atp_per_biomass": {
       "branch": 2.8,
@@ -27,48 +41,236 @@
   "rules": {
     "lateral": {
       "role": "branch",
-      "segment": {"length": 0.115, "radius": 0.008, "density": 390.0},
+      "segment": {
+        "length": 0.115,
+        "radius": 0.008,
+        "density": 390.0,
+        "radius_scale_exponent": 0.5,
+        "minimum_aspect_ratio": 0.0
+      },
       "activation": {
-        "minimum": {"light": 0.3, "nutrient": 0.22, "support": 0.38},
-        "weights": {"light": 0.5, "nutrient": 0.32, "support": 0.18},
+        "minimum": {
+          "light": 0.3,
+          "nutrient": 0.22,
+          "support": 0.38
+        },
+        "weights": {
+          "light": 0.5,
+          "nutrient": 0.32,
+          "support": 0.18
+        },
         "competition_gain": 1.9
       },
       "successors": [
-        {"symbol": "lateral", "angle_degrees": 8.0, "azimuth_degrees": 18.0, "generation_phase_degrees": 137.5, "scale": 0.83, "probability": 0.82}
+        {
+          "symbol": "lateral",
+          "angle_degrees": 8.0,
+          "azimuth_degrees": 18.0,
+          "generation_phase_degrees": 137.5,
+          "scale": 0.83,
+          "probability": 0.82,
+          "response": {
+            "light": 0.58,
+            "nutrient": 0.31,
+            "support": 0.22,
+            "competition": -0.68
+          }
+        }
       ],
-      "leaf": {"probability": 0.86, "area": 0.0065, "aspect": 1.85, "thickness": 0.004, "areal_density": 0.21}
+      "leaf": {
+        "probability": 0.86,
+        "area": 0.0065,
+        "aspect": 1.85,
+        "thickness": 0.004,
+        "areal_density": 0.21
+      },
+      "guidance": {
+        "vertical_weight": 0.18,
+        "clearance_weight": 0.62,
+        "surface_weight": 0.16,
+        "surface_reach": 0.075,
+        "clearance_distance": 0.14
+      },
+      "transport": {
+        "conductivity": 3.4,
+        "half_resistance": 145.0
+      }
     },
     "root": {
       "role": "root",
-      "segment": {"length": 0.105, "radius": 0.009, "density": 430.0},
+      "segment": {
+        "length": 0.105,
+        "radius": 0.009,
+        "density": 430.0,
+        "radius_scale_exponent": 0.5,
+        "minimum_aspect_ratio": 2.5
+      },
       "activation": {
-        "minimum": {"light": 0.0, "nutrient": 0.3, "support": 0.32},
-        "weights": {"light": 0.0, "nutrient": 0.58, "support": 0.42},
+        "minimum": {
+          "light": 0.0,
+          "nutrient": 0.3,
+          "support": 0.32
+        },
+        "weights": {
+          "light": 0.0,
+          "nutrient": 0.58,
+          "support": 0.42
+        },
         "competition_gain": 1.25
       },
       "successors": [
-        {"symbol": "root", "angle_degrees": 9.0, "azimuth_degrees": 0.0, "generation_phase_degrees": 109.0, "scale": 0.87, "probability": 0.94},
-        {"symbol": "root", "angle_degrees": 28.0, "azimuth_degrees": 95.0, "generation_phase_degrees": 137.5, "scale": 0.62, "probability": 0.42}
+        {
+          "symbol": "root",
+          "angle_degrees": 9.0,
+          "azimuth_degrees": 0.0,
+          "generation_phase_degrees": 109.0,
+          "scale": 0.87,
+          "probability": 0.94,
+          "response": {
+            "light": -0.25,
+            "nutrient": 0.72,
+            "support": 0.48,
+            "competition": -0.24
+          }
+        },
+        {
+          "symbol": "root",
+          "angle_degrees": 28.0,
+          "azimuth_degrees": 95.0,
+          "generation_phase_degrees": 137.5,
+          "scale": 0.62,
+          "probability": 0.42,
+          "response": {
+            "light": -0.25,
+            "nutrient": 0.72,
+            "support": 0.48,
+            "competition": -0.24
+          }
+        }
       ],
-      "leaf": null
+      "leaf": null,
+      "guidance": {
+        "vertical_weight": -0.32,
+        "clearance_weight": 0.16,
+        "surface_weight": 1.05,
+        "surface_reach": 0.24,
+        "clearance_distance": 0.16
+      },
+      "transport": {
+        "conductivity": 2.6,
+        "half_resistance": 180.0
+      }
     },
     "trunk": {
       "role": "branch",
-      "segment": {"length": 0.16, "radius": 0.014, "density": 420.0},
+      "segment": {
+        "length": 0.16,
+        "radius": 0.014,
+        "density": 420.0,
+        "radius_scale_exponent": 0.5,
+        "minimum_aspect_ratio": 0.0
+      },
       "activation": {
-        "minimum": {"light": 0.28, "nutrient": 0.25, "support": 0.4},
-        "weights": {"light": 0.46, "nutrient": 0.34, "support": 0.2},
+        "minimum": {
+          "light": 0.28,
+          "nutrient": 0.25,
+          "support": 0.4
+        },
+        "weights": {
+          "light": 0.46,
+          "nutrient": 0.34,
+          "support": 0.2
+        },
         "competition_gain": 1.65
       },
       "successors": [
-        {"symbol": "trunk", "angle_degrees": 4.5, "azimuth_degrees": 0.0, "generation_phase_degrees": 137.5, "scale": 0.91, "probability": 0.96},
-        {"symbol": "lateral", "angle_degrees": 32.0, "azimuth_degrees": 42.0, "generation_phase_degrees": 137.5, "scale": 0.72, "probability": 0.58}
+        {
+          "symbol": "trunk",
+          "angle_degrees": 4.5,
+          "azimuth_degrees": 0.0,
+          "generation_phase_degrees": 137.5,
+          "scale": 0.91,
+          "probability": 0.96,
+          "response": {
+            "light": 0.58,
+            "nutrient": 0.31,
+            "support": 0.22,
+            "competition": -0.68
+          }
+        },
+        {
+          "symbol": "lateral",
+          "angle_degrees": 32.0,
+          "azimuth_degrees": 42.0,
+          "generation_phase_degrees": 137.5,
+          "scale": 0.72,
+          "probability": 0.58,
+          "response": {
+            "light": 0.58,
+            "nutrient": 0.31,
+            "support": 0.22,
+            "competition": -0.68
+          }
+        }
       ],
-      "leaf": {"probability": 0.7, "area": 0.008, "aspect": 1.7, "thickness": 0.004, "areal_density": 0.22}
+      "leaf": {
+        "probability": 0.7,
+        "area": 0.008,
+        "aspect": 1.7,
+        "thickness": 0.004,
+        "areal_density": 0.22
+      },
+      "guidance": {
+        "vertical_weight": 0.18,
+        "clearance_weight": 0.62,
+        "surface_weight": 0.16,
+        "surface_reach": 0.075,
+        "clearance_distance": 0.14
+      },
+      "transport": {
+        "conductivity": 3.4,
+        "half_resistance": 145.0
+      }
     }
   },
   "axiom": [
-    {"symbol": "trunk", "position": [0.0, 0.0, 0.0], "forward": [0.0, 0.0, 1.0], "up": [0.0, 1.0, 0.0], "scale": 1.0},
-    {"symbol": "root", "position": [0.0, 0.0, 0.0], "forward": [0.12, 0.0, -0.9927738917], "up": [0.0, 1.0, 0.0], "scale": 0.92}
+    {
+      "symbol": "trunk",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "forward": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "scale": 1.0
+    },
+    {
+      "symbol": "root",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "forward": [
+        0.12,
+        0.0,
+        -0.9927738917
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "scale": 0.92
+    }
   ]
 }

@@ -1,38 +1,46 @@
-"""Action-conditioned prediction over the current rich-v3 trajectory contract."""
-
+"""Recurrent action-conditioned consequences for the current rich-v3 body."""
 from __future__ import annotations
-
 import hashlib
 import json
 from dataclasses import asdict, dataclass
 from typing import Any, Mapping
-
 import numpy as np
 import torch
 from torch import nn
 
 from chreatures.organism_interface import ACTION_DIM, PHYSIOLOGY_DIM
 
-FORMAT = "chreatures-rich-consequence-ensemble-v2"
-ACTION_SUFFIX_FORMAT = "chreatures-rich-action-suffix-consequence-ensemble-v2"
-ACTION_SUFFIX_HORIZONS = (5, 20)
+FORMAT = "chreatures-rich-recurrent-consequence-ensemble-v3"
 FRAME_CODE_DIM = 256
 FRAME_WINDOW = 4
 NEURAL_DIM = 384
-INPUT_DIM = FRAME_WINDOW * FRAME_CODE_DIM + NEURAL_DIM + 2 * ACTION_DIM
+WORKER_HIDDEN_DIM = 128
+CONTEXT_DIM = (
+    FRAME_WINDOW * FRAME_CODE_DIM
+    + WORKER_HIDDEN_DIM
+    + NEURAL_DIM
+    + PHYSIOLOGY_DIM
+    + ACTION_DIM
+)
 OUTPUT_DIM = FRAME_CODE_DIM + PHYSIOLOGY_DIM
-ACTION_SUFFIX_OUTPUT_DIM = FRAME_WINDOW * FRAME_CODE_DIM + PHYSIOLOGY_DIM
+LATENT_DIM = 256
 MEMBERS = 3
-INPUT_SCALE_FLOOR = 0.02
+MAX_HORIZON = 8
+OBSERVATION_INTERVAL_SECONDS = 0.05
+NORMALIZED_INPUT_CLIP = 8.0
+CONTEXT_SCALE_FLOOR = 0.02
+ACTION_SCALE_FLOOR = 0.02
 CODE_DELTA_SCALE_FLOOR = 1e-3
 PHYSIOLOGY_DELTA_SCALE_FLOOR = 1e-4
-NORMALIZED_INPUT_CLIP = 8.0
-
-INPUT_SEGMENTS = {
+PHYSIOLOGY_LINK_EPSILON = 1e-4
+PHYSIOLOGY_LOWER = (0.0, 0.0, 0.0, -1.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+PHYSIOLOGY_UPPER = (1.0,) * PHYSIOLOGY_DIM
+CONTEXT_SEGMENTS = {
     "frame_codes_t_minus_3_through_t": [0, 1024],
-    "neural_readouts_t": [1024, 1408],
-    "previous_executed_action": [1408, 1420],
-    "candidate_action": [1420, 1432],
+    "private_effective_worker_context_t": [1024, 1152],
+    "neural_readouts_t": [1152, 1536],
+    "raw_physiology_t": [1536, 1548],
+    "previous_delivered_action": [1548, 1560],
 }
 OUTPUT_SEGMENTS = {
     "next_frame_code_delta": [0, 256],
@@ -41,303 +49,164 @@ OUTPUT_SEGMENTS = {
 FRAME_CODE_SEGMENTS = {"visual": [0, 128], "body": [128, 256]}
 
 
-def action_suffix_input_dim(horizon: int) -> int:
-    if horizon not in ACTION_SUFFIX_HORIZONS:
-        raise ValueError(f"action suffix horizon must be one of {ACTION_SUFFIX_HORIZONS}")
-    return FRAME_WINDOW * FRAME_CODE_DIM + NEURAL_DIM + ACTION_DIM * (1 + horizon)
-
-
-def action_suffix_input_segments(horizon: int) -> dict[str, list[int]]:
-    dimension = action_suffix_input_dim(horizon)
-    return {
-        "frame_codes_t_minus_3_through_t": [0, 1024],
-        "neural_readouts_t": [1024, 1408],
-        "previous_executed_action": [1408, 1420],
-        "executed_action_suffix_t_through_t_plus_h_minus_1": [1420, dimension],
-    }
-
-
-ACTION_SUFFIX_OUTPUT_SEGMENTS = {
-    "future_four_frame_code_deltas_from_current": [0, 1024],
-    "future_raw_physiology_delta": [1024, 1036],
-}
-
-
 @dataclass(frozen=True)
 class RichPredictionConfig:
-    input_dim: int = INPUT_DIM
-    hidden_dim: int = 256
+    context_dim: int = CONTEXT_DIM
+    action_dim: int = ACTION_DIM
+    latent_dim: int = LATENT_DIM
     output_dim: int = OUTPUT_DIM
     members: int = MEMBERS
-    frame_code_dim: int = FRAME_CODE_DIM
-    frame_window: int = FRAME_WINDOW
-    neural_dim: int = NEURAL_DIM
-    action_dim: int = ACTION_DIM
-    physiology_dim: int = PHYSIOLOGY_DIM
+    max_horizon: int = MAX_HORIZON
+    interval_seconds: float = OBSERVATION_INTERVAL_SECONDS
 
-    def __post_init__(self) -> None:
+    def __post_init__(self):
         if tuple(asdict(self).values()) != (
-            INPUT_DIM,
-            256,
+            CONTEXT_DIM,
+            ACTION_DIM,
+            LATENT_DIM,
             OUTPUT_DIM,
             MEMBERS,
-            FRAME_CODE_DIM,
-            FRAME_WINDOW,
-            NEURAL_DIM,
-            ACTION_DIM,
-            PHYSIOLOGY_DIM,
+            MAX_HORIZON,
+            OBSERVATION_INTERVAL_SECONDS,
         ):
-            raise ValueError("rich consequence ensemble dimensions are fixed")
+            raise ValueError("rich recurrent consequence dimensions are fixed")
 
 
-class RichConsequenceMember(nn.Module):
-    """A single independent deterministic consequence predictor."""
-
-    def __init__(self) -> None:
+class RichRecurrentConsequenceMember(nn.Module):
+    def __init__(self):
         super().__init__()
-        self.layer0 = nn.Linear(INPUT_DIM, 256)
-        self.layer1 = nn.Linear(256, 256)
-        self.output = nn.Linear(256, OUTPUT_DIM)
+        self.context = nn.Linear(CONTEXT_DIM, LATENT_DIM)
+        self.transition = nn.GRUCell(ACTION_DIM, LATENT_DIM)
+        self.output = nn.Linear(LATENT_DIM, OUTPUT_DIM)
 
-    def forward(self, value: torch.Tensor) -> torch.Tensor:
-        if value.shape[-1] != INPUT_DIM:
-            raise ValueError(f"rich predictor input must end with {INPUT_DIM}")
-        value = torch.tanh(self.layer0(value))
-        value = torch.tanh(self.layer1(value))
-        return self.output(value)
+    def forward(self, context, actions):
+        if context.ndim != 2 or context.shape[-1] != CONTEXT_DIM:
+            raise ValueError("context must be [N,1560]")
+        if (
+            actions.ndim != 3
+            or actions.shape[0] != context.shape[0]
+            or actions.shape[-1] != ACTION_DIM
+            or not 1 <= actions.shape[1] <= MAX_HORIZON
+        ):
+            raise ValueError("actions must be [N,H,12], 1<=H<=8")
+        state = torch.tanh(self.context(context))
+        values = []
+        for step in range(actions.shape[1]):
+            state = self.transition(actions[:, step], state)
+            values.append(self.output(state))
+        return torch.stack(values, dim=1)
 
 
-class RichConsequenceEnsemble(nn.Module):
-    """Three independently initialized members with no shared parameters."""
-
-    def __init__(self) -> None:
+class RichRecurrentConsequenceEnsemble(nn.Module):
+    def __init__(self):
         super().__init__()
         self.config = RichPredictionConfig()
-        self.members = nn.ModuleList(RichConsequenceMember() for _ in range(MEMBERS))
-
-    def forward(self, value: torch.Tensor) -> torch.Tensor:
-        """Return member predictions as ``[...,3,268]`` normalized targets."""
-        return torch.stack([member(value) for member in self.members], dim=-2)
-
-
-@dataclass(frozen=True)
-class ActionSuffixPredictionConfig:
-    horizon: int
-    hidden_dim: int = 256
-    members: int = MEMBERS
-    frame_code_dim: int = FRAME_CODE_DIM
-    frame_window: int = FRAME_WINDOW
-    neural_dim: int = NEURAL_DIM
-    action_dim: int = ACTION_DIM
-    physiology_dim: int = PHYSIOLOGY_DIM
-
-    def __post_init__(self) -> None:
-        action_suffix_input_dim(self.horizon)
-        if tuple(asdict(self).values())[1:] != (
-            256,
-            MEMBERS,
-            FRAME_CODE_DIM,
-            FRAME_WINDOW,
-            NEURAL_DIM,
-            ACTION_DIM,
-            PHYSIOLOGY_DIM,
-        ):
-            raise ValueError("action suffix consequence dimensions are fixed")
-
-    @property
-    def input_dim(self) -> int:
-        return action_suffix_input_dim(self.horizon)
-
-    @property
-    def output_dim(self) -> int:
-        return ACTION_SUFFIX_OUTPUT_DIM
-
-
-class ActionSuffixConsequenceMember(nn.Module):
-    """One independent fixed-horizon endpoint-window predictor."""
-
-    def __init__(self, horizon: int) -> None:
-        super().__init__()
-        self.config = ActionSuffixPredictionConfig(horizon)
-        self.layer0 = nn.Linear(self.config.input_dim, self.config.hidden_dim)
-        self.layer1 = nn.Linear(self.config.hidden_dim, self.config.hidden_dim)
-        self.output = nn.Linear(self.config.hidden_dim, self.config.output_dim)
-
-    def forward(self, value: torch.Tensor) -> torch.Tensor:
-        if value.shape[-1] != self.config.input_dim:
-            raise ValueError(
-                f"H{self.config.horizon} suffix input must end with {self.config.input_dim}"
-            )
-        value = torch.tanh(self.layer0(value))
-        value = torch.tanh(self.layer1(value))
-        return self.output(value)
-
-
-class ActionSuffixConsequenceEnsemble(nn.Module):
-    """Three independent members for one declared action-suffix horizon."""
-
-    def __init__(self, horizon: int) -> None:
-        super().__init__()
-        self.config = ActionSuffixPredictionConfig(horizon)
         self.members = nn.ModuleList(
-            ActionSuffixConsequenceMember(horizon) for _ in range(MEMBERS)
+            RichRecurrentConsequenceMember() for _ in range(MEMBERS)
         )
 
-    def forward(self, value: torch.Tensor) -> torch.Tensor:
-        return torch.stack([member(value) for member in self.members], dim=-2)
+    def forward(self, context, actions):
+        return torch.stack([m(context, actions) for m in self.members], dim=1)
 
 
-def normalized_suffix_input(
-    value: torch.Tensor,
-    mean: torch.Tensor,
-    scale: torch.Tensor,
-    horizon: int,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Normalize a declared suffix input and report rows crossing the clamp."""
-    dimension = action_suffix_input_dim(horizon)
-    if value.shape[-1] != dimension or mean.shape != (dimension,) or scale.shape != (
-        dimension,
-    ):
-        raise ValueError("action suffix input normalization shapes differ")
-    standardized = (value - mean) / scale
-    clipped = torch.any(torch.abs(standardized) > NORMALIZED_INPUT_CLIP, dim=-1)
-    return torch.clamp(standardized, -NORMALIZED_INPUT_CLIP, NORMALIZED_INPUT_CLIP), clipped
-
-
-def denormalize_suffix_output(
-    normalized: torch.Tensor,
-    mean: torch.Tensor,
-    scale: torch.Tensor,
-) -> torch.Tensor:
-    if (
-        normalized.shape[-1] != ACTION_SUFFIX_OUTPUT_DIM
-        or mean.shape != (ACTION_SUFFIX_OUTPUT_DIM,)
-        or scale.shape != (ACTION_SUFFIX_OUTPUT_DIM,)
-    ):
-        raise ValueError("action suffix output normalization shapes differ")
-    return normalized * scale + mean
-
-
-def suffix_ensemble_summary(
-    raw_members: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    if raw_members.shape[-2:] != (MEMBERS, ACTION_SUFFIX_OUTPUT_DIM):
-        raise ValueError("action suffix ensemble output shape differs")
-    mean = raw_members.mean(dim=-2)
-    disagreement = torch.sqrt(
-        torch.mean((raw_members - mean[..., None, :]) ** 2, dim=-2)
+def normalize_context(value, mean, scale):
+    z = (value - mean) / scale
+    return z.clamp(-NORMALIZED_INPUT_CLIP, NORMALIZED_INPUT_CLIP), torch.any(
+        torch.abs(z) > NORMALIZED_INPUT_CLIP, dim=-1
     )
-    return mean, disagreement
 
 
-def normalized_input(
-    value: torch.Tensor,
-    mean: torch.Tensor,
-    scale: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Normalize and clamp, returning a row mask for any clipped coordinate."""
-    if value.shape[-1] != INPUT_DIM or mean.shape != (INPUT_DIM,) or scale.shape != (
-        INPUT_DIM,
-    ):
-        raise ValueError("rich prediction input normalization shapes differ")
-    standardized = (value - mean) / scale
-    clipped = torch.any(torch.abs(standardized) > NORMALIZED_INPUT_CLIP, dim=-1)
-    return torch.clamp(standardized, -NORMALIZED_INPUT_CLIP, NORMALIZED_INPUT_CLIP), clipped
+def normalize_actions(value, mean, scale):
+    z = (value - mean) / scale
+    return z.clamp(-NORMALIZED_INPUT_CLIP, NORMALIZED_INPUT_CLIP), torch.any(
+        torch.abs(z) > NORMALIZED_INPUT_CLIP, dim=-1
+    )
 
 
-def denormalize_output(
-    normalized: torch.Tensor,
-    mean: torch.Tensor,
-    scale: torch.Tensor,
-) -> torch.Tensor:
-    if normalized.shape[-1] != OUTPUT_DIM or mean.shape != (OUTPUT_DIM,) or scale.shape != (
-        OUTPUT_DIM,
-    ):
-        raise ValueError("rich prediction output normalization shapes differ")
-    return normalized * scale + mean
+def denormalize_deltas(value, mean, scale):
+    return value * scale + mean
 
 
-def ensemble_summary(raw_members: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """Return raw-unit ensemble mean and uncalibrated population RMS spread."""
-    if raw_members.shape[-2:] != (MEMBERS, OUTPUT_DIM):
-        raise ValueError("rich prediction ensemble output shape differs")
-    mean = raw_members.mean(dim=-2)
-    disagreement = torch.sqrt(torch.mean((raw_members - mean[..., None, :]) ** 2, dim=-2))
-    return mean, disagreement
+def bounded_physiology_deltas(proposals, physiology_anchor):
+    """Decode proposals to feasible deltas without clipping predicted state."""
+    if proposals.shape[-1] != PHYSIOLOGY_DIM:
+        raise ValueError("physiology proposals must end with 12")
+    lower = proposals.new_tensor(PHYSIOLOGY_LOWER)
+    upper = proposals.new_tensor(PHYSIOLOGY_UPPER)
+    state = physiology_anchor
+    values = []
+    for horizon in range(proposals.shape[-2]):
+        proposal = proposals[..., horizon, :]
+        absolute = proposal.abs()
+        root = torch.sqrt(proposal.square() + PHYSIOLOGY_LINK_EPSILON**2)
+        small = PHYSIOLOGY_LINK_EPSILON**2 / (2 * (root + absolute))
+        positive = torch.where(proposal >= 0, absolute + small, small)
+        negative = torch.where(proposal < 0, absolute + small, small)
+        upward = upper - state
+        downward = state - lower
+        delta = upward * torch.tanh(
+            positive / upward.clamp_min(PHYSIOLOGY_LINK_EPSILON)
+        ) - downward * torch.tanh(
+            negative / downward.clamp_min(PHYSIOLOGY_LINK_EPSILON)
+        )
+        values.append(delta)
+        state = state + delta
+    return torch.stack(values, dim=-2)
+
+
+def cumulative_forecast(member_deltas, code_anchor, physiology_anchor):
+    if member_deltas.ndim != 5:
+        raise ValueError("member deltas must be [B,K,3,H,268]")
+    return (
+        code_anchor[:, None, None, None, :] + member_deltas[..., :256].cumsum(3),
+        physiology_anchor[:, None, None, None, :]
+        + member_deltas[..., 256:].cumsum(3),
+    )
+
+
+def ensemble_summary(member_values):
+    if member_values.ndim != 5:
+        raise ValueError("member values must be [B,K,3,H,D]")
+    mean = member_values.mean(dim=2)
+    return mean, torch.sqrt(
+        torch.mean((member_values - mean[:, :, None]) ** 2, dim=2)
+    )
 
 
 def tensor_bundle_sha256(values: Mapping[str, np.ndarray]) -> str:
-    """Hash sorted tensor names, exact little-endian float32 shapes, and bytes."""
-    digest = hashlib.sha256()
+    d = hashlib.sha256()
     for name in sorted(values):
-        value = np.ascontiguousarray(values[name], dtype="<f4")
-        digest.update(name.encode())
-        digest.update(b"\0")
-        digest.update(json.dumps(list(value.shape), separators=(",", ":")).encode())
-        digest.update(b"\0<f4\0")
-        digest.update(value.tobytes(order="C"))
-    return digest.hexdigest()
+        v = np.ascontiguousarray(values[name], dtype="<f4")
+        d.update(name.encode())
+        d.update(b"\0")
+        d.update(json.dumps(list(v.shape), separators=(",", ":")).encode())
+        d.update(b"\0<f4\0")
+        d.update(v.tobytes())
+    return d.hexdigest()
 
 
-def array_sha256(value: np.ndarray) -> str:
-    return hashlib.sha256(np.ascontiguousarray(value).tobytes(order="C")).hexdigest()
+def array_sha256(value):
+    return hashlib.sha256(np.ascontiguousarray(value).tobytes()).hexdigest()
 
 
-def artifact_identity(metadata: Mapping[str, Any], arrays: Mapping[str, np.ndarray]) -> str:
-    """Content identity independent of NPZ container compression and timestamps."""
+def artifact_identity(
+    metadata: Mapping[str, Any], arrays: Mapping[str, np.ndarray]
+) -> str:
     clean = dict(metadata)
     clean.pop("artifact_identity", None)
-    array_receipts = {
-        name: {
-            "dtype": np.ascontiguousarray(value).dtype.str,
-            "shape": list(value.shape),
-            "sha256": array_sha256(value),
+    receipts = {
+        n: {
+            "dtype": np.ascontiguousarray(v).dtype.str,
+            "shape": list(v.shape),
+            "sha256": array_sha256(v),
         }
-        for name, value in sorted(arrays.items())
+        for n, v in sorted(arrays.items())
     }
-    encoded = json.dumps(
-        {"metadata": clean, "arrays": array_receipts},
-        sort_keys=True,
-        separators=(",", ":"),
-        allow_nan=False,
-    ).encode()
-    return hashlib.sha256(encoded).hexdigest()
-
-
-__all__ = [
-    "ACTION_DIM",
-    "ACTION_SUFFIX_FORMAT",
-    "ACTION_SUFFIX_HORIZONS",
-    "ACTION_SUFFIX_OUTPUT_DIM",
-    "ACTION_SUFFIX_OUTPUT_SEGMENTS",
-    "CODE_DELTA_SCALE_FLOOR",
-    "FORMAT",
-    "FRAME_CODE_DIM",
-    "FRAME_CODE_SEGMENTS",
-    "FRAME_WINDOW",
-    "INPUT_DIM",
-    "INPUT_SCALE_FLOOR",
-    "INPUT_SEGMENTS",
-    "MEMBERS",
-    "NEURAL_DIM",
-    "NORMALIZED_INPUT_CLIP",
-    "OUTPUT_DIM",
-    "OUTPUT_SEGMENTS",
-    "PHYSIOLOGY_DELTA_SCALE_FLOOR",
-    "PHYSIOLOGY_DIM",
-    "ActionSuffixConsequenceEnsemble",
-    "ActionSuffixPredictionConfig",
-    "RichConsequenceEnsemble",
-    "RichPredictionConfig",
-    "artifact_identity",
-    "action_suffix_input_dim",
-    "action_suffix_input_segments",
-    "array_sha256",
-    "denormalize_output",
-    "ensemble_summary",
-    "denormalize_suffix_output",
-    "normalized_input",
-    "normalized_suffix_input",
-    "suffix_ensemble_summary",
-    "tensor_bundle_sha256",
-]
+    return hashlib.sha256(
+        json.dumps(
+            {"metadata": clean, "arrays": receipts},
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode()
+    ).hexdigest()

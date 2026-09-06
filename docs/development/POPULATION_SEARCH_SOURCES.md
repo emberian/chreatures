@@ -54,7 +54,7 @@ serialization, reload, and equality paths. Stable node IDs are the first 128 bit
 of SHA-256 over the complete source ID; the complete source ID remains in every
 node and collisions are rejected.
 
-## Population evidence v1
+## Typed population evidence
 
 `chreatures.population_evidence` validates batches before the Rust adapter repeats
 the structural checks and builds the native Weave. `fields.parent_roles` is an
@@ -73,7 +73,10 @@ This makes these edges distinct:
   `experimental_initialization` births have no physical-parent edge.
 - `life_continuation` is a single non-branching chain from birth through zero or
   more checkpoints to one terminal evaluation. A terminal evaluation ID can
-  appear only once as `evaluation_completed` or `evaluation_failed`.
+  appear only once. Current search-v2 statuses are `completed`,
+  `organism-terminal`, and `infrastructure-failure`: the first two are physical
+  trajectory evidence with descriptors and quality, while an infrastructure
+  failure has no ecological metrics and cannot enter the archive.
 - A pre-allocation `evaluation_failed` has `allocation_status: not_allocated`
   and a `planned_campaign` edge in place of `life_continuation`. It retains the
   planned life identity without inventing a birth.
@@ -150,3 +153,63 @@ plan alone never does. Each content
 batch is applied at most once, and rerunning the same inputs reports `unchanged`.
 The native adapter then serializes and reloads the full graph before the ledger is
 replaced. Missing life provenance is never inferred from archive state.
+
+`record_living_reef.py` produces public recording v2. Every sampled resident has
+body-attached retina, neural readouts, gaze and path, the sampled proposal, the
+separately committed 12-axis action, physiology, actual outcome, goal timing,
+forecast diagnostics, and bounded contextual/sequence/private-learning
+summaries. The full private memories and native state remain absent. Committed
+mechanism events retain the authenticated host source hash chain, replace actor
+identities with stable public indexes, and receive a second hash chain over the
+sanitized public payload. An absent event mechanism or diagnostic is marked
+`unavailable`; the recorder does not reconstruct one from geometry.
+Current event names remain the mechanism names published by the host, including
+root/material acquisition, mobile release, colony emission, growth commit or
+removal, hatching, completed goal episodes, funded signals, contact boundaries,
+and finite visitor interventions. The evidence converter groups these into
+`organism_transfer`, `development_event`, `environment_event`, or
+`interaction_event` without relabeling the source `kind`.
+
+The recording can be joined to a current evidence ledger only with an explicit
+body-to-life binding receipt. The join keeps observation separate from state
+continuation: `observed_life` and `actor_life` edges refer to existing life
+records, while `life_continuation` remains reserved for births and checkpoints.
+Material movement, development, physical-environment changes, and interactions
+become separate typed records. A completed GAM node may be attached as
+`associated_law_fit`, always with `descriptive_association_only`; this is not a
+claim that the fit caused an event.
+
+The link receipt is deliberately small and operator-authored from already
+authenticated records:
+
+```json
+{
+  "format": "chreatures-living-recording-evidence-link-v1",
+  "campaign_id": "population-wave-2",
+  "campaign_record_id": "campaign:population-wave-2",
+  "environment_record_id": "environment:<sha256>",
+  "body_life_record_ids": {
+    "0": "life-checkpoint:<life-id>:<tick>:<sha256>"
+  },
+  "associated_law_fit_record_ids": ["gam-fit:<sha256>"],
+  "event_law_fit_record_ids": {
+    "mobile-material-release": ["gam-fit:<sha256>"]
+  }
+}
+```
+
+Every public body index must be bound exactly once. Event-specific law links are
+optional and must name the exact mechanism kind; the converter rejects partial
+or inferred bindings.
+
+```sh
+python scripts/link_living_recording.py \
+  --ledger runs/population/evidence.json \
+  --recording runs/public/living-reef-v2.json \
+  --link runs/public/living-reef-v2-link.json \
+  --output runs/population/batches/living-reef-v2.json
+
+python scripts/build_population_weave.py \
+  --ledger runs/population/evidence.json \
+  --batch runs/population/batches/living-reef-v2.json
+```

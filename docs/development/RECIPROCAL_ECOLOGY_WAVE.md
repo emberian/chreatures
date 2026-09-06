@@ -20,20 +20,33 @@ predictor and private-memory mechanisms. Old predictors are not a fallback.
 ## Coupled implementation
 
 * **Full-body prediction:** a three-member recurrent ensemble receives the four
-  experienced 256-dimensional frame codes, private 128-dimensional worker state,
+  experienced 256-dimensional frame codes, private 128-dimensional effective
+  worker context (GRU state plus the inherited-gain adaptation state),
   384 neural readouts, twelve current physiology values and twelve previous
   delivered actions (1,560 context values). It forecasts a proposed suffix of
   one to eight twelve-axis actions at 0.05 seconds per step. Each step predicts
-  256 frame-code deltas and twelve physiology deltas. Predictions do not update
+  256 frame-code deltas and twelve physiology deltas. A smooth headroom-bounded
+  link is trained and executed identically, so physiological prediction remains
+  within the declared channel ranges without rejecting every small residual at
+  an empty reserve. This is a surrogate response law, not conserved chemistry.
+  Predictions do not update
   experienced state. Training uses contiguous executed suffixes, whole-world
   partitions and an authenticated frozen representation. Native inference uses
-  batched matrix operations and bounded preallocated scratch space.
+  batched matrix operations and bounded preallocated scratch space. macOS dense
+  matrix products use Accelerate; Linux retains the SIMD matrixmultiply kernel.
+  The live planner compares four-tick constant-action hypotheses, delivers one
+  tick, and re-evaluates after the next actual observation.
 * **Personal sequence memory:** sparse private edges connect exact achieved-goal
   slot generations. Attempt, attainment and timeout remain distinct. Bounded
   contextual path proposals influence goal selection; past succession is not a
   guarantee of reachability. Replacement invalidates incident memories. Local
   consolidation operates on experienced transitions, and all learned state and
   scheduling state are checkpointed and initialized afresh at birth.
+  The 128-slot achieved-history store now divides capacity between 64 lifetime
+  reservoir entries and 64 recent entries. After filling, a changed sensory key
+  (RMS at least 0.08) or ten elapsed ticks permits admission. This keeps old
+  residents able to acquire new encounters; it does not manufacture successful
+  goals or transfer an adult's memories to offspring.
 * **Material interdependence:** conserved fermentate and balanced reaction
   pathways create additional enzyme-budget tradeoffs. Finite physical packets
   and contact carry resources; scent fields carry explicitly nonconserved cues.

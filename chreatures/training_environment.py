@@ -26,7 +26,7 @@ PROFILE_FORMAT = "chreatures-embodied-nursery-family-profile-v7"
 PROFILE_VERSION = 7
 SNAPSHOT_FORMAT = "chreatures-embodied-training-world-v8"
 BIOSPHERE_BIRTH_FORMAT = "chreatures-biosphere-birth-v6"
-BIOSPHERE_SNAPSHOT_FORMAT = "chreatures-biosphere-v7"
+BIOSPHERE_SNAPSHOT_FORMAT = "chreatures-biosphere-v8"
 ROOT = Path(__file__).resolve().parents[1]
 PHYSICAL_BACKENDS = {
     "reference": ArticulatedSensoriumWorld,
@@ -182,7 +182,7 @@ class EmbodiedTrainingProfile:
                 "format", "selector", "generator_config", "schedule",
                 "resident_bundle", "transport", "variants",
             }
-            or value.get("format") != "chreatures-regional-training-identity-v1"
+            or value.get("format") != "chreatures-regional-training-identity-v2"
             or value.get("selector") != "environment-genome-round-robin-v1"
         ):
             raise ValueError("invalid regional training identity")
@@ -229,7 +229,14 @@ class EmbodiedTrainingProfile:
             record = variant.get("environment_record") if isinstance(variant, dict) else None
             record_body = copy.deepcopy(record) if isinstance(record, dict) else {}
             parents = record.get("parents") if isinstance(record, dict) else None
+            genome_parents = (
+                record.get("genome_parents") if isinstance(record, dict) else None
+            )
             variation = record.get("variation") if isinstance(record, dict) else None
+            descriptors = record.get("descriptors") if isinstance(record, dict) else None
+            generation_cost = (
+                record.get("generation_cost") if isinstance(record, dict) else None
+            )
             if record_body:
                 record_body["sha256"] = ""
             if (
@@ -244,13 +251,19 @@ class EmbodiedTrainingProfile:
                 or not isinstance(variant["environment_record"], dict)
                 or variant["environment_record"].get("sha256") != variant["environment_sha256"]
                 or set(record) != {
-                    "format", "sha256", "parents", "variation", "topology_sha256",
-                    "resource_sha256", "profile_sha256", "epoch",
+                    "format", "sha256", "genome_sha256", "genome_parents",
+                    "parents", "variation", "topology_sha256",
+                    "resource_sha256", "profile_sha256", "epoch", "descriptors",
+                    "generation_cost",
                 }
-                or record.get("format") != "chreatures-environment-record-v1"
+                or record.get("format") != "chreatures-environment-record-v2"
+                or record.get("genome_sha256") != variant["genome_sha256"]
                 or hashlib.sha256(_canonical(record_body)).hexdigest() != record["sha256"]
                 or not isinstance(parents, list) or len(parents) > 2
                 or not all(_valid_sha(parent) for parent in parents)
+                or not isinstance(genome_parents, list) or len(genome_parents) > 2
+                or not all(_valid_sha(parent) for parent in genome_parents)
+                or len(genome_parents) != len(parents)
                 or not isinstance(variation, dict)
                 or set(variation) != {"operator", "seed", "recipe_sha256"}
                 or not isinstance(variation["operator"], str) or not variation["operator"]
@@ -261,6 +274,36 @@ class EmbodiedTrainingProfile:
                 or record.get("resource_sha256") != variant["biosphere_sha256"]
                 or not _valid_sha(record.get("profile_sha256"))
                 or record.get("epoch") != variant["epoch"]
+                or not isinstance(descriptors, dict)
+                or set(descriptors) != {
+                    "regional_scale", "elevation_relief", "resource_density",
+                    "renewal_rate", "connectivity",
+                }
+                or not all(
+                    isinstance(item, (int, float))
+                    and not isinstance(item, bool)
+                    and math.isfinite(item)
+                    and 0.0 <= item <= 1.0
+                    for item in descriptors.values()
+                )
+                or not isinstance(generation_cost, dict)
+                or set(generation_cost) != {
+                    "physical_geoms", "regions", "edges", "movables",
+                    "compartments", "normalized",
+                }
+                or not all(
+                    isinstance(generation_cost[key], int)
+                    and not isinstance(generation_cost[key], bool)
+                    and generation_cost[key] >= 0
+                    for key in (
+                        "physical_geoms", "regions", "edges", "movables",
+                        "compartments",
+                    )
+                )
+                or not isinstance(generation_cost["normalized"], (int, float))
+                or isinstance(generation_cost["normalized"], bool)
+                or not math.isfinite(generation_cost["normalized"])
+                or not 0.0 <= generation_cost["normalized"] <= 1.0
                 or not isinstance(variant["dimensions_m"], list) or len(variant["dimensions_m"]) != 3
                 or not all(isinstance(x, (int, float)) and math.isfinite(x) and x > 0 for x in variant["dimensions_m"])
                 or not all(_valid_sha(variant[key]) for key in (
@@ -288,7 +331,7 @@ class EmbodiedTrainingProfile:
         biosphere_path = Path(biosphere).resolve()
         config_path = Path(family_config).resolve()
         schedule_path = Path(schedule).resolve()
-        resident_path = config_path.with_name("regional-residents-v1.json")
+        resident_path = config_path.with_name("regional-residents-v2.json")
         paths = (habitat_path, biosphere_path, config_path, schedule_path, resident_path)
         if any(not path.is_file() for path in paths):
             raise ValueError("regional profile source is absent")
@@ -300,13 +343,13 @@ class EmbodiedTrainingProfile:
         residents_value = json.loads(residents_text)
         cls._validate_family_schedule(schedule_value)
         if (
-            residents_value.get("format") != "chreatures-regional-residents-v1"
+            residents_value.get("format") != "chreatures-regional-residents-v2"
             or not isinstance(residents_value.get("residents"), list)
             or len(residents_value["residents"]) != MAX_RESIDENTS
         ):
             raise ValueError("regional resident founder bundle must declare capacity 32")
         campaign_residents = {
-            "format": "chreatures-regional-residents-v1",
+            "format": "chreatures-regional-residents-v2",
             "residents": residents_value["residents"][:schedule_value["resident_count"]],
         }
         campaign_residents_text = _canonical(campaign_residents).decode()
@@ -432,7 +475,7 @@ class EmbodiedTrainingProfile:
             "homeostasis": FiniteEnergyConfig().to_value(),
             "physiology": physiology_identity(),
             "family": {
-                "format": "chreatures-regional-training-identity-v1",
+                "format": "chreatures-regional-training-identity-v2",
                 "selector": schedule_value["selector"],
                 "generator_config": {"sha256": _sha(config_path)},
                 "schedule": {"sha256": _sha(schedule_path)},
@@ -568,7 +611,7 @@ def _generated_family_spec(
     config_text = config_path.read_text()
     resident_source = json.loads(resident_path.read_text())
     residents_text = _canonical({
-        "format": "chreatures-regional-residents-v1",
+        "format": "chreatures-regional-residents-v2",
         "residents": resident_source["residents"][:identity["transport"]["residents"]],
     }).decode()
     from .native_world import load_world_kernels

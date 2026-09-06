@@ -1,0 +1,72 @@
+{
+  "format": "chreatures-dense-gemm-backend-benchmark-v1",
+  "status": "completed_single_machine_microbenchmark",
+  "date": "2026-09-06",
+  "scope": "Dense matrix multiplication plus scalar bias loops only; this is not a full controller or simulation measurement.",
+  "source": {
+    "benchmark": "native/cognitive-core/examples/bench_dense_backends.rs",
+    "repository_head_observed_when_receipt_was_recorded": "1049c3d9ba12877970648dde61f7a832112e78e5",
+    "original_execution": "The same benchmark body was compiled from /tmp/chreatures-gemm-bench-20260906 with matrixmultiply 0.3.11; it was retained afterward as the repository example without semantic changes.",
+    "reproduction_command": "cargo run --release --manifest-path native/cognitive-core/Cargo.toml --example bench_dense_backends"
+  },
+  "platform": {
+    "architecture": "arm64",
+    "cpu": "Apple M2 Max",
+    "hardware_model": "Mac14,5",
+    "logical_cpu_count": 12,
+    "operating_system": "macOS 26.6.1 build 25G76",
+    "rustc": "1.98.0-nightly (91fe22da8 2026-06-21)",
+    "cargo": "1.98.0-nightly (a595d0da2 2026-06-20)",
+    "generic_backend": "matrixmultiply 0.3.11",
+    "macos_backend": "Accelerate cblas_sgemm"
+  },
+  "layout": {
+    "operation": "output[rows,out] = input[rows,cols] * transpose(weight[out,cols]) + bias[out]",
+    "storage": "contiguous row-major float32",
+    "matrixmultiply_strides": {
+      "input": ["cols", 1],
+      "weight_as_transposed_rhs": [1, "cols"],
+      "output": ["out", 1]
+    },
+    "accelerate_arguments": "CblasRowMajor, CblasNoTrans, CblasTrans, M=rows, N=out, K=cols, lda=cols, ldb=cols, ldc=out, alpha=1, beta=0"
+  },
+  "method": {
+    "profile": "Cargo release optimized build",
+    "inputs": "Deterministic LCG-generated float32 input, weights, and bias, approximately uniform in [-0.1,0.1].",
+    "comparison_seed": 7,
+    "timing_seed_per_shape": 11,
+    "warmup_calls_per_backend_per_shape": 3,
+    "timed_operation": "One SGEMM followed by the same Rust scalar row-wise bias loop.",
+    "backend_order": ["matrixmultiply", "Accelerate"],
+    "repetitions": "clamp(floor(400000000 / (rows*cols*out)), 8, 1000)",
+    "timer": "std::time::Instant",
+    "sampling": "One sequential process run without CPU pinning or process-level isolation. Results establish direction and local magnitude, not a universal speed claim."
+  },
+  "numerical_comparison": {
+    "shape": {"rows": 192, "cols": 1560, "out": 256},
+    "includes_bias": true,
+    "max_absolute_difference": 7.4505806e-7,
+    "rms_difference": 9.78761912e-8
+  },
+  "measurements": [
+    {"batch": 8, "shape_role": "latent128_to_256", "rows": 8, "cols": 128, "out": 256, "repetitions": 1000, "matrixmultiply_us": 14.62, "accelerate_us": 5.48, "speedup": 2.67},
+    {"batch": 8, "shape_role": "latent256_to_256", "rows": 8, "cols": 256, "out": 256, "repetitions": 762, "matrixmultiply_us": 24.58, "accelerate_us": 8.34, "speedup": 2.95},
+    {"batch": 8, "shape_role": "four_candidate_predictor_1560_to_256", "rows": 32, "cols": 1560, "out": 256, "repetitions": 31, "matrixmultiply_us": 356.54, "accelerate_us": 53.16, "speedup": 6.71},
+    {"batch": 8, "shape_role": "peripheral_projection", "rows": 8, "cols": 768, "out": 64, "repetitions": 1000, "matrixmultiply_us": 18.76, "accelerate_us": 7.41, "speedup": 2.53},
+    {"batch": 8, "shape_role": "foveal_projection", "rows": 8, "cols": 2304, "out": 64, "repetitions": 339, "matrixmultiply_us": 55.57, "accelerate_us": 19.97, "speedup": 2.78},
+    {"batch": 8, "shape_role": "peripheral_conv1_im2col", "rows": 1024, "cols": 36, "out": 16, "repetitions": 678, "matrixmultiply_us": 23.52, "accelerate_us": 16.28, "speedup": 1.44},
+    {"batch": 8, "shape_role": "peripheral_conv2_im2col", "rows": 256, "cols": 144, "out": 24, "repetitions": 452, "matrixmultiply_us": 28.79, "accelerate_us": 7.82, "speedup": 3.68},
+    {"batch": 8, "shape_role": "foveal_conv1_im2col", "rows": 3072, "cols": 36, "out": 16, "repetitions": 226, "matrixmultiply_us": 65.19, "accelerate_us": 38.74, "speedup": 1.68},
+    {"batch": 8, "shape_role": "foveal_conv2_im2col", "rows": 768, "cols": 144, "out": 24, "repetitions": 150, "matrixmultiply_us": 78.88, "accelerate_us": 21.61, "speedup": 3.65},
+    {"batch": 48, "shape_role": "latent128_to_256", "rows": 48, "cols": 128, "out": 256, "repetitions": 254, "matrixmultiply_us": 42.98, "accelerate_us": 7.94, "speedup": 5.41},
+    {"batch": 48, "shape_role": "latent256_to_256", "rows": 48, "cols": 256, "out": 256, "repetitions": 127, "matrixmultiply_us": 99.17, "accelerate_us": 13.42, "speedup": 7.39},
+    {"batch": 48, "shape_role": "four_candidate_predictor_1560_to_256", "rows": 192, "cols": 1560, "out": 256, "repetitions": 8, "matrixmultiply_us": 1839.38, "accelerate_us": 216.44, "speedup": 8.50},
+    {"batch": 48, "shape_role": "peripheral_projection", "rows": 48, "cols": 768, "out": 64, "repetitions": 169, "matrixmultiply_us": 76.27, "accelerate_us": 13.41, "speedup": 5.69},
+    {"batch": 48, "shape_role": "foveal_projection", "rows": 48, "cols": 2304, "out": 64, "repetitions": 56, "matrixmultiply_us": 200.69, "accelerate_us": 32.16, "speedup": 6.24},
+    {"batch": 48, "shape_role": "peripheral_conv1_im2col", "rows": 6144, "cols": 36, "out": 16, "repetitions": 113, "matrixmultiply_us": 139.65, "accelerate_us": 82.26, "speedup": 1.70},
+    {"batch": 48, "shape_role": "peripheral_conv2_im2col", "rows": 1536, "cols": 144, "out": 24, "repetitions": 75, "matrixmultiply_us": 153.60, "accelerate_us": 44.05, "speedup": 3.49},
+    {"batch": 48, "shape_role": "foveal_conv1_im2col", "rows": 18432, "cols": 36, "out": 16, "repetitions": 37, "matrixmultiply_us": 381.20, "accelerate_us": 213.52, "speedup": 1.79},
+    {"batch": 48, "shape_role": "foveal_conv2_im2col", "rows": 4608, "cols": 144, "out": 24, "repetitions": 25, "matrixmultiply_us": 466.62, "accelerate_us": 144.11, "speedup": 3.24}
+  ],
+  "conclusion": "Accelerate was faster for every measured current shape. The four-candidate 1560-to-256 predictor multiply improved 6.71x at batch 8 and 8.50x at batch 48. Full-controller timing remains a separate required measurement."
+}

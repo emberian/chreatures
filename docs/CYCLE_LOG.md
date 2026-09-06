@@ -777,3 +777,48 @@ neural service makes this a fixed-cohort research run. Current future source
 checks available neural slots before preparing a funded hatch; the frozen
 recorded life was not changed. Exact scope and identities are in the
 [deployment receipt](../data/development/population-v5-trained.receipt.json).
+
+## Reciprocal ecology: coordinated implementation, 6 September 2026
+
+The approved successor keeps the v4 body boundary and v5 trainable inherited
+weights, while replacing the native execution contract with v6. Its recurrent
+three-member consequence model accepts four experienced frame codes, the actual
+effective worker context, neural readouts and body state, then forecasts up to
+eight twelve-axis actions. The live planner uses four-tick proposals and advances
+only one actual tick. Native physiology decoding matches a bounded trained link;
+imagined states never enter private experienced memory. A new actual corpus is
+being collected on hbox for fitting on persvati; this entry does not claim the
+new predictor has completed training or controlled a live world.
+
+Sparse personal sequence memory now distinguishes attempts, observed attainment
+and timeout, with exact slot-generation identity and bounded local consolidation.
+The achieved-history store keeps 64 lifetime and 64 recent entries; novelty or
+elapsed experience permits admission throughout life. Runtime events record real
+signals, contacts, material movement and goal attempts. Recording-v2 exposes all
+residents and authenticates source events before public anonymization. Native
+Universal Weave accepts their typed evidence links without making the archive an
+organism's memory.
+
+The regional-v2 generator now inherits bounded local Growth-v4 rules and
+seven-pool chemistry. The joined eight-body physical run over 90 ticks built 32
+funded parts, 12 surface attachments and eight parented parts. Fermentate rose
+from zero to 0.0214634202; 0.0005297642 entered physical packets. All 54 exchange
+events reported positive committed transfer, and complete world/Biosphere state
+restored exactly. Recipient uptake was not observed. Source and numerical scope
+are retained in [the interdependence receipt](../data/ecology/interdependence-native-v1.receipt.json).
+
+Native search-v2 retains environment-conditioned niches, pair histories,
+challenge selection and separately recorded infrastructure failures. Parent
+environment records authenticate the corresponding parameter-genome parents.
+The newest three-law GAM bank uses 384,000 transitions from 16 completed lives;
+energy, fatigue and effort fits improve held-out error relative to training-mean
+baselines, with 95.93% joint domain coverage. These remain associations from
+experienced actions, without a demonstrated control benefit or crossed transfer
+experiment. The ledger now contains 629 Weave nodes and 1,483 edges.
+
+macOS dense cognitive matrices now use Accelerate; Linux retains matrixmultiply's
+SIMD kernel. The retained shape benchmark measures 6.71–8.50× improvement for
+the largest predictor product and maximum absolute numerical difference
+7.45e-7. These are matrix timings, not whole-controller throughput. The combined
+native extension builds; the fresh 32-slot neural deployment and actual predictor
+fit are the remaining integration work. Existing worlds retain frozen engines.

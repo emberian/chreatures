@@ -12,12 +12,12 @@ import copy
 import hashlib
 import json
 import math
+from collections.abc import Iterable, Mapping
 from numbers import Integral, Real
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from .native_world import load_world_kernels
-
 
 _KINDS = ("branch", "root", "leaf")
 _SIGNAL_NAMES = ("light", "nutrient", "support")
@@ -75,8 +75,8 @@ def _normalize_grammar(raw: Any) -> dict[str, Any]:
         "resolution", "rules", "axiom",
     }, "growth grammar")
     grammar_version = source["version"]
-    if grammar_version != 3:
-        raise ValueError("growth grammar must use current version 3")
+    if grammar_version != 4:
+        raise ValueError("growth grammar must use current version 4")
     name = _identifier(source["name"], "grammar name")
     cadence = _number(source["cadence_seconds"], "cadence_seconds", 0.05, 1e9)
     initial_delay = _number(source["initial_delay_seconds"], "initial_delay_seconds", 0.0, 1e9)
@@ -124,7 +124,15 @@ def _normalize_grammar(raw: Any) -> dict[str, Any]:
     normalized_rules: dict[str, Any] = {}
     for symbol in sorted(rule_names):
         rule = _mapping(rules[symbol], f"rule {symbol}")
-        expected = {"role", "segment", "activation", "successors", "leaf"}
+        expected = {
+            "role",
+            "segment",
+            "activation",
+            "successors",
+            "leaf",
+            "guidance",
+            "transport",
+        }
         _keys(rule, expected, f"rule {symbol}")
         role = rule["role"]
         if role not in {"branch", "root"}:
@@ -174,7 +182,7 @@ def _normalize_grammar(raw: Any) -> dict[str, Any]:
             successor = _mapping(successor, "successor")
             _keys(successor, {
                 "symbol", "angle_degrees", "azimuth_degrees",
-                "generation_phase_degrees", "scale", "probability",
+                "generation_phase_degrees", "scale", "probability", "response",
             }, "successor")
             target = _identifier(successor["symbol"], "successor symbol")
             if target not in rules:
@@ -186,7 +194,18 @@ def _normalize_grammar(raw: Any) -> dict[str, Any]:
                 "generation_phase_degrees": _number(successor["generation_phase_degrees"], "generation phase", -57_295.0, 57_295.0),
                 "scale": _number(successor["scale"], "successor scale", 0.05, 4.0),
                 "probability": _number(successor["probability"], "successor probability", 0.0, 1.0),
+                "response": {
+                    key: _number(value, f"successor {key} response", -8.0, 8.0)
+                    for key, value in _mapping(
+                        successor["response"], "successor response"
+                    ).items()
+                },
             })
+            _keys(
+                normalized_successors[-1]["response"],
+                {"light", "nutrient", "support", "competition"},
+                "successor response",
+            )
         leaf = rule["leaf"]
         if leaf is not None:
             leaf = _mapping(leaf, "leaf rule")
@@ -199,9 +218,49 @@ def _normalize_grammar(raw: Any) -> dict[str, Any]:
                 "thickness": _number(leaf["thickness"], "leaf thickness", 0.004, 0.2),
                 "areal_density": _number(leaf["areal_density"], "leaf areal density", 0.0001, 10_000.0),
             }
+        guidance = _mapping(rule["guidance"], f"rule {symbol} guidance")
+        _keys(
+            guidance,
+            {
+                "vertical_weight",
+                "clearance_weight",
+                "surface_weight",
+                "surface_reach",
+                "clearance_distance",
+            },
+            f"rule {symbol} guidance",
+        )
+        normalized_guidance = {
+            "vertical_weight": _number(
+                guidance["vertical_weight"], "vertical guidance", -2.0, 2.0
+            ),
+            "clearance_weight": _number(
+                guidance["clearance_weight"], "clearance guidance", 0.0, 4.0
+            ),
+            "surface_weight": _number(
+                guidance["surface_weight"], "surface guidance", 0.0, 4.0
+            ),
+            "surface_reach": _number(
+                guidance["surface_reach"], "surface reach", 0.002, 2.0
+            ),
+            "clearance_distance": _number(
+                guidance["clearance_distance"], "clearance distance", 0.002, 2.0
+            ),
+        }
+        transport = _mapping(rule["transport"], f"rule {symbol} transport")
+        _keys(transport, {"conductivity", "half_resistance"}, "growth transport")
+        normalized_transport = {
+            "conductivity": _number(
+                transport["conductivity"], "growth conductivity", 1e-12, 1e6
+            ),
+            "half_resistance": _number(
+                transport["half_resistance"], "growth half resistance", 1e-12, 1e15
+            ),
+        }
         normalized_rules[symbol] = {
             "role": role, "segment": segment, "activation": normalized_activation,
             "successors": normalized_successors, "leaf": leaf,
+            "guidance": normalized_guidance, "transport": normalized_transport,
         }
 
     axiom = source["axiom"]
@@ -243,7 +302,7 @@ def _canonical(value: Any) -> str:
 class GrowthSystem:
     """One private developmental state sharing an immutable grammar."""
 
-    VERSION = 2
+    VERSION = 3
 
     def __init__(self, grammar: dict[str, Any] | str | Path, seed: int = 1):
         if isinstance(seed, bool) or not isinstance(seed, Integral) or not 0 <= seed < 2**64:
@@ -264,19 +323,33 @@ class GrowthSystem:
                 math.radians(item["azimuth_degrees"]),
                 math.radians(item["generation_phase_degrees"]),
                 item["scale"], item["probability"],
+                [item["response"][key] for key in (*_SIGNAL_NAMES, "competition")],
             ) for item in rule["successors"]]
             leaf = rule["leaf"]
             leaf_tuple = None if leaf is None else (
                 leaf["probability"], leaf["area"], leaf["aspect"],
                 leaf["thickness"], leaf["areal_density"],
             )
+            guidance = rule["guidance"]
+            transport = rule["transport"]
             rules.append((
                 symbol, rule["role"], segment["length"], segment["radius"],
                 segment["density"], segment["radius_scale_exponent"],
                 segment["minimum_aspect_ratio"],
                 [activation["minimum"][key] for key in _SIGNAL_NAMES],
                 [activation["weights"][key] for key in _SIGNAL_NAMES],
-                activation["competition_gain"], successors, leaf_tuple,
+                activation["competition_gain"], successors,
+                (
+                    leaf_tuple,
+                    [
+                        guidance["vertical_weight"],
+                        guidance["clearance_weight"],
+                        guidance["surface_weight"],
+                        guidance["surface_reach"],
+                        guidance["clearance_distance"],
+                    ],
+                    [transport["conductivity"], transport["half_resistance"]],
+                ),
             ))
         axiom = [(
             item["symbol"], item["position"], item["forward"], item["up"], item["scale"],
@@ -314,6 +387,7 @@ class GrowthSystem:
             "generation": int(item[3]), "scale": float(item[4]),
             "position": list(item[5]), "forward": list(item[6]),
             "up": list(item[7]), "right": list(item[8]),
+            "parent_part": item[9], "transport_resistance": float(item[10]),
         } for item in self._kernel.buds()]
 
     @staticmethod
@@ -324,16 +398,30 @@ class GrowthSystem:
         seen: set[int] = set()
         for value in signals:
             value = _mapping(value, "bud signal")
-            _keys(value, {"bud_id", "light", "nutrient", "support", "competition"}, "bud signal")
+            _keys(
+                value,
+                {
+                    "bud_id", "light", "nutrient", "support", "competition",
+                    "surface_direction", "world_up", "surface_distance", "surface_geom",
+                },
+                "bud signal",
+            )
             bud_id = _integer(value["bud_id"], "bud id", 1, 2**64 - 1)
             if bud_id in seen:
                 raise ValueError("bud signals must be unique")
-            result.append((bud_id, [
-                _number(value["light"], "bud light", 0.0, 1.0),
-                _number(value["nutrient"], "bud nutrient", 0.0, 1.0),
-                _number(value["support"], "bud support", 0.0, 1.0),
-                _number(value["competition"], "bud competition", 0.0, 1.0),
-            ]))
+            result.append((
+                bud_id,
+                [
+                    _number(value["light"], "bud light", 0.0, 1.0),
+                    _number(value["nutrient"], "bud nutrient", 0.0, 1.0),
+                    _number(value["support"], "bud support", 0.0, 1.0),
+                    _number(value["competition"], "bud competition", 0.0, 1.0),
+                ],
+                _vector(value["surface_direction"], 3, "surface direction", -1.0, 1.0),
+                _vector(value["world_up"], 3, "local world up", -1.0, 1.0),
+                _number(value["surface_distance"], "surface distance", 0.0, 100.0),
+                _integer(value["surface_geom"], "surface geom", -1, 2**31 - 1),
+            ))
             seen.add(bud_id)
         return sorted(result)
 
@@ -358,8 +446,11 @@ class GrowthSystem:
             "geometry": {
                 "segments": [{
                     "id": item[0], "kind": item[1], "parent_bud": int(item[2]),
-                    "from": list(item[3]), "to": list(item[4]),
-                    "radius": float(item[5]), "biomass": float(item[6]),
+                    "parent_part": item[3], "from": list(item[4]), "to": list(item[5]),
+                    "radius": float(item[6]), "biomass": float(item[7]),
+                    "transport_resistance": float(item[8]),
+                    "attachment_geom": int(item[9]),
+                    "attachment_point": list(item[10]),
                 } for item in raw[7]],
                 "leaves": [{
                     "id": item[0], "kind": "leaf", "parent_bud": int(item[1]),
@@ -370,7 +461,16 @@ class GrowthSystem:
             "metrics": self.proposal_metrics(),
         }
         self._pending = {
-            "signals": [{"bud_id": item[0], "light": item[1][0], "nutrient": item[1][1], "support": item[1][2], "competition": item[1][3]} for item in normalized_signals],
+            "signals": [
+                {
+                    "bud_id": item[0], "light": item[1][0],
+                    "nutrient": item[1][1], "support": item[1][2],
+                    "competition": item[1][3], "surface_direction": item[2],
+                    "world_up": item[3], "surface_distance": item[4],
+                    "surface_geom": item[5],
+                }
+                for item in normalized_signals
+            ],
             "structural_budget": budget,
             "proposal": copy.deepcopy(proposal),
         }
@@ -389,6 +489,13 @@ class GrowthSystem:
     def capacity(self) -> dict[str, int]:
         live, maximum, remaining = self._kernel.capacity()
         return {"live_buds": int(live), "max_buds": int(maximum), "remaining": int(remaining)}
+
+    def invalidate_parts(self, part_ids: Iterable[str]) -> list[int]:
+        """Remove terminal buds whose immediate structural parent disappeared."""
+        if self._pending is not None:
+            raise RuntimeError("cannot invalidate ancestry during a pending proposal")
+        clean = sorted({_identifier(value, "growth part") for value in part_ids})
+        return [int(value) for value in self._kernel.invalidate_parent_parts(clean)]
 
     def proposal_metrics(self) -> dict[str, int | float]:
         raw = self._kernel.proposal_metrics()
@@ -467,6 +574,7 @@ class GrowthSystem:
                 "generation": int(item[3]), "scale": float(item[4]),
                 "position": list(item[5]), "forward": list(item[6]),
                 "up": list(item[7]), "right": list(item[8]),
+                "parent_part": item[9], "transport_resistance": float(item[10]),
             } for item in raw[7]],
         }
         return {
@@ -490,7 +598,18 @@ class GrowthSystem:
         bud_values = []
         for bud in buds:
             bud = _mapping(bud, "growth bud")
-            _keys(bud, {"bud_id", "symbol", "role", "generation", "scale", "position", "forward", "up", "right"}, "growth bud")
+            _keys(
+                bud,
+                {
+                    "bud_id", "symbol", "role", "generation", "scale",
+                    "position", "forward", "up", "right", "parent_part",
+                    "transport_resistance",
+                },
+                "growth bud",
+            )
+            parent_part = bud["parent_part"]
+            if parent_part is not None:
+                parent_part = _identifier(parent_part, "parent part")
             bud_values.append((
                 _integer(bud["bud_id"], "bud id", 1, 2**64 - 1),
                 _identifier(bud["symbol"], "bud symbol"), bud["role"],
@@ -500,6 +619,13 @@ class GrowthSystem:
                 _vector(bud["forward"], 3, "bud forward", -1.0, 1.0),
                 _vector(bud["up"], 3, "bud up", -1.0, 1.0),
                 _vector(bud["right"], 3, "bud right", -1.0, 1.0),
+                parent_part,
+                _number(
+                    bud["transport_resistance"],
+                    "bud transport resistance",
+                    0.0,
+                    1e15,
+                ),
             ))
         instance._kernel.restore_state(
             _integer(state["rng_state"], "growth RNG", 1, 2**64 - 1),

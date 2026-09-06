@@ -40,6 +40,26 @@ class Chemistry:
         self.elements = tuple(self._value["elements"])
         self.pools = tuple(item["name"] for item in self._value["pools"])
         self.reactions = tuple(item["name"] for item in self._value["reactions"])
+        budget = self._value.get("enzyme_budget")
+        if budget is None:
+            self.enzyme_maximum = None
+            self.enzyme_row_sum = None
+        else:
+            if not isinstance(budget, dict) or set(budget) != {
+                "maximum_expression", "row_sum",
+            }:
+                raise ValueError("chemistry enzyme budget is invalid")
+            maximum, row_sum = budget["maximum_expression"], budget["row_sum"]
+            if (
+                isinstance(maximum, bool) or isinstance(row_sum, bool)
+                or not isinstance(maximum, (int, float, np.number))
+                or not isinstance(row_sum, (int, float, np.number))
+                or not np.isfinite(maximum) or not np.isfinite(row_sum)
+                or not 0 < float(maximum) <= float(row_sum)
+            ):
+                raise ValueError("chemistry enzyme budget is invalid")
+            self.enzyme_maximum = float(budget["maximum_expression"])
+            self.enzyme_row_sum = float(budget["row_sum"])
         for names in (self.elements, self.pools, self.reactions):
             if (
                 not names
@@ -109,6 +129,11 @@ class Chemistry:
         )
         if not np.isfinite(values).all() or np.any(values < 0):
             raise ValueError("enzyme expression must be finite and nonnegative")
+        if self.enzyme_maximum is not None and (
+            np.any(values > self.enzyme_maximum)
+            or np.any(values.sum(axis=1) > self.enzyme_row_sum)
+        ):
+            raise ValueError("enzyme expression exceeds the chemistry allocation budget")
         return values
 
 
