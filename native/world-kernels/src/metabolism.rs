@@ -812,6 +812,40 @@ impl MetabolicCohort {
         Ok(())
     }
 
+    /// Atomically debit a resident cohort after validating every row/payment.
+    fn pay_work_batch(
+        &mut self,
+        rows: PyReadonlyArray1<'_, i64>,
+        amounts: PyReadonlyArray1<'_, f64>,
+    ) -> PyResult<()> {
+        if rows.shape() != amounts.shape() {
+            return Err(PyValueError::new_err("work rows and amounts differ"));
+        }
+        let rows = rows.as_slice()?;
+        let amounts = amounts.as_slice()?;
+        let mut debits = vec![0.0; self.n];
+        for (&row, &amount) in rows.iter().zip(amounts) {
+            if row < 0 || row as usize >= self.n || !amount.is_finite() || amount < 0.0 {
+                return Err(PyValueError::new_err("work row or amount is invalid"));
+            }
+            let slot = row as usize;
+            debits[slot] += amount;
+            if !debits[slot].is_finite() || debits[slot] > self.atp[slot] {
+                return Err(PyValueError::new_err(
+                    "compartment has insufficient ATP for work",
+                ));
+            }
+        }
+        for (row, amount) in debits.into_iter().enumerate() {
+            if amount == 0.0 {
+                continue;
+            }
+            self.atp[row] -= amount;
+            self.cumulative_ledger[row * 6 + 4] += amount;
+        }
+        Ok(())
+    }
+
     fn split(&mut self, parent: usize, child: usize, fraction: f64) -> PyResult<()> {
         if parent >= self.n
             || child >= self.n

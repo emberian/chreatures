@@ -1,0 +1,37 @@
+{
+  "format": "chreatures-depleted-somatic-payment-receipt-v1",
+  "cause": "Two valid native payment partitions recombined one IEEE-754 ULP above available ATP at depletion; the strict metabolic debit correctly rejected it.",
+  "campaign_failure": {
+    "path": "/tank/chreatures/campaigns/v1/evaluations/plan-0000/batch-0000/failure.json",
+    "checkpoint_tick": 9600,
+    "failure_tick": 9967,
+    "operation": "SomaticPhysiology.begin_step -> MetabolicWeb.pay_work"
+  },
+  "scope": [
+    "representably bounded native maintenance/activation partition",
+    "prevalidated atomic native cohort ATP debit",
+    "single host ATP cohort read"
+  ],
+  "command": "PYTHONPATH=/tmp/chreatures-atp-native-v2:/Users/ember/dev/chreatures /Users/ember/dev/chreatures/.venv/bin/python /Users/ember/dev/chreatures/scripts/probe_depleted_somatic_payment.py",
+  "result": {
+    "available_atp": 5.224452869761614e-14,
+    "maintenance": 1.9013879491758178e-14,
+    "activation": 3.323064920585796e-14,
+    "debit": 5.2244528697616134e-14,
+    "remaining_atp": 6.310887241768095e-30,
+    "funded_scale": 8.307662717477182e-12,
+    "invalid_batch_atomic": true
+  },
+  "sha256": {
+    "native/world-kernels/src/somatic.rs": "4df290b3290fb1c2b460ddf04c47289c642f149051f13367eb7a33313b68483f",
+    "native/world-kernels/src/metabolism.rs": "1db2aa53257ad2c7c0c45931acadd443bb811fb30121ae93b1dc3d162782882a",
+    "chreatures/somatic.py": "0a210365b907b359858dfea5105453767c608f36c76237869e8915d9afa4a4b1",
+    "chreatures/metabolism.py": "9782c68b536a6e4762fc6ddd6165df062da34b6d97eed42ff6fff802c6a04dc1",
+    "scripts/probe_depleted_somatic_payment.py": "6bcc5f1b5c207e21c3dd0771b2ca3fba0a306697b4b9ff1bb9ce81d46dd281d1",
+    "/tmp/chreatures-atp-native-v2/_world_kernels.cpython-312-darwin.so": "a382be3ffc994bf663195a04801bc0a2bfd1849193dd5c744ba0a3c5a6eb2699"
+  },
+  "exclusions": [
+    "No live or frozen campaign process was mutated or retried.",
+    "This retained boundary reproduction is not a whole-campaign throughput measurement."
+  ]
+}

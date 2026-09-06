@@ -402,19 +402,22 @@ class SomaticPhysiology:
         if self.pending_dt is not None:
             raise RuntimeError("mobile chemistry has an unfinished physical step")
         matrix = self._actions(actions, len(self.residents))
+        body_rows = np.fromiter(
+            (spec["body_row"] for spec in self.residents.values()),
+            dtype=np.int64,
+            count=len(self.residents),
+        )
+        available_atp = self.web.atp[body_rows]
         payments, scales = self._native.begin(
             matrix,
-            np.ascontiguousarray(
-                [self.web.atp[spec["body_row"]] for spec in self.residents.values()],
-                dtype=np.float64,
-            ),
+            np.ascontiguousarray(available_atp, dtype=np.float64),
             float(dt),
         )
         payments = np.asarray(payments, dtype=np.float64)
         scales = np.asarray(scales, dtype=np.float32)
+        self.web.pay_work_batch(body_rows, payments[:, 0] + payments[:, 1])
         for index, (key, spec) in enumerate(self.residents.items()):
             maintenance, activation = map(float, payments[index])
-            self.web.pay_work(spec["body_row"], maintenance + activation)
             requested = dt * spec["maintenance_rate"]
             self.paid[key] = {
                 "maintenance": maintenance,
