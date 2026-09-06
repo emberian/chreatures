@@ -85,6 +85,9 @@ in `FiniteEnergyObjective.potential`, including reserve, fatigue, and gut
 overload terms. Scores are averaged over valid branches and converted to a
 correction relative to candidate zero, then clipped to ±0.12. This preserves
 the inherited and relational scores as independent parts of final selection.
+An all-invalid candidate receives zero correction. Its forecast score, best
+branch, residual summary, and support summary are serialized as `null`, keeping
+the audit JSON finite without manufacturing substitute physiology.
 
 Diagnostics report each candidate's physical forecast score, valid branch
 count, mean E/G/F residual scales, horizon support, model artifact hash, and

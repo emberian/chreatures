@@ -50,9 +50,10 @@ def create_app(
         try:
             from .runtime3d import Habitat3D
 
+            restoring = checkpoint.exists()
             authority["habitat"] = (
                 Habitat3D.load(checkpoint, brain_url)
-                if checkpoint.exists()
+                if restoring
                 else Habitat3D(
                     seed,
                     brain_url,
@@ -72,8 +73,14 @@ def create_app(
                     else None,
                 )
             )
+            if not restoring:
+                # Persist the first coherent state before the first neural tick.
+                # A failed startup must never advance an unsaved new world.
+                authority["habitat"].save(checkpoint)
         except Exception as exc:
             authority["error"] = str(exc)
+            if authority["habitat"] is not None:
+                authority["habitat"].paused = True
             log.exception("Could not start habitat")
 
         async def advance():
@@ -89,7 +96,7 @@ def create_app(
                             habitat.paused = True
                             authority["error"] = str(exc)
                             log.exception("Paused after simulation error")
-                    if habitat and time.monotonic() - last_save > 30:
+                    if habitat and habitat.pending_step is None and time.monotonic() - last_save > 30:
                         try:
                             habitat.save(checkpoint)
                         except Exception as exc:
