@@ -13,8 +13,13 @@ from typing import Any
 import numpy as np
 
 from .organism_interface import ACTION_DIM, OBSERVATION_DIM, PHYSIOLOGY_DIM, identity
+from .resident_contract import (
+    NATIVE_EXECUTION,
+    NATIVE_POPULATION_FORMAT,
+    NATIVE_POPULATION_VERSION,
+)
 
-DEVELOPMENTAL_FORMAT = "chreatures-native-developmental-resident-population-v4"
+DEVELOPMENTAL_FORMAT = NATIVE_POPULATION_FORMAT
 PERSONAL_GOAL_CONTRACT = {
     "format": "chreatures-private-goal-associations-v1",
     "objective": {
@@ -70,6 +75,13 @@ POPULATION_ADAPTER_ORDER = (
     "population_adapter.down",
     "population_adapter.up",
     "population_adapter.bias",
+)
+PHYSIOLOGY_ADAPTER_ORDER = ("model.physiology_adapter.weight",)
+NEW_ACTUATOR_ORDER = (
+    "model.new_actuator_active.weight",
+    "model.new_actuator_active.bias",
+    "model.new_actuator_positive.weight",
+    "model.new_actuator_positive.bias",
 )
 PREDICTOR_ENCODER_NAMES = (
     "visual.peripheral.first.weight",
@@ -199,6 +211,14 @@ RICH_DEVELOPMENTAL_SHAPES = {
     "manager.query.2.weight": (64, 128),
     "manager.query.2.bias": (64,),
     "manager.query_gain": (1,),
+}
+SUCCESSOR_SHAPES = {
+    **RICH_DEVELOPMENTAL_SHAPES,
+    "model.physiology_adapter.weight": (128, 12),
+    "model.new_actuator_active.weight": (4, 256),
+    "model.new_actuator_active.bias": (4,),
+    "model.new_actuator_positive.weight": (128, 256),
+    "model.new_actuator_positive.bias": (128,),
 }
 
 
@@ -392,15 +412,16 @@ class DevelopmentalResidentCohort:
             metadata = json.loads(str(archive["metadata"]))
             order = (
                 RICH_DEVELOPMENTAL_ORDER
+                + PHYSIOLOGY_ADAPTER_ORDER
                 + POPULATION_ADAPTER_ORDER
+                + NEW_ACTUATOR_ORDER
                 + PREDICTOR_ENCODER_ORDER
                 + PREDICTOR_MLP_ORDER
             )
             if (
                 metadata.get("format") != DEVELOPMENTAL_FORMAT
-                or metadata.get("version") != 4
-                or metadata.get("execution")
-                != "developmental-resident-native-population-v4"
+                or metadata.get("version") != NATIVE_POPULATION_VERSION
+                or metadata.get("execution") != NATIVE_EXECUTION
                 or metadata.get("pack_order") != list(order)
                 or set(archive.files) != set(order) | {"metadata"}
             ):
@@ -412,8 +433,8 @@ class DevelopmentalResidentCohort:
                 if (
                     value.dtype != np.float32
                     or (
-                        name in RICH_DEVELOPMENTAL_SHAPES
-                        and value.shape != RICH_DEVELOPMENTAL_SHAPES[name]
+                        name in SUCCESSOR_SHAPES
+                        and value.shape != SUCCESSOR_SHAPES[name]
                     )
                     or (
                         name in PREDICTOR_MLP_ORDER
@@ -569,6 +590,13 @@ class DevelopmentalResidentCohort:
             ),
             dtype=np.float32,
         )
+        physiology_adapter_packed = np.ascontiguousarray(
+            arrays[PHYSIOLOGY_ADAPTER_ORDER[0]].reshape(-1), dtype=np.float32
+        )
+        new_actuator_packed = np.ascontiguousarray(
+            np.concatenate([arrays[name].reshape(-1) for name in NEW_ACTUATOR_ORDER]),
+            dtype=np.float32,
+        )
         self.artifact_path = path
         self.batch_size = batch_size
         self.action_mode = action_mode
@@ -624,9 +652,11 @@ class DevelopmentalResidentCohort:
             population_feature_contract_identity,
             predictor_packed,
             goal_rms,
+            physiology_adapter_packed,
             policy_adapter_packed,
             adapter_count,
             adapter_rank,
+            new_actuator_packed,
             policy_adapter_index,
             candidate_sha256,
             loci_sha256,

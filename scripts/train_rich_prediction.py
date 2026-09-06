@@ -54,8 +54,8 @@ from research.sensorimotor_skills.rich_prediction import (
     tensor_bundle_sha256,
 )
 from chreatures.organism_interface import ACTION_NAMES, PHYSIOLOGY_NAMES
+from chreatures.resident_contract import BOOTSTRAP_FORMAT
 
-BOOTSTRAP_FORMAT = "chreatures-rich-sensorimotor-bootstrap-v4"
 TRAIN_WORLDS = (0, 1, 2)
 VALIDATION_WORLDS = (3,)
 PHYSIOLOGY_BOUNDS = (

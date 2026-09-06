@@ -20,9 +20,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from research.sensorimotor_skills.rich_data import RichNormalizer, RichPlayDataset
+from chreatures.resident_contract import BOOTSTRAP_FORMAT
 from research.sensorimotor_skills.rich_model import RichSensorimotorModel
 
-FORMAT = "chreatures-rich-sensorimotor-bootstrap-v4"
+FORMAT = BOOTSTRAP_FORMAT
 BUCKETS = ((1, 2), (3, 5), (6, 10), (11, 20), (21, 40))
 
 

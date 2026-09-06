@@ -23,6 +23,11 @@ from chreatures.population import (
     current_parameter_recipe,
 )
 from chreatures.training_environment import EmbodiedTrainingProfile
+from chreatures.resident_contract import (
+    NATIVE_EXECUTION,
+    NATIVE_POPULATION_FORMAT,
+    NATIVE_POPULATION_VERSION,
+)
 
 FORMAT = "chreatures-population-campaign-v1"
 PLAN_FORMAT = "chreatures-population-campaign-plan-v1"
@@ -79,13 +84,14 @@ def controller_identity(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         metadata = json.loads(str(archive["metadata"]))
     bank = metadata.get("population_adapters")
     if (
-        metadata.get("version") != 4
-        or metadata.get("execution") != "developmental-resident-native-population-v4"
+        metadata.get("format") != NATIVE_POPULATION_FORMAT
+        or metadata.get("version") != NATIVE_POPULATION_VERSION
+        or metadata.get("execution") != NATIVE_EXECUTION
         or not isinstance(bank, dict)
         or not isinstance(bank.get("count"), int)
         or not isinstance(bank.get("rank"), int)
     ):
-        raise ValueError("controller is not a current population-v4 artifact")
+        raise ValueError("controller is not the current native population artifact")
     valid_sha(bank.get("identity"), "population adapter bank")
     artifact = {
         "path": str(path.resolve()),

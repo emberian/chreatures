@@ -18,10 +18,16 @@ sys.path.insert(0, str(ROOT))
 
 from chreatures.organism_interface import identity as organism_identity
 from chreatures.sensorimotor_worker_native import PERSONAL_GOAL_CONTRACT
+from chreatures.resident_contract import (
+    DEVELOPMENT_FORMAT,
+    NATIVE_EXECUTION,
+    NATIVE_POPULATION_FORMAT,
+    NATIVE_POPULATION_VERSION,
+)
 
-FORMAT = "chreatures-native-developmental-resident-population-v4"
-EXECUTION = "developmental-resident-native-population-v4"
-CHECKPOINT_FORMAT = "chreatures-rich-online-sensorimotor-development-v4"
+FORMAT = NATIVE_POPULATION_FORMAT
+EXECUTION = NATIVE_EXECUTION
+CHECKPOINT_FORMAT = DEVELOPMENT_FORMAT
 V3_CHECKPOINT_FORMAT = "chreatures-rich-online-sensorimotor-development-v1"
 MODEL_NAMES = (
     "visual.peripheral.first.weight", "visual.peripheral.first.bias",
@@ -33,11 +39,24 @@ MODEL_NAMES = (
     "body.0.weight", "body.0.bias", "goal_encoder.0.weight", "goal_encoder.0.bias",
     "goal_encoder.2.weight", "goal_encoder.2.bias",
     "observation_projection.0.weight", "observation_projection.0.bias",
+    "physiology_adapter.weight",
     "history.weight_ih_l0", "history.weight_hh_l0",
     "history.bias_ih_l0", "history.bias_hh_l0",
     "policy_trunk.0.weight", "policy_trunk.0.bias",
     "signed_head.weight", "signed_head.bias", "active_head.weight", "active_head.bias",
     "positive_head.weight", "positive_head.bias",
+    "new_actuator_active.weight", "new_actuator_active.bias",
+    "new_actuator_positive.weight", "new_actuator_positive.bias",
+)
+PHYSIOLOGY_ADAPTER_NAMES = ("physiology_adapter.weight",)
+NEW_ACTUATOR_NAMES = (
+    "new_actuator_active.weight", "new_actuator_active.bias",
+    "new_actuator_positive.weight", "new_actuator_positive.bias",
+)
+ESTABLISHED_MODEL_NAMES = tuple(
+    name
+    for name in MODEL_NAMES
+    if name not in {*PHYSIOLOGY_ADAPTER_NAMES, *NEW_ACTUATOR_NAMES}
 )
 MANAGER_NAMES = (
     "query.0.weight", "query.0.bias", "query.2.weight", "query.2.bias", "query_gain",
@@ -148,6 +167,7 @@ def main() -> None:
     parser.add_argument("--candidate-adapter-rank", type=int, default=8)
     parser.add_argument("--variation-seed", type=int, default=0)
     parser.add_argument("--variation-scale", type=float, default=0.01)
+    parser.add_argument("--new-axis-active-probability", type=float, default=0.05)
     args = parser.parse_args()
     if not args.trusted_checkpoint:
         raise SystemExit("Torch deserialization requires --trusted-checkpoint")
@@ -175,7 +195,12 @@ def main() -> None:
         raise ValueError("development checkpoint format differs")
     identity = copy.deepcopy(checkpoint["identity"])
     if args.cold_inherit_v3:
-        model = cold_inherit_v3_model(checkpoint["model"])
+        if not 0 < args.new_axis_active_probability <= 0.5:
+            raise ValueError("new-axis active probability must be in (0,0.5]")
+        model = cold_inherit_v3_model(
+            checkpoint["model"],
+            new_axis_active_probability=args.new_axis_active_probability,
+        )
         manager = cold_inherit_v3_manager(checkpoint["goal_manager"])
         normalizer = RichNormalizer.cold_inherit_v3(identity["normalizer"])
         adapters = PopulationAdapterBank(
@@ -189,11 +214,20 @@ def main() -> None:
             )
         adapter_state = adapters.state_dict()
         conversion = {
-            "format": "chreatures-v3-to-v4-cold-inheritance-v1",
+            "format": "chreatures-v3-to-v4-cold-inheritance-v2",
             "source_checkpoint_sha256": sha256(checkpoint_path),
             "source_format": source_format,
             "new_physiology_normalization": "mean-zero-scale-one",
-            "new_active_bias": -8.0,
+            "new_axis_active_probability": args.new_axis_active_probability,
+            "new_axis_active_logit": float(
+                torch.logit(torch.tensor(args.new_axis_active_probability))
+            ),
+            "new_axis_positive_magnitudes": "uniform-32-bin",
+            "shared_trainable_organs": [
+                "physiology_adapter",
+                "new_actuator_active",
+                "new_actuator_positive",
+            ],
             "old_to_new_action_columns": [0, 1, 2, 4, 5, 6, 7, 3, 8],
             "optimizer": "not inherited",
             "private_state": "not inherited",
@@ -225,16 +259,26 @@ def main() -> None:
     arrays = {
         "normalizer.mean": array(normalizer.mean),
         "normalizer.scale": array(normalizer.scale),
-        **{"model." + name: array(model[name]) for name in MODEL_NAMES},
+        **{
+            "model." + name: array(model[name])
+            for name in ESTABLISHED_MODEL_NAMES
+        },
         **{
             "manager." + name: array(manager[name]).reshape(1)
             if name == "query_gain"
             else array(manager[name])
             for name in MANAGER_NAMES
         },
+        **{
+            "model." + name: array(model[name])
+            for name in PHYSIOLOGY_ADAPTER_NAMES
+        },
         "population_adapter.down": array(adapter_state["down"]),
         "population_adapter.up": array(adapter_state["up"]),
         "population_adapter.bias": array(adapter_state["bias"]),
+        **{
+            "model." + name: array(model[name]) for name in NEW_ACTUATOR_NAMES
+        },
     }
     predictor_path = args.predictor.resolve()
     predictor_metadata, predictor_arrays = load_predictor(predictor_path)
@@ -286,7 +330,7 @@ def main() -> None:
     ).hexdigest()
     metadata = {
         "format": FORMAT,
-        "version": 4,
+        "version": NATIVE_POPULATION_VERSION,
         "execution": EXECUTION,
         "organism_interface": organism_identity(),
         "checkpoint": {
@@ -302,6 +346,19 @@ def main() -> None:
             "count": int(arrays["population_adapter.down"].shape[0]),
             "rank": int(arrays["population_adapter.down"].shape[1]),
             "identity": adapter_identity,
+        },
+        "shared_trainable_organs": {
+            "scope": "inherited base artifact; not private lifetime state",
+            "physiology_adapter": {
+                "input": "normalized observation physiology12",
+                "output": "worker pre-GRU projection128",
+            },
+            "new_actuator_projection": {
+                "input": "candidate-adapted policy hidden256",
+                "output": "canonical action axes8:12 active and positive logits",
+                "action_names": ["eat", "release", "secrete", "allocate"],
+            },
+            "achieved_goal_geometry": "frozen",
         },
         "runtime_contract": {
             "temporal": {

@@ -42,6 +42,11 @@ from chreatures.training_cohort import (
     WorldTrainingPool,
     load_training_graph,
 )
+from chreatures.resident_contract import (
+    NATIVE_EXECUTION,
+    NATIVE_POPULATION_FORMAT,
+    NATIVE_POPULATION_VERSION,
+)
 
 
 FORMAT = "chreatures-population-episode-evaluation-v1"
@@ -298,8 +303,12 @@ def resident_artifact_identity(path: Path) -> tuple[dict[str, Any], dict[str, An
         "execution": metadata.get("execution"),
         "artifact_sha256": metadata.get("artifact_sha256"),
     }
-    if identity["version"] != 4 or identity["execution"] != "developmental-resident-native-population-v4":
-        raise ValueError("base resident artifact is not the current population v4 runtime")
+    if (
+        identity["format"] != NATIVE_POPULATION_FORMAT
+        or identity["version"] != NATIVE_POPULATION_VERSION
+        or identity["execution"] != NATIVE_EXECUTION
+    ):
+        raise ValueError("base resident artifact is not the current population runtime")
     _sha(identity["artifact_sha256"], "resident artifact identity")
     return identity, metadata
 

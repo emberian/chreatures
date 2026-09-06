@@ -9,17 +9,21 @@ parent selection, transfer eligibility, archive cells, and retention remain in
 ## Inputs and initialization
 
 `init` accepts an encoded `EmbodiedTrainingProfile.to_value()` at profile
-version 6 and a file-executed population-v4 controller NPZ. It verifies the
-profile, every registered native environment record, the controller file and
-internal artifact identities, graph and port identities, organism interface,
-adapter-bank identity/count/rank, and biosphere birth source. The exact encoded
-profile is copied into the campaign directory. The controller remains an
-external content-addressed file because its bytes can be large.
+version 6 and a file-executed population-v5 controller NPZ. It strictly requires
+format `chreatures-native-developmental-resident-population-v5`, metadata
+version 5, and execution `developmental-resident-native-population-v5`. It
+verifies the profile, every registered native environment record, the controller
+file and internal artifact identities, graph and port identities, organism
+interface, adapter-bank identity/count/rank, and biosphere birth source. The
+controller version does not change the body-facing organism-interface v4
+contract: 4,459 observations, 12 physiology fields, and 12 actions. The exact
+encoded profile is copied into the campaign directory. The controller remains
+an external content-addressed file because its bytes can be large.
 
 ```bash
 .venv/bin/python scripts/population_campaign.py init \
   --profile /tank/chreatures/campaign-inputs/profile-v6.json \
-  --controller /tank/chreatures/campaign-inputs/developmental-resident-population-v4.npz \
+  --controller /tank/chreatures/campaign-inputs/developmental-resident-population-v5.npz \
   --seed 20260917 \
   --output /tank/chreatures/runs/population/wave-001
 ```

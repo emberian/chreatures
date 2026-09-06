@@ -18,6 +18,7 @@ from chreatures.organism_interface import (
     BODY_DIM,
     OBSERVATION_DIM,
     OBSERVATION_ORDER,
+    PHYSIOLOGY_DIM,
     PREVIOUS_DIM,
     RECTIFIED_AXES,
     RICH_DIM,
@@ -184,6 +185,11 @@ class RichSensorimotorModel(nn.Module):
         self.observation_projection = nn.Sequential(
             nn.Linear(128 + 128 + PREVIOUS_DIM, 128), nn.Tanh()
         )
+        # A worker-only path lets the current body state affect fast actions while
+        # the shared sensory/goal geometry remains immutable. Cold inheritance
+        # initializes this residual to zero, preserving the inherited controller.
+        self.physiology_adapter = nn.Linear(PHYSIOLOGY_DIM, 128, bias=False)
+        nn.init.zeros_(self.physiology_adapter.weight)
         self.history = nn.GRU(128, 128)
         self.policy_trunk = nn.Sequential(
             nn.Linear(128 + 64 + 1 + PREVIOUS_DIM, 256), nn.Tanh()
@@ -191,6 +197,11 @@ class RichSensorimotorModel(nn.Module):
         self.signed_head = nn.Linear(256, 4 * 65)
         self.active_head = nn.Linear(256, len(RECTIFIED_AXES))
         self.positive_head = nn.Linear(256, len(RECTIFIED_AXES) * 32)
+        # These four outputs are a distinct inherited organ for actuators that
+        # did not exist in v3. Keeping them separate lets population training
+        # freeze the established action heads without freezing new capability.
+        self.new_actuator_active = nn.Linear(256, 4)
+        self.new_actuator_positive = nn.Linear(256, 4 * 32)
         self.register_buffer("signed_centers", torch.linspace(-1, 1, 65))
         self.register_buffer("positive_centers", torch.arange(1, 33) / 32)
 
@@ -243,8 +254,14 @@ class RichSensorimotorModel(nn.Module):
         batch = observation.shape[1]
         if hidden is None:
             hidden = observation.new_zeros((1, batch, 128))
-        encoded = self.observation_projection(
-            torch.cat((self.encode_frames(observation), previous), dim=-1)
+        projection = self.observation_projection[0]
+        encoded = torch.tanh(
+            F.linear(
+                torch.cat((self.encode_frames(observation), previous), dim=-1),
+                projection.weight,
+                projection.bias,
+            )
+            + self.physiology_adapter(observation[..., -PHYSIOLOGY_DIM:])
         )
         hidden = torch.where(reset[0][None, :, None], 0, hidden)
         if len(observation) == 1 or not bool(reset[1:].any().item()):
@@ -275,12 +292,26 @@ class RichSensorimotorModel(nn.Module):
         )
         if adapter is not None:
             hidden = adapter(hidden, candidate)
+        active = self.active_head(hidden)
+        positive = self.positive_head(hidden).reshape(
+            *leading, len(RECTIFIED_AXES), 32
+        )
+        active = torch.cat(
+            (active[..., :4], active[..., 4:] + self.new_actuator_active(hidden)),
+            dim=-1,
+        )
+        positive = torch.cat(
+            (
+                positive[..., :4, :],
+                positive[..., 4:, :]
+                + self.new_actuator_positive(hidden).reshape(*leading, 4, 32),
+            ),
+            dim=-2,
+        )
         return {
             "signed": self.signed_head(hidden).reshape(*leading, 4, 65),
-            "active": self.active_head(hidden),
-            "positive": self.positive_head(hidden).reshape(
-                *leading, len(RECTIFIED_AXES), 32
-            ),
+            "active": active,
+            "positive": positive,
         }
 
     def action_nll(self, logits, action):
@@ -314,8 +345,12 @@ class RichSensorimotorModel(nn.Module):
 
 def cold_inherit_v3_model(
     source: dict[str, torch.Tensor],
+    *,
+    new_axis_active_probability: float = 0.05,
 ) -> dict[str, torch.Tensor]:
     """Extend one authenticated v3 model into v4 without a runtime fallback."""
+    if not 0.0 < new_axis_active_probability <= 0.5:
+        raise ValueError("new-axis active probability must be in (0,0.5]")
     reference = next(iter(source.values()))
     target = RichSensorimotorModel().to(device=reference.device).state_dict()
     unchanged = set(target) - {
@@ -323,11 +358,16 @@ def cold_inherit_v3_model(
         "goal_decoder.2.weight",
         "goal_decoder.2.bias",
         "observation_projection.0.weight",
+        "physiology_adapter.weight",
         "policy_trunk.0.weight",
         "active_head.weight",
         "active_head.bias",
         "positive_head.weight",
         "positive_head.bias",
+        "new_actuator_active.weight",
+        "new_actuator_active.bias",
+        "new_actuator_positive.weight",
+        "new_actuator_positive.bias",
     }
     for name in unchanged:
         if name not in source or source[name].shape != target[name].shape:
@@ -338,11 +378,16 @@ def cold_inherit_v3_model(
         "goal_decoder.2.weight",
         "goal_decoder.2.bias",
         "observation_projection.0.weight",
+        "physiology_adapter.weight",
         "policy_trunk.0.weight",
         "active_head.weight",
         "active_head.bias",
         "positive_head.weight",
         "positive_head.bias",
+        "new_actuator_active.weight",
+        "new_actuator_active.bias",
+        "new_actuator_positive.weight",
+        "new_actuator_positive.bias",
     ):
         target[name].zero_()
     target["body.0.weight"][:, :357] = source["body.0.weight"]
@@ -371,7 +416,9 @@ def cold_inherit_v3_model(
         ][:, 193 + old]
     target["active_head.weight"][:4] = source["active_head.weight"]
     target["active_head.bias"][:4] = source["active_head.bias"]
-    target["active_head.bias"][4:] = -8.0
+    target["new_actuator_active.bias"].fill_(
+        torch.logit(torch.tensor(new_axis_active_probability)).item()
+    )
     target["positive_head.weight"].reshape(8, 32, 256)[:4] = source[
         "positive_head.weight"
     ].reshape(4, 32, 256)
