@@ -127,6 +127,50 @@ export, so it contains no resident birth, goal-selection, snapshot, or
 promotion claim. Supplying `--checkpoint` adds those records only after
 envelope and resident-model identity verification.
 
+### Living-reef biography
+
+`integrations/export_living_reef_weave.py` records the new rich resident life
+without publishing its checkpoint or turning the evidence graph into organism
+memory. It reads the live checkpoint once, authenticates the envelope's
+canonical state, hashes those exact bytes, and emits only a content-addressed
+blob reference plus bounded body, achieved-memory, neural-state, biosphere and
+private-GAM summaries. Four interval nodes summarize the authenticated journal
+tail. The source host journal reuses IDs after its bounded deque fills, so the
+exporter retains the reuse count and hashes the complete source events rather
+than pretending the duplicate host IDs are distinct Weave nodes.
+
+The current-life branch verifies that the frozen deployment, installed native
+resident artifact, update-20 training checkpoint receipt, and inherited GAM
+law bank agree by hash. Its three GAM nodes retain the original conditional,
+non-causal fit status. The snapshot also reports the observed limitation: all
+six private GAM learners had zero updates because their candidates remained
+outside the inherited fit domain.
+
+The rich consequence ensemble is a disconnected research branch rooted in its
+own dataset and frozen encoder identities. It records the actual reserved-world
+fit metrics and explicitly says that the proposed organ was not installed in
+this life. There is no graph edge from that fit into the current resident,
+experience, goal-selection, or snapshot nodes.
+
+The executed export used the private frozen deployment as input:
+
+```bash
+DEPLOYMENT=/path/to/living-reef-215647b
+python3 integrations/export_living_reef_weave.py \
+  --checkpoint "$DEPLOYMENT/runs/living-reef.json" \
+  --deployment-manifest "$DEPLOYMENT/deployment-source.json" \
+  --source-commit 5b23729963bbd502e033c0110cd49b2c0d0c18d4
+```
+
+The retained public graph at
+`integrations/artifacts/living-reef-biography/living-reef-biography.json` has 24
+nodes and 37 edges. Its actual checkpoint capture is model tick 4781, state SHA
+`f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4`,
+and private file SHA
+`658a0026967415557089507331a449128b75330984f94c723b5274688df3ef6b`.
+The 78,894,647 checkpoint bytes remain outside the repository. The native
+Universal Weave serialization reloaded equal and validated after reload.
+
 ## Observing habitat records
 
 `integrations/observe_habitat.py` is the bounded connection to project records.

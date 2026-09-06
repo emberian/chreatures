@@ -1,0 +1,128 @@
+{
+  "actual_experience_and_forecast_fit_are_separate_branches": true,
+  "archive_scope": "external public evidence graph; never resident memory or controller input",
+  "artifacts": {
+    "living-reef-biography.json": {
+      "bytes": 71447,
+      "media_type": "application/json",
+      "role": "living-reef-biography",
+      "sha256": "7ca8b2175deaf43547173cb56d19f67407b38d8b4f4dad908105e082179f515e",
+      "uri": "urn:sha256:7ca8b2175deaf43547173cb56d19f67407b38d8b4f4dad908105e082179f515e",
+      "verification": "verified_local_sha256"
+    },
+    "living-reef-biography.request.json": {
+      "bytes": 35349,
+      "media_type": "application/json",
+      "role": "living-reef-biography.request",
+      "sha256": "297beb87392adaca42c15b89f82375d4391ef44f36839e47e4acf280fb5fa520",
+      "uri": "urn:sha256:297beb87392adaca42c15b89f82375d4391ef44f36839e47e4acf280fb5fa520",
+      "verification": "verified_local_sha256"
+    },
+    "living-reef-biography.weave.json": {
+      "bytes": 63723,
+      "media_type": "application/json",
+      "role": "living-reef-biography.weave",
+      "sha256": "0ccc1a6c8688e197d1e4e86f15267a1f80e95f766035512dabf9d92ff0d9fd9b",
+      "uri": "urn:sha256:0ccc1a6c8688e197d1e4e86f15267a1f80e95f766035512dabf9d92ff0d9fd9b",
+      "verification": "verified_local_sha256"
+    }
+  },
+  "edge_count": 37,
+  "format": "chreatures-living-reef-biography-manifest-v1",
+  "native_weave_roundtrip": true,
+  "node_count": 24,
+  "source": {
+    "actual_life": {
+      "checkpoint": {
+        "bytes": 78894647,
+        "media_type": "application/json",
+        "role": "private_living_reef_checkpoint",
+        "sha256": "658a0026967415557089507331a449128b75330984f94c723b5274688df3ef6b",
+        "uri": "urn:sha256:658a0026967415557089507331a449128b75330984f94c723b5274688df3ef6b",
+        "verification": "verified_from_single_coherent_read_not_published"
+      },
+      "checkpoint_state_sha256": "f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4",
+      "checkpoint_tick": 4781,
+      "deployment": {
+        "bytes": 772,
+        "media_type": "application/json",
+        "role": "frozen_deployment_manifest",
+        "sha256": "a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+        "uri": "urn:sha256:a87580828fc13936d4fadf44b52d9c05babef46850ccbf8437236ed0ef65236d",
+        "verification": "verified_local_sha256"
+      },
+      "goal_selection_count": 6,
+      "journal": {
+        "events": 256,
+        "host_id_reuses": 213,
+        "intervals": 4,
+        "unique_host_ids": 43
+      },
+      "private_checkpoint_published": false,
+      "resident_artifact": {
+        "bytes": 3660839,
+        "media_type": "application/x-npz",
+        "role": "native_update20_resident",
+        "sha256": "c18f2580b19bb36bee12fb16ed5b86bfdf7a1426fee1f18438e12eb9298e99f3",
+        "uri": "urn:sha256:c18f2580b19bb36bee12fb16ed5b86bfdf7a1426fee1f18438e12eb9298e99f3",
+        "verification": "verified_local_sha256"
+      },
+      "resident_count": 6
+    },
+    "archive_id": "living-reef-biography:d5fbd433-ffa2-4877-b55d-b2d0461166ed:f9a1640549e1f8a7f966ecd88b5e8681b1658506cdb37eedacc28a8e9ec8a0b4",
+    "gam": {
+      "fit_report": {
+        "bytes": 2987,
+        "media_type": "application/json",
+        "role": "gam_fit_report",
+        "sha256": "ed888133dd4cbc591f77c6c376ada499b38d3d68f9476425e1cfe72d88bb8164",
+        "uri": "urn:sha256:ed888133dd4cbc591f77c6c376ada499b38d3d68f9476425e1cfe72d88bb8164",
+        "verification": "verified_local_sha256"
+      },
+      "law_bank": {
+        "bytes": 150514,
+        "media_type": "application/json",
+        "role": "native_gam_law_bank",
+        "sha256": "41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+        "uri": "urn:sha256:41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6",
+        "verification": "verified_local_sha256"
+      },
+      "native": {
+        "bytes": 988,
+        "media_type": "application/json",
+        "role": "gam_native_evaluation",
+        "sha256": "854d2a002898a379a20e10fc716e4412502b16af42e12d211e0820a5daec9def",
+        "uri": "urn:sha256:854d2a002898a379a20e10fc716e4412502b16af42e12d211e0820a5daec9def",
+        "verification": "verified_local_sha256"
+      }
+    },
+    "proposed_predictor": {
+      "artifact": {
+        "bytes": 7545779,
+        "media_type": "application/x-npz",
+        "role": "rich_consequence_predictor",
+        "sha256": "7192e01191282a736299013159b7852b291c581ad06faff3b33b37e157d4352f",
+        "uri": "urn:sha256:7192e01191282a736299013159b7852b291c581ad06faff3b33b37e157d4352f",
+        "verification": "verified_local_sha256"
+      },
+      "installed_in_checkpoint": false,
+      "receipt": {
+        "bytes": 14969,
+        "media_type": "application/json",
+        "role": "rich_consequence_fit_receipt",
+        "sha256": "046adad19f5d72dc91b51ed263624951b8fff290582588ef96f31ff853cc0906",
+        "uri": "urn:sha256:046adad19f5d72dc91b51ed263624951b8fff290582588ef96f31ff853cc0906",
+        "verification": "verified_local_sha256"
+      },
+      "reference": {
+        "bytes": 62008,
+        "media_type": "application/x-npz",
+        "role": "predictor_float32_reference",
+        "sha256": "4910fed8c964089bcbda6f6470d82e1961b7ec3098e36c9cf4132306451229b1",
+        "uri": "urn:sha256:4910fed8c964089bcbda6f6470d82e1961b7ec3098e36c9cf4132306451229b1",
+        "verification": "verified_local_sha256"
+      }
+    },
+    "source_commit": "5b23729963bbd502e033c0110cd49b2c0d0c18d4"
+  }
+}

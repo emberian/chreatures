@@ -72,17 +72,34 @@ int chreatures_environment_batch(
       for (int axis = 0; axis < 3; ++axis) world_normal[axis] /= length;
     }
     double sky_exposure = 0.0, sky_reference_incidence = 0.0;
-    for (int ray = profile_offsets[profile];
-         ray < profile_offsets[profile + 1]; ++ray) {
+    const int ray_start = profile_offsets[profile];
+    const int ray_end = profile_offsets[profile + 1];
+    const int ray_count = ray_end - ray_start;
+    if (ray_count <= 0 || ray_count > 256) return -4;
+    int sky_geom[256];
+    double sky_distance[256];
+    // The authored hemisphere is one coherent query from the capture point.
+    // MuJoCo traverses its acceleration structure once for the whole profile.
+    mj_multiRay(model, data, point, ray_directions + 3 * ray_start, NULL, 1,
+                -1, sky_geom, sky_distance, NULL, ray_count, -1.0);
+    for (int local_ray = 0; local_ray < ray_count; ++local_ray) {
+      const int ray = ray_start + local_ray;
       const double *direction = ray_directions + 3 * ray;
-      double origin[3] = {
-          point[0] + 1.0e-4 * direction[0],
-          point[1] + 1.0e-4 * direction[1],
-          point[2] + 1.0e-4 * direction[2]};
-      int geom = -1;
-      double normal[3];
-      const double distance =
-          mj_ray(model, data, origin, direction, NULL, 1, -1, &geom, normal);
+      int geom = sky_geom[local_ray];
+      double distance = sky_distance[local_ray];
+      // The scalar contract starts each ray just beyond its capture point.
+      // Usually the common-origin query has no near hit.  If it does, rerun
+      // only that ray from the original direction-specific offset so a body
+      // surface at the attachment point keeps exactly the prior semantics.
+      if (geom >= 0 && distance >= 0.0 && distance <= 1.0e-4) {
+        const double origin[3] = {
+            point[0] + 1.0e-4 * direction[0],
+            point[1] + 1.0e-4 * direction[1],
+            point[2] + 1.0e-4 * direction[2]};
+        double normal[3];
+        distance = mj_ray(model, data, origin, direction, NULL, 1, -1, &geom,
+                          normal);
+      }
       const double exposure =
           (geom < 0 || distance < 0.0) ? 1.0 : blocked_transmission[profile];
       const double incidence =
