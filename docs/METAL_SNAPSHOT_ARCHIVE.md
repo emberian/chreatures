@@ -60,3 +60,18 @@ On 2026-09-05, an operational proof archived the two oldest safe automatic
 snapshots and verified both remote receipts while leaving their originals
 local. A fetch of one object to a temporary audit path reproduced its
 7,953,754 bytes and SHA-256 exactly. No live service operation was issued.
+
+On 2026-09-06, a bounded relocation archived the oldest 540 eligible automatic
+snapshots from the terrarium and nursery: exactly 4,295,070,392 bytes (4.0001
+GiB). Every remote file was independently rechecked for SHA-256 and size before
+reporting completion. Referenced, newest and young snapshots stayed local;
+manual names and current recycling snapshots were outside this operation.
+The local catalog retains each original path and remote object address.
+
+Batch scans now cache hashes and parsed reference tokens only while a file's
+resolved path, device, inode, size, mtime and ctime remain unchanged. Every
+deletion still refreshes the reference-file listing and metadata, and a changed
+or new checkpoint is parsed immediately. Unreadable existing references abort
+the operation. Each selected snapshot is independently rehashed before upload
+and before removal. A temporary private SSH connection avoids repeated
+authentication handshakes and is closed at the end of the operation.

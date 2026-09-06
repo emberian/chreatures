@@ -435,3 +435,24 @@ Sustained resource regulation, useful manipulation, durable individual habits,
 reciprocal social learning, reproduction, and ecological specialization remain
 active work. Mechanical possibility and successful persistence do not establish
 those behaviors.
+
+The next implemented ecological link is conserved secretion from a configured
+donor compartment into reserved physical slots. A zero-founder-reserve assay
+captured 1.75019 photon-energy units and emitted 0.135937 reserve units in
+daylight; matched near-dark and secretion-disabled conditions emitted none.
+A declared mouth-position intervention consumed 0.008 of one emitted packet.
+Whole physical/chemical continuation was exact. Generic mobile donors also
+resynchronize normalized physiology after secretion. Old exchange snapshots
+validate their original hash before one-way import to the current schema with
+emitters disabled. This is supplied physiology, not evolved cooperation.
+Source: `e03614b` and the colony exudation receipt.
+
+At 2,328 persisted plant parts, a paired offline profile found repeated deep
+copying in every non-development tick. Lazy staging and a shared validated
+resource matrix reduced the measured Biosphere phase from 175.13 to 19.71 ms
+per tick, preserving exact world and chemical snapshots. This excludes neural
+inference, fields, rendering and the server. A separate fresh-birth check
+constructed 12 parts and continued exactly through canonical reload. The live
+recycling world adopted this implementation at a paused checkpoint at tick
+11,327, with its existing physiology and private state retained. Source:
+`072d4ea`; new secretion remains disabled in that older world.
