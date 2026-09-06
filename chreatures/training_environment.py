@@ -22,8 +22,9 @@ from .organism_interface import (
 )
 
 
-PROFILE_FORMAT = "chreatures-embodied-nursery-family-profile-v6"
-SNAPSHOT_FORMAT = "chreatures-embodied-training-world-v7"
+PROFILE_FORMAT = "chreatures-embodied-nursery-family-profile-v7"
+PROFILE_VERSION = 7
+SNAPSHOT_FORMAT = "chreatures-embodied-training-world-v8"
 BIOSPHERE_BIRTH_FORMAT = "chreatures-biosphere-birth-v6"
 BIOSPHERE_SNAPSHOT_FORMAT = "chreatures-biosphere-v7"
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,7 +69,9 @@ def _valid_sha(value: Any) -> bool:
 class EmbodiedTrainingProfile:
     """Immutable-by-copy environment contract selected explicitly by a runner."""
 
-    def __init__(self, value: Mapping[str, Any]) -> None:
+    def __init__(
+        self, value: Mapping[str, Any], locators: Mapping[str, str]
+    ) -> None:
         raw = copy.deepcopy(dict(value))
         expected = {
             "format", "version", "name", "sensorium", "body", "fields",
@@ -78,7 +81,7 @@ class EmbodiedTrainingProfile:
         if (
             set(raw) != expected
             or raw.get("format") != PROFILE_FORMAT
-            or raw.get("version") != 6
+            or raw.get("version") != PROFILE_VERSION
         ):
             raise ValueError("unsupported current embodied training profile")
         if raw["sensorium"] != profile_identity() or raw["body"] != "articulated":
@@ -93,6 +96,23 @@ class EmbodiedTrainingProfile:
         mappings = ("fields", "acoustics", "variation", "horizons", "sources")
         if not all(isinstance(raw[key], dict) for key in mappings):
             raise ValueError("embodied training profile components must be mappings")
+        sources = raw["sources"]
+        if not sources or any(
+            not isinstance(name, str)
+            or not name
+            or not isinstance(source, dict)
+            or set(source) != {"sha256"}
+            or not _valid_sha(source["sha256"])
+            for name, source in sources.items()
+        ):
+            raise ValueError("training profile source identities differ")
+        locator_values = copy.deepcopy(dict(locators))
+        if set(locator_values) != set(sources) or any(
+            not isinstance(path, str) or not path or not Path(path).is_absolute()
+            for path in locator_values.values()
+        ):
+            raise ValueError("training profile locators differ")
+        self._locators = locator_values
         if raw["resources"] is not None or not all(
             isinstance(raw[key], dict) for key in ("habitat", "biosphere", "physiology")
         ):
@@ -111,7 +131,7 @@ class EmbodiedTrainingProfile:
             raise ValueError("current training omits native illumination provenance")
         if raw["physiology"] != physiology_identity():
             raise ValueError("current training physiology semantics differ")
-        self._validate_family_identity(raw["family"])
+        self._validate_family_identity(raw["family"], sources)
 
     @staticmethod
     def _validate_family_schedule(value: Any) -> None:
@@ -153,7 +173,9 @@ class EmbodiedTrainingProfile:
                 seen.add((variant["archetype"], variant["seed"]))
 
     @staticmethod
-    def _validate_family_identity(value: Any) -> None:
+    def _validate_family_identity(
+        value: Any, sources: Mapping[str, Mapping[str, str]]
+    ) -> None:
         if (
             not isinstance(value, dict)
             or set(value) != {
@@ -168,12 +190,17 @@ class EmbodiedTrainingProfile:
             source = value[key]
             if (
                 not isinstance(source, dict)
-                or set(source) != {"path", "sha256"}
-                or not isinstance(source["path"], str)
-                or not source["path"]
+                or set(source) != {"sha256"}
                 or not _valid_sha(source["sha256"])
             ):
                 raise ValueError("invalid regional identity source")
+        for key, source_name in (
+            ("generator_config", "regional_family_config"),
+            ("schedule", "regional_schedule"),
+            ("resident_bundle", "regional_residents"),
+        ):
+            if value[key]["sha256"] != sources.get(source_name, {}).get("sha256"):
+                raise ValueError("regional identity source differs")
         transport = value["transport"]
         if transport != {
             "residents": transport.get("residents") if isinstance(transport, dict) else None,
@@ -389,9 +416,13 @@ class EmbodiedTrainingProfile:
             "native_habitat_family": ROOT / "native/world-kernels/src/habitat_family.rs",
             "retinal_port_spec": port_path,
         }
+        source_identities = {
+            name: {"sha256": _sha(path)} for name, path in source_paths.items()
+        }
+        locators = {name: str(path) for name, path in source_paths.items()}
         value = {
-            "format": PROFILE_FORMAT, "version": 6,
-            "name": "common-chemistry-native-regional-population-v6",
+            "format": PROFILE_FORMAT, "version": PROFILE_VERSION,
+            "name": "common-chemistry-native-regional-population-v7",
             "organism_interface": organism_identity(), "sensorium": profile_identity(),
             "body": "articulated", "habitat": habitat_value,
             "biosphere": biosphere_value,
@@ -403,9 +434,9 @@ class EmbodiedTrainingProfile:
             "family": {
                 "format": "chreatures-regional-training-identity-v1",
                 "selector": schedule_value["selector"],
-                "generator_config": {"path": str(config_path), "sha256": _sha(config_path)},
-                "schedule": {"path": str(schedule_path), "sha256": _sha(schedule_path)},
-                "resident_bundle": {"path": str(resident_path), "sha256": _sha(resident_path)},
+                "generator_config": {"sha256": _sha(config_path)},
+                "schedule": {"sha256": _sha(schedule_path)},
+                "resident_bundle": {"sha256": _sha(resident_path)},
                 "transport": {
                     "residents": schedule_value["resident_count"],
                     "max_residents": MAX_RESIDENTS, "rich": 4096, "physical": 351,
@@ -415,7 +446,7 @@ class EmbodiedTrainingProfile:
                 "variants": artifacts,
             },
             "variation": {
-                "version": 6, "heldout_seed_offset": 80_000_003,
+                "version": PROFILE_VERSION, "heldout_seed_offset": 80_000_003,
                 "body_heading_span_rad": math.pi, "fatigue_range": [0.02, 0.08],
             },
             "horizons": {
@@ -424,24 +455,75 @@ class EmbodiedTrainingProfile:
                 "dt_seconds": 0.05,
                 "rationale": "60 s cold episodes rotate inherited connected regional ecologies",
             },
-            "sources": {name: {"path": str(path), "sha256": _sha(path)} for name, path in source_paths.items()},
+            "sources": source_identities,
         }
-        return cls(value)
+        return cls(value, locators)
 
     def to_value(self) -> dict[str, Any]:
-        return {"value": copy.deepcopy(self._value), "sha256": self.sha256}
+        """Encode semantic identity and host locators as distinct fields."""
+        return {
+            "value": self.semantic_value(),
+            "sha256": self.sha256,
+            "locators": self.locator_manifest(),
+        }
+
+    def semantic_value(self) -> dict[str, Any]:
+        """Return the content-bound value authenticated by ``sha256``."""
+        return copy.deepcopy(self._value)
+
+    def locator_manifest(self) -> dict[str, str]:
+        """Return host paths excluded from semantic profile identity."""
+        return copy.deepcopy(self._locators)
 
     @classmethod
-    def from_value(cls, encoded: Mapping[str, Any]) -> "EmbodiedTrainingProfile":
-        if not isinstance(encoded, Mapping) or set(encoded) != {"value", "sha256"}:
+    def from_value(
+        cls,
+        encoded: Mapping[str, Any],
+        *,
+        locators: Mapping[str, str] | None = None,
+    ) -> "EmbodiedTrainingProfile":
+        if not isinstance(encoded, Mapping) or set(encoded) != {
+            "value", "sha256", "locators",
+        }:
             raise ValueError("invalid encoded embodied training profile")
-        profile = cls(encoded["value"])
+        encoded_locators = encoded["locators"]
+        semantic_sources = (
+            encoded["value"].get("sources")
+            if isinstance(encoded["value"], Mapping)
+            else None
+        )
+        if (
+            not isinstance(encoded_locators, Mapping)
+            or not isinstance(semantic_sources, Mapping)
+            or set(encoded_locators) != set(semantic_sources)
+            or any(
+                not isinstance(path, str) or not path or not Path(path).is_absolute()
+                for path in encoded_locators.values()
+            )
+        ):
+            raise ValueError("invalid encoded embodied training profile locators")
+        selected_locators = encoded["locators"] if locators is None else locators
+        if not isinstance(selected_locators, Mapping):
+            raise ValueError("invalid embodied training profile locators")
+        profile = cls(encoded["value"], selected_locators)
         if encoded["sha256"] != profile.sha256:
             raise ValueError("embodied training profile checksum differs")
+        if locators is not None:
+            for name in profile._locators:
+                profile.source_path(name)
         return profile
 
     def component(self, name: str) -> Any:
         return copy.deepcopy(self._value[name])
+
+    def source_path(self, name: str) -> Path:
+        """Resolve one transport locator and authenticate its semantic bytes."""
+        if name not in self._value["sources"]:
+            raise KeyError(f"unknown training profile source: {name}")
+        path = Path(self._locators[name])
+        if not path.is_file() or _sha(path) != self._value["sources"][name]["sha256"]:
+            raise ValueError(f"training profile source differs: {name}")
+        return path
 
     @property
     def name(self) -> str:
@@ -468,11 +550,11 @@ def _generated_family_spec(
             raise ValueError("explicit population environment is outside the pinned split")
         selected = variants[environment["index"]]
     sources = profile.component("sources")
-    habitat_path = Path(sources["habitat"]["path"])
-    biosphere_path = Path(sources["biosphere_birth"]["path"])
-    config_path = Path(identity["generator_config"]["path"])
-    resident_path = Path(identity["resident_bundle"]["path"])
-    schedule_path = Path(identity["schedule"]["path"])
+    habitat_path = profile.source_path("habitat")
+    biosphere_path = profile.source_path("biosphere_birth")
+    config_path = profile.source_path("regional_family_config")
+    resident_path = profile.source_path("regional_residents")
+    schedule_path = profile.source_path("regional_schedule")
     for path, expected in (
         (habitat_path, sources["habitat"]["sha256"]),
         (biosphere_path, sources["biosphere_birth"]["sha256"]),
@@ -756,7 +838,7 @@ class EmbodiedTrainingWorld:
         if biosphere_snapshot.get("format") != BIOSPHERE_SNAPSHOT_FORMAT:
             raise RuntimeError("world did not produce the current biosphere snapshot")
         return {
-            "format": SNAPSHOT_FORMAT, "version": 7, "stage": 0,
+            "format": SNAPSHOT_FORMAT, "version": 8, "stage": 0,
             "seed": self.seed, "profile": self.profile.to_value(),
             "world": self.world.snapshot(), "field": self.field.snapshot(),
             "resources": None,
@@ -773,10 +855,17 @@ class EmbodiedTrainingWorld:
         *, physical_backend: str = "reference",
     ) -> "EmbodiedTrainingWorld":
         if (snapshot.get("format"), snapshot.get("version")) != (
-            SNAPSHOT_FORMAT, 7,
+            SNAPSHOT_FORMAT, 8,
         ):
             raise ValueError("unsupported current training world snapshot")
-        profile = EmbodiedTrainingProfile.from_value(snapshot["profile"])
+        rebound_locators = (
+            expected_profile.locator_manifest()
+            if isinstance(expected_profile, EmbodiedTrainingProfile)
+            else None
+        )
+        profile = EmbodiedTrainingProfile.from_value(
+            snapshot["profile"], locators=rebound_locators
+        )
         expected_hash = (
             expected_profile.sha256
             if isinstance(expected_profile, EmbodiedTrainingProfile)

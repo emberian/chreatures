@@ -204,7 +204,7 @@ def main() -> int:
     validate(args)
     args.output.mkdir(parents=True, exist_ok=True)
     from chreatures.neural_ports import NeuralPortBundle
-    from chreatures.training_environment import EmbodiedTrainingProfile
+    from chreatures.training_environment import EmbodiedTrainingProfile, PROFILE_VERSION
 
     profile = EmbodiedTrainingProfile.nursery_family(
         args.chemical_habitat,
@@ -225,7 +225,7 @@ def main() -> int:
         "readouts": len(ports.readout_names),
         "actions": ACTION_DIM,
     }
-    if int(profile.component("version")) != 6 or transport != required:
+    if int(profile.component("version")) != PROFILE_VERSION or transport != required:
         raise SystemExit("regional profile transport differs from collector interfaces")
     count = args.worlds * residents_per_world
     from chreatures.population import CandidateGenome

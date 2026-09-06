@@ -280,13 +280,14 @@ def _world_worker(
     from chreatures.training_environment import (
         EmbodiedTrainingProfile,
         EmbodiedTrainingWorld,
+        PROFILE_VERSION,
         embodied_training_spec,
     )
 
     profile = EmbodiedTrainingProfile.from_value(profile_value)
-    if int(profile.component("version")) != 6:
+    if int(profile.component("version")) != PROFILE_VERSION:
         raise ValueError(
-            "world training transport requires the current regional-v6 profile"
+            "world training transport requires the current regional profile"
         )
     memory = shared_memory.SharedMemory(name=str(shared_descriptor["name"]))
     shared = _shared_array_views(memory, shared_descriptor["layout"])
@@ -482,7 +483,7 @@ def _world_worker(
                     world.close()
                 world = EmbodiedTrainingWorld.restore(
                     payload,
-                    expected_profile=profile.sha256,
+                    expected_profile=profile,
                     physical_backend=physical_backend,
                 )
                 result = [body.to_dict() for body in world.bodies]
