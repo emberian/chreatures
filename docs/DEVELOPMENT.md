@@ -1,5 +1,11 @@
 # Batched 3D development
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `chreatures/development.py` couples independent MuJoCo habitats to one
 in-process full MaleCNS sparse circuit. Each habitat contains the three crawler
 bodies from `hollow-garden.json`; eight worlds therefore train 24 residents in

@@ -1,5 +1,11 @@
 # Contextual motor refinement
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `chreatures.contextual_motor.ContextualMotorRefiner` is an optional private
 organ that lets experienced relational memory make a small change to an
 inherited continuous motor decision. It does not create goals or search the

@@ -1,5 +1,11 @@
 # Body-attached visual episodic memory
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `chreatures/visual_memory.py` is a private, fast-binding memory for what one
 creature saw, what it did, and what followed. Its input boundary is deliberately
 narrow: a raw native visual feature, the creature's motor command, its

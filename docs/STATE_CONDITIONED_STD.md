@@ -1,5 +1,11 @@
 # State-conditioned population variance
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 The predictive PPO policy now has two explicit variance architectures. The
 default `PredictivePPOConfig(std_profile="global-v1")` retains the established
 learned eight-element `log_std` vector and its exact action distribution.

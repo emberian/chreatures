@@ -1,5 +1,11 @@
 # Joined sensorimotor development
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `scripts/develop_sensorimotor_worker.py` is a research runner for online 20 Hz
 development in shared chemical 3-D worlds. It combines the canonical full
 MaleCNS circuit, 351 permitted senses, six local physiology values, a private

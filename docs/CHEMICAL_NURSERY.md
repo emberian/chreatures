@@ -1,5 +1,11 @@
 # Chemical resource encounters
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `chemical-encounters-v4` is an opt-in training profile for learning from
 physical encounters with finite chemical packets. It composes the existing
 `EmbodiedTrainingWorld`, MuJoCo body, `Biosphere`, shared metabolic web,

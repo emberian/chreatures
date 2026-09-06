@@ -1,5 +1,11 @@
 # Delayed native visual episodes
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `VisualEpisodeMemory` is a private, bounded NumPy memory for slow native body
 vision. It never receives world coordinates, entity identities, object labels,
 or an archive. Each observation remains a historical capture even when it is

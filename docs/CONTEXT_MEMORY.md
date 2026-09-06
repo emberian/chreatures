@@ -1,5 +1,11 @@
 # Action-conditioned relational context memory
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `chreatures.context_memory.RelationalContextMemory` is an optional personal organ for learning reusable transition structure from experience. Its complete input is:
 
 - an anonymous dense sensory feature vector;

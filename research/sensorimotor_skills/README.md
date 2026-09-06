@@ -1,5 +1,11 @@
 # Sensorimotor play dataset
 
+> **Historical research record.** The Python implementation and operational
+> commands described here were retired from the current tree after the native
+> rich developmental controller replaced them. Reproduce this experiment from
+> Git commit `0caa7ef`; the findings and design rationale below remain part of
+> the research record.
+
 `trajectory-schema-v1.json` is the immutable first collector contract. Each
 episode packet stores observation sequences one element longer than its action
 sequence so achieved future sensory windows can be sampled without reconstructing
