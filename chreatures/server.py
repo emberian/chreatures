@@ -36,6 +36,7 @@ def create_app(
     physics_backend=None,
     visitor_materials=None,
     population_birth=None,
+    population_response_artifact=None,
 ):
     checkpoint = checkpoint or ROOT / "runs/hollow-garden.json"
     authority = {"habitat": None, "error": None, "alive": True}
@@ -48,7 +49,8 @@ def create_app(
 
             restoring = checkpoint.exists()
             authority["habitat"] = (
-                Habitat3D.load(checkpoint, brain_url, resident_artifact)
+                Habitat3D.load(checkpoint, brain_url, resident_artifact,
+                               population_response_artifact)
                 if restoring
                 else Habitat3D(
                     seed,
@@ -62,6 +64,7 @@ def create_app(
                     physics_backend=physics_backend,
                     visitor_materials=visitor_materials,
                     population_birth=population_birth,
+                    population_response_artifact=population_response_artifact,
                     spec=json.loads(Path(habitat_spec).read_text())
                     if habitat_spec is not None
                     else None,
@@ -318,6 +321,11 @@ def main():
         help="Inherited genomes and authenticated neural phenotype artifacts for a new cohort",
     )
     parser.add_argument(
+        "--population-response-artifact",
+        type=Path,
+        help="Explicit fitted GAM candidate-scoring artifact for a research birth or matching restore",
+    )
+    parser.add_argument(
         "--resident-artifact",
         type=Path,
         required=True,
@@ -349,6 +357,7 @@ def main():
             physics_backend=args.physics_backend,
             visitor_materials=args.visitor_materials,
             population_birth=args.population_birth,
+            population_response_artifact=args.population_response_artifact,
         ),
         host=args.host,
         port=args.port,

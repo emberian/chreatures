@@ -360,9 +360,34 @@ class DevelopmentalResidentCohort:
         goal_seed: int,
         action_seed: int,
         candidate_adapters: list[dict[str, Any]],
+        population_response_artifact: str | Path | None = None,
     ) -> None:
         path = Path(artifact).expanduser().resolve()
         file_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+        population_response_json = None
+        population_response_identity = None
+        population_feature_contract_identity = None
+        self.population_response_artifact = None
+        if population_response_artifact is not None:
+            response_path = Path(population_response_artifact).expanduser().resolve()
+            response_bytes = response_path.read_bytes()
+            population_response_json = response_bytes.decode("utf-8")
+            response_value = json.loads(population_response_json)
+            population_response_identity = hashlib.sha256(response_bytes).hexdigest()
+            population_feature_contract_identity = response_value.get(
+                "feature_contract_sha256"
+            )
+            if (
+                response_value.get("schema") != "chreatures-population-response-bank-v1"
+                or not isinstance(population_feature_contract_identity, str)
+                or len(population_feature_contract_identity) != 64
+            ):
+                raise ValueError("population response artifact contract differs")
+            self.population_response_artifact = {
+                "path": str(response_path),
+                "sha256": population_response_identity,
+                "feature_contract_sha256": population_feature_contract_identity,
+            }
         with np.load(path, allow_pickle=False) as archive:
             metadata = json.loads(str(archive["metadata"]))
             order = (
@@ -563,6 +588,7 @@ class DevelopmentalResidentCohort:
             "finite_energy_objective_sha256": PERSONAL_GOAL_CONTRACT["objective"][
                 "sha256"
             ],
+            "population_response": copy.deepcopy(self.population_response_artifact),
         }
         trained = metadata.get("training_identity", {})
         self.neural_contract = {
@@ -593,9 +619,9 @@ class DevelopmentalResidentCohort:
             refinement["learning_rate"],
             refinement["error_decay"],
             refinement["innovation_limit"],
-            None,
-            None,
-            None,
+            population_response_json,
+            population_response_identity,
+            population_feature_contract_identity,
             predictor_packed,
             goal_rms,
             policy_adapter_packed,
@@ -724,6 +750,9 @@ class DevelopmentalResidentCohort:
         result._policy_adapter_count = self._policy_adapter_count
         result._population_adapters = copy.deepcopy(self._population_adapters)
         result._organism_interface_sha256 = self._organism_interface_sha256
+        result.population_response_artifact = copy.deepcopy(
+            self.population_response_artifact
+        )
         result.candidate_adapters = copy.deepcopy(
             self.candidate_adapters + new_candidate_adapters
         )
@@ -838,6 +867,14 @@ class DevelopmentalResidentCohort:
             "skipped_total": (self.batch_size,),
             "cancelled_total": (self.batch_size,),
         }
+        if self.population_response_artifact is not None:
+            expected.update({
+                "population_response_identity": (),
+                "population_feature_contract_identity": (),
+                "population_response_in_domain": (self.batch_size,),
+                "population_response_in_domain_total": (self.batch_size,),
+                "population_response_out_of_domain_total": (self.batch_size,),
+            })
         if set(result) != set(expected):
             raise RuntimeError("native personal goal receipt fields differ")
         for name, shape in expected.items():
@@ -850,6 +887,13 @@ class DevelopmentalResidentCohort:
                 and not np.isfinite(result[name]).all()
             ):
                 raise RuntimeError(f"native personal goal receipt is nonfinite: {name}")
+        if self.population_response_artifact is not None and (
+            str(result["population_response_identity"])
+            != self.population_response_artifact["sha256"]
+            or str(result["population_feature_contract_identity"])
+            != self.population_response_artifact["feature_contract_sha256"]
+        ):
+            raise RuntimeError("native population response receipt identity differs")
         return result
 
     def set_personal_goal_learning(self, enabled: bool) -> None:
@@ -866,12 +910,16 @@ class DevelopmentalResidentCohort:
             "observation_contract": copy.deepcopy(self.observation_contract),
             "action_mode": self.action_mode,
             "candidate_adapters": copy.deepcopy(self.candidate_adapters),
+            "population_response_artifact": copy.deepcopy(
+                self.population_response_artifact
+            ),
             "native": _encode(dict(self._native.snapshot())),
         }
 
     @classmethod
     def restore_value(
-        cls, value: dict[str, Any], artifact: str | Path
+        cls, value: dict[str, Any], artifact: str | Path,
+        population_response_artifact: str | Path | None = None,
     ) -> DevelopmentalResidentCohort:
         if (
             not isinstance(value, dict)
@@ -887,10 +935,13 @@ class DevelopmentalResidentCohort:
             goal_seed=0,
             action_seed=0,
             candidate_adapters=value["candidate_adapters"],
+            population_response_artifact=population_response_artifact,
         )
         if (
             value.get("model_identity") != instance.model_identity
             or value.get("observation_contract") != instance.observation_contract
+            or value.get("population_response_artifact")
+            != instance.population_response_artifact
         ):
             raise ValueError("developmental resident snapshot model identity differs")
         native = _decode(value["native"])

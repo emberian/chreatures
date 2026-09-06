@@ -76,6 +76,7 @@ class Habitat3D:
         physics_backend: str | None = None,
         visitor_materials: str | Path | None = None,
         population_birth: str | Path | None = None,
+        population_response_artifact: str | Path | None = None,
     ) -> None:
         from .acoustics import Acoustics
         from .ecology import Ecology
@@ -162,6 +163,7 @@ class Habitat3D:
             goal_seed=(seed * 1009 + 17) % 2**64,
             action_seed=(seed * 1009 + 31) % 2**64,
             candidate_adapters=candidate_adapters(self.birth_manifest),
+            population_response_artifact=population_response_artifact,
         )
         self._validate_resident_interface()
 
@@ -976,6 +978,7 @@ class Habitat3D:
         path: str | Path,
         brain_url: str | None = None,
         resident_artifact: str | Path | None = None,
+        population_response_artifact: str | Path | None = None,
     ) -> Habitat3D:
         from .acoustics import Acoustics
         from .ecology import Ecology
@@ -1086,7 +1089,8 @@ class Habitat3D:
         if set(instance.birth_templates) != {body.id for body in instance.world.bodies}:
             raise ValueError("saved birth templates differ from the resident population")
         instance.residents = DevelopmentalResidentCohort.restore_value(
-            value["resident_controller"], instance.resident_artifact
+            value["resident_controller"], instance.resident_artifact,
+            population_response_artifact=population_response_artifact,
         )
         instance._validate_resident_interface()
         cohort_size = len(instance.world.bodies)
