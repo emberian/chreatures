@@ -269,7 +269,7 @@ class Biosphere:
         """Advance chemistry and development after the caller advances physics."""
         if not np.isfinite(dt) or not 0 < dt <= 1.0:
             raise ValueError("biosphere step must be in (0, 1] seconds")
-        self._check_structure()
+        checked_structure = self._check_structure()
         if self.exchange is not None:
             self.exchange.before_reactions(dt)
         photons = np.zeros(self.web.count, dtype=np.float64)
@@ -284,7 +284,7 @@ class Biosphere:
             self.mobility.after_reactions(dt)
         if self.exchange is not None:
             self.exchange.after_reactions(dt)
-        self._distribute_turnover(ledger)
+        self._distribute_turnover(ledger, checked_structure)
         reports = self._develop()
         if self.materials is not None:
             self.materials.sync_geometry()
@@ -342,32 +342,65 @@ class Biosphere:
                     )
         return sources
 
-    def _check_structure(self) -> None:
+    def _part_resource_matrix(self, owned: list[dict[str, Any]]) -> np.ndarray:
+        """Validate internal part chemistry into one allocation, in saved order."""
+        names = self.web.chemistry.pools
+        allowed = set(names)
+        if not owned:
+            return np.empty((0, len(names)), dtype=np.float64)
+        rows = []
+        for part in owned:
+            resources = part["resources"]
+            if not isinstance(resources, Mapping) or set(resources) - allowed:
+                raise ValueError("unknown chemical resource")
+            rows.append([resources.get(name, 0.0) for name in names])
+        matrix = np.asarray(rows, dtype=np.float64)
+        if matrix.shape != (len(owned), len(names)):
+            raise ValueError("physical part resource matrix differs")
+        if not np.isfinite(matrix).all() or np.any(matrix < 0.0):
+            raise ValueError("resource quantities must be finite and nonnegative")
+        return matrix
+
+    def _check_structure(self) -> dict[str, tuple[list[dict[str, Any]], np.ndarray]]:
+        checked = {}
         for colony in self.config:
+            owned = [
+                part for part in self.parts.values() if part["colony"] == colony["id"]
+            ]
+            resources = self._part_resource_matrix(owned)
             total = np.zeros(len(self.web.chemistry.pools))
-            for part in self.parts.values():
-                if part["colony"] == colony["id"]:
-                    total += self.web.chemistry.resources(part["resources"])
+            # Preserve the historical insertion-order floating reduction.
+            for row in resources:
+                total += row
             if not np.allclose(
                 total, self.web.pools[colony["structure_row"]], rtol=1e-11, atol=1e-12
             ):
                 raise ValueError(
                     "physical structures and allocated chemical tissue disagree"
                 )
+            checked[colony["id"]] = (owned, resources)
+        return checked
 
-    def _distribute_turnover(self, ledger: Mapping[str, Any]) -> None:
+    def _distribute_turnover(
+        self,
+        ledger: Mapping[str, Any],
+        checked: dict[str, tuple[list[dict[str, Any]], np.ndarray]] | None = None,
+    ) -> None:
         # Turnover changes live tissue to detritus without removing its material
         # or geometry. Dead scaffold can persist; removal is a separate transfer.
         chemistry = self.web.chemistry
         for colony in self.config:
-            owned = [
-                part for part in self.parts.values() if part["colony"] == colony["id"]
-            ]
+            if checked is None:
+                owned = [
+                    part
+                    for part in self.parts.values()
+                    if part["colony"] == colony["id"]
+                ]
+                before = self._part_resource_matrix(owned)
+            else:
+                owned, before = checked[colony["id"]]
             if not owned:
                 continue
-            before = np.asarray(
-                [chemistry.resources(part["resources"]) for part in owned]
-            )
             after = before.copy()
             for reaction, extent in enumerate(
                 ledger["extent"][colony["structure_row"]]
@@ -399,7 +432,10 @@ class Biosphere:
         operations = []
         staged: list[tuple[dict[str, Any], dict[str, Any], GrowthSystem]] = []
         pending: list[tuple[str, str]] = []
-        next_parts = copy.deepcopy(self.parts)
+        # Existing part records are immutable here. Allocate a new mapping only
+        # after a proposal has passed its resource checks; _record_parts appends
+        # fresh records and never edits the values shared with self.parts.
+        next_parts: dict[str, dict[str, Any]] | None = None
         try:
             for colony in self.config:
                 name = colony["id"]
@@ -436,6 +472,8 @@ class Biosphere:
                 )
                 ops = growth.physical_operations(proposal, colony["bindings"])
                 operations.extend(ops)
+                if next_parts is None:
+                    next_parts = self.parts.copy()
                 self._record_parts(colony, proposal, ops, next_parts)
                 staged.append((colony, proposal, candidate))
             if not staged:
@@ -455,6 +493,8 @@ class Biosphere:
             except Exception:
                 self.web = MetabolicWeb.restore(before)
                 raise
+            if next_parts is None:
+                raise RuntimeError("staged development has no physical part records")
             self.parts = next_parts
             for colony, _, candidate in staged:
                 self.growth[colony["id"]] = candidate
