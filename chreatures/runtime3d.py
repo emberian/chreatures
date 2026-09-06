@@ -10,7 +10,6 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-import os
 import time
 import uuid
 from collections import deque
@@ -18,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .checkpoint import canonical
+from .checkpoint import canonical, write_envelope
 from .cognition import AdaptiveOrgan
 from .neural_client import NeuralClient
 from .visitor_events import VisitorPerformances
@@ -760,9 +759,6 @@ class Habitat3D:
     def save(self, path):
         if self.pending_step is not None:
             raise RuntimeError("Cannot checkpoint an incomplete distributed tick")
-        receipt = self.neural.snapshot(
-            f"world-{self.id}-{self.tick}", list(self.remote_ids.values())
-        )
         state = {
             "version": 1,
             "kind": "chreatures-3d",
@@ -803,7 +799,6 @@ class Habitat3D:
             "remote_ids": self.remote_ids,
             "brain_url": self.neural.url,
             "graph_sha256": self.neural.graph["sha256"],
-            "neural_snapshot": receipt,
             "neural_state": self.neural_state,
             "outcomes": self.outcomes,
             "journal": list(self.journal),
@@ -819,23 +814,31 @@ class Habitat3D:
                 "foresights": {key: organ.snapshot() for key, organ in self.foresights.items()},
                 "foresight_deployment": copy.deepcopy(self.foresight_deployment),
             })
-        digest = hashlib.sha256(canonical(state)).hexdigest()
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_name(path.name + ".tmp")
-        with temporary.open("wb") as stream:
-            stream.write(
-                canonical(
-                    {
-                        "format": "chreatures-3d-checkpoint-v1",
-                        "sha256": digest,
-                        "state": state,
-                    }
-                )
+        request = {
+            "name": f"world-{self.id}-{self.tick}",
+            "resident_ids": list(self.remote_ids.values()),
+            "seq": self.neural.next_seq,
+            "service_incarnation": self.neural.service_incarnation,
+        }
+        try:
+            state["neural_snapshot"] = self.neural.snapshot(
+                request["name"], request["resident_ids"]
             )
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
+        except Exception as error:
+            # The local tick is complete. Preserve its private state even if a
+            # remote save's outcome is unknown. This is a recovery artifact,
+            # never a loadable whole-world checkpoint without a verified neural
+            # receipt. The preceding complete checkpoint remains authoritative.
+            destination = Path(path)
+            interrupted = destination.with_name(
+                f"{destination.stem}.interrupted-{self.tick}.json"
+            )
+            write_envelope(interrupted, {
+                "world": state, "neural_request": request,
+                "error": str(error),
+            }, format="chreatures-3d-interrupted-save-v1")
+            raise
+        digest = write_envelope(path, state, format="chreatures-3d-checkpoint-v1")
         self.saved_at = time.time()
         return digest
 

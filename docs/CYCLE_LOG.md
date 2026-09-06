@@ -348,3 +348,88 @@ source revision, and validates local URLs under the project subpath. First
 site source: `682985a`. Eusociality remains a proposed research direction;
 dependent young, reproduction and divisions of reproductive labor are not
 implemented outcomes.
+
+## 2026-09-06 · Coupled chemistry, private forecasts, and recovery
+
+Fresh recycling births now put articulated mobile body/gut compartments,
+finite food objects, constructed plant tissue, and physical return deposits in
+one native chemical ledger. ATP funds active forces and signals. Physical
+mouth contact admits food; digestion and absorption are separate processes.
+Body-local outlets return carried material into 24 reusable physical slots.
+Constructed roots acquire mineral and carbon only through actual contact.
+The root-contact assay transferred 0.000454867 mineral and 0.000682301 carbon
+in one tick, with zero acquisition in its separated control. These are supplied
+mechanisms, not evolved nutrient delivery or a stable food web. Source: `8a7a020`.
+
+The first short chemical training comparison acquired no food. Its apparent
+nutrition was absorption from supplied initial gut contents. Corrected controls
+and the failed first evaluation are retained. The revised AMD nursery starts
+each episode with empty guts and varies physical packet placement across three
+body-local encounter distributions, checking support and initial collisions.
+Policies receive ordinary limited senses, not placement coordinates. At the
+11,500-step interim report, the 48-resident cohort had nine mouth-to-material
+transfers, 0.19167 ingested mass and 0.16664 absorbed reserve, with encounters
+in every stage. This is an opportunity/telemetry result; learned improvement
+requires the completed held-out comparison. Training sources: `4d7f98d`,
+`0e64524`, `9a4437f`.
+
+The final recurrent predictive artifact carries its original feature
+normalizer and a 0.25-second observation contract. Each resident now has private
+experienced recurrent state, while batched imagined action continuations
+provide bounded evidence to the existing motor selector. Imagined branches
+never become experienced observations. This is a transfer from developmental
+worlds, with weak learned action discrimination for gut/energy and no claim of
+improved planning. An invalid forecast initially paused the first recycling
+integration at tick 110. That attempt lacked a complete world checkpoint and
+was not recovered: its retained neural snapshot is diagnostic only. Invalid
+branches are now excluded before strict physiology scoring, and new worlds
+save a birth checkpoint before advancing. Sources: `988ac45`, `1870368`.
+
+The corrected new recycling world was born under UUID
+`a7393968-758c-4c00-b645-281a443e52ae` on local port 8773, with its own Metal
+service, canonical MaleCNS anatomy, heterogeneous articulated bodies, private
+learning and foresight. It reached tick 4753 before a neural snapshot exceeded
+the former 10-second timeout. The previous whole checkpoint at tick 4543 and
+the final observer diagnostics were preserved. The old save path constructed
+its local artifact only after receiving the neural receipt; consequently the
+last 210 ticks do not have a complete local private-state checkpoint. This is
+a recorded interruption, not an assertion of uninterrupted continuity.
+
+The new Metal transport gives every process an incarnation and retains bounded
+request receipts. A lost reply can be resolved by reading the exact original
+committed response, with request hash and sequence checks, without executing
+the mutation again. Other outcomes remain uncertain. Snapshot/restore allow
+60 seconds while native durability stays intact. A failed save at a complete
+physical tick now writes the full local state to an explicitly incomplete
+recovery artifact without replacing the preceding complete checkpoint.
+
+A separate complete-runtime replay exercised 70 ticks before a checkpoint and
+12 afterward, including 12 developed parts, nonzero material return, private
+motor learning and 17 predictive observations per resident. All 26 recorded
+state sections and the native neural checksum matched exactly. This exposed
+two actual persistence bugs: removed objects retained stale grip references,
+and canonical JSON reordered plant-part reductions. Topology removal now
+clears invalid holds; Biosphere v4 persists part order explicitly. Old saves
+retain their available document order, without claiming to reconstruct lost
+pre-serialization ordering. Acoustics and the older resource engine were off
+in this particular probe. Source: `1f512b3` and its public replay receipt.
+
+Material bookkeeping now caches immutable bindings and unchanged inventories.
+The measured recurring component calls fell substantially, with identical
+whole physical/chemical snapshots; the busy-host measurement does not support
+a total simulation speedup claim. Automatic neural snapshots are being moved
+to verified content-addressed bulk storage on hbox to relieve laptop pressure.
+Current and referenced snapshots stay local. Source: `77c184b` and the material
+overhead receipt.
+
+The original 6,789-neuron female FlyWire world was handed to an isolated archive
+checkout with its original saved identity. Current production has one 3D
+launcher, while the archive release retains that earlier engine. Verified
+derived-graph services can also load the 172,376-neuron second-generation
+synthetic descendant, but canonical-trained motor/predictor artifacts still
+reject it until matching interfaces are trained. Sources: `4eb73b4`, `988ac45`.
+
+Sustained resource regulation, useful manipulation, durable individual habits,
+reciprocal social learning, reproduction, and ecological specialization remain
+active work. Mechanical possibility and successful persistence do not establish
+those behaviors.

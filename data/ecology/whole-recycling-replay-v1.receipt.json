@@ -1,0 +1,106 @@
+{
+  "checkpoint": {
+    "path": "runs/metal-recycling-replay/checkpoint.json",
+    "sha256": "372c94938ade456fc1bcd925449ae897ba30dcc52ef1dca75fdce45996a561d3"
+  },
+  "format": "chreatures-whole-ecology-replay-receipt-v1",
+  "implementation_revision": "1f512b3",
+  "implementation_source_sha256": {
+    "chreatures/biosphere.py": "240559bb8b4939dbf4971a5d4c01fbd9ab830774fad57dcb97bad69d8031467b",
+    "chreatures/material_objects.py": "c907d0917d90c7bf496e31fa8c48984755efa70f3f137e59cbe5d5c6f4f009d0",
+    "chreatures/neural_client.py": "7a96216c11b55765e6b39c1a5ad266541e13447c4ddfd52c6f928f5a7d84a241",
+    "chreatures/physics.py": "94aa2a570e0f25c461627f0d290d633240e49318a702b2fe313658b61c0d4434",
+    "chreatures/runtime3d.py": "7780aa5bf98e6709122093c497be49d2ae26561f1768e1b13c04c33760d9a240",
+    "scripts/probe_whole_ecology.py": "f70ab1af2760344256b6f7254fa567659654559ed014f2e214ca6864acdddaf6"
+  },
+  "neural_exact": true,
+  "neural_snapshot_sha256": "4b78682bc19eea6dbbc4b3b8e9836235d5b0a84d74057d236ab5d730ad16c63d",
+  "note": "Pinned revision preserves the executed behavioral implementation. Probe-only lint formatting was finalized after the run. Subsequent neural receipt protocol and interrupted-save recovery are separate changes.",
+  "owner_sha256": {
+    "acoustic_state": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "acoustics": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "biosphere": "b73cee1076600e3084e1f2076d9f2a72e59eae524bf2bf70a75a4e55406b394e",
+    "branch": "5f8368d643022c015855422d0a88d1968b456809d58389653f8fc970701b8870",
+    "execution_migrations": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "feature_mean": "010c4174d6bc1f257ff7a62a8589640a672ab91864684968373439b9837acda6",
+    "feature_variance": "bf3cce110abbd721f5a1fd8fa6401ec215fc2af9e6109a1e75760b6c2d3ea987",
+    "field": "b9b0c25f0c15dfae372b72db0347d5a4ce3c91756ff36051686f4047b046b337",
+    "foresight_deployment": "148b778b5b366dec6f48f08962ab676db29319d16666aacfc89a2d2fc2c96bee",
+    "foresights": "a6b31fccced3d7f66cbd4be96e81d0a41bef4d6ade87fc8b4e0b28b2ea6a3b09",
+    "history": "2f4cc2176b82f4ff4343e98ec5abf2b0eec9d2caa15a9669491b4f8cb0b3285e",
+    "journal": "cb5eddae7a49e30fbff08d95a336474296e32b58792e66ae2dc57de43fcfd9fd",
+    "last_senses": "928838ee88381d3aeac476696a8f8a049270bc2f0d56696300c3b04b0b2a1228",
+    "motors": "93560b5a16814408af7018e1929934e0f75a9fb8bed5129236ae625dfbfdda70",
+    "neural_response": "494fcd192bdb7fff8fea601d54da8e3fd437c5be5bcad3c454237c48f894d72d",
+    "organs": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "outcomes": "b7dcce8aa4f2277e236714393e2517ba3ebefed244d0faac2deb2fa3b6ac2bc4",
+    "paused": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+    "pending_step": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "physics": "ff7f467ed97f609b8264f88ae8a72d3ffc3e14b0445f1ca9e3620ca69122a258",
+    "resource_state": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "resources": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "sensed_at": "0823d183f1e0d3b56cadaae0370aaca00c4d056d221d8306e1d6711876cce8ad",
+    "speed": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+    "tick": "a46e37632fa6ca51a13fe39a567b3c23b28c2f47d8af6be9bd63e030e214ba38",
+    "visitor": "398fdb6b2a2742b9911fb5f169671c8307459907e70cc621cd6bd533ce158502"
+  },
+  "passed": true,
+  "scope": {
+    "acoustics_exercised": false,
+    "exactness": "Same runtime and hardware; one 70-tick developmental history plus12-tick continuation. Empty optional owners are not evidence of their dynamics.",
+    "legacy_resources_exercised": false,
+    "neural_intervention_exercised": false,
+    "physical_dt_seconds": 0.05,
+    "private_service": true
+  },
+  "seed": 73,
+  "sources": {
+    "biosphere": {
+      "path": "runs/recycling-reef-birth/biosphere.json",
+      "sha256": "589286427790cedc13e5c5b1047e08019a04ac55b4a462e653b9c133e5096b09"
+    },
+    "brain_artifact": {
+      "path": "data/metal-brain/metal-csr-v2.bin",
+      "sha256": "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0"
+    },
+    "habitat": {
+      "path": "runs/recycling-reef-birth/habitat.json",
+      "sha256": "a61d5e49d25781957c56ee2c897aef1fe91ed322c47c00be687351f87c4fca6e"
+    },
+    "motor_genome": {
+      "path": "data/genomes/nursery-embodied-v2-step9695.npz",
+      "sha256": "ceb546e9d9a2ae2495c82e545031114b872c5da80ea4df7e6f9ed6c77b7832f6"
+    },
+    "port_bundle": {
+      "path": "data/ports/retinal-v1-maps.npz",
+      "sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2"
+    },
+    "predictive_model": {
+      "path": "data/cognitive/predictive-state-fullgraph-v3.npz",
+      "sha256": "c7ba729b8a62b7fda5a436a69d3ee8f5036c1c63119da6549443a9ed49f82ca2"
+    }
+  },
+  "state_evidence": {
+    "developed_parts": 12,
+    "egested_mass": 0.0879340749823326,
+    "foresight_observations": {
+      "fern": 17,
+      "mica": 17,
+      "pip": 17
+    },
+    "growth_buds": {
+      "colony-a": 4,
+      "colony-b": 4,
+      "colony-c": 5
+    },
+    "motor_macro_steps": {
+      "fern": 5,
+      "mica": 5,
+      "pip": 5
+    }
+  },
+  "steps": {
+    "before_checkpoint": 70,
+    "continuation": 12
+  }
+}

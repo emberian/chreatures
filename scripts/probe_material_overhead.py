@@ -30,7 +30,6 @@ from chreatures.biosphere import Biosphere
 from chreatures.physical_batch import FastArticulatedSensoriumWorld
 from scripts.build_chemical_habitat import configure
 
-
 PROFILE_NAMES = {"sync_geometry", "surface_cues", "_check_physical_state"}
 
 
