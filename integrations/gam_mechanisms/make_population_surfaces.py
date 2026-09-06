@@ -28,7 +28,9 @@ def main() -> None:
     args = parser.parse_args()
     bank_path = args.fit / "population_response_bank.json"
     bank = json.loads(bank_path.read_text())
-    axes = {"energy_state_delta": ("energy", "thrust"), "effort": ("fatigue", "thrust")}
+    axes = {"energy_state_delta": ("history_energy_mean", "thrust"),
+            "fatigue_state_delta": ("history_fatigue_mean", "thrust"),
+            "effort": ("fatigue", "thrust")}
     features = bank["fitted"]["features"]
     names = [feature["name"] for feature in features]
     laws = {law["name"]: law for law in bank["fitted"]["laws"]}

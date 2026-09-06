@@ -110,7 +110,9 @@ def fit(data_path: Path, schema_path: Path, feature_contract_path: Path, output:
     heldout_candidate = np.isin(candidate, test_candidates)
     test = heldout_lineage | heldout_candidate | heldout_environment
     remaining = ~test
-    validation = remaining & (data["world_unit"].astype(np.int64) % int(schema["split"].get("validation_world_mod", 5)) == 0)
+    validation_candidates = np.asarray(schema["split"].get("validation_candidates", []), dtype=candidate.dtype)
+    validation = remaining & (np.isin(candidate, validation_candidates) if len(validation_candidates)
+        else data["world_unit"].astype(np.int64) % int(schema["split"].get("validation_world_mod", 5)) == 0)
     train_pool = remaining & ~validation
     stride = int(schema.get("training_tick_stride", 1))
     if "tick_unit" not in data.files or not 1 <= stride <= 64:

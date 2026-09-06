@@ -70,6 +70,41 @@ and effort SHA-256
 The compact repository artifacts are sufficient for Rust inference and public
 inspection; the bulk models preserve exact `gamfit` reconstruction.
 
+## Complete-life history-conditioned bank
+
+`artifacts/population_complete_b2_history_v2/fit/population_response_bank.json`
+is the first bank fitted solely from a completed population cohort and with the
+correct post-state history timing. Its 384,000 transitions cover 16 completed
+lives, two environments, and two worlds. Before target inspection, four whole
+candidate lives were reserved for validation and four for final holdout, each
+balanced across both environments; the remaining eight lives supplied 24,000
+target-blind stride-8 fit rows. All lives share one founder and every candidate
+was assigned to only one environment.
+
+Three native GAMs certified: energy-state delta, fatigue-state delta, and
+effort. Final held-out transition RMSEs are `1.445e-5`, `1.675e-4`, and
+`0.04553`, compared with training-mean baselines `4.549e-5`, `3.231e-4`, and
+`0.15161`. Complete-life aggregate RMSEs are `2.816e-6`, `2.053e-5`, and
+`0.007442`. Validation lives alone calibrate runtime residual uncertainty.
+The three-law joint domain covers 95.85% of all rows and 95.93% of final
+holdout rows.
+
+History means enter all three fitted laws. Candidate action scores still vary:
+state and history contributions cancel when hypothetical candidates share one
+context, while thrust contributes to every law and yaw, posture, and grip
+contribute to fatigue and effort. The executed-action latent component standard
+deviations are `0.0201`, `0.0359`, and `0.6970`, respectively. These measured
+associations permit bounded proposal tilts; they do not establish action
+causality.
+
+The observed candidate/environment support artifact deliberately emits no
+challenge scores. Each candidate appeared in one environment with no
+independent repeat, so genotype-by-environment transfer is unidentified. It
+instead recommends a crossed repeat design for the next wave. The exact native
+models are retained under
+`/tank/chreatures/runs/analysis/population-gam-complete-b2-v2/fit/`; compact
+bank, reports, surfaces, split, and receipts remain in the repository.
+
 The population evaluator can now record the required row-level evidence with `--gam-trace-chunk-steps 128`. Trace chunks flush before every coherent checkpoint and contain pre/post physiology12, executed action12, outcome8, and measured organ-flow3 arrays. After a completed evaluation, the staged commands are:
 
 ```text

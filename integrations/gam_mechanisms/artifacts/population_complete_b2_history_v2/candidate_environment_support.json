@@ -1,0 +1,190 @@
+{
+  "candidate_count": 16,
+  "challenge_score_artifact": null,
+  "data_sha256": "0e395b1cd7476a165e03207a879c4840bf8f6a4ffadcde00d947a854320b308f",
+  "environment_count": 2,
+  "format": "chreatures-population-candidate-environment-support-v1",
+  "limitation": "each candidate was observed in only one environment and no pair has independent repeats; genotype-by-environment transfer ranking is unidentified",
+  "observed_pair_count": 16,
+  "observed_pairs": [
+    {
+      "candidate_sha256": "0d4148034e128c5b7885908a7365408e0486945a25504261f8ce80e9370db8d7",
+      "environment_sha256": "a4416267367ccc470597b30fffea08679c8de1691a064d3261a805b7b5ec17bf",
+      "observed_mean": {
+        "effort": 0.2568894028663635,
+        "energy_state_delta": -3.244237814215012e-05,
+        "fatigue_state_delta": 3.946029755752534e-05
+      },
+      "split": "heldout",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "1f2c7e89915b6289ac4294d055d829addfc3f2ce3c147658ac300436f5b559db",
+      "environment_sha256": "a4416267367ccc470597b30fffea08679c8de1691a064d3261a805b7b5ec17bf",
+      "observed_mean": {
+        "effort": 0.3431369364261627,
+        "energy_state_delta": -3.2631382055114955e-05,
+        "fatigue_state_delta": 4.077663834323175e-05
+      },
+      "split": "validation",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "2f4450e2a9ae9aee56531de833e2cfccfe57f6d90a39ba380c46a5755d6698df",
+      "environment_sha256": "a4416267367ccc470597b30fffea08679c8de1691a064d3261a805b7b5ec17bf",
+      "observed_mean": {
+        "effort": 0.21534878015518188,
+        "energy_state_delta": -3.112151171080768e-05,
+        "fatigue_state_delta": 3.875348556903191e-05
+      },
+      "split": "training",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "3a1b18505317b4e165d565ea273bba9d1b680530264a3d1f565c8025dc09e7bd",
+      "environment_sha256": "a4416267367ccc470597b30fffea08679c8de1691a064d3261a805b7b5ec17bf",
+      "observed_mean": {
+        "effort": 0.2065046727657318,
+        "energy_state_delta": -3.308448867755942e-05,
+        "fatigue_state_delta": 4.052868825965561e-05
+      },
+      "split": "training",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "51b59ce0ac648303c82f9798abcebb6ca3a565e03dde9d29f1df52c7da279114",
+      "environment_sha256": "cf37829005c722d1ad9c8a822be0fcc36fbb8890eb5255946bf2a85734f4ff2f",
+      "observed_mean": {
+        "effort": 0.21073289215564728,
+        "energy_state_delta": -3.235513577237725e-05,
+        "fatigue_state_delta": 4.044746674480848e-05
+      },
+      "split": "heldout",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "64a98698af8e9b876e174b05e3c7d5f1e429b42f1b15b823541905e1e620e851",
+      "environment_sha256": "a4416267367ccc470597b30fffea08679c8de1691a064d3261a805b7b5ec17bf",
+      "observed_mean": {
+        "effort": 0.23581629991531372,
+        "energy_state_delta": -3.3296171750407666e-05,
+        "fatigue_state_delta": 3.877392737194896e-05
+      },
+      "split": "validation",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "864ffb53c9a1a75d6f60536283cd2d85cc76b66dc2981cb1036e7f47aed66917",
+      "environment_sha256": "cf37829005c722d1ad9c8a822be0fcc36fbb8890eb5255946bf2a85734f4ff2f",
+      "observed_mean": {
+        "effort": 0.25868210196495056,
+        "energy_state_delta": -3.263137841713615e-05,
+        "fatigue_state_delta": 3.852051304420456e-05
+      },
+      "split": "training",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "88847617555244381b31cc612dac3f5c4ec5ae88a90530ca82e70c5303ca7d5a",
+      "environment_sha256": "cf37829005c722d1ad9c8a822be0fcc36fbb8890eb5255946bf2a85734f4ff2f",
+      "observed_mean": {
+        "effort": 0.2142006903886795,
+        "energy_state_delta": -3.279983138781972e-05,
+        "fatigue_state_delta": 3.881048905896023e-05
+      },
+      "split": "training",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "97aeedf43230344b9d3b2997d94e2439b46129f14ec42661a7c816877760fb3a",
+      "environment_sha256": "cf37829005c722d1ad9c8a822be0fcc36fbb8890eb5255946bf2a85734f4ff2f",
+      "observed_mean": {
+        "effort": 0.2738625109195709,
+        "energy_state_delta": -3.3135507692350075e-05,
+        "fatigue_state_delta": 3.8746049540350214e-05
+      },
+      "split": "training",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "a3dcd83f89ec63e7124d4e27888062b6bd12d4ee910d2ffc50668068b95ce5f5",
+      "environment_sha256": "cf37829005c722d1ad9c8a822be0fcc36fbb8890eb5255946bf2a85734f4ff2f",
+      "observed_mean": {
+        "effort": 0.21304923295974731,
+        "energy_state_delta": -3.4393662645015866e-05,
+        "fatigue_state_delta": 4.0739083488006145e-05
+      },
+      "split": "validation",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "a7463fe9ecfb044334477ca5fa2ba1e9d0bc4c559f457f4946a27fd1fb6a97dd",
+      "environment_sha256": "a4416267367ccc470597b30fffea08679c8de1691a064d3261a805b7b5ec17bf",
+      "observed_mean": {
+        "effort": 0.3262700140476227,
+        "energy_state_delta": -3.317761729704216e-05,
+        "fatigue_state_delta": 4.02680343540851e-05
+      },
+      "split": "heldout",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "b033d2320b5bf19f2f7e326b3303bf7b2f7538fb948a021696abcbd244c1c41a",
+      "environment_sha256": "a4416267367ccc470597b30fffea08679c8de1691a064d3261a805b7b5ec17bf",
+      "observed_mean": {
+        "effort": 0.21038419008255005,
+        "energy_state_delta": -3.2363765058107674e-05,
+        "fatigue_state_delta": 4.003818685305305e-05
+      },
+      "split": "training",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "bbf586750ea3b65da19278d48ab8259824408c24efe07fdbd0bf8410b7f1eca7",
+      "environment_sha256": "cf37829005c722d1ad9c8a822be0fcc36fbb8890eb5255946bf2a85734f4ff2f",
+      "observed_mean": {
+        "effort": 0.19675959646701813,
+        "energy_state_delta": -3.348510290379636e-05,
+        "fatigue_state_delta": 3.8401525671361014e-05
+      },
+      "split": "heldout",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "bbf88c2aa584e6a8f8fb070067e67902edcefb5c17287cf5e00ef62b4015a742",
+      "environment_sha256": "cf37829005c722d1ad9c8a822be0fcc36fbb8890eb5255946bf2a85734f4ff2f",
+      "observed_mean": {
+        "effort": 0.23585277795791626,
+        "energy_state_delta": -3.244237814215012e-05,
+        "fatigue_state_delta": 3.9730344724375755e-05
+      },
+      "split": "validation",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "e94038db3228defa30ddcf40dc26453988b17f24a6c952ced82d183ad718e980",
+      "environment_sha256": "cf37829005c722d1ad9c8a822be0fcc36fbb8890eb5255946bf2a85734f4ff2f",
+      "observed_mean": {
+        "effort": 0.23673073947429657,
+        "energy_state_delta": -3.1963161745807156e-05,
+        "fatigue_state_delta": 3.849203494610265e-05
+      },
+      "split": "training",
+      "transitions": 24000
+    },
+    {
+      "candidate_sha256": "ec94062d6be97f82afb057072681a67b30011fc001430db1c868fa64330081b5",
+      "environment_sha256": "a4416267367ccc470597b30fffea08679c8de1691a064d3261a805b7b5ec17bf",
+      "observed_mean": {
+        "effort": 0.3664260804653168,
+        "energy_state_delta": -3.2631382055114955e-05,
+        "fatigue_state_delta": 3.91327848774381e-05
+      },
+      "split": "training",
+      "transitions": 24000
+    }
+  ],
+  "possible_crossed_pair_count": 32,
+  "proposal_guidance": "collect each candidate or lineage in repeated environments before emitting authenticated challenge scores",
+  "unit_of_analysis": "observed candidate-environment assignment with resident transitions nested within it"
+}

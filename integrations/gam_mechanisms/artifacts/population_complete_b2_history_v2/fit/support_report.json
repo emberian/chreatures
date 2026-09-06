@@ -1,0 +1,114 @@
+{
+  "action_sensitivity": {
+    "effort": {
+      "action_terms": [
+        {
+          "feature": "thrust",
+          "latent_span_over_fitted_domain": 1.5187848058026918
+        },
+        {
+          "feature": "yaw",
+          "latent_span_over_fitted_domain": 0.7673503285307817
+        },
+        {
+          "feature": "posture",
+          "latent_span_over_fitted_domain": 0.834752334744334
+        },
+        {
+          "feature": "grip",
+          "latent_span_over_fitted_domain": 0.7596940656366815
+        }
+      ],
+      "candidate_varying": true,
+      "executed_action_component_std_latent": 0.6969784047740335,
+      "state_history_terms_cancel_when_candidates_share_context": true
+    },
+    "energy_state_delta": {
+      "action_terms": [
+        {
+          "feature": "thrust",
+          "latent_span_over_fitted_domain": 0.07883567451856799
+        },
+        {
+          "feature": "eat",
+          "latent_span_over_fitted_domain": 2.493394379854408e-12
+        },
+        {
+          "feature": "allocate",
+          "latent_span_over_fitted_domain": 2.5023979000060592e-09
+        }
+      ],
+      "candidate_varying": true,
+      "executed_action_component_std_latent": 0.020089814998141546,
+      "state_history_terms_cancel_when_candidates_share_context": true
+    },
+    "fatigue_state_delta": {
+      "action_terms": [
+        {
+          "feature": "thrust",
+          "latent_span_over_fitted_domain": 0.15881906845268595
+        },
+        {
+          "feature": "yaw",
+          "latent_span_over_fitted_domain": 0.04367833408259887
+        },
+        {
+          "feature": "posture",
+          "latent_span_over_fitted_domain": 0.03717047019939283
+        },
+        {
+          "feature": "grip",
+          "latent_span_over_fitted_domain": 0.0013671097761549199
+        }
+      ],
+      "candidate_varying": true,
+      "executed_action_component_std_latent": 0.03592975418428351,
+      "state_history_terms_cancel_when_candidates_share_context": true
+    }
+  },
+  "bank_sha256": "4d535c586c899609a51c14792b6dda6a50c66dc84e2b763c1a99a74842947b92",
+  "coverage": {
+    "all": {
+      "fraction": 0.95853125,
+      "in_domain_rows": 368076,
+      "rows": 384000
+    },
+    "final_holdout": {
+      "fraction": 0.95928125,
+      "in_domain_rows": 92091,
+      "rows": 96000
+    },
+    "training_pool": {
+      "fraction": 0.958890625,
+      "in_domain_rows": 184107,
+      "rows": 192000
+    },
+    "validation": {
+      "fraction": 0.9570625,
+      "in_domain_rows": 91878,
+      "rows": 96000
+    }
+  },
+  "data_sha256": "0e395b1cd7476a165e03207a879c4840bf8f6a4ffadcde00d947a854320b308f",
+  "format": "chreatures-population-gam-support-report-v1",
+  "interpretation": "descriptive support under executed actions; action terms permit candidate-varying scores but are not causal effects",
+  "per_law_all": {
+    "effort": {
+      "fraction": 0.9659140625,
+      "in_domain_rows": 370911,
+      "rows": 384000
+    },
+    "energy_state_delta": {
+      "fraction": 0.9838385416666666,
+      "in_domain_rows": 377794,
+      "rows": 384000
+    },
+    "fatigue_state_delta": {
+      "fraction": 0.9659140625,
+      "in_domain_rows": 370911,
+      "rows": 384000
+    }
+  },
+  "runtime_contract": "all inputs finite; range rejection only on each law smooth features; bank requires every scored law in domain",
+  "schema_sha256": "763058681d1c68b53dcb94a20eb056e0e102873ab4015974ed4424b2ffa7669c"
+}
