@@ -8,7 +8,7 @@ use crate::personal_consequences::{ConsequenceConfig, ConsequenceTarget, Persona
 use crate::{gemm_into, gru, linear, take, tanh_all, Gru, Linear};
 use numpy::{
     ndarray::{Array1, Array2, Array3},
-    IntoPyArray, PyReadonlyArray1, PyReadonlyArray2, PyUntypedArrayMethods,
+    IntoPyArray, PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3, PyUntypedArrayMethods,
 };
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 
@@ -77,12 +77,14 @@ pub(crate) struct DevelopmentalResidentCohort {
     foveal_code: Vec<f32>,
     body_code: Vec<f32>,
     frame_code: Vec<f32>,
+    recent_codes: Vec<f32>,
+    recent_code_cursor: Vec<usize>,
+    recent_code_count: Vec<usize>,
     observation_input: Vec<f32>,
     encoded: Vec<f32>,
     gx: Vec<f32>,
     gh: Vec<f32>,
     next_state: Vec<f32>,
-    goal_observations: Vec<f32>,
     goal_flat: Vec<f32>,
     goal_middle: Vec<f32>,
     manager_input: Vec<f32>,
@@ -286,33 +288,23 @@ impl DevelopmentalResidentCohort {
         }
     }
 
-    fn encode_windows(&mut self, windows: &[f32], valid: &[bool]) -> Vec<f32> {
+    fn encode_windows(&mut self, valid: &[bool]) -> Vec<f32> {
         if !valid.iter().any(|include| *include) {
             return vec![0.0; self.batch * GOAL];
         }
-        self.goal_observations
-            .resize(self.batch * WINDOW * OBS, 0.0);
-        self.goal_observations.fill(0.0);
+        self.goal_flat.fill(0.0);
         for row in 0..self.batch {
             if !valid[row] {
                 continue;
             }
             for frame in 0..WINDOW {
-                let source =
-                    &windows[(row * WINDOW + frame) * OBS..(row * WINDOW + frame + 1) * OBS];
-                let target = &mut self.goal_observations
-                    [(row * WINDOW + frame) * OBS..(row * WINDOW + frame + 1) * OBS];
-                for j in 0..OBS {
-                    target[j] =
-                        ((source[j] - self.core.mean[j]) / self.core.scale[j]).clamp(-8.0, 8.0);
-                }
+                let slot = (self.recent_code_cursor[row] + frame) % WINDOW;
+                let source = (row * WINDOW + slot) * 256;
+                let target = (row * WINDOW + frame) * 256;
+                self.goal_flat[target..target + 256]
+                    .copy_from_slice(&self.recent_codes[source..source + 256]);
             }
         }
-        let normalized = std::mem::take(&mut self.goal_observations);
-        self.encode_frames(&normalized, self.batch * WINDOW);
-        self.goal_observations = normalized;
-        self.goal_flat.resize(self.batch * WINDOW * 256, 0.0);
-        self.goal_flat.copy_from_slice(&self.frame_code);
         gemm_into(
             &self.goal_flat,
             self.batch,
@@ -335,6 +327,21 @@ impl DevelopmentalResidentCohort {
             }
         }
         keys
+    }
+
+    fn remember_frame_codes(&mut self, reset: &[bool]) {
+        for row in 0..self.batch {
+            if reset[row] {
+                self.recent_code_cursor[row] = 0;
+                self.recent_code_count[row] = 0;
+            }
+            let slot = self.recent_code_cursor[row];
+            let target = (row * WINDOW + slot) * 256;
+            self.recent_codes[target..target + 256]
+                .copy_from_slice(&self.frame_code[row * 256..(row + 1) * 256]);
+            self.recent_code_cursor[row] = (slot + 1) % WINDOW;
+            self.recent_code_count[row] = (self.recent_code_count[row] + 1).min(WINDOW);
+        }
     }
 
     fn observe(&mut self, observations: &[f32], previous: &[f32], reset: &[bool]) {
@@ -385,6 +392,9 @@ impl DevelopmentalResidentCohort {
         physiology: &[f32],
         ticks: &[u64],
     ) -> PyResult<SelectionArrays> {
+        if !ticks.iter().all(|tick| tick % 10 == 0) {
+            return Ok(self.memory.current_selection(ticks));
+        }
         for row in 0..self.batch {
             let offset = row * (HIDDEN + NEURAL + PHYSIOLOGY);
             self.manager_input[offset..offset + HIDDEN]
@@ -421,12 +431,7 @@ impl DevelopmentalResidentCohort {
                 self.logits[row * RESERVOIR + slot] = dot * self.core.query_gain / 8.0;
             }
         }
-        let boundary = ticks.iter().all(|tick| tick % 10 == 0);
-        if boundary {
-            self.memory.choose_inner(&self.logits, 1.0, ticks)
-        } else {
-            Ok(self.memory.current_selection(ticks))
-        }
+        self.memory.choose_inner(&self.logits, 1.0, ticks)
     }
 
     fn policy_actions(&mut self, goal: &[f32], remaining: &[u64]) -> Vec<f32> {
@@ -808,12 +813,14 @@ impl DevelopmentalResidentCohort {
             foveal_code: Vec::new(),
             body_code: Vec::new(),
             frame_code: Vec::new(),
+            recent_codes: vec![0.0; batch * WINDOW * 256],
+            recent_code_cursor: vec![0; batch],
+            recent_code_count: vec![0; batch],
             observation_input: vec![0.0; batch * (256 + PREVIOUS)],
             encoded: vec![0.0; batch * HIDDEN],
             gx: vec![0.0; batch * 3 * HIDDEN],
             gh: vec![0.0; batch * 3 * HIDDEN],
             next_state: vec![0.0; batch * HIDDEN],
-            goal_observations: vec![0.0; batch * WINDOW * OBS],
             goal_flat: vec![0.0; batch * WINDOW * 256],
             goal_middle: vec![0.0; batch * POLICY],
             manager_input: vec![0.0; batch * (HIDDEN + NEURAL + PHYSIOLOGY)],
@@ -881,8 +888,16 @@ impl DevelopmentalResidentCohort {
         }
         let (inserted, selection, actions, oral) = py.detach(|| -> PyResult<_> {
             self.observe(o, a, rst);
-            let (windows, valid) = self.memory.push_inner(o, t, time, rst)?;
-            let keys = self.encode_windows(&windows, &valid);
+            self.remember_frame_codes(rst);
+            let (_windows, valid) = self.memory.push_inner(o, t, time, rst)?;
+            if valid
+                .iter()
+                .enumerate()
+                .any(|(row, v)| *v != (self.recent_code_count[row] == WINDOW))
+            {
+                return Err(PyValueError::new_err("raw/code goal rings diverged"));
+            }
+            let keys = self.encode_windows(&valid);
             let inserted = self.memory.remember_inner(&keys, &valid)?;
             let selection = self.manager_selection(n, p, t)?;
             let candidates = self.policy_actions(&selection.key, &selection.remaining);
@@ -991,7 +1006,7 @@ impl DevelopmentalResidentCohort {
     fn snapshot<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let out = PyDict::new(py);
         out.set_item("format", FORMAT)?;
-        out.set_item("version", 2)?;
+        out.set_item("version", 3)?;
         out.set_item("batch", self.batch)?;
         out.set_item("conditioned", self.conditioned)?;
         out.set_item("sample", self.sample)?;
@@ -1014,6 +1029,14 @@ impl DevelopmentalResidentCohort {
                 .into_pyarray(py),
         )?;
         out.set_item("goal_memory", self.memory.snapshot(py)?)?;
+        out.set_item(
+            "recent_frame_codes",
+            Array3::from_shape_vec((self.batch, WINDOW, 256), self.recent_codes.clone())
+                .unwrap()
+                .into_pyarray(py),
+        )?;
+        out.set_item("recent_code_cursor", self.recent_code_cursor.clone())?;
+        out.set_item("recent_code_count", self.recent_code_count.clone())?;
         out.set_item(
             "personal_consequences",
             self.consequences
@@ -1093,7 +1116,7 @@ impl DevelopmentalResidentCohort {
             })
         };
         if get("format")?.extract::<String>()? != FORMAT
-            || get("version")?.extract::<u8>()? != 2
+            || get("version")?.extract::<u8>()? != 3
             || get("batch")?.extract::<usize>()? != self.batch
             || get("conditioned")?.extract::<bool>()? != self.conditioned
             || get("sample")?.extract::<bool>()? != self.sample
@@ -1125,6 +1148,30 @@ impl DevelopmentalResidentCohort {
         }
         let memory: Bound<'_, PyDict> = get("goal_memory")?.extract()?;
         self.memory.restore(&memory)?;
+        let codes: PyReadonlyArray3<'_, f32> = get("recent_frame_codes")?.extract()?;
+        let cursor: Vec<usize> = get("recent_code_cursor")?.extract()?;
+        let count: Vec<usize> = get("recent_code_count")?.extract()?;
+        if codes.shape() != [self.batch, WINDOW, 256]
+            || cursor.len() != self.batch
+            || count.len() != self.batch
+            || cursor.iter().any(|x| *x >= WINDOW)
+            || count.iter().any(|x| *x > WINDOW)
+            || codes.as_slice()?.iter().any(|x| !x.is_finite())
+        {
+            return Err(PyValueError::new_err("cached goal-code state differs"));
+        }
+        self.recent_codes.copy_from_slice(codes.as_slice()?);
+        self.recent_code_cursor = cursor;
+        self.recent_code_count = count;
+        let (raw_count, raw_cursor) = self.memory.recent_ring_state();
+        if (0..self.batch).any(|row| {
+            self.recent_code_count[row] != raw_count[row] as usize
+                || self.recent_code_cursor[row] != raw_cursor[row] as usize
+        }) {
+            return Err(PyValueError::new_err(
+                "raw and encoded recent rings diverged",
+            ));
+        }
         let personal = get("personal_consequences")?.extract::<String>()?;
         let config = self.consequences.config().clone();
         self.consequences = PersonalConsequences::restore(&personal, &config, self.batch)

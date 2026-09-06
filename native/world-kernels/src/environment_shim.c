@@ -26,7 +26,8 @@ static void transform_vector(const mjData *data, int body, const double *local,
 int chreatures_environment_batch(
     const void *model_address, void *data_address, int sample_count,
     const int *sample_bodies, const double *sample_local,
-    const double *sample_world_offset, const int *sample_profiles,
+    const double *sample_world_offset, const double *sample_local_normal,
+    const int *sample_profiles,
     int profile_count, const int *profile_offsets, const double *ray_directions,
     const double *ray_weights, const double *blocked_transmission,
     const double *solar_direction, double solar_direct, double solar_diffuse,
@@ -55,7 +56,22 @@ int chreatures_environment_batch(
       continue;
     }
 
-    double sky_exposure = 0.0;
+    const double *local_normal = sample_local_normal + 3 * sample;
+    const double local_normal_length =
+        sqrt(local_normal[0] * local_normal[0] +
+             local_normal[1] * local_normal[1] +
+             local_normal[2] * local_normal[2]);
+    const int surface = local_normal_length > 1.0e-12;
+    double world_normal[3] = {0.0, 0.0, 0.0};
+    if (surface) {
+      transform_vector(data, body, local_normal, world_normal);
+      const double length =
+          sqrt(world_normal[0] * world_normal[0] +
+               world_normal[1] * world_normal[1] +
+               world_normal[2] * world_normal[2]);
+      for (int axis = 0; axis < 3; ++axis) world_normal[axis] /= length;
+    }
+    double sky_exposure = 0.0, sky_reference_incidence = 0.0;
     for (int ray = profile_offsets[profile];
          ray < profile_offsets[profile + 1]; ++ray) {
       const double *direction = ray_directions + 3 * ray;
@@ -69,7 +85,19 @@ int chreatures_environment_batch(
           mj_ray(model, data, origin, direction, NULL, 1, -1, &geom, normal);
       const double exposure =
           (geom < 0 || distance < 0.0) ? 1.0 : blocked_transmission[profile];
-      sky_exposure += ray_weights[ray] * exposure;
+      const double incidence =
+          surface ? fmax(0.0, world_normal[0] * direction[0] +
+                                  world_normal[1] * direction[1] +
+                                  world_normal[2] * direction[2])
+                  : 1.0;
+      sky_exposure += ray_weights[ray] * exposure * incidence;
+      sky_reference_incidence +=
+          ray_weights[ray] * fmax(0.0, direction[2]);
+    }
+    if (surface) {
+      sky_exposure = sky_reference_incidence > 1.0e-12
+                         ? fmin(1.0, sky_exposure / sky_reference_incidence)
+                         : 0.0;
     }
     double solar_origin[3] = {
         point[0] + 1.0e-4 * solar_direction[0],
@@ -84,7 +112,13 @@ int chreatures_environment_batch(
         (solar_geom < 0 || solar_distance < 0.0)
             ? 1.0
             : blocked_transmission[profile];
-    double value = solar_diffuse * sky_exposure + solar_direct * solar_exposure;
+    const double direct_incidence =
+        surface ? fmax(0.0, world_normal[0] * solar_direction[0] +
+                                world_normal[1] * solar_direction[1] +
+                                world_normal[2] * solar_direction[2])
+                : 1.0;
+    double value = solar_diffuse * sky_exposure +
+                   solar_direct * solar_exposure * direct_incidence;
 
     for (int light = 0; light < light_count; ++light) {
       const int light_body = light_bodies[light];
@@ -121,7 +155,13 @@ int chreatures_environment_batch(
         cone = pow(fmax(0.0, alignment), 0.35);
       }
       const double scaled_distance = distance / light_radius[light];
-      value += visibility * cone * light_intensity[light] /
+      const double surface_incidence =
+          surface && distance >= 1.0e-8
+              ? fmax(0.0, world_normal[0] * (-delta[0] / distance) +
+                              world_normal[1] * (-delta[1] / distance) +
+                              world_normal[2] * (-delta[2] / distance))
+              : 1.0;
+      value += visibility * cone * surface_incidence * light_intensity[light] /
                (1.0 + scaled_distance * scaled_distance);
     }
 
@@ -131,7 +171,14 @@ int chreatures_environment_batch(
       const double dz = point[2] - flash_position[2];
       const double distance = sqrt(dx * dx + dy * dy + dz * dz);
       const double scaled_distance = distance / 1.8;
-      value += flash_intensity / (1.0 + scaled_distance * scaled_distance);
+      const double flash_incidence =
+          surface && distance >= 1.0e-8
+              ? fmax(0.0, world_normal[0] * (-dx / distance) +
+                              world_normal[1] * (-dy / distance) +
+                              world_normal[2] * (-dz / distance))
+              : 1.0;
+      value += flash_incidence * flash_intensity /
+               (1.0 + scaled_distance * scaled_distance);
     }
     illumination[sample] = fmin(1.0, value);
   }

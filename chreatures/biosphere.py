@@ -21,7 +21,7 @@ from .growth import GrowthSystem
 from .metabolism import Chemistry, MetabolicWeb, canonical
 from .native_world import load_world_kernels
 
-FORMAT = "chreatures-biosphere-v5"
+FORMAT = "chreatures-biosphere-v6"
 KINDS = ("branch", "root", "leaf")
 
 
@@ -106,6 +106,56 @@ def _light_sampling(value: Any) -> dict[str, Any]:
     return copy.deepcopy(value)
 
 
+def _mobile_phototrophy(
+    value: Any, world: Any, mobiles: Any,
+) -> tuple[dict[str, Any], list[dict[str, float]]]:
+    """Validate shared radiance law and inherited dorsal surface traits."""
+    if (
+        not isinstance(value, dict)
+        or set(value) != {
+            "version", "photon_flux_per_square_meter_second", "light_sampling",
+        }
+        or value["version"] != 1
+    ):
+        raise ValueError("mobile_phototrophy requires the exact version 1 schema")
+    flux = value["photon_flux_per_square_meter_second"]
+    if (
+        isinstance(flux, bool)
+        or not isinstance(flux, (int, float))
+        or not np.isfinite(flux)
+        or not 0.0 < flux <= 1.0e9
+    ):
+        raise ValueError("mobile photon flux density must be finite and positive")
+    result = copy.deepcopy(value)
+    result["light_sampling"] = _light_sampling(value["light_sampling"])
+    if not isinstance(mobiles, list) or not mobiles:
+        raise ValueError("mobile phototrophy requires resident physiology")
+    mobile_ids = [spec.get("id") for spec in mobiles if isinstance(spec, dict)]
+    body_by_id = {body["id"]: body for body in world.spec["bodies"]}
+    if len(mobile_ids) != len(mobiles) or set(mobile_ids) != set(body_by_id):
+        raise ValueError("mobile phototrophy and physical resident identities differ")
+    traits = []
+    for resident_id in mobile_ids:
+        inherited = body_by_id[resident_id].get("metabolic_traits")
+        if not isinstance(inherited, dict) or set(inherited) != {
+            "phototrophic_absorptivity", "dorsal_capture_fraction",
+        }:
+            raise ValueError("resident metabolic traits differ from current schema")
+        clean = {}
+        for key in ("phototrophic_absorptivity", "dorsal_capture_fraction"):
+            scalar = inherited[key]
+            if (
+                isinstance(scalar, bool)
+                or not isinstance(scalar, (int, float))
+                or not np.isfinite(scalar)
+                or not 0.0 <= scalar <= 1.0
+            ):
+                raise ValueError("resident metabolic traits must be in [0, 1]")
+            clean[key] = float(scalar)
+        traits.append(clean)
+    return result, traits
+
+
 class Biosphere:
     """One chemical web and multiple resource-funded developmental colonies.
 
@@ -122,6 +172,7 @@ class Biosphere:
         colonies: list[dict[str, Any]],
         *,
         illumination_cycle: dict[str, Any],
+        mobile_phototrophy: dict[str, Any],
         mobiles=None,
     ):
         self.world = world
@@ -132,6 +183,16 @@ class Biosphere:
         self.illumination_sha256 = hashlib.sha256(
             canonical(self.illumination_config)
         ).hexdigest()
+        self.mobile_photo_config, self._mobile_traits = _mobile_phototrophy(
+            mobile_phototrophy, world, mobiles,
+        )
+        self.mobile_photo_sha256 = hashlib.sha256(
+            canonical({
+                "config": self.mobile_photo_config,
+                "traits": self._mobile_traits,
+            })
+        ).hexdigest()
+        self._mobile_specs = copy.deepcopy(mobiles)
         self.growth: dict[str, GrowthSystem] = {}
         self.parts: dict[str, dict[str, Any]] = {}
         self.active: dict[str, bool] = {}
@@ -235,6 +296,12 @@ class Biosphere:
                 profile_index[key] = len(profiles)
                 profiles.append(spec)
             self._light_profile_ids[name] = profile_index[key]
+        mobile_profile = self.mobile_photo_config["light_sampling"]
+        mobile_key = canonical(mobile_profile)
+        if mobile_key not in profile_index:
+            profile_index[mobile_key] = len(profiles)
+            profiles.append(mobile_profile)
+        self._mobile_light_profile = profile_index[mobile_key]
         directions: list[list[float]] = []
         weights: list[float] = []
         offsets = [0]
@@ -274,7 +341,7 @@ class Biosphere:
         if not isinstance(config, dict):
             raise TypeError("biosphere birth configuration must be an object")
         config = copy.deepcopy(config)
-        if config.get("format") != "chreatures-biosphere-birth-v4" or set(config) != {
+        if config.get("format") != "chreatures-biosphere-birth-v5" or set(config) != {
             "format",
             "chemistry",
             "compartments",
@@ -284,6 +351,7 @@ class Biosphere:
             "material_objects",
             "exchange",
             "illumination_cycle",
+            "mobile_phototrophy",
         }:
             raise ValueError("invalid biosphere birth configuration")
         compartments = config["compartments"]
@@ -306,6 +374,7 @@ class Biosphere:
         instance = cls(
             world, web, config["colonies"],
             illumination_cycle=config["illumination_cycle"],
+            mobile_phototrophy=config["mobile_phototrophy"],
             mobiles=config["mobiles"],
         )
         if instance.mobility is not None:
@@ -438,6 +507,44 @@ class Biosphere:
             part_ids,
             np.asarray(initial_tissue, dtype=np.float64),
         )
+        mobile_bodies: list[int] = []
+        mobile_local: list[list[float]] = []
+        mobile_area: list[float] = []
+        mobile_absorptivity: list[float] = []
+        for spec, traits in zip(self._mobile_specs, self._mobile_traits, strict=True):
+            geom_id = mujoco.mj_name2id(
+                self.world.model, mujoco.mjtObj.mjOBJ_GEOM,
+                f"resident:{spec['id']}:geom:thorax",
+            )
+            body_id = self.world._body_mj[spec["id"]]
+            if (
+                geom_id < 0
+                or int(self.world.model.geom_type[geom_id])
+                != int(mujoco.mjtGeom.mjGEOM_ELLIPSOID)
+                or int(self.world.model.geom_bodyid[geom_id]) != body_id
+            ):
+                raise ValueError("mobile phototrophy requires a physical thorax ellipsoid")
+            size = np.asarray(self.world.model.geom_size[geom_id], dtype=float)
+            local = np.asarray(self.world.model.geom_pos[geom_id], dtype=float)
+            mobile_bodies.append(body_id)
+            mobile_local.append((local + [0.0, 0.0, size[2] + 1e-4]).tolist())
+            mobile_area.append(
+                float(np.pi * size[0] * size[1] * traits["dorsal_capture_fraction"])
+            )
+            mobile_absorptivity.append(traits["phototrophic_absorptivity"])
+        self._mobile_capture_area = np.asarray(mobile_area, dtype=np.float64)
+        self._environment.bind_mobile(
+            np.asarray(mobile_bodies, dtype=np.int32),
+            self._matrix(mobile_local, 3),
+            np.tile(
+                np.asarray([[0.0, 0.0, 1.0]], dtype=np.float64),
+                (len(mobile_bodies), 1),
+            ),
+            np.full(len(mobile_bodies), self._mobile_light_profile, dtype=np.int32),
+            self._mobile_capture_area,
+            np.asarray(mobile_absorptivity, dtype=np.float64),
+            self.mobile_photo_config["photon_flux_per_square_meter_second"],
+        )
         light_bodies: list[int] = []
         light_positions: list[list[float]] = []
         light_directions: list[list[float]] = []
@@ -470,7 +577,7 @@ class Biosphere:
         self._environment_revision = self.world.model_revision
         self._sync_solar_state(self._solar.state())
 
-    def _sample_environment(self) -> np.ndarray:
+    def _sample_environment(self, dt: float) -> tuple[np.ndarray, np.ndarray]:
         if self._environment_revision != self.world.model_revision:
             self._bind_environment()
         bud_bodies: list[int] = []
@@ -494,13 +601,14 @@ class Biosphere:
         if self._environment_lights is None:
             raise RuntimeError("physical light environment is not bound")
         light = self.world._light
-        capture, bud_light = self._environment.sample(
+        capture, bud_light, mobile_photons = self._environment.sample(
             self._tissue,
             int(self.world.model._address),
             int(self.world.data._address),
             np.asarray(bud_bodies, dtype=np.int32),
             self._matrix(bud_local, 3),
             np.asarray(bud_profiles, dtype=np.int32),
+            dt,
             self._solar_state["toward_sun"],
             self._solar_state["direct_irradiance"],
             self._solar_state["diffuse_irradiance"],
@@ -513,7 +621,14 @@ class Biosphere:
         self._development_light = {colony["id"]: [] for colony in self.config}
         for (name, bud), value in zip(ordered, np.asarray(bud_light), strict=True):
             self._development_light[name].append((bud, float(value)))
-        return np.asarray(capture, dtype=np.float64)
+        mobile_photons = np.asarray(mobile_photons, dtype=np.float64)
+        if (
+            mobile_photons.shape != (len(self._mobile_specs),)
+            or not np.isfinite(mobile_photons).all()
+            or np.any(mobile_photons < 0.0)
+        ):
+            raise RuntimeError("native mobile photon supply is invalid")
+        return np.asarray(capture, dtype=np.float64), mobile_photons
 
     def _signals(self, colony: Mapping[str, Any]) -> list[dict[str, Any]]:
         mineral = float(
@@ -537,6 +652,28 @@ class Biosphere:
             )
         return result
 
+    def _mobile_photo_report(
+        self, supplied: np.ndarray, photon_used: np.ndarray,
+    ) -> list[dict[str, Any]]:
+        rows = np.asarray(
+            [spec["body_row"] for spec in self._mobile_specs], dtype=np.int64,
+        )
+        resources = self.web.pools[rows]
+        body_mass = resources @ self.web.chemistry._arrays[1].sum(axis=1)
+        stored_energy = resources @ self.web.chemistry._arrays[2] + self.web.atp[rows]
+        return [
+            {
+                "id": spec["id"],
+                "capture_area_square_meters": float(self._mobile_capture_area[index]),
+                "absorptivity": self._mobile_traits[index]["phototrophic_absorptivity"],
+                "photons_supplied": float(supplied[index]),
+                "photons_used": float(photon_used[spec["body_row"]]),
+                "body_material_mass": float(body_mass[index]),
+                "body_stored_energy": float(stored_energy[index]),
+            }
+            for index, spec in enumerate(self._mobile_specs)
+        ]
+
     def advance(self, dt: float) -> dict[str, Any]:
         """Advance chemistry and development after the caller advances physics."""
         if not np.isfinite(dt) or not 0 < dt <= 1.0:
@@ -548,13 +685,15 @@ class Biosphere:
             if self.active[colony["id"]]:
                 self.growth[colony["id"]].elapse(dt)
         self._sync_solar_state(self._solar.advance(dt))
-        capture = self._sample_environment()
+        capture, mobile_photons = self._sample_environment(dt)
         photons = np.zeros(self.web.count, dtype=np.float64)
         for colony_index, colony in enumerate(self.config):
             if self.active[colony["id"]]:
                 photons[colony["body_row"]] = (
                     dt * colony["photon_flux"] * capture[colony_index]
                 )
+        for spec, supplied in zip(self._mobile_specs, mobile_photons, strict=True):
+            photons[spec["body_row"]] = supplied
         if self.mobility is not None:
             self.mobility.before_reactions(dt)
         ledger = self.web.step(dt, photons, np.zeros(self.web.count))
@@ -573,6 +712,9 @@ class Biosphere:
             "developments": reports,
             "parts": len(self.parts),
             "illumination": copy.deepcopy(self._solar_state),
+            "mobile_phototrophy": self._mobile_photo_report(
+                mobile_photons, ledger["photon_used"],
+            ),
             "accounting": self.accounting(),
             "exchange": self.exchange.view() if self.exchange is not None else None,
         }
@@ -874,6 +1016,10 @@ class Biosphere:
                 "config_sha256": self.illumination_sha256,
                 "clock_seconds": float(self._solar.clock_seconds()),
             },
+            "mobile_phototrophy": {
+                "config": copy.deepcopy(self.mobile_photo_config),
+                "config_sha256": self.mobile_photo_sha256,
+            },
             "web": self.web.snapshot(),
             "growth": {key: value.snapshot() for key, value in self.growth.items()},
             "parts": copy.deepcopy(self.parts),
@@ -901,18 +1047,26 @@ class Biosphere:
             "config", "config_sha256", "clock_seconds",
         }:
             raise ValueError("invalid saved solar cycle")
+        mobile_photo = snapshot.get("mobile_phototrophy")
+        if not isinstance(mobile_photo, dict) or set(mobile_photo) != {
+            "config", "config_sha256",
+        }:
+            raise ValueError("invalid saved mobile phototrophy")
         mobile_state = snapshot["mobility"]
         instance = cls(
             world,
             MetabolicWeb.restore(snapshot["web"]),
             snapshot["config"],
             illumination_cycle=illumination["config"],
+            mobile_phototrophy=mobile_photo["config"],
             mobiles=mobile_state["config"] if mobile_state is not None else None,
         )
         if instance.config_sha256 != snapshot["config_sha256"]:
             raise ValueError("developmental colony configuration differs")
         if instance.illumination_sha256 != illumination["config_sha256"]:
             raise ValueError("solar cycle configuration differs")
+        if instance.mobile_photo_sha256 != mobile_photo["config_sha256"]:
+            raise ValueError("mobile phototrophy configuration differs")
         instance._sync_solar_state(
             instance._solar.restore_clock(illumination["clock_seconds"])
         )

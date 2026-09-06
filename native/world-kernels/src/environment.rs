@@ -24,6 +24,7 @@ unsafe extern "C" {
         sample_bodies: *const i32,
         sample_local: *const f64,
         sample_world_offset: *const f64,
+        sample_local_normal: *const f64,
         sample_profiles: *const i32,
         profiles: i32,
         profile_offsets: *const i32,
@@ -69,8 +70,16 @@ pub struct LightEnvironment {
     sample_bodies: Vec<i32>,
     sample_local: Vec<f64>,
     sample_world_offset: Vec<f64>,
+    sample_local_normal: Vec<f64>,
     sample_profiles: Vec<i32>,
     illumination: Vec<f64>,
+    mobile_bodies: Vec<i32>,
+    mobile_local: Vec<f64>,
+    mobile_local_normal: Vec<f64>,
+    mobile_profiles: Vec<i32>,
+    mobile_area: Vec<f64>,
+    mobile_absorptivity: Vec<f64>,
+    mobile_photon_flux_density: f64,
 }
 
 #[pymethods]
@@ -168,9 +177,76 @@ impl LightEnvironment {
             sample_bodies: Vec::new(),
             sample_local: Vec::new(),
             sample_world_offset: Vec::new(),
+            sample_local_normal: Vec::new(),
             sample_profiles: Vec::new(),
             illumination: Vec::new(),
+            mobile_bodies: Vec::new(),
+            mobile_local: Vec::new(),
+            mobile_local_normal: Vec::new(),
+            mobile_profiles: Vec::new(),
+            mobile_area: Vec::new(),
+            mobile_absorptivity: Vec::new(),
+            mobile_photon_flux_density: 0.0,
         })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn bind_mobile(
+        &mut self,
+        bodies: PyReadonlyArray1<'_, i32>,
+        local: PyReadonlyArray2<'_, f64>,
+        local_normal: PyReadonlyArray2<'_, f64>,
+        profiles: PyReadonlyArray1<'_, i32>,
+        areas: PyReadonlyArray1<'_, f64>,
+        absorptivity: PyReadonlyArray1<'_, f64>,
+        photon_flux_density: f64,
+    ) -> PyResult<usize> {
+        let bodies = bodies.as_slice()?;
+        let local = local.as_slice()?;
+        let local_normal = local_normal.as_slice()?;
+        let profiles = profiles.as_slice()?;
+        let areas = areas.as_slice()?;
+        let absorptivity = absorptivity.as_slice()?;
+        let count = bodies.len();
+        if count == 0
+            || count > MAX_SAMPLES
+            || local.len() != count * 3
+            || local_normal.len() != count * 3
+            || profiles.len() != count
+            || areas.len() != count
+            || absorptivity.len() != count
+            || local
+                .iter()
+                .chain(local_normal)
+                .chain(areas)
+                .chain(absorptivity)
+                .any(|value| !value.is_finite())
+            || local_normal.chunks_exact(3).any(|value| {
+                let length = value.iter().map(|axis| axis * axis).sum::<f64>().sqrt();
+                length <= 1.0e-12 || (length - 1.0).abs() > 1.0e-10
+            })
+            || profiles
+                .iter()
+                .any(|profile| *profile < 0 || *profile as usize >= self.blocked_transmission.len())
+            || areas.iter().any(|value| *value < 0.0 || *value > 100.0)
+            || absorptivity
+                .iter()
+                .any(|value| !(0.0..=1.0).contains(value))
+            || !photon_flux_density.is_finite()
+            || !(0.0..=1.0e9).contains(&photon_flux_density)
+        {
+            return Err(PyValueError::new_err(
+                "invalid mobile phototrophic surface binding",
+            ));
+        }
+        self.mobile_bodies = bodies.to_vec();
+        self.mobile_local = local.to_vec();
+        self.mobile_local_normal = local_normal.to_vec();
+        self.mobile_profiles = profiles.to_vec();
+        self.mobile_area = areas.to_vec();
+        self.mobile_absorptivity = absorptivity.to_vec();
+        self.mobile_photon_flux_density = photon_flux_density;
+        Ok(count)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -264,6 +340,7 @@ impl LightEnvironment {
         bud_bodies: PyReadonlyArray1<'_, i32>,
         bud_local: PyReadonlyArray2<'_, f64>,
         bud_profiles: PyReadonlyArray1<'_, i32>,
+        dt_seconds: f64,
         solar_direction: Vec<f64>,
         solar_direct: f64,
         solar_diffuse: f64,
@@ -276,7 +353,11 @@ impl LightEnvironment {
         flash_intensity: f64,
         flash_active: bool,
         bounds: Vec<f64>,
-    ) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>)> {
+    ) -> PyResult<(
+        Bound<'py, PyArray1<f64>>,
+        Bound<'py, PyArray1<f64>>,
+        Bound<'py, PyArray1<f64>>,
+    )> {
         if model_address == 0 || data_address == 0 || self.capture_bodies.is_empty() {
             return Err(PyRuntimeError::new_err(
                 "physical light environment is not bound",
@@ -299,7 +380,8 @@ impl LightEnvironment {
         let light_intensity = light_intensity.as_slice()?.to_vec();
         let light_radius = light_radius.as_slice()?.to_vec();
         let lights = light_bodies.len();
-        if self.capture_bodies.len() + buds > MAX_SAMPLES
+        if self.capture_bodies.len() + buds + self.mobile_bodies.len() > MAX_SAMPLES
+            || self.mobile_bodies.is_empty()
             || bud_local.len() != buds * 3
             || bud_profiles.len() != buds
             || bud_profiles
@@ -311,6 +393,8 @@ impl LightEnvironment {
             || solar_direct < 0.0
             || !solar_diffuse.is_finite()
             || solar_diffuse < 0.0
+            || !dt_seconds.is_finite()
+            || !(0.0..=60.0).contains(&dt_seconds)
             || lights > MAX_LIGHTS
             || light_local_position.len() != lights * 3
             || light_local_direction.len() != lights * 3
@@ -357,10 +441,21 @@ impl LightEnvironment {
             .extend_from_slice(&self.capture_world_offset);
         self.sample_world_offset
             .resize((self.capture_bodies.len() + buds) * 3, 0.0);
+        self.sample_local_normal.clear();
+        self.sample_local_normal
+            .resize((self.capture_bodies.len() + buds) * 3, 0.0);
         self.sample_profiles.clear();
         self.sample_profiles
             .extend_from_slice(&self.capture_profiles);
         self.sample_profiles.extend_from_slice(bud_profiles);
+        self.sample_bodies.extend_from_slice(&self.mobile_bodies);
+        self.sample_local.extend_from_slice(&self.mobile_local);
+        self.sample_world_offset
+            .resize(self.sample_local.len(), 0.0);
+        self.sample_local_normal
+            .extend_from_slice(&self.mobile_local_normal);
+        self.sample_profiles
+            .extend_from_slice(&self.mobile_profiles);
         self.illumination.resize(self.sample_bodies.len(), 0.0);
 
         let count = self.sample_bodies.len();
@@ -373,6 +468,7 @@ impl LightEnvironment {
                 self.sample_bodies.as_ptr(),
                 self.sample_local.as_ptr(),
                 self.sample_world_offset.as_ptr(),
+                self.sample_local_normal.as_ptr(),
                 self.sample_profiles.as_ptr(),
                 profiles as i32,
                 self.profile_offsets.as_ptr(),
@@ -412,10 +508,22 @@ impl LightEnvironment {
             capture[self.capture_colonies[sample]] +=
                 self.capture_area[sample] * fraction * self.illumination[sample];
         }
-        let bud_light = &self.illumination[self.capture_bodies.len()..];
+        let bud_start = self.capture_bodies.len();
+        let mobile_start = bud_start + buds;
+        let bud_light = &self.illumination[bud_start..mobile_start];
+        let mobile_photons = (0..self.mobile_bodies.len())
+            .map(|index| {
+                dt_seconds
+                    * self.mobile_photon_flux_density
+                    * self.mobile_area[index]
+                    * self.mobile_absorptivity[index]
+                    * self.illumination[mobile_start + index]
+            })
+            .collect();
         Ok((
             PyArray1::from_vec(py, capture),
             PyArray1::from_slice(py, bud_light),
+            PyArray1::from_vec(py, mobile_photons),
         ))
     }
 }

@@ -237,7 +237,7 @@ class DevelopmentalResidentCohort:
 
     def snapshot_value(self) -> dict[str, Any]:
         return {
-            "format": "chreatures-developmental-resident-rich-snapshot-v1", "version": 1,
+            "format": "chreatures-developmental-resident-rich-snapshot-v2", "version": 2,
             "model_identity": copy.deepcopy(self.model_identity), "batch_size": self.batch_size,
             "observation_contract": copy.deepcopy(self.observation_contract),
             "action_mode": self.action_mode, "native": _encode(dict(self._native.snapshot())),
@@ -245,7 +245,7 @@ class DevelopmentalResidentCohort:
 
     @classmethod
     def restore_value(cls, value: dict[str, Any], artifact: str | Path) -> "DevelopmentalResidentCohort":
-        if not isinstance(value, dict) or value.get("format") != "chreatures-developmental-resident-rich-snapshot-v1" or value.get("version") != 1:
+        if not isinstance(value, dict) or value.get("format") != "chreatures-developmental-resident-rich-snapshot-v2" or value.get("version") != 2:
             raise ValueError("unsupported developmental resident snapshot")
         instance = cls(artifact, int(value["batch_size"]), action_mode=value["action_mode"], goal_seed=0, action_seed=0)
         if value.get("model_identity") != instance.model_identity or value.get("observation_contract") != instance.observation_contract:

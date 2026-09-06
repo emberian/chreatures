@@ -76,19 +76,21 @@ part stocks and geometry correspondence. Existing saved worlds retain their
 own habitat/body specifications; current source changes do not reconstruct an
 already living resident.
 
-Current birth-v4 worlds bind every mobile resident to private body/gut
+Current birth-v5 worlds bind every mobile resident to private body/gut
 compartments in the same web. `resident_physiology_coupled` then reports true. See
 [SOMATIC_PHYSIOLOGY.md](SOMATIC_PHYSIOLOGY.md) for funded activation, physical
 mouth contact, digestion and absorption, and [MATERIAL_OBJECTS.md](MATERIAL_OBJECTS.md)
-for finite shared stores and geometry boundaries.
+for finite shared stores and geometry boundaries. Current residents also have
+[physical mobile phototrophy](MOBILE_PHOTOTROPHY.md): inherited absorptivity and
+bounded dorsal capture feed the same conserved chemistry.
 
-Birth-v4 worlds can additionally enable [physical recycling](ECOLOGICAL_EXCHANGE.md):
+Birth-v5 worlds can additionally enable [physical recycling](ECOLOGICAL_EXCHANGE.md):
 mobile material leaves through body-local outlets into finite free deposits,
 and constructed roots acquire configured resources under actual physical contact.
 The native chemical ledger spans all these compartments. The current snapshot
-format is v5. It explicitly preserves developmental part iteration order because
+format is v6. It explicitly preserves developmental part iteration order because
 floating-point tissue and illumination reductions depend on that order. Current
-source accepts only birth-v4 and snapshot-v5 documents; older processes remain
+source accepts only birth-v5 and snapshot-v6 documents; older processes remain
 responsible for artifacts they already loaded.
 
 Embodied reproduction, autonomous predation, full mass-to-inertia coupling

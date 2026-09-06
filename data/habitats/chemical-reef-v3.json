@@ -224,6 +224,10 @@
         "leg_length_scale": 1.13,
         "antenna_length_scale": 1.22,
         "frequency_scale": 1.12
+      },
+      "metabolic_traits": {
+        "phototrophic_absorptivity": 0.0,
+        "dorsal_capture_fraction": 0.56
       }
     },
     {
@@ -245,6 +249,10 @@
         "density_scale": 1.12,
         "torque_scale": 1.08,
         "frequency_scale": 0.86
+      },
+      "metabolic_traits": {
+        "phototrophic_absorptivity": 0.09,
+        "dorsal_capture_fraction": 0.52
       }
     },
     {
@@ -266,6 +274,10 @@
         "antenna_spread_scale": 1.3,
         "friction_scale": 1.18,
         "sweep_scale": 1.12
+      },
+      "metabolic_traits": {
+        "phototrophic_absorptivity": 0.24,
+        "dorsal_capture_fraction": 0.68
       }
     }
   ],

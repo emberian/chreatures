@@ -817,7 +817,11 @@
       "material": "mica",
       "energy": 0.8,
       "gut": 0.1,
-      "fatigue": 0.04
+      "fatigue": 0.04,
+      "metabolic_traits": {
+        "phototrophic_absorptivity": 0.0,
+        "dorsal_capture_fraction": 0.56
+      }
     },
     {
       "id": "fern",
@@ -831,7 +835,11 @@
       "material": "fern",
       "energy": 0.76,
       "gut": 0.16,
-      "fatigue": 0.04
+      "fatigue": 0.04,
+      "metabolic_traits": {
+        "phototrophic_absorptivity": 0.06,
+        "dorsal_capture_fraction": 0.5
+      }
     },
     {
       "id": "pip",
@@ -845,7 +853,11 @@
       "material": "pip",
       "energy": 0.82,
       "gut": 0.08,
-      "fatigue": 0.04
+      "fatigue": 0.04,
+      "metabolic_traits": {
+        "phototrophic_absorptivity": 0.0,
+        "dorsal_capture_fraction": 0.64
+      }
     },
     {
       "id": "lumen",
@@ -866,6 +878,10 @@
         "leg_length_scale": 1.18,
         "antenna_length_scale": 1.32,
         "frequency_scale": 0.94
+      },
+      "metabolic_traits": {
+        "phototrophic_absorptivity": 0.42,
+        "dorsal_capture_fraction": 0.8
       }
     },
     {
@@ -888,6 +904,10 @@
         "friction_scale": 1.26,
         "torque_scale": 1.14,
         "frequency_scale": 0.82
+      },
+      "metabolic_traits": {
+        "phototrophic_absorptivity": 0.19,
+        "dorsal_capture_fraction": 0.62
       }
     },
     {
@@ -910,6 +930,10 @@
         "antenna_spread_scale": 1.38,
         "sweep_scale": 1.16,
         "frequency_scale": 1.16
+      },
+      "metabolic_traits": {
+        "phototrophic_absorptivity": 0.035,
+        "dorsal_capture_fraction": 0.42
       }
     }
   ],

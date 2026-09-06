@@ -81,6 +81,13 @@ outcomes into the GRU. Goal encoding applies the same shared front to four
 actual historical frames, then maps 1,024→256→64. There is no 357-input
 production branch or synthetic warmup window.
 
+Each current observation passes through the frozen visual/body front exactly
+once. A private four-entry ring retains its 256-value frame codes beside the raw
+goal-memory ring, so completed windows run only the 1,024→256→64 projection.
+Snapshots preserve both rings and reject divergent cursors or counts. Raw
+windows remain authoritative for provenance and body-goal refinement. Manager
+projections and reservoir scoring run only at the ten-tick selection boundary.
+
 The step first updates the GRU from the current observation. It then pushes the
 same actual observation into the ring, encodes and stores a window only after
 four real frames, and queries only that resident's valid past keys. Manager
@@ -126,3 +133,8 @@ front was checked against an independent NumPy implementation at maximum
 absolute hidden-state error `2.80e-9`; a 12-step snapshot continuation replayed
 bit-exactly. A learned-artifact comparison remains required after the current
 rich online run produces its final checkpoint.
+
+On the M2 Max with the authenticated synthetic rich fixture, the complete B3
+step plus consequence-receipt path averaged 1.74 ms before caching and 0.704 ms
+afterward over 40 ticks. This is execution evidence, not trained-behavior
+evidence.
