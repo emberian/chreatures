@@ -135,6 +135,139 @@ def configure(*, recycling=False):
     return copy.deepcopy(habitat), copy.deepcopy(birth)
 
 
+def configure_visitor_material_supply(habitat, birth, *, slots_per_choice=4):
+    """Add finite outside reserves and reusable physical offering slots.
+
+    This mutates one fresh birth specification. Existing worlds and the default
+    ``configure()`` result retain their prior chemistry and topology.
+    """
+    if (
+        isinstance(slots_per_choice, bool)
+        or not isinstance(slots_per_choice, int)
+        or not 1 <= slots_per_choice <= 8
+    ):
+        raise ValueError("visitor supply needs 1..8 slots per choice")
+    materials = birth.get("material_objects")
+    if not isinstance(materials, dict):
+        raise ValueError("visitor supply requires configured MaterialObjects")
+    names = [pool["name"] for pool in birth["chemistry"]["pools"]]
+    mass = {
+        pool["name"]: sum(pool["composition"])
+        for pool in birth["chemistry"]["pools"]
+    }
+    choices = (
+        {
+            "id": "reserve-fruit",
+            "initial": {"reserve": 2.64},
+            "portion": {"reserve": 0.22},
+            "shape": {"type": "sphere", "size": [0.075]},
+            "rgba": [0.72, 0.18, 0.08, 1.0],
+            "surface": {
+                "rgb_bias": [0.08, 0.02, 0.01],
+                "rgb_coefficients": {"reserve": [2.6, 0.45, 0.1]},
+                "odor_coefficients": {"reserve": [2.2, 0.05, 0.0]},
+            },
+        },
+        {
+            "id": "soft-fruit",
+            "initial": {"reserve": 1.44, "soft_tissue": 0.42},
+            "portion": {"reserve": 0.12, "soft_tissue": 0.035},
+            "shape": {"type": "ellipsoid", "size": [0.08, 0.06, 0.055]},
+            "rgba": [0.48, 0.38, 0.08, 1.0],
+            "surface": {
+                "rgb_bias": [0.06, 0.05, 0.01],
+                "rgb_coefficients": {
+                    "reserve": [1.8, 0.3, 0.08],
+                    "soft_tissue": [0.4, 2.4, 0.5],
+                },
+                "odor_coefficients": {
+                    "reserve": [1.4, 0.08, 0.0],
+                    "soft_tissue": [0.2, 1.8, 0.05],
+                },
+            },
+        },
+        {
+            "id": "detrital-cake",
+            "initial": {"mineral": 0.12, "reserve": 0.72, "detritus": 0.48},
+            "portion": {"mineral": 0.01, "reserve": 0.06, "detritus": 0.04},
+            "shape": {"type": "box", "size": [0.065, 0.055, 0.045]},
+            "rgba": [0.30, 0.20, 0.07, 1.0],
+            "surface": {
+                "rgb_bias": [0.04, 0.025, 0.01],
+                "rgb_coefficients": {
+                    "mineral": [0.2, 1.0, 0.25],
+                    "reserve": [1.4, 0.25, 0.05],
+                    "detritus": [0.3, 0.18, 0.06],
+                },
+                "odor_coefficients": {
+                    "reserve": [0.8, 0.05, 0.0],
+                    "detritus": [0.0, 0.35, 2.2],
+                },
+            },
+        },
+    )
+    supply = {
+        "format": "chreatures-visitor-material-supply-v1",
+        "chemistry_sha256": materials["chemistry_sha256"],
+        "choices": [],
+    }
+    for choice in choices:
+        source_row = len(birth["compartments"])
+        birth["compartments"].append(
+            {
+                "enzymes": {},
+                "pools": choice["initial"],
+                "atp": 0.0,
+                "atp_capacity": 0.0,
+            }
+        )
+        slots = []
+        for index in range(slots_per_choice):
+            entity_id = f"visitor-{choice['id']}-{index}"
+            slots.append(entity_id)
+            habitat["materials"][entity_id] = {"rgba": choice["rgba"]}
+            habitat["compiler"]["material_order"].append(entity_id)
+            row = len(birth["compartments"])
+            birth["compartments"].append(
+                {"enzymes": {}, "pools": {}, "atp": 0.0, "atp_capacity": 0.0}
+            )
+            materials["objects"].append(
+                {
+                    "entity": entity_id,
+                    "row": row,
+                    "capacities": dict.fromkeys(names, 0.5),
+                    "content_weights": mass.copy(),
+                    "remove_when_empty": True,
+                    "boundaries": [
+                        {"minimum_content": 0.12, "scale": 1.0},
+                        {"minimum_content": 0.04, "scale": 0.76},
+                        {"minimum_content": 0.0, "scale": 0.52},
+                    ],
+                    "dormant_template": {
+                        "id": entity_id,
+                        "mobility": "free",
+                        "material": entity_id,
+                        "physical_material": "light",
+                        "position": [0.5, 0.5, 0.1],
+                        "shapes": [copy.deepcopy(choice["shape"])],
+                        "components": [],
+                    },
+                    "surface": copy.deepcopy(choice["surface"]),
+                }
+            )
+        supply["choices"].append(
+            {
+                "id": choice["id"],
+                "source_row": source_row,
+                "initial_resources": copy.deepcopy(choice["initial"]),
+                "portion": copy.deepcopy(choice["portion"]),
+                "minimum_fraction": 0.25,
+                "slots": slots,
+            }
+        )
+    return supply
+
+
 def _add_recycling(habitat, birth):
     """Physical shared deposit capacity and chemical root acquisition laws."""
     habitat["name"] = "recycling-reef"
@@ -262,11 +395,25 @@ def main():
         action="store_true",
         help="Enable physical egestion and root acquisition",
     )
+    parser.add_argument(
+        "--visitor-supply",
+        action="store_true",
+        help="Add finite outside reserves and dormant offering slots",
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     habitat, birth = configure(recycling=args.recycling)
+    visitor_supply = (
+        configure_visitor_material_supply(habitat, birth)
+        if args.visitor_supply
+        else None
+    )
     (args.output / "habitat.json").write_text(json.dumps(habitat, indent=2) + "\n")
     (args.output / "biosphere.json").write_text(json.dumps(birth, indent=2) + "\n")
+    if visitor_supply is not None:
+        (args.output / "visitor-materials.json").write_text(
+            json.dumps(visitor_supply, indent=2) + "\n"
+        )
     print(args.output)
 
 

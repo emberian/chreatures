@@ -1,0 +1,287 @@
+{
+  "artifacts": {
+    "birth": "runs/visitor-offering-replay-birth",
+    "full_report": "runs/visitor-offering-replay/report.json"
+  },
+  "birth_checkpoint_sha256": "e0c6fd355fab2fc0c39b713bf6583f48909c4b376ea6227b8d0736f6d59a70bc",
+  "continuation_checkpoint_sha256": "e55c196ae274d135362d4cd3713301dec007260fd51ba3bea2adfe0a950178d0",
+  "format": "chreatures-whole-visitor-offering-replay-receipt-v1",
+  "native": {
+    "assay_module": "/tmp/chreatures-composed-native-v1/_world_kernels.cpython-312-darwin.so",
+    "binary_sha256": "f7aaa9948c2d5ca23c2012c09eaeff15d45c92df304004a9ad490dddcf46a494",
+    "exports": [
+      "BiosphereTissue",
+      "MotorRuntime"
+    ],
+    "source_set_sha256": "81c507ef3997949dad2ef291a152ae04978a77bd865f03f3402e639b21939c75"
+  },
+  "neural": {
+    "connections": 25563197,
+    "exact": true,
+    "inputs": 351,
+    "neurons": 165122,
+    "readouts": 384,
+    "snapshot_sha256": "226d23c039445f57f77c6914b41683cfa8801e15c5c6a2ef992c2ff41a793832"
+  },
+  "offering": {
+    "choice": "reserve-fruit",
+    "elemental_residual": {
+      "carbon_equivalent": 0.0,
+      "mineral_equivalent": 0.0
+    },
+    "fraction": 1.0,
+    "moved_resources": [
+      0.0,
+      0.0,
+      0.22,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "physical_mass": 0.06715154297048183,
+    "pools": [
+      "mineral",
+      "inorganic_carbon",
+      "reserve",
+      "soft_tissue",
+      "tough_tissue",
+      "detritus"
+    ],
+    "position": [
+      1.0,
+      1.42,
+      0.16
+    ],
+    "remaining_source_resources": [
+      0.0,
+      0.0,
+      2.42,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "slot": "visitor-reserve-fruit-0",
+    "stored_energy_residual": 0.0
+  },
+  "owner_sha256": {
+    "acoustic_state": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "acoustics": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "biosphere": "2d7fac13d72d7e8186eba226b66d0b0b364e7ae7e8912b75f35504c9e1f444af",
+    "branch": "5f8368d643022c015855422d0a88d1968b456809d58389653f8fc970701b8870",
+    "execution_migrations": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "feature_mean": "010c4174d6bc1f257ff7a62a8589640a672ab91864684968373439b9837acda6",
+    "feature_variance": "bf3cce110abbd721f5a1fd8fa6401ec215fc2af9e6109a1e75760b6c2d3ea987",
+    "field": "6c4881f6cec0be1bee262869b3d20189e1617fa0b38449889f9a376089ef6934",
+    "foresight_deployment": "148b778b5b366dec6f48f08962ab676db29319d16666aacfc89a2d2fc2c96bee",
+    "foresights": "b7764c0271abd4596f88d55416c6062ac25814b2f3beba6c3b109a00846b04e6",
+    "history": "082d285482cc97f9e0a1a56db0dd1a2f9742afad15330766d2a6d111cade58ac",
+    "journal": "2ca2eb27658c737d72d8612e4bd2c95cf1f2bf772c489d4b83bcd14c55c9ffdb",
+    "last_senses": "89ad38ef0f218e0094b8a5499bc9afc2e41ea178b7581b187fc22df33f652dba",
+    "motors": "ee77142be5612df23acc84fd81e32b4b81a85a7f942d14aa6f918e5dc9960309",
+    "neural_response": "38410ad3fc8270c5f119e68ea09b1530b4bd8ed220cc05c3e6c9600e08693f3b",
+    "organs": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "outcomes": "e88fc55c45003d07096c619884b2726051866a290728a673ead325d7e0b721a4",
+    "paused": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+    "pending_step": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "physics": "308a6e4d71ca51ccef4f0ff84798408c34dc4262e4efe102b5c6ea07e622fe4a",
+    "resource_state": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "resources": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "sensed_at": "45a8b1c9c942fb4ef16f9edf7df0d5207f078ffe18269978aafed98bd7ed7c06",
+    "speed": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+    "tick": "81b8a03f97e8787c53fe1a86bda042b6f0de9b0ec9c09357e107c99ba4d6948a",
+    "visitor": "398fdb6b2a2742b9911fb5f169671c8307459907e70cc621cd6bd533ce158502",
+    "visitor_materials": "b88432b01bd4b0da1642731762ffff6769a2c479da4ca44722c6cc66ce383416"
+  },
+  "owners_exact": true,
+  "passed": true,
+  "scope": {
+    "acoustics": false,
+    "branch": "research",
+    "continuation_ticks": 12,
+    "legacy_resources": false,
+    "mutable_owner_count": 27,
+    "private_brain_port": 18774,
+    "residents": 3,
+    "warmup_ticks": 50
+  },
+  "sources": {
+    "biosphere": {
+      "path": "runs/visitor-offering-replay-birth/biosphere.json",
+      "sha256": "7b0f04396a3b30aa3dba2482aa81d6434659a5d18942dee6d0e8830bde48080f"
+    },
+    "brain_artifact": {
+      "path": "data/metal-brain/metal-csr-v2.bin",
+      "sha256": "4a2df4b62208cb4021c6abe1e33c02f008f13d8964c90eebe8255a68a9b88df0"
+    },
+    "habitat": {
+      "path": "runs/visitor-offering-replay-birth/habitat.json",
+      "sha256": "ae871fe33b626132c64f0513c5e8a0c114c080a1867af3cb57b2b4d713b2eab4"
+    },
+    "motor_genome": {
+      "path": "data/genomes/chemical-encounters-v1-step20000.npz",
+      "sha256": "daba5662479ffcb94d7e61df7f129a76696499cda62c959219747eb5efa6ff9c"
+    },
+    "port_bundle": {
+      "path": "data/ports/retinal-v1-maps.npz",
+      "sha256": "56fdf4657358628843412c5d72a11c4464eea75127616ad0626bb7bb3f0865b2"
+    },
+    "predictive_model": {
+      "path": "data/cognitive/predictive-state-fullgraph-v3.npz",
+      "sha256": "c7ba729b8a62b7fda5a436a69d3ee8f5036c1c63119da6549443a9ed49f82ca2"
+    },
+    "visitor_materials": {
+      "path": "runs/visitor-offering-replay-birth/visitor-materials.json",
+      "sha256": "38e8d8f2ff0f765e94d700efd2b6cd31e4b71ec0c91dec955822c03bd2cc04d8"
+    }
+  },
+  "state_evidence": {
+    "developed_parts": 12,
+    "egested_mass": 0.03260252321493795,
+    "foresight_observations": {
+      "fern": 13,
+      "mica": 13,
+      "pip": 13
+    },
+    "growth_buds": {
+      "colony-a": 4,
+      "colony-b": 4,
+      "colony-c": 5
+    },
+    "motor_macro_steps": {
+      "fern": 5,
+      "mica": 5,
+      "pip": 5
+    },
+    "visitor_supply": {
+      "accounting": {
+        "detrital-cake": {
+          "available": true,
+          "available_slots": 4,
+          "initial_resources": [
+            0.12,
+            0.0,
+            0.72,
+            0.0,
+            0.0,
+            0.48
+          ],
+          "pools": [
+            "mineral",
+            "inorganic_carbon",
+            "reserve",
+            "soft_tissue",
+            "tough_tissue",
+            "detritus"
+          ],
+          "remaining_portions": 12.0,
+          "remaining_resources": [
+            0.12,
+            0.0,
+            0.72,
+            0.0,
+            0.0,
+            0.48
+          ],
+          "supplied_chemical_energy": 0.0,
+          "supplied_elements": {
+            "carbon_equivalent": 0.0,
+            "mineral_equivalent": 0.0
+          },
+          "supplied_resources": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "reserve-fruit": {
+          "available": true,
+          "available_slots": 3,
+          "initial_resources": [
+            0.0,
+            0.0,
+            2.64,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pools": [
+            "mineral",
+            "inorganic_carbon",
+            "reserve",
+            "soft_tissue",
+            "tough_tissue",
+            "detritus"
+          ],
+          "remaining_portions": 11.0,
+          "remaining_resources": [
+            0.0,
+            0.0,
+            2.42,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "supplied_chemical_energy": 0.2200000000000002,
+          "supplied_elements": {
+            "carbon_equivalent": 0.2200000000000002,
+            "mineral_equivalent": 0.0
+          },
+          "supplied_resources": [
+            0.0,
+            0.0,
+            0.2200000000000002,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "soft-fruit": {
+          "available": true,
+          "available_slots": 4,
+          "initial_resources": [
+            0.0,
+            0.0,
+            1.44,
+            0.42,
+            0.0,
+            0.0
+          ],
+          "pools": [
+            "mineral",
+            "inorganic_carbon",
+            "reserve",
+            "soft_tissue",
+            "tough_tissue",
+            "detritus"
+          ],
+          "remaining_portions": 11.999999999999998,
+          "remaining_resources": [
+            0.0,
+            0.0,
+            1.44,
+            0.42,
+            0.0,
+            0.0
+          ],
+          "supplied_chemical_energy": 0.0,
+          "supplied_elements": {
+            "carbon_equivalent": 0.0,
+            "mineral_equivalent": 0.0
+          },
+          "supplied_resources": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "offer_count": 1
+    }
+  }
+}

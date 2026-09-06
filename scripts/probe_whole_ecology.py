@@ -59,6 +59,9 @@ def _continuation_state(habitat: Habitat3D) -> dict[str, Any]:
         "acoustics": None if habitat.acoustics is None else habitat.acoustics.snapshot(),
         "acoustic_state": habitat.acoustic_state,
         "biosphere": None if habitat.biosphere is None else habitat.biosphere.snapshot(),
+        "visitor_materials": (
+            None if habitat.visitor_materials is None else habitat.visitor_materials.snapshot()
+        ),
         "visitor": habitat.visitor.snapshot(),
         "organs": {key: value.snapshot() for key, value in habitat.organs.items()},
         "motors": {key: value.snapshot_value() for key, value in habitat.motors.items()},
@@ -93,6 +96,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         spec=json.loads(args.habitat.read_text()) if args.habitat is not None else None,
         resources=None if args.biosphere is not None else args.resources,
         biosphere=args.biosphere,
+        visitor_materials=args.visitor_materials,
         acoustics=None if args.no_acoustics else args.acoustics,
         motor_genome=args.motor_genome,
         personal_memory=args.personal_memory,
@@ -100,6 +104,20 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         predictive_model=args.predictive_model,
     )
     habitat.branch = "research"
+    birth_checkpoint = None
+    birth_checkpoint_sha256 = None
+    offering = None
+    if args.visitor_materials is not None:
+        birth_checkpoint = output / "birth-checkpoint.json"
+        birth_checkpoint_sha256 = habitat.save(birth_checkpoint)
+    if args.offer_material is not None:
+        if args.offer_position is None:
+            raise ValueError("--offer-material requires --offer-position X Y Z")
+        offering = habitat.command({
+            "op": "offer_material", "material": args.offer_material,
+            "x": args.offer_position[0], "y": args.offer_position[1],
+            "z": args.offer_position[2],
+        })
     if args.impulse_entity is not None:
         habitat.command({"op": "impulse", "id": args.impulse_entity, "impulse": [0.0, 0.0, 0.75]})
     habitat.step(args.warmup_steps)
@@ -107,6 +125,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     habitat.step(args.continuation_steps)
     expected = _continuation_state(habitat)
+    expected_supply_accounting = (
+        None
+        if habitat.visitor_materials is None
+        else habitat.visitor_materials.accounting()
+    )
     remote_name = f"whole-ecology-final-{habitat.id}"
     expected_neural = habitat.neural.snapshot(remote_name, list(habitat.remote_ids.values()))
 
@@ -140,6 +163,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "motor_macro_steps": {
             key: value["macro_steps"] for key, value in expected["motors"].items()
         },
+        "visitor_supply": (
+            None
+            if expected["visitor_materials"] is None
+            else {
+                "offer_count": expected["visitor_materials"]["offer_count"],
+                "accounting": expected_supply_accounting,
+            }
+        ),
     }
     report = {
         "format": "chreatures-whole-ecology-probe-v2",
@@ -152,11 +183,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "habitat": args.habitat, "biosphere": args.biosphere,
                 "motor_genome": args.motor_genome, "predictive_model": args.predictive_model,
                 "brain_artifact": args.brain_artifact, "port_bundle": args.port_bundle,
+                "visitor_materials": args.visitor_materials,
             }.items() if path is not None
         },
         "branch": habitat.branch,
         "steps": {"before_checkpoint": args.warmup_steps, "continuation": args.continuation_steps},
         "checkpoint": {"path": str(checkpoint), "sha256": checkpoint_sha256},
+        "birth_checkpoint": (
+            None if birth_checkpoint is None else {
+                "path": str(birth_checkpoint), "sha256": birth_checkpoint_sha256,
+            }
+        ),
+        "offering": offering,
         "neural": {
             "graph_sha256": habitat.neural.graph["sha256"],
             "neurons": habitat.neural.graph["neurons"],
@@ -190,6 +228,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "format": "chreatures-whole-ecology-replay-receipt-v1",
         "passed": passed, "seed": args.seed, "steps": report["steps"],
         "checkpoint": report["checkpoint"], "sources": report["sources"],
+        "birth_checkpoint": report["birth_checkpoint"], "offering": offering,
         "state_evidence": state_evidence,
         "owner_sha256": {key: value["expected"] for key, value in section_hashes.items()},
         "neural_snapshot_sha256": expected_neural["sha256"],
@@ -214,6 +253,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--personal-memory", action="store_true")
     parser.add_argument("--personal-plasticity", action="store_true")
     parser.add_argument("--predictive-model", type=Path)
+    parser.add_argument("--visitor-materials", type=Path)
+    parser.add_argument("--offer-material")
+    parser.add_argument("--offer-position", type=float, nargs=3, metavar=("X", "Y", "Z"))
     parser.add_argument("--brain-artifact", type=Path, default=ROOT / "data/metal-brain/metal-csr-v2.bin")
     parser.add_argument("--port-bundle", type=Path, default=ROOT / "data/ports/retinal-v1-maps.npz")
     parser.add_argument("--resources", type=Path, default=ROOT / "data/ecology/portable-orchard.json")

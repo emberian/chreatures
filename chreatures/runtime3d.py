@@ -52,6 +52,7 @@ class Habitat3D:
         physics_backend=None,
         personal_plasticity=False,
         predictive_model=None,
+        visitor_materials=None,
     ):
         from .acoustics import Acoustics
         from .ecology import Ecology
@@ -114,6 +115,13 @@ class Habitat3D:
             from .biosphere import Biosphere
 
             self.biosphere = Biosphere.from_config(self.world, biosphere)
+        self.visitor_materials = None
+        if visitor_materials is not None:
+            from .visitor_materials import VisitorMaterialSupply
+
+            if self.biosphere is None:
+                raise ValueError("Material offerings require a developmental biosphere")
+            self.visitor_materials = VisitorMaterialSupply(self.biosphere, visitor_materials)
         self.acoustics = (
             Acoustics(self.world, acoustics) if acoustics is not None else None
         )
@@ -664,6 +672,15 @@ class Habitat3D:
                 maturation=copy.deepcopy(records),
             )
             return {"queued": records}
+        if op == "offer_material":
+            if self.visitor_materials is None:
+                raise ValueError("This world has no outside material supply")
+            result = self.visitor_materials.command(command)
+            self.note(
+                "caregiver", "A visitor placed a finite material offering.",
+                command=copy.deepcopy(command), transfer=copy.deepcopy(result),
+            )
+            return result
         result = self.world.command(command)
         self.visitor.direct_command(command)
         self.note(
@@ -677,6 +694,7 @@ class Habitat3D:
             {
                 "id": self.id,
                 "name": self.world.spec.get("name", "The hollow garden"),
+                "available_presets": sorted(self.world.spec.get("presets", {})),
                 "tick": self.tick,
                 "branch": self.branch,
                 "paused": self.paused,
@@ -698,6 +716,8 @@ class Habitat3D:
                 "biosphere": self._biosphere_view(),
                 "acoustics": copy.deepcopy(self.acoustic_state),
                 "visitor": self.visitor.view(self.tick, self.paused),
+                "visitor_materials": self.visitor_materials.view()
+                if self.visitor_materials is not None else None,
                 "vision": self.vision.view(self.tick)
                 if self.vision is not None
                 else None,
@@ -808,6 +828,8 @@ class Habitat3D:
                 k: v.tolist() for k, v in self.feature_variance.items()
             },
         }
+        if self.visitor_materials is not None:
+            state["visitor_materials"] = self.visitor_materials.snapshot()
         if self.foresights:
             state.update({
                 "predictive_model": self.predictive_model,
@@ -890,6 +912,15 @@ class Habitat3D:
             from .biosphere import Biosphere
 
             instance.biosphere = Biosphere.restore(instance.world, value["biosphere"])
+        instance.visitor_materials = None
+        if value.get("visitor_materials") is not None:
+            from .visitor_materials import VisitorMaterialSupply
+
+            if instance.biosphere is None:
+                raise ValueError("Saved offerings require their shared biosphere")
+            instance.visitor_materials = VisitorMaterialSupply.restore(
+                instance.biosphere, value["visitor_materials"]
+            )
         instance.acoustics = (
             Acoustics.restore(instance.world, value["acoustics"])
             if value.get("acoustics") is not None
