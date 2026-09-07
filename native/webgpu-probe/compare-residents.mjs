@@ -19,12 +19,19 @@ for (let index = 0; index < argv.length; index += 2) {
   args[argv[index].slice(2)] = argv[index + 1];
 }
 if (!args.parent || !args.trained || !args.report) {
-  console.error('usage: node compare-residents.mjs --parent PACK --trained PACK --report NEW_JSON [--site dist/site] [--ticks 512] [--backend metal|vulkan] [--world-seed N] [--variation-seed N]');
+  console.error('usage: node compare-residents.mjs --parent PACK --trained PACK --report NEW_JSON [--first-trained PACK] [--research-trained PACK] [--single-trained-label LABEL --reference-report JSON] [--site dist/site] [--ticks 512] [--backend metal|vulkan] [--world-seed N] [--variation-seed N]');
   process.exit(2);
 }
 const siteDirectory = resolve(args.site ?? '../../dist/site');
-const packs = { parent: resolve(args.parent), trained: resolve(args.trained) };
+const packs = { parent: resolve(args.parent),
+  ...(args['first-trained'] ? { 'first-trained': resolve(args['first-trained']) } : {}),
+  ...(args['research-trained'] ? { 'research-trained': resolve(args['research-trained']) } : {}),
+  trained: resolve(args.trained) };
 const reportPath = resolve(args.report);
+const singleTrainedLabel = args['single-trained-label'];
+if (singleTrainedLabel && !args['reference-report']) throw new Error('--single-trained-label requires --reference-report');
+const referenceReportBytes = args['reference-report'] ? await readFile(resolve(args['reference-report'])) : null;
+const referenceReport = referenceReportBytes ? JSON.parse(referenceReportBytes) : null;
 const ticks = Number(args.ticks ?? 512);
 if (!Number.isInteger(ticks) || ticks < 96 || ticks > 512) throw new Error('ticks must be an integer in [96,512]');
 const worldSeed = Number(args['world-seed'] ?? 20270331);
@@ -57,18 +64,20 @@ for (const [name, directory] of Object.entries(packs)) {
     resident: JSON.parse(await readFile(resolve(directory, 'resident-manifest.json'), 'utf8')),
   };
 }
-assert.equal(manifests.parent.cns.serviceArtifactSha256, manifests.trained.cns.serviceArtifactSha256, 'CNS services differ');
-assert.equal(manifests.parent.cns.identity.artifact, manifests.trained.cns.identity.artifact, 'CNS adapters differ');
-assert.equal(manifests.parent.resident.config.action_seed, manifests.trained.resident.config.action_seed, 'action RNG seeds differ');
-assert.equal(manifests.parent.resident.config.suffix_seed, manifests.trained.resident.config.suffix_seed, 'suffix RNG seeds differ');
-for (const [name, buffer] of Object.entries(manifests.parent.cns.buffers)) {
-  assert.equal(buffer.sha256, manifests.trained.cns.buffers[name]?.sha256, `CNS numeric buffer differs: ${name}`);
+for (const [packName, manifest] of Object.entries(manifests)) {
+  assert.equal(manifests.parent.cns.serviceArtifactSha256, manifest.cns.serviceArtifactSha256, `CNS service differs: ${packName}`);
+  assert.equal(manifests.parent.cns.identity.artifact, manifest.cns.identity.artifact, `CNS adapter differs: ${packName}`);
+  assert.equal(manifests.parent.resident.config.action_seed, manifest.resident.config.action_seed, `action RNG seed differs: ${packName}`);
+  assert.equal(manifests.parent.resident.config.suffix_seed, manifest.resident.config.suffix_seed, `suffix RNG seed differs: ${packName}`);
+  for (const [name, buffer] of Object.entries(manifests.parent.cns.buffers)) {
+    assert.equal(buffer.sha256, manifest.cns.buffers[name]?.sha256, `CNS numeric buffer differs: ${packName}/${name}`);
+  }
 }
 
 const server = createServer(async (request, response) => {
   try {
     const pathname = new URL(request.url, 'http://localhost').pathname;
-    const match = /^\/(parent|trained)(\/.*)$/.exec(pathname);
+    const match = /^\/(parent|first-trained|research-trained|trained)(\/.*)$/.exec(pathname);
     if (!match) throw new Error('run prefix missing');
     const modelPrefix = '/live/model/';
     const modelRequest = match[2].startsWith(modelPrefix);
@@ -307,16 +316,26 @@ async function rollout(label, packName, controller) {
 let report;
 try {
   const results = [];
-  for (const [label, packName, controller] of [['parent', 'parent', 'resident'], ['trained', 'trained', 'resident'],
-    ['zero-command', 'parent', 'zero']]) {
+  const arms = singleTrainedLabel ? [[singleTrainedLabel, 'trained', 'resident']] : [['parent', 'parent', 'resident']];
+  if (!singleTrainedLabel) {
+    if (packs['first-trained']) arms.push(['first-trained', 'first-trained', 'resident']);
+    if (packs['research-trained']) arms.push(['candidate01-future-key-contaminated', 'research-trained', 'resident']);
+    arms.push(['trained', 'trained', 'resident'], ['zero-command', 'parent', 'zero']);
+  }
+  for (const [label, packName, controller] of arms) {
     const result = await rollout(label, packName, controller); results.push(result);
     console.error(`${label}: ${result.execution.failed ? 'FAILED' : `${ticks} committed transitions`}`);
   }
-  const matched = !results.some(result => result.execution.failed) &&
-    results[0].initialWorldSha256 === results[1].initialWorldSha256 &&
-    results[0].initialCns.stateSha256 === results[1].initialCns.stateSha256 &&
-    results[0].initialCns.canonicalMetadataSha256 === results[1].initialCns.canonicalMetadataSha256 &&
-    results.every(result => result.layoutIdentity === results[0].layoutIdentity && result.initialWorldSha256 === results[0].initialWorldSha256);
+  const residentResults = results.filter(result => result.controller === 'resident');
+  const referenceParent = singleTrainedLabel ? referenceReport?.results?.find(result => result.label === 'parent') : null;
+  const matched = !results.some(result => result.execution.failed) && (singleTrainedLabel ?
+    referenceParent && results[0].initialWorldSha256 === referenceParent.initialWorldSha256 &&
+      results[0].layoutIdentity === referenceParent.layoutIdentity &&
+      results[0].initialCns.stateSha256 === referenceParent.initialCns.stateSha256 &&
+      results[0].initialCns.canonicalMetadataSha256 === referenceParent.initialCns.canonicalMetadataSha256 :
+    residentResults.every(result => result.initialCns.stateSha256 === residentResults[0].initialCns.stateSha256 &&
+      result.initialCns.canonicalMetadataSha256 === residentResults[0].initialCns.canonicalMetadataSha256) &&
+      results.every(result => result.layoutIdentity === results[0].layoutIdentity && result.initialWorldSha256 === results[0].initialWorldSha256));
   report = { format: 'chreatures-autonomous-physical-outcome-assay-v1', backend,
     adapter: adapter.info?.device || adapter.info?.description || `Dawn ${backend}`,
     adapterLimits: { maxBufferSize: adapter.limits.maxBufferSize,
@@ -327,7 +346,8 @@ try {
     cnsAdapterSha256: manifests.parent.cns.identity.artifact, cnsNumericBuffersMatched: true,
     worldSeedMatched: true, actionAndSuffixSeedsMatched: true, initialWorldAndCnsStateMatched: matched,
     initialCnsComparison: 'decoded GPU state bytes and host metadata after removing only identity.sourceRevision; full snapshot hashes remain in each result',
-    worldSeed, variationSeed, zeroCommandBaselineIncluded: true,
+    worldSeed, variationSeed, zeroCommandBaselineIncluded: results.some(result => result.controller === 'zero'),
+    ...(referenceReportBytes ? {referenceReport: resolve(args['reference-report']), referenceReportSha256: sha256(referenceReportBytes)} : {}),
     screenSchedule: 'shared deterministic 2x2 color sequence; no geometry-derived policy input', results,
     interpretation: 'Matched fresh-life autonomous outcomes. There is no hidden teacher clock or requested goal; proximity, stopping, food transfer, motion, turning and effort are descriptive outcomes and do not establish goal conditioning or general embodied competence.' };
   await writeFile(reportPath, JSON.stringify(report, null, 2) + '\n', { flag: 'wx' });

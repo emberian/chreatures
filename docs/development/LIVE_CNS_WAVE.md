@@ -117,3 +117,41 @@ unversioned module alongside a new binary. Each build contains only its current
 bundle; no old engine implementation is retained. `live-publication.json` records
 the public entry and byte-derived identity. The stable `live/` copy supports the
 headless tools and contains the identical current bytes.
+
+## Reproduce the current physical-screen experiment
+
+The public [matched-response figure](../../site/assets/live-cns-screen-response.svg)
+and [compact receipt](../../site/assets/live-cns-screen-response.json) describe
+600 physical steps with the film versus 600 with a black screen. This run used
+the V2 trained CNS and initialized controller. Neural/retinal captures follow
+resident 0; delivered commands and body positions include all three residents.
+
+From the repository root, with Node, npm and ffmpeg available:
+
+```sh
+python3 scripts/build_pages.py
+cd native/webgpu-probe
+npm ci
+node screen-response.mjs \
+  --site ../../dist/site \
+  --video ../../site/assets/bad-apple-source-30s.mp4 \
+  --report /absolute/new-output/response.json \
+  --traces /absolute/new-output/response.traces.json.gz
+```
+
+Create the output directory first; existing result files are never overwritten.
+The build downloads the SHA-256-locked model release. The assay uses Dawn Metal
+on macOS or Vulkan on Linux and requires a real compatible adapter. It runs no
+browser. Node 20 installations need `NODE_OPTIONS=--experimental-default-type=module`
+when loading the site's ES modules, including isolated worker processes; the recorded M2 execution used the local newer
+Node installation. About 0.9 GB of temporary raw captures are streamed to the
+system temporary directory and removed after the comparison; set `TMPDIR` to
+project bulk storage on disk-constrained nodes. The lifetime of Dawn's native
+context is explicitly retained through shutdown.
+
+In this reproducible assay the film frame is fixed to each 50 ms model step.
+The interactive tab instead samples its wall-time video clock at each step,
+so a slow device does not show the exact same stimulus chronology. Both routes
+use the same physical emitting surface, occlusion, retinal rays and CNS; neither
+injects decoded frames directly into neuronal rows or substitutes the recorded
+response for the live one.
