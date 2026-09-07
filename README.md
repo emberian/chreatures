@@ -12,8 +12,9 @@ The **reciprocal ecology wave** now couples recurrent full-body prediction,
 private sequence memory, material-funded local growth, seven-pool synthetic
 chemistry, and organism–environment search. Its native controller format is v6;
 the twelve-action body interface remains v4 and inherited Torch policy weights
-remain v5. Existing recorded lives keep their original mechanisms. A fresh
-predictor fit and joined neural deployment are in progress; the first joined
+remain v5. Existing recorded lives keep their original mechanisms. The new
+predictor has been fitted and exported to native execution; its joined neural
+deployment is in progress. The first joined
 physical run built 32 funded parts and released newly produced fermentate into
 physical packets. Recipient uptake and a sustained food web are not established.
 [Wave contract and implementation](docs/development/RECIPROCAL_ECOLOGY_WAVE.md).
@@ -37,12 +38,12 @@ A resident's current control loop combines:
 - **Spatial perception and working memory:** a native convolutional visual front, body-state encoder and persistent private GRU process the 4,459-column current observation at each 50 ms physical tick.
 - **Experienced goals:** each individual retains a private reservoir of four-frame sensory encounters. A learned manager selects among those memories; the motor controller attempts to approach the selected sensory state. The current Rust controller also learns private, physiology-dependent goal preferences from the actual bodily return of completed attempts.
 - **Personal consequence learning:** inherited GAM predictions and private bounded residual learning estimate movement, energy-cost and fatigue consequences of motor proposals. Actual delivered actions and their subsequent physical outcomes supply the updates.
-- **Action-conditioned forecasts:** the current three-member recurrent ensemble predicts sensory and physiological changes across up to eight twelve-axis actions. The native planner compares four-tick hypotheses, delivers one physical tick, and replans from actual sensations. Its contribution to selection is bounded; predicted states never enter experienced memory. The newly fitted artifact is being prepared; older published lives retain their pinned one-step ensemble.
+- **Action-conditioned forecasts:** the fitted three-member recurrent ensemble predicts sensory and physiological changes across up to eight twelve-axis actions. The native planner compares four-tick hypotheses, delivers one physical tick, and replans from actual sensations. Its contribution to selection is bounded; predicted states never enter experienced memory. Older published lives retain their pinned one-step ensemble.
 - **Private sequence memory:** observed attempts, attainment and context build sparse transitions between remembered encounters. Lifetime and recent memory share a bounded store, so old residents can continue acquiring new experience. Past succession can bias a proposal, but does not establish present reachability.
 
 Eating is an explicit current action. Physical mouth contact, available material and digestive chemistry determine its consequences. Remembered goals are previously experienced states, not guarantees of present reachability. The first v4 cold inheritance conservatively initializes new action heads and extends the sensory interface; that initialization does not supply competence with the new organs. Useful navigation, durable learned habits and reciprocal interaction are still being developed.
 
-The current **controller v5** adds trainable pathways from all twelve physiology channels into recurrent state and from the policy into the four new organ actions. Achieved-goal encoding stays fixed. This repairs a limitation of the first frozen v4 inheritance, whose new sensory columns and actuator weights could not learn in the population training configuration. An actual v5 checkpoint now contains 20 PPO updates and 81,920 physical training transitions; its new organs acquired nonzero weights, and each new actuator executed on 4.4–6.1% of those transitions. Their higher exploration rate was deliberately initialized and is not evidence of learned competence. The public regional recording remains the earlier, explicitly pinned v4 life. [Current organ implementation](docs/development/POPULATION_V5_NATIVE.md).
+The inherited **Torch v5 policy** trains pathways from all twelve physiology channels into recurrent state and from the policy into the four new organ actions. Achieved-goal encoding stays fixed. Its completed hbox lineage reached 160 PPO updates and 655,360 resident transitions. The native-v6 export combines those weights with the fitted recurrent predictor and the new private-memory mechanisms. The preceding update-20 recording remains available as evidence of that earlier deployment; initialized exploration and nonzero actuator weights alone do not establish competence. [Organ implementation](docs/development/POPULATION_V5_NATIVE.md) · [Current export identity](data/training/rich-recurrent-v3/fit-export-receipt.json).
 
 ## GAM × Universal Weave
 
@@ -60,6 +61,16 @@ with private lifetime learning kept separate. It does not establish causal
 regulation or genotype–environment transfer. [Fit and support](docs/GAM_POPULATION_RESPONSE.md).
 
 ## What has run
+
+The new predictor corpus contains **393,216 actual transitions**, collected in
+six eight-resident worlds at **229.06 resident transitions/s**, including sealing
+and checkpoints. Its three-member recurrent fit took **399.79 seconds** on
+persvati's AMD Radeon 890M. In the final held-out source-world slot, four-tick
+goal-code RMS was **0.23464**, compared with **0.55048** for persistence. Native
+and Torch inference differed by at most `1.76e-6` in the retained numerical
+comparison. These are prediction results from frozen-v5 source dynamics;
+transfer to the new chemistry and improved physical control remain unestablished.
+[Fit, split and numerical scope](docs/RICH_PREDICTION.md).
 
 The earlier regional observatory replays **240 actual frames from eight v4 residents**, covering model seconds 51.65–118.50. The source recording contains delivered actions, body measurements, real geometry and private learning diagnostics. Its simulation ran on the M2 with the full MaleCNS graph. This is a recorded episode, not a live connection to the private world, and it does not establish successful feeding, reproduction or social learning. [Watch the regional world](https://emberian.github.io/chreatures/living.html?recording=regional-wave).
 

@@ -1,0 +1,129 @@
+{
+  "attempts": [
+    {
+      "allocation": {
+        "allocated_neural_residents": 0,
+        "planned_resident_assignments": 80,
+        "planned_residents_per_world": 8,
+        "planned_worlds": 10,
+        "status": "rejected-before-allocation"
+      },
+      "attempt_id": "population-assignment-portability-gate",
+      "brain_snapshot": {
+        "reason": "assignment was rejected before birth or neural allocation",
+        "status": "unavailable"
+      },
+      "classification": "one shared infrastructure failure projected across 80 planned assignments; not 80 independent organism failures",
+      "committed_physical_ticks": 0,
+      "failure": {
+        "cause": "native regional generation produced platform-dependent last-bit differences in entity quaternion and geometry values, so regenerated habitat and environment identities differed before reset or world advance",
+        "scope": "shared cohort setup failure",
+        "trace_sha256": "469c20573d75256d6daf115d4e7f44a242d63a4aa639d4749a6896c55b2fb271"
+      },
+      "inputs": {
+        "assignment_file_sha256": "f7cd07245121ba0ced72a867e52bc7457b6a603c78ed6e9bb68d6f6124a77933",
+        "biosphere_birth_source_sha256": "7313420e6f8b507bf45b8ab2ec733064033af127897a3bab135a964fb519fe0e",
+        "campaign_search_config_sha256": "cd8d9ca3a9a5f960780f6e1694ebc036ed0386b93dec56701adddb8633dcd9d9",
+        "controller_artifact_sha256": "4e8d04176fc013eadc18bb71124e38925a98c469c6ca9cbf458562740a191596",
+        "controller_file_sha256": "00bbd8580baa0f5f016b5c69548210f86412bc54ced32e737793fcedbd0019c4",
+        "plan_content_sha256": "fbb897fbbbd64997dc1f88437afd9032b0187a0247e6c92ebfdc95a75864726b",
+        "plan_file_sha256": "9bf90cb67dbd509fd560a974d6baf8b577a7304b840a8cad72ea295e85b01cb1",
+        "profile_semantic_sha256": "49f7b640a9cd301db3de8b6217c5da325ffc793f88195e22de850ff6a8575d57"
+      },
+      "private_failure_receipt": {
+        "content_sha256": "09eaf0869d97875d80dd52255a89e5523277ea406139125becfffa5f58cf8631",
+        "file_sha256": "a9452a49fb58e2385e1fb2885a443bddac5ebb0a3738016aa391fa51bd83ff87",
+        "format": "chreatures-population-evaluation-failure-v1",
+        "recorded_at": "2026-09-07T00:07:07Z"
+      },
+      "source": {
+        "revision": "7e1ec04e1230c512005773b5feac20f5529ac28b"
+      },
+      "terminal_ingestion": {
+        "classification": "infrastructure-failure",
+        "plan_status": "ingested",
+        "projected_assignment_records": 80
+      }
+    },
+    {
+      "allocation": {
+        "allocated_neural_residents": 8,
+        "status": "allocated-neurally; physical world never advanced"
+      },
+      "attempt_id": "initial-world-checkpoint-serialization",
+      "birth_receipt": {
+        "file_sha256": "934b6feab7b8a69cdba662938632f04986abd45c3f1a1a5d70e5026a10165c20",
+        "format": "chreatures-reciprocal-v6-split-host-birth-export-v1",
+        "logical_sha256": "bc40972762322a056abce065f6fe74747ac88eadfb134556b9df4aaaf3753b22",
+        "manifest_file_sha256": "69f00787066541f34190d6809ad1248cfe174f25c4ea0d338d9f494e0050dbbb"
+      },
+      "brain_snapshot": {
+        "bytes": 63442771,
+        "model_tick": 0,
+        "sha256": "4ba83155e3fcbefa0641543cca961383fa2f8edfed53543427a6d3390feca7d2",
+        "status": "retained-private"
+      },
+      "classification": "retired infrastructure failure after neural allocation; never a continuing life",
+      "committed_physical_ticks": 0,
+      "failure": {
+        "cause": "a native Vec<u8> snapshot field crossed PyO3 as bytes, and the wrapper encoder lacked a bytes representation",
+        "phase": "mandatory initial world checkpoint",
+        "scope": "shared host serialization failure"
+      },
+      "inputs": {
+        "cognitive_core_sha256": "650e9fe4ecd26889d40e4a1b8a527f1472a011dfa033b8fd39a9776e42dda10d",
+        "controller_artifact_sha256": "4e8d04176fc013eadc18bb71124e38925a98c469c6ca9cbf458562740a191596",
+        "controller_file_sha256": "00bbd8580baa0f5f016b5c69548210f86412bc54ced32e737793fcedbd0019c4",
+        "world_kernels_sha256": "f941aebd5a227937b3d5f50451e25ce890c1b3afb78b584aba7d0b5ca2408d3d"
+      },
+      "private_failure_receipt": {
+        "content_sha256": "34cd2a0e3b62169c5b5f23a2d7048481d86c1c9389dde515807c18c11c078465",
+        "file_sha256": "2c4cde8992696e7f08cdff1df291d6cc92f905be548b87fc068582f421ab6214",
+        "format": "chreatures-reciprocal-v6-failed-birth-receipt-v1",
+        "recorded_at": "2026-09-07T00:13:13.386126+00:00"
+      },
+      "public_recording": {
+        "reason": "recorder aborted while the host was paused at the failed mandatory checkpoint",
+        "status": "unavailable"
+      },
+      "source": {
+        "archive_sha256": "8085f35c66cae7366695d7f9c7df5174d51543a4e3455e2ac32d464bdd7f106a",
+        "revision": "5355e671703123c9ff54f543466540146bdb8a4f"
+      }
+    }
+  ],
+  "content_sha256": "e275e4beed7fcb87fd06ade2b2819688622c4dd7ac1d28ff53dc8c184a672870",
+  "format": "chreatures-reciprocal-v6-integration-attempts-v1",
+  "limitations": [
+    "These receipts establish integration boundaries and failure causes only; they contain no ecological, behavioral, welfare, or learning evidence.",
+    "No world or body identifiers, resident labels, host locators, service identifiers, ports, or private filesystem paths are included.",
+    "The two failures have separate causes and allocation boundaries and must not be combined into an organism-level outcome count.",
+    "A successful reciprocal-v6 birth, physical tick, checkpoint, or public recording is not claimed here; the final portability gate only clears a launch prerequisite."
+  ],
+  "remediation": {
+    "stages": [
+      {
+        "archive_sha256": "665350038e8f7126805a239a29e01369e3372ad162c84e2584ea389d8f017d8b",
+        "bytes_snapshot_fix": "an actual eight-resident 99,591,617-byte JSON snapshot roundtrip passed",
+        "remaining_cross_platform_drift_variants": 4,
+        "revision": "8fb1ff94aca5e708aa18eb18ffeb5ba88f86f44b",
+        "status": "partial"
+      },
+      {
+        "archive_sha256": "e0599a89b04d6150de54be29b4887c519ad4eff2dbb851058366f4d6088a3a4c",
+        "canonical_variant_array_sha256": "a73617889fabd70339083901b505a718df667f448777a98f72db45c788ddd49c",
+        "compared_variants": 10,
+        "comparison": "exact match for genome, environment, habitat, biosphere, and analyst records across the two target platforms",
+        "linux_receipt": {
+          "file_sha256": "0f25797b1a7b69cd4597a6cd895146298aec3f72190a36623728c57d01da79e1",
+          "format": "chreatures-regional-cross-platform-linux-receipt-v1"
+        },
+        "revision": "b5efde9930a035fe7356032cb33fdb25d3a9c74e",
+        "source_manifest_file_sha256": "8a800d3825b1487f66921614c439505c55470da166e748fe7f2c3034172e4d6b",
+        "status": "passed"
+      }
+    ],
+    "status": "resolved for the cross-platform generation gate; no successful life is claimed"
+  },
+  "scope": "public-safe authenticated receipt for two pre-tick reciprocal-v6 integration attempts"
+}
