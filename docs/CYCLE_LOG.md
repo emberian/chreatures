@@ -1062,3 +1062,23 @@ parameters to float32; recurrence is unchanged. A 135-tick actual service run
 matched the host clock exactly. Checkpoints also bind the native service binary
 hash. Paired full screen/blank recordings restart as new research runs after this
 fix; failed prefixes remain preserved.
+
+### Completed paired Bad Apple recording
+
+The frozen 3b89440 source completed 600 recorded ticks after 40 warmup ticks in
+each of two eight-body worlds: physical-screen film and matched blank screen.
+Clip capture took 347.33 wall seconds including offscreen rendering and complete
+restore/replay; blank took 298.06 seconds while sharing the laptop. Both restored
+whole-world state and repeated their first recorded neural rates, delivered
+commands, physical positions and time exactly. The official 30-second silent
+stimulus was absent from procedural visual pretraining.
+
+The pair's first recorded rates, Z512 values, commands and positions are exact
+matches. Neural differences begin at recorded frame 27; 3782 photoreceptor and
+64121 other rows ever differ by more than 1e-6. Per-resident command differences
+begin at frames 36–63, with final position differences of 0.00194–0.19049 metres.
+These are stimulus-dependent outcomes of one paired seed, not learned skills or
+replicated behavioral improvement. The initialized motor/memory controller stays
+explicitly untrained. Public video uses actual rate captures and measured soma
+positions, a fixed 99.5th-percentile display scale, and actual physical frames.
+The full-range first render was retained privately; raw rates were not changed.

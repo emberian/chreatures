@@ -225,6 +225,79 @@ internal adapter `cfedd0ed4286b9ea5a2cde36a0b66ee4443dfb7a459cde70851b95cc8230aa
 fitted Torch fixture. Parameter status is `trained`, which denotes executed
 optimization rather than a competence threshold.
 
+## Reproduce the current CNS-only execution
+
+The research release tag `cns-optic-v1-research-20260907` resolves to its exact
+source commit. The resident metadata binds that source even though the release
+uses compact canonical filenames. The fitted service is unchanged across the
+source-only runtime correction:
+
+| Artifact | File SHA-256 | Internal identity |
+| --- | --- | --- |
+| `cns-service-fitted-v1.bin` | `395120785a56a5f9bfe0f70edf744e1251e6141656f799ff1b5963d3e0217da9` | adapter `cfedd0ed4286b9ea5a2cde36a0b66ee4443dfb7a459cde70851b95cc8230aab4` |
+| `cns-resident.npz` | See the release notes | initialized resident bound to the release source and fitted service |
+| `sequence-control.npz` | See the release notes | initialized immutable head, version 0 |
+
+Build the native modules from that source and start a dedicated Metal service:
+
+```sh
+git checkout cns-optic-v1-research-20260907
+uv sync --extra dev
+uv run python native/world-kernels/build_extension.py
+uv run python native/cognitive-core/build_extension.py
+cargo build --release --manifest-path native/metal-brain/Cargo.toml \
+  --bin metal-brain-server
+
+RELEASE_DIR=/path/to/cns-optic-v1-research-20260907
+RESIDENT="$RELEASE_DIR/cns-resident.npz"
+uv run python scripts/serve_metal.py \
+  --artifact "$RELEASE_DIR/cns-service-fitted-v1.bin" \
+  --binary native/metal-brain/target/release/metal-brain-server \
+  --capacity 32 --kernel simd \
+  --snapshot-dir /path/to/cns-snapshots \
+  --pid-file /path/to/cns-service.pid \
+  --bind 127.0.0.1 --port 18790
+```
+
+The release resident is a deterministic initialized controller bound to the
+fitted service. Re-exporting it is reproducible and requires new output paths:
+
+```sh
+uv run python scripts/export_developmental_resident.py \
+  --cns-service "$RELEASE_DIR/cns-service-fitted-v1.bin" \
+  --output /path/to/reproduced/cns-resident.npz \
+  --sequence-control-output /path/to/reproduced/sequence-control.npz \
+  --seed 20260907
+```
+
+Create a physical birth bundle from an authenticated profile and assignment
+bank, then start the Habitat against that same service:
+
+```sh
+uv run python scripts/export_population_birth.py \
+  --profile /path/to/profile.json \
+  --assignments /path/to/founder-assignments.json \
+  --world-index 0 \
+  --resident-artifact "$RESIDENT" \
+  --output /path/to/cns-birth
+
+uv run chreatures --port 8790 \
+  --brain-url http://127.0.0.1:18790 \
+  --body articulated --ecology diffusion --physics-backend vectorized \
+  --resident-artifact "$RESIDENT" \
+  --population-birth /path/to/cns-birth/resident-birth.json \
+  --habitat /path/to/cns-birth/habitat.json \
+  --biosphere /path/to/cns-birth/biosphere.json \
+  --checkpoint /path/to/new-cns-life.json
+```
+
+Use an empty service and new checkpoint/output paths for a fresh life. The
+service's optical adapter completed training, while held-out current and future
+optic prediction MSE changed from `0.045188` to `0.045460` and `0.045173` to
+`0.045352`. The resident core and sequence-control head remain explicitly
+initialized and untrained, so these artifacts make no motor, feeding or policy
+competence claim.
+
 ## Consequential sources
 
 The connectome-constrained fly visual model supports optimizing unknown cellular

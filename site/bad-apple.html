@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#08110e">
+  <title>Bad Apple response — Chreatures</title>
+  <meta name="description" content="A synchronized Bad Apple stimulus, full MaleCNS rate-model response, and recorded creature motion.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="bad-apple.css">
+  <script defer src="main.js"></script>
+</head>
+<body class="bad-apple-page">
+  <a class="skip" href="#main">Skip to content</a>
+  <header><nav class="wrap" aria-label="Main"><a class="brand" href="index.html">chreatures</a><div class="links"><a href="index.html">Living Reef</a><a href="bad-apple.html" aria-current="page">Bad Apple</a><a href="population.html">Population</a><a href="lab.html">Lab notes</a><a href="https://github.com/emberian/chreatures">GitHub ↗</a></div></nav></header>
+
+  <main id="main">
+    <section class="ba-hero wrap">
+      <div><p class="kicker">Bad Apple!! · one recorded sensory pass</p><h1>A film meets<br>the modeled CNS.</h1></div>
+      <div class="ba-intro"><p>Follow the same 30 seconds across three views: the official shadow animation reaching the modeled eyes, changing rate state across the full MaleCNS graph, and the creature moving in its physical world.</p><p id="result-summary">No result is published yet. Playback appears after the synchronized recording and its receipt are complete.</p><button id="play-recording" class="ba-play" type="button" disabled>Recording not yet published</button></div>
+    </section>
+
+    <section class="ba-stage" aria-labelledby="stage-title">
+      <div class="ba-stage-head wrap"><div><p class="kicker">One synchronized recording</p><h2 id="stage-title">Screen → CNS → body</h2></div><p id="playback-status" class="ba-status" role="status">Checking for a recorded public manifest…</p></div>
+      <div class="ba-screen-wrap wrap">
+        <video id="response-video" poster="assets/bad-apple-poster.jpg" controls playsinline preload="metadata" hidden aria-label="Synchronized Bad Apple stimulus, MaleCNS rate-model state, and recorded creature response"></video>
+        <div id="awaiting-recording" class="ba-awaiting">
+          <div><span>01</span><strong>Screen stimulus</strong><small>Awaiting recorded source frames</small></div>
+          <div class="cns-awaiting"><span>02</span><strong>Full MaleCNS</strong><small>Awaiting 165,122 rate-model values per sample</small><i aria-hidden="true"></i></div>
+          <div><span>03</span><strong>Physical body</strong><small>Awaiting frames from the same embodied run</small></div>
+        </div>
+      </div>
+      <div id="recording-facts" class="ba-facts wrap" hidden></div>
+    </section>
+
+    <section class="ba-source">
+      <div class="wrap ba-source-grid"><div><p class="kicker">The paired blank-screen run</p><h2>The film changes the loop.</h2></div><div><p>The film and blank-screen runs begin with identical recorded neural rates, latent states, actions and positions. The film subsequently changes 64,121 non-photoreceptor neurons above a 10⁻⁶ difference threshold, followed by motor commands and physical trajectories. This is one paired seed, with an untrained motor controller—not a demonstration of recognition or useful learned behavior.</p><p>The centre panel shows rate changes since its first sample, including ongoing internal dynamics. Cyan means an increase; orange means a decrease. The scale stays fixed for the entire film and clips the largest 0.5% of changes at measured soma locations. All 165,122 neurons simulate; 140,024 have measured soma positions available to plot.</p><p><a href="assets/bad-apple-comparison.json">Inspect the paired response ↗</a> · <a href="assets/bad-apple-display.json">Colour scale and raw-data identity ↗</a> · <a href="https://github.com/emberian/chreatures/releases/tag/cns-optic-v1-research-20260907">Download the model release ↗</a></p></div></div>
+    </section>
+
+    <section class="ba-model wrap" aria-labelledby="model-title">
+      <div class="ba-model-head"><p class="kicker">What this run begins with</p><h2 id="model-title">A pretrained visual model.<br>An untrained controller.</h2></div>
+      <div class="ba-model-cards">
+        <article><span>Full CNS</span><h3>Visually pretrained</h3><p>The afferent, recurrent type-law and readout parameters received 128 updates on procedural moving bars, checker fields and occluders. Bad Apple was absent from training.</p></article>
+        <article class="ba-caution"><span>Held-out result</span><h3>Optic prediction did not improve</h3><p>Lower is better. Current-frame MSE changed from 0.04519 before fitting to 0.04546 after; next-frame MSE changed from 0.04517 to 0.04535.</p></article>
+        <article><span>Motor + memory</span><h3>Initialized, untrained</h3><p>The controller begins from initialized weights. This replay shows its actual first response; it is not evidence of learned movement or competence.</p></article>
+      </div>
+      <p class="ba-provenance-link"><a href="assets/bad-apple-provenance.json">Open the compact model and source provenance ↗</a></p>
+    </section>
+
+    <section class="ba-source">
+      <div class="wrap ba-source-grid"><div><p class="kicker">The source on the screen</p><h2>Bad Apple!! feat. nomico</h2></div><div><p>The left panel shows the complete frame placed on the world’s physical screen. It is not the resident’s retinal array: head pose and occluding geometry determine which anatomical eye sites receive any part of it. At the joined baseline, 272 of Mica’s sites had a direct view.</p><p>This silent 0–30 second research excerpt comes from the official Alstroemeria Records upload. Shadow animation by あにら (Anira), originally published as niconico sm8628149. Music by Masayoshi Minoshima, vocals by nomico, based on ZUN’s composition.</p><a href="https://www.youtube.com/watch?v=i41KoE0iMYU">Watch the official source ↗</a></div></div>
+    </section>
+
+    <details class="ba-ledger wrap"><summary>Recording hashes and receipt</summary><div id="source-ledger"><p>The completed recording will list its video, stimulus, canonical graph, neural capture, physical capture and world revision here.</p></div></details>
+  </main>
+
+  <footer class="wrap footer"><p>Chreatures · Bad Apple response<br>Synchronized rate-model and physical state</p><p><a href="index.html">Living Reef</a> · <a href="lab.html">Evidence &amp; limitations</a><br>Site revision <a class="revision" data-revision href="https://github.com/emberian/chreatures">in development</a></p></footer>
+  <script type="module" src="bad-apple.js"></script>
+</body>
+</html>

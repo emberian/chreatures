@@ -31,8 +31,11 @@ untrained. This is working infrastructure for learning, not demonstrated visual
 understanding or useful behavior. Actual Torch/Metal recurrence agrees within
 2.1e-7; a tiled Metal readout reduced the measured two-resident neural step from
 about 420 ms to 7.25–8.35 ms. Eight physical residents now execute the joined
-CNS-only loop with private memory and complete checkpoints. A headless Bad Apple
-recording is being captured for the public observatory.
+CNS-only loop with private memory and complete checkpoints. The [30-second Bad Apple recording](https://emberian.github.io/chreatures/bad-apple.html)
+shows the actual stimulus, full CNS rate changes and recorded body response. A
+matched blank-screen run begins identically, then diverges in neural activity,
+actions and physical trajectories. This is stimulus dependence, not learned
+recognition. [Paired measurements](site/assets/bad-apple-comparison.json).
 
 ## The completed ecological v8 baseline
 
