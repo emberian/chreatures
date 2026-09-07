@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import {OrbitControls} from './vendor/three/OrbitControls.js';
 import {habitatView} from './habitat-view.js';
 
-const FORMATS = new Set(['chreatures-living-reef-public-recording-v1','chreatures-living-reef-public-recording-v2','chreatures-living-reef-public-recording-v3']);
+const FORMATS = new Set(['chreatures-living-reef-public-recording-v1','chreatures-living-reef-public-recording-v2','chreatures-living-reef-public-recording-v3','chreatures-living-reef-public-recording-v4']);
 const GEOMETRY_ENCODING = 'entity-replacement-delta-v1';
+const REGIONAL_MATTER_ENCODING = 'keyframe-state-delta-v1';
 const ACTIONS = ['thrust','yaw','gaze_pitch','grip','signal_low','signal_mid','signal_high','posture','oral'];
 const ACTOR_ACTIONS = ACTIONS.slice(0,8);
 const $ = (selector) => document.querySelector(selector);
@@ -58,8 +59,13 @@ function validate(data) {
   if (data.geometry_encoding !== GEOMETRY_ENCODING) throw new Error(`Expected ${GEOMETRY_ENCODING}`);
   if (!Array.isArray(data.frames) || data.frames.length < 2) throw new Error('Recording has no frame sequence');
   if (!data.geometry || !Array.isArray(data.geometry.bounds)) throw new Error('Recording has no geometry bounds');
+  const v4=data.format.endsWith('-v4');
+  if(v4&&data.regional_matter_encoding!==REGIONAL_MATTER_ENCODING)throw new Error(`Expected ${REGIONAL_MATTER_ENCODING}`);
+  if(v4&&data.frame_event_encoding!=='half-open-index-range-v1')throw new Error('Expected half-open-index-range-v1');
+  if(v4&&!Array.isArray(data.events))throw new Error('Recording event chain is invalid');
   const actionOrder=data.organism_interface?.action_order||ACTIONS,proposalOrder=data.organism_interface?.format==='chreatures-organism-interface-v4'?actionOrder:ACTOR_ACTIONS;
   if(!Array.isArray(actionOrder)||!actionOrder.length||!Array.isArray(proposalOrder))throw new Error('Recording action contract is invalid');
+  let expectedEventStart=0;
   for (const [index, frame] of data.frames.entries()) {
     if (!Number.isFinite(frame.model_time) || !Number.isInteger(frame.tick)) throw new Error(`Frame ${index} time is invalid`);
     if (!Array.isArray(frame.bodies) || !Array.isArray(frame.entities)) throw new Error(`Frame ${index} is incomplete`);
@@ -81,10 +87,17 @@ function validate(data) {
     if(acquired?.status==='recorded'){
       const value=acquired.value,keys=['available','recalled','slot','generation','length_ticks','support','empirical_score','recall_score','first_action'];
       if(!value||keys.some(key=>!Array.isArray(value[key])||value[key].length!==8)||value.first_action.some(row=>!Array.isArray(row)||row.length!==actionOrder.length))throw new Error(`Frame ${index} acquired-action contract is invalid`);
+      if(v4){
+        if(!Array.isArray(value.phase)||value.phase.length!==8||value.phase.some(item=>!Number.isInteger(item)||item<0))throw new Error(`Frame ${index} acquired-action phase is invalid`);
+        for(const key of ['length_ticks','support'])if(value[key].some(item=>!Number.isInteger(item)||item<0))throw new Error(`Frame ${index} acquired-action ${key} is invalid`);
+        for(const key of ['completed_total','interrupted_total'])if(!Number.isInteger(value[key])||value[key]<0)throw new Error(`Frame ${index} acquired-action ${key} is invalid`);
+      }
     }
     }
-    if(data.format.endsWith('-v3')){const matter=frame.regional_matter;if(!matter||!['recorded','unavailable'].includes(matter.status))throw new Error(`Frame ${index} regional matter status is invalid`);if(matter.status==='recorded'&&(!Array.isArray(matter.nodes)||!Array.isArray(matter.edges)||!Array.isArray(matter.outlets)||!Array.isArray(matter.last_events)))throw new Error(`Frame ${index} regional matter view is invalid`);}
+    if(data.format.endsWith('-v3')||v4){const matter=frame.regional_matter;if(!matter||!['recorded','unavailable'].includes(matter.status))throw new Error(`Frame ${index} regional matter status is invalid`);if(matter.status==='recorded'&&(!Array.isArray(matter.nodes)||!Array.isArray(matter.edges)||!Array.isArray(matter.outlets)||(data.format.endsWith('-v3')&&!Array.isArray(matter.last_events))))throw new Error(`Frame ${index} regional matter view is invalid`);}
+    if(v4){const range=frame.event_range;if(!Array.isArray(range)||range.length!==2||range.some(item=>!Number.isInteger(item)||item<0)||range[0]!==expectedEventStart||range[0]>range[1]||range[1]>data.events.length)throw new Error(`Frame ${index} event range is invalid`);if(data.events.slice(range[0],range[1]).some(event=>!Number.isInteger(event.tick)||event.tick>frame.tick))throw new Error(`Frame ${index} event range contains a future event`);expectedEventStart=range[1];}
   }
+  if(v4&&expectedEventStart!==data.events.length)throw new Error('Frame event ranges do not cover the event chain');
   return data;
 }
 
@@ -106,6 +119,44 @@ function expandEntityDeltas(data) {
   }
   return data;
 }
+
+function cloneJson(value){return JSON.parse(JSON.stringify(value));}
+
+function applyRegionalRows(previous,changes,identity,label){
+  if(!Array.isArray(changes))throw new Error(`${label} changes are invalid`);
+  const rows=new Map(previous.map(item=>[item[identity],cloneJson(item)]));
+  for(const change of changes){
+    const key=change?.[identity],old=rows.get(key);
+    if(!Number.isInteger(key)||!old)throw new Error(`${label} change identity is invalid`);
+    rows.set(key,{...old,...cloneJson(change)});
+  }
+  return [...rows.values()].sort((left,right)=>left[identity]-right[identity]);
+}
+
+function expandRegionalMatterDeltas(data){
+  if(!data||data.regional_matter_encoding!==REGIONAL_MATTER_ENCODING||!Array.isArray(data.frames))return data;
+  let current=null;
+  for(const [frameIndex,frame] of data.frames.entries()){
+    const encoded=frame.regional_matter;
+    if(frameIndex===0){
+      if(!encoded||!['recorded','unavailable'].includes(encoded.status))throw new Error('First frame must contain complete regional matter state');
+      current=cloneJson(encoded);frame.regional_matter=current;continue;
+    }
+    if(encoded?.status==='replacement'){
+      if(!encoded.value||!['recorded','unavailable'].includes(encoded.value.status))throw new Error(`Frame ${frameIndex} regional replacement is invalid`);
+      current=cloneJson(encoded.value);
+    }else if(encoded?.status==='delta'){
+      if(current?.status!=='recorded'||!Number.isFinite(encoded.time)||!Number.isInteger(encoded.step_index))throw new Error(`Frame ${frameIndex} regional delta has no recorded base`);
+      current={...current,time:encoded.time,step_index:encoded.step_index,nodes:applyRegionalRows(current.nodes,encoded.nodes,'node','regional node'),edges:applyRegionalRows(current.edges,encoded.edges,'edge','regional edge'),outlets:applyRegionalRows(current.outlets,encoded.outlets,'outlet','regional outlet')};
+    }else if(encoded&&['recorded','unavailable'].includes(encoded.status)){
+      current=cloneJson(encoded);
+    }else throw new Error(`Frame ${frameIndex} regional matter encoding is invalid`);
+    frame.regional_matter=current;
+  }
+  return data;
+}
+
+function expandRecording(data){return expandRegionalMatterDeltas(expandEntityDeltas(data));}
 
 function initThree() {
   renderer = new THREE.WebGLRenderer({canvas, antialias: true, powerPreference: 'high-performance'});
@@ -340,6 +391,12 @@ function residentDetail(frame,body=activeBody){
 
 function bodyPose(frame,body=activeBody){return (frame.bodies||[]).find(value=>value.body===body)||null;}
 
+function frameEvents(frame){
+  if(Array.isArray(frame.event_range))return (recording.events||[]).slice(frame.event_range[0],frame.event_range[1]);
+  const ids=new Set(frame.event_ids||[]);
+  return (recording.events||[]).filter(event=>ids.has(event.event_id));
+}
+
 function rebuildResidentOverlays(){
   if(!recording||!pathLine)return;
   const samples=[];pathFrameIndices=[];recording.frames.forEach((frame,index)=>{const body=bodyPose(frame);if(body){samples.push(body.position);pathFrameIndices.push(index);}});
@@ -489,17 +546,24 @@ function paintContext(selected){
   ui.context.replaceChildren(...rows);ui.contextUnavailable.hidden=rows.length>0;
 }
 
-function paintSuffix(selected){
+function paintSuffix(selected,previousSelected){
   const summary=selected?.acquired_action_candidates;ui.suffixNote.hidden=Boolean(summary);ui.suffix.replaceChildren();
   if(!summary)return;
   const rows=[];for(let index=0;index<summary.available.length;index++){
     const card=document.createElement('div'),title=document.createElement('strong'),meta=document.createElement('span');card.className='suffix-card';
-    const available=summary.available[index],recalled=summary.recalled[index];card.classList.toggle('unavailable',!available);card.classList.toggle('recalled',available&&recalled);card.classList.toggle('selected',index===summary.selected_candidate);
-    title.textContent=`${index+1} · ${available?(recalled?'recalled suffix':'local proposal'):'unavailable'}${index===summary.selected_candidate?' · selected':''}`;
-    meta.textContent=available?(recalled?`slot ${summary.slot[index]} · generation ${summary.generation[index]} · ${summary.length_ticks[index]} ticks · support ${summary.support[index]} · empirical ${formatNative(summary.empirical_score[index])} · recall ${formatNative(summary.recall_score[index])}`:'current local anatomical candidate'):'no candidate in this slot';
+    const available=summary.available[index],recalled=summary.recalled[index],phase=summary.phase?.[index],selected=index===summary.selected_candidate,continuing=recalled&&Number.isInteger(phase)&&phase>0;
+    card.classList.toggle('unavailable',!available);card.classList.toggle('recalled',available&&recalled);card.classList.toggle('selected',selected);card.classList.toggle('continuing',continuing);card.classList.toggle('starting',recalled&&phase===0);
+    const execution=recalled&&Number.isInteger(phase)?(continuing?`continuation cursor ${phase}`:'sequence start candidate'):recalled?'recalled suffix':'local proposal';
+    title.textContent=`${index+1} · ${available?execution:'unavailable'}${selected?' · selected':''}`;
+    meta.textContent=available?(recalled?`slot ${summary.slot[index]} · generation ${summary.generation[index]} · ${summary.length_ticks[index]} ticks remaining · ${summary.support[index]} completed executions · empirical ${formatNative(summary.empirical_score[index])} · recall ${formatNative(summary.recall_score[index])}`:'current local anatomical candidate'):'no candidate in this slot';
     card.append(title,meta);rows.push(card);
   }
-  ui.suffix.replaceChildren(...rows);ui.suffixNote.hidden=false;ui.suffixNote.textContent=`${summary.occupied_slots} recalled slots occupied · ${summary.learned_total} learned total. Support is execution frequency, not confidence; scores and first actions are recorded selection diagnostics, not experienced outcomes.`;
+  ui.suffix.replaceChildren(...rows);ui.suffixNote.hidden=false;
+  const counters=Number.isInteger(summary.completed_total)&&Number.isInteger(summary.interrupted_total)?` ${summary.completed_total} executions completed and ${summary.interrupted_total} interrupted before this decision.`:'';
+  const old=previousSelected?.acquired_action_candidates,completedDelta=old&&Number.isInteger(old.completed_total)?summary.completed_total-old.completed_total:0,interruptedDelta=old&&Number.isInteger(old.interrupted_total)?summary.interrupted_total-old.interrupted_total:0,selectedPhase=summary.phase?.[summary.selected_candidate],selectedRecalled=summary.recalled[summary.selected_candidate];
+  const transition=selectedRecalled&&selectedPhase>0?` The selected proposal continues at cursor ${selectedPhase}, reached through exact prior delivered-action receipts.`:selectedRecalled&&selectedPhase===0&&interruptedDelta>0?` The selected candidate starts from zero after ${interruptedDelta} interruption receipt${interruptedDelta===1?'':'s'} since the previous sampled frame.`:selectedRecalled&&selectedPhase===0?' The selected recalled candidate proposes its sequence start.':'';
+  const receipts=completedDelta>0?` ${completedDelta} whole-sequence completion receipt${completedDelta===1?'':'s'} arrived since the previous sampled frame.`:'';
+  ui.suffixNote.textContent=`${summary.occupied_slots} recalled slots occupied · ${summary.learned_total} learned total.${counters}${transition}${receipts} Support counts complete sequence executions, not confidence or success.`;
 }
 
 function paintMatter(frame){
@@ -508,7 +572,9 @@ function paintMatter(frame){
   ui.matterNote.textContent='Node color reflects recorded total inventory. Edge color reflects recorded movement magnitude and accessibility without implying direction; arrows appear in the list only when a committed event supplies per-pool direction.';
   ui.matterContract.textContent=`step ${matter.step_index} · pools in synthetic chemical amount`;
   const inventories=matter.nodes.map(node=>{const row=document.createElement('div'),name=document.createElement('strong'),values=document.createElement('span');row.className='matter-node';name.textContent=`region ${node.node}`;values.textContent=Object.entries(node.pools).map(([pool,value])=>`${pool} ${formatNative(value)}`).join(' · ')||'empty';row.append(name,values);return row;});ui.matterInventory.replaceChildren(...inventories);
-  const flows=[];for(const event of matter.last_events||[]){if(event.kind!=='regional-material-flow')continue;for(const [pool,direction] of Object.entries(event.details?.directions||{})){const quantity=event.quantities?.find(item=>item.name===pool),row=document.createElement('div');row.className='matter-flow';row.textContent=`${pool}: region ${direction.source} → region ${direction.target}${quantity?` · ${formatNative(quantity.value)} ${quantity.unit}`:''} · recorded route event`;flows.push(row);}}
+  const regionalEvents=frameEvents(frame).filter(event=>['physical-material-entered-region','regional-material-flow','regional-material-outlet'].includes(event.kind));
+  const flows=[];for(const event of regionalEvents){if(event.kind!=='regional-material-flow')continue;for(const [pool,direction] of Object.entries(event.details?.directions||{})){const quantity=event.quantities?.find(item=>item.name===pool),row=document.createElement('div');row.className='matter-flow';row.textContent=`${pool}: region ${direction.source} → region ${direction.target}${quantity?` · ${formatNative(quantity.value)} ${quantity.unit}`:''} · receipt ${event.sequence}`;flows.push(row);}}
+  if(!flows.length)for(const event of matter.last_events||[]){if(event.kind!=='regional-material-flow')continue;for(const [pool,direction] of Object.entries(event.details?.directions||{})){const quantity=event.quantities?.find(item=>item.name===pool),row=document.createElement('div');row.className='matter-flow';row.textContent=`${pool}: region ${direction.source} → region ${direction.target}${quantity?` · ${formatNative(quantity.value)} ${quantity.unit}`:''} · recorded route event`;flows.push(row);}}
   if(!flows.length){const row=document.createElement('div');row.className='matter-flow';row.textContent='No directional regional flow event was recorded at this frame.';flows.push(row);}ui.matterFlows.replaceChildren(...flows);
   updateMatterGeometry(matter);
 }
@@ -568,7 +634,7 @@ function updateInstruments(index) {
   const refinement=selected?.consequence_refinement,forecast=selected?.sensory_forecast;
   const hasDecision=Boolean(refinement&&forecast&&selected?.sampled_proposal&&refinement.status!=='unavailable'&&forecast.status!=='unavailable');setDecisionAvailable(hasDecision);if(hasDecision)paintDecision(selected);
   paintContext(selected);
-  paintSuffix(selected);
+  paintSuffix(selected,index>0?residentDetail(recording.frames[index-1]):null);
   paintMatter(frame);
   paintHistory(index);
   updateResidentOverlays(index);
@@ -599,7 +665,7 @@ function nearestFrame(tick){let best=0;for(let index=1;index<recording.frames.le
 
 function sonifyFrame(index){
   if(!hearingSignals||document.hidden||!audioContext||index===lastAudibleFrame)return;lastAudibleFrame=index;
-  const frame=recording.frames[index],ids=new Set(frame.event_ids||[]),events=(recording.events||[]).filter(event=>event.kind==='signal_emission'&&(ids.has(event.event_id)||event.tick===frame.tick)).slice(0,3);
+  const frame=recording.frames[index],events=frameEvents(frame).filter(event=>event.kind==='signal_emission').slice(0,3);
   for(const event of events){
     if(activeVoices.size>=3)break;
     const band=Number(event.details?.signal?.tone),rawStrength=Number(event.details?.signal?.strength);if(!Number.isFinite(band)||!Number.isFinite(rawStrength))continue;
@@ -674,7 +740,7 @@ function animate(now) {
 }
 
 export function loadRecording(data) {
-  stopActiveVoices();recording=validate(expandEntityDeltas(data));cursor=0;playing=false;
+  stopActiveVoices();recording=validate(expandRecording(data));cursor=0;playing=false;
   const ids=residentIds();activeBody=ids.includes(recording.frames[0].selected?.body)?recording.frames[0].selected.body:ids[0];
   ui.resident.replaceChildren(...ids.map((id,index)=>{const option=document.createElement('option');option.value=String(id);option.textContent=`Resident ${index+1} · body ${id}`;return option;}));ui.resident.value=String(activeBody);ui.resident.disabled=false;
   makePools(recording);makeActionBars();makeDecisionDisplay();populateMoments();populateEvents();
@@ -696,10 +762,15 @@ export function loadRecording(data) {
 }
 
 export function consumeRecordingInstrumentsForTest(data){
-  recording=validate(expandEntityDeltas(data));makeActionBars();makeDecisionDisplay();populateMoments();populateEvents();
+  recording=validate(expandRecording(data));makeActionBars();makeDecisionDisplay();populateMoments();populateEvents();
   const bodies=residentIds(),frames=[0,Math.floor(recording.frames.length/2),recording.frames.length-1];
   let updates=0;for(const body of bodies){activeBody=body;for(const frame of frames){updateInstruments(frame);updates++;}}
   return {format:recording.format,residents:bodies.length,frames:recording.frames.length,instrument_updates:updates,events:(recording.events||[]).length};
+}
+
+export function inspectRecordingStructureForTest(data){
+  const decoded=validate(expandRecording(data)),regional=decoded.frames.filter(frame=>frame.regional_matter?.status==='recorded'),details=decoded.frames.flatMap(frame=>frame.resident_details||[]),suffixes=details.map(detail=>detail.acquired_action_candidates?.status==='recorded'?detail.acquired_action_candidates.value:null).filter(Boolean);
+  return {format:decoded.format,frames:decoded.frames.length,events:(decoded.events||[]).length,regional_frames:regional.length,regional_steps:regional.map(frame=>frame.regional_matter.step_index),regional_event_copies:regional.reduce((total,frame)=>total+(frame.regional_matter.last_events?.length||0),0),regional_flow_receipts:(decoded.events||[]).filter(event=>event.kind==='regional-material-flow').length,selected_continuation_frames:suffixes.filter(value=>value.recalled[value.selected_candidate]&&value.phase[value.selected_candidate]>0).length,completed_executions_max:Math.max(0,...suffixes.map(value=>value.completed_total)),interrupted_executions_max:Math.max(0,...suffixes.map(value=>value.interrupted_total))};
 }
 
 ui.resident.addEventListener('change',()=>{activeBody=Number(ui.resident.value);rebuildResidentOverlays();updateInstruments(Math.round(cursor));const bodyButton=document.querySelector('[data-camera="body"]'),hasPose=recording.frames.some(frame=>residentDetail(frame)?.retina_pose);bodyButton.disabled=!hasPose;bodyButton.title=hasPose?'Recorded retinal viewpoint':'This resident has no recorded retinal pose';});

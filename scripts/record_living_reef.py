@@ -20,7 +20,10 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FORMAT = "chreatures-living-reef-public-recording-v3"
+FORMAT = "chreatures-living-reef-public-recording-v4"
+REGIONAL_MATTER_ENCODING = "keyframe-state-delta-v1"
+RESIDENT_FORMAT = "chreatures-native-developmental-resident-population-v8"
+RESIDENT_EXECUTION = "developmental-resident-native-population-v8"
 V4_ACTION_NAMES = (
     "thrust", "yaw", "gaze_pitch", "posture", "grip",
     "signal_low", "signal_mid", "signal_high", "eat", "release", "secrete",
@@ -141,6 +144,14 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--profile-sha256", required=True)
     parser.add_argument("--expected-graph-sha256")
     parser.add_argument("--expected-resident-artifact-sha256")
+    parser.add_argument(
+        "--require-regional-flow", action="store_true",
+        help="Fail unless regional inventory is present and a committed route-flow receipt is captured",
+    )
+    parser.add_argument(
+        "--require-observed-continuation", action="store_true",
+        help="Fail unless a selected acquired-action candidate has a positive continuation phase",
+    )
     return parser.parse_args()
 
 
@@ -340,6 +351,7 @@ def acquired_action_summary(value: Any, action_count: int) -> dict[str, Any]:
         ("recalled", bool),
         ("slot", int),
         ("generation", int),
+        ("phase", int),
         ("length_ticks", int),
         ("support", int),
         ("empirical_score", lambda item: finite(item, key)),
@@ -348,6 +360,15 @@ def acquired_action_summary(value: Any, action_count: int) -> dict[str, Any]:
         source = value.get(key)
         if not isinstance(source, list) or len(source) != count:
             raise ValueError(f"acquired-action {key} must contain eight candidates")
+        if key in {"slot", "generation", "phase", "length_ticks", "support"} and any(
+            isinstance(item, bool)
+            or not isinstance(item, (int, float))
+            or not math.isfinite(item)
+            or item != int(item)
+            or item < 0
+            for item in source
+        ):
+            raise ValueError(f"acquired-action {key} must contain nonnegative integers")
         arrays[key] = [convert(item) for item in source]
     first_actions = value.get("first_action")
     if not isinstance(first_actions, list) or len(first_actions) != count:
@@ -356,9 +377,22 @@ def acquired_action_summary(value: Any, action_count: int) -> dict[str, Any]:
         vector(row, action_count, "acquired-action first action")
         for row in first_actions
     ]
-    arrays["selected_candidate"] = int(value["selected_candidate"])
-    arrays["occupied_slots"] = int(value["occupied_slots"])
-    arrays["learned_total"] = int(value["learned_total"])
+    for key in (
+        "selected_candidate", "occupied_slots", "learned_total",
+        "completed_total", "interrupted_total",
+    ):
+        item = value.get(key)
+        if (
+            isinstance(item, bool)
+            or not isinstance(item, (int, float))
+            or not math.isfinite(item)
+            or item != int(item)
+            or item < 0
+        ):
+            raise ValueError(f"acquired-action {key} must be a nonnegative integer")
+        arrays[key] = int(item)
+    if arrays["selected_candidate"] >= count:
+        raise ValueError("acquired-action selected candidate is outside the candidate set")
     components = value.get("empirical_component_weights")
     arrays["empirical_component_weights"] = vector(
         components, 3, "acquired-action empirical component weights"
@@ -367,7 +401,22 @@ def acquired_action_summary(value: Any, action_count: int) -> dict[str, Any]:
         "movement_response", "energy_cost", "fatigue_recovery"
     ]
     arrays["empirical_tilt_limit"] = finite(value["empirical_tilt_limit"], "acquired-action empirical tilt limit")
-    arrays["meaning"] = str(value.get("meaning", "recorded recall diagnostic; support is execution frequency, not confidence"))
+    arrays["length_semantics"] = "remaining ticks in the candidate sequence"
+    arrays["phase_semantics"] = (
+        "zero is a sequence-start proposal; positive values are continuation proposals "
+        "whose cursor advanced only after exact delivered-action receipts"
+    )
+    arrays["support_semantics"] = (
+        "completed executions of the entire stored sequence; not confidence or success"
+    )
+    arrays["counter_semantics"] = (
+        "lifetime completed and interrupted execution receipts before this decision"
+    )
+    arrays["meaning"] = str(value.get(
+        "meaning",
+        "private recall and interruptible continuation of executed sequences; support "
+        "counts complete executions and does not certify success or reachability",
+    ))
     return {"status": "recorded", "value": arrays}
 
 
@@ -398,23 +447,13 @@ def regional_matter_view(
         key=str(item["id"]);slots=item["slots"]
         if not isinstance(slots,list): raise ValueError("regional outlet slots must be an array")
         outlets.append({"outlet":outlet_indices[key],"region":node_indices[str(item["region"])],"position":vector(item["position"],3,"regional outlet position"),"interval_seconds":finite(item["interval_seconds"],"regional outlet interval"),"credit_seconds":finite(item["credit_seconds"],"regional outlet credit"),"slot_count":len(slots),"available_slots":int(item["available_slots"]),"last_moved_resources":chemical_pools(item["last_moved_resources"],"regional outlet last movement"),"cumulative_moved_resources":chemical_pools(item["cumulative_moved_resources"],"regional outlet cumulative movement")})
-    events=[]
-    for item in raw.get("last_events", []):
-        actors=item.get("actors",{});details=item.get("details",{});kind=str(item["kind"])
-        allowed={"physical-material-entered-region":{"face","receiver_row"},"regional-material-flow":{"route","accessibility","endpoints","directions"},"regional-material-outlet":{"outlet","source_row","position"}}
-        if kind not in allowed or set(details) != allowed[kind]:
-            raise ValueError(f"regional matter event {kind} has an invalid detail contract")
-        public_details=dict(details)
-        for key in ("receiver_row","source_row"):
-            if key in public_details: public_details[key]=int(public_details[key])
-        if "route" in public_details: public_details["route"]=edge_indices[str(public_details["route"])]
-        if "outlet" in public_details: public_details["outlet"]=outlet_indices[str(public_details["outlet"])]
-        if "endpoints" in public_details: public_details["endpoints"]=[node_indices[str(value)] for value in public_details["endpoints"]]
-        if "directions" in public_details: public_details["directions"]={str(pool):{"source":node_indices[str(direction["source"])],"target":node_indices[str(direction["target"])]} for pool,direction in sorted(public_details["directions"].items())}
-        quantities=[{"name":str(q["name"]),"value":finite(q["value"],"regional event quantity"),"unit":str(q["unit"])} for q in item.get("quantities",[])]
-        if any(q["unit"] != "synthetic-chemical-amount" for q in quantities): raise ValueError("regional matter event unit is invalid")
-        events.append({"kind":kind,"actors":{"bodies":[body_indices[str(value)] for value in actors.get("bodies",[]) if str(value) in body_indices],"entities":[entity_indices[str(value)] for value in actors.get("entities",[]) if str(value) in entity_indices]},"quantities":quantities,"details":public_details,"source":{"stream":"regional-matter","config_sha256":str(raw["config_sha256"])},"blob_refs":[]})
-    return {"status":"recorded","format":raw["format"],"config_sha256":str(raw["config_sha256"]),"time":finite(raw["time"],"regional matter time"),"step_index":int(raw["step_index"]),"nodes":sorted(nodes,key=lambda x:x["node"]),"edges":sorted(edges,key=lambda x:x["edge"]),"outlets":sorted(outlets,key=lambda x:x["outlet"]),"last_events":events,"units":{"position":"meter","pools":"synthetic-chemical-amount","movement":"synthetic-chemical-amount"}}
+    if not isinstance(raw.get("last_events"), list):
+        raise ValueError("regional matter last events must be an array")
+    # Regional events are retained once in the authenticated top-level event
+    # chain and associated with frames by event_range. Repeating the same
+    # causal records inside every regional state made flow-heavy captures grow
+    # needlessly and left the duplicate copies outside that public hash chain.
+    return {"status":"recorded","format":raw["format"],"config_sha256":str(raw["config_sha256"]),"time":finite(raw["time"],"regional matter time"),"step_index":int(raw["step_index"]),"nodes":sorted(nodes,key=lambda x:x["node"]),"edges":sorted(edges,key=lambda x:x["edge"]),"outlets":sorted(outlets,key=lambda x:x["outlet"]),"units":{"position":"meter","pools":"synthetic-chemical-amount","movement":"synthetic-chemical-amount"}}
 
 
 def event_capabilities(state: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
@@ -766,6 +805,11 @@ def identity(state: Mapping[str, Any], args: argparse.Namespace) -> dict[str, An
     controller = state.get("resident_controller", {})
     graph = str(anatomy.get("sha256", ""))
     artifact = str(controller.get("artifact_sha256", ""))
+    if (
+        controller.get("format") != RESIDENT_FORMAT
+        or controller.get("execution") != RESIDENT_EXECUTION
+    ):
+        raise ValueError("host is not running the current native v8 resident")
     engine = state.get("engine_identity")
     if not isinstance(engine, Mapping) or len(str(engine.get("sha256", ""))) != 64:
         raise ValueError("host view lacks its pinned engine identity")
@@ -1153,6 +1197,24 @@ def extract_frame(
         )
         if selected_body["speed"] >= 0.1:
             reasons.append("rapid-motion")
+    acquired = selected_detail["acquired_action_candidates"]
+    if acquired["status"] == "recorded":
+        summary = acquired["value"]
+        selected_candidate = summary["selected_candidate"]
+        if summary["recalled"][selected_candidate] and summary["phase"][selected_candidate] > 0:
+            reasons.append("acquired-sequence-continuation")
+        if previous is not None:
+            old = next(
+                value
+                for value in previous["resident_details"]
+                if value["body"] == selected_index
+            )["acquired_action_candidates"]
+            if old["status"] == "recorded":
+                old_summary = old["value"]
+                if summary["completed_total"] > old_summary["completed_total"]:
+                    reasons.append("acquired-sequence-completed")
+                if summary["interrupted_total"] > old_summary["interrupted_total"]:
+                    reasons.append("acquired-sequence-interrupted")
     return frame, reasons, evidence_events(
         state, body_indices, entity_indices, after_sequence=event_cursor,
         regional_indices=regional_indices,
@@ -1178,6 +1240,96 @@ def encode_entity_deltas(frames: list[dict[str, Any]]) -> None:
         previous = current
 
 
+def _regional_static_view(value: Mapping[str, Any]) -> dict[str, Any]:
+    """Return topology fields which require a replacement if they change."""
+    return {
+        "format": value["format"],
+        "config_sha256": value["config_sha256"],
+        "units": value["units"],
+        "nodes": [
+            {key: item[key] for key in ("node", "row", "position")}
+            for item in value["nodes"]
+        ],
+        "edges": [
+            {key: item[key] for key in ("edge", "source", "target")}
+            for item in value["edges"]
+        ],
+        "outlets": [
+            {
+                key: item[key]
+                for key in (
+                    "outlet", "region", "position", "interval_seconds", "slot_count",
+                )
+            }
+            for item in value["outlets"]
+        ],
+    }
+
+
+def _changed_regional_rows(
+    current: list[dict[str, Any]], previous: list[dict[str, Any]],
+    identity: str, dynamic: tuple[str, ...],
+) -> list[dict[str, Any]]:
+    old = {int(item[identity]): item for item in previous}
+    changed = []
+    for item in current:
+        key = int(item[identity])
+        if key not in old:
+            raise ValueError("regional matter topology changed without replacement")
+        fields = {
+            name: item[name]
+            for name in dynamic
+            if item[name] != old[key][name]
+        }
+        if fields:
+            changed.append({identity: key, **fields})
+    return changed
+
+
+def encode_regional_matter_deltas(frames: list[dict[str, Any]]) -> None:
+    """Keep a complete frame-zero state, then exact keyed dynamic changes."""
+    previous: dict[str, Any] | None = None
+    for frame_index, frame in enumerate(frames):
+        current = frame["regional_matter"]
+        if frame_index == 0:
+            previous = current
+            continue
+        if current.get("status") != "recorded" or previous is None:
+            previous = current
+            continue
+        if previous.get("status") != "recorded" or (
+            _regional_static_view(current) != _regional_static_view(previous)
+        ):
+            frame["regional_matter"] = {
+                "status": "replacement", "value": current,
+            }
+            previous = current
+            continue
+        frame["regional_matter"] = {
+            "status": "delta",
+            "time": current["time"],
+            "step_index": current["step_index"],
+            "nodes": _changed_regional_rows(
+                current["nodes"], previous["nodes"], "node", ("pools",),
+            ),
+            "edges": _changed_regional_rows(
+                current["edges"], previous["edges"], "edge",
+                (
+                    "accessibility", "last_moved_resources",
+                    "cumulative_moved_resources",
+                ),
+            ),
+            "outlets": _changed_regional_rows(
+                current["outlets"], previous["outlets"], "outlet",
+                (
+                    "credit_seconds", "available_slots", "last_moved_resources",
+                    "cumulative_moved_resources",
+                ),
+            ),
+        }
+        previous = current
+
+
 def main() -> int:
     args = arguments()
     validate_arguments(args)
@@ -1194,6 +1346,8 @@ def main() -> int:
         str(entity["id"]): index for index, entity in enumerate(entities)
     }
     regional_initial = initial.get("biosphere", {}).get("regional_matter")
+    if args.require_regional_flow and regional_initial is None:
+        raise SystemExit("host has no regional matter for the required flow capture")
     if regional_initial is None:
         regional_indices = ({}, {}, {})
     else:
@@ -1264,6 +1418,7 @@ def main() -> int:
                 event_cursor,
                 regional_indices,
             )
+            frame_event_start = len(events)
             for event in frame_events:
                 if event["tick"] > tick:
                     raise RuntimeError("host published an event from a future tick")
@@ -1290,7 +1445,7 @@ def main() -> int:
                 raise RuntimeError("host event cursor advanced beyond retained event receipts")
             if event_stream_head(state) != source_event_head:
                 raise RuntimeError("host event head differs from captured receipt chain")
-            frame["event_ids"] = [event["event_id"] for event in frame_events]
+            frame["event_range"] = [frame_event_start, len(events)]
             geometry_entity_indexes.update(
                 int(entity["entity"]) for entity in frame["entities"]
             )
@@ -1450,7 +1605,14 @@ def main() -> int:
             }
         ),
         "acquired_action_candidates": (
-            {"status":"recorded","source_path":"api/state.cognition[*].acquired_action_candidates"}
+            {
+                "status":"recorded",
+                "source_path":"api/state.cognition[*].acquired_action_candidates",
+                "phase":"zero is a sequence-start proposal; positive is a continuation cursor advanced by exact delivered-action receipts",
+                "length_ticks":"remaining ticks in the candidate sequence",
+                "support":"completed whole-sequence executions; not confidence or success",
+                "counters":"lifetime completed and interrupted receipts before the recorded decision",
+            }
             if any(detail["acquired_action_candidates"]["status"] == "recorded" for frame in frames for detail in frame["resident_details"])
             else {"status":"unavailable","source_path":"api/state.cognition[*].acquired_action_candidates","reason":"host did not publish acquired-action candidate diagnostics"}
         ),
@@ -1471,6 +1633,23 @@ def main() -> int:
                 "source_path": f"api/state.evidence_events[kind={kind}]",
                 "records": count,
             }
+    if args.require_regional_flow and not event_counts["regional-material-flow"]:
+        raise RuntimeError("recording observed no committed regional material flow")
+    if args.require_observed_continuation and not any(
+        detail["acquired_action_candidates"]["status"] == "recorded"
+        and detail["acquired_action_candidates"]["value"]["recalled"][
+            detail["acquired_action_candidates"]["value"]["selected_candidate"]
+        ]
+        and detail["acquired_action_candidates"]["value"]["phase"][
+            detail["acquired_action_candidates"]["value"]["selected_candidate"]
+        ] > 0
+        for frame in frames
+        for detail in frame["resident_details"]
+        if detail["body"] == args.resident_index
+    ):
+        raise RuntimeError(
+            "selected resident recording observed no acquired-action continuation"
+        )
 
     event_stream = dict(event_stream_start)
     if event_stream["status"] == "recorded":
@@ -1527,9 +1706,12 @@ def main() -> int:
     }
 
     encode_entity_deltas(frames)
+    encode_regional_matter_deltas(frames)
     result = {
         "format": FORMAT,
         "geometry_encoding": "entity-replacement-delta-v1",
+        "regional_matter_encoding": REGIONAL_MATTER_ENCODING,
+        "frame_event_encoding": "half-open-index-range-v1",
         "status": (
             "observed physical recording; behavior and growth are not evidence of learned competence"
         ),
@@ -1599,6 +1781,7 @@ def main() -> int:
             "Phenomena labels index observed physical changes and do not interpret intention or learning.",
             "Every present resident's direct retina and neural readouts are sampled; unavailable diagnostic streams are explicit in capabilities.",
             "Events are copied only from stable host receipts; absent event capabilities are not reconstructed from scene changes.",
+            "Regional flow receipts are stored once in the authenticated event chain; frame event ranges and regional state deltas are lossless public encodings.",
         ],
     }
     result["content_sha256"] = sha256_bytes(canonical_bytes(result))
