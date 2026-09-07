@@ -45,7 +45,7 @@ Private coefficients, update counts, residual summaries, RNG and pending transit
 state survive a whole-resident checkpoint.
 
 The rich Torch development policy is trained without this four-candidate
-refinement. The current native-v6 export embeds the rich-play consequence bank
+refinement. The current native-v8 export embeds the preceding rich-play consequence bank
 with the inherited controller weights, creating a declared deployment variant
 rather than an identical copy of the training policy. The earlier v3 export
 receipt already pinned the same rich bank SHA alongside the update-160 inherited
@@ -124,9 +124,61 @@ The earlier `artifacts/body_consequence_laws.json` bank (SHA-256
 retained as historical evidence. It used 192,000 transitions, with 144,000
 training and 48,000 held-out rows, and reported movement, energy, and fatigue
 RMSEs of `0.01849`, `0.0000191`, and `0.0000698`. It is not the bank embedded in
-the current native-v6 export.
+the current native-v8 export.
 
-## Source and reproduction
+## Queued current rich-v4 refit
+
+The next body-law fit consumes only the completed
+`chreatures-sensorimotor-play-rich-v4` campaign with 655,360 delivered physical
+transitions. The compact extractor refuses partial progress manifests, dirty
+collector source, non-contiguous 512-tick shards, altered receipts, or any split
+other than world slots 0–7 for fitting, slot 8 for validation calibration, and
+slot 9 for final reporting. It also requires the current native-v8 resident
+identity and its authenticated 80-member founding bank. All eight residents
+sharing an episode/world remain in the same partition.
+
+Rich-v4 uses the current twelve-action body boundary. The old shortcut over
+action columns `0:4` is invalid because column 3 is posture. The current native
+LawBank seam maps grip from delivered column 4, oral/eat from column 8, and
+computes motor magnitude from columns 0, 1, 2, and 4. The target seam remains
+one-tick encoded-speed change, energy cost, and fatigue recovery from physiology
+columns 3, 0, and 2. This refresh changes fitted physical associations; it adds
+no score, personality, reward, or privileged world feature.
+
+After the authoritative manifest exists, extract the compact bulk intermediate
+on persvati beside the relayed collection:
+
+```sh
+/home/ember/kaxsim/.venv7/bin/python integrations/gam_mechanisms/prepare_rich_consequence_laws.py \
+  --collection /home/ember/chreatures-data/sensorimotor-play/rich-v4-seed20260919 \
+  --source-revision aa0093ab4f2c5e26f135bc9d79df448c8ae249a1 \
+  --output /home/ember/chreatures-data/sensorimotor-play/rich-v4-seed20260919/gam-body-transitions-v1.npz
+```
+
+Transfer only that compact intermediate to the M2 source-frozen integration
+checkout whose `integrations/.venv` contains native `gamfit==0.1.259`. Build the
+current Rust verifier outside the laptop workspace, then fit into a fresh output
+directory:
+
+```sh
+CARGO_TARGET_DIR=/Users/ember/paperbin/chreatures/build/gam-mechanisms \
+  cargo build --release --manifest-path integrations/gam_mechanisms/Cargo.toml
+integrations/.venv/bin/python integrations/gam_mechanisms/fit_consequence_laws.py \
+  --compact /path/to/gam-body-transitions-v1.npz \
+  --output-dir /path/to/rich-v4-body-laws-v1 \
+  --native-evaluator /Users/ember/paperbin/chreatures/build/gam-mechanisms/release/chreatures-gam-mechanisms
+```
+
+The fit uses `gamfit.fit_array`, which stays on the package's native Rust path
+without materializing 524,288 Python row dictionaries. It saves each certified
+native `.gam` model. A failed model or native verification leaves a failure
+receipt and any completed model files, mints no `body_consequence_laws.json`, and
+does not substitute the preceding bank. A successful run emits the reusable
+LawBank, validation and untouched-holdout domain metrics, per-world cohort
+checks, native boundary cases, a native evaluation receipt, and an outside-only
+analyst receipt. Root still owns artifact promotion and source freeze.
+
+## Historical source and reproduction
 
 The fitting API is the native `gamfit==0.1.259` wheel, built from the official
 SauersML/gam commit `7c7eca8ac4826de95c8e743a20294bee132a9bcc` (the upstream
@@ -135,22 +187,10 @@ We intentionally do not constrain observed energy or fatigue curves toward desir
 behavior: physical laws remain authoritative, and the fit must reveal what was
 experienced.
 
-Reproducing the rich-body bank requires its archived rich-play packets, including
+Reproducing the preceding rich-body bank requires its archived rich-play packets, including
 the separate oral-command column. The new twelve-action rich-v3 corpus has its
 own declared contract; it is not interchangeable with those fitting inputs.
-Extract compact columns on the bulk node, then fit into a fresh output directory:
-
-```sh
-python integrations/gam_mechanisms/prepare_rich_consequence_laws.py \
-  --collection /path/to/archived-rich-play \
-  --source-revision PINNED_COLLECTION_REVISION \
-  --output /path/to/experienced_transitions.npz
-integrations/.venv/bin/python integrations/gam_mechanisms/fit_consequence_laws.py \
-  --compact /path/to/experienced_transitions.npz \
-  --output-dir /path/to/fresh-rich-body-fit
-cargo run --manifest-path integrations/gam_mechanisms/Cargo.toml -- \
-  /path/to/fresh-rich-body-fit/body_consequence_laws.json FEATURE...
-```
-
-The compact transition matrix is bulk intermediate data and stays outside Git. The
-law bank records SHA-256 hashes of both authoritative source packets.
+That historical invocation belongs to pinned Git history. The current extractor
+intentionally accepts rich-v4 only. Compact transition matrices remain bulk
+intermediates outside Git, while each law bank records the authoritative packet
+hashes and collection identities.

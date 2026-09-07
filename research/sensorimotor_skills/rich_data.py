@@ -6,7 +6,7 @@ import copy
 import hashlib
 import json
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -100,6 +100,39 @@ class RichEpisode:
         return value
 
 
+@dataclass(frozen=True)
+class RichPacket:
+    episode: int
+    shard: int
+    start_tick: int
+    stop_tick: int
+    stage: int
+    path: Path
+    sha256: str
+    receipt: Mapping[str, Any]
+
+
+class _RichEpisodeSequence(Sequence[RichEpisode]):
+    """Sequence facade that opens one authenticated packet per access."""
+
+    def __init__(self, dataset: "RichPlayDataset") -> None:
+        self.dataset = dataset
+
+    def __len__(self) -> int:
+        return len(self.dataset.packets)
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return [
+                self.dataset.load_packet(packet)
+                for packet in self.dataset.packets[index]
+            ]
+        return self.dataset.load_packet(self.dataset.packets[index])
+
+    def __iter__(self) -> Iterator[RichEpisode]:
+        return self.dataset.iter_contiguous_shards()
+
+
 class RichPlayDataset:
     """Verify every receipt before exposing direct 4459-column observations."""
 
@@ -139,7 +172,10 @@ class RichPlayDataset:
             raise ValueError("rich collection identity receipt differs")
         identity_body = copy.deepcopy(identity)
         identity_sha = identity_body.pop("sha256", None)
-        if identity_sha != canonical_sha256(identity_body):
+        if (
+            identity_sha != canonical_sha256(identity_body)
+            or manifest.get("collection_identity_sha256") != identity_sha
+        ):
             raise ValueError("rich collection identity hash differs")
         if (
             identity.get("rich_profile_sha256") != PROFILE_SHA256
@@ -168,7 +204,7 @@ class RichPlayDataset:
         packets = manifest.get("packets")
         if not isinstance(packets, list) or not packets:
             raise ValueError("rich packet receipts are missing")
-        episodes = []
+        packets_verified = []
         hashes = {
             "manifest.json": hashlib.sha256(raw).hexdigest(),
             str(SCHEMA_PATH): schema_hash,
@@ -177,7 +213,10 @@ class RichPlayDataset:
         expected_packets = int(scope["episodes"]) * (
             self.steps_per_episode // self.shard_steps
         )
-        if len(packets) != expected_packets:
+        if (
+            self.steps_per_episode % self.shard_steps
+            or len(packets) != expected_packets
+        ):
             raise ValueError("rich shard count differs")
         for number, packet_receipt in enumerate(packets):
             episode = number // (self.steps_per_episode // self.shard_steps)
@@ -199,15 +238,25 @@ class RichPlayDataset:
                 packet_receipt.get("bytes", -1)
             ):
                 raise ValueError("rich packet receipt differs")
-            episodes.append(
-                self._load_episode(episode, shard, packet, digest, packet_receipt)
+            packets_verified.append(
+                RichPacket(
+                    episode=episode,
+                    shard=shard,
+                    start_tick=start_tick,
+                    stop_tick=start_tick + self.shard_steps,
+                    stage=int(packet_receipt["stage"]),
+                    path=packet,
+                    sha256=digest,
+                    receipt=copy.deepcopy(packet_receipt),
+                )
             )
             hashes[packet.name] = digest
         self._verify_checkpoints(manifest.get("checkpoints"), hashes)
         self.manifest = manifest
         self.manifest_file_sha256 = hashlib.sha256(raw).hexdigest()
         self.file_sha256s = hashes
-        self.episodes = episodes
+        self.packets = tuple(packets_verified)
+        self.episodes = _RichEpisodeSequence(self)
 
     def _verify_checkpoints(self, checkpoints, hashes) -> None:
         expected = []
@@ -245,7 +294,12 @@ class RichPlayDataset:
                     raise ValueError("rich checkpoint file receipt differs")
                 hashes[str(path.relative_to(self.path))] = digest
 
-    def _load_episode(self, number, shard, path, digest, receipt) -> RichEpisode:
+    def load_packet(self, packet: RichPacket) -> RichEpisode:
+        number = packet.episode
+        shard = packet.shard
+        path = packet.path
+        digest = packet.sha256
+        receipt = packet.receipt
         with np.load(path, allow_pickle=False) as value:
             required = {
                 "observation",
@@ -361,6 +415,45 @@ class RichPlayDataset:
             readonly(arrays["organ_flows"]),
         )
 
+    def iter_contiguous_shards(self) -> Iterator[RichEpisode]:
+        """Load one shard at a time and reject discontinuous episode seams."""
+        previous_boundary = None
+        previous_packet = None
+        for packet in self.packets:
+            episode = self.load_packet(packet)
+            if previous_packet is None or packet.episode != previous_packet.episode:
+                if packet.shard != 0 or packet.start_tick != 0:
+                    raise ValueError("rich episode does not start at shard zero")
+            else:
+                if (
+                    packet.shard != previous_packet.shard + 1
+                    or packet.start_tick != previous_packet.stop_tick
+                    or not np.array_equal(
+                        previous_boundary["observation"], episode.observation[0]
+                    )
+                    or not np.array_equal(
+                        previous_boundary["canonical"], episode.canonical[0]
+                    )
+                    or (previous_boundary["neural"] is None) != (episode.neural is None)
+                    or (
+                        previous_boundary["neural"] is not None
+                        and not np.array_equal(
+                            previous_boundary["neural"], episode.neural[0]
+                        )
+                    )
+                ):
+                    raise ValueError("rich shard continuity differs")
+            previous_boundary = {
+                "observation": episode.observation[-1].copy(),
+                "canonical": episode.canonical[-1].copy(),
+                "neural": (
+                    episode.neural[-1].copy() if episode.neural is not None else None
+                ),
+            }
+            previous_packet = packet
+            yield episode
+            del episode
+
     def columns(self, world_slots: Sequence[int]) -> np.ndarray:
         wanted = np.asarray(world_slots, dtype=np.int64)
         if (
@@ -369,7 +462,7 @@ class RichPlayDataset:
             or np.any((wanted < 0) | (wanted >= self.world_count))
         ):
             raise ValueError("world slots are invalid")
-        slots = self.episodes[0].world_slots
+        slots = np.repeat(np.arange(self.world_count), self.residents_per_world)
         return readonly(np.flatnonzero(np.isin(slots, wanted)).astype(np.int64))
 
 
@@ -432,6 +525,7 @@ class RichNormalizer:
                 mean += delta * len(rows) / total
                 m2 += batch_m2 + delta * delta * count * len(rows) / total
                 count = total
+            del episode
         scale = np.maximum(np.sqrt(m2 / count), 0.02)
         statistics = {
             "split": "explicit-train-worlds",
@@ -441,7 +535,7 @@ class RichNormalizer:
             "floor_std": 0.02,
             "clip": 8.0,
             "manifest_file_sha256": dataset.manifest_file_sha256,
-            "packet_sha256s": [episode.packet_sha256 for episode in dataset.episodes],
+            "packet_sha256s": [packet.sha256 for packet in dataset.packets],
         }
         return cls(mean, scale, statistics)
 

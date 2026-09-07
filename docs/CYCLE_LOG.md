@@ -956,3 +956,45 @@ its unused archive timer was unloaded; previous lives and archive jobs remain
 untouched. The planned 655,360-transition corpus, current artifact identities,
 source checkpoint and launch prerequisites are in
 [the resume handoff](development/ECOLOGICAL_SPECIALIZATION_HANDOFF.md).
+
+## Resumed specialization — coupled execution and fresh cohort preparation
+
+After the user's quota refresh, the resumed swarm kept the ecological
+specialization architecture and completed its joined physical run. Outlet
+centres had overlapped generated blocks and colonies; route queries had crossed
+endpoint furniture. Native generation now reserves physical outlet clearance
+and samples the exposed connecting span. Obstruction still comes from actual
+geometry.
+
+The B8 assay completed 1,200 physical ticks and a 12-tick exact continuation:
+21 material regions, 29 routes, six activated finite outlets, complete
+packet-exit accounting, 12 committed growth updates and 16 regulated body/gut
+rows. Maximum elemental residual was `3.41e-13`. It used analyst-supplied actions,
+not a neural controller. Packed native transfers and smaller per-tick reports
+reduced the measured physics-plus-biosphere path from 5.458 to 4.945 seconds over
+200 ticks, with identical final states. Source `bdfdc74` and the
+[actual receipt](../data/ecology/regional-ecology-v2.receipt.json) preserve scope.
+
+Native v8 (`9f8334d`) repairs private sequence execution: a resident can offer
+the remaining portion of an active memory, re-evaluate it after sensation, and
+interrupt it. Exact completed delivery earns sequence support; selecting a
+first action does not. An actual-artifact B8 boundary run restored all 66
+next-decision fields and pending receipt state exactly, including the newly
+reachable H1–H3 remaining horizons. The immutable pretrained tensors are
+unchanged. Physical usefulness of continuation still needs its own evidence.
+
+The preparation path (`71e649a`, `cd2ccfc`) binds one profile, current controller,
+80 distinct cold genomes, episode/world seeds and native search provenance
+before allocating the cohort. It also emits the same founders as canonical
+live-world birth inputs. The planned 655,360-transition collection uses ten
+shared worlds, with world slots 0–7 for fitting, 8 for validation and 9 for final
+reporting. Persvati is the intended collection host because its available host
+RAM is much larger; hbox remains available for fitting and bulk storage. This
+entry records preparation, not a completed collection or fit.
+
+The v4 public recorder (`b7a9c8e`) adds explicit recalled-sequence phase,
+completion and interruption observations. Regional state uses keyframes and
+changed rows; authenticated physical events occur once in the recording and
+have explicit frame ranges. The previous actual recording remains published
+until the new full-neural world supplies its own clip. Existing lives and their
+frozen engines remain untouched.
