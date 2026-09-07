@@ -29,6 +29,8 @@ let paused = false;
 let selectedResident = null;
 let selectedToy = null;
 let requestCounter = 0;
+const requestedStimulus = new URLSearchParams(location.search).get('stimulus');
+const initialStimulus = ['bad-apple', 'grating'].includes(requestedStimulus) ? requestedStimulus : 'blank';
 let stimulusMode = 'blank';
 let stimulusTimer = null;
 let stimulusStarted = performance.now();
@@ -155,6 +157,10 @@ function handleReady(message) {
   selectResident(residents[0].id);
   setNotice('running locally', 'ready');
   startStimulusClock();
+  if (initialStimulus !== 'blank') {
+    const button = document.querySelector(`[data-stimulus="${initialStimulus}"]`);
+    void chooseStimulus(initialStimulus, button);
+  }
 }
 
 function updateFrame(message) {
@@ -162,7 +168,7 @@ function updateFrame(message) {
   modelTime.textContent = `${Number(message.time).toFixed(2)} s`;
   paused = Boolean(message.paused);
   pauseButton.textContent = paused ? 'Resume' : 'Pause';
-  setNotice(paused ? 'paused' : 'running locally', paused ? 'paused' : 'ready');
+  if (!noticeTimer) setNotice(paused ? 'paused' : 'running locally', paused ? 'paused' : 'ready');
   if (message.selectedResidentId === selectedResident) {
     if (message.neuralRates) {
       const activity = view.updateNeural(message.neuralRates);
@@ -328,3 +334,5 @@ stimulusVideo.addEventListener('error', () => {
 });
 
 setInteractive(false);
+
+if (initialStimulus === 'bad-apple') startButton.textContent = 'Start a life with Bad Apple';
