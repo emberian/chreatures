@@ -48,6 +48,7 @@ BODY_STATE_FIELDS = {
 PERIPHERAL_SHAPE = (8, 32, 4)
 FOVEAL_SHAPE = (24, 32, 4)
 EVENT_KINDS = (
+    "research_continuation",
     "root-material-acquisition",
     "mobile-material-release",
     "colony-material-emission",
