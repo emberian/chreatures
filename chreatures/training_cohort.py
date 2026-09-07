@@ -211,10 +211,13 @@ def _write_outcomes(
         body_id = body.id if hasattr(body, "id") else str(body["id"])
         outcome = outcomes[body_id]
         homeostasis = outcome.get("homeostasis", {})
-        # Actual material flows have their own native shared buffer. They are
-        # not silently inserted into the fixed physical-outcome vector.
+        # Actual material flows have their own native shared buffer. Contact
+        # identities and emitted signal records are observer metadata, consumed
+        # by the interactive runtime's evidence journal. This transport projects
+        # only numeric outcomes; it must not turn entity IDs into policy inputs.
         unknown = set(outcome) - set(OUTCOME_FIELDS) - {
             "homeostasis", "released_mass", "secreted_mass", "allocated_mass",
+            "contacted_entities", "emitted_signals",
         }
         unknown_homeostasis = set(homeostasis) - set(HOMEOSTASIS_FIELDS)
         if unknown or unknown_homeostasis:
@@ -222,6 +225,12 @@ def _write_outcomes(
                 "shared outcome schema differs: "
                 f"fields={sorted(unknown)} homeostasis={sorted(unknown_homeostasis)}"
             )
+        contacts = outcome.get("contacted_entities", [])
+        signals = outcome.get("emitted_signals", [])
+        if not isinstance(contacts, list) or any(not isinstance(x, str) for x in contacts):
+            raise ValueError("contacted_entities observer metadata must be a list of IDs")
+        if not isinstance(signals, list) or any(not isinstance(x, Mapping) for x in signals):
+            raise ValueError("emitted_signals observer metadata must be a list of records")
         target[row] = [float(outcome.get(name, 0.0)) for name in OUTCOME_FIELDS]
         homeostasis_target[row] = [
             float(homeostasis.get(name, 0.0)) for name in HOMEOSTASIS_FIELDS
