@@ -83,7 +83,7 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=Path,
-        default=ROOT / "data/habitat-families/regional-v2.json",
+        default=ROOT / "data/habitat-families/regional-v3.json",
     )
     parser.add_argument(
         "--resident-bundle",

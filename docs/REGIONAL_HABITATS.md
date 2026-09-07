@@ -85,9 +85,16 @@ body-local rays, chemistry, contact, sound, and private physiology; region IDs,
 resource placement, graph connectivity, ancestry, and world coordinates are not
 sensory features.
 
+Generator v3 computes ramp orientations with closed-form half angles using
+basic arithmetic and square roots. It avoids platform-specific `atan2` and
+`sin_cos` results, which changed environment hashes by a few final quaternion
+bits between macOS and Linux in the first reciprocal campaign. Generated source
+identities remain strict. Earlier profiles and failed campaign inputs retain
+their original v2 generator rather than being relabeled.
+
 Current sources are:
 
-- `data/habitat-families/regional-v2.json`: bounds, archetypes, mutation recipe,
+- `data/habitat-families/regional-v3.json`: bounds, archetypes, mutation recipe,
   physical cluster definitions, and initial training genomes.
 - `data/habitat-families/regional-residents-v2.json`: the 32-resident capacity
   bundle of somatic-v3 founders at the five-compartment boundary. A campaign
