@@ -88,7 +88,10 @@ sensory features.
 Generator v3 computes ramp orientations with closed-form half angles using
 basic arithmetic and square roots. It avoids platform-specific `atan2` and
 `sin_cos` results, which changed environment hashes by a few final quaternion
-bits between macOS and Linux in the first reciprocal campaign. Generated source
+bits between macOS and Linux in the first reciprocal campaign. A bounded
+integer-indexed triangular elevation pattern replaces the other transcendental
+source in initial node placement; the updated mutation recipe records this
+layout change. Generated source
 identities remain strict. Earlier profiles and failed campaign inputs retain
 their original v2 generator rather than being relabeled.
 

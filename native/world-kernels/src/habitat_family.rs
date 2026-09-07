@@ -1175,7 +1175,15 @@ impl HabitatFamily {
             let x = margin + xn * usable_x + rng.symmetric() * (usable_x / columns as f64) * 0.12;
             let y =
                 margin + yn * usable_y + rng.symmetric() * (usable_y / p.lane_count as f64) * 0.12;
-            let wave = ((xn * std::f64::consts::PI * 2.0) + (lane as f64 * 0.73)).sin() * 0.18;
+            // An integer-indexed triangular relief avoids platform libm while
+            // retaining alternating exposed and sheltered elevations.
+            let wave_step = (column * 5 + lane * 3) % 16;
+            let triangle = if wave_step <= 8 {
+                wave_step as f64 / 8.0
+            } else {
+                (16 - wave_step) as f64 / 8.0
+            };
+            let wave = (triangle * 2.0 - 1.0) * 0.18;
             let terrace = (xn * 3.0 + p.terrace_bias).floor() / 3.0;
             let z = 0.1
                 + p.elevation_span_m
