@@ -121,7 +121,10 @@ def main() -> int:
     if not args.graph.is_dir():
         raise NotADirectoryError(args.graph)
 
-    profile = EmbodiedTrainingProfile.from_value(json.loads(args.profile.read_text()))
+    encoded_profile = json.loads(args.profile.read_text())
+    profile = EmbodiedTrainingProfile.from_value(
+        encoded_profile, locators=encoded_profile["locators"]
+    )
     world, candidates = selected_world(args.assignments, args.world_index)
     environment = world.get("environment")
     if not isinstance(environment, dict) or environment.get("split") not in {
