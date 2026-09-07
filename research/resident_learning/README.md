@@ -21,16 +21,37 @@ object labels, physiology, and raw sensor arrays have no field in the episode
 format. `pack-joined` seals equivalent arrays exported by the browser or native
 world and requires their CNS service identity to match the resident artifact.
 
+The current corpus is six independent training worlds plus two held-out worlds.
+Every episode is divided into gapless approach, heading-correction, stop,
+withdraw, and contact-recovery bouts.  The trainer samples those skills
+uniformly instead of sampling ticks uniformly, so a long turning phase cannot
+dominate stopping or recovery.  World seed, variation seed, and layout identity
+must all be unique, and held-out identities cannot occur in training. Bout
+labels are privileged sampling/target metadata; they never enter a tensor given
+to the resident. Each optimized 32-tick window first reconstructs up to 32
+actual preceding CNS/action ticks without gradients, then detaches that private
+state. This matches live recurrent context over the recent 1.6 seconds without
+claiming retention beyond the explicit burn-in horizon.
+
 An achieved future CNS key conditions each inverse motor fit. Deployment can
 obtain that kind of goal only through the resident's own achieved-history
 reservoir. The native predictor ensemble fits one-to-eight-step CNS outcomes;
 the existing selector, value estimate, and acquired-suffix termination head use
 the same physical sequence and scalar return. Held-out teacher variations and
 world starts can be supplied as validation episodes, with before/after losses
-recorded in the final receipt.
+recorded both overall and per skill in the final receipt. Predictor loss covers
+every horizon from one through eight. Selector/value gradients stop at the
+canonical head inputs so they cannot distort the CNS transition model to create
+an easy classification shortcut. Termination learns from both the suffix that
+was useful in the current context and a mismatched experienced suffix.
 
-`scripts/train_cns_resident.py convert-recording` can remove physical geometry
-from an actual joined assay after deriving scalar displacement reward. `train`
-publishes a new immutable resident and sequence-control artifact. `compare-native`
-checks the exported GRU state, goal key, and four local proposals against the
-native implementation at a reset boundary.
+`scripts/train_cns_resident.py pack-corpus` seals the eight exact joined source
+archives and writes their authenticated split manifest. It also authenticates
+the complete collection receipt and its stable curriculum-contract identity;
+placement-only source amendments remain explicit per episode without relabeling
+already collected experience. `train` consumes that
+single manifest and publishes a new immutable resident and sequence-control
+artifact. Durable checkpoints move every model and optimizer tensor to CPU and
+include lineage, RNG, validation baseline, and history, so another ROCm or CPU
+host can resume them. `compare-native` checks the exported GRU state, goal key,
+and four local proposals against the native implementation at a reset boundary.

@@ -90,10 +90,18 @@ class CnsResidentModel(nn.Module):
         raw = self.proposal_out(hidden).reshape(*state.shape[:-1], LOCAL, ACTIONS)
         return self.bounded_actions(raw)
 
-    def unroll(self, latent: torch.Tensor, previous: torch.Tensor, reset: torch.Tensor) -> dict[str, torch.Tensor]:
+    def unroll(
+        self,
+        latent: torch.Tensor,
+        previous: torch.Tensor,
+        reset: torch.Tensor,
+        initial_state: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         if latent.ndim != 3 or latent.shape[-1] != Z or previous.shape != (*latent.shape[:-1], ACTIONS):
             raise ValueError("resident unroll requires [time,batch,Z512] and previous action12")
-        state = latent.new_zeros((latent.shape[1], HIDDEN))
+        state = latent.new_zeros((latent.shape[1], HIDDEN)) if initial_state is None else initial_state
+        if state.shape != (latent.shape[1], HIDDEN):
+            raise ValueError("resident initial recurrent state differs")
         states, keys, proposals = [], [], []
         for t in range(latent.shape[0]):
             state, key = self.observe(latent[t], previous[t], reset[t], state)
@@ -187,7 +195,23 @@ class LossTerms:
 def training_loss(model: CnsResidentModel, batch: Mapping[str, torch.Tensor], discount: float = 0.97) -> LossTerms:
     latent, previous, reset = batch["cns_latent"], batch["previous_delivered_command"], batch["reset"]
     delivered, reward = batch["delivered_command"], batch["physical_reward"]
-    result = model.unroll(latent, previous, reset)
+    burn_in = int(batch.get("burn_in", 0))
+    if burn_in < 0 or burn_in >= delivered.shape[0]:
+        raise ValueError("resident burn-in leaves no optimized transitions")
+    initial_state = None
+    if burn_in:
+        # Reconstruct recent private recurrent context from the actual CNS and
+        # delivered-action chronology.  The state is detached at the target
+        # window boundary: burn-in supplies context, never an extra loss path.
+        with torch.no_grad():
+            prefix = model.unroll(latent[:burn_in], previous[:burn_in], reset[:burn_in])
+            initial_state = prefix["state"][-1].detach()
+        latent = latent[burn_in:]
+        previous = previous[burn_in:]
+        reset = reset[burn_in:]
+        delivered = delivered[burn_in:]
+        reward = reward[burn_in:]
+    result = model.unroll(latent, previous, reset, initial_state)
     states, keys = result["state"][:-1], result["key"]
     t, b = delivered.shape[:2]
     goal_horizon = min(MAX_HORIZON, t)
@@ -205,25 +229,39 @@ def training_loss(model: CnsResidentModel, batch: Mapping[str, torch.Tensor], di
     horizon = min(MAX_HORIZON, t)
     starts = t - horizon + 1
     suffixes = []
-    targets = []
-    contexts = []
     utilities = []
     lengths = []
     for step in range(starts):
         seq = delivered[step : step + horizon].permute(1, 0, 2)
         suffixes.append(seq)
-        targets.append(latent[step + horizon])
-        contexts.append(torch.cat((latent[step], states[step], achieved_goal[step], previous[step]), -1))
         weights = reward.new_tensor([discount**i for i in range(horizon)])[:, None]
         utilities.append((reward[step : step + horizon] * weights).sum(0))
         lengths.append(torch.full((b,), horizon, dtype=torch.long, device=latent.device))
     suffix = torch.cat(suffixes)
-    target = torch.cat(targets)
-    context = torch.cat(contexts)
     utility = torch.cat(utilities)
     length = torch.cat(lengths)
-    predicted, _ = model.predict(context, suffix)
-    prediction_loss = ((predicted - target[:, None]) ** 2).mean()
+    # Fit every rollout depth.  Training only the eighth step allowed the
+    # recurrent transition to trade short-horizon accuracy for one endpoint,
+    # which made the first campaign's held-out predictor worse.  Candidate
+    # construction below is detached so selector gradients cannot rewrite the
+    # dynamics model to create an easier classification feature.
+    prediction_terms = []
+    for depth in range(1, horizon + 1):
+        depth_starts = t - depth + 1
+        depth_suffix = torch.cat([
+            delivered[step : step + depth].permute(1, 0, 2)
+            for step in range(depth_starts)
+        ])
+        depth_context = torch.cat([
+            torch.cat((latent[step], states[step], achieved_goal[step], previous[step]), -1)
+            for step in range(depth_starts)
+        ]).detach()
+        depth_target = torch.cat([latent[step + depth] for step in range(depth_starts)]).detach()
+        depth_predicted, _ = model.predict(depth_context, depth_suffix)
+        prediction_terms.append(F.smooth_l1_loss(
+            depth_predicted, depth_target[:, None].expand_as(depth_predicted), beta=0.02
+        ))
+    prediction_loss = torch.stack(prediction_terms).mean()
 
     # Future keys from the same embodied stream are positives; other residents
     # in the batch are negatives. Rewarded changes strengthen the association.
@@ -243,16 +281,44 @@ def training_loss(model: CnsResidentModel, batch: Mapping[str, torch.Tensor], di
         start_latent, start_state, start_goal, start_previous, start_local,
         suffix, length,
     )
-    outputs = model.sequence_control(control_state, proposals, active, proposal_mask, active_mask)
+    outputs = model.sequence_control(
+        control_state.detach(), proposals.detach(), active.detach(), proposal_mask, active_mask
+    )
     nearest = action_error[:starts].reshape(starts * b, LOCAL).argmin(-1)
-    selector_target = torch.where(utility > 0, torch.full_like(nearest, LOCAL), nearest)
+    selector_target = torch.where(utility > 0.02, torch.full_like(nearest, LOCAL), nearest)
     selector_logits = outputs["selector_logits"].masked_fill(~proposal_mask, -torch.inf)
-    selector_loss = F.cross_entropy(selector_logits, selector_target)
-    # End an active learned suffix when its first action no longer agrees with
-    # what the body actually delivered or its immediate physical return is bad.
-    break_error = ((suffix[:, 0] - delivered[:starts].reshape(starts * b, ACTIONS)) ** 2).mean(-1)
-    hazard_target = (break_error > 0.04) | (utility < 0)
-    hazard_loss = F.binary_cross_entropy_with_logits(outputs["hazard_logit"], hazard_target.float())
-    value_loss = F.smooth_l1_loss(outputs["value"], utility.detach())
+    selector_weight = (1.0 + utility.detach().abs()).clamp_max(4.0)
+    selector_loss = (
+        F.cross_entropy(selector_logits, selector_target, reduction="none") * selector_weight
+    ).sum() / selector_weight.sum()
+
+    # Positive active examples replay the suffix that was actually useful in
+    # this context.  Rolled examples represent recall of an experienced suffix
+    # in another resident/time context; disagreement with the current teacher
+    # command is the termination target.  This supplies both sides of the
+    # hazard decision instead of the old self-comparison, which was always zero.
+    rolled_suffix = torch.roll(suffix, shifts=max(1, b), dims=0)
+    _, rolled_proposals, rolled_mask, rolled_active, rolled_active_mask = model.control_features(
+        start_latent, start_state, start_goal, start_previous, start_local,
+        rolled_suffix, length,
+    )
+    rolled_outputs = model.sequence_control(
+        control_state.detach(), rolled_proposals.detach(), rolled_active.detach(),
+        rolled_mask, rolled_active_mask,
+    )
+    own_hazard_target = utility < -0.02
+    break_error = ((rolled_suffix[:, 0] - delivered[:starts].reshape(starts * b, ACTIONS)) ** 2).mean(-1)
+    rolled_hazard_target = (break_error > 0.02) | (reward[:starts].reshape(starts * b) < -0.02)
+    hazard_logits = torch.cat((outputs["hazard_logit"], rolled_outputs["hazard_logit"]))
+    hazard_target = torch.cat((own_hazard_target, rolled_hazard_target)).float()
+    positive = hazard_target.sum().clamp_min(1.0)
+    negative = (hazard_target.numel() - hazard_target.sum()).clamp_min(1.0)
+    hazard_weight = torch.where(hazard_target.bool(), 0.5 / positive, 0.5 / negative)
+    hazard_loss = (
+        F.binary_cross_entropy_with_logits(hazard_logits, hazard_target, reduction="none")
+        * hazard_weight
+    ).sum()
+    value_target = utility.detach().clamp(-4.0, 4.0)
+    value_loss = F.smooth_l1_loss(outputs["value"], value_target)
     total = action_loss + prediction_loss * 2.0 + memory_loss * 0.05 + selector_loss * 0.25 + hazard_loss * 0.15 + value_loss * 0.5
     return LossTerms(total, action_loss, prediction_loss, memory_loss, selector_loss, hazard_loss, value_loss)

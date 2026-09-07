@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 from typing import Any, Mapping
 import uuid
 
@@ -22,6 +23,15 @@ FORMAT = "chreatures-cns-resident-episode-v1"
 CONTROLLER_FIELDS = ("cns_latent", "previous_delivered_command", "reset")
 TEACHER_FIELDS = ("delivered_command", "physical_reward", "terminal")
 ARRAY_FIELDS = CONTROLLER_FIELDS + TEACHER_FIELDS
+CORPUS_FORMAT = "chreatures-cns-resident-corpus-v1"
+SKILLS = (
+    "approach",
+    "heading-correction",
+    "stop",
+    "withdraw",
+    "contact-recovery",
+)
+_SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 def canonical(value: Any) -> bytes:
@@ -65,6 +75,89 @@ class ResidentEpisode:
     @property
     def residents(self) -> int:
         return self.arrays["delivered_command"].shape[1]
+
+    @property
+    def curriculum(self) -> dict[str, Any]:
+        """Privileged collection labels used only to stratify training windows."""
+        return validate_curriculum(self.metadata["provenance"], self.transitions)
+
+
+def validate_curriculum(provenance: Mapping[str, Any], transitions: int) -> dict[str, Any]:
+    """Validate the independent-world split without exposing labels to the model."""
+    required = {
+        "episode_index", "split", "world_seed", "variation_seed",
+        "layout_identity", "teacher_bouts",
+    }
+    missing = required - set(provenance)
+    if missing:
+        raise ValueError(f"episode curriculum metadata is missing {sorted(missing)}")
+    episode_index = provenance["episode_index"]
+    split = provenance["split"]
+    if not isinstance(episode_index, int) or isinstance(episode_index, bool) or not 0 <= episode_index < 8:
+        raise ValueError("episode_index must be in [0,8)")
+    if split not in {"train", "heldout-worlds"}:
+        raise ValueError("episode split differs")
+    expected_split = "train" if episode_index < 6 else "heldout-worlds"
+    if split != expected_split:
+        raise ValueError("episode index and world split differ")
+    for name in ("world_seed", "variation_seed"):
+        if not isinstance(provenance[name], int) or isinstance(provenance[name], bool):
+            raise ValueError(f"{name} must be an integer")
+    layout = provenance["layout_identity"]
+    if not isinstance(layout, str) or _SHA256.fullmatch(layout) is None:
+        raise ValueError("layout_identity must be a lowercase SHA-256")
+    bouts = provenance["teacher_bouts"]
+    if not isinstance(bouts, list) or not bouts:
+        raise ValueError("teacher_bouts must be a nonempty list")
+    cursor = 0
+    clean_bouts = []
+    for bout in bouts:
+        if not isinstance(bout, dict) or set(bout) != {"start_tick", "end_tick", "skill"}:
+            raise ValueError("teacher bout fields differ")
+        start, end, skill = bout["start_tick"], bout["end_tick"], bout["skill"]
+        if not isinstance(start, int) or not isinstance(end, int) or start != cursor or end <= start:
+            raise ValueError("teacher bouts must be ordered, gapless, and nonempty")
+        if skill not in SKILLS:
+            raise ValueError("teacher bout skill differs")
+        clean_bouts.append({"start_tick": start, "end_tick": end, "skill": skill})
+        cursor = end
+    if cursor != transitions:
+        raise ValueError("teacher bouts must cover the complete episode")
+    return {
+        "episode_index": episode_index,
+        "split": split,
+        "world_seed": provenance["world_seed"],
+        "variation_seed": provenance["variation_seed"],
+        "layout_identity": layout,
+        "teacher_bouts": clean_bouts,
+    }
+
+
+def validate_corpus(episodes: list[ResidentEpisode]) -> tuple[list[ResidentEpisode], list[ResidentEpisode]]:
+    """Require six train worlds and two identity-disjoint held-out worlds."""
+    if len(episodes) != 8:
+        raise ValueError("resident corpus must contain exactly eight independent episodes")
+    by_index: dict[int, ResidentEpisode] = {}
+    identities: set[tuple[int, int, str]] = set()
+    for episode in episodes:
+        if episode.transitions != 512 or episode.residents != 3:
+            raise ValueError("resident corpus episodes must be exactly 512 transitions by three residents")
+        curriculum = episode.curriculum
+        index = curriculum["episode_index"]
+        if index in by_index:
+            raise ValueError("resident corpus repeats an episode index")
+        identity = (
+            curriculum["world_seed"], curriculum["variation_seed"],
+            curriculum["layout_identity"],
+        )
+        if identity in identities:
+            raise ValueError("resident corpus repeats a world/variation/layout identity")
+        identities.add(identity)
+        by_index[index] = episode
+    if set(by_index) != set(range(8)):
+        raise ValueError("resident corpus episode indices differ")
+    ordered = [by_index[index] for index in range(8)]
+    return ordered[:6], ordered[6:]
 
 
 def _validated_arrays(values: Mapping[str, Any]) -> dict[str, np.ndarray]:
@@ -144,6 +237,12 @@ def write_episode(
             handle.flush()
             os.fsync(handle.fileno())
         os.link(temporary, destination)
+        os.chmod(destination, 0o444)
+        directory = os.open(destination.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
     finally:
         temporary.unlink(missing_ok=True)
     return load_episode(destination)
