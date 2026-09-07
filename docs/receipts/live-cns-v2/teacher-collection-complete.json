@@ -1,0 +1,166 @@
+{
+  "format": "chreatures-browser-teacher-collection-combined-receipt-v1",
+  "collector": {
+    "file": "/Users/ember/dev/chreatures/native/webgpu-probe/collect-skills.mjs",
+    "runtime": "actual Dawn Metal + MuJoCo 3.12 Wasm + Rust/Wasm body + full MaleCNS WebGPU V2",
+    "collectionSourceSha256": "77e995c24083a894c4093342b206558b94b3c97a655b4779cde2764c5ca76286",
+    "currentBackendSelectableSourceSha256": "756ea90f918a716fd147849aac62196d636539189d4a480ae960d7f3f051d107",
+    "sourceChangeAfterCollection": "backend selection/adapter limits receipt and corrected lifecycle comment only; episode equations and schema unchanged"
+  },
+  "source_revision": "3a6d7a710fa0500ca48653203a2811bb813a2b7b",
+  "cns_service_artifact_sha256": "ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+  "adapter_sha256": "6875314d15f46806abb0fab04802856d4427d3a6ef29b19b12c70bb79706806d",
+  "resident_file_sha256": "bc11d35aa0d828cdcb6b19a4fd5e9215c5d98e841ffa1ce765d17d85acdb44c1",
+  "resident_artifact_sha256": "c63c9f2db4bf62ffade3265dd1e162a2c26693b0ba27ba3d92e94fcc3fe7d255",
+  "action_source": "privileged-physical-teacher",
+  "raw_geometry_retained": false,
+  "schemaValidation": "exact six-member source schema; shapes/dtypes, finite values, reset and terminal contracts validated with NumPy allow_pickle=False",
+  "episodes": [
+    {
+      "file": "/Users/ember/paperbin/chreatures/integration/browser-v2-teacher-skills-20260907/episode-00-train.npz",
+      "byteLength": 620099,
+      "sha256": "bbc7d43d14ac202021b80236f021cb745b4e7ce3087fce0ba848ba7fb3a17742",
+      "split": "train",
+      "transitions": 96,
+      "batch": 3,
+      "arrays": {
+        "metadata": {
+          "shape": [],
+          "dtype": "<U1789"
+        },
+        "cns_latent": {
+          "shape": [
+            97,
+            3,
+            512
+          ],
+          "dtype": "float32"
+        },
+        "delivered_command": {
+          "shape": [
+            96,
+            3,
+            12
+          ],
+          "dtype": "float32"
+        },
+        "physical_reward": {
+          "shape": [
+            96,
+            3
+          ],
+          "dtype": "float32"
+        },
+        "reset": {
+          "shape": [
+            97,
+            3
+          ],
+          "dtype": "bool"
+        },
+        "terminal": {
+          "shape": [
+            96,
+            3
+          ],
+          "dtype": "bool"
+        }
+      },
+      "positiveRewardFraction": 0.3645833333333333,
+      "commandRms": 0.278404176235199,
+      "allFinite": true,
+      "resetContract": true,
+      "terminalContract": true,
+      "rawGeometryRetained": false,
+      "rawSensesRetained": false
+    },
+    {
+      "file": "/Users/ember/paperbin/chreatures/integration/browser-v2-teacher-skills-20260907/episode-01-heldout-starts.npz",
+      "byteLength": 620291,
+      "sha256": "6d52ca02f7196fa8354b89def4435098c0577884a04f82f16d3f3db670d9656e",
+      "split": "heldout-starts",
+      "transitions": 96,
+      "batch": 3,
+      "arrays": {
+        "metadata": {
+          "shape": [],
+          "dtype": "<U1837"
+        },
+        "cns_latent": {
+          "shape": [
+            97,
+            3,
+            512
+          ],
+          "dtype": "float32"
+        },
+        "delivered_command": {
+          "shape": [
+            96,
+            3,
+            12
+          ],
+          "dtype": "float32"
+        },
+        "physical_reward": {
+          "shape": [
+            96,
+            3
+          ],
+          "dtype": "float32"
+        },
+        "reset": {
+          "shape": [
+            97,
+            3
+          ],
+          "dtype": "bool"
+        },
+        "terminal": {
+          "shape": [
+            96,
+            3
+          ],
+          "dtype": "bool"
+        }
+      },
+      "positiveRewardFraction": 0.21180555555555555,
+      "commandRms": 0.2898027300834656,
+      "allFinite": true,
+      "resetContract": true,
+      "terminalContract": true,
+      "rawGeometryRetained": false,
+      "rawSensesRetained": false
+    }
+  ],
+  "executionMetrics": {
+    "train": {
+      "maxMotionMetersApprox": 0.228,
+      "stopLabels": 42,
+      "note": "maximum retained from collector stdout rounded to 3 decimals"
+    },
+    "heldout": {
+      "maxMotionMeters": 0.29717191409322946,
+      "stopLabels": 42,
+      "contactAttempts": 0,
+      "positiveProgress": 94,
+      "meanPhysicalReward": 0.009890456105431811
+    }
+  },
+  "strictResidentEpisodes": [
+    {
+      "file": "/Users/ember/paperbin/chreatures/integration/browser-v2-teacher-skills-20260907/resident-episode-00-train.npz",
+      "fileSha256": "04c3195434c61e6b72377a21071378310e2d7c81ba7d2074ab92e785a2052211",
+      "episodeSha256": "65dcf7d75b5bfe9d240567225001605c23726b141cc4a9f1072f76d94b064d12"
+    },
+    {
+      "file": "/Users/ember/paperbin/chreatures/integration/browser-v2-teacher-skills-20260907/resident-episode-01-heldout.npz",
+      "fileSha256": "20fa61aabdf4354a2fff9b5b1dd97e3bcde99dc1a44e89e5c26f009017e0ef70",
+      "episodeSha256": "e6f95197de65026d7eee141e58ebb6d344e5c045c59ba93c9b9d0cad3fe64f28"
+    }
+  ],
+  "limitations": [
+    "Teacher labels are privileged offline supervision and were not selected by the resident.",
+    "The sealed held-out run reached no near-contact grip labels (contactAttempts=0); it tests different physical targets/start perturbations, turning, approach, stopping, and recovery."
+  ]
+}

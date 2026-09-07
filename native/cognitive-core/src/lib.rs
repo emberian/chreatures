@@ -311,14 +311,48 @@ fn dense_sgemm(
     output: &mut [f32],
 ) {
     use std::arch::wasm32::*;
-    // Four independent lanes avoid scalar loads and multiply-add dispatch in the
-    // batch-one browser path. All addresses are bounded by the checked GEMM shapes.
+    #[inline(always)]
+    fn horizontal_sum(value: v128) -> f32 {
+        f32x4_extract_lane::<0>(value)
+            + f32x4_extract_lane::<1>(value)
+            + f32x4_extract_lane::<2>(value)
+            + f32x4_extract_lane::<3>(value)
+    }
+    // Forecasting is dominated by single-row matrices with hundreds of output
+    // neurons. Compute four output rows together so each input vector load feeds
+    // four dot products. Each accumulator retains the previous lane and reduction
+    // order, preserving the model's float32 results and private decisions.
     for row in 0..rows {
-        for neuron in 0..out {
-            let a = &input[row * cols..(row + 1) * cols];
+        let a = &input[row * cols..(row + 1) * cols];
+        let end = cols / 4 * 4;
+        let tiled = out / 4 * 4;
+        for neuron in (0..tiled).step_by(4) {
+            let b0 = weight[neuron * cols..].as_ptr();
+            let b1 = weight[(neuron + 1) * cols..].as_ptr();
+            let b2 = weight[(neuron + 2) * cols..].as_ptr();
+            let b3 = weight[(neuron + 3) * cols..].as_ptr();
+            let mut sums = [f32x4_splat(0.0); 4];
+            for k in (0..end).step_by(4) {
+                unsafe {
+                    let av = v128_load(a.as_ptr().add(k).cast());
+                    sums[0] = f32x4_add(sums[0], f32x4_mul(av, v128_load(b0.add(k).cast())));
+                    sums[1] = f32x4_add(sums[1], f32x4_mul(av, v128_load(b1.add(k).cast())));
+                    sums[2] = f32x4_add(sums[2], f32x4_mul(av, v128_load(b2.add(k).cast())));
+                    sums[3] = f32x4_add(sums[3], f32x4_mul(av, v128_load(b3.add(k).cast())));
+                }
+            }
+            for lane in 0..4 {
+                let mut value = horizontal_sum(sums[lane]);
+                let b = &weight[(neuron + lane) * cols..(neuron + lane + 1) * cols];
+                for k in end..cols {
+                    value += a[k] * b[k];
+                }
+                output[row * out + neuron + lane] = value;
+            }
+        }
+        for neuron in tiled..out {
             let b = &weight[neuron * cols..(neuron + 1) * cols];
             let mut sum = f32x4_splat(0.0);
-            let end = cols / 4 * 4;
             for k in (0..end).step_by(4) {
                 unsafe {
                     sum = f32x4_add(
@@ -330,10 +364,7 @@ fn dense_sgemm(
                     );
                 }
             }
-            let mut value = f32x4_extract_lane::<0>(sum)
-                + f32x4_extract_lane::<1>(sum)
-                + f32x4_extract_lane::<2>(sum)
-                + f32x4_extract_lane::<3>(sum);
+            let mut value = horizontal_sum(sum);
             for k in end..cols {
                 value += a[k] * b[k];
             }

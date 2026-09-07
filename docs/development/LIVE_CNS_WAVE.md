@@ -73,3 +73,28 @@ MuJoCo's mutation of its factory options object. Each reconstructed world now
 receives fresh options around the authenticated immutable Wasm bytes. The repaired
 joined run restored the entire grown world exactly; its receipt and the failed
 integration record are retained in `docs/receipts/live-cns-v2`.
+
+The next integrated pass displays all 1,771 current body-attached RGB samples in
+their side/q/r lattice, explicitly marking the 1,486 supported sites. The body
+camera remains an observer camera. Neural colors use a fixed user-selected range
+(default ±0.01), with a logarithmic control that can expose small signed changes
+without automatic rescaling. RMS and peak changes include all 165,122 modeled
+rows, including rows without soma coordinates. No visualization statistic is fed
+back into the organism.
+
+A four-output Rust/Wasm SIMD GEMM tile reuses each input vector across four
+weight rows and preserves the previous per-output reduction order. The joined
+SIMD/retina scenario ran at 60.46 ms per physical tick on the M2 Max, with exact
+physical, neural and full-life continuation. Body XML and retinal fixture bytes
+are now authenticated and included in the runtime identity as well. The receipt
+is `docs/receipts/live-cns-v2/joined-simd-retina.receipt.json`.
+
+The first actual-body teacher collection and 128-update ROCm fit are retained
+separately as research evidence. It reduced held-out action and memory losses,
+while prediction, selection and value losses regressed. In a same-start 128-tick
+three-body rollout, distinct rounded commands increased from 86 to 120 and two
+residents turned more; stopping and net displacement were mixed. This is a learned
+change in physical behavior, not demonstrated sensory-goal attainment. Privileged
+teacher geometry supplied targets only; the policy received CNS Z512 and its own
+delivered motor history. The short collection had no held-out contact labels,
+which motivates the subsequent expanded encounter curriculum.

@@ -1,0 +1,208 @@
+{
+  "format": "chreatures-matched-resident-rollout-v2",
+  "backend": "metal",
+  "adapter": "apple-m2-max",
+  "adapterLimits": {
+    "maxBufferSize": 4294967295,
+    "maxStorageBufferBindingSize": 4294967295
+  },
+  "policyInputContract": [
+    "cns_latent[512]",
+    "previous_delivered_command[12]",
+    "reset"
+  ],
+  "evaluatorOnlyFields": [
+    "resident root bodyPositions",
+    "resident root rotations"
+  ],
+  "teacherGeometryUsedByPolicy": false,
+  "cnsServiceArtifactSha256": "ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+  "cnsAdapterSha256": "6875314d15f46806abb0fab04802856d4427d3a6ef29b19b12c70bb79706806d",
+  "cnsNumericBuffersMatched": true,
+  "worldSeedMatched": true,
+  "actionAndSuffixSeedsMatched": true,
+  "initialWorldAndCnsStateMatched": true,
+  "initialCnsComparison": "decoded GPU state bytes and host metadata after removing only identity.sourceRevision; full snapshot hashes remain in each result",
+  "screenSchedule": "shared deterministic 2x2 color sequence; no geometry-derived input",
+  "results": [
+    {
+      "label": "parent",
+      "residentArtifactSha256": "c63c9f2db4bf62ffade3265dd1e162a2c26693b0ba27ba3d92e94fcc3fe7d255",
+      "trainingStatus": "initialized-untrained",
+      "transitions": 128,
+      "batch": 3,
+      "initialWorldSha256": "dd4d6c27285956616c3e1c3f2d98819029eaeb8ece8fd29aced3a3f5ebb258cd",
+      "initialCns": {
+        "snapshotSha256": "1270eaa05b1c89c93c34a8a416e84888e006c1f5ee85c88e44ee4f1788f1d6f4",
+        "stateSha256": "482627c624e81017a3d7730ef3a5118a595d77db7989ea579918bf518b9a0432",
+        "canonicalMetadataSha256": "e589e1854ca1d17ce6831ac7e8fa4d22469eeb325cc60f5c79ddcc3fc9a7e852",
+        "sourceRevision": "3a6d7a710fa0500ca48653203a2811bb813a2b7b",
+        "stateBytes": 7925856
+      },
+      "rng": {
+        "worldSeed": 20260907,
+        "actionSeed": 314159,
+        "suffixSeed": 271828
+      },
+      "action": {
+        "overallRms": 0.10445410169559002,
+        "channelRms": [
+          0.05114792582633604,
+          0.05307377819939772,
+          0.07171275398809689,
+          0.08160352193000787,
+          0.11540881943874555,
+          0.12247386001776756,
+          0.120834265399534,
+          0.12198134168712443,
+          0.12079661920412342,
+          0.12042288290173686,
+          0.11993153491732741,
+          0.1114300040217463
+        ],
+        "channelStd": [
+          0.05037960322660285,
+          0.04965774268989917,
+          0.06636359496880388,
+          0.07647750903480528,
+          0.0050976057470374135,
+          0.016538119422100393,
+          0.007489570156143632,
+          0.0055076463489106275,
+          0.004758332211830271,
+          0.004783282807199815,
+          0.005725557530300248,
+          0.006663974209911706
+        ],
+        "meanChannelStd": 0.02495354486279544,
+        "distinctRowsRounded1e3": 86,
+        "totalRows": 384,
+        "rootMeanSquareStepDeltaL2": 0.17817317841583283
+      },
+      "physical": {
+        "netDisplacementMeters": [
+          0.13802793612148861,
+          0.0015486710789404249,
+          0.10893077274800118
+        ],
+        "pathLengthMeters": [
+          0.4003900738852054,
+          0.3402990588426025,
+          0.122705535867513
+        ],
+        "cumulativeAbsoluteTurnRadians": [
+          1.3805301807568302,
+          5.466977147051319,
+          4.678069882016585
+        ],
+        "netTurnRadians": [
+          0.3269653537815432,
+          0.35314039947613735,
+          0.03933651923610171
+        ],
+        "physicalStopTicksAt1cmPerSecond": [
+          4,
+          4,
+          119
+        ]
+      },
+      "execution": {
+        "failed": false,
+        "failures": [],
+        "meanTickMs": 112.72707810156258,
+        "maxTickMs": 171.67525000000023,
+        "wallSeconds": 16.400618
+      }
+    },
+    {
+      "label": "trained",
+      "residentArtifactSha256": "42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+      "trainingStatus": "trained",
+      "transitions": 128,
+      "batch": 3,
+      "initialWorldSha256": "dd4d6c27285956616c3e1c3f2d98819029eaeb8ece8fd29aced3a3f5ebb258cd",
+      "initialCns": {
+        "snapshotSha256": "62aedfbd4a8d863f0c8c8ef1704a3c06dbf5a0b69d0965450a3e0586d3da329c",
+        "stateSha256": "482627c624e81017a3d7730ef3a5118a595d77db7989ea579918bf518b9a0432",
+        "canonicalMetadataSha256": "e589e1854ca1d17ce6831ac7e8fa4d22469eeb325cc60f5c79ddcc3fc9a7e852",
+        "sourceRevision": "7c4daa1e822d7e472cca2fdfbc7bd80d9934e9ae",
+        "stateBytes": 7925856
+      },
+      "rng": {
+        "worldSeed": 20260907,
+        "actionSeed": 314159,
+        "suffixSeed": 271828
+      },
+      "action": {
+        "overallRms": 0.18620813051807902,
+        "channelRms": [
+          0.3800111114347955,
+          0.39786078521454016,
+          0.18254891526760417,
+          0.08114825478858567,
+          0.08215930457124464,
+          0.08283022028262388,
+          0.10528575965208255,
+          0.11168517706138109,
+          0.08271086582108651,
+          0.12529054468910344,
+          0.08605558724455256,
+          0.0797294225275964
+        ],
+        "channelStd": [
+          0.24332948721508466,
+          0.35112185766174003,
+          0.17456598049047017,
+          0.07865515073175457,
+          0.015598045164437824,
+          0.02000518012420048,
+          0.022398898008469306,
+          0.01936337390576572,
+          0.01594070436931724,
+          0.014125378527782676,
+          0.015973643311421485,
+          0.01624361336362112
+        ],
+        "meanChannelStd": 0.08227677607283879,
+        "distinctRowsRounded1e3": 120,
+        "totalRows": 384,
+        "rootMeanSquareStepDeltaL2": 0.47444587067959704
+      },
+      "physical": {
+        "netDisplacementMeters": [
+          0.0262742638975611,
+          0.02896662978168093,
+          0.1091809825599721
+        ],
+        "pathLengthMeters": [
+          0.5010937608566725,
+          0.3405825629791003,
+          0.12304990264129283
+        ],
+        "cumulativeAbsoluteTurnRadians": [
+          2.714774243493044,
+          10.159822848118655,
+          4.825134070095382
+        ],
+        "netTurnRadians": [
+          -0.1307423104826384,
+          -0.18581993147297549,
+          0.04102193486433192
+        ],
+        "physicalStopTicksAt1cmPerSecond": [
+          1,
+          2,
+          120
+        ]
+      },
+      "execution": {
+        "failed": false,
+        "failures": [],
+        "meanTickMs": 113.07909080468741,
+        "maxTickMs": 181.3029170000009,
+        "wallSeconds": 16.246798832999996
+      }
+    }
+  ],
+  "interpretation": "Fresh-life closed-loop comparison only; metrics do not establish general embodied competence."
+}

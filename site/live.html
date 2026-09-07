@@ -35,10 +35,26 @@
     <aside class="instrument-panel">
       <section class="brain-card" aria-labelledby="brain-title">
         <div class="section-head"><div><small>selected resident</small><h2 id="brain-title">Full MaleCNS</h2></div><output id="brain-count">165,122 rows</output></div>
-        <canvas id="brain-canvas" aria-label="Actual MaleCNS soma point cloud colored by rate-model change"></canvas>
-        <div class="brain-legend"><span><i class="negative"></i> lower</span><span>signed change from loaded baseline</span><span><i class="positive"></i> higher</span></div>
-        <label class="scale-control"><span>Fixed display scale <output id="scale-output">±0.10</output></span><input id="neural-scale" type="range" min="0.01" max="0.50" step="0.01" value="0.10"></label>
-        <p class="rate-note">Model activity, not measured firing rate or Hz. Points use only supplied atlas coordinates; missing somata are absent.</p>
+        <div class="neural-tabs" role="tablist" aria-label="Selected resident senses and CNS">
+          <button id="brain-tab" type="button" role="tab" aria-selected="true" aria-controls="brain-panel" data-neural-panel="brain">CNS activity</button>
+          <button id="eyes-tab" type="button" role="tab" aria-selected="false" aria-controls="eyes-panel" data-neural-panel="eyes">Retinal facets</button>
+        </div>
+        <div id="brain-panel" role="tabpanel" aria-labelledby="brain-tab">
+          <canvas id="brain-canvas" aria-label="Actual MaleCNS soma point cloud colored by rate-model change"></canvas>
+          <div class="brain-legend"><span><i class="negative"></i> lower</span><span>signed change from loaded baseline</span><span><i class="positive"></i> higher</span></div>
+          <label class="scale-control"><span>Fixed display scale <output id="scale-output">±0.010</output></span><input id="neural-scale" type="range" min="-4" max="-0.3" step="0.05" value="-2" aria-label="Logarithmic display scale"></label>
+          <div class="activity-numbers"><span>All-row RMS Δ <output id="neural-rms">—</output></span><span>Largest |Δ| <output id="neural-peak">—</output></span></div>
+          <p class="rate-note">Fixed color limits; the display never rescales itself. Model activity, not measured firing rate or Hz. Points use only supplied atlas coordinates; missing somata are absent.</p>
+        </div>
+        <div id="eyes-panel" role="tabpanel" aria-labelledby="eyes-tab" hidden>
+          <div class="retina-grid">
+            <figure><figcaption>Eye side 1</figcaption><canvas id="retina-side-1" aria-label="Actual RGB rays for retinal side 1"></canvas></figure>
+            <figure><figcaption>Eye side 2</figcaption><canvas id="retina-side-2" aria-label="Actual RGB rays for retinal side 2"></canvas></figure>
+          </div>
+          <div class="retina-legend"><span><i></i> actual supported-facet RGB</span><span><i class="unsupported"></i> no connectome anchor</span></div>
+          <p class="retina-count">1,771 facets · 1,486 connectome-anchored sites</p>
+          <p class="rate-note">These colors are the selected resident’s latest physical-world rays passed to its CNS. The q/r hex layout is engineered; column membership is anatomical. The body camera is a separate observer view.</p>
+        </div>
       </section>
 
       <section class="control-card">

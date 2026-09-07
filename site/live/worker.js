@@ -10,7 +10,7 @@ function exclusive(operation, requestId) {
 }
 function frame(value) {
   const transferable = [];
-  for (const field of ['positions', 'rotations', 'colors', 'bodyPositions', 'food', 'neuralRates']) {
+  for (const field of ['positions', 'rotations', 'colors', 'bodyPositions', 'food', 'neuralRates', 'retinalRGB']) {
     if (value[field]?.buffer) transferable.push(value[field].buffer);
   }
   post('frame', {...value, paused: !running}, transferable);
