@@ -119,3 +119,7 @@ main { width: min(1420px, calc(100% - 48px)); margin: 0 auto; padding-bottom: 64
 }
 
 @media (prefers-reduced-motion: reduce) { .loading i { animation: none; } }
+
+.record-figure { margin: 1.5rem 0; }
+.record-figure img { display: block; width: 100%; height: auto; border: 1px solid #d5dccf; border-radius: .4rem; }
+.record-figure figcaption { margin-top: .6rem; color: #526154; font-size: .8rem; line-height: 1.5; }

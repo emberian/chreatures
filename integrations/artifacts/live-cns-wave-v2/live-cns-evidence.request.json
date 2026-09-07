@@ -1,6 +1,6 @@
 {
   "archive_id": "live-cns-wave-v2-20260907",
-  "description": "Actual live-CNS research chain: dynamics, temporal fit, browser export, teacher fit, and matched physical rollout.",
+  "description": "Actual live-CNS research chain: dynamics, temporal fit, browser export, paired physical-screen response, teacher fit, and matched physical rollout.",
   "evidence": [
     {
       "artifact_uri": "urn:sha256:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
@@ -472,6 +472,193 @@
       "time": {
         "domain": "live_cns_evidence_stage",
         "value": 5
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:d94c7a8b48a55ca0b3396234f65d246350214c47e4f8a1cfe39b2fe75643cd62",
+      "blob_refs": [
+        {
+          "bytes": 12213,
+          "media_type": "application/json",
+          "role": "original_screen_response_receipt",
+          "sha256": "d94c7a8b48a55ca0b3396234f65d246350214c47e4f8a1cfe39b2fe75643cd62",
+          "uri": "urn:sha256:d94c7a8b48a55ca0b3396234f65d246350214c47e4f8a1cfe39b2fe75643cd62",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 216374,
+          "media_type": "application/gzip",
+          "role": "screen_response_compact_traces",
+          "sha256": "c1018f24e20c0044374f8437db6b66148d62232f1a76540acf48a2137a2a9942",
+          "uri": "urn:sha256:c1018f24e20c0044374f8437db6b66148d62232f1a76540acf48a2137a2a9942",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 6777,
+          "media_type": "application/json",
+          "role": "public_screen_response_receipt",
+          "sha256": "6aeee4dad30ca2c26612379ae9cca178bd7d1129c77fa05210a9971decaa494c",
+          "uri": "urn:sha256:6aeee4dad30ca2c26612379ae9cca178bd7d1129c77fa05210a9971decaa494c",
+          "verification": "derived_public_projection_sha256"
+        }
+      ],
+      "fields": {
+        "cns_artifact_sha256": "6875314d15f46806abb0fab04802856d4427d3a6ef29b19b12c70bb79706806d",
+        "cns_service_artifact_sha256": "ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+        "cns_training_status": "trained",
+        "engine_identity": "ff22382f50114a7c26d6818e158ce67675c16d77f114e372a288aa74ca3f8754",
+        "execution": {
+          "batch": 3,
+          "blankMeanTickMs": 71.93148983333346,
+          "dt": 0.05,
+          "filmMeanTickMs": 70.5999055416666,
+          "modelSeconds": 30,
+          "ticks": 600
+        },
+        "matched_initial_state": {
+          "cnsSha256": "1270eaa05b1c89c93c34a8a416e84888e006c1f5ee85c88e44ee4f1788f1d6f4",
+          "exactAcrossConditions": true,
+          "physicalSha256": "dd4d6c27285956616c3e1c3f2d98819029eaeb8ece8fd29aced3a3f5ebb258cd",
+          "residentSha256": "41ed1f3717a2fc850a6054ff9bfd5327f77ceee4b887bec4273311dda71cc730"
+        },
+        "parent_roles": {
+          "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea": "initialized_resident",
+          "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee": "executed_runtime_predecessor",
+          "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378": "trained_cns_service"
+        },
+        "resident_artifact_sha256": "c63c9f2db4bf62ffade3265dd1e162a2c26693b0ba27ba3d92e94fcc3fe7d255",
+        "resident_training_status": "initialized-untrained",
+        "screen_only_intervention": true,
+        "source_revision": "10b4b4c0c46d99866af623824e633ac1b04a61b5",
+        "stimulus": {
+          "comparison": "decoded film on physical emitting screen versus black physical screen",
+          "decodedFrames": 600,
+          "decodedHeight": 120,
+          "decodedRgbSha256": "10153971d0e8bfd8d490896c38b8007e365b804296181ec98d2a5d4b7dc9e572",
+          "decodedWidth": 160,
+          "sourceAsset": "bad-apple-source-30s.mp4",
+          "sourceDurationSeconds": 30.03,
+          "sourceSha256": "c84678a072e0365e9acaa3687075d1e35a6fc4bbe9db93d6b730af7af0589529"
+        }
+      },
+      "id": "matched-physical-screen-intervention:d94c7a8b48a55ca0b3396234f65d246350214c47e4f8a1cfe39b2fe75643cd62",
+      "parent_ids": [
+        "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+        "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+        "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee"
+      ],
+      "record_type": "matched_physical_screen_intervention",
+      "text": "From an exact shared initial state, the current V2 runtime executed 600 ticks with the official film decoded onto its physical screen and 600 matched ticks with that screen black.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 6
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:6aeee4dad30ca2c26612379ae9cca178bd7d1129c77fa05210a9971decaa494c",
+      "blob_refs": [
+        {
+          "bytes": 6777,
+          "media_type": "application/json",
+          "role": "public_screen_response_receipt",
+          "sha256": "6aeee4dad30ca2c26612379ae9cca178bd7d1129c77fa05210a9971decaa494c",
+          "uri": "urn:sha256:6aeee4dad30ca2c26612379ae9cca178bd7d1129c77fa05210a9971decaa494c",
+          "verification": "derived_public_projection_sha256"
+        },
+        {
+          "bytes": 216374,
+          "media_type": "application/gzip",
+          "role": "screen_response_compact_traces",
+          "sha256": "c1018f24e20c0044374f8437db6b66148d62232f1a76540acf48a2137a2a9942",
+          "uri": "urn:sha256:c1018f24e20c0044374f8437db6b66148d62232f1a76540acf48a2137a2a9942",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "action_changed_resident_rows": 887,
+        "action_changed_ticks": 567,
+        "action_physical_batch": 3,
+        "afferent_neurons": 15340,
+        "afferent_neurons_ever_changed": 15331,
+        "blank_path_length_meters": [
+          1.5739561492047132,
+          1.5140492219385238,
+          0.19807634645465969
+        ],
+        "claims_not_established": [
+          "recovered physiology",
+          "stimulus understanding",
+          "learned motor competence"
+        ],
+        "film_path_length_meters": [
+          1.6479810644096684,
+          1.5522528810996237,
+          0.19807741253682032
+        ],
+        "maximum_root_divergence_meters": [
+          0.1861182667687366,
+          0.0762079206929435,
+          9.5367431640625e-07
+        ],
+        "nonafferent_neurons": 149782,
+        "nonafferent_neurons_ever_changed": 140200,
+        "outcome": "measured differences",
+        "parent_roles": {
+          "matched-physical-screen-intervention:d94c7a8b48a55ca0b3396234f65d246350214c47e4f8a1cfe39b2fe75643cd62": "paired_execution"
+        },
+        "plot_url": "assets/live-cns-screen-response.svg",
+        "response_semantics": "ever exceeded absolute paired-condition difference 1e-6 over 600 ticks; stream timings are not a simultaneous-response claim",
+        "retinal_neural_capture_resident": 0,
+        "retinal_sites_ever_changed": 1370,
+        "retinal_supported_sites": 1486,
+        "temporal_response": {
+          "actions": {
+            "firstModelSeconds": 1.5,
+            "firstTick": 30,
+            "peakModelSeconds": 27.3,
+            "peakTick": 546,
+            "peakValue": 0.06145424803706151
+          },
+          "afferentRates": {
+            "firstModelSeconds": 1.4000000000000001,
+            "firstTick": 28,
+            "peakModelSeconds": 12.350000000000001,
+            "peakTick": 247,
+            "peakValue": 0.0323913851482908
+          },
+          "bodyPositions": {
+            "firstModelSeconds": 1.5,
+            "firstTick": 30,
+            "peakModelSeconds": 16.85,
+            "peakTick": 337,
+            "peakValue": 0.04899026239125802
+          },
+          "nonafferentRates": {
+            "firstModelSeconds": 1.4000000000000001,
+            "firstTick": 28,
+            "peakModelSeconds": 27.85,
+            "peakTick": 557,
+            "peakValue": 0.003006692325631095
+          },
+          "retina": {
+            "firstModelSeconds": 1.4000000000000001,
+            "firstTick": 28,
+            "peakModelSeconds": 29.85,
+            "peakTick": 597,
+            "peakValue": 1007
+          }
+        },
+        "threshold_absolute_difference": 1e-06
+      },
+      "id": "physical-screen-response-v2",
+      "parent_ids": [
+        "matched-physical-screen-intervention:d94c7a8b48a55ca0b3396234f65d246350214c47e4f8a1cfe39b2fe75643cd62"
+      ],
+      "record_type": "physical_screen_response",
+      "text": "The paired film and blank executions differed in resident 0 retina and neural rates, and in actions and physical motion across the three-resident batch.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 7
       }
     },
     {

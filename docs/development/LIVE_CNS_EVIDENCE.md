@@ -34,13 +34,30 @@ competence:
   header differed. Its decoded GPU bytes and canonical host numeric state did
   match. The refined successor records that distinction explicitly; it did not
   repair or replace different numeric initial states.
+- A matched physical-screen comparison starts the current V2 runtime twice from
+  byte-identical physical, CNS, and resident state. One arm decodes the 30-second
+  film onto the emitting screen; the other keeps that physical screen black.
+  Resident 0 supplies the 1,771-site retinal capture and neural-rate capture;
+  action and physical summaries cover the three-resident batch. At an absolute
+  paired-difference threshold of `1e-6`, 140,200 of 149,782 nonafferent neurons
+  changed at least once across the 600 ticks. Actions differed on 567 ticks and
+  the physical root trajectories diverged. These are stream-specific paired
+  measurements, not evidence of a simultaneous response, recovered physiology,
+  stimulus understanding, or learned motor competence. The resident controller
+  in this run was initialized and untrained.
 
 The public files are
 [`live-cns-evidence.json`](../../site/assets/live-cns-evidence.json), the generic
 portable projection, and
 [`live-cns-evidence.weave.json`](../../site/assets/live-cns-evidence.weave.json),
-the exact native serialization. Every source blob is represented by local
-SHA-256 and byte length; bulk artifacts remain outside Git.
+the exact native serialization. The screen comparison also has a sanitized
+[`compact receipt`](../../site/assets/live-cns-screen-response.json), its exact
+[`compressed traces`](../../site/assets/live-cns-screen-response.traces.json.gz),
+and a four-signal
+[`static trace figure`](../../site/assets/live-cns-screen-response.svg). The
+compact receipt preserves the SHA-256 of the original receipt while omitting
+machine paths and decoder command lines. Every source blob is represented by
+local SHA-256 and byte length; other bulk artifacts remain outside Git.
 
 Rebuild from the frozen paperbin inputs with:
 
@@ -50,8 +67,10 @@ python3 integrations/export_live_cns_weave.py
 
 The exporter verifies the receipt formats, source-to-fit links, all release
 members, teacher episode hashes, trained artifacts, and matched-rollout
-identities before invoking `cargo run --locked --release` for the pinned
-Universal Weave revision. The Rust adapter validates the DAG, serializes it,
-reloads it, and requires exact equality. Existing outputs are not overwritten
-unless `--replace` is supplied. Later richer training data should produce a new
-dated evidence chain rather than reinterpret these first results.
+identities. It also checks the paired-run source and model identities, exact
+initial-state hashes, 600-sample trace dimensions, resident scopes, and the
+original receipt and trace hashes before invoking `cargo run --locked --release`
+for the pinned Universal Weave revision. The Rust adapter validates the DAG,
+serializes it, reloads it, and requires exact equality. Existing outputs are not
+overwritten unless `--replace` is supplied. Later richer training data should
+produce a new dated evidence chain rather than reinterpret these first results.

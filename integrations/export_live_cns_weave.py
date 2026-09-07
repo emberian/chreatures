@@ -9,6 +9,7 @@ then invokes the pinned Rust Weave adapter and publishes its portable result.
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -67,6 +68,25 @@ def blob(path: Path, role: str, media_type: str, expected: str | None = None) ->
         "bytes": path.stat().st_size,
         "media_type": media_type,
         "verification": "verified_local_sha256",
+    }
+
+
+def byte_blob(data: bytes, role: str, media_type: str) -> dict[str, Any]:
+    digest = hashlib.sha256(data).hexdigest()
+    return {
+        "role": role,
+        "uri": f"urn:sha256:{digest}",
+        "sha256": digest,
+        "bytes": len(data),
+        "media_type": media_type,
+        "verification": "derived_public_projection_sha256",
+    }
+
+
+def difference_summary(value: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value[key]
+        for key in ("samples", "signedMean", "rms", "min", "max", "maxAbs", "changedSamples", "positiveSamples", "negativeSamples")
     }
 
 
@@ -131,6 +151,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     temporal = args.paperbin / "dynamics-v2-temporal-fit-20260907"
     browser = args.paperbin / "browser-v2-temporal-pack-20260907"
     teacher = args.paperbin / "browser-v2-teacher-skills-20260907"
+    screen = args.paperbin / "screen-response-v2-20260907"
 
     sweep_path, fit_path, confirm_path = crossed / "receipt.json", crossed / "gam" / "fit_report.json", crossed / "gam-confirm.receipt.json"
     sweep, fit, confirmation = map(read_json, (sweep_path, fit_path, confirm_path))
@@ -197,6 +218,97 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     trained_release, trained_release_blob = verify_release(teacher / "trained-browser-model")
     require(trained_release.get("residentArtifactSha256") == trained["artifact_sha256"], "trained browser release used another resident")
 
+    screen_receipt_path = screen / "bad-apple-vs-blank.receipt.json"
+    screen_trace_path = screen / "bad-apple-vs-blank.traces.json.gz"
+    screen_receipt = read_json(screen_receipt_path)
+    screen_receipt_blob = blob(screen_receipt_path, "original_screen_response_receipt", "application/json")
+    screen_trace_blob = blob(screen_trace_path, "screen_response_compact_traces", "application/gzip")
+    require(screen_receipt_blob["sha256"] == "d94c7a8b48a55ca0b3396234f65d246350214c47e4f8a1cfe39b2fe75643cd62", "screen response receipt identity differs")
+    require(screen_trace_blob["sha256"] == "c1018f24e20c0044374f8437db6b66148d62232f1a76540acf48a2137a2a9942", "screen response trace identity differs")
+    require(screen_receipt.get("format") == "chreatures-screen-response-v1", "screen response receipt format differs")
+    require(screen_receipt.get("sourceRevision") == "10b4b4c0c46d99866af623824e633ac1b04a61b5", "screen response source revision differs")
+    require(screen_receipt.get("model", {}).get("cnsFormat") == "chreatures-cns-webgpu-v2", "screen response CNS format differs")
+    require(screen_receipt["model"].get("cnsServiceArtifactSha256") == service_sha, "screen response used another CNS service")
+    require(screen_receipt["model"].get("residentArtifactSha256") == base_release["residentArtifactSha256"], "screen response used another initialized resident")
+    require(screen_receipt["model"].get("cnsTrainingStatus") == "trained" and screen_receipt["model"].get("residentTrainingStatus") == "initialized-untrained", "screen response model status differs")
+    execution = screen_receipt.get("execution", {})
+    initial = screen_receipt.get("matchedInitialState", {})
+    require(execution.get("ticks") == 600 and execution.get("batch") == 3 and execution.get("dt") == 0.05 and execution.get("modelSeconds") == 30, "screen response execution extent differs")
+    require(initial.get("exactAcrossConditions") is True, "screen response conditions did not share exact initial state")
+    for key in ("physicalSha256", "cnsSha256", "residentSha256"):
+        require_hash(initial.get(key), f"screen response {key}")
+    require(screen_receipt.get("threshold", {}).get("absoluteDifference") == 1e-6, "screen response difference threshold differs")
+    retina = screen_receipt.get("retina", {})
+    neural = screen_receipt.get("neural", {})
+    action = screen_receipt.get("action", {})
+    physical = screen_receipt.get("physical", {})
+    require(retina.get("capturedResident") == 0 and neural.get("capturedResident") == 0, "screen response neural/retinal capture is not resident 0")
+    require(retina.get("anatomicalSites") == 1771 and retina.get("supportedSites") == 1486 and retina.get("capturesPerCondition") == 600, "screen response retina extent differs")
+    require(neural.get("capturesPerCondition") == 600 and neural.get("afferent", {}).get("neurons") == 15340 and neural.get("nonafferent", {}).get("neurons") == 149782, "screen response neural extent differs")
+    require(neural["nonafferent"].get("responsiveNeurons") == 140200, "screen response nonafferent count differs")
+    require(action.get("valuesPerCondition") == 21600 and len(action.get("filmMinusBlankByChannel", [])) == 12, "screen response action extent differs")
+    require(len(physical.get("filmPathLengthMeters", [])) == 3 and len(physical.get("blankPathLengthMeters", [])) == 3, "screen response physical batch extent differs")
+
+    try:
+        screen_trace = json.loads(gzip.decompress(screen_trace_path.read_bytes()))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("screen response trace is not valid gzip JSON") from exc
+    require(isinstance(screen_trace, dict) and screen_trace.get("format") == "chreatures-screen-response-trace-v1" and screen_trace.get("dt") == 0.05, "screen response trace format differs")
+    for key in ("filmTimeSeconds", "afferentDeltaRms", "nonafferentDeltaRms", "afferentDeltaSignedMean", "nonafferentDeltaSignedMean", "retinalChangedSites", "actionDeltaRms", "bodyDeltaRms"):
+        require(isinstance(screen_trace.get(key), list) and len(screen_trace[key]) == 600, f"screen response trace {key} extent differs")
+    for key in ("filmRootPositions", "blankRootPositions"):
+        values = screen_trace.get(key)
+        require(isinstance(values, list) and len(values) == 600 and all(isinstance(frame, list) and len(frame) == 3 and all(isinstance(row, list) and len(row) == 3 for row in frame) for frame in values), f"screen response trace {key} extent differs")
+    for key in ("filmActions", "blankActions"):
+        values = screen_trace.get(key)
+        require(isinstance(values, list) and len(values) == 600 and all(isinstance(frame, list) and len(frame) == 36 for frame in values), f"screen response trace {key} extent differs")
+
+    public_screen_receipt = {
+        "format": "chreatures-public-screen-response-v1",
+        "resultNodeId": "physical-screen-response-v2",
+        "originalReceiptSha256": screen_receipt_blob["sha256"],
+        "trace": {"file": "live-cns-screen-response.traces.json.gz", "sha256": screen_trace_blob["sha256"], "bytes": screen_trace_blob["bytes"], "format": screen_trace["format"], "samples": 600},
+        "engineIdentity": require_hash(screen_receipt["engineIdentity"], "screen response engine"),
+        "sourceRevision": screen_receipt["sourceRevision"],
+        "adapter": screen_receipt["adapter"],
+        "model": screen_receipt["model"],
+        "stimulus": {
+            "sourceAsset": "bad-apple-source-30s.mp4",
+            "sourceSha256": require_hash(screen_receipt["stimulus"]["sourceSha256"], "screen source video"),
+            "sourceDurationSeconds": screen_receipt["stimulus"]["sourceDurationSeconds"],
+            "decodedWidth": screen_receipt["stimulus"]["decodedWidth"],
+            "decodedHeight": screen_receipt["stimulus"]["decodedHeight"],
+            "decodedFrames": screen_receipt["stimulus"]["decodedFrames"],
+            "decodedRgbSha256": require_hash(screen_receipt["stimulus"]["decodedRgbSha256"], "decoded screen stimulus"),
+            "comparison": screen_receipt["stimulus"]["comparison"],
+        },
+        "execution": execution,
+        "matchedInitialState": initial,
+        "threshold": screen_receipt["threshold"],
+        "retina": {
+            "anatomicalSites": retina["anatomicalSites"], "supportedSites": retina["supportedSites"], "capturedResident": retina["capturedResident"], "capturesPerCondition": retina["capturesPerCondition"],
+            "filmMinusBlank": difference_summary(retina["filmMinusBlank"]), "everChangedSites": retina["everChangedSites"], "meanChangedSitesPerTick": retina["meanChangedSitesPerTick"], "maxChangedSitesPerTick": retina["maxChangedSitesPerTick"], "unsupportedSitesEverNonzero": retina["unsupportedSitesEverNonzero"],
+        },
+        "neural": {
+            "capturedResident": neural["capturedResident"], "capturesPerCondition": neural["capturesPerCondition"],
+            "afferent": {"neurons": neural["afferent"]["neurons"], "filmMinusBlank": difference_summary(neural["afferent"]["filmMinusBlank"]), "responsiveNeurons": neural["afferent"]["responsiveNeurons"]},
+            "nonafferent": {"neurons": neural["nonafferent"]["neurons"], "filmMinusBlank": difference_summary(neural["nonafferent"]["filmMinusBlank"]), "responsiveNeurons": neural["nonafferent"]["responsiveNeurons"]},
+        },
+        "action": {"scope": "all three residents", "valuesPerCondition": action["valuesPerCondition"], "changedTicks": action["changedTicks"], "changedResidentRows": action["changedResidentRows"], "filmMinusBlank": difference_summary(action["filmMinusBlank"])},
+        "physical": {"scope": "all three residents", "bodyPositionFilmMinusBlank": difference_summary(physical["bodyPositionFilmMinusBlank"]), "filmPathLengthMeters": physical["filmPathLengthMeters"], "blankPathLengthMeters": physical["blankPathLengthMeters"], "maxRootDivergenceMeters": physical["maxRootDivergenceMeters"], "finalRootDivergenceMeters": physical["finalRootDivergenceMeters"]},
+        "temporalResponse": screen_receipt["temporalResponse"],
+        "scope": screen_receipt["scope"],
+        "interpretation": "Paired differences exceeded the declared threshold in retinal, neural, action, and physical streams during the executed 30-second comparison.",
+        "limitations": [
+            "Retinal and neural captures are for resident 0; action and physical summaries cover all three residents.",
+            "Each stream has its own sampled or aggregated first-change time; the receipt does not establish one simultaneous response.",
+            "Responsive means the neuron exceeded an absolute paired-condition difference of 1e-6 at least once across 600 ticks.",
+            "The result does not establish recovered physiology, stimulus understanding, or learned motor competence.",
+        ],
+    }
+    public_screen_bytes = json.dumps(public_screen_receipt, indent=2, sort_keys=True, allow_nan=False).encode() + b"\n"
+    public_screen_blob = byte_blob(public_screen_bytes, "public_screen_response_receipt", "application/json")
+
     sweep_id = f"fullgraph-sweep:{sha256(sweep_path)}"
     gam_id = f"gam-fit:{sha256(fit_path)}"
     prediction_id = f"heldout-setting-prediction:{hashlib.sha256(canonical(prediction)).hexdigest()}"
@@ -215,6 +327,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     trained_browser_id = f"trained-browser-export:{trained_release_blob['sha256']}"
     unmatched_rollout_id = f"rollout-identity-diagnostic:{sha256(unmatched_rollout_path)}"
     rollout_id = f"matched-physical-rollout:{sha256(rollout_path)}"
+    screen_intervention_id = f"matched-physical-screen-intervention:{screen_receipt_blob['sha256']}"
+    screen_result_id = "physical-screen-response-v2"
 
     records = [
         node(sweep_id, 0, "fullgraph_parameter_sweep", "Executed 27-setting crossed dynamics sweep on all 165,122 neurons and 25,563,197 graph edges.", blobs=[blob(sweep_path, "fullgraph_sweep_receipt", "application/json")], fields={"settings": 27, "ticks_per_setting": sweep["ticks"], "train_streams": 8, "heldout_streams": 4, "metric": sweep["metric"], "scope": "procedural full-graph diagnostic; not behavior"}),
@@ -228,6 +342,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         node(dawn_id, 4, "browser_numeric_confirmation", "The browser WebGPU kernels executed eight full-graph ticks within pinned binary16 regression bounds and restored state byte-exactly.", parents={browser_id: "browser_release"}, blobs=[blob(dawn_path, "dawn_webgpu_probe_receipt", "application/json")], fields={"ticks": dawn["ticks"], "adapter": dawn["adapter"]["name"], "limits": dawn["limits"], "final_max_abs": dawn["finalMaxAbs"], "byte_exact_restore": dawn["byteExactRestore"], "limit_basis": dawn["limitBasis"]}),
         node(failure_id, 4, "executed_integration_failure", "The first whole-life load attempt failed because a reused MuJoCo Emscripten options object had been mutated.", parents={browser_id: "browser_release"}, blobs=[blob(joined_failure_path, "joined_load_failure_receipt", "application/json")], fields={"operation": joined_failure["operation"], "error": joined_failure["error"], "repair": joined_failure["repair"], "superseded_result": joined_id}),
         node(joined_id, 5, "joined_execution_confirmation", "After the recorded options-lifetime repair, the full CNS, Rust resident and MuJoCo world advanced and replayed one grown life exactly.", parents={browser_id: "browser_release", dawn_id: "numeric_confirmation", failure_id: "repaired_failure"}, blobs=[blob(joined_path, "joined_execution_receipt", "application/json")], fields={key: joined[key] for key in ("neurons", "edges", "residents", "modelSeconds", "meanCompleteTickMs", "maxCompleteTickMs", "wholeLifeReplayExact", "fullNeuralReplayExact", "physicalReplayExact", "restoredGrownWorld", "modelStatus", "controllerStatus", "scope")}),
+        node(screen_intervention_id, 6, "matched_physical_screen_intervention", "From an exact shared initial state, the current V2 runtime executed 600 ticks with the official film decoded onto its physical screen and 600 matched ticks with that screen black.", parents={service_id: "trained_cns_service", browser_id: "initialized_resident", joined_id: "executed_runtime_predecessor"}, blobs=[screen_receipt_blob, screen_trace_blob, public_screen_blob], fields={"engine_identity": screen_receipt["engineIdentity"], "source_revision": screen_receipt["sourceRevision"], "cns_artifact_sha256": screen_receipt["model"]["cnsArtifactSha256"], "cns_service_artifact_sha256": screen_receipt["model"]["cnsServiceArtifactSha256"], "resident_artifact_sha256": screen_receipt["model"]["residentArtifactSha256"], "cns_training_status": "trained", "resident_training_status": "initialized-untrained", "stimulus": public_screen_receipt["stimulus"], "execution": execution, "matched_initial_state": initial, "screen_only_intervention": True}),
+        node(screen_result_id, 7, "physical_screen_response", "The paired film and blank executions differed in resident 0 retina and neural rates, and in actions and physical motion across the three-resident batch.", parents={screen_intervention_id: "paired_execution"}, blobs=[public_screen_blob, screen_trace_blob], fields={"plot_url": "assets/live-cns-screen-response.svg", "threshold_absolute_difference": 1e-6, "retinal_neural_capture_resident": 0, "action_physical_batch": 3, "retinal_sites_ever_changed": retina["everChangedSites"], "retinal_supported_sites": retina["supportedSites"], "afferent_neurons_ever_changed": neural["afferent"]["responsiveNeurons"], "afferent_neurons": neural["afferent"]["neurons"], "nonafferent_neurons_ever_changed": neural["nonafferent"]["responsiveNeurons"], "nonafferent_neurons": neural["nonafferent"]["neurons"], "action_changed_ticks": action["changedTicks"], "action_changed_resident_rows": action["changedResidentRows"], "film_path_length_meters": physical["filmPathLengthMeters"], "blank_path_length_meters": physical["blankPathLengthMeters"], "maximum_root_divergence_meters": physical["maxRootDivergenceMeters"], "temporal_response": screen_receipt["temporalResponse"], "response_semantics": "ever exceeded absolute paired-condition difference 1e-6 over 600 ticks; stream timings are not a simultaneous-response claim", "outcome": "measured differences", "claims_not_established": ["recovered physiology", "stimulus understanding", "learned motor competence"]}),
         node(collection_failure_id, 6, "executed_collection_failure", "The first teacher collection stopped when a mutated Emscripten options object prevented held-out world reinitialization.", parents={joined_id: "runtime_predecessor", browser_id: "collection_release"}, blobs=[blob(collection_failure_path, "teacher_collection_failure_receipt", "application/json")], fields={"completed_before_failure": collection_failure["completed"], "failed_phase": collection_failure["failed_phase"], "error": collection_failure["error"], "diagnosis": collection_failure["diagnosis"], "resolution": collection_failure["resolution"]}),
         node(teacher_id, 6, "physical_teacher_collection", "Two actual full-CNS physical episodes supplied 576 transitions of privileged offline teacher supervision across train and held-out starts.", parents={joined_id: "executed_runtime", browser_id: "collection_release", collection_failure_id: "repaired_attempt"}, blobs=[blob(collection_path, "teacher_collection_receipt", "application/json"), *episode_blobs], fields={"action_source": collection["action_source"], "transitions": sum(item["transitions"] * item["batch"] for item in collection["episodes"]), "episodes": [{key: item[key] for key in ("split", "transitions", "batch", "positiveRewardFraction", "commandRms", "rawGeometryRetained", "rawSensesRetained")} for item in collection["episodes"]], "heldout_contact_attempts": collection["executionMetrics"]["heldout"]["contactAttempts"], "limitations": collection["limitations"]}),
         node(controller_id, 7, "resident_controller_training", "The current teacher data drove 128 optimizer updates and produced a new resident plus sequence-control artifact.", parents={teacher_id: "training_data", browser_id: "parent_controller"}, blobs=[blob(result_path, "resident_training_result", "application/json"), trained_blob, sequence_blob], fields={"updates": len(result["history"]), "seconds": result["seconds"], "validation_before": result["validation"]["before"], "validation_after": result["validation"]["after"], "resident_artifact_sha256": trained["artifact_sha256"], "sequence_control_artifact_sha256": sequence["artifact_sha256"], "scope": "offline privileged-teacher fit; physical competence requires matched rollout"}),
@@ -239,7 +355,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
 
     request = {
         "archive_id": "live-cns-wave-v2-20260907",
-        "description": "Actual live-CNS research chain: dynamics, temporal fit, browser export, teacher fit, and matched physical rollout.",
+        "description": "Actual live-CNS research chain: dynamics, temporal fit, browser export, paired physical-screen response, teacher fit, and matched physical rollout.",
         "evidence": records,
     }
     for record in records:
@@ -250,7 +366,9 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     output = args.output_dir
     public = args.public
     public_weave = public.with_suffix(".weave.json")
-    targets = [output / "live-cns-evidence.request.json", output / "live-cns-evidence.weave.json", output / "live-cns-evidence.receipt.json", public, public_weave]
+    public_screen = public.parent / "live-cns-screen-response.json"
+    public_screen_trace = public.parent / "live-cns-screen-response.traces.json.gz"
+    targets = [output / "live-cns-evidence.request.json", output / "live-cns-evidence.weave.json", output / "live-cns-evidence.receipt.json", public, public_weave, public_screen, public_screen_trace]
     if not args.replace:
         existing = [path for path in targets if path.exists()]
         require(not existing, "refusing to replace existing evidence: " + ", ".join(map(str, existing)))
@@ -276,12 +394,25 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "neurons": 165122,
         "edges": 25563197,
         "teacher_updates": 128,
+        "screen_response": {
+            "result_node_id": screen_result_id,
+            "model_seconds_per_condition": execution["modelSeconds"],
+            "retinal_neural_capture_resident": 0,
+            "action_physical_batch": 3,
+            "nonafferent_neurons_ever_changed": neural["nonafferent"]["responsiveNeurons"],
+            "nonafferent_neurons": neural["nonafferent"]["neurons"],
+            "threshold_absolute_difference": 1e-6,
+        },
         "matched_rollout_outcome": "mixed",
-        "claims_not_established": ["biological parameter recovery", "general optic/body prediction improvement beyond the procedural fit split", "general embodied competence"],
+        "claims_not_established": ["biological parameter recovery", "general optic/body prediction improvement beyond the procedural fit split", "simultaneous cross-stream response", "stimulus understanding", "general embodied competence"],
     }
     encoded = json.dumps(portable, indent=2, sort_keys=True, allow_nan=False).encode() + b"\n"
     public.write_bytes(encoded)
     shutil.copyfile(weave_path, public_weave)
+    public_screen.write_bytes(public_screen_bytes)
+    shutil.copyfile(screen_trace_path, public_screen_trace)
+    require(sha256(public_screen) == public_screen_blob["sha256"], "public screen response receipt changed during write")
+    require(sha256(public_screen_trace) == screen_trace_blob["sha256"], "public screen response trace changed during copy")
     receipt = {
         "format": "chreatures-live-cns-weave-export-v1",
         "request_sha256": sha256(request_path),
@@ -293,8 +424,11 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "reload_equal": True,
         "validated_after_reload": True,
         "universal_weave": portable["library"],
-        "public_files": [public.name, public_weave.name],
-        "source_directories": [path.name for path in (crossed, temporal, browser, teacher)],
+        "public_files": [public.name, public_weave.name, public_screen.name, public_screen_trace.name],
+        "public_screen_response_sha256": public_screen_blob["sha256"],
+        "public_screen_trace_sha256": screen_trace_blob["sha256"],
+        "original_screen_response_receipt_sha256": screen_receipt_blob["sha256"],
+        "source_directories": [path.name for path in (crossed, temporal, browser, teacher, screen)],
     }
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     return receipt
