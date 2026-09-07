@@ -266,6 +266,7 @@ class RegionalMatter:
                     entities=[request["entity"]],
                     resources=resources,
                     details={
+                        "cause": request["cause"],
                         "face": request["face"],
                         "receiver_row": request["receiver_row"],
                     },
@@ -309,36 +310,25 @@ class RegionalMatter:
         route_resources = np.asarray(proposal["route_resources"], dtype=np.float64)
         outlet_resources = np.asarray(proposal["outlet_resources"], dtype=np.float64)
         pool_names = list(self.web.chemistry.pools)
-        before = self.web.snapshot()
+        # This transaction changes native inventory only, never the web's
+        # immutable reaction/regulation configuration. Retain its exact native
+        # state for rollback without serializing that configuration every tick.
+        before = self.web._native.snapshot()
         actual_route = np.zeros_like(route_resources)
-        route_requests: list[tuple[int, int]] = []
-        route_donors: list[int] = []
-        route_receivers: list[int] = []
-        route_amounts: list[dict[str, float]] = []
-        for edge in range(route_resources.shape[0]):
-            for pool, name in enumerate(pool_names):
-                amount = float(route_resources[edge, pool])
-                if amount <= 0.0:
-                    continue
-                route_requests.append((edge, pool))
-                route_donors.append(int(rows[route_source[edge, pool]]))
-                route_receivers.append(int(rows[route_target[edge, pool]]))
-                route_amounts.append({name: amount})
         try:
-            if route_requests:
-                route_result = self.web.transfer_batch(
-                    route_donors,
-                    route_receivers,
-                    route_amounts,
-                    [0.0] * len(route_requests),
+            if np.any(route_resources > 0.0):
+                route_result = self.web._native.transfer_batch(
+                    proposal["transfer_donors"],
+                    proposal["transfer_receivers"],
+                    proposal["transfer_resources"],
+                    np.zeros(route_resources.shape[0] * 2, dtype=np.float64),
                 )
                 moved = np.asarray(route_result["moved_resources"], dtype=np.float64)
-                for (edge, pool), values in zip(route_requests, moved, strict=True):
-                    actual_route[edge, pool] = values[pool]
+                actual_route = moved[0::2] + moved[1::2]
             if not np.array_equal(actual_route, route_resources):
                 raise RuntimeError("authoritative regional route application differs")
         except Exception:
-            self.materials._restore_native(self.web, before)
+            self.web._native.restore(before)
             self.materials._mark_inventory_current()
             self._native.abort(token)
             raise
@@ -370,7 +360,7 @@ class RegionalMatter:
                 for index, values in zip(requested_indices, moved, strict=True):
                     actual_outlet[index] = values
         except Exception:
-            self.materials._restore_native(self.web, before)
+            self.web._native.restore(before)
             self.materials._mark_inventory_current()
             self._native.abort(token)
             raise

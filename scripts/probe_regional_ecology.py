@@ -11,6 +11,8 @@ import argparse
 import hashlib
 import json
 import math
+import time
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -77,11 +79,10 @@ def _obstruction_case(world: Any, biosphere: Biosphere, dt: float) -> dict[str, 
     changed = np.empty(0, dtype=np.int64)
     obstructed = before.copy()
     if np.any(before > 0.0):
-        route = regional._native.route_metadata()[int(np.argmax(before))]
-        _, a, b, _ = route
-        metadata = regional._native.metadata()
-        pa = np.asarray(metadata[int(a)][2], dtype=np.float64)
-        pb = np.asarray(metadata[int(b)][2], dtype=np.float64)
+        route = regional.config["routes"][int(np.argmax(before))]
+        sample = route["clearance_samples"][0]
+        pa = np.asarray(sample["from"], dtype=np.float64)
+        pb = np.asarray(sample["to"], dtype=np.float64)
         midpoint = ((pa + pb) * 0.5).tolist()
         world.command(
             {
@@ -98,6 +99,10 @@ def _obstruction_case(world: Any, biosphere: Biosphere, dt: float) -> dict[str, 
         world.prepare_topology_batch(
             [{"op": "remove", "id": "analyst-route-obstacle"}]
         ).commit()
+    if not changed.size:
+        raise AssertionError("generated routes lack a physically open, obstructible corridor")
+    if not np.array_equal(_route_accessibility(regional), before):
+        raise AssertionError("removing the route obstacle failed to restore accessibility")
 
     outlet = regional.config["outlets"][0]
     obstacle_ids = []
@@ -168,22 +173,30 @@ def _exit_case(world: Any, biosphere: Biosphere, dt: float) -> dict[str, Any]:
     outlet_region = next(
         item for item in regional.config["regions"] if item["id"] == outlet["region"]
     )
-    source = int(outlet_region["row"])
-    donor = int(biosphere._mobile_specs[0]["body_row"])
-    pool = int(np.argmax(biosphere.web.pools[donor]))
-    pool_name = biosphere.web.chemistry.pools[pool]
-    amount = min(0.015, float(biosphere.web.pools[donor, pool]) * 0.2)
-    biosphere.web.transfer(donor, source, {pool_name: amount})
     slot = outlet["slots"][0]
     if slot in materials.active_entities:
         raise AssertionError("designated exit packet slot is already active")
     inside = list(map(float, outlet["position"]))
-    receipt = materials.deposit_batch(
-        [{"entity": slot, "donor_row": source, "resources": {pool_name: amount}, "position": inside}]
+    # The preceding blocked interval earned release credit. Let the actual
+    # network/outlet transaction emit its finite inventory at the authored pose.
+    regional_before = biosphere.web.pools[_regional_rows(regional)].sum(axis=0)
+    totals_before_release = biosphere.web.totals()
+    before_packets = set(materials.active_free_entities)
+    events = regional.after_reactions(dt)
+    if slot not in materials.active_free_entities:
+        raise AssertionError("scheduled finite outlet did not activate its physical packet")
+    activated = set(materials.active_free_entities) - before_packets
+    emitted = sum(
+        (biosphere.web.pools[materials._item(entity)["row"]] for entity in activated),
+        np.zeros(len(biosphere.web.chemistry.pools), dtype=np.float64),
     )
-    moved = float(np.asarray(receipt["moved_resources"])[0, pool])
-    if moved <= 0.0 or slot not in materials.active_free_entities:
-        raise AssertionError("analyst packet did not become a physical free entity")
+    regional_after = biosphere.web.pools[_regional_rows(regional)].sum(axis=0)
+    if not np.allclose(regional_before - regional_after, emitted, rtol=0.0, atol=1e-12):
+        raise AssertionError("outlet inventory was not debited from finite regional rows")
+    packet_row = materials._item(slot)["row"]
+    packet = biosphere.web.pools[packet_row].copy()
+    if not np.any(packet > 0.0):
+        raise AssertionError("scheduled outlet activated an empty packet")
     face = next(item for item in regional.config["exit_faces"] if item["axis"] == "x" and item["side"] == "max")
     target_region = next(item for item in regional.config["regions"] if item["id"] == face["region"])
     receiver = int(target_region["row"])
@@ -193,20 +206,37 @@ def _exit_case(world: Any, biosphere: Biosphere, dt: float) -> dict[str, Any]:
     events = regional.before_reactions(dt)
     if slot in world._entity_mj or slot in materials.active_entities:
         raise AssertionError("escaped packet remained physically active")
-    gained = biosphere.web.pools[receiver] - receiver_before
-    if gained[pool] != moved or any(event["kind"] != "physical-material-entered-region" for event in events):
+    if (
+        not np.array_equal(biosphere.web.pools[receiver], receiver_before + packet)
+        or np.any(biosphere.web.pools[packet_row] != 0.0)
+        or len(events) != 1
+        or events[0]["kind"] != "physical-material-entered-region"
+        or events[0]["details"]["cause"] != "declared-world-face"
+    ):
         raise AssertionError("escaped packet did not transfer completely into its region")
     total_after = biosphere.web.totals()
-    if total_before != total_after:
+    residual = {
+        name: total_after["elements"][name] - total_before["elements"][name]
+        for name in total_before["elements"]
+    }
+    energy_residual = total_after["stored_energy"] - total_before["stored_energy"]
+    if max(map(abs, residual.values())) > 1e-12 or abs(energy_residual) > 1e-12:
         raise AssertionError("physical exit changed conserved web inventory")
     return {
+        "outlet": outlet["id"],
+        "scheduled_outlet_activation": True,
+        "activated_packets": sorted(activated),
+        "regional_debit_matches_emission": True,
         "entity": slot,
         "face": face["id"],
-        "pool": pool_name,
-        "quantity": moved,
+        "cause": events[0]["details"]["cause"],
+        "resources": dict(zip(biosphere.web.chemistry.pools, map(float, packet), strict=True)),
         "physical_entity_retired": True,
         "complete_inventory_transferred": True,
-        "web_totals_exact": True,
+        "packet_row_empty": True,
+        "elemental_residual": residual,
+        "stored_energy_residual": energy_residual,
+        "release_totals_before": totals_before_release,
     }
 
 
@@ -229,19 +259,32 @@ def main() -> None:
     world = FastArticulatedSensoriumWorld(seed=args.seed, spec=habitat)
     biosphere = Biosphere.from_config(world, biosphere_path)
     initial = biosphere.web.totals()
+    initial_parts = len(biosphere.parts)
     obstruction = _obstruction_case(world, biosphere, args.dt)
     exit_case = _exit_case(world, biosphere, args.dt)
     regulation_before = np.asarray(
         biosphere.web._native.cumulative_regulation_atp, dtype=np.float64
     )
+    event_counts: Counter[str] = Counter()
+    started = time.perf_counter()
     for tick in range(args.steps):
         world.advance(_actions(world, tick), args.dt)
         biosphere.advance(args.dt)
+        event_counts.update(event["kind"] for event in biosphere.last_report["evidence_events"])
+        if (tick + 1) % 200 == 0:
+            print(json.dumps({"tick": tick + 1, "seconds": time.perf_counter() - started, "parts": len(biosphere.parts)}), flush=True)
     regulation_after = np.asarray(
         biosphere.web._native.cumulative_regulation_atp, dtype=np.float64
     )
     world_snapshot = world.snapshot()
     biosphere_snapshot = biosphere.snapshot()
+    checkpoint_path = args.output.with_suffix(".checkpoint.json")
+    checkpoint_path.write_text(json.dumps({
+        "format": "chreatures-regional-ecology-probe-checkpoint-v1",
+        "completed_ticks": args.steps,
+        "world": world_snapshot,
+        "biosphere": biosphere_snapshot,
+    }, sort_keys=True) + "\n")
     for tick in range(args.steps, args.steps + args.continuation):
         world.advance(_actions(world, tick), args.dt)
         biosphere.advance(args.dt)
@@ -260,12 +303,15 @@ def main() -> None:
         raise AssertionError("regional ecology continuation differs after restore")
     accounting = biosphere.accounting()
     result = {
-        "format": "chreatures-regional-ecology-probe-v1",
+        "format": "chreatures-regional-ecology-probe-v2",
         "steps": args.steps,
         "continuation_steps": args.continuation,
         "dt_seconds": args.dt,
         "resident_count": len(world.bodies),
         "parts": len(biosphere.parts),
+        "initial_parts": initial_parts,
+        "event_counts": dict(event_counts),
+        "elapsed_seconds": time.perf_counter() - started,
         "initial_totals": initial,
         "final_accounting": accounting,
         "regulation_atp_cost": float((regulation_after - regulation_before).sum()),
@@ -288,6 +334,11 @@ def main() -> None:
         "exit": exit_case,
         "world_restore_exact": world_exact,
         "biosphere_restore_exact": biosphere_exact,
+        "checkpoint": {"path": str(checkpoint_path.resolve()), "sha256": _sha(checkpoint_path)},
+        "native": {
+            "path": str(Path(__import__("_world_kernels").__file__).resolve()),
+            "sha256": _sha(Path(__import__("_world_kernels").__file__).resolve()),
+        },
         "source_sha256": {
             str(habitat_path): _sha(habitat_path),
             str(biosphere_path): _sha(biosphere_path),

@@ -872,6 +872,58 @@ fn canopy_entity(index: usize, node: &Node, clearance: f64) -> Value {
 fn landmark_entity(index: usize, node: &Node, material: &str) -> Value {
     json!({"id":format!("region-landmark-{index:02}"),"mobility":"static","material":material,"physical_material":"timber","position":[node.position[0],node.position[1],0],"shapes":[{"type":"cylinder","size":[0.055,0.3],"position":[node.half_size[0]*0.65,0,node.position[2]+0.3]}],"components":[]})
 }
+
+// Material infrastructure uses the south-west quadrant of a platform. Other
+// generated ecology occupies the centre, canopy/landmark geometry lies on the
+// x axis, and finite packets are staged to the north. Keeping the outlet root
+// in its own authored quadrant lets physical collision remain authoritative.
+fn outlet_position(node: &Node, clearance_height: f64) -> [f64; 3] {
+    [
+        node.position[0] - node.half_size[0] * 0.55,
+        node.position[1] - node.half_size[1] * 0.55,
+        node.position[2] + clearance_height,
+    ]
+}
+
+// A route's physical carrier is the exposed ramp between the two platform
+// edges. Platform centres can contain colonies and construction pieces, so a
+// centre-to-centre clearance segment incorrectly treats endpoint furniture as
+// a blocked ramp. Trim each end to the corresponding rectangular platform
+// edge; objects on the exposed carrier still obstruct the route normally.
+fn route_clearance_endpoints(a: &Node, b: &Node, clearance_height: f64) -> ([f64; 3], [f64; 3]) {
+    let dx = b.position[0] - a.position[0];
+    let dy = b.position[1] - a.position[1];
+    let dz = b.position[2] - a.position[2];
+    let edge_fraction = |node: &Node| {
+        let tx = if dx.abs() > f64::EPSILON {
+            node.half_size[0] / dx.abs()
+        } else {
+            f64::INFINITY
+        };
+        let ty = if dy.abs() > f64::EPSILON {
+            node.half_size[1] / dy.abs()
+        } else {
+            f64::INFINITY
+        };
+        tx.min(ty).clamp(0.0, 0.45)
+    };
+    // Each trim is capped below one half. Even when platform bounds overlap,
+    // the resulting nonzero segment preserves a physical clearance query.
+    let from_fraction = edge_fraction(a);
+    let to_fraction = 1.0 - edge_fraction(b);
+    (
+        [
+            a.position[0] + dx * from_fraction,
+            a.position[1] + dy * from_fraction,
+            a.position[2] + dz * from_fraction + clearance_height,
+        ],
+        [
+            a.position[0] + dx * to_fraction,
+            a.position[1] + dy * to_fraction,
+            a.position[2] + dz * to_fraction + clearance_height,
+        ],
+    )
+}
 fn boundary_entities(width: f64, height: f64, g: &Geometry) -> Vec<Value> {
     vec![
         json!({"id":"region-ground","mobility":"static","material":"loam","physical_material":"earth","position":[width*0.5,height*0.5,-0.04],"shapes":[{"type":"box","size":[width*0.5,height*0.5,0.04]}],"components":[]}),
@@ -1274,16 +1326,8 @@ fn install_regional_matter(
         .iter()
         .enumerate()
         .map(|(route, &(a, b))| {
-            let from = [
-                nodes[a].position[0],
-                nodes[a].position[1],
-                nodes[a].position[2] + spec.clearance_height_m,
-            ];
-            let to = [
-                nodes[b].position[0],
-                nodes[b].position[1],
-                nodes[b].position[2] + spec.clearance_height_m,
-            ];
+            let (from, to) =
+                route_clearance_endpoints(&nodes[a], &nodes[b], spec.clearance_height_m);
             let conductance: BTreeMap<&str, f64> = pool_names
                 .iter()
                 .map(|name| {
@@ -1358,11 +1402,7 @@ fn install_regional_matter(
                 "id": format!("material-outlet-{outlet:02}"),
                 "region": format!("material-region-{node:02}"),
                 "slots": slots,
-                "position": [
-                    nodes[node].position[0],
-                    nodes[node].position[1],
-                    nodes[node].position[2] + spec.clearance_height_m,
-                ],
+                "position": outlet_position(&nodes[node], spec.clearance_height_m),
                 "interval_s": parameters.regional_matter.outlet_interval_seconds,
                 "maximum_release": maximum_release,
             })
