@@ -8,7 +8,10 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 import json
 import hashlib
+import http.client
 import urllib.request
+import urllib.error
+import time
 import os
 from pathlib import Path
 import re
@@ -192,21 +195,38 @@ def _copy_model(model_directory: Path | None) -> None:
         if not re.fullmatch(r"[a-zA-Z0-9_.-]+", name):
             raise ValueError("Invalid public model asset name")
         target = destination / name
-        digest = hashlib.sha256()
-        size = 0
-        if source is None:
-            stream = urllib.request.urlopen(base + name, timeout=90)
-        else:
-            stream = (source / name).open("rb")
-        with stream, target.open("wb") as output:
-            while chunk := stream.read(1024 * 1024):
-                size += len(chunk)
-                if size > expected["bytes"]:
-                    raise ValueError(f"Oversized model asset: {name}")
-                digest.update(chunk)
-                output.write(chunk)
-        if size != expected["bytes"] or digest.hexdigest() != expected["sha256"]:
-            raise ValueError(f"Model asset identity differs: {name}")
+        partial = target.with_suffix(target.suffix + ".part")
+        attempts = 5 if source is None else 1
+        for attempt in range(attempts):
+            digest = hashlib.sha256()
+            size = 0
+            try:
+                if source is None:
+                    request = urllib.request.Request(base + name, headers={"User-Agent": "chreatures-pages/1"})
+                    stream = urllib.request.urlopen(request, timeout=90)
+                else:
+                    stream = (source / name).open("rb")
+                with stream, partial.open("wb") as output:
+                    while chunk := stream.read(1024 * 1024):
+                        size += len(chunk)
+                        if size > expected["bytes"]:
+                            raise ValueError(f"Oversized model asset: {name}")
+                        digest.update(chunk)
+                        output.write(chunk)
+                if source is None and size < expected["bytes"]:
+                    raise http.client.IncompleteRead(b"", expected["bytes"] - size)
+                if size != expected["bytes"] or digest.hexdigest() != expected["sha256"]:
+                    raise ValueError(f"Model asset identity differs: {name}")
+                partial.replace(target)
+                break
+            except (urllib.error.URLError, ConnectionError, TimeoutError, http.client.IncompleteRead) as error:
+                if (source is not None or attempt + 1 == attempts or
+                    isinstance(error, urllib.error.HTTPError) and error.code not in {408, 429, 500, 502, 503, 504}):
+                    raise
+                print(f"Retrying public model asset {name} ({attempt + 2}/{attempts}) after transport failure")
+                time.sleep(min(2 ** attempt, 8))
+            finally:
+                partial.unlink(missing_ok=True)
 
 
 def build(revision: str | None = None, built_at: str | None = None, model_directory: Path | None = None) -> Path:

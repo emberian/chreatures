@@ -1,0 +1,61 @@
+{
+  "format": "chreatures-live-phase-profile-v1",
+  "engineIdentity": "a5e02291407591dd5c314ca0383d9793fe3f22951e17bafab3a004bb6ca08ca0",
+  "adapter": "apple-m2-max",
+  "residents": 3,
+  "ticks": 64,
+  "phases": {
+    "worldSample": {
+      "meanMs": 6.950147062499944,
+      "p50Ms": 6.609833999999864,
+      "p95Ms": 8.405832999999802,
+      "maxMs": 11.717333000000053,
+      "calls": 64
+    },
+    "brainStep": {
+      "meanMs": 16.582180984374926,
+      "p50Ms": 16.38175000000001,
+      "p95Ms": 20.09820800000034,
+      "maxMs": 33.39829099999997,
+      "calls": 64
+    },
+    "residentStep": {
+      "meanMs": 84.124268984375,
+      "p50Ms": 88.40212499999961,
+      "p95Ms": 94.97516700000051,
+      "maxMs": 102.96829199999956,
+      "calls": 64
+    },
+    "worldAdvance": {
+      "meanMs": 2.4882877343749783,
+      "p50Ms": 2.3632920000000013,
+      "p95Ms": 3.493083000000297,
+      "maxMs": 6.114790999999968,
+      "calls": 64
+    },
+    "residentAcknowledge": {
+      "meanMs": 0.009094328125030415,
+      "p50Ms": 0.007000000000061846,
+      "p95Ms": 0.012166000000433996,
+      "maxMs": 0.09845799999993687,
+      "calls": 64
+    },
+    "worldObserve": {
+      "meanMs": 0.10081021875002705,
+      "p50Ms": 0.09975000000031287,
+      "p95Ms": 0.12616699999989578,
+      "maxMs": 0.16300000000046566,
+      "calls": 128
+    },
+    "completeTick": {
+      "meanMs": 110.48627996875,
+      "p50Ms": 114.98441699999967,
+      "p95Ms": 121.00937500000055,
+      "maxMs": 128.87670799999978,
+      "calls": 64
+    }
+  },
+  "accountedMeanMs": 110.35559953124992,
+  "unaccountedMeanMs": 0.13068043750007519,
+  "scope": "Actual Node Dawn Metal, deployed browser Wasm and MuJoCo; steady ticks after model load"
+}

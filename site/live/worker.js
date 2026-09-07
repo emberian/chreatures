@@ -22,7 +22,7 @@ function pump() {
     scheduled = false;
     exclusive(async () => {
       if (!running) return;
-      const observation = await engine.advance(engine.tick % 4 === 0);
+      const observation = await engine.advance(true);
       frame(observation);
     });
     queue.then(pump);
