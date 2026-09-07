@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f0eadc">
+  <title>Live CNS evidence — Chreatures</title>
+  <meta name="description" content="Navigate the native Universal Weave evidence graph behind the live MaleCNS garden.">
+  <link rel="stylesheet" href="evidence.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html">chreatures</a>
+    <p>Live CNS evidence</p>
+    <a href="live.html">Enter the live garden ↗</a>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div>
+        <p class="eyebrow">Native Universal Weave</p>
+        <h1>Follow what happened.</h1>
+      </div>
+      <div class="intro-copy">
+        <p id="archive-description">Loading the portable evidence graph…</p>
+        <dl class="counts" aria-label="Evidence graph totals">
+          <div><dt>nodes</dt><dd id="node-count">—</dd></div>
+          <div><dt>edges</dt><dd id="edge-count">—</dd></div>
+          <div><dt>joins</dt><dd id="join-count">—</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section id="loading" class="loading" aria-live="polite">
+      <i></i><p>Reading the portable graph and checking its native serialization…</p>
+    </section>
+
+    <section id="evidence-shell" class="evidence-shell" hidden>
+      <aside class="record-browser" aria-labelledby="chain-title">
+        <div class="browser-head">
+          <div><p class="eyebrow">Topological order</p><h2 id="chain-title">Evidence chain</h2></div>
+          <label><span class="sr-only">Filter evidence records</span><input id="record-filter" type="search" placeholder="Filter records"></label>
+        </div>
+        <ol id="record-list" class="record-list"></ol>
+        <p id="filter-empty" class="filter-empty" hidden>No records match this filter.</p>
+      </aside>
+
+      <article id="record-detail" class="record-detail" aria-live="polite">
+        <div class="detail-heading">
+          <div><p id="detail-stage" class="eyebrow">stage —</p><h2 id="detail-title">Choose a record</h2></div>
+          <span id="detail-status" class="status">recorded</span>
+        </div>
+        <p id="detail-text" class="detail-text"></p>
+
+        <section class="relations" aria-labelledby="relations-title">
+          <h3 id="relations-title">Relations</h3>
+          <div class="relation-columns">
+            <div><h4>Built from</h4><div id="parent-list" class="relation-list"></div></div>
+            <div><h4>Leads to</h4><div id="child-list" class="relation-list"></div></div>
+          </div>
+        </section>
+
+        <details open>
+          <summary>Recorded fields</summary>
+          <pre id="field-data"></pre>
+        </details>
+        <details>
+          <summary>SHA-256 provenance</summary>
+          <div id="blob-list" class="blob-list"></div>
+        </details>
+      </article>
+    </section>
+
+    <section id="graph-footer" class="graph-footer" hidden>
+      <div><p class="eyebrow">Artifact identity</p><code id="artifact-sha"></code></div>
+      <p id="verification-state">Checking native serialization…</p>
+      <p id="library-state"></p>
+    </section>
+
+    <section id="failure" class="failure" hidden aria-live="assertive">
+      <p class="eyebrow">Evidence unavailable</p>
+      <h2>The graph stayed closed.</h2>
+      <p id="failure-reason"></p>
+    </section>
+  </main>
+
+  <script type="module" src="evidence.js"></script>
+</body>
+</html>

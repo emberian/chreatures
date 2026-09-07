@@ -1,0 +1,26 @@
+{
+  "edge_count": 31,
+  "format": "chreatures-live-cns-weave-export-v1",
+  "multi_parent_nodes": 10,
+  "node_count": 18,
+  "portable_sha256": "645bb5a76da70460b9bfdfd0962f97a9e7d05d2e339f104448438964920fb267",
+  "public_files": [
+    "live-cns-evidence.json",
+    "live-cns-evidence.weave.json"
+  ],
+  "reload_equal": true,
+  "request_sha256": "18d65146560baeecf39875a79c36c37bbbe40c4fb7c30341d02e9cd2282ddf98",
+  "source_directories": [
+    "dynamics-v2-crossed-20260907",
+    "dynamics-v2-temporal-fit-20260907",
+    "browser-v2-temporal-pack-20260907",
+    "browser-v2-teacher-skills-20260907"
+  ],
+  "universal_weave": {
+    "name": "universal-weave",
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+    "version": "0.5.0"
+  },
+  "validated_after_reload": true,
+  "weave_sha256": "a271799ca96f910c26106fce71027fd052d3d4bc927be898d932b61e1876a027"
+}

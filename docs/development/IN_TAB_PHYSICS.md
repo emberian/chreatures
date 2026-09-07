@@ -63,6 +63,16 @@ three-band emission, secretion and developmental allocation are explicit body
 mechanisms. The grip spring and simplified physiological coefficients are part of
 this new browser epoch and are not asserted to exactly reproduce native lives.
 
+The current browser ingestion rule uses an explicit **0.28 m root-centre radius**
+and an oral-action threshold, drawing from finite resource stores into the gut.
+It does not reproduce the native engine's directed 0.045 m mouth-contact law.
+Likewise, the grip spring has a supplied forward reach rather than finger contact.
+Research proximity/alignment counters must be named as such; they are not evidence
+of mouth contact or grasping. Actual resource transfer and actual grip state can
+be measured separately. The more precise native acquisition mechanism remains a
+porting task for a new browser engine epoch, not a capability inferred from this
+simplified law.
+
 The policy boundary is only `sample()`:
 
 | Array | Resident-major layout | Meaning |
