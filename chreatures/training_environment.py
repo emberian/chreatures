@@ -256,7 +256,7 @@ class EmbodiedTrainingProfile:
                     "resource_sha256", "profile_sha256", "epoch", "descriptors",
                     "generation_cost",
                 }
-                or record.get("format") != "chreatures-environment-record-v3"
+                or record.get("format") != "chreatures-environment-record-v4"
                 or record.get("genome_sha256") != variant["genome_sha256"]
                 or hashlib.sha256(_canonical(record_body)).hexdigest() != record["sha256"]
                 or not isinstance(parents, list) or len(parents) > 2

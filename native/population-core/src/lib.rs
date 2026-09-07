@@ -705,7 +705,7 @@ impl SearchState {
             "renewal_rate".to_string(),
             "connectivity".to_string(),
         ]);
-        if e.format != "chreatures-environment-record-v3"
+        if e.format != "chreatures-environment-record-v4"
             || !valid_hash(&e.sha256)
             || !valid_hash(&e.genome_sha256)
             || e.parents.len() > 2
