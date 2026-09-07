@@ -229,6 +229,51 @@ def _copy_model(model_directory: Path | None) -> None:
                 partial.unlink(missing_ok=True)
 
 
+
+def _version_live_publication() -> None:
+    """Publish one complete live bundle under a content-derived URL.
+
+    The stable /live tree also supports headless tooling. Public entry points use
+    the versioned copy so a refresh cannot mix cached JS from one engine with
+    another engine's Wasm, shaders, fixture or model. No prior bundles are kept.
+    """
+    live = OUTPUT / "live"
+    if not (live / "runtime-manifest.json").exists():
+        return
+    runtime = json.loads((live / "runtime-manifest.json").read_text())
+    inputs = {"runtime": runtime["files"], "files": {}}
+    for relative in ("live.js", "live.css", "live/view.js", "live/model/cns-manifest.json",
+                     "live/model/resident-manifest.json", "live/model/observer-manifest.json"):
+        path = OUTPUT / relative
+        if not path.is_file():
+            raise FileNotFoundError(f"missing live publication input: {relative}")
+        inputs["files"][relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+    identity = hashlib.sha256(json.dumps(inputs, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    prefix = "live-" + identity[:24]
+    shutil.copytree(live, OUTPUT / prefix)
+    entry = (OUTPUT / "live.js").read_text()
+    for old, new in (("'./live/view.js'", f"'./{prefix}/view.js'"),
+                     ("'./live/worker.js'", f"'./{prefix}/worker.js'")):
+        if entry.count(old) != 1:
+            raise ValueError(f"live entry reference changed: {old}")
+        entry = entry.replace(old, new)
+    (OUTPUT / (prefix + ".js")).write_text(entry)
+    shutil.copy2(OUTPUT / "live.css", OUTPUT / (prefix + ".css"))
+    page = OUTPUT / "live.html"
+    html = page.read_text()
+    for old, new in (("src=\"live.js\"", f"src=\"{prefix}.js\""),
+                     ("href=\"live.css\"", f"href=\"{prefix}.css\"")):
+        if html.count(old) != 1:
+            raise ValueError(f"live page entry changed: {old}")
+        html = html.replace(old, new)
+    page.write_text(html)
+    (OUTPUT / "live-publication.json").write_text(json.dumps({
+        "format": "chreatures-live-publication-v1", "identity": identity,
+        "basePath": prefix + "/", "entry": prefix + ".js", "style": prefix + ".css",
+        "sourceRevision": runtime["sourceRevision"],
+    }, sort_keys=True) + "\n")
+
+
 def build(revision: str | None = None, built_at: str | None = None, model_directory: Path | None = None) -> Path:
     if not (SITE / "index.html").is_file():
         raise FileNotFoundError("site/index.html is required")
@@ -250,6 +295,7 @@ def build(revision: str | None = None, built_at: str | None = None, model_direct
     )
     _copy_model(model_directory)
     _runtime_identity(_revision(revision))
+    _version_live_publication()
     info = {
         "format": "chreatures-pages-build-v1",
         "revision": _revision(revision),

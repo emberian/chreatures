@@ -109,3 +109,11 @@ A Pages build failed on an HTTPS connection reset while fetching the immutable
 release. Downloads now restart interrupted transfers with bounded backoff; each
 asset is committed only after length and SHA256 match. Hash mismatches still fail
 the build. No partial model is published.
+
+Public entry scripts, view modules, worker, shaders, Wasm, physical fixture and
+model manifests are now published together under one content-derived directory.
+The HTML points to that complete bundle, so a normal refresh cannot reuse an old
+unversioned module alongside a new binary. Each build contains only its current
+bundle; no old engine implementation is retained. `live-publication.json` records
+the public entry and byte-derived identity. The stable `live/` copy supports the
+headless tools and contains the identical current bytes.
