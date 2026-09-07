@@ -249,6 +249,33 @@ def main() -> int:
         )
         bank_path = stage / "founding-bank.json"
         atomic_json(bank_path, bank)
+        birth_assignment_body = {
+            "format": "chreatures-population-evaluation-assignments-v1",
+            "profile_sha256": profile.sha256,
+            "resident_artifact_sha256": controller["file_sha256"],
+            "founding_bank_sha256": bank["sha256"],
+            "worlds": [
+                {
+                    "world_id": world["environment_sha256"],
+                    "seed": world["seed"],
+                    "environment": world["environment"],
+                    "candidates": [
+                        candidate.to_value()
+                        for candidate in candidates[
+                            world["world_slot"] * residents:
+                            (world["world_slot"] + 1) * residents
+                        ]
+                    ],
+                }
+                for world in episodes[0]["worlds"]
+            ],
+        }
+        birth_assignments = {
+            **birth_assignment_body,
+            "sha256": value_sha256(birth_assignment_body),
+        }
+        birth_assignments_path = stage / "founder-assignments.json"
+        atomic_json(birth_assignments_path, birth_assignments)
         inputs = {
             "resident_artifact": {
                 "path": str(args.resident_artifact.resolve()),
@@ -289,6 +316,13 @@ def main() -> int:
                 "distinct_regulation_count": bank["regulation_diversity"][
                     "unique_regulation_vectors"
                 ],
+            },
+            "founder_assignments": {
+                "path": "founder-assignments.json",
+                "semantic_sha256": birth_assignments["sha256"],
+                "file_sha256": file_sha256(birth_assignments_path),
+                "world_count": len(birth_assignments["worlds"]),
+                "semantics": "episode-zero cold birth inputs; no world or brain started",
             },
             "search": {
                 "path": "search.json",
