@@ -843,13 +843,9 @@ class Biosphere:
             "mobile_phototrophy": self._mobile_photo_report(
                 mobile_photons, ledger["photon_used"],
             ),
-            "accounting": self.accounting(),
-            "exchange": self.exchange.view() if self.exchange is not None else None,
-            "regional_matter": (
-                self.regional_matter.view() if self.regional_matter is not None else None
-            ),
-            "metabolic_regulation": self.web.regulation_view(),
-            "hatch_offers": self.hatch_offers(),
+            # Full inventories, regulation arrays and derived hatch offers are
+            # observer queries. Serializing them here at every physical tick
+            # duplicated native state even when the caller only wanted events.
         }
         self._growth_evidence.clear()
         return copy.deepcopy(self.last_report)
@@ -1064,8 +1060,6 @@ class Biosphere:
         )
         candidate.mobility._maturity[offer["resident_index"]] = 0.0
         candidate.mobility.sync_bodies()
-        if candidate.last_report:
-            candidate.last_report["hatch_offers"] = candidate.hatch_offers()
         source_sha256 = hashlib.sha256(canonical(saved)).hexdigest()
         funding = {
             "format": "chreatures-hatch-funding-v1",

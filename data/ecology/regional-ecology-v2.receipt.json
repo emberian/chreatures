@@ -1,0 +1,169 @@
+{
+  "base_git_commit": "74d62dfa41286a861872643af71ad094d7c2ec65",
+  "boundary_benchmark": {
+    "biosphere_exact": true,
+    "format": "chreatures-regional-join-boundary-benchmark-v1",
+    "measured_ticks": 200,
+    "scope": "complete affected physics+biosphere advance; same current binary and corrected geometry; only regional host boundary differs",
+    "seconds": {
+      "baseline": 5.4580813749926165,
+      "packed_native": 4.945013167016441
+    },
+    "warmup_ticks": 40,
+    "world_exact": true
+  },
+  "cause": "Generated outlet positions and route clearance endpoints coincided with platform-center colony/construction geometry. Current native physical clearance correctly blocked the old outlet; source generation now reserves a platform quadrant for outlets and samples exposed ramp corridors.",
+  "command": "PYTHONPATH=/tmp/chreatures-ecological-join-20260907-bin:/Users/ember/dev/chreatures .venv/bin/python -u scripts/probe_regional_ecology.py --fixture /tmp/chreatures-ecological-join-20260907-fixture --steps 1200 --continuation 12 --dt 0.05 --output /tmp/chreatures-ecological-join-20260907-final-result.json",
+  "date": "2026-09-07",
+  "executed_findings": {
+    "biosphere_restore_exact": true,
+    "continuation_steps": 12,
+    "elapsed_seconds": 31.88110083300853,
+    "event_counts": {
+      "developmental-growth-committed": 12,
+      "mobile-material-release": 36,
+      "regional-material-flow": 34754,
+      "regional-material-outlet": 1
+    },
+    "exit": {
+      "activated_packets": [
+        "living-deposit-18",
+        "living-deposit-19",
+        "living-deposit-20",
+        "living-deposit-21",
+        "living-deposit-22",
+        "living-deposit-23"
+      ],
+      "cause": "declared-world-face",
+      "complete_inventory_transferred": true,
+      "elemental_residual": {
+        "carbon_equivalent": 0.0,
+        "mineral_equivalent": 0.0
+      },
+      "entity": "living-deposit-18",
+      "face": "material-exit-x-max",
+      "outlet": "material-outlet-00",
+      "packet_row_empty": true,
+      "physical_entity_retired": true,
+      "regional_debit_matches_emission": true,
+      "release_totals_before": {
+        "elements": {
+          "carbon_equivalent": 447.91529844187875,
+          "mineral_equivalent": 61.012008265083786
+        },
+        "stored_energy": 275.0978060627312
+      },
+      "resources": {
+        "detritus": 0.0031743679753675714,
+        "fermentate": 0.0,
+        "inorganic_carbon": 0.006257807574951379,
+        "mineral": 0.004957739189937227,
+        "reserve": 0.05038041385975197,
+        "soft_tissue": 0.00510699021642465,
+        "tough_tissue": 0.0
+      },
+      "scheduled_outlet_activation": true,
+      "stored_energy_residual": 0.0
+    },
+    "final_accounting": {
+      "captured_photons": 17.973085582782492,
+      "elemental_residual": {
+        "carbon_equivalent": -3.410605131648481e-13,
+        "mineral_equivalent": 2.1316282072803006e-14
+      },
+      "elements": {
+        "carbon_equivalent": 447.91529844187846,
+        "mineral_equivalent": 61.012008265083814
+      },
+      "energy_residual": -5.3734794391857577e-14,
+      "exported_work": 1.3399560686532266,
+      "heat": 25.510962174766224,
+      "stored_energy": 266.21997340209424
+    },
+    "initial_parts": 0,
+    "obstruction": {
+      "authored_routes_already_fully_obstructed": false,
+      "blocked_slot": "living-deposit-18",
+      "outlet": "material-outlet-00",
+      "regional_inventory_exact": true,
+      "retained_pool": "reserve",
+      "retained_quantity": 0.02,
+      "route_accessibility_before": 1.0,
+      "route_accessibility_obstructed": 0.0,
+      "route_index": 0,
+      "route_intervention_feasible": true
+    },
+    "parts": 12,
+    "regulated_rows_changed": 16,
+    "regulation_atp_cost": 0.12124379817499092,
+    "resident_count": 8,
+    "steps": 1200,
+    "world_restore_exact": true
+  },
+  "format": "chreatures-regional-ecology-probe-receipt-v2",
+  "mechanism_changes": [
+    "Native habitat generation reserves outlet placement away from center content and bounds clearance segments to exposed ramp corridors; all physical overlap and obstruction checks remain active.",
+    "Native regional proposals directly pack both directional material transfers; the thin adapter uses the existing native web array ABI and exact binary rollback state.",
+    "Complete exit transfer/retirement was already correct; its observer event now includes the declared exit cause."
+  ],
+  "policy": "Analyst-authored actuator signals and physical interventions, not a neural policy, learned competence, or sustained food-web claim.",
+  "retained_directory": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v7-complete-20260907",
+  "retained_files": {
+    "_world_kernels.cpython-312-darwin.so": {
+      "bytes": 2578064,
+      "sha256": "0015311dcc65c17474593ccd501d2f5285a2a4dd2bce3b6ebe1b113bc2c046b4"
+    },
+    "analyst.json": {
+      "bytes": 21009,
+      "sha256": "5625dcd55a54fd12997887ac1a745f9e33b75f72447be6bd76ea66521d6bb269"
+    },
+    "biosphere.json": {
+      "bytes": 447087,
+      "sha256": "36420a605885a7264c9e97d7b70024fe18aa0ce9b2e2af5857726099dee5ad77"
+    },
+    "boundary-benchmark.json": {
+      "bytes": 396,
+      "sha256": "9ead84d96986141fe967ee67339fb522d7e28fd9d5d853458fafe9b20b9a73f8"
+    },
+    "checkpoint.json": {
+      "bytes": 661728,
+      "sha256": "1331e8189e23bc76e14d02cc871dfadfab6b31b87d258379871a1cbde2f2ba69"
+    },
+    "environment.genome.json": {
+      "bytes": 1943,
+      "sha256": "556b88eef47967d7e3d422289fc6d5a0237501d0201885d74ba665abad1b7979"
+    },
+    "habitat.json": {
+      "bytes": 123469,
+      "sha256": "4d3d08e359a7e65003c804c5bfd8f5d8b7fba4cd47d0806556cad04d1e776a18"
+    },
+    "manifest.json": {
+      "bytes": 3231,
+      "sha256": "05bcb5ef7c0563dabad60705a9aba160ae1cf1a5de71bbe28faadb8a730af4d9"
+    },
+    "result.json": {
+      "bytes": 3629,
+      "sha256": "c76511216f4482afb0cd5e863e9f3c504b1f18ae5382f8e4806fe4972db44159"
+    },
+    "source-sha256.json": {
+      "bytes": 9400,
+      "sha256": "1c22ffafb5d8200008b38e33d86ff939fc3fb72b15f0c64b8f4c2ea4aaf3dfa3"
+    },
+    "source.tar.gz": {
+      "bytes": 452861,
+      "sha256": "659af2802abe3ca1977e8a092f45a38928fbcbbd8cf34bf9cb93485df3f849c6"
+    }
+  },
+  "scope": "One B8 generated regional-v4, birth-v7, full-current-native physics/Biosphere joined assay: finite scheduled outlets, physical obstruction, complete packet face exit, 1200 physical ticks, and exact 12-tick coupled continuation.",
+  "source_sha256": {
+    "chreatures/biosphere.py": "08788271a2c8c345815ed9a79003359acf15d8b5ae0337a1839917f496afe864",
+    "chreatures/material_objects.py": "d97014fd2bb7267b24fad38bb9b11ef06ba2ea149298b4ed18dde434d2484343",
+    "chreatures/regional_matter.py": "351db6922f0a69e52870f6ed16312099ebacadf17ecf738ddd440577b84c6943",
+    "native/world-kernels/src/habitat_family.rs": "0a8618b4c225579b58403d65784b2e7a0923d24763d2ae2b4ef2301f09ab295c",
+    "native/world-kernels/src/regional_matter.rs": "61573f9f76575fba00547d50fec1e652f0b4dc2f11c9b8d4dd99711849c6156d",
+    "scripts/probe_regional_ecology.py": "e7ef267d270c8330496fa2cd0577943a56b3c4f73d6436b5004a405f850a710a"
+  },
+  "source_state": "Base commit plus source changes pinned by the retained source archive and per-file SHA-256 manifest; old running worlds and the gen8 binary were not used.",
+  "status": "complete",
+  "supersedes_incomplete_evidence": "data/ecology/regional-ecology-v1.receipt.json; retained unchanged as the historical failed assay."
+}

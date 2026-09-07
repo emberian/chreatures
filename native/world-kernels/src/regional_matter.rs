@@ -777,6 +777,35 @@ impl RegionalMatter {
         });
         let result = PyDict::new(py);
         result.set_item("token", token)?;
+        // Materialize the two physical directions of each route in the native
+        // transfer ABI. Different pools can flow in opposite directions; no
+        // per-pool Python dictionary expansion is needed at the web boundary.
+        let mut transfer_donors = Vec::with_capacity(edge_count * 2);
+        let mut transfer_receivers = Vec::with_capacity(edge_count * 2);
+        let mut transfer_resources = vec![0.0; edge_count * 2 * k];
+        for (edge, route) in self.routes.iter().enumerate() {
+            transfer_donors.extend([
+                self.regions[route.a].row as i64,
+                self.regions[route.b].row as i64,
+            ]);
+            transfer_receivers.extend([
+                self.regions[route.b].row as i64,
+                self.regions[route.a].row as i64,
+            ]);
+            for pool in 0..k {
+                let direction = usize::from(source[edge * k + pool] as usize != route.a);
+                transfer_resources[(edge * 2 + direction) * k + pool] =
+                    route_resources[edge * k + pool];
+            }
+        }
+        result.set_item("transfer_donors", transfer_donors.into_pyarray(py))?;
+        result.set_item("transfer_receivers", transfer_receivers.into_pyarray(py))?;
+        result.set_item(
+            "transfer_resources",
+            Array2::from_shape_vec((edge_count * 2, k), transfer_resources)
+                .unwrap()
+                .into_pyarray(py),
+        )?;
         result.set_item(
             "route_source",
             Array2::from_shape_vec((edge_count, k), source)
