@@ -29,3 +29,32 @@ held-out source-world error does not validate the new ecological dynamics.
 ```
 
 The artifact pins the trajectory manifest and packet hashes, complete action and physiology orders, exact resident checkpoint and representation tensor identities, normalization floors, temporal alignment, bounded decoder, tensor receipts, and H1–H8 validation and final-heldout goal errors. Existing residents retain their older immutable predictor artifacts.
+
+## First executed fit
+
+The first fixed three-member fit ran on an AMD Radeon 890M with Torch 2.10.0
+and ROCm 7.0 for 399.791 seconds. Its corpus contains 393,216 transitions;
+fitting used only world slots 0–3. World 4 remained validation-only, and world 5 was opened once
+for the final held-out report.
+
+At the runtime scoring horizon H4 (0.20 seconds), held-out goal-code RMS was
+0.234636, compared with 0.550485 for a persistence forecast. Held-out H4 RMSE
+was 0.152928 for the visual code, 0.254890 for the body code, and 0.070819 for
+the twelve bounded physiology channels. These are learned representation and
+normalized physiology units, not physical calibration or evidence of improved
+control. Ensemble disagreement is residual member spread and is not calibrated
+epistemic uncertainty.
+
+The fit used trajectories from the instrumented frozen-v5 update-160 controller
+and source-world dynamics. Reciprocal-v6 uses this predictor as an inherited
+bounded prior. The held-out result does not validate transfer to v6 chemistry,
+new ecology, or a fresh resident's action choices.
+
+The compact [fit and export receipt](../data/training/rich-recurrent-v3/fit-export-receipt.json)
+pins the corpus, split, representation checkpoint, source files, predictor and
+native-v6 artifact identities, embedded consequence laws, held-out metrics, and
+hardware run. [Native parity](../data/training/rich-recurrent-v3/native-parity.json)
+used the fitted weights with synthetic B3 x K4 x H4 numerical inputs; maximum absolute error was `1.76e-6` for cumulative
+codes and at most `9.54e-7` for per-member deltas. The check is reproducible
+with `scripts/validate_rich_prediction_native.py` against the immutable
+predictor and compiled `_cognitive_core` extension.
