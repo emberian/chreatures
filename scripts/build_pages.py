@@ -149,6 +149,24 @@ def _validate_public_urls() -> None:
                     _validate_reference(path, reference)
 
 
+def _runtime_identity(revision: str) -> None:
+    """Bind saved lives to executable bytes as well as immutable model tensors."""
+    live = OUTPUT / "live"
+    if not (live / "engine.js").exists():
+        return
+    names = ["engine.js", "worker.js", "assets.js", "cns-webgpu.js", "world-runtime.mjs",
+             "pkg/resident_runtime.js", "pkg/resident_runtime_bg.wasm",
+             "pkg/chreatures_browser_world.js", "pkg/chreatures_browser_world_bg.wasm",
+             "vendor/mujoco/mujoco.js", "vendor/mujoco/mujoco.wasm",
+             "shaders/afferent.wgsl", "shaders/dynamics.wgsl", "shaders/readout.wgsl"]
+    manifest = {"format": "chreatures-live-runtime-v1", "sourceRevision": revision, "files": {}}
+    for name in names:
+        content = (live / name).read_bytes()
+        manifest["files"][name] = {"url": name, "byteLength": len(content),
+                                    "sha256": hashlib.sha256(content).hexdigest()}
+    (live / "runtime-manifest.json").write_text(json.dumps(manifest, sort_keys=True) + "\n")
+
+
 def _copy_model(model_directory: Path | None) -> None:
     """Materialize only the pinned public model release, outside source Git."""
     lock_path = SITE / "live" / "model.lock.json"
@@ -210,6 +228,7 @@ def build(revision: str | None = None, built_at: str | None = None, model_direct
         OUTPUT / "vendor" / "three",
     )
     _copy_model(model_directory)
+    _runtime_identity(_revision(revision))
     info = {
         "format": "chreatures-pages-build-v1",
         "revision": _revision(revision),

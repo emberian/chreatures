@@ -64,3 +64,12 @@ GAM regime characterization and CNS-only resident skill training proceed in
 parallel on the AMD nodes. Each keeps trained, initialized and demonstrated
 behavior distinct. No isolated motor success is a prerequisite for building
 memory, social interaction, physical development or ecology.
+
+The publication loader also authenticates the three Wasm binaries and binds life
+snapshots to the executable-byte manifest (host, shaders, bindings and binaries),
+separately from informational Git revisions. A documentation-only build does not
+change that runtime identity. During this addition, a joined restore exposed
+MuJoCo's mutation of its factory options object. Each reconstructed world now
+receives fresh options around the authenticated immutable Wasm bytes. The repaired
+joined run restored the entire grown world exactly; its receipt and the failed
+integration record are retained in `docs/receipts/live-cns-v2`.
