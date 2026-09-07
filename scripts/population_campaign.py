@@ -136,7 +136,7 @@ def init_command(args: argparse.Namespace) -> None:
         heritable_policy_adapter_rows=False,
     )
     variation_receipt = {
-        "operator": "bounded-genome-variation-v1",
+        "operator": "bounded-genome-variation-v3",
         "parameters": specs,
         "policy_adapter_selection": "fixed-row-zero-v1",
     }

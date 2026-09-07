@@ -9,7 +9,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 use sha2::{Digest, Sha256};
 
-const MAGIC: &[u8; 8] = b"CHMET1\0\0";
+const MAGIC: &[u8; 8] = b"CHMET2\0\0";
 const EPS: f64 = 1e-12;
 
 fn finite_nonnegative(values: &[f64]) -> bool {
@@ -51,7 +51,138 @@ pub struct MetabolicCohort {
     bulk_atp: f64,
     time: f64,
     cumulative_ledger: Vec<f64>,
+    regulation_baseline: Vec<f64>,
+    regulation_substrate_response: Vec<f64>,
+    regulation_atp_response: Vec<f64>,
+    regulation_time_constant: Vec<f64>,
+    regulation_change_cost: Vec<f64>,
+    regulation_maximum: f64,
+    regulation_total_budget: f64,
+    cumulative_regulation_atp: Vec<f64>,
     program_sha256: String,
+}
+
+impl MetabolicCohort {
+    fn clone_for_expansion(
+        &self,
+        added: usize,
+        new_enzymes: &[f64],
+        new_capacity: &[f64],
+    ) -> PyResult<Self> {
+        if !finite_nonnegative(new_enzymes) || !finite_nonnegative(new_capacity) {
+            return Err(PyValueError::new_err(
+                "metabolism expansion values are invalid",
+            ));
+        }
+        for row in 0..added {
+            let values = &new_enzymes[row * self.r..(row + 1) * self.r];
+            if values.iter().any(|x| *x > self.regulation_maximum)
+                || values.iter().sum::<f64>() > self.regulation_total_budget + EPS
+            {
+                return Err(PyValueError::new_err(
+                    "expanded baseline exceeds enzyme budget",
+                ));
+            }
+        }
+        let mut enzymes = self.enzyme_activity.clone();
+        enzymes.extend_from_slice(new_enzymes);
+        let mut pools = self.pools.clone();
+        pools.resize((self.n + added) * self.k, 0.0);
+        let mut atp = self.atp.clone();
+        atp.resize(self.n + added, 0.0);
+        let mut capacities = self.atp_capacity.clone();
+        capacities.extend_from_slice(new_capacity);
+        let mut ledger = self.cumulative_ledger.clone();
+        ledger.resize((self.n + added) * 6, 0.0);
+        Ok(Self {
+            n: self.n + added,
+            r: self.r,
+            k: self.k,
+            e: self.e,
+            stoich: self.stoich.clone(),
+            elements: self.elements.clone(),
+            chemical_energy: self.chemical_energy.clone(),
+            atp_cost: self.atp_cost.clone(),
+            atp_yield: self.atp_yield.clone(),
+            photon_cost: self.photon_cost.clone(),
+            half_saturation: self.half_saturation.clone(),
+            base_rates: self.base_rates.clone(),
+            reaction_heat: self.reaction_heat.clone(),
+            enzyme_activity: enzymes,
+            pools,
+            atp,
+            atp_capacity: capacities,
+            bulk_pool: self.bulk_pool.clone(),
+            bulk_atp: self.bulk_atp,
+            time: self.time,
+            cumulative_ledger: ledger,
+            regulation_baseline: self.regulation_baseline.clone(),
+            regulation_substrate_response: self.regulation_substrate_response.clone(),
+            regulation_atp_response: self.regulation_atp_response.clone(),
+            regulation_time_constant: self.regulation_time_constant.clone(),
+            regulation_change_cost: self.regulation_change_cost.clone(),
+            regulation_maximum: self.regulation_maximum,
+            regulation_total_budget: self.regulation_total_budget,
+            cumulative_regulation_atp: self.cumulative_regulation_atp.clone(),
+            program_sha256: self.program_sha256.clone(),
+        })
+    }
+
+    fn regulate(&mut self, dt: f64) -> Vec<f64> {
+        let mut paid = vec![0.0; self.n];
+        if self.regulation_baseline.is_empty() {
+            return paid;
+        }
+        let mut target = vec![0.0; self.r];
+        for row in 0..self.n {
+            let atp_fraction = if self.atp_capacity[row] > 0.0 {
+                (self.atp[row] / self.atp_capacity[row]).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            for reaction in 0..self.r {
+                let mut availability = 1.0_f64;
+                for species in 0..self.k {
+                    if self.stoich[reaction * self.k + species] < 0.0 {
+                        let amount = self.pools[row * self.k + species];
+                        let km = self.half_saturation[reaction * self.k + species];
+                        availability = availability.min(amount / (km + amount));
+                    }
+                }
+                let index = row * self.r + reaction;
+                target[reaction] = (self.regulation_baseline[index]
+                    + self.regulation_substrate_response[index] * (availability - 0.5)
+                    + self.regulation_atp_response[index] * (atp_fraction - 0.5))
+                    .clamp(0.0, self.regulation_maximum);
+            }
+            let target_sum: f64 = target.iter().sum();
+            if target_sum > self.regulation_total_budget {
+                let scale = self.regulation_total_budget / target_sum;
+                target.iter_mut().for_each(|x| *x *= scale);
+            }
+            let alpha = -(-dt / self.regulation_time_constant[row]).exp_m1();
+            let mut requested_cost = 0.0;
+            for (reaction, &goal) in target.iter().enumerate() {
+                let index = row * self.r + reaction;
+                requested_cost += (alpha * (goal - self.enzyme_activity[index])).abs()
+                    * self.regulation_change_cost[row];
+            }
+            let limiter = if requested_cost > 0.0 {
+                (self.atp[row] / requested_cost).min(1.0)
+            } else {
+                1.0
+            };
+            for (reaction, &goal) in target.iter().enumerate() {
+                let index = row * self.r + reaction;
+                self.enzyme_activity[index] +=
+                    limiter * alpha * (goal - self.enzyme_activity[index]);
+            }
+            paid[row] = requested_cost * limiter;
+            self.atp[row] -= paid[row];
+            self.cumulative_regulation_atp[row] += paid[row];
+        }
+        paid
+    }
 }
 
 #[pymethods]
@@ -216,6 +347,14 @@ impl MetabolicCohort {
             bulk_atp,
             time: 0.0,
             cumulative_ledger: vec![0.0; n * 6],
+            regulation_baseline: Vec::new(),
+            regulation_substrate_response: Vec::new(),
+            regulation_atp_response: Vec::new(),
+            regulation_time_constant: Vec::new(),
+            regulation_change_cost: Vec::new(),
+            regulation_maximum: 0.0,
+            regulation_total_budget: 0.0,
+            cumulative_regulation_atp: Vec::new(),
             program_sha256,
         })
     }
@@ -264,64 +403,142 @@ impl MetabolicCohort {
         self.time
     }
 
-    fn expanded(
-        &self,
-        enzyme_activity: PyReadonlyArray2<'_, f64>,
-        atp_capacity: PyReadonlyArray1<'_, f64>,
-    ) -> PyResult<Self> {
-        let shape = enzyme_activity.shape();
-        if shape.len() != 2
-            || shape[1] != self.r
-            || !(1..=5).contains(&shape[0])
-            || self.n + shape[0] > 4096
-            || atp_capacity.shape() != [shape[0]]
+    #[allow(clippy::too_many_arguments)]
+    fn enable_regulation(
+        &mut self,
+        baseline: PyReadonlyArray2<'_, f64>,
+        substrate_response: PyReadonlyArray2<'_, f64>,
+        atp_response: PyReadonlyArray2<'_, f64>,
+        time_constant: PyReadonlyArray1<'_, f64>,
+        change_cost: PyReadonlyArray1<'_, f64>,
+        maximum_expression: f64,
+        total_budget: f64,
+    ) -> PyResult<()> {
+        if !self.regulation_baseline.is_empty()
+            || baseline.shape() != [self.n, self.r]
+            || substrate_response.shape() != [self.n, self.r]
+            || atp_response.shape() != [self.n, self.r]
+            || time_constant.shape() != [self.n]
+            || change_cost.shape() != [self.n]
+            || !maximum_expression.is_finite()
+            || !total_budget.is_finite()
+            || maximum_expression <= 0.0
+            || total_budget < maximum_expression
         {
             return Err(PyValueError::new_err(
-                "metabolism expansion dimensions differ",
+                "metabolic regulation dimensions or budgets differ",
             ));
         }
-        let new_enzymes = enzyme_activity.as_slice()?;
-        let new_capacity = atp_capacity.as_slice()?;
-        if !finite_nonnegative(new_enzymes) || !finite_nonnegative(new_capacity) {
+        let baseline = baseline.as_slice()?;
+        let substrate = substrate_response.as_slice()?;
+        let atp_response = atp_response.as_slice()?;
+        let tau = time_constant.as_slice()?;
+        let cost = change_cost.as_slice()?;
+        if !finite_nonnegative(baseline)
+            || substrate
+                .iter()
+                .any(|x| !x.is_finite() || x.abs() > maximum_expression)
+            || atp_response
+                .iter()
+                .any(|x| !x.is_finite() || x.abs() > maximum_expression)
+            || tau.iter().any(|x| !x.is_finite() || *x < 0.5 || *x > 120.0)
+            || cost.iter().any(|x| !x.is_finite() || *x < 0.01 || *x > 2.0)
+        {
             return Err(PyValueError::new_err(
-                "metabolism expansion values must be finite and nonnegative",
+                "metabolic regulation values are invalid",
             ));
         }
-        let added = shape[0];
-        let mut enzymes = self.enzyme_activity.clone();
-        enzymes.extend_from_slice(new_enzymes);
-        let mut pools = self.pools.clone();
-        pools.resize((self.n + added) * self.k, 0.0);
-        let mut atp = self.atp.clone();
-        atp.resize(self.n + added, 0.0);
-        let mut capacities = self.atp_capacity.clone();
-        capacities.extend_from_slice(new_capacity);
-        let mut ledger = self.cumulative_ledger.clone();
-        ledger.resize((self.n + added) * 6, 0.0);
-        Ok(Self {
-            n: self.n + added,
-            r: self.r,
-            k: self.k,
-            e: self.e,
-            stoich: self.stoich.clone(),
-            elements: self.elements.clone(),
-            chemical_energy: self.chemical_energy.clone(),
-            atp_cost: self.atp_cost.clone(),
-            atp_yield: self.atp_yield.clone(),
-            photon_cost: self.photon_cost.clone(),
-            half_saturation: self.half_saturation.clone(),
-            base_rates: self.base_rates.clone(),
-            reaction_heat: self.reaction_heat.clone(),
-            enzyme_activity: enzymes,
-            pools,
-            atp,
-            atp_capacity: capacities,
-            bulk_pool: self.bulk_pool.clone(),
-            bulk_atp: self.bulk_atp,
-            time: self.time,
-            cumulative_ledger: ledger,
-            program_sha256: self.program_sha256.clone(),
-        })
+        for row in 0..self.n {
+            let values = &baseline[row * self.r..(row + 1) * self.r];
+            if values.iter().any(|x| *x > maximum_expression)
+                || values.iter().sum::<f64>() > total_budget + EPS
+            {
+                return Err(PyValueError::new_err(
+                    "regulation baseline exceeds enzyme budget",
+                ));
+            }
+        }
+        self.regulation_baseline = baseline.to_vec();
+        self.regulation_substrate_response = substrate.to_vec();
+        self.regulation_atp_response = atp_response.to_vec();
+        self.regulation_time_constant = tau.to_vec();
+        self.regulation_change_cost = cost.to_vec();
+        self.regulation_maximum = maximum_expression;
+        self.regulation_total_budget = total_budget;
+        self.cumulative_regulation_atp = vec![0.0; self.n];
+        self.enzyme_activity.copy_from_slice(baseline);
+        Ok(())
+    }
+
+    #[getter]
+    fn cumulative_regulation_atp<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        self.cumulative_regulation_atp.clone().into_pyarray(py)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn expanded(
+        &self,
+        baseline: PyReadonlyArray2<'_, f64>,
+        atp_capacity: PyReadonlyArray1<'_, f64>,
+        substrate_response: PyReadonlyArray2<'_, f64>,
+        atp_response: PyReadonlyArray2<'_, f64>,
+        time_constant: PyReadonlyArray1<'_, f64>,
+        change_cost: PyReadonlyArray1<'_, f64>,
+    ) -> PyResult<Self> {
+        if self.regulation_baseline.is_empty() {
+            return Err(PyValueError::new_err(
+                "metabolism regulation is not enabled",
+            ));
+        }
+        let shape = baseline.shape();
+        let added = shape.first().copied().unwrap_or(0);
+        if shape != [added, self.r]
+            || !(1..=5).contains(&added)
+            || self.n + added > 4096
+            || atp_capacity.shape() != [added]
+            || substrate_response.shape() != [added, self.r]
+            || atp_response.shape() != [added, self.r]
+            || time_constant.shape() != [added]
+            || change_cost.shape() != [added]
+        {
+            return Err(PyValueError::new_err(
+                "regulated expansion dimensions differ",
+            ));
+        }
+        let mut candidate =
+            self.clone_for_expansion(added, baseline.as_slice()?, atp_capacity.as_slice()?)?;
+        let substrate = substrate_response.as_slice()?;
+        let atp_gain = atp_response.as_slice()?;
+        let tau = time_constant.as_slice()?;
+        let cost = change_cost.as_slice()?;
+        if substrate
+            .iter()
+            .any(|x| !x.is_finite() || x.abs() > self.regulation_maximum)
+            || atp_gain
+                .iter()
+                .any(|x| !x.is_finite() || x.abs() > self.regulation_maximum)
+            || tau.iter().any(|x| !x.is_finite() || *x < 0.5 || *x > 120.0)
+            || cost.iter().any(|x| !x.is_finite() || *x < 0.01 || *x > 2.0)
+        {
+            return Err(PyValueError::new_err(
+                "regulated expansion values are invalid",
+            ));
+        }
+        candidate
+            .regulation_baseline
+            .extend_from_slice(baseline.as_slice()?);
+        candidate
+            .regulation_substrate_response
+            .extend_from_slice(substrate);
+        candidate
+            .regulation_atp_response
+            .extend_from_slice(atp_gain);
+        candidate.regulation_time_constant.extend_from_slice(tau);
+        candidate.regulation_change_cost.extend_from_slice(cost);
+        candidate
+            .cumulative_regulation_atp
+            .resize(self.n + added, 0.0);
+        Ok(candidate)
     }
 
     #[getter]
@@ -355,13 +572,14 @@ impl MetabolicCohort {
                 "budgets and costs must be finite and nonnegative",
             ));
         }
+        let regulation_atp_cost = self.regulate(dt);
         let mut extent = vec![0.0; self.n * self.r];
         let mut limiter = vec![1.0; self.n * self.r];
         let mut photon_used = vec![0.0; self.n];
         let mut atp_cost_used = vec![0.0; self.n];
         let mut atp_yielded = vec![0.0; self.n];
         let mut chemical_delta = vec![0.0; self.n];
-        let mut reaction_heat = vec![0.0; self.n];
+        let mut reaction_heat = regulation_atp_cost.clone();
         let mut overflow = vec![0.0; self.n];
         let mut mechanical_paid = vec![0.0; self.n];
         let mut mechanical_unmet = vec![0.0; self.n];
@@ -369,7 +587,7 @@ impl MetabolicCohort {
         let mut energy_residual = vec![0.0; self.n];
         let mut ratios = vec![1.0; self.k];
         for row in 0..self.n {
-            let begin_atp = self.atp[row];
+            let begin_atp = self.atp[row] + regulation_atp_cost[row];
             let begin_chemical: f64 = (0..self.k)
                 .map(|species| self.pools[row * self.k + species] * self.chemical_energy[species])
                 .sum();
@@ -520,6 +738,7 @@ impl MetabolicCohort {
         put1!("photon_used", photon_used);
         put1!("reaction_atp_cost", atp_cost_used);
         put1!("reaction_atp_yield", atp_yielded);
+        put1!("regulation_atp_cost", regulation_atp_cost);
         put1!("chemical_energy_delta", chemical_delta);
         put1!("reaction_heat", reaction_heat);
         put1!("atp_overflow_heat", overflow);
@@ -886,6 +1105,7 @@ impl MetabolicCohort {
                 + self.atp_capacity.len()
                 + self.bulk_pool.len()
                 + self.cumulative_ledger.len()
+                + self.cumulative_regulation_atp.len()
                 + 2)
                 * 8,
         );
@@ -894,6 +1114,7 @@ impl MetabolicCohort {
         for x in [self.n, self.r, self.k, self.e] {
             out.extend_from_slice(&(x as u64).to_le_bytes());
         }
+        out.push(u8::from(!self.regulation_baseline.is_empty()));
         for values in [
             &self.pools,
             &self.atp,
@@ -901,6 +1122,7 @@ impl MetabolicCohort {
             &self.atp_capacity,
             &self.bulk_pool,
             &self.cumulative_ledger,
+            &self.cumulative_regulation_atp,
         ] {
             for x in values {
                 out.extend_from_slice(&x.to_le_bytes());
@@ -915,12 +1137,14 @@ impl MetabolicCohort {
         let expected = 8
             + 64
             + 32
+            + 1
             + (self.pools.len()
                 + self.atp.len()
                 + self.enzyme_activity.len()
                 + self.atp_capacity.len()
                 + self.bulk_pool.len()
                 + self.cumulative_ledger.len()
+                + self.cumulative_regulation_atp.len()
                 + 2)
                 * 8;
         if snapshot.len() != expected
@@ -941,6 +1165,13 @@ impl MetabolicCohort {
                 ));
             }
         }
+        let regulated = snapshot[cursor];
+        cursor += 1;
+        if regulated > 1 || (regulated == 1) != !self.regulation_baseline.is_empty() {
+            return Err(PyValueError::new_err(
+                "metabolism regulation identity differs",
+            ));
+        }
         let mut read = |target: &mut [f64], nonnegative: bool| -> PyResult<()> {
             for x in target {
                 *x = f64::from_le_bytes(snapshot[cursor..cursor + 8].try_into().unwrap());
@@ -959,12 +1190,14 @@ impl MetabolicCohort {
         let mut capacity = self.atp_capacity.clone();
         let mut bulk = self.bulk_pool.clone();
         let mut ledger = self.cumulative_ledger.clone();
+        let mut regulation_ledger = self.cumulative_regulation_atp.clone();
         read(&mut pools, true)?;
         read(&mut atp, true)?;
         read(&mut enzyme, true)?;
         read(&mut capacity, true)?;
         read(&mut bulk, true)?;
         read(&mut ledger, false)?;
+        read(&mut regulation_ledger, true)?;
         let bulk_atp = f64::from_le_bytes(snapshot[cursor..cursor + 8].try_into().unwrap());
         cursor += 8;
         let time = f64::from_le_bytes(snapshot[cursor..cursor + 8].try_into().unwrap());
@@ -978,6 +1211,18 @@ impl MetabolicCohort {
                 "metabolism snapshot ATP state is invalid",
             ));
         }
+        if !self.regulation_baseline.is_empty() {
+            for row in 0..self.n {
+                let values = &enzyme[row * self.r..(row + 1) * self.r];
+                if values.iter().any(|x| *x > self.regulation_maximum)
+                    || values.iter().sum::<f64>() > self.regulation_total_budget + EPS
+                {
+                    return Err(PyValueError::new_err(
+                        "metabolism snapshot enzyme state exceeds regulation budget",
+                    ));
+                }
+            }
+        }
         self.pools = pools;
         self.atp = atp;
         self.enzyme_activity = enzyme;
@@ -986,6 +1231,7 @@ impl MetabolicCohort {
         self.bulk_atp = bulk_atp;
         self.time = time;
         self.cumulative_ledger = ledger;
+        self.cumulative_regulation_atp = regulation_ledger;
         Ok(())
     }
 }

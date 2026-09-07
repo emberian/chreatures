@@ -412,6 +412,25 @@ class MaterialObjects:
         """Environment-only entity-to-compartment bindings."""
         return self._donor_rows.copy()
 
+    @property
+    def active_entities(self) -> tuple[str, ...]:
+        """Return physically present material identities for engine adapters."""
+        return tuple(
+            item["entity"]
+            for item in self.config["objects"]
+            if self._state[item["entity"]]["active"]
+        )
+
+    @property
+    def active_free_entities(self) -> tuple[str, ...]:
+        """Return present packets whose poses can cross a declared world face."""
+        self._check_physical_state()
+        return tuple(
+            entity_id
+            for entity_id in self.active_entities
+            if self._world_entity(entity_id)["mobility"] == "free"
+        )
+
     def _content(self, item: Mapping[str, Any], pools: np.ndarray) -> float:
         return float(sum(
             pools[index] * weight
@@ -845,6 +864,7 @@ class MaterialObjects:
         if not isinstance(requests, list) or len(requests) > self.MAX_BATCH:
             raise ValueError(f"material batch must contain at most {self.MAX_BATCH} requests")
         web = self._web()
+        self._check_physical_state()
         if not requests:
             return {
                 "direction": "withdraw_batch", "requests": [],
@@ -943,6 +963,7 @@ class MaterialObjects:
                 transaction.commit()
         except Exception:
             self._restore_native(web, before)
+            self._mark_inventory_current()
             raise
 
         for change in changes:
@@ -973,6 +994,196 @@ class MaterialObjects:
         }
         self.last_receipt = copy.deepcopy(receipt)
         self._mark_inventory_current()
+        return receipt
+
+    def exit_batch(self, requests: Any) -> dict[str, Any]:
+        """Move complete escaped-packet inventories into regional web rows.
+
+        Exit handling intentionally bypasses the ordinary per-bite transfer
+        bound. Every request transfers the packet's complete current pool
+        vector and removes its physical entity in one prepared topology batch.
+        Capacity, staleness, or topology failures leave both owners unchanged.
+        """
+        if not isinstance(requests, list) or len(requests) > self.MAX_BATCH:
+            raise ValueError(
+                f"material exit batch must contain at most {self.MAX_BATCH} requests"
+            )
+        web = self._web()
+        pool_names = list(web.chemistry.pools)
+        if not requests:
+            return {
+                "direction": "exit_batch",
+                "requests": [],
+                "pools": pool_names,
+                "moved_resources": [],
+                "changes": [],
+                "model_revision": int(self.world.model_revision),
+                "elemental_residual": {
+                    name: 0.0 for name in web.chemistry.elements
+                },
+                "stored_energy_residual": 0.0,
+            }
+
+        material_rows = set(self._donor_rows.values())
+        normalized: list[dict[str, Any]] = []
+        donors: list[int] = []
+        receivers: list[int] = []
+        requested: list[np.ndarray] = []
+        receiver_capacities: dict[int, np.ndarray] = {}
+        seen: set[str] = set()
+        for index, raw in enumerate(requests):
+            request = _mapping(raw, f"material exit request {index}")
+            if set(request) != {
+                "entity", "receiver_row", "receiver_capacities", "face", "cause",
+            }:
+                raise ValueError("invalid material exit request fields")
+            entity_id = _identifier(request["entity"], "material entity")
+            if entity_id in seen:
+                raise ValueError("one material entity cannot exit twice")
+            seen.add(entity_id)
+            item = self._item(entity_id)
+            state = self._state[entity_id]
+            if (
+                not state["active"]
+                or not item["remove_when_empty"]
+                or self._world_entity(entity_id)["mobility"] != "free"
+            ):
+                raise ValueError("only active removable free material can exit")
+            receiver = self._row(request["receiver_row"], "regional receiver row")
+            if receiver in material_rows or receiver in self._structure_rows:
+                raise ValueError("regional receiver row cannot be material or structure")
+            raw_capacity = _mapping(
+                request["receiver_capacities"], "regional receiver capacities"
+            )
+            if set(raw_capacity) != set(pool_names):
+                raise ValueError("regional receiver capacities must cover every pool")
+            capacity = np.asarray(
+                [
+                    _number(raw_capacity[name], "regional receiver capacity", 0.0, 1e12)
+                    for name in pool_names
+                ],
+                dtype=np.float64,
+            )
+            previous_capacity = receiver_capacities.setdefault(receiver, capacity)
+            if not np.array_equal(previous_capacity, capacity):
+                raise ValueError("one regional row cannot declare different capacities")
+            resources = np.asarray(web.pools[item["row"]], dtype=np.float64).copy()
+            if not np.any(resources > 0.0):
+                raise ValueError("active exited material has no chemical inventory")
+            face = _identifier(request["face"], "exit face")
+            cause = _identifier(request["cause"], "exit cause")
+            normalized.append({
+                "entity": entity_id,
+                "receiver_row": receiver,
+                "receiver_capacities": {
+                    name: float(capacity[pool])
+                    for pool, name in enumerate(pool_names)
+                },
+                "face": face,
+                "cause": cause,
+            })
+            donors.append(item["row"])
+            receivers.append(receiver)
+            requested.append(resources)
+
+        requested_array = np.asarray(requested, dtype=np.float64)
+        stage = MetabolicWeb.restore(web.snapshot())
+        staged = stage.transfer_batch(
+            donors,
+            receivers,
+            [
+                {
+                    name: float(row[pool])
+                    for pool, name in enumerate(pool_names)
+                    if row[pool] > 0.0
+                }
+                for row in requested_array
+            ],
+            [0.0] * len(normalized),
+        )
+        moved = np.asarray(staged["moved_resources"], dtype=np.float64)
+        if moved.shape != requested_array.shape or not np.array_equal(
+            moved, requested_array
+        ):
+            raise RuntimeError("regional exit must transfer each complete packet")
+        for receiver, capacity in receiver_capacities.items():
+            if np.any(stage.pools[receiver] > capacity):
+                raise ValueError("regional exit exceeds receiver capacity")
+
+        operations = [
+            {"op": "remove", "id": request["entity"]} for request in normalized
+        ]
+        transaction = self.world.prepare_topology_batch(operations)
+        mass_before = {
+            request["entity"]: self._physical_mass(request["entity"])
+            for request in normalized
+        }
+        before = web.snapshot()
+        totals_before = web.totals()
+        try:
+            applied = web.transfer_batch(
+                donors,
+                receivers,
+                [
+                    {
+                        name: float(row[pool])
+                        for pool, name in enumerate(pool_names)
+                        if row[pool] > 0.0
+                    }
+                    for row in requested_array
+                ],
+                [0.0] * len(normalized),
+            )
+            applied_moved = np.asarray(applied["moved_resources"], dtype=np.float64)
+            if not np.array_equal(applied_moved, requested_array):
+                raise RuntimeError("staged and authoritative material exits differ")
+            totals_after = web.totals()
+            elemental_residual = {
+                name: totals_after["elements"][name] - amount
+                for name, amount in totals_before["elements"].items()
+            }
+            energy_residual = (
+                totals_after["stored_energy"] - totals_before["stored_energy"]
+            )
+            if max(map(abs, elemental_residual.values()), default=0.0) > 1e-10 or abs(
+                energy_residual
+            ) > 1e-10:
+                raise RuntimeError("regional material exit violated chemical conservation")
+            transaction.commit()
+        except Exception:
+            self._restore_native(web, before)
+            self._mark_inventory_current()
+            raise
+
+        changes = []
+        for request in normalized:
+            entity_id = request["entity"]
+            self._state[entity_id] = {"active": False, "boundary": None}
+            changes.append({
+                "entity": entity_id,
+                "face": request["face"],
+                "cause": request["cause"],
+                "receiver_row": request["receiver_row"],
+                "physical_mass_before": mass_before[entity_id],
+                "physical_mass_after": 0.0,
+            })
+        moved_total = requested_array.sum(axis=0)
+        self.cumulative_withdrawn = (
+            np.asarray(self.cumulative_withdrawn, dtype=np.float64) + moved_total
+        ).tolist()
+        self.transfer_count += len(normalized)
+        receipt = {
+            "direction": "exit_batch",
+            "requests": copy.deepcopy(normalized),
+            "pools": pool_names,
+            "moved_resources": requested_array.tolist(),
+            "changes": changes,
+            "model_revision": int(self.world.model_revision),
+            "elemental_residual": elemental_residual,
+            "stored_energy_residual": energy_residual,
+        }
+        self.last_receipt = copy.deepcopy(receipt)
+        self._mark_inventory_current()
         self._check_physical_state()
         return receipt
 
@@ -986,6 +1197,7 @@ class MaterialObjects:
         if not isinstance(requests, list) or len(requests) > self.MAX_BATCH:
             raise ValueError(f"material batch must contain at most {self.MAX_BATCH} requests")
         web = self._web()
+        self._check_physical_state()
         if not requests:
             return {
                 "direction": "deposit_batch", "requests": [],
@@ -1222,7 +1434,6 @@ class MaterialObjects:
         }
         self.last_receipt = copy.deepcopy(receipt)
         self._mark_inventory_current()
-        self._check_physical_state()
         return receipt
 
     def sync_geometry(self) -> list[dict[str, Any]]:

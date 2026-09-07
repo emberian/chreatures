@@ -28,6 +28,7 @@
         <button type="button" data-overlay="gaze" aria-pressed="true">Gaze</button>
         <button type="button" data-overlay="signals" aria-pressed="true">Signals</button>
         <button type="button" data-overlay="events" aria-pressed="true">Events</button>
+        <button type="button" data-overlay="matter" aria-pressed="true">Matter</button>
       </div>
       <button id="inspection-light" class="inspection-light" type="button" aria-pressed="true" title="Additional light for inspecting the recording; the recorded retinal inputs remain in the instruments">Inspection light</button>
       <button id="hear-signals" class="hear-signals" type="button" aria-pressed="false" disabled title="Sonification is available only when recorded signal events exist">Hear recorded signals</button>
@@ -76,6 +77,12 @@
         <p id="context-unavailable" class="decision-note">No contextual or sequence diagnostic was captured at this frame.</p>
       </section>
 
+      <section class="suffix-section">
+        <div class="section-title"><h2>Acquired action candidates</h2><span>local &amp; recalled diagnostics</span></div>
+        <div id="suffix-candidates" class="suffix-candidates"></div>
+        <p id="suffix-note" class="decision-note">This recording does not contain acquired-action diagnostics.</p>
+      </section>
+
       <section class="decision-section">
         <div class="section-title"><h2>Recorded decision path</h2><span>native controller values</span></div>
         <div class="decision-flow" aria-label="Remembered goal, actor proposal, candidate evaluation, and delivered action">
@@ -121,6 +128,13 @@
         <div class="section-title"><h2>World evidence</h2><span id="event-contract">event stream</span></div>
         <div id="event-filters" class="event-filters" aria-label="Event filters"></div>
         <ol id="events" class="moments event-list"></ol>
+      </section>
+
+      <section class="matter-section">
+        <div class="section-title"><h2>Regional matter</h2><span id="matter-contract">recorded observer view</span></div>
+        <div id="matter-inventory" class="matter-inventory"></div>
+        <div id="matter-flows" class="matter-flows"></div>
+        <p id="matter-note" class="decision-note">Regional matter was unavailable in this recording.</p>
       </section>
 
       <footer><span>Actual recording</span><span>Provided mechanics</span><span>Learned controller</span><a id="recording-evidence-link" href="https://github.com/emberian/chreatures/blob/main/integrations/artifacts/living-reef-biography/living-reef-biography.json" target="_parent">Earlier biography ↗</a></footer>

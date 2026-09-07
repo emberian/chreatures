@@ -9,13 +9,13 @@ use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
-use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 
-const FORMAT: &str = "chreatures-regional-habitat-family-v3";
-const GENOME_FORMAT: &str = "chreatures-environment-genome-v3";
-const RESIDENT_FORMAT: &str = "chreatures-regional-residents-v2";
-const ANALYST_FORMAT: &str = "chreatures-regional-analyst-v3";
-const RECORD_FORMAT: &str = "chreatures-environment-record-v3";
+const FORMAT: &str = "chreatures-regional-habitat-family-v4";
+const GENOME_FORMAT: &str = "chreatures-environment-genome-v4";
+const RESIDENT_FORMAT: &str = "chreatures-regional-residents-v3";
+const ANALYST_FORMAT: &str = "chreatures-regional-analyst-v4";
+const RECORD_FORMAT: &str = "chreatures-environment-record-v4";
 const MAX_REGIONS: usize = 48;
 const MAX_EDGES: usize = 128;
 const MAX_RESIDENTS: usize = 32;
@@ -68,6 +68,33 @@ struct CatchmentSpec {
     wall_height_m: f64,
     material: String,
     physical_material: String,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RegionalMatterSpec {
+    inventory_fraction: ScalarRange,
+    capacity_factor: ScalarRange,
+    conductance_scale: ScalarRange,
+    route_radius_m: ScalarRange,
+    clearance_height_m: f64,
+    outlet_count: IntegerRange,
+    outlet_interval_seconds: ScalarRange,
+    outlet_release_fraction: ScalarRange,
+    outlet_slots_each: usize,
+    pool_conductance_per_second: BTreeMap<String, f64>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RegionalMatterAlleles {
+    inventory_fraction: f64,
+    capacity_factor: f64,
+    conductance_scale: f64,
+    route_radius_m: f64,
+    outlet_count: usize,
+    outlet_interval_seconds: f64,
+    outlet_release_fraction: f64,
 }
 
 #[derive(Clone, Deserialize)]
@@ -180,6 +207,7 @@ struct Config {
     capacity: Capacity,
     geometry: Geometry,
     catchment: CatchmentSpec,
+    regional_matter: RegionalMatterSpec,
     mutation: MutationSpec,
     descriptor_normalization: DescriptorNormalization,
     developmental_rule_alleles: DevelopmentalRuleAlleleRanges,
@@ -213,6 +241,7 @@ struct Parameters {
     movable_count: usize,
     terrace_bias: f64,
     developmental_rules: DevelopmentalRuleAlleles,
+    regional_matter: RegionalMatterAlleles,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -349,7 +378,7 @@ fn parse_genome(text: &str) -> PyResult<Genome> {
     let value: Genome = serde_json::from_str(text)
         .map_err(|e| PyValueError::new_err(format!("invalid environment genome: {e}")))?;
     if value.format != GENOME_FORMAT
-        || value.version != 2
+        || value.version != 4
         || !valid_sha(&value.sha256)
         || !valid_sha(&value.profile_sha256)
         || value.parents.len() > 2
@@ -467,7 +496,27 @@ fn validate_config(config: &Config) -> PyResult<()> {
         || !(0.2..=2.5).contains(&config.catchment.wall_height_m)
         || !identifier(&config.catchment.material)
         || !identifier(&config.catchment.physical_material)
-        || config.mutation.operator != "bounded-regional-perturbation-v3"
+        || !valid_range(&config.regional_matter.inventory_fraction, 0.05, 0.8)
+        || !valid_range(&config.regional_matter.capacity_factor, 1.0, 8.0)
+        || !valid_range(&config.regional_matter.conductance_scale, 0.05, 8.0)
+        || !valid_range(&config.regional_matter.route_radius_m, 0.01, 0.3)
+        || !(0.08..=0.8).contains(&config.regional_matter.clearance_height_m)
+        || !valid_integer(&config.regional_matter.outlet_count, 2, 16)
+        || !valid_range(&config.regional_matter.outlet_interval_seconds, 0.1, 120.0)
+        || !valid_range(&config.regional_matter.outlet_release_fraction, 0.001, 0.5)
+        || !(1..=4).contains(&config.regional_matter.outlet_slots_each)
+        || config
+            .regional_matter
+            .pool_conductance_per_second
+            .is_empty()
+        || config
+            .regional_matter
+            .pool_conductance_per_second
+            .iter()
+            .any(|(name, value)| {
+                !identifier(name) || !value.is_finite() || *value <= 0.0 || *value > 10.0
+            })
+        || config.mutation.operator != "bounded-regional-perturbation-v4"
         || !valid_sha(&config.mutation.recipe_sha256)
         || !(0.0..=0.3).contains(&config.mutation.scalar_fraction)
         || config.mutation.integer_delta > 8
@@ -730,6 +779,61 @@ fn mutate_developmental_rules(
     }
 }
 
+fn sample_regional_matter(
+    spec: &RegionalMatterSpec,
+    region_count: usize,
+    rng: &mut SplitMix64,
+) -> RegionalMatterAlleles {
+    RegionalMatterAlleles {
+        inventory_fraction: rng.range(&spec.inventory_fraction),
+        capacity_factor: rng.range(&spec.capacity_factor),
+        conductance_scale: rng.range(&spec.conductance_scale),
+        route_radius_m: rng.range(&spec.route_radius_m),
+        outlet_count: rng.integer(&spec.outlet_count).min(region_count),
+        outlet_interval_seconds: rng.range(&spec.outlet_interval_seconds),
+        outlet_release_fraction: rng.range(&spec.outlet_release_fraction),
+    }
+}
+
+fn mutate_regional_matter(
+    value: &RegionalMatterAlleles,
+    spec: &RegionalMatterSpec,
+    region_count: usize,
+    fraction: f64,
+    rng: &mut SplitMix64,
+) -> RegionalMatterAlleles {
+    RegionalMatterAlleles {
+        inventory_fraction: perturb(
+            value.inventory_fraction,
+            &spec.inventory_fraction,
+            fraction,
+            rng,
+        ),
+        capacity_factor: perturb(value.capacity_factor, &spec.capacity_factor, fraction, rng),
+        conductance_scale: perturb(
+            value.conductance_scale,
+            &spec.conductance_scale,
+            fraction,
+            rng,
+        ),
+        route_radius_m: perturb(value.route_radius_m, &spec.route_radius_m, fraction, rng),
+        outlet_count: perturb_integer(value.outlet_count, &spec.outlet_count, 1, rng)
+            .min(region_count),
+        outlet_interval_seconds: perturb(
+            value.outlet_interval_seconds,
+            &spec.outlet_interval_seconds,
+            fraction,
+            rng,
+        ),
+        outlet_release_fraction: perturb(
+            value.outlet_release_fraction,
+            &spec.outlet_release_fraction,
+            fraction,
+            rng,
+        ),
+    }
+}
+
 fn platform_entity(index: usize, node: &Node, g: &Geometry, material: &str) -> Value {
     let mut shapes = vec![
         json!({"type":"box","size":[node.half_size[0],node.half_size[1],g.platform_thickness_m*0.5],"position":[0,0,node.position[2]-g.platform_thickness_m*0.5]}),
@@ -816,14 +920,489 @@ fn remap_rows(value: &mut Value, map: &HashMap<usize, usize>) -> PyResult<()> {
     Ok(())
 }
 fn validate_compartment(value: &Value) -> PyResult<()> {
-    let keys: HashSet<&str> = object(value, "founder compartment")?
-        .keys()
-        .map(String::as_str)
-        .collect();
-    if keys != HashSet::from(["enzymes", "pools", "atp", "atp_capacity"]) {
+    let compartment = object(value, "founder compartment")?;
+    let keys: HashSet<&str> = compartment.keys().map(String::as_str).collect();
+    if keys != HashSet::from(["enzymes", "pools", "atp", "atp_capacity", "regulation"]) {
         return Err(PyValueError::new_err("founder compartment fields differ"));
     }
+    let enzymes = compartment
+        .get("enzymes")
+        .and_then(Value::as_object)
+        .ok_or_else(|| PyValueError::new_err("founder enzymes must be an object"))?;
+    let regulation = compartment
+        .get("regulation")
+        .and_then(Value::as_object)
+        .ok_or_else(|| PyValueError::new_err("founder regulation must be an object"))?;
+    if regulation
+        .keys()
+        .map(String::as_str)
+        .collect::<HashSet<_>>()
+        != HashSet::from([
+            "baseline",
+            "substrate_response",
+            "atp_response",
+            "time_constant_seconds",
+            "change_cost_atp_per_expression",
+        ])
+        || regulation.get("baseline").and_then(Value::as_object) != Some(enzymes)
+    {
+        return Err(PyValueError::new_err(
+            "founder regulation baseline differs from enzymes",
+        ));
+    }
+    for key in ["substrate_response", "atp_response"] {
+        let response = regulation
+            .get(key)
+            .and_then(Value::as_object)
+            .ok_or_else(|| PyValueError::new_err("founder response must be an object"))?;
+        if response.iter().any(|(reaction, gain)| {
+            !identifier(reaction)
+                || gain
+                    .as_f64()
+                    .is_none_or(|value| !value.is_finite() || !(-0.06..=0.06).contains(&value))
+        }) {
+            return Err(PyValueError::new_err(
+                "founder regulation response is outside current bounds",
+            ));
+        }
+    }
+    let tau = regulation
+        .get("time_constant_seconds")
+        .and_then(Value::as_f64);
+    let cost = regulation
+        .get("change_cost_atp_per_expression")
+        .and_then(Value::as_f64);
+    if tau.is_none_or(|value| !value.is_finite() || !(0.5..=120.0).contains(&value))
+        || cost.is_none_or(|value| !value.is_finite() || !(0.01..=2.0).contains(&value))
+    {
+        return Err(PyValueError::new_err(
+            "founder regulation kinetics are outside current bounds",
+        ));
+    }
     Ok(())
+}
+
+fn validate_structural_regulation(value: &Value) -> PyResult<()> {
+    validate_compartment(value)?;
+    let regulation = object(value, "structural compartment")?
+        .get("regulation")
+        .and_then(Value::as_object)
+        .unwrap();
+    let allowed = HashSet::from(["soft_turnover", "tough_turnover"]);
+    for key in ["substrate_response", "atp_response"] {
+        if regulation[key]
+            .as_object()
+            .unwrap()
+            .keys()
+            .any(|reaction| !allowed.contains(reaction.as_str()))
+        {
+            return Err(PyValueError::new_err(
+                "structural regulation may respond only through tissue turnover",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn nearest_node(nodes: &[Node], axis: usize, maximum: bool) -> usize {
+    (0..nodes.len())
+        .min_by(|a, b| {
+            let ordering = nodes[*a].position[axis].total_cmp(&nodes[*b].position[axis]);
+            if maximum {
+                ordering.reverse()
+            } else {
+                ordering
+            }
+        })
+        .unwrap()
+}
+
+fn install_regional_matter(
+    biosphere: &mut Value,
+    nodes: &[Node],
+    edges: &[(usize, usize)],
+    content_nodes: &[usize],
+    parameters: &Parameters,
+    spec: &RegionalMatterSpec,
+) -> PyResult<Value> {
+    let chemistry = object(biosphere, "biosphere")?
+        .get("chemistry")
+        .ok_or_else(|| PyValueError::new_err("biosphere chemistry is missing"))?
+        .clone();
+    let pool_names: Vec<String> = object(&chemistry, "chemistry")?
+        .get("pools")
+        .and_then(Value::as_array)
+        .ok_or_else(|| PyValueError::new_err("chemistry pools are missing"))?
+        .iter()
+        .map(|pool| {
+            object(pool, "chemistry pool")?
+                .get("name")
+                .and_then(Value::as_str)
+                .filter(|name| identifier(name))
+                .map(str::to_owned)
+                .ok_or_else(|| PyValueError::new_err("chemistry pool name is invalid"))
+        })
+        .collect::<PyResult<_>>()?;
+    if pool_names.len() != spec.pool_conductance_per_second.len()
+        || pool_names
+            .iter()
+            .any(|name| !spec.pool_conductance_per_second.contains_key(name))
+    {
+        return Err(PyValueError::new_err(
+            "regional conductance pools differ from chemistry",
+        ));
+    }
+    let chemistry_sha256 = sha256(canonical(&chemistry)?.as_bytes());
+    let material_config = object(biosphere, "biosphere")?
+        .get("material_objects")
+        .and_then(Value::as_object)
+        .ok_or_else(|| PyValueError::new_err("material object configuration is missing"))?;
+    let maximum_transfer = material_config
+        .get("max_transfer")
+        .and_then(Value::as_f64)
+        .filter(|value| value.is_finite() && *value > 0.0)
+        .ok_or_else(|| PyValueError::new_err("material transfer bound is invalid"))?;
+    let objects = material_config
+        .get("objects")
+        .and_then(Value::as_array)
+        .ok_or_else(|| PyValueError::new_err("material objects are missing"))?
+        .clone();
+    let mut active_sources = Vec::new();
+    let mut active_source_rows = HashSet::new();
+    for item in &objects {
+        let item = object(item, "material object")?;
+        let entity = item
+            .get("entity")
+            .and_then(Value::as_str)
+            .ok_or_else(|| PyValueError::new_err("material object entity is missing"))?;
+        if !entity.starts_with("living-packet-") {
+            continue;
+        }
+        let row = item
+            .get("row")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| PyValueError::new_err("material source row is missing"))?
+            as usize;
+        if !active_source_rows.insert(row) {
+            return Err(PyValueError::new_err("material source rows are duplicated"));
+        }
+        let content_weights = item
+            .get("content_weights")
+            .and_then(Value::as_object)
+            .ok_or_else(|| PyValueError::new_err("material content weights are missing"))?;
+        let weights: Vec<f64> = pool_names
+            .iter()
+            .map(|name| {
+                content_weights
+                    .get(name)
+                    .and_then(Value::as_f64)
+                    .unwrap_or(0.0)
+            })
+            .collect();
+        let minimum_content = item
+            .get("boundaries")
+            .and_then(Value::as_array)
+            .and_then(|boundaries| boundaries.first())
+            .and_then(Value::as_object)
+            .and_then(|boundary| boundary.get("minimum_content"))
+            .and_then(Value::as_f64)
+            .ok_or_else(|| PyValueError::new_err("material first boundary is missing"))?;
+        if weights
+            .iter()
+            .any(|weight| !weight.is_finite() || *weight < 0.0)
+            || !minimum_content.is_finite()
+            || minimum_content < 0.0
+        {
+            return Err(PyValueError::new_err(
+                "material geometry content contract is invalid",
+            ));
+        }
+        active_sources.push((row, weights, minimum_content));
+    }
+    let dormant_slots: Vec<String> = objects
+        .iter()
+        .filter_map(|item| {
+            let item = item.as_object()?;
+            let entity = item.get("entity")?.as_str()?;
+            entity
+                .starts_with("living-deposit-")
+                .then(|| entity.to_owned())
+        })
+        .collect();
+    let outlet_slot_count = parameters.regional_matter.outlet_count * spec.outlet_slots_each;
+    if active_sources.is_empty()
+        || dormant_slots.len() < outlet_slot_count
+        || content_nodes.len() < parameters.regional_matter.outlet_count
+    {
+        return Err(PyValueError::new_err(
+            "regional matter lacks finite sources, outlet slots, or physical nodes",
+        ));
+    }
+    let reserved_slots = dormant_slots[dormant_slots.len() - outlet_slot_count..].to_vec();
+
+    let mut object_capacity = vec![0.0; pool_names.len()];
+    let mut capacity_by_entity = HashMap::new();
+    for item in &objects {
+        let item = object(item, "material object")?;
+        let entity = item
+            .get("entity")
+            .and_then(Value::as_str)
+            .ok_or_else(|| PyValueError::new_err("material object entity is missing"))?;
+        let capacities = item
+            .get("capacities")
+            .and_then(Value::as_object)
+            .ok_or_else(|| PyValueError::new_err("material capacities are missing"))?;
+        let mut entity_capacity = Vec::with_capacity(pool_names.len());
+        for (pool, name) in pool_names.iter().enumerate() {
+            let value = capacities
+                .get(name)
+                .and_then(Value::as_f64)
+                .ok_or_else(|| PyValueError::new_err("material capacity pool is missing"))?;
+            object_capacity[pool] += value;
+            entity_capacity.push(value);
+        }
+        capacity_by_entity.insert(entity.to_owned(), entity_capacity);
+    }
+
+    let mut extracted = vec![0.0; pool_names.len()];
+    let mut inventories = vec![vec![0.0; pool_names.len()]; nodes.len()];
+    let mut region_rows = Vec::with_capacity(nodes.len());
+    {
+        let compartments = object_mut(biosphere, "biosphere")?
+            .get_mut("compartments")
+            .and_then(Value::as_array_mut)
+            .ok_or_else(|| PyValueError::new_err("biosphere compartments are missing"))?;
+        for (row, weights, minimum_content) in &active_sources {
+            let pools = object_mut(
+                compartments
+                    .get_mut(*row)
+                    .ok_or_else(|| PyValueError::new_err("material source row is invalid"))?,
+                "material source compartment",
+            )?
+            .get_mut("pools")
+            .and_then(Value::as_object_mut)
+            .ok_or_else(|| PyValueError::new_err("material source pools are missing"))?;
+            let before: Vec<f64> = pool_names
+                .iter()
+                .map(|name| pools.get(name).and_then(Value::as_f64).unwrap_or(0.0))
+                .collect();
+            let content: f64 = before.iter().zip(weights).map(|(a, w)| a * w).sum();
+            let boundary_margin =
+                f64::EPSILON * 16.0 * content.abs().max(minimum_content.abs()).max(1.0);
+            let safe_fraction = if content > minimum_content + boundary_margin {
+                ((content - minimum_content - boundary_margin) / content)
+                    .clamp(0.0, parameters.regional_matter.inventory_fraction)
+            } else {
+                0.0
+            };
+            for (pool, name) in pool_names.iter().enumerate() {
+                let moved = before[pool] * safe_fraction;
+                extracted[pool] += moved;
+                if before[pool] - moved > 0.0 {
+                    pools.insert(name.clone(), Value::from(before[pool] - moved));
+                } else {
+                    pools.remove(name);
+                }
+            }
+        }
+        for pool in 0..pool_names.len() {
+            let weights: Vec<f64> = (0..nodes.len())
+                .map(|region| 1.0 + ((region * 13 + pool * 7) % 11) as f64 * 0.125)
+                .collect();
+            let total_weight: f64 = weights.iter().sum();
+            let mut assigned = 0.0;
+            for region in 0..nodes.len() {
+                let amount = if region + 1 == nodes.len() {
+                    (extracted[pool] - assigned).max(0.0)
+                } else {
+                    extracted[pool] * weights[region] / total_weight
+                };
+                inventories[region][pool] = amount;
+                assigned += amount;
+            }
+        }
+        for (region, inventory) in inventories.iter().enumerate() {
+            let row = compartments.len();
+            region_rows.push(row);
+            let pools: BTreeMap<&str, f64> = pool_names
+                .iter()
+                .zip(inventory)
+                .filter(|(_, amount)| **amount > 0.0)
+                .map(|(name, amount)| (name.as_str(), *amount))
+                .collect();
+            compartments.push(json!({
+                "enzymes": {},
+                "pools": pools,
+                "atp": 0.0,
+                "atp_capacity": 0.0,
+                "regulation": {
+                    "baseline": {},
+                    "substrate_response": {},
+                    "atp_response": {},
+                    "time_constant_seconds": 120.0,
+                    "change_cost_atp_per_expression": 0.01
+                }
+            }));
+            if row >= 4096 || region >= MAX_REGIONS {
+                return Err(PyValueError::new_err("regional matter row bound exceeded"));
+            }
+        }
+    }
+
+    let regions: Vec<Value> = inventories
+        .iter()
+        .enumerate()
+        .map(|(region, inventory)| {
+            let capacities: BTreeMap<&str, f64> = pool_names
+                .iter()
+                .enumerate()
+                .map(|(pool, name)| {
+                    let shared = object_capacity[pool] * parameters.regional_matter.capacity_factor
+                        / nodes.len() as f64;
+                    (name.as_str(), shared.max(inventory[pool] * 1.05))
+                })
+                .collect();
+            json!({
+                "id": format!("material-region-{region:02}"),
+                "row": region_rows[region],
+                "position": nodes[region].position,
+                "capacities": capacities,
+            })
+        })
+        .collect();
+    let routes: Vec<Value> = edges
+        .iter()
+        .enumerate()
+        .map(|(route, &(a, b))| {
+            let from = [
+                nodes[a].position[0],
+                nodes[a].position[1],
+                nodes[a].position[2] + spec.clearance_height_m,
+            ];
+            let to = [
+                nodes[b].position[0],
+                nodes[b].position[1],
+                nodes[b].position[2] + spec.clearance_height_m,
+            ];
+            let conductance: BTreeMap<&str, f64> = pool_names
+                .iter()
+                .map(|name| {
+                    (
+                        name.as_str(),
+                        spec.pool_conductance_per_second[name]
+                            * parameters.regional_matter.conductance_scale,
+                    )
+                })
+                .collect();
+            json!({
+                "id": format!("material-route-{route:03}"),
+                "a": format!("material-region-{a:02}"),
+                "b": format!("material-region-{b:02}"),
+                "conductance": conductance,
+                "clearance_samples": [{
+                    "from": from,
+                    "to": to,
+                    "radius": parameters.regional_matter.route_radius_m,
+                }],
+                "carrier_entity": format!("region-ramp-{route:02}"),
+            })
+        })
+        .collect();
+    let exit_faces = vec![
+        json!({"id":"material-exit-x-min","axis":"x","side":"min","coordinate_m":0.0,"region":format!("material-region-{:02}",nearest_node(nodes,0,false))}),
+        json!({"id":"material-exit-x-max","axis":"x","side":"max","coordinate_m":parameters.dimensions_m[0],"region":format!("material-region-{:02}",nearest_node(nodes,0,true))}),
+        json!({"id":"material-exit-y-min","axis":"y","side":"min","coordinate_m":0.0,"region":format!("material-region-{:02}",nearest_node(nodes,1,false))}),
+        json!({"id":"material-exit-y-max","axis":"y","side":"max","coordinate_m":parameters.dimensions_m[1],"region":format!("material-region-{:02}",nearest_node(nodes,1,true))}),
+        json!({"id":"material-exit-z-min","axis":"z","side":"min","coordinate_m":0.0,"region":format!("material-region-{:02}",nearest_node(nodes,2,false))}),
+        json!({"id":"material-exit-z-max","axis":"z","side":"max","coordinate_m":parameters.dimensions_m[2],"region":format!("material-region-{:02}",nearest_node(nodes,2,true))}),
+    ];
+    let outlet_nodes: Vec<usize> = (0..parameters.regional_matter.outlet_count)
+        .map(|index| {
+            content_nodes[index * content_nodes.len() / parameters.regional_matter.outlet_count]
+        })
+        .collect();
+    let outlets: Vec<Value> = outlet_nodes
+        .iter()
+        .enumerate()
+        .map(|(outlet, &node)| {
+            let slots = reserved_slots
+                [outlet * spec.outlet_slots_each..(outlet + 1) * spec.outlet_slots_each]
+                .to_vec();
+            let mut release: Vec<f64> = pool_names
+                .iter()
+                .enumerate()
+                .map(|(pool, _name)| {
+                    let shared = object_capacity[pool] * parameters.regional_matter.capacity_factor
+                        / nodes.len() as f64;
+                    let slot_capacity = slots
+                        .iter()
+                        .map(|slot| capacity_by_entity[slot][pool])
+                        .fold(f64::INFINITY, f64::min);
+                    (shared * parameters.regional_matter.outlet_release_fraction).min(slot_capacity)
+                })
+                .collect();
+            let total: f64 = release.iter().sum();
+            if total > maximum_transfer {
+                let conservative_limit =
+                    maximum_transfer - f64::EPSILON * 16.0 * maximum_transfer.abs().max(1.0);
+                for amount in &mut release {
+                    *amount *= conservative_limit / total;
+                }
+            }
+            let maximum_release: BTreeMap<&str, f64> = pool_names
+                .iter()
+                .zip(release)
+                .map(|(name, amount)| (name.as_str(), amount))
+                .collect();
+            json!({
+                "id": format!("material-outlet-{outlet:02}"),
+                "region": format!("material-region-{node:02}"),
+                "slots": slots,
+                "position": [
+                    nodes[node].position[0],
+                    nodes[node].position[1],
+                    nodes[node].position[2] + spec.clearance_height_m,
+                ],
+                "interval_s": parameters.regional_matter.outlet_interval_seconds,
+                "maximum_release": maximum_release,
+            })
+        })
+        .collect();
+    let value = json!({
+        "format": "chreatures-regional-matter-v1",
+        "chemistry_sha256": chemistry_sha256,
+        "world_size_m": parameters.dimensions_m,
+        "regions": regions,
+        "routes": routes,
+        "exit_faces": exit_faces,
+        "outlets": outlets,
+    });
+    let value_sha256 = sha256(canonical(&value)?.as_bytes());
+    {
+        let exchange = object_mut(
+            object_mut(biosphere, "biosphere")?
+                .get_mut("exchange")
+                .ok_or_else(|| PyValueError::new_err("ecological exchange is missing"))?,
+            "ecological exchange",
+        )?;
+        let slots = exchange
+            .get_mut("deposit_slots")
+            .and_then(Value::as_array_mut)
+            .ok_or_else(|| PyValueError::new_err("exchange deposit slots are missing"))?;
+        slots.retain(|slot| {
+            slot.as_str()
+                .is_none_or(|id| !reserved_slots.contains(&id.to_owned()))
+        });
+    }
+    object_mut(biosphere, "biosphere")?.insert("regional_matter".into(), value);
+    Ok(json!({
+        "sha256": value_sha256,
+        "regions": nodes.len(),
+        "routes": edges.len(),
+        "outlets": outlet_nodes,
+        "reserved_slots": reserved_slots,
+        "finite_reallocated": pool_names.iter().zip(extracted).collect::<BTreeMap<_,_>>(),
+    }))
 }
 
 #[pyclass]
@@ -897,6 +1476,7 @@ impl HabitatFamily {
                 .fold(0u64, |x, b| x.wrapping_mul(131).wrapping_add(b as u64)),
         );
         let minimum_regions = (resident_count + 3) / 4 + self.config.mechanism_clusters.len() + 4;
+        let region_count = rng.integer(&a.region_count).max(minimum_regions);
         let parameters = Parameters {
             archetype,
             seed,
@@ -906,7 +1486,7 @@ impl HabitatFamily {
                 rng.range(&a.height_m),
                 rng.range(&a.depth_m),
             ],
-            region_count: rng.integer(&a.region_count).max(minimum_regions),
+            region_count,
             lane_count: rng.integer(&a.lane_count),
             elevation_span_m: rng.range(&a.elevation_span_m),
             loop_fraction: rng.range(&a.loop_fraction),
@@ -920,15 +1500,20 @@ impl HabitatFamily {
                 &self.config.developmental_rule_alleles,
                 &mut rng,
             ),
+            regional_matter: sample_regional_matter(
+                &self.config.regional_matter,
+                region_count,
+                &mut rng,
+            ),
         };
         let mut genome = Genome {
             format: GENOME_FORMAT.into(),
-            version: 2,
+            version: 4,
             sha256: String::new(),
             parents: vec![],
             environment_parents: vec![],
             variation: Variation {
-                operator: "initial-regional-sample-v3".into(),
+                operator: "initial-regional-sample-v4".into(),
                 seed,
                 recipe_sha256: self.config.mutation.recipe_sha256.clone(),
             },
@@ -1054,9 +1639,16 @@ impl HabitatFamily {
             self.config.mutation.scalar_fraction,
             &mut rng,
         );
+        p.regional_matter = mutate_regional_matter(
+            &p.regional_matter,
+            &self.config.regional_matter,
+            p.region_count,
+            self.config.mutation.scalar_fraction,
+            &mut rng,
+        );
         let mut genome = Genome {
             format: GENOME_FORMAT.into(),
-            version: 2,
+            version: 4,
             sha256: String::new(),
             parents: vec![parent.sha256],
             environment_parents: vec![parent_environment_record_sha256],
@@ -1138,6 +1730,33 @@ impl HabitatFamily {
                 .any(|(value, range)| {
                     !value.is_finite() || !(range.min..=range.max).contains(value)
                 })
+            || !p.regional_matter.inventory_fraction.is_finite()
+            || !(self.config.regional_matter.inventory_fraction.min
+                ..=self.config.regional_matter.inventory_fraction.max)
+                .contains(&p.regional_matter.inventory_fraction)
+            || !p.regional_matter.capacity_factor.is_finite()
+            || !(self.config.regional_matter.capacity_factor.min
+                ..=self.config.regional_matter.capacity_factor.max)
+                .contains(&p.regional_matter.capacity_factor)
+            || !p.regional_matter.conductance_scale.is_finite()
+            || !(self.config.regional_matter.conductance_scale.min
+                ..=self.config.regional_matter.conductance_scale.max)
+                .contains(&p.regional_matter.conductance_scale)
+            || !p.regional_matter.route_radius_m.is_finite()
+            || !(self.config.regional_matter.route_radius_m.min
+                ..=self.config.regional_matter.route_radius_m.max)
+                .contains(&p.regional_matter.route_radius_m)
+            || p.regional_matter.outlet_count < self.config.regional_matter.outlet_count.min
+            || p.regional_matter.outlet_count > self.config.regional_matter.outlet_count.max
+            || p.regional_matter.outlet_count > p.region_count
+            || !p.regional_matter.outlet_interval_seconds.is_finite()
+            || !(self.config.regional_matter.outlet_interval_seconds.min
+                ..=self.config.regional_matter.outlet_interval_seconds.max)
+                .contains(&p.regional_matter.outlet_interval_seconds)
+            || !p.regional_matter.outlet_release_fraction.is_finite()
+            || !(self.config.regional_matter.outlet_release_fraction.min
+                ..=self.config.regional_matter.outlet_release_fraction.max)
+                .contains(&p.regional_matter.outlet_release_fraction)
         {
             return Err(PyValueError::new_err(
                 "environment genome parameters exceed archetype",
@@ -1587,6 +2206,20 @@ impl HabitatFamily {
             .and_then(Value::as_array)
             .ok_or_else(|| PyValueError::new_err("biosphere compartments missing"))?
             .clone();
+        for compartment in &old_compartments {
+            validate_compartment(compartment)?;
+        }
+        for colony in &colonies {
+            let structure_row = object(colony, "colony")?
+                .get("structure_row")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| PyValueError::new_err("colony structure row missing"))?
+                as usize;
+            let structure = old_compartments.get(structure_row).ok_or_else(|| {
+                PyValueError::new_err("colony structure row is outside compartments")
+            })?;
+            validate_structural_regulation(structure)?;
+        }
         let colony_limit = colonies
             .iter()
             .flat_map(|v| {
@@ -1613,6 +2246,7 @@ impl HabitatFamily {
             ] {
                 validate_compartment(c)?;
             }
+            validate_structural_regulation(&founder.founders.structure)?;
             let body = founder.body;
             let rid = id(&body)
                 .ok_or_else(|| PyValueError::new_err("resident body id missing"))?
@@ -1663,7 +2297,7 @@ impl HabitatFamily {
         let bm = object_mut(&mut biosphere, "biosphere")?;
         bm.insert(
             "format".into(),
-            Value::String("chreatures-biosphere-birth-v6".into()),
+            Value::String("chreatures-biosphere-birth-v7".into()),
         );
         bm.insert("compartments".into(), Value::Array(new_compartments));
         bm.insert("mobiles".into(), Value::Array(new_mobiles));
@@ -1710,6 +2344,14 @@ impl HabitatFamily {
                 }
             }
         }
+        let regional_matter = install_regional_matter(
+            &mut biosphere,
+            &nodes,
+            &edges,
+            &content_nodes,
+            p,
+            &self.config.regional_matter,
+        )?;
 
         // Place arbitrary resident cohorts on the structure-free regions reserved
         // before any canopies, landmarks, or mechanism clusters were emitted.
@@ -1814,7 +2456,7 @@ impl HabitatFamily {
         let mut record = json!({"format":RECORD_FORMAT,"sha256":"","genome_sha256":genome.sha256.clone(),"genome_parents":genome.parents.clone(),"parents":genome.environment_parents.clone(),"variation":genome.variation.clone(),"topology_sha256":topology_sha256,"resource_sha256":resource_sha256,"profile_sha256":genome.profile_sha256.clone(),"epoch":genome.epoch,"descriptors":descriptors,"generation_cost":generation_cost});
         let record_sha = sha256(serde_json::to_string(&record).unwrap().as_bytes());
         record["sha256"] = Value::String(record_sha);
-        let analyst = json!({"format":ANALYST_FORMAT,"runtime_visible":false,"environment_genome":genome,"environment_record":record,"graph":{"nodes":node_meta,"edges":edge_meta,"connected":true},"resident_spawns":spawn_meta,"underpass_nodes":underpasses,"shelter_nodes":shelters,"landmark_nodes":landmarks,"resource_budget":{"founder_scale":p.resource_scale,"finite_material_element_equivalents":finite_material,"renewal_capacity_per_second":renewal,"finite_packets":active_packet_count,"colonies":colony_count,"movable_building_materials":p.movable_count},"limits":{"maximum_rise_over_run":self.config.geometry.maximum_rise_over_run,"minimum_underpass_clearance_m":self.config.geometry.minimum_underpass_clearance_m,"minimum_spawn_clearance_m":self.config.geometry.minimum_spawn_clearance_m},"generator_config_sha256":self.config_sha256});
+        let analyst = json!({"format":ANALYST_FORMAT,"runtime_visible":false,"environment_genome":genome,"environment_record":record,"graph":{"nodes":node_meta,"edges":edge_meta,"connected":true},"regional_matter":regional_matter,"resident_spawns":spawn_meta,"underpass_nodes":underpasses,"shelter_nodes":shelters,"landmark_nodes":landmarks,"resource_budget":{"founder_scale":p.resource_scale,"finite_material_element_equivalents":finite_material,"renewal_capacity_per_second":renewal,"finite_packets":active_packet_count,"colonies":colony_count,"movable_building_materials":p.movable_count},"limits":{"maximum_rise_over_run":self.config.geometry.maximum_rise_over_run,"minimum_underpass_clearance_m":self.config.geometry.minimum_underpass_clearance_m,"minimum_spawn_clearance_m":self.config.geometry.minimum_spawn_clearance_m},"generator_config_sha256":self.config_sha256});
         Ok((habitat_output, biosphere_output, pretty(&analyst)?))
     }
 }
@@ -2009,6 +2651,40 @@ fn finite_material_mass(biosphere: &Value) -> PyResult<f64> {
                 .ok_or_else(|| PyValueError::new_err("material pool is not in chemistry"))?;
             if !amount.is_finite() || amount < 0.0 {
                 return Err(PyValueError::new_err("material pool must be finite"));
+            }
+            total += amount * weight;
+        }
+    }
+    let regional_rows = root
+        .get("regional_matter")
+        .and_then(Value::as_object)
+        .and_then(|value| value.get("regions"))
+        .and_then(Value::as_array)
+        .ok_or_else(|| PyValueError::new_err("regional matter rows are missing"))?;
+    for region in regional_rows {
+        let row = object(region, "regional matter row")?
+            .get("row")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| PyValueError::new_err("regional matter row is missing"))?
+            as usize;
+        if row >= compartments.len() || !rows.insert(row) {
+            return Err(PyValueError::new_err(
+                "regional matter rows must be valid and distinct",
+            ));
+        }
+        let inventory = object(&compartments[row], "regional matter compartment")?
+            .get("pools")
+            .and_then(Value::as_object)
+            .ok_or_else(|| PyValueError::new_err("regional matter pools are missing"))?;
+        for (name, value) in inventory {
+            let amount = value
+                .as_f64()
+                .ok_or_else(|| PyValueError::new_err("regional pool must be numeric"))?;
+            let weight = weights
+                .get(name.as_str())
+                .ok_or_else(|| PyValueError::new_err("regional pool is not in chemistry"))?;
+            if !amount.is_finite() || amount < 0.0 {
+                return Err(PyValueError::new_err("regional pool must be finite"));
             }
             total += amount * weight;
         }

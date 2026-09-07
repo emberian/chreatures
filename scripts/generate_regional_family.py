@@ -6,8 +6,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,7 +15,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from chreatures.native_world import load_world_kernels
-
 
 OUTPUT_NAMES = (
     "environment.genome.json",
@@ -71,7 +70,9 @@ def _uint64(value: str) -> int:
 
 
 def _sha(value: str) -> str:
-    if len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
+    if len(value) != 64 or any(
+        character not in "0123456789abcdef" for character in value
+    ):
         raise argparse.ArgumentTypeError("value must be a lowercase SHA-256 digest")
     return value
 
@@ -83,12 +84,12 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=Path,
-        default=ROOT / "data/habitat-families/regional-v3.json",
+        default=ROOT / "data/habitat-families/regional-v4.json",
     )
     parser.add_argument(
         "--resident-bundle",
         type=Path,
-        default=ROOT / "data/habitat-families/regional-residents-v2.json",
+        default=ROOT / "data/habitat-families/regional-residents-v3.json",
     )
     parser.add_argument(
         "--habitat-template",
@@ -158,14 +159,14 @@ def main() -> None:
     resident_count = genome["parameters"]["resident_count"]
     resident_values = residents.get("residents")
     if (
-        residents.get("format") != "chreatures-regional-residents-v2"
+        residents.get("format") != "chreatures-regional-residents-v3"
         or not isinstance(resident_values, list)
         or len(resident_values) < resident_count
     ):
         raise SystemExit("regional resident bundle lacks the requested capacity")
     selected_residents = _canonical(
         {
-            "format": "chreatures-regional-residents-v2",
+            "format": "chreatures-regional-residents-v3",
             "residents": resident_values[:resident_count],
         }
     ).decode()
@@ -222,8 +223,7 @@ def main() -> None:
             for name, path in sources.items()
         },
         "files": {
-            name: {"path": name, "sha256": _sha256(output / name)}
-            for name in values
+            name: {"path": name, "sha256": _sha256(output / name)} for name in values
         },
     }
     manifest["sha256"] = _sha256_bytes(_canonical(manifest))

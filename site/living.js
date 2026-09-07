@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from './vendor/three/OrbitControls.js';
 import {habitatView} from './habitat-view.js';
 
-const FORMATS = new Set(['chreatures-living-reef-public-recording-v1','chreatures-living-reef-public-recording-v2']);
+const FORMATS = new Set(['chreatures-living-reef-public-recording-v1','chreatures-living-reef-public-recording-v2','chreatures-living-reef-public-recording-v3']);
 const GEOMETRY_ENCODING = 'entity-replacement-delta-v1';
 const ACTIONS = ['thrust','yaw','gaze_pitch','grip','signal_low','signal_mid','signal_high','posture','oral'];
 const ACTOR_ACTIONS = ACTIONS.slice(0,8);
@@ -23,15 +23,17 @@ const ui = {
   eventFilters: $('#event-filters'), eventContract: $('#event-contract'),
   context: $('#context-diagnostics'), contextUnavailable: $('#context-unavailable'),
   source: $('#recording-source'), hearSignals: $('#hear-signals'),
+  suffix: $('#suffix-candidates'), suffixNote: $('#suffix-note'), matterInventory: $('#matter-inventory'),
+  matterFlows: $('#matter-flows'), matterNote: $('#matter-note'), matterContract: $('#matter-contract'),
 };
 
-let renderer, scene, camera, controls, worldRoot, signalPoints, physicalSun, ambientFill, inspectionLights, pathLine, gazeLine, eventPoints;
+let renderer, scene, camera, controls, worldRoot, signalPoints, physicalSun, ambientFill, inspectionLights, pathLine, gazeLine, eventPoints, matterPoints, matterLines;
 let recording = null, cursor = 0, playing = false, lastClock = performance.now(), cameraMode = 'orbit';
 let activeBody = 0, activeEventKind = 'all';
 let audioContext=null,hearingSignals=false,lastAudibleFrame=-1;
 const activeVoices=new Set();
 let pathFrameIndices=[];
-const overlayVisibility={path:true,gaze:true,signals:true,events:true};
+const overlayVisibility={path:true,gaze:true,signals:true,events:true,matter:true};
 let pools = new Map();
 const dummy = new THREE.Object3D(), tint = new THREE.Color(), qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
 const pos = new THREE.Vector3(), posB = new THREE.Vector3(), look = new THREE.Vector3(), direction = new THREE.Vector3();
@@ -68,13 +70,20 @@ function validate(data) {
     if(refinement?.status==='unavailable'&&forecast?.status==='unavailable')continue;
     if (!refinement && !forecast && !selected.sampled_proposal) continue;
     if (!refinement || !forecast || !selected.sampled_proposal) throw new Error(`Frame ${index} has a partial decision path`);
+    const candidateCount=refinement.candidate_scores?.length;
     for(const [label,value] of [['GAM scores',refinement.candidate_scores],['GAM coverage',refinement.candidate_out_of_domain],['forecast progress',forecast.candidate_progress],['forecast disagreement',forecast.candidate_disagreement],['forecast validity',forecast.candidate_forecast_invalid||forecast.candidate_input_clipped],['forecast tilt',forecast.candidate_logit_tilt]]){
-      if(!Array.isArray(value)||value.length!==4)throw new Error(`Frame ${index} ${label} must have four candidates`);
+      if(!candidateCount||!Array.isArray(value)||value.length!==candidateCount)throw new Error(`Frame ${index} ${label} candidate count differs`);
     }
     if(!Array.isArray(refinement.selected_private_correction)||refinement.selected_private_correction.length!==3)throw new Error(`Frame ${index} private correction is invalid`);
     if(!proposalOrder.every(name=>Number.isFinite(selected.sampled_proposal[name]))||!actionOrder.every(name=>Number.isFinite(selected.committed_action[name])))throw new Error(`Frame ${index} action contract is invalid`);
-    if(!Number.isInteger(refinement.selected_candidate)||refinement.selected_candidate<0||refinement.selected_candidate>3)throw new Error(`Frame ${index} selected candidate is invalid`);
+    if(!Number.isInteger(refinement.selected_candidate)||refinement.selected_candidate<0||refinement.selected_candidate>=candidateCount)throw new Error(`Frame ${index} selected candidate is invalid`);
+    const acquired=selected.acquired_action_candidates;
+    if(acquired?.status==='recorded'){
+      const value=acquired.value,keys=['available','recalled','slot','generation','length_ticks','support','empirical_score','recall_score','first_action'];
+      if(!value||keys.some(key=>!Array.isArray(value[key])||value[key].length!==8)||value.first_action.some(row=>!Array.isArray(row)||row.length!==actionOrder.length))throw new Error(`Frame ${index} acquired-action contract is invalid`);
     }
+    }
+    if(data.format.endsWith('-v3')){const matter=frame.regional_matter;if(!matter||!['recorded','unavailable'].includes(matter.status))throw new Error(`Frame ${index} regional matter status is invalid`);if(matter.status==='recorded'&&(!Array.isArray(matter.nodes)||!Array.isArray(matter.edges)||!Array.isArray(matter.outlets)||!Array.isArray(matter.last_events)))throw new Error(`Frame ${index} regional matter view is invalid`);}
   }
   return data;
 }
@@ -203,7 +212,9 @@ function makePools(data) {
   pathLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:'#e8bf72',transparent:true,opacity:.86}));
   gazeLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:'#d8ece2',transparent:true,opacity:.9}));
   eventPoints=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({color:'#e88d61',size:.16,transparent:true,opacity:.9,depthWrite:false}));
-  worldRoot.add(pathLine,gazeLine,eventPoints);
+  matterPoints=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({size:.18,vertexColors:true,transparent:true,opacity:.9,depthWrite:false}));
+  matterLines=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.72}));
+  worldRoot.add(pathLine,gazeLine,eventPoints,matterLines,matterPoints);
   rebuildResidentOverlays();
   frameHabitat();
 }
@@ -323,7 +334,8 @@ function residentDetail(frame,body=activeBody){
   if(!detail)return trace||null;
   const bodyState=detail.recorded_body_state||trace?.recorded_body_state,goal=detail.goal?{...detail.goal,commit_remaining_ticks:detail.goal.remaining_ticks??detail.goal.commit_remaining_ticks}:undefined;
   const response=detail.population_response?.status==='recorded'?detail.population_response.value:detail.population_response?.status==='unavailable'?null:detail.population_response;
-  return {...trace,...detail,goal,metabolism:detail.metabolism||trace?.metabolism||(bodyState?{energy:bodyState.energy,gut:bodyState.gut,fatigue:bodyState.fatigue}:undefined),consequence_refinement:detail.refinement||detail.consequence_refinement,sensory_forecast:detail.forecast||detail.sensory_forecast,sequence_memory:detail.memory_summary?.sequence||detail.sequence_memory,context:detail.memory_summary?.contextual||detail.context,population_response:response};
+  const acquired=detail.acquired_action_candidates?.status==='recorded'?detail.acquired_action_candidates.value:null;
+  return {...trace,...detail,goal,metabolism:detail.metabolism||trace?.metabolism||(bodyState?{energy:bodyState.energy,gut:bodyState.gut,fatigue:bodyState.fatigue}:undefined),consequence_refinement:detail.refinement||detail.consequence_refinement,sensory_forecast:detail.forecast||detail.sensory_forecast,sequence_memory:detail.memory_summary?.sequence||detail.sequence_memory,context:detail.memory_summary?.contextual||detail.context,population_response:response,acquired_action_candidates:acquired};
 }
 
 function bodyPose(frame,body=activeBody){return (frame.bodies||[]).find(value=>value.body===body)||null;}
@@ -425,7 +437,8 @@ function makeDecisionDisplay(){
     const item=document.createElement('div');item.className='proposal-value';item.dataset.action=name;
     item.innerHTML=`<span>${name.replaceAll('_',' ')}</span><span>0.000</span>`;return item;
   }));
-  ui.candidates.replaceChildren(...Array.from({length:4},(_,index)=>{
+  const candidateCount=Math.max(1,...recording.frames.flatMap(frame=>(frame.resident_details||(frame.selected?[frame.selected]:[])).map(detail=>(detail.refinement||detail.consequence_refinement)?.candidate_scores?.length||0)));
+  ui.candidates.replaceChildren(...Array.from({length:candidateCount},(_,index)=>{
     const row=document.createElement('div');row.className='candidate-row';row.dataset.candidate=index;
     row.innerHTML=`<span>${index+1}</span><span data-value="score">—</span><span class="coverage" data-value="coverage">—</span><span data-value="progress">—</span><span data-value="disagreement">—</span><span data-value="tilt">—</span>`;
     return row;
@@ -476,6 +489,38 @@ function paintContext(selected){
   ui.context.replaceChildren(...rows);ui.contextUnavailable.hidden=rows.length>0;
 }
 
+function paintSuffix(selected){
+  const summary=selected?.acquired_action_candidates;ui.suffixNote.hidden=Boolean(summary);ui.suffix.replaceChildren();
+  if(!summary)return;
+  const rows=[];for(let index=0;index<summary.available.length;index++){
+    const card=document.createElement('div'),title=document.createElement('strong'),meta=document.createElement('span');card.className='suffix-card';
+    const available=summary.available[index],recalled=summary.recalled[index];card.classList.toggle('unavailable',!available);card.classList.toggle('recalled',available&&recalled);card.classList.toggle('selected',index===summary.selected_candidate);
+    title.textContent=`${index+1} · ${available?(recalled?'recalled suffix':'local proposal'):'unavailable'}${index===summary.selected_candidate?' · selected':''}`;
+    meta.textContent=available?(recalled?`slot ${summary.slot[index]} · generation ${summary.generation[index]} · ${summary.length_ticks[index]} ticks · support ${summary.support[index]} · empirical ${formatNative(summary.empirical_score[index])} · recall ${formatNative(summary.recall_score[index])}`:'current local anatomical candidate'):'no candidate in this slot';
+    card.append(title,meta);rows.push(card);
+  }
+  ui.suffix.replaceChildren(...rows);ui.suffixNote.hidden=false;ui.suffixNote.textContent=`${summary.occupied_slots} recalled slots occupied · ${summary.learned_total} learned total. Support is execution frequency, not confidence; scores and first actions are recorded selection diagnostics, not experienced outcomes.`;
+}
+
+function paintMatter(frame){
+  const matter=frame.regional_matter,available=matter?.status==='recorded';ui.matterNote.hidden=false;ui.matterInventory.replaceChildren();ui.matterFlows.replaceChildren();
+  if(!available){ui.matterNote.textContent=matter?.reason||'Regional matter was unavailable in this recording.';if(matterPoints)matterPoints.visible=false;if(matterLines)matterLines.visible=false;return;}
+  ui.matterNote.textContent='Node color reflects recorded total inventory. Edge color reflects recorded movement magnitude and accessibility without implying direction; arrows appear in the list only when a committed event supplies per-pool direction.';
+  ui.matterContract.textContent=`step ${matter.step_index} · pools in synthetic chemical amount`;
+  const inventories=matter.nodes.map(node=>{const row=document.createElement('div'),name=document.createElement('strong'),values=document.createElement('span');row.className='matter-node';name.textContent=`region ${node.node}`;values.textContent=Object.entries(node.pools).map(([pool,value])=>`${pool} ${formatNative(value)}`).join(' · ')||'empty';row.append(name,values);return row;});ui.matterInventory.replaceChildren(...inventories);
+  const flows=[];for(const event of matter.last_events||[]){if(event.kind!=='regional-material-flow')continue;for(const [pool,direction] of Object.entries(event.details?.directions||{})){const quantity=event.quantities?.find(item=>item.name===pool),row=document.createElement('div');row.className='matter-flow';row.textContent=`${pool}: region ${direction.source} → region ${direction.target}${quantity?` · ${formatNative(quantity.value)} ${quantity.unit}`:''} · recorded route event`;flows.push(row);}}
+  if(!flows.length){const row=document.createElement('div');row.className='matter-flow';row.textContent='No directional regional flow event was recorded at this frame.';flows.push(row);}ui.matterFlows.replaceChildren(...flows);
+  updateMatterGeometry(matter);
+}
+
+function updateMatterGeometry(matter){
+  if(!matterPoints||!matterLines)return;matterPoints.visible=overlayVisibility.matter;matterLines.visible=overlayVisibility.matter;
+  const nodePosition=new Map(matter.nodes.map(node=>[node.node,node.position])),nodeValues=matter.nodes.map(node=>Object.values(node.pools).reduce((sum,value)=>sum+Math.max(0,value),0)),peak=Math.max(1e-12,...nodeValues);
+  const positions=new Float32Array(matter.nodes.length*3),colors=new Float32Array(matter.nodes.length*3);matter.nodes.forEach((node,index)=>{positions.set(node.position,index*3);const level=Math.log1p(nodeValues[index])/Math.log1p(peak);tint.set('#cbb866').lerp(new THREE.Color('#e67c4b'),level);colors.set([tint.r,tint.g,tint.b],index*3);});
+  const edgePositions=new Float32Array(matter.edges.length*6),edgeColors=new Float32Array(matter.edges.length*6);matter.edges.forEach((edge,index)=>{edgePositions.set(nodePosition.get(edge.source),index*6);edgePositions.set(nodePosition.get(edge.target),index*6+3);const moved=Object.values(edge.last_moved_resources).reduce((sum,value)=>sum+Math.abs(value),0),level=Math.min(1,Math.log1p(moved)*.35),color=new THREE.Color('#547467').lerp(new THREE.Color('#e28955'),level);color.multiplyScalar(.45+.55*edge.accessibility);edgeColors.set([color.r,color.g,color.b,color.r,color.g,color.b],index*6);});
+  matterPoints.geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));matterPoints.geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));matterLines.geometry.setAttribute('position',new THREE.BufferAttribute(edgePositions,3));matterLines.geometry.setAttribute('color',new THREE.BufferAttribute(edgeColors,3));
+}
+
 function paintActions(values) {
   for(const item of ui.actions.children){
     const value=Math.max(-1,Math.min(1,Number(values[item.dataset.action])||0));
@@ -523,6 +568,8 @@ function updateInstruments(index) {
   const refinement=selected?.consequence_refinement,forecast=selected?.sensory_forecast;
   const hasDecision=Boolean(refinement&&forecast&&selected?.sampled_proposal&&refinement.status!=='unavailable'&&forecast.status!=='unavailable');setDecisionAvailable(hasDecision);if(hasDecision)paintDecision(selected);
   paintContext(selected);
+  paintSuffix(selected);
+  paintMatter(frame);
   paintHistory(index);
   updateResidentOverlays(index);
   ui.residentCoverage.textContent=detailed?'Retina, neural readouts and recorded controller detail are available at this frame.':'Physical trace available; detailed sensory and controller streams were not recorded for this resident at this frame.';
@@ -674,7 +721,7 @@ $('#inspection-light').addEventListener('click',event=>{
 });
 ui.hearSignals.addEventListener('click',async()=>{if(ui.hearSignals.disabled)return;if(!audioContext)audioContext=new AudioContext();await audioContext.resume();hearingSignals=!hearingSignals;if(!hearingSignals)stopActiveVoices();lastAudibleFrame=Math.round(cursor);ui.hearSignals.setAttribute('aria-pressed',String(hearingSignals));ui.hearSignals.textContent=hearingSignals?'Recorded signals audible':'Hear recorded signals';});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopActiveVoices();if(audioContext?.state==='running')audioContext.suspend();}else if(hearingSignals&&audioContext?.state==='suspended')audioContext.resume();});
-for(const button of document.querySelectorAll('[data-overlay]'))button.addEventListener('click',()=>{const key=button.dataset.overlay;overlayVisibility[key]=!overlayVisibility[key];button.setAttribute('aria-pressed',String(overlayVisibility[key]));});
+for(const button of document.querySelectorAll('[data-overlay]'))button.addEventListener('click',()=>{const key=button.dataset.overlay;overlayVisibility[key]=!overlayVisibility[key];button.setAttribute('aria-pressed',String(overlayVisibility[key]));if(key==='matter'){if(matterPoints)matterPoints.visible=overlayVisibility.matter;if(matterLines)matterLines.visible=overlayVisibility.matter;}});
 
 if(!globalThis.__CHREATURES_LIVING_DOM_STUB__)initThree();
 const recordingKey=globalThis.__CHREATURES_LIVING_DOM_STUB__?null:new URLSearchParams(location.search).get('recording');

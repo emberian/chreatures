@@ -1,7 +1,7 @@
 {
-  "format": "chreatures-regional-habitat-family-v3",
+  "format": "chreatures-regional-habitat-family-v4",
   "habitat_template_sha256": "70d3659059564ee3ba75ccca91fe82cfc81d6c28ac2626141def38ec302628e7",
-  "biosphere_template_sha256": "7313420e6f8b507bf45b8ab2ec733064033af127897a3bab135a964fb519fe0e",
+  "biosphere_template_sha256": "1d3b0aed0f10002f8a57437a95c816c4806da63b52f712e2ae249e05cbc3e9e6",
   "replace_entity_ids": [
     "ground",
     "west-wall",
@@ -140,8 +140,8 @@
     "physical_material": "masonry"
   },
   "mutation": {
-    "operator": "bounded-regional-perturbation-v3",
-    "recipe_sha256": "d53a82f7f7280bbd0641c79fb75038a1f17783383f3db2e10ff41b0f495e04a0",
+    "operator": "bounded-regional-perturbation-v4",
+    "recipe_sha256": "4d9e40e02bc8ebf37dbeb8a8dcba5798a98907df936d24915d626a4f189ab946",
     "scalar_fraction": 0.12,
     "integer_delta": 3,
     "resident_delta": 0
@@ -470,5 +470,46 @@
       "epoch": 0,
       "profile_sha256": "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"
     }
-  ]
+  ],
+  "regional_matter": {
+    "inventory_fraction": {
+      "min": 0.22,
+      "max": 0.48
+    },
+    "capacity_factor": {
+      "min": 1.5,
+      "max": 3.0
+    },
+    "conductance_scale": {
+      "min": 0.6,
+      "max": 1.4
+    },
+    "route_radius_m": {
+      "min": 0.045,
+      "max": 0.12
+    },
+    "clearance_height_m": 0.2,
+    "outlet_count": {
+      "min": 4,
+      "max": 8
+    },
+    "outlet_interval_seconds": {
+      "min": 1.5,
+      "max": 6.0
+    },
+    "outlet_release_fraction": {
+      "min": 0.04,
+      "max": 0.18
+    },
+    "outlet_slots_each": 1,
+    "pool_conductance_per_second": {
+      "mineral": 0.004,
+      "inorganic_carbon": 0.006,
+      "reserve": 0.003,
+      "fermentate": 0.005,
+      "soft_tissue": 0.001,
+      "tough_tissue": 0.0006,
+      "detritus": 0.002
+    }
+  }
 }

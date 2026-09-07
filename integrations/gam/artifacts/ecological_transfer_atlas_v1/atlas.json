@@ -1,0 +1,2761 @@
+{
+  "feature_sources": {
+    "allocation_structure": "developmental.allocation.structure",
+    "connectivity": "environment.descriptors.connectivity",
+    "elevation_relief": "environment.descriptors.elevation_relief",
+    "friction": "body.friction_scale",
+    "leg_length": "body.leg_length_scale",
+    "maintenance": "somatic.maintenance_rate_gain",
+    "regional_scale": "environment.descriptors.regional_scale",
+    "renewal_rate": "environment.descriptors.renewal_rate",
+    "reserve_capacity": "somatic.reserve_capacity_gain",
+    "resource_density": "environment.descriptors.resource_density",
+    "secretion_rate": "somatic.secretion_rate_gain"
+  },
+  "fit_seconds": 3.725831999996444,
+  "format": "chreatures-native-gxe-transfer-atlas-v1",
+  "library": {
+    "name": "sauersML/gam",
+    "native_build": {
+      "abi3": "cp310+",
+      "available": true,
+      "capabilities": [
+        "fit",
+        "fit_array",
+        "load",
+        "extend_with_group",
+        "torch_from_fitted",
+        "predict",
+        "transformation_score",
+        "predict_array",
+        "predict_conformal",
+        "build_predict_payload_json",
+        "interpolate_rows",
+        "survival_chunk_defaults",
+        "survival_chunk_ranges",
+        "survival_should_chunk",
+        "survival_chunk_iter_collect",
+        "write_survival_csv",
+        "default_survival_time_grid",
+        "competing_risks_cif",
+        "competing_risks_cif_from_predictions",
+        "survival_prediction_payload_from_json",
+        "competing_risks_prediction_payload_from_json",
+        "sample",
+        "summary",
+        "summary_html",
+        "check",
+        "report",
+        "sklearn_fit_metadata",
+        "cross_fit_shared_precision_groups",
+        "save",
+        "validate_formula",
+        "formula_validation_repr",
+        "formula_validation_html",
+        "design_matrix_array",
+        "basis",
+        "basis_with_jet",
+        "duchon_function_norm_penalty",
+        "duchon_operator_penalties",
+        "thin_plate_penalty",
+        "gaussian_weighted_ridge_array",
+        "gaussian_weighted_ridge_batch",
+        "gaussian_weighted_ridge_batch_backward",
+        "gaussian_reml_score",
+        "gaussian_reml_fit",
+        "gaussian_reml_fit_backward",
+        "gaussian_reml_fit_batched",
+        "gaussian_reml_fit_batched_backward",
+        "gaussian_reml_fit_positions",
+        "gaussian_reml_fit_positions_backward",
+        "gaussian_reml_fit_positions_batched",
+        "gaussian_reml_fit_positions_batched_backward",
+        "gaussian_reml_fit_latent",
+        "gaussian_reml_fit_latent_backward",
+        "glm_reml_fit_latent",
+        "glm_reml_fit_latent_backward",
+        "equivariant_penalty_value",
+        "skip_transcoder_reml_metrics",
+        "_block_diag",
+        "tierney_kadane_normalized_score",
+        "gaussian_reml_fit_formula_table",
+        "gaussian_reml_fit_with_constraints_forward",
+        "gaussian_reml_fit_with_constraints_backward",
+        "sphere_frechet_mean",
+        "response_geometry_closure",
+        "response_geometry_clr",
+        "response_geometry_alr",
+        "response_geometry_inverse_alr",
+        "response_geometry_simplex_frechet_mean",
+        "response_geometry_simplex_log_map",
+        "response_geometry_simplex_exp_map",
+        "response_geometry_sphere_log_map",
+        "response_geometry_sphere_exp_map",
+        "response_geometry_ilr",
+        "response_geometry_inverse_ilr",
+        "response_geometry_aitchison_metric",
+        "response_geometry_clr_jet",
+        "response_geometry_simplex_log_map_jet",
+        "response_geometry_simplex_exp_map_jet",
+        "response_geometry_sphere_exp_map_jet",
+        "response_geometry_fit_curvature",
+        "response_geometry_normalize_fisher_rao",
+        "equivariant_rho_so2",
+        "equivariant_rho_so2_jvp",
+        "equivariant_rho_so3",
+        "equivariant_rho_so3_jvp",
+        "equivariant_gauge_companion_loss"
+      ],
+      "crate": "gam-pyffi",
+      "cuda_diagnostics": {
+        "conflicts": {},
+        "mapped": {},
+        "packaged_complete_stacks": [],
+        "packaged_cuda_library_dirs": [],
+        "packaged_nvidia_roots": [],
+        "platform": "darwin",
+        "system_complete_stacks": [],
+        "system_driver_libraries": []
+      },
+      "engine_crate": "gam",
+      "module": "gamfit._rust",
+      "python_module": "gam._rust",
+      "sae_row_block_penalties": [
+        "ard",
+        "top_k_activation",
+        "smooth_threshold",
+        "sparsity",
+        "row_precision_prior",
+        "parametric_row_precision_prior",
+        "scad_mcp",
+        "block_orthogonality",
+        "isometry"
+      ],
+      "supported_model_classes": [
+        "standard",
+        "transformation-normal",
+        "survival",
+        "competing-risks-survival",
+        "bernoulli-marginal-slope",
+        "survival-marginal-slope",
+        "survival-location-scale",
+        "latent-survival",
+        "latent-binary",
+        "gaussian-location-scale",
+        "binomial-location-scale"
+      ],
+      "version": "0.1.259"
+    },
+    "native_extension_sha256": "31e6052dbefee525ac5249ce7c9f146ac4f9a41861ca8c100adca7ada6e0fd8c",
+    "python_package": "gamfit",
+    "source_commit": "7c7eca8ac4826de95c8e743a20294bee132a9bcc",
+    "version": "0.1.259"
+  },
+  "models": {
+    "allocation_rate": {
+      "additive": "response ~ s(allocation_structure,k=4)+s(secretion_rate,k=4)+s(resource_density,k=4)+s(renewal_rate,k=4)",
+      "interaction": "ti(reserve_capacity,resource_density,k=9)",
+      "mechanism_hypothesis": "stored-energy capacity by resource density",
+      "source": "trajectory_metrics.allocation_mass_sum / valid_time_seconds",
+      "train_outcome": {
+        "mean": 0.00016575723187628455,
+        "scale": 4.118108764514587e-05
+      },
+      "transform": "identity",
+      "unit": "allocated_material_mass_per_second",
+      "variants": {
+        "additive": {
+          "formula": "response ~ s(allocation_structure,k=4)+s(secretion_rate,k=4)+s(resource_density,k=4)+s(renewal_rate,k=4)",
+          "heldout_reporting_only": {
+            "candidate_group_mean_rmse": 4.142188803368883e-05,
+            "candidate_groups": 23,
+            "environment_group_mean_rmse": 3.143932738133032e-05,
+            "environment_groups": 10,
+            "latent_rmse": 4.32659320254362e-05,
+            "life_observation_rows": 48,
+            "mean_baseline_rmse": 4.1484116414001985e-05,
+            "rmse": 4.32659320254362e-05,
+            "statistical_independence_claim": false
+          },
+          "native_model": "allocation_rate-additive.gam",
+          "native_model_sha256": "a999c8dd2c25be3a528d9b7d0a5121e0bb0dba66ef4b3b85459625153beb14c2",
+          "validation": {
+            "candidate_group_mean_rmse": 4.7534214784056076e-05,
+            "candidate_groups": 20,
+            "environment_group_mean_rmse": 6.517616413512453e-05,
+            "environment_groups": 8,
+            "latent_rmse": 6.94175406983949e-05,
+            "life_observation_rows": 37,
+            "mean_baseline_rmse": 6.396746447536506e-05,
+            "rmse": 6.94175406983949e-05,
+            "statistical_independence_claim": false
+          }
+        },
+        "interaction": {
+          "formula": "response ~ s(allocation_structure,k=4)+s(secretion_rate,k=4)+s(resource_density,k=4)+s(renewal_rate,k=4)+ti(reserve_capacity,resource_density,k=9)",
+          "heldout_reporting_only": {
+            "candidate_group_mean_rmse": 4.1399989986837815e-05,
+            "candidate_groups": 23,
+            "environment_group_mean_rmse": 3.391995305194417e-05,
+            "environment_groups": 10,
+            "latent_rmse": 4.380246957418299e-05,
+            "life_observation_rows": 48,
+            "mean_baseline_rmse": 4.1484116414001985e-05,
+            "rmse": 4.380246957418299e-05,
+            "statistical_independence_claim": false
+          },
+          "native_model": "allocation_rate-interaction.gam",
+          "native_model_sha256": "56a90e37109609881de91275f20ced93fce86efaec4988e9dfc46c6fd9503a29",
+          "validation": {
+            "candidate_group_mean_rmse": 7.113398946729622e-05,
+            "candidate_groups": 20,
+            "environment_group_mean_rmse": 6.425428742018154e-05,
+            "environment_groups": 8,
+            "latent_rmse": 7.975440030985698e-05,
+            "life_observation_rows": 37,
+            "mean_baseline_rmse": 6.396746447536506e-05,
+            "rmse": 7.975440030985698e-05,
+            "statistical_independence_claim": false
+          }
+        },
+        "selection": {
+          "chosen_on_validation": "additive",
+          "heldout_beats_mean": false,
+          "rule": "variant chosen on validation RMSE; final holdout is reporting-only and may veto analyst ranking but never retunes the model",
+          "usable_for_bounded_ranking": false,
+          "validation_beats_mean": false
+        }
+      }
+    },
+    "contact_ticks": {
+      "additive": "response ~ s(leg_length,k=4)+s(friction,k=4)+s(elevation_relief,k=4)+s(regional_scale,k=4)",
+      "interaction": "ti(leg_length,elevation_relief,k=9)",
+      "mechanism_hypothesis": "leg scale by terrain relief",
+      "source": "trajectory_metrics.contact_ticks",
+      "train_outcome": {
+        "mean": 554.9066666666666,
+        "scale": 631.8527924199503
+      },
+      "transform": "log1p",
+      "unit": "physical_ticks_with_contact",
+      "variants": {
+        "additive": {
+          "formula": "response ~ s(leg_length,k=4)+s(friction,k=4)+s(elevation_relief,k=4)+s(regional_scale,k=4)",
+          "heldout_reporting_only": {
+            "candidate_group_mean_rmse": 278.9815379240421,
+            "candidate_groups": 23,
+            "environment_group_mean_rmse": 512.814784819389,
+            "environment_groups": 10,
+            "latent_rmse": 1.4653278128669194,
+            "life_observation_rows": 48,
+            "mean_baseline_rmse": 564.5100398575742,
+            "rmse": 598.8983346358016,
+            "statistical_independence_claim": false
+          },
+          "native_model": "contact_ticks-additive.gam",
+          "native_model_sha256": "a675c30bfd6ab513efd1b712f1829fd310b804dd4ef1e51c81e2bfedbb6ed8d8",
+          "validation": {
+            "candidate_group_mean_rmse": 283.10427287736894,
+            "candidate_groups": 20,
+            "environment_group_mean_rmse": 359.6499284316044,
+            "environment_groups": 8,
+            "latent_rmse": 1.4065948669078587,
+            "life_observation_rows": 37,
+            "mean_baseline_rmse": 519.59161689807,
+            "rmse": 449.94562357380823,
+            "statistical_independence_claim": false
+          }
+        },
+        "interaction": {
+          "formula": "response ~ s(leg_length,k=4)+s(friction,k=4)+s(elevation_relief,k=4)+s(regional_scale,k=4)+ti(leg_length,elevation_relief,k=9)",
+          "heldout_reporting_only": {
+            "candidate_group_mean_rmse": 280.2016723178199,
+            "candidate_groups": 23,
+            "environment_group_mean_rmse": 512.7507329632454,
+            "environment_groups": 10,
+            "latent_rmse": 1.462596499958324,
+            "life_observation_rows": 48,
+            "mean_baseline_rmse": 564.5100398575742,
+            "rmse": 599.1173920275935,
+            "statistical_independence_claim": false
+          },
+          "native_model": "contact_ticks-interaction.gam",
+          "native_model_sha256": "29d45599e7890d28b3a3485c1b3a77f68d6ede1994571331161b8466b669df58",
+          "validation": {
+            "candidate_group_mean_rmse": 275.825715193968,
+            "candidate_groups": 20,
+            "environment_group_mean_rmse": 357.80118392449384,
+            "environment_groups": 8,
+            "latent_rmse": 1.3895384132361237,
+            "life_observation_rows": 37,
+            "mean_baseline_rmse": 519.59161689807,
+            "rmse": 446.38294227292283,
+            "statistical_independence_claim": false
+          }
+        },
+        "selection": {
+          "chosen_on_validation": "interaction",
+          "heldout_beats_mean": false,
+          "rule": "variant chosen on validation RMSE; final holdout is reporting-only and may veto analyst ranking but never retunes the model",
+          "usable_for_bounded_ranking": false,
+          "validation_beats_mean": true
+        }
+      }
+    },
+    "energy_change": {
+      "additive": "response ~ s(reserve_capacity,k=4)+s(maintenance,k=4)+s(resource_density,k=4)+s(renewal_rate,k=4)",
+      "interaction": "ti(reserve_capacity,resource_density,k=9)",
+      "mechanism_hypothesis": "stored-energy capacity by resource density",
+      "source": "trajectory_metrics.energy_change",
+      "train_outcome": {
+        "mean": -0.18093606074651084,
+        "scale": 0.015066703822139855
+      },
+      "transform": "identity",
+      "unit": "physiological_energy_over_102.4_seconds",
+      "variants": {
+        "additive": {
+          "formula": "response ~ s(reserve_capacity,k=4)+s(maintenance,k=4)+s(resource_density,k=4)+s(renewal_rate,k=4)",
+          "heldout_reporting_only": {
+            "candidate_group_mean_rmse": 0.013874514548325593,
+            "candidate_groups": 23,
+            "environment_group_mean_rmse": 0.006482113123892847,
+            "environment_groups": 10,
+            "latent_rmse": 0.017021094428220657,
+            "life_observation_rows": 48,
+            "mean_baseline_rmse": 0.01722246486388122,
+            "rmse": 0.017021094428220657,
+            "statistical_independence_claim": false
+          },
+          "native_model": "energy_change-additive.gam",
+          "native_model_sha256": "859990d8ad8b0abe84d6e62645862785d5327eeef6a5c62db05d6ed5fcc4c47b",
+          "validation": {
+            "candidate_group_mean_rmse": 0.013193970107824755,
+            "candidate_groups": 20,
+            "environment_group_mean_rmse": 0.010089436432266735,
+            "environment_groups": 8,
+            "latent_rmse": 0.01481997486072497,
+            "life_observation_rows": 37,
+            "mean_baseline_rmse": 0.01508655846097766,
+            "rmse": 0.01481997486072497,
+            "statistical_independence_claim": false
+          }
+        },
+        "interaction": {
+          "formula": "response ~ s(reserve_capacity,k=4)+s(maintenance,k=4)+s(resource_density,k=4)+s(renewal_rate,k=4)+ti(reserve_capacity,resource_density,k=9)",
+          "heldout_reporting_only": {
+            "candidate_group_mean_rmse": 0.013820647073356295,
+            "candidate_groups": 23,
+            "environment_group_mean_rmse": 0.006513035382043687,
+            "environment_groups": 10,
+            "latent_rmse": 0.0169740283779164,
+            "life_observation_rows": 48,
+            "mean_baseline_rmse": 0.01722246486388122,
+            "rmse": 0.0169740283779164,
+            "statistical_independence_claim": false
+          },
+          "native_model": "energy_change-interaction.gam",
+          "native_model_sha256": "1aa02c7283f5eea303b1f1edf2e32cd3bedef3606d40d403461b606f48993da3",
+          "validation": {
+            "candidate_group_mean_rmse": 0.017449775734340856,
+            "candidate_groups": 20,
+            "environment_group_mean_rmse": 0.010024362455772713,
+            "environment_groups": 8,
+            "latent_rmse": 0.017412645891009805,
+            "life_observation_rows": 37,
+            "mean_baseline_rmse": 0.01508655846097766,
+            "rmse": 0.017412645891009805,
+            "statistical_independence_claim": false
+          }
+        },
+        "selection": {
+          "chosen_on_validation": "additive",
+          "heldout_beats_mean": true,
+          "rule": "variant chosen on validation RMSE; final holdout is reporting-only and may veto analyst ranking but never retunes the model",
+          "usable_for_bounded_ranking": true,
+          "validation_beats_mean": true
+        }
+      }
+    },
+    "mechanical_work_rate": {
+      "additive": "response ~ s(leg_length,k=4)+s(friction,k=4)+s(elevation_relief,k=4)+s(regional_scale,k=4)",
+      "interaction": "ti(leg_length,elevation_relief,k=9)",
+      "mechanism_hypothesis": "leg scale by terrain relief",
+      "source": "trajectory_metrics.mechanical_work_sum / valid_time_seconds",
+      "train_outcome": {
+        "mean": 0.781506194354219,
+        "scale": 0.1619448103543689
+      },
+      "transform": "identity",
+      "unit": "world_mechanical_work_per_second",
+      "variants": {
+        "additive": {
+          "formula": "response ~ s(leg_length,k=4)+s(friction,k=4)+s(elevation_relief,k=4)+s(regional_scale,k=4)",
+          "heldout_reporting_only": {
+            "candidate_group_mean_rmse": 0.09454453162999085,
+            "candidate_groups": 23,
+            "environment_group_mean_rmse": 0.13732245030641033,
+            "environment_groups": 10,
+            "latent_rmse": 0.1448871873334668,
+            "life_observation_rows": 48,
+            "mean_baseline_rmse": 0.1355295142168763,
+            "rmse": 0.1448871873334668,
+            "statistical_independence_claim": false
+          },
+          "native_model": "mechanical_work_rate-additive.gam",
+          "native_model_sha256": "41fe32033a0768190cd336023ca1aa048ca3246f7dfdfa9934dd929a637eaf22",
+          "validation": {
+            "candidate_group_mean_rmse": 0.05199289472232232,
+            "candidate_groups": 20,
+            "environment_group_mean_rmse": 0.06684955616952741,
+            "environment_groups": 8,
+            "latent_rmse": 0.06105078271232701,
+            "life_observation_rows": 37,
+            "mean_baseline_rmse": 0.07179988980735433,
+            "rmse": 0.06105078271232701,
+            "statistical_independence_claim": false
+          }
+        },
+        "interaction": {
+          "formula": "response ~ s(leg_length,k=4)+s(friction,k=4)+s(elevation_relief,k=4)+s(regional_scale,k=4)+ti(leg_length,elevation_relief,k=9)",
+          "heldout_reporting_only": {
+            "candidate_group_mean_rmse": 0.13277360368388674,
+            "candidate_groups": 23,
+            "environment_group_mean_rmse": 0.4260745154813374,
+            "environment_groups": 10,
+            "latent_rmse": 0.3074329714687235,
+            "life_observation_rows": 48,
+            "mean_baseline_rmse": 0.1355295142168763,
+            "rmse": 0.3074329714687235,
+            "statistical_independence_claim": false
+          },
+          "native_model": "mechanical_work_rate-interaction.gam",
+          "native_model_sha256": "2f0553072482c6531fed016dfa1f0657d7f9281908ba62943c078d1043f50f0b",
+          "validation": {
+            "candidate_group_mean_rmse": 0.7485487499711305,
+            "candidate_groups": 20,
+            "environment_group_mean_rmse": 0.42753329286020325,
+            "environment_groups": 8,
+            "latent_rmse": 0.7397499202826586,
+            "life_observation_rows": 37,
+            "mean_baseline_rmse": 0.07179988980735433,
+            "rmse": 0.7397499202826586,
+            "statistical_independence_claim": false
+          }
+        },
+        "selection": {
+          "chosen_on_validation": "additive",
+          "heldout_beats_mean": false,
+          "rule": "variant chosen on validation RMSE; final holdout is reporting-only and may veto analyst ranking but never retunes the model",
+          "usable_for_bounded_ranking": false,
+          "validation_beats_mean": true
+        }
+      }
+    }
+  },
+  "normalization": {
+    "allocation_structure": {
+      "mean": 0.4483238153424007,
+      "scale": 0.018364961274093927
+    },
+    "connectivity": {
+      "mean": 0.5101593657856172,
+      "scale": 0.1541301397618005
+    },
+    "elevation_relief": {
+      "mean": 0.16976396211017342,
+      "scale": 0.08070858097313112
+    },
+    "friction": {
+      "mean": 0.9987202698757756,
+      "scale": 0.017710077356408324
+    },
+    "leg_length": {
+      "mean": 0.9979232004615157,
+      "scale": 0.018398484022693083
+    },
+    "maintenance": {
+      "mean": 1.0048968578547754,
+      "scale": 0.024461981472780014
+    },
+    "regional_scale": {
+      "mean": 0.7206085514008367,
+      "scale": 0.05690212003305359
+    },
+    "renewal_rate": {
+      "mean": 0.39260092631711896,
+      "scale": 0.06404430428235822
+    },
+    "reserve_capacity": {
+      "mean": 0.9896590014032784,
+      "scale": 0.029220291378883913
+    },
+    "resource_density": {
+      "mean": 0.4473638143556498,
+      "scale": 0.08618018839486755
+    },
+    "secretion_rate": {
+      "mean": 1.0074217484749297,
+      "scale": 0.0219822961140147
+    }
+  },
+  "observation_units": {
+    "residents_per_shared_world": 8,
+    "rows": 160,
+    "statistical_independence_claim": false,
+    "uncertainty_calibration_claim": "none",
+    "unit": "one completed 2048-tick physical life observation row",
+    "warning": "residents shared and could interact within each physical world; within-life ticks, contacts, and actions are also repeated measurements"
+  },
+  "rank_contract": {
+    "output": "response vector plus per-axis additive/interaction comparison and support; never a scalar fitness",
+    "request_format": "chreatures-gxe-ranking-request-v1",
+    "resident_boundary": "environment descriptors, archive hashes, fit predictions, and support diagnostics are analyst-only",
+    "unsupported": "new genome/environment schemas, values outside training bounds, or distant candidate/environment vectors return unranked"
+  },
+  "rank_features": [
+    "reserve_capacity",
+    "maintenance",
+    "leg_length",
+    "friction",
+    "secretion_rate",
+    "allocation_structure",
+    "resource_density",
+    "renewal_rate",
+    "elevation_relief",
+    "regional_scale",
+    "connectivity"
+  ],
+  "realized_action_physiology_diagnostic": {
+    "features": [
+      "mean_abs_thrust",
+      "mean_abs_posture",
+      "mean_abs_secrete",
+      "mean_abs_allocate",
+      "mean_fatigue",
+      "mean_gut",
+      "elevation_relief",
+      "resource_density"
+    ],
+    "formula": "response ~ s(mean_abs_thrust,k=4)+s(mean_abs_posture,k=4)+s(mean_abs_secrete,k=4)+s(mean_abs_allocate,k=4)+s(mean_fatigue,k=4)+s(mean_gut,k=4)+s(elevation_relief,k=4)+s(resource_density,k=4)+ti(mean_abs_thrust,elevation_relief,k=9)",
+    "heldout_reporting_only": {
+      "candidate_group_mean_rmse": 0.011347683476563224,
+      "candidate_groups": 23,
+      "environment_group_mean_rmse": 0.005869549576021649,
+      "environment_groups": 10,
+      "latent_rmse": 0.015808829284689702,
+      "life_observation_rows": 48,
+      "mean_baseline_rmse": 0.01722246486388122,
+      "rmse": 0.015808829284689702,
+      "statistical_independence_claim": false
+    },
+    "native_model": "energy-change-realized-diagnostic.gam",
+    "native_model_sha256": "4e6b6a5622e70370cc6251742782a5cbc16226eb971eb2be4103e55113df59fb",
+    "normalization": {
+      "elevation_relief": {
+        "mean": 0.16976396211017342,
+        "scale": 0.08070858097313112
+      },
+      "mean_abs_allocate": {
+        "mean": 0.00824624838884726,
+        "scale": 0.0021405026225475477
+      },
+      "mean_abs_posture": {
+        "mean": 0.2258236818891237,
+        "scale": 0.016704625300488152
+      },
+      "mean_abs_secrete": {
+        "mean": 0.14033060265954797,
+        "scale": 0.011906380154980606
+      },
+      "mean_abs_thrust": {
+        "mean": 0.13390626553669183,
+        "scale": 0.02554325756502028
+      },
+      "mean_fatigue": {
+        "mean": 0.00159136434888054,
+        "scale": 0.0011836009658545592
+      },
+      "mean_gut": {
+        "mean": 0.03406426795024648,
+        "scale": 0.007751040633165294
+      },
+      "resource_density": {
+        "mean": 0.4473638143556498,
+        "scale": 0.08618018839486755
+      }
+    },
+    "status": "descriptive after-the-fact mechanism fit; prohibited for unrun-pair ranking",
+    "validation": {
+      "candidate_group_mean_rmse": 0.007770889819844072,
+      "candidate_groups": 20,
+      "environment_group_mean_rmse": 0.006940791176203831,
+      "environment_groups": 8,
+      "latent_rmse": 0.011177103074823122,
+      "life_observation_rows": 37,
+      "mean_baseline_rmse": 0.01508655846097766,
+      "rmse": 0.011177103074823122,
+      "statistical_independence_claim": false
+    }
+  },
+  "source": {
+    "challenge_receipt_content_sha256": "cdffa1b42255947dfdb8813cf477c724bcf0ccbc41cc28193a6d043b80b96c35",
+    "challenge_receipt_file_sha256": "8cb10ea614c940703e02d569255b0e8e6fee1c4d35b6d0e6392d362340ee692d",
+    "challenge_result_content_sha256": "fbfe08d6766d29c8f0a1c48fcf84266a675aa43388bc9fdb2c3c05ccbcc8186b",
+    "challenge_result_file_sha256": "e5f2f4da42e9ddf1eaed0af1cf0e266bc2d6e8f952a4383a71f9efb8697f2027",
+    "challenge_source_revision": "61aeb1e322fb3dea7acec66d090c9f51cfb7300b",
+    "controller_artifact_sha256": "4e8d04176fc013eadc18bb71124e38925a98c469c6ca9cbf458562740a191596",
+    "environment_descriptor_keys": [
+      "connectivity",
+      "elevation_relief",
+      "regional_scale",
+      "renewal_rate",
+      "resource_density"
+    ],
+    "environment_format": "chreatures-environment-record-v3",
+    "environment_profile_sha256s": [
+      "bd9f0e237b0df3cb2e1043f1011d098fc5aedf1c5cc9e85bf111981aca6b1475"
+    ],
+    "environments": 10,
+    "genome_context": {
+      "base_controller_sha256": "00bbd8580baa0f5f016b5c69548210f86412bc54ced32e737793fcedbd0019c4",
+      "developmental_base_sha256": "7313420e6f8b507bf45b8ab2ec733064033af127897a3bab135a964fb519fe0e",
+      "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+      "organism_interface_sha256": "623846903b421ff2b2c3fa742f1285441c21dcb2f0e02dc9edd36ce28eb37230",
+      "policy_adapter_count": 4,
+      "policy_adapter_rank": 8,
+      "population_adapter_bank_sha256": "310c515aaae762e559864b94117463682837a8a18a880b603e08c49342a9488c"
+    },
+    "genome_format": "chreatures-population-genome-v2",
+    "genome_value_keys": [
+      "body.antenna_length_scale",
+      "body.antenna_spread_scale",
+      "body.axial_scale",
+      "body.body_scale",
+      "body.density_scale",
+      "body.frequency_scale",
+      "body.friction_scale",
+      "body.leg_length_scale",
+      "body.leg_radius_scale",
+      "body.radial_scale",
+      "body.sweep_scale",
+      "body.torque_scale",
+      "controller.action_gain.allocate",
+      "controller.action_gain.eat",
+      "controller.action_gain.gaze_pitch",
+      "controller.action_gain.grip",
+      "controller.action_gain.posture",
+      "controller.action_gain.release",
+      "controller.action_gain.secrete",
+      "controller.action_gain.signal_high",
+      "controller.action_gain.signal_low",
+      "controller.action_gain.signal_mid",
+      "controller.action_gain.thrust",
+      "controller.action_gain.yaw",
+      "controller.action_logit_temperature_offset.allocate",
+      "controller.action_logit_temperature_offset.eat",
+      "controller.action_logit_temperature_offset.gaze_pitch",
+      "controller.action_logit_temperature_offset.grip",
+      "controller.action_logit_temperature_offset.posture",
+      "controller.action_logit_temperature_offset.release",
+      "controller.action_logit_temperature_offset.secrete",
+      "controller.action_logit_temperature_offset.signal_high",
+      "controller.action_logit_temperature_offset.signal_low",
+      "controller.action_logit_temperature_offset.signal_mid",
+      "controller.action_logit_temperature_offset.thrust",
+      "controller.action_logit_temperature_offset.yaw",
+      "controller.learning_rate_gain",
+      "controller.policy_adapter_index",
+      "controller.recurrent_gain",
+      "developmental.allocation.brood",
+      "developmental.allocation.gland",
+      "developmental.allocation.structure",
+      "metabolic.enzyme_activity_gain.carbon_fixation",
+      "metabolic.enzyme_activity_gain.detritus_digestion",
+      "metabolic.enzyme_activity_gain.detritus_hydrolysis",
+      "metabolic.enzyme_activity_gain.fermentate_respiration",
+      "metabolic.enzyme_activity_gain.reserve_fermentation",
+      "metabolic.enzyme_activity_gain.soft_digestion",
+      "metabolic.enzyme_activity_gain.tough_digestion",
+      "neural.excitability",
+      "neural.input_gain",
+      "neural.learning_rate_gain",
+      "neural.modulator_gain",
+      "neural.readout_gain",
+      "neural.recurrent_gain",
+      "somatic.absorption_rate_gain",
+      "somatic.activation_rate_gain",
+      "somatic.allocate_activity_cost_gain",
+      "somatic.allocation_rate_gain",
+      "somatic.bite_rate_gain",
+      "somatic.brood_capacity_gain",
+      "somatic.brood_energy_target_gain",
+      "somatic.brood_material_target_gain",
+      "somatic.brood_maturation_rate_gain",
+      "somatic.digestive_atp_rate_gain",
+      "somatic.dorsal_capture_fraction_gain",
+      "somatic.eat_activity_cost_gain",
+      "somatic.exchange_load_decay_rate_gain",
+      "somatic.fatigue_recovery_gain",
+      "somatic.fatigue_rise_gain",
+      "somatic.gland_capacity_gain",
+      "somatic.gland_synthesis_rate_gain",
+      "somatic.gut_capacity_gain",
+      "somatic.maintenance_rate_gain",
+      "somatic.maximum_bite_gain",
+      "somatic.mouth_radius_gain",
+      "somatic.phototrophic_absorptivity_gain",
+      "somatic.release_radius_gain",
+      "somatic.release_rate_gain",
+      "somatic.reserve_capacity_gain",
+      "somatic.secrete_activity_cost_gain",
+      "somatic.secretion_profile.0",
+      "somatic.secretion_profile.1",
+      "somatic.secretion_profile.2",
+      "somatic.secretion_rate_gain",
+      "somatic.structural_capacity_gain"
+    ],
+    "life_rows_file": "life_rows.json",
+    "life_rows_file_sha256": "f9788656da82741b0daa20e798a53a43df63f5f0693584f1d49b0f6dd45545d3",
+    "principal_receipt_content_sha256": "7bf8fe26641e38689ae64c1e0df564dceb8848e0e1d6622ffc371b1170a5d796",
+    "principal_receipt_file_sha256": "ecfb72eab14347cbf56a8c9e3b48c64f3536aa5396c1073cf2919347b7112b47",
+    "principal_result_content_sha256": "0758800fd40c5803beaa6109a83441647f96a336048efb8f458376f16b91f029",
+    "principal_result_file_sha256": "285dd0c7d628ef3e652a5eede9636c3854dd3611492e836ea52171c3a19ebd0a",
+    "principal_source_revision": "3c9b0c1c8d93b99b9dca371a29b5e1471c46ab6d",
+    "rows": 160,
+    "search_file_sha256": "a36212489c6d4c36da72d6e8604a7828a4d6d292a62bc9597213aa79d5e729f3",
+    "split": {
+      "heldout_candidates": [
+        "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043",
+        "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357"
+      ],
+      "heldout_environments": [
+        "c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+        "c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6"
+      ],
+      "rule": "lexicographically last two repeated candidate hashes and environment hashes are reporting holdouts; preceding two of each are validation; a row belongs to the first applicable union",
+      "validation_candidates": [
+        "a4e94d786955d93d15dd0bd719b494090c002b6c590adf5a2ecd3d37f359aa1b",
+        "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1"
+      ],
+      "validation_environments": [
+        "771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+        "a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3"
+      ]
+    },
+    "split_rows": {
+      "heldout": 48,
+      "train": 75,
+      "validation": 37
+    },
+    "transfer_candidates": 10,
+    "unique_candidates": 80
+  },
+  "split": {
+    "heldout_candidates": [
+      "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043",
+      "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357"
+    ],
+    "heldout_environments": [
+      "c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6"
+    ],
+    "rule": "lexicographically last two repeated candidate hashes and environment hashes are reporting holdouts; preceding two of each are validation; a row belongs to the first applicable union",
+    "validation_candidates": [
+      "a4e94d786955d93d15dd0bd719b494090c002b6c590adf5a2ecd3d37f359aa1b",
+      "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1"
+    ],
+    "validation_environments": [
+      "771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3"
+    ]
+  },
+  "split_rows": {
+    "heldout": 48,
+    "train": 75,
+    "validation": 37
+  },
+  "status": "descriptive association atlas; analyst-only; no causal, feeding, survival, or resident-policy claim",
+  "support": {
+    "candidate_distance_threshold": 3.1622354487130244,
+    "environment_distance_threshold": 2.9339777782836194,
+    "full_genome_value_bounds": {
+      "body.antenna_length_scale": {
+        "maximum": 1.1590207145442617,
+        "minimum": 0.9030727534133681
+      },
+      "body.antenna_spread_scale": {
+        "maximum": 1.0404075545237563,
+        "minimum": 0.9182416861940571
+      },
+      "body.axial_scale": {
+        "maximum": 1.0543281178771493,
+        "minimum": 0.9473150420354746
+      },
+      "body.body_scale": {
+        "maximum": 1.0419247204862327,
+        "minimum": 0.9538026181808873
+      },
+      "body.density_scale": {
+        "maximum": 1.0353107974347224,
+        "minimum": 0.9119455944435125
+      },
+      "body.frequency_scale": {
+        "maximum": 1.0485206125002613,
+        "minimum": 0.9296033243172341
+      },
+      "body.friction_scale": {
+        "maximum": 1.0556510541299773,
+        "minimum": 0.9271184014370261
+      },
+      "body.leg_length_scale": {
+        "maximum": 1.0553537878194215,
+        "minimum": 0.9217629846726842
+      },
+      "body.leg_radius_scale": {
+        "maximum": 1.0447302352106065,
+        "minimum": 0.9745117335532879
+      },
+      "body.radial_scale": {
+        "maximum": 1.0819786221934682,
+        "minimum": 0.9479441500443201
+      },
+      "body.sweep_scale": {
+        "maximum": 1.0707450598085901,
+        "minimum": 0.9512724264460917
+      },
+      "body.torque_scale": {
+        "maximum": 1.0648064096711962,
+        "minimum": 0.9532460872682672
+      },
+      "controller.action_gain.allocate": {
+        "maximum": 1.059176052021494,
+        "minimum": 0.9672903485578788
+      },
+      "controller.action_gain.eat": {
+        "maximum": 1.0426930432000139,
+        "minimum": 0.8923602475758344
+      },
+      "controller.action_gain.gaze_pitch": {
+        "maximum": 1.0854297440598748,
+        "minimum": 0.9541518455254878
+      },
+      "controller.action_gain.grip": {
+        "maximum": 1.0614888255883619,
+        "minimum": 0.9573158036663872
+      },
+      "controller.action_gain.posture": {
+        "maximum": 1.0464277955841979,
+        "minimum": 0.9483625622064175
+      },
+      "controller.action_gain.release": {
+        "maximum": 1.0680192344018788,
+        "minimum": 0.9302725591523993
+      },
+      "controller.action_gain.secrete": {
+        "maximum": 1.0517033799375861,
+        "minimum": 0.9696057553272728
+      },
+      "controller.action_gain.signal_high": {
+        "maximum": 1.0899130065549163,
+        "minimum": 0.9693504817616185
+      },
+      "controller.action_gain.signal_low": {
+        "maximum": 1.0769274335844472,
+        "minimum": 0.9408060357767508
+      },
+      "controller.action_gain.signal_mid": {
+        "maximum": 1.0461875521874229,
+        "minimum": 0.9584896722863662
+      },
+      "controller.action_gain.thrust": {
+        "maximum": 1.0412706313180948,
+        "minimum": 0.9514004876563773
+      },
+      "controller.action_gain.yaw": {
+        "maximum": 1.0601146510601835,
+        "minimum": 0.9466585150040291
+      },
+      "controller.action_logit_temperature_offset.allocate": {
+        "maximum": 0.07349243929164084,
+        "minimum": -0.1512483790978546
+      },
+      "controller.action_logit_temperature_offset.eat": {
+        "maximum": 0.10116772659325912,
+        "minimum": -0.08141879819401132
+      },
+      "controller.action_logit_temperature_offset.gaze_pitch": {
+        "maximum": 0.12967595124257358,
+        "minimum": -0.18532323596968403
+      },
+      "controller.action_logit_temperature_offset.grip": {
+        "maximum": 0.13065336052913423,
+        "minimum": -0.11742981598342628
+      },
+      "controller.action_logit_temperature_offset.posture": {
+        "maximum": 0.1660662524543397,
+        "minimum": -0.1390048323989641
+      },
+      "controller.action_logit_temperature_offset.release": {
+        "maximum": 0.06968731751329083,
+        "minimum": -0.11485537532180179
+      },
+      "controller.action_logit_temperature_offset.secrete": {
+        "maximum": 0.1338041212659309,
+        "minimum": -0.14532313140249664
+      },
+      "controller.action_logit_temperature_offset.signal_high": {
+        "maximum": 0.06253293775828528,
+        "minimum": -0.09087581313785253
+      },
+      "controller.action_logit_temperature_offset.signal_low": {
+        "maximum": 0.10223378877133749,
+        "minimum": -0.09495836375187677
+      },
+      "controller.action_logit_temperature_offset.signal_mid": {
+        "maximum": 0.04959912036094005,
+        "minimum": -0.09415692196802483
+      },
+      "controller.action_logit_temperature_offset.thrust": {
+        "maximum": 0.1714093383748032,
+        "minimum": -0.10696177141745117
+      },
+      "controller.action_logit_temperature_offset.yaw": {
+        "maximum": 0.04172564281402302,
+        "minimum": -0.1299742448169191
+      },
+      "controller.learning_rate_gain": {
+        "maximum": 1.0410660820250608,
+        "minimum": 0.9415240629241163
+      },
+      "controller.policy_adapter_index": {
+        "maximum": 0.0,
+        "minimum": 0.0
+      },
+      "controller.recurrent_gain": {
+        "maximum": 1.0334453712035707,
+        "minimum": 0.9641709321841281
+      },
+      "developmental.allocation.brood": {
+        "maximum": 0.420192833475231,
+        "minimum": 0.3092412592266602
+      },
+      "developmental.allocation.gland": {
+        "maximum": 0.25857260216378153,
+        "minimum": 0.14869643784991804
+      },
+      "developmental.allocation.structure": {
+        "maximum": 0.4788582537094211,
+        "minimum": 0.3872760422144104
+      },
+      "metabolic.enzyme_activity_gain.carbon_fixation": {
+        "maximum": 1.1278826567012687,
+        "minimum": 0.8542909225346329
+      },
+      "metabolic.enzyme_activity_gain.detritus_digestion": {
+        "maximum": 1.1371079988845867,
+        "minimum": 0.9027982220566206
+      },
+      "metabolic.enzyme_activity_gain.detritus_hydrolysis": {
+        "maximum": 1.091761553719308,
+        "minimum": 0.8853911163185113
+      },
+      "metabolic.enzyme_activity_gain.fermentate_respiration": {
+        "maximum": 1.090305507503096,
+        "minimum": 0.8544421929822931
+      },
+      "metabolic.enzyme_activity_gain.reserve_fermentation": {
+        "maximum": 1.115001176171945,
+        "minimum": 0.8596498816626915
+      },
+      "metabolic.enzyme_activity_gain.soft_digestion": {
+        "maximum": 1.0856650499443503,
+        "minimum": 0.8829919795752545
+      },
+      "metabolic.enzyme_activity_gain.tough_digestion": {
+        "maximum": 1.114917620730798,
+        "minimum": 0.8037930546903105
+      },
+      "neural.excitability": {
+        "maximum": 1.032640660148516,
+        "minimum": 0.9407329736804866
+      },
+      "neural.input_gain": {
+        "maximum": 1.0528797209772105,
+        "minimum": 0.9372224653301885
+      },
+      "neural.learning_rate_gain": {
+        "maximum": 1.0747168402292804,
+        "minimum": 0.9583430793658383
+      },
+      "neural.modulator_gain": {
+        "maximum": 1.085037156216214,
+        "minimum": 0.9191333002353033
+      },
+      "neural.readout_gain": {
+        "maximum": 1.0497232562665386,
+        "minimum": 0.9370542623451718
+      },
+      "neural.recurrent_gain": {
+        "maximum": 1.0751944750060518,
+        "minimum": 0.9124371833865672
+      },
+      "somatic.absorption_rate_gain": {
+        "maximum": 1.0441804131436903,
+        "minimum": 0.8909117891412899
+      },
+      "somatic.activation_rate_gain": {
+        "maximum": 1.0778148736148325,
+        "minimum": 0.9306719335825839
+      },
+      "somatic.allocate_activity_cost_gain": {
+        "maximum": 1.058244763818054,
+        "minimum": 0.9620888213662567
+      },
+      "somatic.allocation_rate_gain": {
+        "maximum": 1.0658563415189202,
+        "minimum": 0.9076368345984989
+      },
+      "somatic.bite_rate_gain": {
+        "maximum": 1.0579213166924604,
+        "minimum": 0.9129040134507617
+      },
+      "somatic.brood_capacity_gain": {
+        "maximum": 1.1003204000680677,
+        "minimum": 0.93216596978254
+      },
+      "somatic.brood_energy_target_gain": {
+        "maximum": 1.0851124310251352,
+        "minimum": 0.9083395891409353
+      },
+      "somatic.brood_material_target_gain": {
+        "maximum": 1.059191450840036,
+        "minimum": 0.916465329057516
+      },
+      "somatic.brood_maturation_rate_gain": {
+        "maximum": 1.116060802468417,
+        "minimum": 0.892454033249417
+      },
+      "somatic.digestive_atp_rate_gain": {
+        "maximum": 1.0717674521095129,
+        "minimum": 0.8932162438182183
+      },
+      "somatic.dorsal_capture_fraction_gain": {
+        "maximum": 1.0884679125744048,
+        "minimum": 0.9279467412949409
+      },
+      "somatic.eat_activity_cost_gain": {
+        "maximum": 1.0635607025355258,
+        "minimum": 0.9464640216932585
+      },
+      "somatic.exchange_load_decay_rate_gain": {
+        "maximum": 1.0893985432029054,
+        "minimum": 0.9321983931085214
+      },
+      "somatic.fatigue_recovery_gain": {
+        "maximum": 1.0430099998797608,
+        "minimum": 0.9299259046122138
+      },
+      "somatic.fatigue_rise_gain": {
+        "maximum": 1.0743281911870173,
+        "minimum": 0.8905688308449657
+      },
+      "somatic.gland_capacity_gain": {
+        "maximum": 1.0627665364239283,
+        "minimum": 0.9354692098500736
+      },
+      "somatic.gland_synthesis_rate_gain": {
+        "maximum": 1.1222699288464633,
+        "minimum": 0.9059322343195954
+      },
+      "somatic.gut_capacity_gain": {
+        "maximum": 1.0735142742129762,
+        "minimum": 0.8926027999284507
+      },
+      "somatic.maintenance_rate_gain": {
+        "maximum": 1.1099487691713799,
+        "minimum": 0.9152470436435909
+      },
+      "somatic.maximum_bite_gain": {
+        "maximum": 1.0763348931548649,
+        "minimum": 0.9284069796633554
+      },
+      "somatic.mouth_radius_gain": {
+        "maximum": 1.0669910049068614,
+        "minimum": 0.8909616508768574
+      },
+      "somatic.phototrophic_absorptivity_gain": {
+        "maximum": 1.0837991942643637,
+        "minimum": 0.9330384986001552
+      },
+      "somatic.release_radius_gain": {
+        "maximum": 1.1109454126562048,
+        "minimum": 0.9241212175537593
+      },
+      "somatic.release_rate_gain": {
+        "maximum": 1.0855264456596412,
+        "minimum": 0.886831224560284
+      },
+      "somatic.reserve_capacity_gain": {
+        "maximum": 1.0672755084141425,
+        "minimum": 0.9313085044964248
+      },
+      "somatic.secrete_activity_cost_gain": {
+        "maximum": 1.0952456787487364,
+        "minimum": 0.9228594640794796
+      },
+      "somatic.secretion_profile.0": {
+        "maximum": 0.38509773463186064,
+        "minimum": 0.30634425718171737
+      },
+      "somatic.secretion_profile.1": {
+        "maximum": 0.3797217817024228,
+        "minimum": 0.28002501144102276
+      },
+      "somatic.secretion_profile.2": {
+        "maximum": 0.36366004822445513,
+        "minimum": 0.2769748140029883
+      },
+      "somatic.secretion_rate_gain": {
+        "maximum": 1.0715642157897738,
+        "minimum": 0.9416785641256692
+      },
+      "somatic.structural_capacity_gain": {
+        "maximum": 1.083054872018945,
+        "minimum": 0.9048530320955562
+      }
+    },
+    "modeled_bounds": {
+      "allocation_structure": {
+        "maximum": 0.4788582537094211,
+        "minimum": 0.3872760422144104
+      },
+      "connectivity": {
+        "maximum": 0.75,
+        "minimum": 0.3333333333333333
+      },
+      "elevation_relief": {
+        "maximum": 0.2925743535336179,
+        "minimum": 0.056000831831688545
+      },
+      "friction": {
+        "maximum": 1.0556510541299773,
+        "minimum": 0.9271184014370261
+      },
+      "leg_length": {
+        "maximum": 1.0553537878194215,
+        "minimum": 0.9217629846726842
+      },
+      "maintenance": {
+        "maximum": 1.1099487691713799,
+        "minimum": 0.9152470436435909
+      },
+      "regional_scale": {
+        "maximum": 0.800824727090274,
+        "minimum": 0.6300806720069085
+      },
+      "renewal_rate": {
+        "maximum": 0.5037172033658547,
+        "minimum": 0.31182013123839486
+      },
+      "reserve_capacity": {
+        "maximum": 1.0672755084141425,
+        "minimum": 0.9313085044964248
+      },
+      "resource_density": {
+        "maximum": 0.5520763022269896,
+        "minimum": 0.31007049715763685
+      },
+      "secretion_rate": {
+        "maximum": 1.0715642157897738,
+        "minimum": 0.9416785641256692
+      }
+    },
+    "observed_pairs": [
+      "005a6b200aca28864e62af736d992729d1a596d765d4334e541662edd306eead:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "048e2c46c18649625187f9669f6b97a0d004775a09e5a436f2ec9d33f73fb892:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "048e2c46c18649625187f9669f6b97a0d004775a09e5a436f2ec9d33f73fb892:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "048e2c46c18649625187f9669f6b97a0d004775a09e5a436f2ec9d33f73fb892:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "048e2c46c18649625187f9669f6b97a0d004775a09e5a436f2ec9d33f73fb892:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "048e2c46c18649625187f9669f6b97a0d004775a09e5a436f2ec9d33f73fb892:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "048e2c46c18649625187f9669f6b97a0d004775a09e5a436f2ec9d33f73fb892:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "048e2c46c18649625187f9669f6b97a0d004775a09e5a436f2ec9d33f73fb892:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "048e2c46c18649625187f9669f6b97a0d004775a09e5a436f2ec9d33f73fb892:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "048e2c46c18649625187f9669f6b97a0d004775a09e5a436f2ec9d33f73fb892:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "048e2c46c18649625187f9669f6b97a0d004775a09e5a436f2ec9d33f73fb892:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "078126c70dd7310448c7a17f077dab10944c2940c2c2a4b7b1c317d2687e723a:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "0a7f7d95de40d1a61a0422a0a5be6edfa66a210d014e957044f8865bbd1abb73:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "0a7f7d95de40d1a61a0422a0a5be6edfa66a210d014e957044f8865bbd1abb73:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "0a7f7d95de40d1a61a0422a0a5be6edfa66a210d014e957044f8865bbd1abb73:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "0a7f7d95de40d1a61a0422a0a5be6edfa66a210d014e957044f8865bbd1abb73:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "0a7f7d95de40d1a61a0422a0a5be6edfa66a210d014e957044f8865bbd1abb73:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "0a7f7d95de40d1a61a0422a0a5be6edfa66a210d014e957044f8865bbd1abb73:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "0a7f7d95de40d1a61a0422a0a5be6edfa66a210d014e957044f8865bbd1abb73:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "0a7f7d95de40d1a61a0422a0a5be6edfa66a210d014e957044f8865bbd1abb73:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "0a7f7d95de40d1a61a0422a0a5be6edfa66a210d014e957044f8865bbd1abb73:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "0a7f7d95de40d1a61a0422a0a5be6edfa66a210d014e957044f8865bbd1abb73:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "0b7ca4023385f41ed0be33113cb7838e4f57c6d1b986586e4ed2abdfc8e7e44a:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "0da6fb38628d3a2f38ffe981c631bc77b5e77e8ed71ae748ac3219708e4aa53e:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "0f8b0e8888379fcf5ae396b36d7163a0975d68780d5881c03e0125658518bac4:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "1bc09f81b568969a03ed6f66cca54dcb30320fab2948f6b09f7af01c24f0fd53:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "1fb7bc7f77c5bb69045b054628f4a98491bad1b8277fed248f86a22d7834b610:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "2526a5cd78b172593ddbb64dd7928c0e8257d777398eeede1cb77996e61e6d32:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "252fdf0d310cfac9a418b077e599820e883ce1babbc6fbe38ed0e97dbcf64d68:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "27da32d3028b771e0bae0409853617c5941308454667e1abd1c7921e12334caa:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "28f8fa5802beae1f9ca541a6f53ea17ea1988bb4dc0d81ab3356ae20b1d1b817:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "296f179391af08f402f2809a30ccbb3a153dc2064c35eb04fd8714c0879835d8:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "2ebf8fda89eebd76e1fffc15074e26700ae0797501aa221b6a85f2abb2846031:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "2ecbf953c5ca055bebc1b7355ede7a72ef5190c583af64bff1a06b347e84a1f7:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "310ad369e00341b0f67f77b348cab9b7eb105a4312b35e6e4ff738b3bb50c065:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "33acff5ed52109deac3a004545d5655d80392598d8593caf970116452f19b743:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "34c64aa2bcaef9a9e24e8233a2bcacdeda5eae4af8429987ef933c596462fddd:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "35119b68a2263348f8163fb3710d8341a297e5dbf361cbec25a63f0ab1d837fe:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "39c4a57c75c778b0791f96473fcd7320c93cc036bc4c5319da599639de4bb714:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "3b2edd3f353e53b02b78f448b4da0adcecc87001e4594ff21bc4e578a8846b59:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "472be2f8bddcd251b5b26772bda230efbbc6ef82ee1ec453d927ac03707028d7:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "4b6a0be3faafa4c029b23e8e904b191a0cf6262e8f8a345ba2c9d24241404293:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "4cb5394e087e06a71874316f7a362711e9b80b0c0ebc5855e75676423afdc4f6:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "4e2fb3bd26815e7cde3bb3c149bde22be75e2efc9f234881547cfa97b010d25a:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "4fa8df91de87d0d1208f97d84f27cc99a1c191f4e05acb0d77e528d4eafc2cfa:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "4fa8df91de87d0d1208f97d84f27cc99a1c191f4e05acb0d77e528d4eafc2cfa:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "4fa8df91de87d0d1208f97d84f27cc99a1c191f4e05acb0d77e528d4eafc2cfa:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "4fa8df91de87d0d1208f97d84f27cc99a1c191f4e05acb0d77e528d4eafc2cfa:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "4fa8df91de87d0d1208f97d84f27cc99a1c191f4e05acb0d77e528d4eafc2cfa:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "4fa8df91de87d0d1208f97d84f27cc99a1c191f4e05acb0d77e528d4eafc2cfa:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "4fa8df91de87d0d1208f97d84f27cc99a1c191f4e05acb0d77e528d4eafc2cfa:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "4fa8df91de87d0d1208f97d84f27cc99a1c191f4e05acb0d77e528d4eafc2cfa:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "4fa8df91de87d0d1208f97d84f27cc99a1c191f4e05acb0d77e528d4eafc2cfa:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "4fa8df91de87d0d1208f97d84f27cc99a1c191f4e05acb0d77e528d4eafc2cfa:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "537ddb69701fc72ec95d501ff780788518fcc57affcdea03e2d94038d3eaec06:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "543546bd972353757632c7c65632a4c849ebacc60e32e6ee71ae791d939d2ed0:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "5bcd7886b80f1769e94b2787d007317b6eb12834cfa33ace2c9e0c188652df97:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "5e0babd680f0290bce8279486e19b937f8b0829fe1150661b33cafec20b41e08:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "6124028ef520f84842135e15facfd681680b0d218311c777f8e455acf81e6d4d:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "638692935d85d84685a9e93c46d9dc9afcfd1107dd6756ffb00c02bc7686fa67:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "63bf8b2f0d10a481c17948c947fbebe8b385fbc24b3c4289a0f0a89207613ad8:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "6ff48c80322cb732ae2e3620544a73ff33d9390312410a1bf90e83156f325137:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "721e515dfa9767305d1e94a65ee58195497f9cd0f3c3f8571d8abf7174bc0d58:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "736195952efdbc8097b0fd755354fbd29e6f6c56a28591acbcb3d93ba6f02676:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "742c855301a6987032f3e18f8598a986aed045c4df770c16b27a6fd304dcc07b:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "742c855301a6987032f3e18f8598a986aed045c4df770c16b27a6fd304dcc07b:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "742c855301a6987032f3e18f8598a986aed045c4df770c16b27a6fd304dcc07b:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "742c855301a6987032f3e18f8598a986aed045c4df770c16b27a6fd304dcc07b:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "742c855301a6987032f3e18f8598a986aed045c4df770c16b27a6fd304dcc07b:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "742c855301a6987032f3e18f8598a986aed045c4df770c16b27a6fd304dcc07b:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "742c855301a6987032f3e18f8598a986aed045c4df770c16b27a6fd304dcc07b:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "742c855301a6987032f3e18f8598a986aed045c4df770c16b27a6fd304dcc07b:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "742c855301a6987032f3e18f8598a986aed045c4df770c16b27a6fd304dcc07b:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "742c855301a6987032f3e18f8598a986aed045c4df770c16b27a6fd304dcc07b:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "7909359679d0cbc6ddd730494bd9d49e703469f5e3f43b53e180ade7222c5b7c:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "79350a319c752c5c8379474fc6008fa090bdb99a6a14c7bdcb2f4780d95eb81e:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "797f387859db7be7c2cf97bb41813f1f719d9ec65a6ba054aaf63ebd5d117168:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "797f387859db7be7c2cf97bb41813f1f719d9ec65a6ba054aaf63ebd5d117168:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "797f387859db7be7c2cf97bb41813f1f719d9ec65a6ba054aaf63ebd5d117168:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "799febb017766dc4a7680e4fcedd5dc390b34a7234638445ec862a0062412866:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "7f80318929a6f69ff98beb18b97871d0c7779363ac9a6eef323b63929bd8082f:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "86929a98a94c69a9d37b8186fd4f4a842cb6f7352cc426208db023a53abec5ae:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "8c6ba5fbde83616812f95ec35f5ccf8c63dffa0210d3b4fb9e71030ecc5149b3:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "8d26492c0ae1e1a090fbbe130dd0063dad324f166a5a38914e06b155357341c3:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "923fe78637f87149b1465a1712e954f499a9784f1aff0b116966cad51730f2ed:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "93edf2acf1f5ced38f9cf0b2ff87f6d8c377529dd1ec013266254e093d10287a:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "968ba9dcf4bab8fb58ceeaf0aab27cad2bd19c1378761c8e66b4f7b6b8072016:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "96acc2df7b17a3f7e86b3803f30c32166940fe2cf32f48cf0f5952fa58a7a44a:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "96acc2df7b17a3f7e86b3803f30c32166940fe2cf32f48cf0f5952fa58a7a44a:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "96acc2df7b17a3f7e86b3803f30c32166940fe2cf32f48cf0f5952fa58a7a44a:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "96acc2df7b17a3f7e86b3803f30c32166940fe2cf32f48cf0f5952fa58a7a44a:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "96acc2df7b17a3f7e86b3803f30c32166940fe2cf32f48cf0f5952fa58a7a44a:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "96acc2df7b17a3f7e86b3803f30c32166940fe2cf32f48cf0f5952fa58a7a44a:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "96acc2df7b17a3f7e86b3803f30c32166940fe2cf32f48cf0f5952fa58a7a44a:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "96acc2df7b17a3f7e86b3803f30c32166940fe2cf32f48cf0f5952fa58a7a44a:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "96acc2df7b17a3f7e86b3803f30c32166940fe2cf32f48cf0f5952fa58a7a44a:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "96acc2df7b17a3f7e86b3803f30c32166940fe2cf32f48cf0f5952fa58a7a44a:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "973d47d8a191a6e8371446ba83d6de63f973f1be33fc4d2e24f7679c6825eac8:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "9856e3dec455a4b98fcb6c79bc73d7df23ad6b438869bdec26e65b222d518c50:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "a19d81a17641c8906df60773a4b8cadca0a5e603086c0c9723627b8d7dd06c89:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "a4e94d786955d93d15dd0bd719b494090c002b6c590adf5a2ecd3d37f359aa1b:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "a4e94d786955d93d15dd0bd719b494090c002b6c590adf5a2ecd3d37f359aa1b:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "a4e94d786955d93d15dd0bd719b494090c002b6c590adf5a2ecd3d37f359aa1b:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "a4e94d786955d93d15dd0bd719b494090c002b6c590adf5a2ecd3d37f359aa1b:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "a4e94d786955d93d15dd0bd719b494090c002b6c590adf5a2ecd3d37f359aa1b:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "a4e94d786955d93d15dd0bd719b494090c002b6c590adf5a2ecd3d37f359aa1b:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "a4e94d786955d93d15dd0bd719b494090c002b6c590adf5a2ecd3d37f359aa1b:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "ac55e8cb9accbb2ebd8235cc17dc1e88f892b74b52177c4b2a633dd167e65a61:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "adc7fb0c651d057140e70b0a3c58a425add156b32a2d556fc7cd2a87b24cba48:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "b325ffd8bf0a311a8209fe648003dd93fbe16ac36611013a5f283066cf8173a6:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "b4d31fe7d7b1fd7b6b0f15dd8fc5e9987b743ffe2145194610b6c4027c3dac0f:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "b7b84ee1ddf6b946a2710ccf6e9a1f9fda4f3d5e6c5194aca0cfe3814a75d850:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "bc470f372c7120a675dba94ca36030edc3173ad46a1425fbd1777a23a6174770:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "c35fc291a1786059db85511ae99ec906c24f870110b9d0171acbb6491ef8314e:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "c606715783eacbd6faddd70d8fccc796c32f50765d58720a055ba38fab513355:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "c951af9869f5a80acb385305c3eafc473743977f49bb2d9ad499009b8da031c1:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "ca05e842be74c2c80ce219d8ae80512ed3a0fd62f02e7b57f78c6d2c6c415ab0:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "cf05a93d1909f6b78aafef140705110087c5a1124be97d2b13491e2cd6e069f2:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "cf4465fcfbd1a04f6c381d7361c7044a16916a201d1630e4442d65b1942e44a1:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "d002d02057c84da92773cfe1d87a9b85cb3cd15ac4fb8f8ff92d475384192eb4:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "d0383bc1caf2d8bdb4848c2a115371e7101877e5f62ef9476130132a2750c199:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "d0939166e9f5c61c164d07d3885d6c01bdb93eb0217fe5702b2045077d8a4fbd:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "d1a0be911dc871473025be7e930bdc4c8df8369426d58af1d544724255727b97:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "d4762cfa3bbe93f910a87c67d17a8839a275a7914433092461293082c3510043:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "d4e65472c2d7052d2afbb022fba1c7db4b89852b3573d9dfc1efa5a89fd301d2:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "dac98df59daa1539e2a4fa6cdaeeba8d6961baffb06d1d56e6be6d80eb4367df:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "dcd53c09f69a8cc42ecbc2e0ebe8d48528d0f19412793ec20f5ece8fffe80487:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357:1d31e3e4a34890829d8dc6ddf200f1f0548bc0da57e07403eb5a2901da368be2",
+      "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357:2b07ae060f54cc60c839b313cc7e18a2158e5c457d1c0b16dcf78d1cd47e0bd4",
+      "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357:4ea912edda2e10d13882e766569385747eb41f26566e58778faf6a930ddc8043",
+      "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357:645c33cff5bef4698a5e51ab8a90ef51c576dbf55109b368f926f7d5c636749f",
+      "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357:6b4bfe42371685db2a0b01596096ed8b289a0301e1b934186164eadd5eb3dcbf",
+      "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357:a76c8154ff8751869438376a1da341bc34291db29b934f13e2e389b526326fb3",
+      "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "dfbcd35d4ac875cfa5026f4a019dd18afeacc98a87c49eec4001f2dc85e24357:c1a804767fdbb9db5da6d1a82cf88733df8d86c8b2763e6fa65eed0e2897d8f6",
+      "e12c77c17ef0110796d6dfbf140ec8ff920071efd62d0c255616f71323d23b89:3cca66a3cf457dfa4a301edb28cbba1ddddf77edde32bc3bef5340e8d3865ca3",
+      "e38126a9b24c4470661f167ddaf6b5b9aa7c6c564adb98564044d2264c79b4ef:771ab0053eaa840ae7a4830c9057b95cf1dec6d8d484de5cce5673d2af7e7bd6",
+      "e59abe9f21fe2cfef2d559299f5699f53c731349bb813ee31a613c0ea6ce1e24:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "eb820b5dd84d3b0e2a507d8d289a118ac82b5a4b4237919dde2fc562ef9666f3:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2",
+      "f71aea7860e741eac0d97163e84f33f3c38941de290c3b1b0a1e336efaa66fe4:c01712eef47b67111e71506c8e3a5c346711d67809a7342025ecf1f9ed697ee2"
+    ],
+    "rule": "all full-schema values in training ranges and modeled candidate/environment nearest distances at or below training 95th-percentile leave-one-group-out distances",
+    "train_candidate_vectors": [
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.2103134917948872
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        -0.7429134015299451,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217
+      ],
+      [
+        -0.41076516848246636,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.5023520193237985,
+        2.1402877194980503,
+        0.8528970805320298
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        -0.6557114465537798,
+        -0.33762389681385535,
+        0.09127079728525217
+      ],
+      [
+        0.35389786031341525,
+        4.294497215342124,
+        0.11287884023067914,
+        0.07225999629873878,
+        1.8617472000714184,
+        -0.45791893269951356
+      ],
+      [
+        0.35389786031341525,
+        -0.917550186671558,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        1.6044113679670944
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        1.4087478842972325,
+        -0.33762389681385535,
+        0.09127079728525217
+      ],
+      [
+        -1.511501566454546,
+        1.1579966600148417,
+        2.0199316657898527,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.0835505154935811
+      ],
+      [
+        -0.16186976036337908,
+        -0.2001823875234478,
+        0.11287884023067914,
+        -2.2877862838731273,
+        1.4869207588153162,
+        0.09127079728525217
+      ],
+      [
+        0.35389786031341525,
+        0.5816480744946473,
+        0.11287884023067914,
+        0.003961001586439023,
+        -0.33762389681385535,
+        -0.4215756463368098
+      ],
+      [
+        0.35389786031341525,
+        0.36288788133632555,
+        0.11287884023067914,
+        0.07225999629873878,
+        2.9179148066316136,
+        0.16046672440674922
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.7571407027014687,
+        0.07225999629873878,
+        2.5777747022315864,
+        -2.821323585348624
+      ],
+      [
+        0.31240675181003824,
+        -0.2001823875234478,
+        -4.139483214752576,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217
+      ],
+      [
+        0.060697124932624136,
+        -0.2001823875234478,
+        0.8976309343306573,
+        0.07225999629873878,
+        0.25661311442567997,
+        0.09127079728525217
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -0.32007598358853423
+      ],
+      [
+        2.316775044199366,
+        -0.2001823875234478,
+        0.9769580691568384,
+        -1.7790639981111889,
+        -0.853173496672883,
+        1.3306832391673344
+      ],
+      [
+        0.8756905841559736,
+        -0.2001823875234478,
+        0.3076815348643061,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.8269539766991728,
+        -0.5477422779204294
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.6973116345390534,
+        -1.9939327906612268
+      ],
+      [
+        -1.671995327639847,
+        -0.2001823875234478,
+        -1.5000821488856553,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -0.1481038096736526
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        0.24852370956743275,
+        1.627761364568004
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        1.304895173344093,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -1.6565662488328774
+      ],
+      [
+        0.35389786031341525,
+        -3.6648631391918145,
+        0.11287884023067914,
+        2.806307052487361,
+        -0.33762389681385535,
+        1.6626464881302556
+      ],
+      [
+        0.2909551251491871,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        0.6852750796832076,
+        1.174838325959702
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.786968476986547
+      ],
+      [
+        0.11037448983400498,
+        -0.2001823875234478,
+        2.273409660431728,
+        -4.043001450405333,
+        -0.33762389681385535,
+        0.09127079728525217
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        -2.6137301193482525,
+        1.9439786591930652,
+        0.5895036944425281,
+        0.8958334443698808
+      ],
+      [
+        -1.9969170105203247,
+        2.079958257633412,
+        0.577414008336421,
+        -0.5451423579779482,
+        -0.33762389681385535,
+        -1.1942735480005098
+      ],
+      [
+        0.35389786031341525,
+        -0.7905077131209741,
+        0.11287884023067914,
+        0.2813372221670894,
+        -0.33762389681385535,
+        -0.4774299185667971
+      ],
+      [
+        0.35389786031341525,
+        -0.8547104047517738,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        -2.9776141300592105,
+        0.07225999629873878,
+        0.5266753124085358,
+        -0.708906491463669
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.3092581301922928,
+        -0.33762389681385535,
+        -0.6198527460135211
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        -1.4577067911671735,
+        0.12149104317698953,
+        -0.33762389681385535,
+        0.09127079728525217
+      ],
+      [
+        0.35389786031341525,
+        -0.6939606160468699,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.9356279498484085
+      ],
+      [
+        0.35389786031341525,
+        1.2009298986109125,
+        3.12148475314975,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -0.27592735165992544
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.5063533817534083,
+        0.07225999629873878,
+        0.8349153547190692,
+        0.9260613400047348
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        -3.7945342770312167,
+        -2.9907332704587803,
+        0.09127079728525217
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -1.2264536447340268,
+        0.09127079728525217
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        0.898775013438124,
+        -3.3241438528980605
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        -2.332510243834724,
+        -0.33762389681385535,
+        1.1742109391431645
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.5143889655779921
+      ],
+      [
+        -0.9526267150193981,
+        -1.4388900993573916,
+        -0.07184452353264292,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.08620848163797264
+      ],
+      [
+        1.7177884038764653,
+        2.1620601149950027,
+        0.11287884023067914,
+        0.4352022487698118,
+        -0.33762389681385535,
+        1.0684732454178105
+      ],
+      [
+        2.6236931976162134,
+        -0.2001823875234478,
+        0.06850965732059958,
+        -0.1407523737014303,
+        -0.33762389681385535,
+        0.09127079728525217
+      ],
+      [
+        0.20584559847462328,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        0.4510261818387571,
+        -2.592318881123865
+      ],
+      [
+        1.2321636006092451,
+        -0.2001823875234478,
+        0.11287884023067914,
+        1.4412607512480289,
+        -0.33762389681385535,
+        0.09115371048982598
+      ],
+      [
+        2.656253697283586,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -2.3639464846511418,
+        0.09127079728525217
+      ],
+      [
+        -0.16229066941176548,
+        -0.2001823875234478,
+        0.11287884023067914,
+        3.214598282576193,
+        -0.33762389681385535,
+        -2.369041665778242
+      ]
+    ],
+    "train_environment_vectors": [
+      [
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ]
+    ],
+    "train_pair_vectors": [
+      [
+        0.35389786031341525,
+        -3.6648631391918145,
+        0.11287884023067914,
+        2.806307052487361,
+        -0.33762389681385535,
+        1.6626464881302556,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        -0.16186976036337908,
+        -0.2001823875234478,
+        0.11287884023067914,
+        -2.2877862838731273,
+        1.4869207588153162,
+        0.09127079728525217,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        0.4510261818387571,
+        -2.592318881123865,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        0.35389786031341525,
+        0.5816480744946473,
+        0.11287884023067914,
+        0.003961001586439023,
+        -0.33762389681385535,
+        -0.4215756463368098,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        0.35389786031341525,
+        4.294497215342124,
+        0.11287884023067914,
+        0.07225999629873878,
+        1.8617472000714184,
+        -0.45791893269951356,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        0.35389786031341525,
+        1.2009298986109125,
+        3.12148475314975,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -0.27592735165992544,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        0.8756905841559736,
+        -0.2001823875234478,
+        0.3076815348643061,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        0.11037448983400498,
+        -0.2001823875234478,
+        2.273409660431728,
+        -4.043001450405333,
+        -0.33762389681385535,
+        0.09127079728525217,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.786968476986547,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.5143889655779921,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -0.32007598358853423,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        -0.6557114465537798,
+        -0.33762389681385535,
+        0.09127079728525217,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        0.24852370956743275,
+        1.627761364568004,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        -0.7429134015299451,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.8269539766991728,
+        -0.5477422779204294,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        -0.16229066941176548,
+        -0.2001823875234478,
+        0.11287884023067914,
+        3.214598282576193,
+        -0.33762389681385535,
+        -2.369041665778242,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        0.31240675181003824,
+        -0.2001823875234478,
+        -4.139483214752576,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        0.35389786031341525,
+        -0.8547104047517738,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.7571407027014687,
+        0.07225999629873878,
+        2.5777747022315864,
+        -2.821323585348624,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        -1.671995327639847,
+        -0.2001823875234478,
+        -1.5000821488856553,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -0.1481038096736526,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        0.898775013438124,
+        -3.3241438528980605,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        0.2909551251491871,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        0.6852750796832076,
+        1.174838325959702,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        0.35389786031341525,
+        -0.917550186671558,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        1.6044113679670944,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        -2.9776141300592105,
+        0.07225999629873878,
+        0.5266753124085358,
+        -0.708906491463669,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        0.20584559847462328,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        1.4087478842972325,
+        -0.33762389681385535,
+        0.09127079728525217,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        -1.511501566454546,
+        1.1579966600148417,
+        2.0199316657898527,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.0835505154935811,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -1.2264536447340268,
+        0.09127079728525217,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        -0.9526267150193981,
+        -1.4388900993573916,
+        -0.07184452353264292,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.08620848163797264,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        1.7177884038764653,
+        2.1620601149950027,
+        0.11287884023067914,
+        0.4352022487698118,
+        -0.33762389681385535,
+        1.0684732454178105,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.5063533817534083,
+        0.07225999629873878,
+        0.8349153547190692,
+        0.9260613400047348,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        2.656253697283586,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -2.3639464846511418,
+        0.09127079728525217,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        -3.7945342770312167,
+        -2.9907332704587803,
+        0.09127079728525217,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        -2.332510243834724,
+        -0.33762389681385535,
+        1.1742109391431645,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        -2.6137301193482525,
+        1.9439786591930652,
+        0.5895036944425281,
+        0.8958334443698808,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        1.2321636006092451,
+        -0.2001823875234478,
+        0.11287884023067914,
+        1.4412607512480289,
+        -0.33762389681385535,
+        0.09115371048982598,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.6973116345390534,
+        -1.9939327906612268,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        1.304895173344093,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -1.6565662488328774,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.09127079728525217,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        0.060697124932624136,
+        -0.2001823875234478,
+        0.8976309343306573,
+        0.07225999629873878,
+        0.25661311442567997,
+        0.09127079728525217,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        2.6236931976162134,
+        -0.2001823875234478,
+        0.06850965732059958,
+        -0.1407523737014303,
+        -0.33762389681385535,
+        0.09127079728525217,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        2.316775044199366,
+        -0.2001823875234478,
+        0.9769580691568384,
+        -1.7790639981111889,
+        -0.853173496672883,
+        1.3306832391673344,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        -1.4577067911671735,
+        0.12149104317698953,
+        -0.33762389681385535,
+        0.09127079728525217,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        0.35389786031341525,
+        -0.7905077131209741,
+        0.11287884023067914,
+        0.2813372221670894,
+        -0.33762389681385535,
+        -0.4774299185667971,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        0.35389786031341525,
+        0.36288788133632555,
+        0.11287884023067914,
+        0.07225999629873878,
+        2.9179148066316136,
+        0.16046672440674922,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.3092581301922928,
+        -0.33762389681385535,
+        -0.6198527460135211,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        -1.9969170105203247,
+        2.079958257633412,
+        0.577414008336421,
+        -0.5451423579779482,
+        -0.33762389681385535,
+        -1.1942735480005098,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        -1.671995327639847,
+        -0.2001823875234478,
+        -1.5000821488856553,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -0.1481038096736526,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        -0.41076516848246636,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.5023520193237985,
+        2.1402877194980503,
+        0.8528970805320298,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.2103134917948872,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        0.35389786031341525,
+        -0.6939606160468699,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.9356279498484085,
+        1.2150412968646502,
+        1.7349907738687709,
+        -0.3669600406729284,
+        -1.5909403611208486,
+        1.55609171953677
+      ],
+      [
+        -1.9969170105203247,
+        2.079958257633412,
+        0.577414008336421,
+        -0.5451423579779482,
+        -0.33762389681385535,
+        -1.1942735480005098,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        -1.671995327639847,
+        -0.2001823875234478,
+        -1.5000821488856553,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -0.1481038096736526,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        -0.41076516848246636,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.5023520193237985,
+        2.1402877194980503,
+        0.8528970805320298,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.2103134917948872,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        0.35389786031341525,
+        -0.6939606160468699,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.9356279498484085,
+        -0.7133109128963012,
+        -0.7076898817704209,
+        0.7505581030094558,
+        0.6719134889815372,
+        -0.6252265941383688
+      ],
+      [
+        -1.9969170105203247,
+        2.079958257633412,
+        0.577414008336421,
+        -0.5451423579779482,
+        -0.33762389681385535,
+        -1.1942735480005098,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        -0.41076516848246636,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.5023520193237985,
+        2.1402877194980503,
+        0.8528970805320298,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.2103134917948872,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        0.35389786031341525,
+        -0.6939606160468699,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.9356279498484085,
+        -0.19305263738256614,
+        -0.5637015515265655,
+        0.3099111996370907,
+        0.4983020257389797,
+        0.02677184687222186
+      ],
+      [
+        -1.9969170105203247,
+        2.079958257633412,
+        0.577414008336421,
+        -0.5451423579779482,
+        -0.33762389681385535,
+        -1.1942735480005098,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        -1.671995327639847,
+        -0.2001823875234478,
+        -1.5000821488856553,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -0.1481038096736526,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        -0.41076516848246636,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.5023520193237985,
+        2.1402877194980503,
+        0.8528970805320298,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.2103134917948872,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        0.35389786031341525,
+        -0.6939606160468699,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.9356279498484085,
+        -1.5930960439416892,
+        -1.2613267640878434,
+        1.5216522201564857,
+        1.409722091950896,
+        1.0851867734083898
+      ],
+      [
+        -1.9969170105203247,
+        2.079958257633412,
+        0.577414008336421,
+        -0.5451423579779482,
+        -0.33762389681385535,
+        -1.1942735480005098,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        -1.671995327639847,
+        -0.2001823875234478,
+        -1.5000821488856553,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -0.1481038096736526,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        -0.41076516848246636,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.5023520193237985,
+        2.1402877194980503,
+        0.8528970805320298,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.2103134917948872,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        0.35389786031341525,
+        -0.6939606160468699,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.9356279498484085,
+        1.1586175134422105,
+        0.12970558834711635,
+        -1.4095543361908198,
+        -0.2520856798239841,
+        -0.8382979800895424
+      ],
+      [
+        -1.9969170105203247,
+        2.079958257633412,
+        0.577414008336421,
+        -0.5451423579779482,
+        -0.33762389681385535,
+        -1.1942735480005098,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        -1.671995327639847,
+        -0.2001823875234478,
+        -1.5000821488856553,
+        0.07225999629873878,
+        -0.33762389681385535,
+        -0.1481038096736526,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        -0.41076516848246636,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.5023520193237985,
+        2.1402877194980503,
+        0.8528970805320298,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        0.35389786031341525,
+        -0.2001823875234478,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.2103134917948872,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ],
+      [
+        0.35389786031341525,
+        -0.6939606160468699,
+        0.11287884023067914,
+        0.07225999629873878,
+        -0.33762389681385535,
+        0.9356279498484085,
+        0.2935397202924943,
+        0.7680983590681147,
+        -0.9184227749567211,
+        -0.8403518745885554,
+        -1.147251489718744
+      ]
+    ]
+  }
+}

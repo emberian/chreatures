@@ -30,6 +30,33 @@ held-out source-world error does not validate the new ecological dynamics.
 
 The artifact pins the trajectory manifest and packet hashes, complete action and physiology orders, exact resident checkpoint and representation tensor identities, normalization floors, temporal alignment, bounded decoder, tensor receipts, and H1–H8 validation and final-heldout goal errors. Existing residents retain their older immutable predictor artifacts.
 
+## Current specialization corpus boundary
+
+Fresh reciprocal-v7 trajectories use the breaking
+`chreatures-sensorimotor-play-rich-v4` corpus format. Each episode is sealed as
+ordered 512-tick NPZ shards backed by temporary typed memory maps, rather than
+being accumulated in process memory. The final observation of one shard is the
+initial observation of the next. Train-only moment fitting counts that boundary
+once.
+
+The predictor-visible arrays remain observation4459, neural readouts384, exact
+native effective worker context128, delivered action12, reset boundaries, and a
+50 ms interval. Actual organ release, secretion, and allocation are retained as
+an audit-only array. Private motor suffix contents and world regulation state do
+not become predictor targets or controller inputs.
+
+Every 1,024 ticks and at episode end, collection seals the current observation,
+physiology, neural readouts, previous delivered action, reset state and time with
+complete world, neural-cohort, and developmental-resident private/RNG snapshots.
+The manifest authenticates every shard and checkpoint file and is published
+last. An atomic, content-hashed progress record exposes only monotonic prefixes
+of already sealed receipts, allowing transport to overlap collection without
+treating a partial corpus as complete. The next fixed fit uses worlds 0–7 for
+training, world 8 for validation,
+and world 9 once for the final held-out report. The recurrent predictor tensor
+format remains v3 because its 1,560-input, action12, code256 and physiology12
+mathematics are unchanged; the corpus format change does not relabel weights.
+
 ## First executed fit
 
 The first fixed three-member fit ran on an AMD Radeon 890M with Torch 2.10.0

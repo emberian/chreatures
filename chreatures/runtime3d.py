@@ -574,8 +574,25 @@ class Habitat3D:
                     "horizon_ticks": int(result["forecast_horizon_ticks"]),
                     "horizon_seconds": MODEL_DT * int(result["forecast_horizon_ticks"]),
                     "candidate_physiology": result["forecast_physiology"][index].astype(float).tolist(),
-                    "proposal_suffix": "hold each proposed action for four physical ticks; replan after the next actual observation",
+                    "proposal_suffix": "four constant-action plans over eight ticks and up to four actually experienced sequences scored over their stored lengths; execute the first action and replan",
                     "meaning": "predicted progress toward an achieved sensory goal; member disagreement is not calibrated confidence",
+                },
+                "acquired_action_candidates": {
+                    "available": result["candidate_available"][index].astype(bool).tolist(),
+                    "recalled": result["candidate_is_recalled_suffix"][index].astype(bool).tolist(),
+                    "slot": result["candidate_suffix_slot"][index].astype(int).tolist(),
+                    "generation": result["candidate_suffix_generation"][index].astype(int).tolist(),
+                    "length_ticks": result["candidate_suffix_length"][index].astype(int).tolist(),
+                    "support": result["candidate_suffix_support"][index].astype(float).tolist(),
+                    "empirical_score": result["candidate_suffix_empirical_score"][index].astype(float).tolist(),
+                    "recall_score": result["candidate_suffix_recall_score"][index].astype(float).tolist(),
+                    "first_action": result["candidate_first_action"][index].astype(float).tolist(),
+                    "selected_candidate": int(result["selected_candidate"][index]),
+                    "occupied_slots": int(result["motor_suffix_slots"][index]),
+                    "learned_total": int(result["motor_suffix_learned_total"][index]),
+                    "empirical_component_weights": result["motor_suffix_empirical_components"].astype(float).tolist(),
+                    "empirical_tilt_limit": float(result["motor_suffix_empirical_tilt_limit"]),
+                    "meaning": "private recall of executed sequences; support counts experience and does not certify success or reachability",
                 },
                 "contextual_memory": {
                     "retrieval_bias": float(result["contextual_retrieval_bias"][index]),
@@ -1030,6 +1047,12 @@ class Habitat3D:
                 if getattr(self.biosphere, "exchange", None) is not None
                 else None
             ),
+            "regional_matter": (
+                self.biosphere.regional_matter.view()
+                if self.biosphere.regional_matter is not None
+                else None
+            ),
+            "metabolic_regulation": self.biosphere.web.regulation_view(),
         }
 
     def save(self, path: str | Path) -> str:

@@ -282,6 +282,9 @@ _RECORDING_EVENT_TYPES = {
     "contact_begin": "interaction_event",
     "contact_end": "interaction_event",
     "visitor_material": "environment_event",
+    "physical-material-entered-region": "environment_event",
+    "regional-material-flow": "environment_event",
+    "regional-material-outlet": "environment_event",
     "visitor_stimulus": "interaction_event",
 }
 
@@ -901,7 +904,7 @@ def reconcile_population_state(
     records: Sequence[Mapping[str, Any]], state: Mapping[str, Any]
 ) -> dict[str, int]:
     """Require every terminal result in a native search snapshot to be retained."""
-    if state.get("format") != "chreatures-population-search-v2":
+    if state.get("format") != "chreatures-population-search-v3":
         raise PopulationEvidenceError("unsupported native population search state")
     evaluations = state.get("evaluations")
     if not isinstance(evaluations, list):

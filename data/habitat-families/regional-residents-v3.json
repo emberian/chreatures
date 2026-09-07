@@ -1,5 +1,5 @@
 {
-  "format": "chreatures-regional-residents-v2",
+  "format": "chreatures-regional-residents-v3",
   "residents": [
     {
       "body": {
@@ -93,7 +93,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105
+            },
+            "substrate_response": {
+              "respiration": 0.012
+            },
+            "atp_response": {
+              "respiration": 0.048
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gut": {
           "enzymes": {
@@ -109,7 +122,35 @@
             "reserve": 0.04
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.025,
+              "fermentate_respiration": 0.003,
+              "detritus_hydrolysis": 0.002
+            },
+            "substrate_response": {
+              "soft_digestion": -0.018000000000000002,
+              "tough_digestion": -0.018000000000000002,
+              "detritus_digestion": 0.018000000000000002,
+              "reserve_fermentation": -0.024,
+              "fermentate_respiration": -0.012,
+              "detritus_hydrolysis": -0.024
+            },
+            "atp_response": {
+              "soft_digestion": 0.036000000000000004,
+              "tough_digestion": -0.048,
+              "detritus_digestion": 0.048,
+              "reserve_fermentation": 0.018000000000000002,
+              "fermentate_respiration": 0.042,
+              "detritus_hydrolysis": -0.012
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "structure": {
           "enzymes": {},
@@ -118,7 +159,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gland": {
           "enzymes": {},
@@ -127,13 +175,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         }
       }
     },
@@ -230,7 +292,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00035
+            },
+            "substrate_response": {
+              "respiration": 0.012,
+              "carbon_fixation": -0.012
+            },
+            "atp_response": {
+              "respiration": 0.024,
+              "carbon_fixation": 0.018000000000000002
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gut": {
           "enzymes": {
@@ -245,7 +323,35 @@
             "soft_tissue": 0.017
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.003,
+              "fermentate_respiration": 0.025,
+              "detritus_hydrolysis": 0.005
+            },
+            "substrate_response": {
+              "soft_digestion": 0.012,
+              "tough_digestion": 0.024,
+              "detritus_digestion": -0.042,
+              "reserve_fermentation": 0.03,
+              "fermentate_respiration": 0.024,
+              "detritus_hydrolysis": 0.018000000000000002
+            },
+            "atp_response": {
+              "soft_digestion": 0.036000000000000004,
+              "tough_digestion": -0.024,
+              "detritus_digestion": -0.036000000000000004,
+              "reserve_fermentation": -0.036000000000000004,
+              "fermentate_respiration": -0.024,
+              "detritus_hydrolysis": -0.036000000000000004
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "structure": {
           "enzymes": {},
@@ -254,7 +360,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gland": {
           "enzymes": {},
@@ -263,13 +376,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         }
       }
     },
@@ -365,7 +492,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0119
+            },
+            "substrate_response": {
+              "respiration": -0.018000000000000002
+            },
+            "atp_response": {
+              "respiration": 0.036000000000000004
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gut": {
           "enzymes": {
@@ -380,7 +520,35 @@
             "soft_tissue": 0.018000000000000002
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.036,
+              "tough_digestion": 0.009000000000000001,
+              "detritus_digestion": 0.01,
+              "reserve_fermentation": 0.003,
+              "fermentate_respiration": 0.006,
+              "detritus_hydrolysis": 0.025
+            },
+            "substrate_response": {
+              "soft_digestion": 0.048,
+              "tough_digestion": 0.048,
+              "detritus_digestion": -0.042,
+              "reserve_fermentation": -0.012,
+              "fermentate_respiration": 0.03,
+              "detritus_hydrolysis": 0.048
+            },
+            "atp_response": {
+              "soft_digestion": 0.042,
+              "tough_digestion": -0.036000000000000004,
+              "detritus_digestion": 0.006,
+              "reserve_fermentation": 0.03,
+              "fermentate_respiration": -0.024,
+              "detritus_hydrolysis": 0.012
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "structure": {
           "enzymes": {},
@@ -389,7 +557,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gland": {
           "enzymes": {},
@@ -398,13 +573,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         }
       }
     },
@@ -508,7 +697,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0126,
+              "carbon_fixation": 0.0028
+            },
+            "substrate_response": {
+              "respiration": -0.024,
+              "carbon_fixation": -0.042
+            },
+            "atp_response": {
+              "respiration": -0.024,
+              "carbon_fixation": 0.03
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gut": {
           "enzymes": {
@@ -524,7 +729,35 @@
             "reserve": 0.04
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.039,
+              "tough_digestion": 0.006,
+              "detritus_digestion": 0.012,
+              "reserve_fermentation": 0.021,
+              "fermentate_respiration": 0.005,
+              "detritus_hydrolysis": 0.003
+            },
+            "substrate_response": {
+              "soft_digestion": -0.048,
+              "tough_digestion": 0.012,
+              "detritus_digestion": 0.012,
+              "reserve_fermentation": 0.006,
+              "fermentate_respiration": -0.018000000000000002,
+              "detritus_hydrolysis": 0.03
+            },
+            "atp_response": {
+              "soft_digestion": 0.024,
+              "tough_digestion": -0.042,
+              "detritus_digestion": -0.018000000000000002,
+              "reserve_fermentation": 0.018000000000000002,
+              "fermentate_respiration": 0.018000000000000002,
+              "detritus_hydrolysis": 0.018000000000000002
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "structure": {
           "enzymes": {},
@@ -533,7 +766,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gland": {
           "enzymes": {},
@@ -542,13 +782,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         }
       }
     },
@@ -653,7 +907,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105,
+              "carbon_fixation": 0.0011
+            },
+            "substrate_response": {
+              "respiration": -0.006,
+              "carbon_fixation": -0.024
+            },
+            "atp_response": {
+              "respiration": -0.036000000000000004,
+              "carbon_fixation": -0.042
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gut": {
           "enzymes": {
@@ -668,7 +938,35 @@
             "soft_tissue": 0.017
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.004,
+              "fermentate_respiration": 0.022,
+              "detritus_hydrolysis": 0.006
+            },
+            "substrate_response": {
+              "soft_digestion": -0.006,
+              "tough_digestion": 0.024,
+              "detritus_digestion": -0.048,
+              "reserve_fermentation": 0.042,
+              "fermentate_respiration": -0.006,
+              "detritus_hydrolysis": -0.03
+            },
+            "atp_response": {
+              "soft_digestion": 0.018000000000000002,
+              "tough_digestion": -0.048,
+              "detritus_digestion": -0.048,
+              "reserve_fermentation": -0.048,
+              "fermentate_respiration": -0.018000000000000002,
+              "detritus_hydrolysis": -0.024
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "structure": {
           "enzymes": {},
@@ -677,7 +975,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gland": {
           "enzymes": {},
@@ -686,13 +991,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         }
       }
     },
@@ -797,7 +1116,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00018
+            },
+            "substrate_response": {
+              "respiration": 0.042,
+              "carbon_fixation": 0.036000000000000004
+            },
+            "atp_response": {
+              "respiration": 0.006,
+              "carbon_fixation": -0.024
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gut": {
           "enzymes": {
@@ -812,7 +1147,35 @@
             "soft_tissue": 0.018000000000000002
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.002,
+              "fermentate_respiration": 0.008,
+              "detritus_hydrolysis": 0.023
+            },
+            "substrate_response": {
+              "soft_digestion": -0.006,
+              "tough_digestion": 0.036000000000000004,
+              "detritus_digestion": 0.018000000000000002,
+              "reserve_fermentation": 0.006,
+              "fermentate_respiration": -0.048,
+              "detritus_hydrolysis": -0.036000000000000004
+            },
+            "atp_response": {
+              "soft_digestion": 0.006,
+              "tough_digestion": 0.018000000000000002,
+              "detritus_digestion": -0.03,
+              "reserve_fermentation": -0.042,
+              "fermentate_respiration": 0.036000000000000004,
+              "detritus_hydrolysis": 0.048
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "structure": {
           "enzymes": {},
@@ -821,7 +1184,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gland": {
           "enzymes": {},
@@ -830,13 +1200,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         }
       }
     },
@@ -932,7 +1316,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105
+            },
+            "substrate_response": {
+              "respiration": 0.006
+            },
+            "atp_response": {
+              "respiration": 0.012
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gut": {
           "enzymes": {
@@ -948,7 +1345,35 @@
             "reserve": 0.04
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.025,
+              "fermentate_respiration": 0.003,
+              "detritus_hydrolysis": 0.002
+            },
+            "substrate_response": {
+              "soft_digestion": 0.018000000000000002,
+              "tough_digestion": -0.042,
+              "detritus_digestion": -0.036000000000000004,
+              "reserve_fermentation": 0.006,
+              "fermentate_respiration": -0.042,
+              "detritus_hydrolysis": 0.006
+            },
+            "atp_response": {
+              "soft_digestion": 0.012,
+              "tough_digestion": -0.03,
+              "detritus_digestion": -0.024,
+              "reserve_fermentation": -0.036000000000000004,
+              "fermentate_respiration": -0.006,
+              "detritus_hydrolysis": 0.018000000000000002
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "structure": {
           "enzymes": {},
@@ -957,7 +1382,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gland": {
           "enzymes": {},
@@ -966,13 +1398,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         }
       }
     },
@@ -1069,7 +1515,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00035
+            },
+            "substrate_response": {
+              "respiration": 0.024,
+              "carbon_fixation": -0.048
+            },
+            "atp_response": {
+              "respiration": 0.03,
+              "carbon_fixation": -0.024
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gut": {
           "enzymes": {
@@ -1084,7 +1546,35 @@
             "soft_tissue": 0.017
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.003,
+              "fermentate_respiration": 0.025,
+              "detritus_hydrolysis": 0.005
+            },
+            "substrate_response": {
+              "soft_digestion": -0.006,
+              "tough_digestion": 0.048,
+              "detritus_digestion": 0.018000000000000002,
+              "reserve_fermentation": 0.036000000000000004,
+              "fermentate_respiration": -0.042,
+              "detritus_hydrolysis": 0.048
+            },
+            "atp_response": {
+              "soft_digestion": -0.012,
+              "tough_digestion": -0.024,
+              "detritus_digestion": -0.006,
+              "reserve_fermentation": -0.006,
+              "fermentate_respiration": 0.03,
+              "detritus_hydrolysis": 0.012
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "structure": {
           "enzymes": {},
@@ -1093,7 +1583,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gland": {
           "enzymes": {},
@@ -1102,13 +1599,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         }
       }
     },
@@ -1204,7 +1715,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105
+            },
+            "substrate_response": {
+              "respiration": 0.048
+            },
+            "atp_response": {
+              "respiration": -0.042
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gut": {
           "enzymes": {
@@ -1219,7 +1743,35 @@
             "soft_tissue": 0.016
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.003,
+              "fermentate_respiration": 0.006,
+              "detritus_hydrolysis": 0.025
+            },
+            "substrate_response": {
+              "soft_digestion": -0.036000000000000004,
+              "tough_digestion": -0.042,
+              "detritus_digestion": 0.036000000000000004,
+              "reserve_fermentation": 0.036000000000000004,
+              "fermentate_respiration": -0.048,
+              "detritus_hydrolysis": -0.018000000000000002
+            },
+            "atp_response": {
+              "soft_digestion": 0.03,
+              "tough_digestion": -0.018000000000000002,
+              "detritus_digestion": -0.006,
+              "reserve_fermentation": 0.012,
+              "fermentate_respiration": -0.042,
+              "detritus_hydrolysis": -0.048
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "structure": {
           "enzymes": {},
@@ -1228,7 +1780,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gland": {
           "enzymes": {},
@@ -1237,13 +1796,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         }
       }
     },
@@ -1340,7 +1913,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00035
+            },
+            "substrate_response": {
+              "respiration": 0.018000000000000002,
+              "carbon_fixation": 0.042
+            },
+            "atp_response": {
+              "respiration": -0.048,
+              "carbon_fixation": 0.024
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gut": {
           "enzymes": {
@@ -1356,7 +1945,35 @@
             "reserve": 0.04
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.021,
+              "fermentate_respiration": 0.005,
+              "detritus_hydrolysis": 0.003
+            },
+            "substrate_response": {
+              "soft_digestion": -0.024,
+              "tough_digestion": 0.048,
+              "detritus_digestion": 0.006,
+              "reserve_fermentation": 0.036000000000000004,
+              "fermentate_respiration": -0.042,
+              "detritus_hydrolysis": -0.012
+            },
+            "atp_response": {
+              "soft_digestion": 0.012,
+              "tough_digestion": 0.006,
+              "detritus_digestion": 0.018000000000000002,
+              "reserve_fermentation": 0.036000000000000004,
+              "fermentate_respiration": -0.048,
+              "detritus_hydrolysis": -0.036000000000000004
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "structure": {
           "enzymes": {},
@@ -1365,7 +1982,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gland": {
           "enzymes": {},
@@ -1374,13 +1998,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         }
       }
     },
@@ -1476,7 +2114,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0119
+            },
+            "substrate_response": {
+              "respiration": -0.006
+            },
+            "atp_response": {
+              "respiration": -0.048
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gut": {
           "enzymes": {
@@ -1491,7 +2142,35 @@
             "soft_tissue": 0.018000000000000002
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.036,
+              "tough_digestion": 0.009000000000000001,
+              "detritus_digestion": 0.01,
+              "reserve_fermentation": 0.004,
+              "fermentate_respiration": 0.022,
+              "detritus_hydrolysis": 0.006
+            },
+            "substrate_response": {
+              "soft_digestion": 0.006,
+              "tough_digestion": -0.048,
+              "detritus_digestion": -0.03,
+              "reserve_fermentation": -0.03,
+              "fermentate_respiration": -0.042,
+              "detritus_hydrolysis": -0.042
+            },
+            "atp_response": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.03,
+              "detritus_digestion": -0.012,
+              "reserve_fermentation": -0.006,
+              "fermentate_respiration": -0.036000000000000004,
+              "detritus_hydrolysis": 0.036000000000000004
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "structure": {
           "enzymes": {},
@@ -1500,7 +2179,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gland": {
           "enzymes": {},
@@ -1509,13 +2195,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         }
       }
     },
@@ -1619,7 +2319,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0126,
+              "carbon_fixation": 0.0028
+            },
+            "substrate_response": {
+              "respiration": 0.012,
+              "carbon_fixation": 0.036000000000000004
+            },
+            "atp_response": {
+              "respiration": -0.03,
+              "carbon_fixation": 0.042
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gut": {
           "enzymes": {
@@ -1634,7 +2350,35 @@
             "soft_tissue": 0.016
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.039,
+              "tough_digestion": 0.006,
+              "detritus_digestion": 0.012,
+              "reserve_fermentation": 0.002,
+              "fermentate_respiration": 0.008,
+              "detritus_hydrolysis": 0.023
+            },
+            "substrate_response": {
+              "soft_digestion": -0.006,
+              "tough_digestion": -0.006,
+              "detritus_digestion": 0.018000000000000002,
+              "reserve_fermentation": 0.036000000000000004,
+              "fermentate_respiration": -0.012,
+              "detritus_hydrolysis": 0.03
+            },
+            "atp_response": {
+              "soft_digestion": -0.012,
+              "tough_digestion": 0.036000000000000004,
+              "detritus_digestion": -0.012,
+              "reserve_fermentation": -0.024,
+              "fermentate_respiration": -0.042,
+              "detritus_hydrolysis": 0.042
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "structure": {
           "enzymes": {},
@@ -1643,7 +2387,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gland": {
           "enzymes": {},
@@ -1652,13 +2403,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         }
       }
     },
@@ -1763,7 +2528,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105,
+              "carbon_fixation": 0.0011
+            },
+            "substrate_response": {
+              "respiration": 0.024,
+              "carbon_fixation": 0.024
+            },
+            "atp_response": {
+              "respiration": 0.03,
+              "carbon_fixation": -0.006
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gut": {
           "enzymes": {
@@ -1779,7 +2560,35 @@
             "reserve": 0.04
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.025,
+              "fermentate_respiration": 0.003,
+              "detritus_hydrolysis": 0.002
+            },
+            "substrate_response": {
+              "soft_digestion": -0.036000000000000004,
+              "tough_digestion": 0.012,
+              "detritus_digestion": -0.006,
+              "reserve_fermentation": 0.006,
+              "fermentate_respiration": 0.03,
+              "detritus_hydrolysis": -0.012
+            },
+            "atp_response": {
+              "soft_digestion": -0.03,
+              "tough_digestion": -0.018000000000000002,
+              "detritus_digestion": 0.006,
+              "reserve_fermentation": -0.03,
+              "fermentate_respiration": 0.024,
+              "detritus_hydrolysis": 0.042
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "structure": {
           "enzymes": {},
@@ -1788,7 +2597,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gland": {
           "enzymes": {},
@@ -1797,13 +2613,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         }
       }
     },
@@ -1908,7 +2738,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00018
+            },
+            "substrate_response": {
+              "respiration": -0.036000000000000004,
+              "carbon_fixation": 0.03
+            },
+            "atp_response": {
+              "respiration": -0.03,
+              "carbon_fixation": 0.036000000000000004
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gut": {
           "enzymes": {
@@ -1923,7 +2769,35 @@
             "soft_tissue": 0.018000000000000002
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.003,
+              "fermentate_respiration": 0.025,
+              "detritus_hydrolysis": 0.005
+            },
+            "substrate_response": {
+              "soft_digestion": -0.018000000000000002,
+              "tough_digestion": -0.036000000000000004,
+              "detritus_digestion": -0.012,
+              "reserve_fermentation": 0.042,
+              "fermentate_respiration": 0.006,
+              "detritus_hydrolysis": 0.012
+            },
+            "atp_response": {
+              "soft_digestion": 0.006,
+              "tough_digestion": -0.03,
+              "detritus_digestion": 0.03,
+              "reserve_fermentation": -0.036000000000000004,
+              "fermentate_respiration": -0.012,
+              "detritus_hydrolysis": 0.042
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "structure": {
           "enzymes": {},
@@ -1932,7 +2806,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gland": {
           "enzymes": {},
@@ -1941,13 +2822,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         }
       }
     },
@@ -2043,7 +2938,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105
+            },
+            "substrate_response": {
+              "respiration": -0.036000000000000004
+            },
+            "atp_response": {
+              "respiration": 0.03
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gut": {
           "enzymes": {
@@ -2058,7 +2966,35 @@
             "soft_tissue": 0.016
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.003,
+              "fermentate_respiration": 0.006,
+              "detritus_hydrolysis": 0.025
+            },
+            "substrate_response": {
+              "soft_digestion": 0.018000000000000002,
+              "tough_digestion": -0.042,
+              "detritus_digestion": -0.036000000000000004,
+              "reserve_fermentation": 0.03,
+              "fermentate_respiration": 0.036000000000000004,
+              "detritus_hydrolysis": -0.006
+            },
+            "atp_response": {
+              "soft_digestion": -0.018000000000000002,
+              "tough_digestion": -0.006,
+              "detritus_digestion": 0.036000000000000004,
+              "reserve_fermentation": 0.048,
+              "fermentate_respiration": 0.024,
+              "detritus_hydrolysis": -0.006
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "structure": {
           "enzymes": {},
@@ -2067,7 +3003,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gland": {
           "enzymes": {},
@@ -2076,13 +3019,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         }
       }
     },
@@ -2179,7 +3136,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00035
+            },
+            "substrate_response": {
+              "respiration": -0.024,
+              "carbon_fixation": -0.018000000000000002
+            },
+            "atp_response": {
+              "respiration": -0.018000000000000002,
+              "carbon_fixation": 0.036000000000000004
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gut": {
           "enzymes": {
@@ -2195,7 +3168,35 @@
             "reserve": 0.04
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.021,
+              "fermentate_respiration": 0.005,
+              "detritus_hydrolysis": 0.003
+            },
+            "substrate_response": {
+              "soft_digestion": -0.048,
+              "tough_digestion": 0.012,
+              "detritus_digestion": 0.012,
+              "reserve_fermentation": 0.042,
+              "fermentate_respiration": -0.036000000000000004,
+              "detritus_hydrolysis": -0.048
+            },
+            "atp_response": {
+              "soft_digestion": -0.048,
+              "tough_digestion": 0.03,
+              "detritus_digestion": -0.036000000000000004,
+              "reserve_fermentation": 0.036000000000000004,
+              "fermentate_respiration": 0.048,
+              "detritus_hydrolysis": 0.012
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "structure": {
           "enzymes": {},
@@ -2204,7 +3205,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gland": {
           "enzymes": {},
@@ -2213,13 +3221,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         }
       }
     },
@@ -2315,7 +3337,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105
+            },
+            "substrate_response": {
+              "respiration": 0.036000000000000004
+            },
+            "atp_response": {
+              "respiration": -0.042
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gut": {
           "enzymes": {
@@ -2330,7 +3365,35 @@
             "soft_tissue": 0.016
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.004,
+              "fermentate_respiration": 0.022,
+              "detritus_hydrolysis": 0.006
+            },
+            "substrate_response": {
+              "soft_digestion": -0.042,
+              "tough_digestion": -0.018000000000000002,
+              "detritus_digestion": 0.048,
+              "reserve_fermentation": -0.036000000000000004,
+              "fermentate_respiration": -0.048,
+              "detritus_hydrolysis": 0.03
+            },
+            "atp_response": {
+              "soft_digestion": 0.012,
+              "tough_digestion": 0.036000000000000004,
+              "detritus_digestion": -0.048,
+              "reserve_fermentation": 0.024,
+              "fermentate_respiration": 0.012,
+              "detritus_hydrolysis": -0.048
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "structure": {
           "enzymes": {},
@@ -2339,7 +3402,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gland": {
           "enzymes": {},
@@ -2348,13 +3418,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         }
       }
     },
@@ -2451,7 +3535,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00035
+            },
+            "substrate_response": {
+              "respiration": 0.012,
+              "carbon_fixation": 0.036000000000000004
+            },
+            "atp_response": {
+              "respiration": -0.024,
+              "carbon_fixation": 0.03
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gut": {
           "enzymes": {
@@ -2466,7 +3566,35 @@
             "soft_tissue": 0.017
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.002,
+              "fermentate_respiration": 0.008,
+              "detritus_hydrolysis": 0.023
+            },
+            "substrate_response": {
+              "soft_digestion": -0.03,
+              "tough_digestion": 0.048,
+              "detritus_digestion": -0.036000000000000004,
+              "reserve_fermentation": -0.03,
+              "fermentate_respiration": -0.048,
+              "detritus_hydrolysis": 0.048
+            },
+            "atp_response": {
+              "soft_digestion": 0.03,
+              "tough_digestion": -0.006,
+              "detritus_digestion": -0.036000000000000004,
+              "reserve_fermentation": -0.024,
+              "fermentate_respiration": -0.042,
+              "detritus_hydrolysis": 0.048
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "structure": {
           "enzymes": {},
@@ -2475,7 +3603,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gland": {
           "enzymes": {},
@@ -2484,13 +3619,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         }
       }
     },
@@ -2586,7 +3735,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0119
+            },
+            "substrate_response": {
+              "respiration": -0.006
+            },
+            "atp_response": {
+              "respiration": -0.036000000000000004
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gut": {
           "enzymes": {
@@ -2602,7 +3764,35 @@
             "reserve": 0.04
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.036,
+              "tough_digestion": 0.009000000000000001,
+              "detritus_digestion": 0.01,
+              "reserve_fermentation": 0.025,
+              "fermentate_respiration": 0.003,
+              "detritus_hydrolysis": 0.002
+            },
+            "substrate_response": {
+              "soft_digestion": 0.036000000000000004,
+              "tough_digestion": -0.048,
+              "detritus_digestion": 0.006,
+              "reserve_fermentation": 0.03,
+              "fermentate_respiration": 0.006,
+              "detritus_hydrolysis": 0.03
+            },
+            "atp_response": {
+              "soft_digestion": 0.036000000000000004,
+              "tough_digestion": -0.03,
+              "detritus_digestion": -0.012,
+              "reserve_fermentation": -0.042,
+              "fermentate_respiration": -0.024,
+              "detritus_hydrolysis": 0.024
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "structure": {
           "enzymes": {},
@@ -2611,7 +3801,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gland": {
           "enzymes": {},
@@ -2620,13 +3817,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         }
       }
     },
@@ -2730,7 +3941,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0126,
+              "carbon_fixation": 0.0028
+            },
+            "substrate_response": {
+              "respiration": 0.042,
+              "carbon_fixation": 0.042
+            },
+            "atp_response": {
+              "respiration": 0.018000000000000002,
+              "carbon_fixation": -0.018000000000000002
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gut": {
           "enzymes": {
@@ -2745,7 +3972,35 @@
             "soft_tissue": 0.016
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.039,
+              "tough_digestion": 0.006,
+              "detritus_digestion": 0.012,
+              "reserve_fermentation": 0.003,
+              "fermentate_respiration": 0.025,
+              "detritus_hydrolysis": 0.005
+            },
+            "substrate_response": {
+              "soft_digestion": -0.024,
+              "tough_digestion": -0.006,
+              "detritus_digestion": -0.042,
+              "reserve_fermentation": 0.024,
+              "fermentate_respiration": -0.036000000000000004,
+              "detritus_hydrolysis": -0.042
+            },
+            "atp_response": {
+              "soft_digestion": -0.024,
+              "tough_digestion": -0.006,
+              "detritus_digestion": 0.006,
+              "reserve_fermentation": -0.006,
+              "fermentate_respiration": -0.048,
+              "detritus_hydrolysis": 0.006
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "structure": {
           "enzymes": {},
@@ -2754,7 +4009,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gland": {
           "enzymes": {},
@@ -2763,13 +4025,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         }
       }
     },
@@ -2874,7 +4150,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105,
+              "carbon_fixation": 0.0011
+            },
+            "substrate_response": {
+              "respiration": 0.03,
+              "carbon_fixation": 0.048
+            },
+            "atp_response": {
+              "respiration": -0.006,
+              "carbon_fixation": -0.042
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gut": {
           "enzymes": {
@@ -2889,7 +4181,35 @@
             "soft_tissue": 0.017
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.003,
+              "fermentate_respiration": 0.006,
+              "detritus_hydrolysis": 0.025
+            },
+            "substrate_response": {
+              "soft_digestion": -0.036000000000000004,
+              "tough_digestion": -0.036000000000000004,
+              "detritus_digestion": -0.018000000000000002,
+              "reserve_fermentation": -0.042,
+              "fermentate_respiration": 0.024,
+              "detritus_hydrolysis": 0.036000000000000004
+            },
+            "atp_response": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.012,
+              "detritus_digestion": 0.048,
+              "reserve_fermentation": -0.024,
+              "fermentate_respiration": 0.03,
+              "detritus_hydrolysis": -0.018000000000000002
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "structure": {
           "enzymes": {},
@@ -2898,7 +4218,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gland": {
           "enzymes": {},
@@ -2907,13 +4234,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         }
       }
     },
@@ -3018,7 +4359,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00018
+            },
+            "substrate_response": {
+              "respiration": -0.006,
+              "carbon_fixation": -0.012
+            },
+            "atp_response": {
+              "respiration": -0.012,
+              "carbon_fixation": 0.024
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gut": {
           "enzymes": {
@@ -3034,7 +4391,35 @@
             "reserve": 0.04
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.021,
+              "fermentate_respiration": 0.005,
+              "detritus_hydrolysis": 0.003
+            },
+            "substrate_response": {
+              "soft_digestion": -0.024,
+              "tough_digestion": 0.018000000000000002,
+              "detritus_digestion": -0.012,
+              "reserve_fermentation": 0.012,
+              "fermentate_respiration": 0.012,
+              "detritus_hydrolysis": 0.018000000000000002
+            },
+            "atp_response": {
+              "soft_digestion": 0.03,
+              "tough_digestion": -0.024,
+              "detritus_digestion": 0.012,
+              "reserve_fermentation": 0.024,
+              "fermentate_respiration": -0.012,
+              "detritus_hydrolysis": 0.048
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "structure": {
           "enzymes": {},
@@ -3043,7 +4428,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gland": {
           "enzymes": {},
@@ -3052,13 +4444,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         }
       }
     },
@@ -3154,7 +4560,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105
+            },
+            "substrate_response": {
+              "respiration": 0.036000000000000004
+            },
+            "atp_response": {
+              "respiration": -0.048
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gut": {
           "enzymes": {
@@ -3169,7 +4588,35 @@
             "soft_tissue": 0.016
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.004,
+              "fermentate_respiration": 0.022,
+              "detritus_hydrolysis": 0.006
+            },
+            "substrate_response": {
+              "soft_digestion": -0.036000000000000004,
+              "tough_digestion": 0.006,
+              "detritus_digestion": 0.024,
+              "reserve_fermentation": -0.024,
+              "fermentate_respiration": -0.048,
+              "detritus_hydrolysis": 0.012
+            },
+            "atp_response": {
+              "soft_digestion": -0.042,
+              "tough_digestion": 0.012,
+              "detritus_digestion": -0.036000000000000004,
+              "reserve_fermentation": 0.018000000000000002,
+              "fermentate_respiration": 0.006,
+              "detritus_hydrolysis": 0.018000000000000002
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "structure": {
           "enzymes": {},
@@ -3178,7 +4625,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gland": {
           "enzymes": {},
@@ -3187,13 +4641,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         }
       }
     },
@@ -3290,7 +4758,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00035
+            },
+            "substrate_response": {
+              "respiration": -0.018000000000000002,
+              "carbon_fixation": -0.006
+            },
+            "atp_response": {
+              "respiration": 0.03,
+              "carbon_fixation": -0.012
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gut": {
           "enzymes": {
@@ -3305,7 +4789,35 @@
             "soft_tissue": 0.017
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.002,
+              "fermentate_respiration": 0.008,
+              "detritus_hydrolysis": 0.023
+            },
+            "substrate_response": {
+              "soft_digestion": 0.024,
+              "tough_digestion": 0.018000000000000002,
+              "detritus_digestion": -0.018000000000000002,
+              "reserve_fermentation": 0.036000000000000004,
+              "fermentate_respiration": 0.036000000000000004,
+              "detritus_hydrolysis": 0.03
+            },
+            "atp_response": {
+              "soft_digestion": -0.03,
+              "tough_digestion": -0.03,
+              "detritus_digestion": -0.006,
+              "reserve_fermentation": 0.018000000000000002,
+              "fermentate_respiration": 0.018000000000000002,
+              "detritus_hydrolysis": 0.006
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "structure": {
           "enzymes": {},
@@ -3314,7 +4826,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gland": {
           "enzymes": {},
@@ -3323,13 +4842,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         }
       }
     },
@@ -3425,7 +4958,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105
+            },
+            "substrate_response": {
+              "respiration": -0.042
+            },
+            "atp_response": {
+              "respiration": -0.036000000000000004
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gut": {
           "enzymes": {
@@ -3441,7 +4987,35 @@
             "reserve": 0.04
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.025,
+              "fermentate_respiration": 0.003,
+              "detritus_hydrolysis": 0.002
+            },
+            "substrate_response": {
+              "soft_digestion": 0.048,
+              "tough_digestion": 0.03,
+              "detritus_digestion": 0.03,
+              "reserve_fermentation": 0.03,
+              "fermentate_respiration": 0.006,
+              "detritus_hydrolysis": -0.018000000000000002
+            },
+            "atp_response": {
+              "soft_digestion": -0.042,
+              "tough_digestion": -0.018000000000000002,
+              "detritus_digestion": -0.036000000000000004,
+              "reserve_fermentation": 0.006,
+              "fermentate_respiration": -0.006,
+              "detritus_hydrolysis": 0.018000000000000002
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "structure": {
           "enzymes": {},
@@ -3450,7 +5024,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gland": {
           "enzymes": {},
@@ -3459,13 +5040,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         }
       }
     },
@@ -3562,7 +5157,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00035
+            },
+            "substrate_response": {
+              "respiration": -0.012,
+              "carbon_fixation": 0.012
+            },
+            "atp_response": {
+              "respiration": 0.006,
+              "carbon_fixation": 0.036000000000000004
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gut": {
           "enzymes": {
@@ -3577,7 +5188,35 @@
             "soft_tissue": 0.017
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.003,
+              "fermentate_respiration": 0.025,
+              "detritus_hydrolysis": 0.005
+            },
+            "substrate_response": {
+              "soft_digestion": 0.006,
+              "tough_digestion": -0.03,
+              "detritus_digestion": 0.006,
+              "reserve_fermentation": 0.048,
+              "fermentate_respiration": -0.048,
+              "detritus_hydrolysis": 0.048
+            },
+            "atp_response": {
+              "soft_digestion": -0.042,
+              "tough_digestion": 0.042,
+              "detritus_digestion": 0.036000000000000004,
+              "reserve_fermentation": -0.006,
+              "fermentate_respiration": 0.018000000000000002,
+              "detritus_hydrolysis": -0.024
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "structure": {
           "enzymes": {},
@@ -3586,7 +5225,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gland": {
           "enzymes": {},
@@ -3595,13 +5241,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         }
       }
     },
@@ -3697,7 +5357,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0119
+            },
+            "substrate_response": {
+              "respiration": 0.03
+            },
+            "atp_response": {
+              "respiration": 0.042
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gut": {
           "enzymes": {
@@ -3712,7 +5385,35 @@
             "soft_tissue": 0.018000000000000002
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.036,
+              "tough_digestion": 0.009000000000000001,
+              "detritus_digestion": 0.01,
+              "reserve_fermentation": 0.003,
+              "fermentate_respiration": 0.006,
+              "detritus_hydrolysis": 0.025
+            },
+            "substrate_response": {
+              "soft_digestion": -0.006,
+              "tough_digestion": 0.024,
+              "detritus_digestion": 0.036000000000000004,
+              "reserve_fermentation": 0.018000000000000002,
+              "fermentate_respiration": 0.042,
+              "detritus_hydrolysis": 0.042
+            },
+            "atp_response": {
+              "soft_digestion": -0.036000000000000004,
+              "tough_digestion": 0.024,
+              "detritus_digestion": 0.048,
+              "reserve_fermentation": -0.03,
+              "fermentate_respiration": -0.036000000000000004,
+              "detritus_hydrolysis": -0.006
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "structure": {
           "enzymes": {},
@@ -3721,7 +5422,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gland": {
           "enzymes": {},
@@ -3730,13 +5438,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         }
       }
     },
@@ -3840,7 +5562,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0126,
+              "carbon_fixation": 0.0028
+            },
+            "substrate_response": {
+              "respiration": 0.03,
+              "carbon_fixation": 0.012
+            },
+            "atp_response": {
+              "respiration": 0.012,
+              "carbon_fixation": 0.03
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gut": {
           "enzymes": {
@@ -3856,7 +5594,35 @@
             "reserve": 0.04
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.039,
+              "tough_digestion": 0.006,
+              "detritus_digestion": 0.012,
+              "reserve_fermentation": 0.021,
+              "fermentate_respiration": 0.005,
+              "detritus_hydrolysis": 0.003
+            },
+            "substrate_response": {
+              "soft_digestion": -0.036000000000000004,
+              "tough_digestion": -0.048,
+              "detritus_digestion": -0.006,
+              "reserve_fermentation": 0.036000000000000004,
+              "fermentate_respiration": -0.012,
+              "detritus_hydrolysis": -0.036000000000000004
+            },
+            "atp_response": {
+              "soft_digestion": 0.036000000000000004,
+              "tough_digestion": -0.018000000000000002,
+              "detritus_digestion": 0.042,
+              "reserve_fermentation": -0.018000000000000002,
+              "fermentate_respiration": -0.042,
+              "detritus_hydrolysis": -0.042
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "structure": {
           "enzymes": {},
@@ -3865,7 +5631,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gland": {
           "enzymes": {},
@@ -3874,13 +5647,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         }
       }
     },
@@ -3985,7 +5772,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105,
+              "carbon_fixation": 0.0011
+            },
+            "substrate_response": {
+              "respiration": -0.012,
+              "carbon_fixation": -0.03
+            },
+            "atp_response": {
+              "respiration": -0.03,
+              "carbon_fixation": -0.03
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gut": {
           "enzymes": {
@@ -4000,7 +5803,35 @@
             "soft_tissue": 0.017
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.004,
+              "fermentate_respiration": 0.022,
+              "detritus_hydrolysis": 0.006
+            },
+            "substrate_response": {
+              "soft_digestion": -0.006,
+              "tough_digestion": -0.036000000000000004,
+              "detritus_digestion": 0.036000000000000004,
+              "reserve_fermentation": 0.042,
+              "fermentate_respiration": 0.036000000000000004,
+              "detritus_hydrolysis": -0.03
+            },
+            "atp_response": {
+              "soft_digestion": 0.006,
+              "tough_digestion": 0.036000000000000004,
+              "detritus_digestion": 0.036000000000000004,
+              "reserve_fermentation": -0.042,
+              "fermentate_respiration": -0.024,
+              "detritus_hydrolysis": -0.036000000000000004
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "structure": {
           "enzymes": {},
@@ -4009,7 +5840,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gland": {
           "enzymes": {},
@@ -4018,13 +5856,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         }
       }
     },
@@ -4129,7 +5981,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00018
+            },
+            "substrate_response": {
+              "respiration": 0.018000000000000002,
+              "carbon_fixation": 0.036000000000000004
+            },
+            "atp_response": {
+              "respiration": 0.03,
+              "carbon_fixation": -0.03
+            },
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gut": {
           "enzymes": {
@@ -4144,7 +6012,35 @@
             "soft_tissue": 0.018000000000000002
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.002,
+              "fermentate_respiration": 0.008,
+              "detritus_hydrolysis": 0.023
+            },
+            "substrate_response": {
+              "soft_digestion": -0.012,
+              "tough_digestion": -0.006,
+              "detritus_digestion": 0.018000000000000002,
+              "reserve_fermentation": -0.042,
+              "fermentate_respiration": 0.018000000000000002,
+              "detritus_hydrolysis": 0.042
+            },
+            "atp_response": {
+              "soft_digestion": 0.012,
+              "tough_digestion": -0.048,
+              "detritus_digestion": 0.012,
+              "reserve_fermentation": -0.018000000000000002,
+              "fermentate_respiration": -0.024,
+              "detritus_hydrolysis": 0.018000000000000002
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "structure": {
           "enzymes": {},
@@ -4153,7 +6049,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gland": {
           "enzymes": {},
@@ -4162,13 +6065,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         }
       }
     },
@@ -4264,7 +6181,20 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0105
+            },
+            "substrate_response": {
+              "respiration": -0.018000000000000002
+            },
+            "atp_response": {
+              "respiration": 0.018000000000000002
+            },
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "gut": {
           "enzymes": {
@@ -4280,7 +6210,35 @@
             "reserve": 0.04
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.03,
+              "tough_digestion": 0.007,
+              "detritus_digestion": 0.014,
+              "reserve_fermentation": 0.025,
+              "fermentate_respiration": 0.003,
+              "detritus_hydrolysis": 0.002
+            },
+            "substrate_response": {
+              "soft_digestion": -0.048,
+              "tough_digestion": 0.036000000000000004,
+              "detritus_digestion": -0.012,
+              "reserve_fermentation": -0.006,
+              "fermentate_respiration": 0.024,
+              "detritus_hydrolysis": 0.042
+            },
+            "atp_response": {
+              "soft_digestion": -0.006,
+              "tough_digestion": -0.012,
+              "detritus_digestion": -0.024,
+              "reserve_fermentation": 0.048,
+              "fermentate_respiration": -0.012,
+              "detritus_hydrolysis": 0.03
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "structure": {
           "enzymes": {},
@@ -4289,7 +6247,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "gland": {
           "enzymes": {},
@@ -4298,13 +6263,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         }
       }
     },
@@ -4401,7 +6380,23 @@
             "inorganic_carbon": 0.02
           },
           "atp": 0.78,
-          "atp_capacity": 1.05
+          "atp_capacity": 1.05,
+          "regulation": {
+            "baseline": {
+              "respiration": 0.0112,
+              "carbon_fixation": 0.00035
+            },
+            "substrate_response": {
+              "respiration": 0.042,
+              "carbon_fixation": 0.042
+            },
+            "atp_response": {
+              "respiration": -0.024,
+              "carbon_fixation": 0.048
+            },
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         },
         "gut": {
           "enzymes": {
@@ -4416,7 +6411,35 @@
             "soft_tissue": 0.017
           },
           "atp": 0.07,
-          "atp_capacity": 0.17
+          "atp_capacity": 0.17,
+          "regulation": {
+            "baseline": {
+              "soft_digestion": 0.033,
+              "tough_digestion": 0.008,
+              "detritus_digestion": 0.016,
+              "reserve_fermentation": 0.003,
+              "fermentate_respiration": 0.025,
+              "detritus_hydrolysis": 0.005
+            },
+            "substrate_response": {
+              "soft_digestion": -0.048,
+              "tough_digestion": -0.048,
+              "detritus_digestion": 0.018000000000000002,
+              "reserve_fermentation": -0.006,
+              "fermentate_respiration": -0.024,
+              "detritus_hydrolysis": 0.012
+            },
+            "atp_response": {
+              "soft_digestion": 0.006,
+              "tough_digestion": -0.024,
+              "detritus_digestion": 0.024,
+              "reserve_fermentation": -0.048,
+              "fermentate_respiration": 0.018000000000000002,
+              "detritus_hydrolysis": 0.042
+            },
+            "time_constant_seconds": 4.0,
+            "change_cost_atp_per_expression": 0.24
+          }
         },
         "structure": {
           "enzymes": {},
@@ -4425,7 +6448,14 @@
             "soft_tissue": 0.006
           },
           "atp": 0.01,
-          "atp_capacity": 0.08
+          "atp_capacity": 0.08,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 12.0,
+            "change_cost_atp_per_expression": 0.6
+          }
         },
         "gland": {
           "enzymes": {},
@@ -4434,13 +6464,27 @@
             "reserve": 0.006
           },
           "atp": 0.015,
-          "atp_capacity": 0.06
+          "atp_capacity": 0.06,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 36.0,
+            "change_cost_atp_per_expression": 0.04
+          }
         },
         "brood": {
           "enzymes": {},
           "pools": {},
           "atp": 0.0,
-          "atp_capacity": 0.5
+          "atp_capacity": 0.5,
+          "regulation": {
+            "baseline": {},
+            "substrate_response": {},
+            "atp_response": {},
+            "time_constant_seconds": 96.0,
+            "change_cost_atp_per_expression": 0.1
+          }
         }
       }
     }

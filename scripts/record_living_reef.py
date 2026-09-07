@@ -20,7 +20,7 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FORMAT = "chreatures-living-reef-public-recording-v2"
+FORMAT = "chreatures-living-reef-public-recording-v3"
 V4_ACTION_NAMES = (
     "thrust", "yaw", "gaze_pitch", "posture", "grip",
     "signal_low", "signal_mid", "signal_high", "eat", "release", "secrete",
@@ -62,6 +62,9 @@ EVENT_KINDS = (
     "contact_end",
     "visitor_material",
     "visitor_stimulus",
+    "physical-material-entered-region",
+    "regional-material-flow",
+    "regional-material-outlet",
 )
 UNAVAILABLE_EVENT_CAPABILITIES = (
     "material_ingestion",
@@ -324,6 +327,96 @@ def optional_summary(value: Any, label: str) -> dict[str, Any]:
     return {"status": "recorded", "value": json.loads(encoded)}
 
 
+def acquired_action_summary(value: Any, action_count: int) -> dict[str, Any]:
+    """Copy the bounded public eight-candidate suffix diagnostics when present."""
+    if value is None:
+        return optional_summary(None, "acquired-action candidate summary")
+    if not isinstance(value, Mapping):
+        raise ValueError("acquired-action candidate summary must be an object")
+    count = 8
+    arrays = {}
+    for key, convert in (
+        ("available", bool),
+        ("recalled", bool),
+        ("slot", int),
+        ("generation", int),
+        ("length_ticks", int),
+        ("support", int),
+        ("empirical_score", lambda item: finite(item, key)),
+        ("recall_score", lambda item: finite(item, key)),
+    ):
+        source = value.get(key)
+        if not isinstance(source, list) or len(source) != count:
+            raise ValueError(f"acquired-action {key} must contain eight candidates")
+        arrays[key] = [convert(item) for item in source]
+    first_actions = value.get("first_action")
+    if not isinstance(first_actions, list) or len(first_actions) != count:
+        raise ValueError("acquired-action first actions must contain eight candidates")
+    arrays["first_action"] = [
+        vector(row, action_count, "acquired-action first action")
+        for row in first_actions
+    ]
+    arrays["selected_candidate"] = int(value["selected_candidate"])
+    arrays["occupied_slots"] = int(value["occupied_slots"])
+    arrays["learned_total"] = int(value["learned_total"])
+    components = value.get("empirical_component_weights")
+    arrays["empirical_component_weights"] = vector(
+        components, 3, "acquired-action empirical component weights"
+    )
+    arrays["empirical_component_order"] = [
+        "movement_response", "energy_cost", "fatigue_recovery"
+    ]
+    arrays["empirical_tilt_limit"] = finite(value["empirical_tilt_limit"], "acquired-action empirical tilt limit")
+    arrays["meaning"] = str(value.get("meaning", "recorded recall diagnostic; support is execution frequency, not confidence"))
+    return {"status": "recorded", "value": arrays}
+
+
+def chemical_pools(value: Any, label: str) -> dict[str, float]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{label} must be a pool mapping")
+    return {str(key): finite(amount, f"{label} {key}") for key, amount in sorted(value.items())}
+
+
+def regional_matter_view(
+    state: Mapping[str, Any], node_indices: Mapping[str, int],
+    edge_indices: Mapping[str, int], outlet_indices: Mapping[str, int],
+    body_indices: Mapping[str, int], entity_indices: Mapping[str, int],
+) -> dict[str, Any]:
+    raw = state.get("biosphere", {}).get("regional_matter")
+    if raw is None:
+        return {"status": "unavailable", "reason": "host did not publish regional matter"}
+    if not isinstance(raw, Mapping) or raw.get("format") != "chreatures-regional-matter-view-v1":
+        raise ValueError("host regional matter view is invalid")
+    nodes=[]
+    for item in raw.get("nodes", []):
+        key=str(item["id"]);nodes.append({"node":node_indices[key],"row":int(item["row"]),"position":vector(item["position"],3,"regional node position"),"pools":chemical_pools(item["pools"],"regional node pools")})
+    edges=[]
+    for item in raw.get("edges", []):
+        key=str(item["id"]);edges.append({"edge":edge_indices[key],"source":node_indices[str(item["source"])],"target":node_indices[str(item["target"])],"accessibility":finite(item["accessibility"],"regional edge accessibility"),"last_moved_resources":chemical_pools(item["last_moved_resources"],"regional edge last movement"),"cumulative_moved_resources":chemical_pools(item["cumulative_moved_resources"],"regional edge cumulative movement")})
+    outlets=[]
+    for item in raw.get("outlets", []):
+        key=str(item["id"]);slots=item["slots"]
+        if not isinstance(slots,list): raise ValueError("regional outlet slots must be an array")
+        outlets.append({"outlet":outlet_indices[key],"region":node_indices[str(item["region"])],"position":vector(item["position"],3,"regional outlet position"),"interval_seconds":finite(item["interval_seconds"],"regional outlet interval"),"credit_seconds":finite(item["credit_seconds"],"regional outlet credit"),"slot_count":len(slots),"available_slots":int(item["available_slots"]),"last_moved_resources":chemical_pools(item["last_moved_resources"],"regional outlet last movement"),"cumulative_moved_resources":chemical_pools(item["cumulative_moved_resources"],"regional outlet cumulative movement")})
+    events=[]
+    for item in raw.get("last_events", []):
+        actors=item.get("actors",{});details=item.get("details",{});kind=str(item["kind"])
+        allowed={"physical-material-entered-region":{"face","receiver_row"},"regional-material-flow":{"route","accessibility","endpoints","directions"},"regional-material-outlet":{"outlet","source_row","position"}}
+        if kind not in allowed or set(details) != allowed[kind]:
+            raise ValueError(f"regional matter event {kind} has an invalid detail contract")
+        public_details=dict(details)
+        for key in ("receiver_row","source_row"):
+            if key in public_details: public_details[key]=int(public_details[key])
+        if "route" in public_details: public_details["route"]=edge_indices[str(public_details["route"])]
+        if "outlet" in public_details: public_details["outlet"]=outlet_indices[str(public_details["outlet"])]
+        if "endpoints" in public_details: public_details["endpoints"]=[node_indices[str(value)] for value in public_details["endpoints"]]
+        if "directions" in public_details: public_details["directions"]={str(pool):{"source":node_indices[str(direction["source"])],"target":node_indices[str(direction["target"])]} for pool,direction in sorted(public_details["directions"].items())}
+        quantities=[{"name":str(q["name"]),"value":finite(q["value"],"regional event quantity"),"unit":str(q["unit"])} for q in item.get("quantities",[])]
+        if any(q["unit"] != "synthetic-chemical-amount" for q in quantities): raise ValueError("regional matter event unit is invalid")
+        events.append({"kind":kind,"actors":{"bodies":[body_indices[str(value)] for value in actors.get("bodies",[]) if str(value) in body_indices],"entities":[entity_indices[str(value)] for value in actors.get("entities",[]) if str(value) in entity_indices]},"quantities":quantities,"details":public_details,"source":{"stream":"regional-matter","config_sha256":str(raw["config_sha256"])},"blob_refs":[]})
+    return {"status":"recorded","format":raw["format"],"config_sha256":str(raw["config_sha256"]),"time":finite(raw["time"],"regional matter time"),"step_index":int(raw["step_index"]),"nodes":sorted(nodes,key=lambda x:x["node"]),"edges":sorted(edges,key=lambda x:x["edge"]),"outlets":sorted(outlets,key=lambda x:x["outlet"]),"last_events":events,"units":{"position":"meter","pools":"synthetic-chemical-amount","movement":"synthetic-chemical-amount"}}
+
+
 def event_capabilities(state: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
     stream = state.get("evidence_event_stream")
     if stream is not None and not isinstance(stream, Mapping):
@@ -431,6 +524,7 @@ def evidence_events(
     entity_indices: dict[str, int],
     *,
     after_sequence: int,
+    regional_indices: tuple[Mapping[str, int], Mapping[str, int], Mapping[str, int]],
 ) -> list[dict[str, Any]]:
     raw = state.get("evidence_events")
     if raw is None:
@@ -513,6 +607,19 @@ def evidence_events(
                 for key in ("x", "y", "z", "tone", "strength", "remaining")
                 if key in signal
             }
+        node_indices, edge_indices, outlet_indices = regional_indices
+        if kind == "regional-material-flow":
+            raw_details["route"] = edge_indices[str(raw_details["route"])]
+            raw_details["endpoints"] = [node_indices[str(value)] for value in raw_details["endpoints"]]
+            raw_details["directions"] = {
+                str(pool): {
+                    "source": node_indices[str(direction["source"])],
+                    "target": node_indices[str(direction["target"])],
+                }
+                for pool, direction in sorted(raw_details["directions"].items())
+            }
+        elif kind == "regional-material-outlet":
+            raw_details["outlet"] = outlet_indices[str(raw_details["outlet"])]
         mechanism_details = public_event_value(
             raw_details, body_indices, entity_indices
         )
@@ -882,6 +989,9 @@ def resident_detail(
         "population_response": optional_summary(
             cognition.get("population_response"), "population response summary"
         ),
+        "acquired_action_candidates": acquired_action_summary(
+            cognition.get("acquired_action_candidates"), len(action_names)
+        ),
     }
 
 
@@ -889,6 +999,7 @@ def extract_frame(
     state: Mapping[str, Any], selected_id: str, body_indices: dict[str, int],
     entity_indices: dict[str, int], previous: Mapping[str, Any] | None,
     contract: Mapping[str, Any], event_cursor: int,
+    regional_indices: tuple[Mapping[str, int], Mapping[str, int], Mapping[str, int]],
 ) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
     bodies = state["bodies"]
     entities = state["entities"]
@@ -1011,6 +1122,9 @@ def extract_frame(
             for light in state.get("lights", [])
         ],
         "selected_body": selected_index,
+        "regional_matter": regional_matter_view(
+            state, *regional_indices, body_indices, entity_indices
+        ),
     }
     reasons = []
     if selected_detail["goal"]["changed"]:
@@ -1040,7 +1154,8 @@ def extract_frame(
         if selected_body["speed"] >= 0.1:
             reasons.append("rapid-motion")
     return frame, reasons, evidence_events(
-        state, body_indices, entity_indices, after_sequence=event_cursor
+        state, body_indices, entity_indices, after_sequence=event_cursor,
+        regional_indices=regional_indices,
     )
 
 
@@ -1078,6 +1193,16 @@ def main() -> int:
     entity_indices = {
         str(entity["id"]): index for index, entity in enumerate(entities)
     }
+    regional_initial = initial.get("biosphere", {}).get("regional_matter")
+    if regional_initial is None:
+        regional_indices = ({}, {}, {})
+    else:
+        if regional_initial.get("format") != "chreatures-regional-matter-view-v1":
+            raise SystemExit("host regional matter view is invalid")
+        regional_indices = tuple(
+            {str(item["id"]): index for index, item in enumerate(sorted(regional_initial[key], key=lambda value: str(value["id"])))}
+            for key in ("nodes", "edges", "outlets")
+        )
     selected_id = body_ids[args.resident_index]
     provenance = identity(initial, args)
     contract = organism_contract(initial)
@@ -1137,6 +1262,7 @@ def main() -> int:
                 previous,
                 contract,
                 event_cursor,
+                regional_indices,
             )
             for event in frame_events:
                 if event["tick"] > tick:
@@ -1322,6 +1448,16 @@ def main() -> int:
                 "source_path": "api/state.cognition[*].population_response",
                 "reason": "host did not publish a fitted population-response summary",
             }
+        ),
+        "acquired_action_candidates": (
+            {"status":"recorded","source_path":"api/state.cognition[*].acquired_action_candidates"}
+            if any(detail["acquired_action_candidates"]["status"] == "recorded" for frame in frames for detail in frame["resident_details"])
+            else {"status":"unavailable","source_path":"api/state.cognition[*].acquired_action_candidates","reason":"host did not publish acquired-action candidate diagnostics"}
+        ),
+        "regional_matter": (
+            {"status":"recorded","source_path":"api/state.biosphere.regional_matter","format":"chreatures-regional-matter-view-v1"}
+            if any(frame["regional_matter"]["status"] == "recorded" for frame in frames)
+            else {"status":"unavailable","source_path":"api/state.biosphere.regional_matter","reason":"host did not publish regional matter"}
         ),
         "events": event_stream_capabilities,
     }

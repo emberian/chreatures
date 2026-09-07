@@ -180,7 +180,7 @@ python scripts/population_campaign.py plan --output CAMPAIGN \
   --worlds-per-batch 4 --candidate-waves 1 --selection challenge
 ```
 
-Population genome version 2 also replaces the broad photosynthesis/digestion
+Population genome version 3 also replaces the broad photosynthesis/digestion
 allocation switch with inherited gains for carbon fixation, fermentate
 respiration, three gut-digestion pathways, reserve fermentation, and detritus
 hydrolysis. Cold phenotype compilation applies gains only to reactions present
@@ -188,6 +188,22 @@ in a founder row, caps each resulting coefficient at 0.06, and enforces a total
 enzyme activity budget of 0.10 per compartment. These are kinetic inheritance
 parameters; chemical inventory still comes only from funded founder or parent
 material.
+
+Version 3 additionally inherits physiological regulation without inheriting an
+adult's expression state. For each reaction, immutable candidate loci provide
+bounded signed substrate and ATP response gains in `[-0.06, 0.06]`. Body and gut
+rows each inherit a relaxation time in `[0.5, 120]` seconds and an expression
+change cost in `[0.01, 2.0]` ATP per unit expression. The constitutive baseline
+is compiled after the scarce 0.10 enzyme-budget projection and copied exactly to
+the founder regulation baseline. Runtime expression, acclimation history and ATP
+remain private state and never enter a genome or egg.
+
+The current regional founder bundle is built reproducibly with
+`scripts/build_regional_residents.py`. Its 32 templates have diverse signed
+response laws, relaxation times and costs without assigned species or metabolic
+roles. Candidate v3 mutation then supplies a second authenticated source of
+individual variation through the same cold compiler; reactions absent from a
+founder compartment remain absent.
 
 ## Material packet performance receipt
 

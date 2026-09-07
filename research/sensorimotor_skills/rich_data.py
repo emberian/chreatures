@@ -22,9 +22,10 @@ from chreatures.organism_interface import (
     RECTIFIED_AXES,
 )
 
-DATASET_FORMAT = "chreatures-sensorimotor-play-rich-v3"
-SCHEMA_ID = "chreatures-sensorimotor-play-rich-trajectory-v3"
-SCHEMA_PATH = Path(__file__).with_name("trajectory-schema-rich-v3.json")
+DATASET_FORMAT = "chreatures-sensorimotor-play-rich-v4"
+DATASET_VERSION = 4
+SCHEMA_ID = "chreatures-sensorimotor-play-rich-trajectory-v4"
+SCHEMA_PATH = Path(__file__).with_name("trajectory-schema-rich-v4.json")
 PROFILE_SHA256 = "c71380718ba5535dbaebdeaf8aa2e88cc45cf218312a03e13507877f02a5554e"
 CHANNEL_NAMES_SHA256 = (
     "b4c6b328116d820143e16ee922ccffd7b950dbe008efc580ad93056e01349bfa"
@@ -40,6 +41,7 @@ OUTCOME_ORDER = (
     "mouth_material_contacts",
     "homeostatic_reward",
 )
+ORGAN_FLOW_ORDER = ("release", "secretion", "allocation")
 _PARTITION = re.compile(
     r"episode-(?P<episode>[0-9]{3})/"
     r"world-(?P<world>[0-9]{3})/resident-(?P<resident>[0-9]{2})\Z"
@@ -73,6 +75,9 @@ def readonly(value: np.ndarray) -> np.ndarray:
 @dataclass(frozen=True)
 class RichEpisode:
     episode: int
+    shard: int
+    start_tick: int
+    stop_tick: int
     stage: int
     packet_path: Path
     packet_sha256: str
@@ -84,6 +89,7 @@ class RichEpisode:
     canonical: np.ndarray
     neural: np.ndarray | None
     worker_recurrent_context: np.ndarray
+    organ_flows: np.ndarray
 
     @property
     def previous(self) -> np.ndarray:
@@ -106,7 +112,8 @@ class RichPlayDataset:
         expected_content = body.pop("content_sha256", None)
         if (
             manifest.get("format") != DATASET_FORMAT
-            or manifest.get("version") != 3
+            or manifest.get("version") != DATASET_VERSION
+            or manifest.get("completed") is not True
             or expected_content != canonical_sha256(body)
         ):
             raise ValueError("rich dataset manifest identity differs")
@@ -120,6 +127,20 @@ class RichPlayDataset:
         ):
             raise ValueError("rich trajectory schema differs")
         identity = manifest.get("collection_identity", {})
+        identity_receipt = manifest.get("identity_receipt", {})
+        identity_path = (self.path / str(identity_receipt.get("path"))).resolve()
+        if (
+            not identity_path.is_relative_to(self.path)
+            or not identity_path.is_file()
+            or identity_path.stat().st_size != int(identity_receipt.get("bytes", -1))
+            or file_sha256(identity_path) != identity_receipt.get("sha256")
+            or json.loads(identity_path.read_text()) != identity
+        ):
+            raise ValueError("rich collection identity receipt differs")
+        identity_body = copy.deepcopy(identity)
+        identity_sha = identity_body.pop("sha256", None)
+        if identity_sha != canonical_sha256(identity_body):
+            raise ValueError("rich collection identity hash differs")
         if (
             identity.get("rich_profile_sha256") != PROFILE_SHA256
             or identity.get("rich_channel_names_sha256") != CHANNEL_NAMES_SHA256
@@ -128,15 +149,22 @@ class RichPlayDataset:
             raise ValueError("rich sensor profile identity differs")
         if tuple(manifest.get("transition_outcome_order", ())) != OUTCOME_ORDER:
             raise ValueError("transition outcome order differs")
+        if tuple(manifest.get("organ_flow_order", ())) != ORGAN_FLOW_ORDER:
+            raise ValueError("organ flow order differs")
         scope = manifest.get("scope", {})
+        self.manifest_scope = copy.deepcopy(scope)
         self.world_count = int(scope["worlds"])
         self.residents_per_world = int(scope["residents_per_world"])
         self.steps_per_episode = int(scope["steps_per_episode"])
         self.dt_seconds = float(scope["dt_seconds"])
+        self.shard_steps = int(scope["shard_steps"])
+        self.checkpoint_steps = int(scope["checkpoint_steps"])
         if min(self.world_count, self.residents_per_world, self.steps_per_episode) < 1:
             raise ValueError("rich dataset scope is empty")
         if self.dt_seconds != 0.05:
             raise ValueError("rich dataset interval differs")
+        if self.shard_steps != 512 or self.checkpoint_steps != 1024:
+            raise ValueError("rich shard or checkpoint interval differs")
         packets = manifest.get("packets")
         if not isinstance(packets, list) or not packets:
             raise ValueError("rich packet receipts are missing")
@@ -144,10 +172,25 @@ class RichPlayDataset:
         hashes = {
             "manifest.json": hashlib.sha256(raw).hexdigest(),
             str(SCHEMA_PATH): schema_hash,
+            identity_path.name: identity_receipt["sha256"],
         }
+        expected_packets = int(scope["episodes"]) * (
+            self.steps_per_episode // self.shard_steps
+        )
+        if len(packets) != expected_packets:
+            raise ValueError("rich shard count differs")
         for number, packet_receipt in enumerate(packets):
-            if int(packet_receipt.get("episode", -1)) != number:
-                raise ValueError("rich episode ordering differs")
+            episode = number // (self.steps_per_episode // self.shard_steps)
+            shard = number % (self.steps_per_episode // self.shard_steps)
+            start_tick = shard * self.shard_steps
+            if (
+                int(packet_receipt.get("episode", -1)) != episode
+                or int(packet_receipt.get("shard", -1)) != shard
+                or int(packet_receipt.get("start_tick", -1)) != start_tick
+                or int(packet_receipt.get("stop_tick", -1))
+                != start_tick + self.shard_steps
+            ):
+                raise ValueError("rich shard ordering differs")
             packet = (self.path / str(packet_receipt.get("path"))).resolve()
             if not packet.is_relative_to(self.path) or not packet.is_file():
                 raise ValueError("rich packet path is invalid")
@@ -156,14 +199,53 @@ class RichPlayDataset:
                 packet_receipt.get("bytes", -1)
             ):
                 raise ValueError("rich packet receipt differs")
-            episodes.append(self._load_episode(number, packet, digest, packet_receipt))
+            episodes.append(
+                self._load_episode(episode, shard, packet, digest, packet_receipt)
+            )
             hashes[packet.name] = digest
+        self._verify_checkpoints(manifest.get("checkpoints"), hashes)
         self.manifest = manifest
         self.manifest_file_sha256 = hashlib.sha256(raw).hexdigest()
         self.file_sha256s = hashes
         self.episodes = episodes
 
-    def _load_episode(self, number, path, digest, receipt) -> RichEpisode:
+    def _verify_checkpoints(self, checkpoints, hashes) -> None:
+        expected = []
+        episodes = int(self.manifest_scope["episodes"])
+        for episode in range(episodes):
+            for tick in range(
+                self.checkpoint_steps,
+                self.steps_per_episode + 1,
+                self.checkpoint_steps,
+            ):
+                expected.append((episode, tick))
+            if self.steps_per_episode % self.checkpoint_steps:
+                expected.append((episode, self.steps_per_episode))
+        if not isinstance(checkpoints, list) or len(checkpoints) != len(expected):
+            raise ValueError("rich checkpoint receipts differ")
+        for receipt, (episode, tick) in zip(checkpoints, expected, strict=True):
+            directory = self.path / f"episode-{episode:03d}-tick-{tick:08d}"
+            files = receipt.get("files")
+            if (
+                receipt.get("episode") != episode
+                or receipt.get("tick") != tick
+                or receipt.get("path") != directory.name
+                or not isinstance(files, Mapping)
+                or receipt.get("tree_sha256") != canonical_sha256(files)
+            ):
+                raise ValueError("rich checkpoint identity differs")
+            for value in files.values():
+                path = (directory / str(value.get("path"))).resolve()
+                if not path.is_relative_to(directory) or not path.is_file():
+                    raise ValueError("rich checkpoint path is invalid")
+                digest = file_sha256(path)
+                if digest != value.get("sha256") or path.stat().st_size != int(
+                    value.get("bytes", -1)
+                ):
+                    raise ValueError("rich checkpoint file receipt differs")
+                hashes[str(path.relative_to(self.path))] = digest
+
+    def _load_episode(self, number, shard, path, digest, receipt) -> RichEpisode:
         with np.load(path, allow_pickle=False) as value:
             required = {
                 "observation",
@@ -173,11 +255,12 @@ class RichPlayDataset:
                 "transition_outcomes",
                 "canonical_channels",
                 "worker_recurrent_context",
+                "organ_flows",
             }
             if set(value.files) not in (required, required | {"neural_readouts"}):
                 raise ValueError("rich packet arrays differ")
             arrays = {name: np.asarray(value[name]) for name in value.files}
-        t, n = self.steps_per_episode, self.world_count * self.residents_per_world
+        t, n = self.shard_steps, self.world_count * self.residents_per_world
         shapes = {
             "observation": (t + 1, n, OBSERVATION_DIM),
             "executed_actions": (t, n, ACTION_DIM),
@@ -186,6 +269,7 @@ class RichPlayDataset:
             "transition_outcomes": (t, n, 8),
             "canonical_channels": (t + 1, n, 351),
             "worker_recurrent_context": (t, n, 128),
+            "organ_flows": (t, n, 3),
         }
         if "neural_readouts" in arrays:
             shapes["neural_readouts"] = (t + 1, n, 384)
@@ -205,7 +289,11 @@ class RichPlayDataset:
             raise ValueError("rich neural readout dtype or finiteness differs")
         if (
             arrays["reset"].dtype != np.dtype("|b1")
-            or not arrays["reset"][0].all()
+            or (
+                not arrays["reset"][0].all()
+                if int(receipt["start_tick"]) == 0
+                else arrays["reset"][0].any()
+            )
             or arrays["reset"][1:].any()
         ):
             raise ValueError("rich reset boundary differs")
@@ -254,6 +342,9 @@ class RichPlayDataset:
             raise ValueError("rich resident partition order differs")
         return RichEpisode(
             number,
+            shard,
+            int(receipt["start_tick"]),
+            int(receipt["stop_tick"]),
             int(receipt["stage"]),
             path,
             digest,
@@ -267,6 +358,7 @@ class RichPlayDataset:
             if "neural_readouts" in arrays
             else None,
             readonly(arrays["worker_recurrent_context"]),
+            readonly(arrays["organ_flows"]),
         )
 
     def columns(self, world_slots: Sequence[int]) -> np.ndarray:
@@ -327,7 +419,8 @@ class RichNormalizer:
         mean = np.zeros(OBSERVATION_DIM, dtype=np.float64)
         m2 = np.zeros(OBSERVATION_DIM, dtype=np.float64)
         for episode in dataset.episodes:
-            for start in range(0, len(episode.observation), 64):
+            first = 0 if episode.start_tick == 0 else 1
+            for start in range(first, len(episode.observation), 64):
                 rows = episode.observation[start : start + 64, columns].reshape(
                     -1, OBSERVATION_DIM
                 )
