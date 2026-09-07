@@ -18,7 +18,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from research.resident_learning.artifact import file_sha256, load_parent, publish_trained
-from research.resident_learning.data import load_episode, write_episode
+from research.resident_learning.data import (
+    CORPUS_FORMAT,
+    SKILLS,
+    load_episode,
+    validate_corpus,
+    validate_curriculum,
+    write_episode,
+)
 
 RESULT_FORMAT = "chreatures-cns-resident-training-result-v1"
 
@@ -34,6 +41,29 @@ def atomic_json(path: Path, value: Any) -> None:
 def _sha(path: Path) -> str:
     with path.open("rb") as handle:
         return hashlib.file_digest(handle, "sha256").hexdigest()
+
+
+def _cpu_tree(value: Any) -> Any:
+    """Move optimizer/model tensors into a backend-portable checkpoint."""
+    import torch
+    if isinstance(value, torch.Tensor):
+        return value.detach().cpu()
+    if isinstance(value, dict):
+        return {key: _cpu_tree(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_cpu_tree(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_cpu_tree(item) for item in value)
+    return value
+
+
+def atomic_torch(path: Path, value: Any) -> None:
+    import torch
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    with temporary.open("xb") as handle:
+        torch.save(_cpu_tree(value), handle)
+        handle.flush(); os.fsync(handle.fileno())
+    os.replace(temporary, path)
 
 
 def convert_recording(args: argparse.Namespace) -> None:
@@ -97,10 +127,10 @@ def inspect(args: argparse.Namespace) -> None:
     }, sort_keys=True))
 
 
-def pack_joined(args: argparse.Namespace) -> None:
-    source = args.source.resolve()
-    parent_metadata, _ = load_parent(args.parent)
-    parent_hash = file_sha256(args.parent.resolve())
+def _pack_joined(source: Path, parent: Path, output: Path):
+    source = source.resolve(); parent = parent.resolve(); output = output.resolve()
+    parent_metadata, _ = load_parent(parent)
+    parent_hash = file_sha256(parent)
     with np.load(source, allow_pickle=False) as archive:
         required = {"metadata", "cns_latent", "delivered_command", "physical_reward", "reset", "terminal"}
         if set(archive.files) != required:
@@ -115,48 +145,202 @@ def pack_joined(args: argparse.Namespace) -> None:
         raise ValueError("joined history must identify teacher or resident action source")
     if metadata.get("cns_service_artifact_sha256") != parent_metadata["cns_service"]["service_artifact_sha256"]:
         raise ValueError("joined history CNS service differs from the resident binding")
+    if metadata.get("adapter_sha256") != parent_metadata["cns_service"]["adapter_sha256"]:
+        raise ValueError("joined history CNS adapter differs from the resident binding")
+    if metadata.get("resident_file_sha256") != parent_hash or metadata.get("resident_artifact_sha256") != parent_metadata["artifact_sha256"]:
+        raise ValueError("joined history parent resident differs")
     if latent.ndim != 3 or delivered.ndim != 3 or latent.shape[0] != delivered.shape[0] + 1:
         raise ValueError("joined history must align T+1 CNS observations with T deliveries")
+    validate_curriculum(metadata, delivered.shape[0])
+    if metadata.get("raw_geometry_retained") is not False or metadata.get("raw_senses_retained") is not False:
+        raise ValueError("joined history must explicitly discard raw geometry and senses")
+    forbidden_metadata = {"targets", "target_positions", "poses", "world_positions", "raw_visual", "raw_sensory"}
+    if forbidden_metadata.intersection(metadata):
+        raise ValueError("joined history retains privileged/raw controller-bypass metadata")
     previous = np.zeros((latent.shape[0], latent.shape[1], 12), np.float32)
     previous[1:] = delivered
     episode = write_episode(
-        args.output,
+        output,
         {"cns_latent": latent, "previous_delivered_command": previous, "reset": reset,
          "delivered_command": delivered, "physical_reward": reward, "terminal": terminal},
         cns_service=parent_metadata["cns_service"],
         resident_artifact={"file_sha256": parent_hash, "artifact_sha256": parent_metadata["artifact_sha256"]},
         provenance={"source_joined_file_sha256": file_sha256(source), **metadata},
     )
+    return episode, metadata
+
+
+def pack_joined(args: argparse.Namespace) -> None:
+    episode, metadata = _pack_joined(args.source, args.parent, args.output)
     print(json.dumps({"path": str(episode.path), "file_sha256": episode.file_sha256, "episode_sha256": episode.metadata["episode_sha256"], "action_source": metadata["action_source"], "transitions": episode.transitions, "residents": episode.residents}, sort_keys=True))
 
 
-def _tensor_window(episode, start: int, length: int, residents: np.ndarray, device: torch.device) -> dict[str, torch.Tensor]:
+def pack_corpus(args: argparse.Namespace) -> None:
+    source_dir = args.source_dir.resolve(); output = args.output.resolve()
+    collection_receipt_path = args.collection_receipt.resolve()
+    collection_receipt_bytes = collection_receipt_path.read_bytes()
+    collection_receipt = json.loads(collection_receipt_bytes)
+    if collection_receipt.get("format") != "chreatures-browser-teacher-collection-combined-receipt-v2" or collection_receipt.get("complete") is not True:
+        raise ValueError("teacher collection receipt is incomplete or differs")
+    contract = collection_receipt.get("curriculum_contract_sha256")
+    if not isinstance(contract, str) or len(contract) != 64 or any(value not in "0123456789abcdef" for value in contract):
+        raise ValueError("teacher curriculum contract identity differs")
+    receipt_episodes = collection_receipt.get("episodes")
+    if not isinstance(receipt_episodes, list) or len(receipt_episodes) != 8:
+        raise ValueError("teacher collection receipt episode count differs")
+    if not isinstance(collection_receipt.get("source_amendments"), list):
+        raise ValueError("teacher collection source amendments are missing")
+    receipt_by_index = {}
+    for receipt in receipt_episodes:
+        required = {"file", "sha256", "episode_index", "split", "collector_source_sha256"}
+        if not isinstance(receipt, dict) or not required.issubset(receipt):
+            raise ValueError("teacher collection episode receipt differs")
+        index = receipt["episode_index"]
+        source_sha = receipt["collector_source_sha256"]
+        if not isinstance(index, int) or isinstance(index, bool) or not isinstance(source_sha, str) or len(source_sha) != 64 or any(value not in "0123456789abcdef" for value in source_sha):
+            raise ValueError("teacher collection episode source identity differs")
+        expected_split = "train" if index < 6 else "heldout-worlds"
+        if receipt["split"] != expected_split:
+            raise ValueError("teacher collection episode split differs")
+        if index in receipt_by_index:
+            raise ValueError("teacher collection repeats an episode receipt")
+        receipt_by_index[index] = receipt
+    if set(receipt_by_index) != set(range(8)):
+        raise ValueError("teacher collection episode indices differ")
+    if output.exists():
+        raise FileExistsError(output)
+    output.mkdir(parents=True)
+    episodes = []
+    entries = []
+    for index in range(8):
+        split = "train" if index < 6 else "heldout-world"
+        source = source_dir / f"episode-{index:02d}-{split}.npz"
+        source_receipt = receipt_by_index[index]
+        if source_receipt["file"] != source.name or source_receipt["sha256"] != file_sha256(source):
+            raise ValueError("teacher source file differs from its combined receipt")
+        destination = output / f"resident-episode-{index:02d}-{split}.npz"
+        episode, metadata = _pack_joined(source, args.parent, destination)
+        if metadata.get("curriculum_contract_sha256", contract) != contract:
+            raise ValueError("teacher episode curriculum contract differs")
+        episodes.append(episode)
+        entries.append({
+            "episode_index": index,
+            "split": metadata["split"],
+            "source": str(source),
+            "source_file_sha256": file_sha256(source),
+            "collector_source_sha256": source_receipt["collector_source_sha256"],
+            "file": destination.name,
+            "file_sha256": episode.file_sha256,
+            "episode_sha256": episode.metadata["episode_sha256"],
+            "world_seed": metadata["world_seed"],
+            "variation_seed": metadata["variation_seed"],
+            "layout_identity": metadata["layout_identity"],
+        })
+    train_episodes, validation_episodes = validate_corpus(episodes)
+    parent = args.parent.resolve(); parent_metadata, _ = load_parent(parent)
+    manifest = {
+        "format": CORPUS_FORMAT,
+        "collection_receipt": {"file": "collection-receipt.json", "file_sha256": hashlib.sha256(collection_receipt_bytes).hexdigest()},
+        "curriculum_contract_sha256": contract,
+        "parent": {"file_sha256": file_sha256(parent), "artifact_sha256": parent_metadata["artifact_sha256"]},
+        "controller_input_fields": ["cns_latent", "previous_delivered_command", "reset"],
+        "teacher_only_fields": ["delivered_command", "physical_reward", "terminal", "teacher_bouts"],
+        "episodes": entries,
+        "train": [episode.path.name for episode in train_episodes],
+        "heldout_worlds": [episode.path.name for episode in validation_episodes],
+    }
+    with (output / "collection-receipt.json").open("xb") as handle:
+        handle.write(collection_receipt_bytes); handle.flush(); os.fsync(handle.fileno())
+    os.chmod(output / "collection-receipt.json", 0o444)
+    atomic_json(output / "corpus.json", manifest)
+    os.chmod(output / "corpus.json", 0o444)
+    print(json.dumps({"manifest": str(output / "corpus.json"), "sha256": _sha(output / "corpus.json"), "train_episodes": 6, "heldout_worlds": 2}, sort_keys=True))
+
+
+def _load_corpus(path: Path, parent_file: str) -> tuple[list[Any], list[Any], str]:
+    manifest_path = path.resolve()
+    manifest = json.loads(manifest_path.read_text())
+    if set(manifest) != {"format", "collection_receipt", "curriculum_contract_sha256", "parent", "controller_input_fields", "teacher_only_fields", "episodes", "train", "heldout_worlds"} or manifest["format"] != CORPUS_FORMAT:
+        raise ValueError("resident corpus manifest differs")
+    if manifest["parent"].get("file_sha256") != parent_file:
+        raise ValueError("resident corpus parent file differs")
+    if manifest["controller_input_fields"] != ["cns_latent", "previous_delivered_command", "reset"]:
+        raise ValueError("resident corpus controller boundary differs")
+    base = manifest_path.parent
+    receipt_path = base / manifest["collection_receipt"]["file"]
+    if file_sha256(receipt_path) != manifest["collection_receipt"]["file_sha256"]:
+        raise ValueError("resident corpus collection receipt differs")
+    collection_receipt = json.loads(receipt_path.read_text())
+    if collection_receipt.get("complete") is not True or collection_receipt.get("curriculum_contract_sha256") != manifest["curriculum_contract_sha256"]:
+        raise ValueError("resident corpus curriculum contract differs")
+    episodes = []
+    for entry in manifest["episodes"]:
+        entry_fields = {"episode_index", "split", "source", "source_file_sha256", "collector_source_sha256", "file", "file_sha256", "episode_sha256", "world_seed", "variation_seed", "layout_identity"}
+        if not isinstance(entry, dict) or set(entry) != entry_fields:
+            raise ValueError("resident corpus episode manifest fields differ")
+        episode = load_episode(base / entry["file"])
+        if episode.file_sha256 != entry["file_sha256"] or episode.metadata["episode_sha256"] != entry["episode_sha256"]:
+            raise ValueError("resident corpus episode receipt differs")
+        curriculum = episode.curriculum
+        for name in ("episode_index", "split", "world_seed", "variation_seed", "layout_identity"):
+            if entry[name] != curriculum[name]:
+                raise ValueError("resident corpus episode identity metadata differs")
+        episodes.append(episode)
+    train, validation = validate_corpus(episodes)
+    if manifest["train"] != [episode.path.name for episode in train] or manifest["heldout_worlds"] != [episode.path.name for episode in validation]:
+        raise ValueError("resident corpus split listing differs")
+    return train, validation, _sha(manifest_path)
+
+
+def _tensor_window(episode, start: int, length: int, residents: np.ndarray, device: torch.device, burn_in: int = 0) -> dict[str, Any]:
     import torch
     arrays = episode.arrays
+    context_start = max(0, start - burn_in)
+    context_length = start - context_start
+    end = start + length
     result = {
-        "cns_latent": arrays["cns_latent"][start : start + length + 1, residents],
-        "previous_delivered_command": arrays["previous_delivered_command"][start : start + length + 1, residents],
-        "reset": arrays["reset"][start : start + length + 1, residents],
-        "delivered_command": arrays["delivered_command"][start : start + length, residents],
-        "physical_reward": arrays["physical_reward"][start : start + length, residents],
-        "terminal": arrays["terminal"][start : start + length, residents],
+        "cns_latent": arrays["cns_latent"][context_start : end + 1, residents],
+        "previous_delivered_command": arrays["previous_delivered_command"][context_start : end + 1, residents],
+        "reset": arrays["reset"][context_start : end + 1, residents],
+        "delivered_command": arrays["delivered_command"][context_start:end, residents],
+        "physical_reward": arrays["physical_reward"][context_start:end, residents],
+        "terminal": arrays["terminal"][context_start:end, residents],
     }
-    # A sampled window is a fresh truncated recurrent training sequence.
+    # A truncated chronology starts from zero, consumes up to burn_in actual
+    # CNS/action ticks without gradients, then optimizes the requested window.
     result["reset"] = result["reset"].copy(); result["reset"][0] = True
-    return {name: torch.as_tensor(value, device=device) for name, value in result.items()}
+    converted = {name: torch.as_tensor(value, device=device) for name, value in result.items()}
+    converted["burn_in"] = context_length
+    return converted
+
+
+def _bout_windows(episodes, length: int) -> dict[str, list[tuple[Any, int, int]]]:
+    windows = {skill: [] for skill in SKILLS}
+    for episode in episodes:
+        for bout in episode.curriculum["teacher_bouts"]:
+            first, end = bout["start_tick"], bout["end_tick"]
+            if end - first >= length:
+                windows[bout["skill"]].append((episode, first, end - length))
+    missing = [skill for skill, rows in windows.items() if not rows]
+    if missing:
+        raise ValueError(f"corpus has no full training window for skills {missing}")
+    return windows
 
 
 def train(args: argparse.Namespace) -> None:
     import torch
     from research.resident_learning.model import CnsResidentModel, training_loss
     began = time.monotonic()
+    if args.updates < 1 or args.sequence_length < 8 or args.burn_in < 0 or args.residents_per_batch < 1:
+        raise ValueError("training sizes must be positive and sequence length must cover the eight-step skill horizon")
+    if args.checkpoint_every < 1 or args.report_every < 1 or not 0 < args.discount <= 1:
+        raise ValueError("training intervals or discount differ")
     device = torch.device(args.device)
     if device.type == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("requested ROCm/CUDA device is unavailable")
     parent_metadata, parent_arrays = load_parent(args.parent)
     parent_file = file_sha256(args.parent.resolve())
-    episodes = [load_episode(path) for path in args.episode]
-    validation = [load_episode(path) for path in args.validation_episode]
+    episodes, validation, corpus_sha = _load_corpus(args.corpus, parent_file)
     for episode in [*episodes, *validation]:
         declared = episode.metadata["resident_artifact"].get("file_sha256")
         service = episode.metadata["cns_service"]
@@ -171,55 +355,86 @@ def train(args: argparse.Namespace) -> None:
     model = CnsResidentModel.from_arrays(parent_arrays, device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
     generator = np.random.default_rng(args.seed)
-    output = args.output.resolve(); output.mkdir(parents=True, exist_ok=False)
-    history: list[dict[str, float | int]] = []
+    training_windows = _bout_windows(episodes, args.sequence_length)
+    validation_windows = _bout_windows(validation, args.sequence_length)
+    output = args.output.resolve()
+    restored_history = None
+    restored_validation_before = None
+    if args.resume is None:
+        output.mkdir(parents=True, exist_ok=False)
+        first_update = 1
+    else:
+        output.mkdir(parents=True, exist_ok=True)
+        checkpoint = torch.load(args.resume.resolve(), map_location=device, weights_only=False)
+        expected = {"format", "update", "model", "optimizer", "parent_file_sha256", "corpus_sha256", "numpy_rng_state", "training", "history", "validation_before"}
+        if set(checkpoint) != expected or checkpoint["format"] != RESULT_FORMAT:
+            raise ValueError("resident optimizer checkpoint differs")
+        if checkpoint["parent_file_sha256"] != parent_file or checkpoint["corpus_sha256"] != corpus_sha:
+            raise ValueError("resident optimizer checkpoint lineage differs")
+        current_training = {"seed": args.seed, "learning_rate": args.learning_rate, "weight_decay": args.weight_decay, "sequence_length": args.sequence_length, "burn_in": args.burn_in, "residents_per_batch": args.residents_per_batch, "discount": args.discount, "max_grad_norm": args.max_grad_norm}
+        if checkpoint["training"] != current_training:
+            raise ValueError("resident optimizer checkpoint hyperparameters differ")
+        model.load_state_dict(checkpoint["model"], strict=True)
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        generator.bit_generator.state = checkpoint["numpy_rng_state"]
+        restored_history = checkpoint["history"]
+        restored_validation_before = checkpoint["validation_before"]
+        first_update = int(checkpoint["update"]) + 1
+        if first_update > args.updates:
+            raise ValueError("resume checkpoint is already beyond requested updates")
+    history: list[dict[str, Any]] = [] if restored_history is None else restored_history
 
     def evaluate() -> dict[str, float]:
         if not validation:
             return {}
         rows = []
+        by_skill = {skill: [] for skill in SKILLS}
         model.eval()
         with torch.no_grad():
-            for episode in validation:
-                length = min(args.sequence_length, episode.transitions)
-                resident_rows = np.arange(min(args.residents_per_batch, episode.residents))
-                terms = training_loss(model, _tensor_window(episode, 0, length, resident_rows, device), args.discount)
-                rows.append({name: float(getattr(terms, name)) for name in ("total", "action", "prediction", "memory", "selector", "hazard", "value")})
+            for skill in SKILLS:
+                for episode, low, high in validation_windows[skill]:
+                    start = (low + high) // 2
+                    resident_rows = np.arange(min(args.residents_per_batch, episode.residents))
+                    terms = training_loss(model, _tensor_window(episode, start, args.sequence_length, resident_rows, device, args.burn_in), args.discount)
+                    row = {name: float(getattr(terms, name)) for name in ("total", "action", "prediction", "memory", "selector", "hazard", "value")}
+                    rows.append(row); by_skill[skill].append(row)
         model.train()
-        return {name: float(np.mean([row[name] for row in rows])) for name in rows[0]}
+        overall = {name: float(np.mean([row[name] for row in rows])) for name in rows[0]}
+        return {"overall": overall, "by_skill": {skill: {name: float(np.mean([row[name] for row in skill_rows])) for name in skill_rows[0]} for skill, skill_rows in by_skill.items()}}
 
-    validation_before = evaluate()
+    validation_before = evaluate() if restored_validation_before is None else restored_validation_before
     model.train()
-    for update in range(1, args.updates + 1):
-        episode = episodes[int(generator.integers(len(episodes)))]
-        length = min(args.sequence_length, episode.transitions)
-        start = int(generator.integers(episode.transitions - length + 1))
+    for update in range(first_update, args.updates + 1):
+        skill = SKILLS[int(generator.integers(len(SKILLS)))]
+        candidates = training_windows[skill]
+        episode, low, high = candidates[int(generator.integers(len(candidates)))]
+        start = int(generator.integers(low, high + 1))
         count = min(args.residents_per_batch, episode.residents)
         residents = generator.choice(episode.residents, size=count, replace=False)
-        batch = _tensor_window(episode, start, length, residents, device)
+        batch = _tensor_window(episode, start, args.sequence_length, residents, device, args.burn_in)
         optimizer.zero_grad(set_to_none=True)
         terms = training_loss(model, batch, args.discount)
         terms.total.backward()
         grad = torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
         optimizer.step()
-        row = {"update": update, "loss": float(terms.total.detach()), "action": float(terms.action.detach()), "prediction": float(terms.prediction.detach()), "memory": float(terms.memory.detach()), "selector": float(terms.selector.detach()), "hazard": float(terms.hazard.detach()), "value": float(terms.value.detach()), "grad_norm": float(grad), "seconds": time.monotonic() - began}
+        row = {"update": update, "skill": skill, "episode_index": episode.curriculum["episode_index"], "start_tick": start, "burn_in": int(batch["burn_in"]), "loss": float(terms.total.detach()), "action": float(terms.action.detach()), "prediction": float(terms.prediction.detach()), "memory": float(terms.memory.detach()), "selector": float(terms.selector.detach()), "hazard": float(terms.hazard.detach()), "value": float(terms.value.detach()), "grad_norm": float(grad), "seconds": time.monotonic() - began}
         history.append(row)
         if update == 1 or update % args.report_every == 0 or update == args.updates:
             print(json.dumps(row, sort_keys=True), flush=True)
             atomic_json(output / "progress.json", {"format": RESULT_FORMAT, "complete": False, "latest": row, "history": history})
         if update % args.checkpoint_every == 0 or update == args.updates:
             checkpoint = output / f"checkpoint-{update:06d}.pt"
-            torch.save({"format": RESULT_FORMAT, "update": update, "model": model.state_dict(), "optimizer": optimizer.state_dict(), "episodes": [e.metadata["episode_sha256"] for e in episodes]}, checkpoint)
+            atomic_torch(checkpoint, {"format": RESULT_FORMAT, "update": update, "model": model.state_dict(), "optimizer": optimizer.state_dict(), "parent_file_sha256": parent_file, "corpus_sha256": corpus_sha, "numpy_rng_state": generator.bit_generator.state, "training": {"seed": args.seed, "learning_rate": args.learning_rate, "weight_decay": args.weight_decay, "sequence_length": args.sequence_length, "burn_in": args.burn_in, "residents_per_batch": args.residents_per_batch, "discount": args.discount, "max_grad_norm": args.max_grad_norm}, "history": history, "validation_before": validation_before})
             atomic_json(output / "last-checkpoint.json", {"path": str(checkpoint), "sha256": _sha(checkpoint), "update": update})
     arrays = model.arrays()
     publication = publish_trained(
         output / args.resident_name, output / args.control_name,
         parent_metadata, arrays,
         episode_identities=[{"episode_sha256": e.metadata["episode_sha256"], "file_sha256": e.file_sha256} for e in episodes],
-        training={"updates": args.updates, "seed": args.seed, "learning_rate": args.learning_rate, "weight_decay": args.weight_decay, "sequence_length": args.sequence_length, "discount": args.discount, "device": str(device), "final_loss": history[-1]},
+        training={"updates": args.updates, "seed": args.seed, "learning_rate": args.learning_rate, "weight_decay": args.weight_decay, "sequence_length": args.sequence_length, "burn_in": args.burn_in, "residents_per_batch": args.residents_per_batch, "discount": args.discount, "max_grad_norm": args.max_grad_norm, "device": str(device), "corpus_sha256": corpus_sha, "balanced_skills": list(SKILLS), "final_loss": history[-1]},
     )
     validation_after = evaluate()
-    result = {"format": RESULT_FORMAT, "complete": True, "parent": {"path": str(args.parent.resolve()), "file_sha256": parent_file, "artifact_sha256": parent_metadata["artifact_sha256"]}, "episodes": [{"path": str(e.path), "file_sha256": e.file_sha256, "episode_sha256": e.metadata["episode_sha256"]} for e in episodes], "validation_episodes": [{"path": str(e.path), "file_sha256": e.file_sha256, "episode_sha256": e.metadata["episode_sha256"]} for e in validation], "validation": {"before": validation_before, "after": validation_after}, "publication": publication, "history": history, "seconds": time.monotonic() - began}
+    result = {"format": RESULT_FORMAT, "complete": True, "source": {"trainer_sha256": _sha(Path(__file__)), "model_sha256": _sha(ROOT / "research/resident_learning/model.py"), "data_sha256": _sha(ROOT / "research/resident_learning/data.py")}, "parent": {"path": str(args.parent.resolve()), "file_sha256": parent_file, "artifact_sha256": parent_metadata["artifact_sha256"]}, "corpus": {"path": str(args.corpus.resolve()), "file_sha256": corpus_sha}, "episodes": [{"path": str(e.path), "file_sha256": e.file_sha256, "episode_sha256": e.metadata["episode_sha256"]} for e in episodes], "validation_episodes": [{"path": str(e.path), "file_sha256": e.file_sha256, "episode_sha256": e.metadata["episode_sha256"]} for e in validation], "validation": {"before": validation_before, "after": validation_after}, "publication": publication, "history": history, "seconds": time.monotonic() - began}
     atomic_json(output / "result.json", result)
     atomic_json(output / "progress.json", {"format": RESULT_FORMAT, "complete": True, "result_sha256": _sha(output / "result.json"), "latest": history[-1]})
     print(json.dumps({"result": str(output / "result.json"), "result_sha256": _sha(output / "result.json"), **publication}, sort_keys=True))
@@ -265,13 +480,14 @@ def arguments() -> argparse.Namespace:
     show = commands.add_parser("inspect"); show.add_argument("--episode", type=Path, required=True); show.set_defaults(function=inspect)
     joined = commands.add_parser("pack-joined")
     joined.add_argument("--source", type=Path, required=True); joined.add_argument("--parent", type=Path, required=True); joined.add_argument("--output", type=Path, required=True); joined.set_defaults(function=pack_joined)
+    corpus = commands.add_parser("pack-corpus")
+    corpus.add_argument("--source-dir", type=Path, required=True); corpus.add_argument("--collection-receipt", type=Path, required=True); corpus.add_argument("--parent", type=Path, required=True); corpus.add_argument("--output", type=Path, required=True); corpus.set_defaults(function=pack_corpus)
     fit = commands.add_parser("train")
-    fit.add_argument("--parent", type=Path, required=True); fit.add_argument("--episode", type=Path, action="append", required=True)
-    fit.add_argument("--validation-episode", type=Path, action="append", default=[])
+    fit.add_argument("--parent", type=Path, required=True); fit.add_argument("--corpus", type=Path, required=True)
     fit.add_argument("--output", type=Path, required=True); fit.add_argument("--resident-name", default="cns-resident-trained.npz"); fit.add_argument("--control-name", default="sequence-control-trained.npz")
-    fit.add_argument("--updates", type=int, default=256); fit.add_argument("--sequence-length", type=int, default=32); fit.add_argument("--residents-per-batch", type=int, default=8)
+    fit.add_argument("--updates", type=int, default=256); fit.add_argument("--sequence-length", type=int, default=32); fit.add_argument("--burn-in", type=int, default=32); fit.add_argument("--residents-per-batch", type=int, default=8)
     fit.add_argument("--learning-rate", type=float, default=2e-4); fit.add_argument("--weight-decay", type=float, default=1e-5); fit.add_argument("--discount", type=float, default=0.97); fit.add_argument("--max-grad-norm", type=float, default=1.0)
-    fit.add_argument("--checkpoint-every", type=int, default=32); fit.add_argument("--report-every", type=int, default=8); fit.add_argument("--seed", type=int, default=20260907); fit.add_argument("--device", default="cpu"); fit.set_defaults(function=train)
+    fit.add_argument("--checkpoint-every", type=int, default=32); fit.add_argument("--report-every", type=int, default=8); fit.add_argument("--seed", type=int, default=20260907); fit.add_argument("--device", default="cpu"); fit.add_argument("--resume", type=Path); fit.set_defaults(function=train)
     compare = commands.add_parser("compare-native")
     compare.add_argument("--resident", type=Path, required=True); compare.add_argument("--episode", type=Path, required=True); compare.add_argument("--residents", type=int, default=4); compare.add_argument("--tolerance", type=float, default=3e-5); compare.add_argument("--output", type=Path); compare.set_defaults(function=compare_native)
     return parser.parse_args()
