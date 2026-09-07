@@ -822,3 +822,31 @@ the largest predictor product and maximum absolute numerical difference
 7.45e-7. These are matrix timings, not whole-controller throughput. The combined
 native extension builds; the fresh 32-slot neural deployment and actual predictor
 fit are the remaining integration work. Existing worlds retain frozen engines.
+
+## Reciprocal fit and cross-host convergence, 6 September 2026
+
+The collection completed 393,216 transitions in 1,716.603 wall seconds,
+including sealing and checkpoints. Its authenticated packets preserve the actual
+effective worker context alongside observations, full-circuit readouts and
+delivered actions. The three-member recurrent predictor then fitted on persvati's
+AMD Radeon 890M in 399.791 seconds. At the runtime H4 horizon, held-out goal-code
+RMS was 0.234636 versus 0.550485 for persistence. The source-world partition and
+native parity result remain in the [fit receipt](../data/training/rich-recurrent-v3/fit-export-receipt.json).
+These are frozen-v5 predictive results, not evidence of control improvement or
+validation of the new chemical dynamics.
+
+The principal integration found two pre-tick failures. Hbox rejected an
+80-assignment cohort because macOS/Linux generation produced different final
+floating-point bits. A separate M2 birth allocated eight neural residents but
+failed its initial JSON checkpoint because PyO3 returned a native byte vector.
+Both attempts remain distinct [infrastructure records](../integrations/artifacts/reciprocal-v6-integration-attempts-v1.json);
+neither contributes ecological outcomes. The M2 attempt's initial neural snapshot
+was retained and its dedicated services were closed before a replacement birth.
+
+The current generator is regional-v3. Closed-form ramp quaternions and a declared
+triangular elevation pattern remove the platform-dependent trigonometric calls.
+All ten scheduled variants now match exactly between M2 and Linux across genome,
+habitat, biosphere, analyst and environment hashes. Snapshot encoding now preserves
+native bytes; the complete B8 wrapper survived JSON serialization and restoration.
+These repairs retain strict identities and one current implementation. The
+replacement profile, campaign and birth have new identities under `b5efde9`.
