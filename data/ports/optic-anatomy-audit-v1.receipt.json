@@ -1,0 +1,217 @@
+{
+  "annotation_sha256": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+  "assigned_hex_cells": 23720,
+  "atlas_bytes": 1924043,
+  "atlas_sha256": "6a59c4282ffc912e1c0304498686819cdcc16c059f453fd5bc19c55938218482",
+  "coordinate_units": "source integer coordinates retained; inferred 8nm EM voxels, supported by official SWC same-cell comparison; annotation-specific unit metadata absent",
+  "format": "chreatures-optic-anatomy-audit-v1",
+  "graph_counts": {
+    "edges": 25563197,
+    "neurons": 165122,
+    "synapses": 124025046
+  },
+  "graph_hash": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "hex_type_counts": {
+    "C2": 874,
+    "C3": 1770,
+    "L1": 1767,
+    "L2": 1767,
+    "L3": 892,
+    "L5": 1773,
+    "Mi1": 1762,
+    "Mi4": 1758,
+    "Mi9": 1760,
+    "T1": 1764,
+    "Tm1": 1767,
+    "Tm2": 1758,
+    "Tm20": 1732,
+    "Tm4": 833,
+    "Tm9": 1743
+  },
+  "mapping_limit": "Measured connectivity-derived column distribution; not measured optical angle, spectral sensitivity or physiological receptive field. Unmapped receptors stay unmapped.",
+  "photoreceptors": {
+    "cells": 4107,
+    "cross_side_synapses_excluded": 0,
+    "direct_assigned_hex_cells": 0,
+    "evidenced_site_count": 1486,
+    "evidenced_site_counts_by_side": {
+      "L": 691,
+      "R": 795
+    },
+    "mapped_via_same_side_outgoing_synapses_to_hex_anchors": 3936,
+    "mapping_synapses": 196357,
+    "types": {
+      "R1-R6": {
+        "cells": 1394,
+        "mapped": 1386,
+        "sides": {
+          "L": 501,
+          "R": 893
+        },
+        "top_column_fraction_quantiles_0_25_50_75_100": [
+          0.504950495049505,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "R7R8_unclear": {
+        "cells": 85,
+        "mapped": 34,
+        "sides": {
+          "R": 85
+        },
+        "top_column_fraction_quantiles_0_25_50_75_100": [
+          0.5,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "R7_unclear": {
+        "cells": 404,
+        "mapped": 350,
+        "sides": {
+          "L": 165,
+          "R": 239
+        },
+        "top_column_fraction_quantiles_0_25_50_75_100": [
+          0.3333333333333333,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "R7d": {
+        "cells": 82,
+        "mapped": 80,
+        "sides": {
+          "L": 40,
+          "R": 42
+        },
+        "top_column_fraction_quantiles_0_25_50_75_100": [
+          0.5555555555555556,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "R7p": {
+        "cells": 332,
+        "mapped": 296,
+        "sides": {
+          "L": 173,
+          "R": 159
+        },
+        "top_column_fraction_quantiles_0_25_50_75_100": [
+          0.6666666666666666,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "R7y": {
+        "cells": 481,
+        "mapped": 468,
+        "sides": {
+          "L": 229,
+          "R": 252
+        },
+        "top_column_fraction_quantiles_0_25_50_75_100": [
+          0.5,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "R8_unclear": {
+        "cells": 442,
+        "mapped": 436,
+        "sides": {
+          "L": 188,
+          "R": 254
+        },
+        "top_column_fraction_quantiles_0_25_50_75_100": [
+          0.4666666666666667,
+          0.9666889058330156,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "R8d": {
+        "cells": 76,
+        "mapped": 75,
+        "sides": {
+          "L": 35,
+          "R": 41
+        },
+        "top_column_fraction_quantiles_0_25_50_75_100": [
+          0.45454545454545453,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "R8p": {
+        "cells": 330,
+        "mapped": 330,
+        "sides": {
+          "L": 172,
+          "R": 158
+        },
+        "top_column_fraction_quantiles_0_25_50_75_100": [
+          0.6739130434782609,
+          0.984363894811656,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "R8y": {
+        "cells": 481,
+        "mapped": 481,
+        "sides": {
+          "L": 230,
+          "R": 251
+        },
+        "top_column_fraction_quantiles_0_25_50_75_100": [
+          0.5714285714285714,
+          0.96875,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    }
+  },
+  "port_sha256": "933b871fdd11dafa8c43afceb9862101984bf0950592af84631a4d7aa9bebe53",
+  "retinal_v2": {
+    "fallback_ports": 72,
+    "nonzeros": 48258,
+    "scalar_channels": 320,
+    "spatial_bins": 80,
+    "target_sides": {
+      "L": 10453,
+      "R": 13267
+    },
+    "unique_targets": 23720
+  },
+  "side_hex_site_counts": {
+    "L": 879,
+    "R": 892
+  },
+  "side_hex_sites": 1771,
+  "soma_location_cells": 140024,
+  "soma_location_hex_cells": 18320,
+  "status": "executed read-only anatomy extraction; no circuit stepped",
+  "tosoma_location_cells": 995,
+  "tosoma_location_hex_cells": 170
+}

@@ -1,0 +1,134 @@
+{
+  "artifacts": {
+    "birth-batch.json": {
+      "bytes": 737078,
+      "file_sha256": "2e55c4c351faa548236d0eadfe0f56808a299dca3828aa9cfea9ed796b216225",
+      "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/birth-batch.json"
+    },
+    "complete.weave-receipt.json": {
+      "bytes": 1882,
+      "file_sha256": "5ad54440934bc396ba5f4bdcc0ac65fc2633b71458bbadc24172126c36619080",
+      "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/complete.weave-receipt.json"
+    },
+    "complete.weave-request.json": {
+      "bytes": 148056191,
+      "file_sha256": "df067397bfd5333be2b303adb61d0ef85d4b1540148a23d5ba4f5da3da70ee2e",
+      "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/complete.weave-request.json"
+    },
+    "complete.weave.json": {
+      "bytes": 185518299,
+      "file_sha256": "b0309287940c219f1298c86bf263b4e9759d8a0bcf23aa8ae1446b3f2ae6e0a8",
+      "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/complete.weave.json"
+    },
+    "foundation.weave-receipt.json": {
+      "bytes": 1684,
+      "file_sha256": "208f18b57b1399d7bc603f6b1d3216090b552aa8d94ab20444cd2a57a92fbc46",
+      "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/foundation.weave-receipt.json"
+    },
+    "frozen-tools.receipt.json": {
+      "bytes": 1593,
+      "file_sha256": "1e6e2572feeee37e81b611f22236fdf66befb19cac2b74d937a9b8452a8093af",
+      "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/frozen-tools.receipt.json"
+    },
+    "ledger.json": {
+      "bytes": 148056486,
+      "file_sha256": "59e019c3594ac4c46d0fc8d0edb325abe8451f654f5ef6a10c0fca02ae11409a",
+      "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/ledger.json"
+    },
+    "recording-batch.json": {
+      "bytes": 147320472,
+      "file_sha256": "6f085ef3f65f4d52446c8b0d61ce9ce79f1b8b928cd6679803cf92f107ee7849",
+      "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/recording-batch.json"
+    },
+    "recording-link.json": {
+      "bytes": 2493,
+      "file_sha256": "6cf227e4d1e8b16c28b722769f290bdf37ec717b053289be17395a8d184969e9",
+      "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/recording-link.json"
+    }
+  },
+  "campaign_id": "fresh-ecology-2a28425d9748cfb067d348e37dc71c86b1ea30accefe4174a98a55c33e99820e",
+  "checkpoint": {
+    "bytes": 109744902,
+    "file_sha256": "aea5449b174bb0d404c26ae153f1f94a75231e27ec6c58510193d19a5fea4e02",
+    "path": "/Users/ember/paperbin/chreatures/deployments/ecological-specialization-v8/run/world-recording-tail.json",
+    "state_sha256": "2a9e2181a0a5c602ccce4fa58cff25acbea71375b3b71fc2379ad37b4e79d740",
+    "tick": 7081
+  },
+  "format": "chreatures-fresh-v8-recording-weave-execution-v1",
+  "foundation_native_weave_sha256": "ed2cbccc7170eeefe9d5eb0ed7c3cc7d4932bb0aed7332436f2efb617c5f0646",
+  "frozen_evidence_source_revision": "5052fbec02ba2cbbe8bd35ad2a01f29cd86bde10",
+  "integration_failure_and_fix": "Initial complete native build rejected current v4 recording because its evidence adapter required v2. Narrow overlay accepts current v4 and verifies event frame association, while preserving immutable archived v2 evidence readability. Python ingestion and simulation contracts were unchanged. Failed build did not publish a partial ledger.",
+  "native_population": {
+    "bytes": 4188840,
+    "file_sha256": "61dd5d7dab86851b6da5b600a7587506d1f7710147a1e2b6950d16e2da9002b3",
+    "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/native-population-target/debug/chreatures-population"
+  },
+  "native_roundtrip": {
+    "edge_count": 134994,
+    "integration": "native-universal-weave-dag",
+    "library": {
+      "name": "universal-weave",
+      "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+      "version": "0.5.0"
+    },
+    "multi_parent_nodes": 64943,
+    "node_count": 64954,
+    "node_id_contract": "lowercase first-128-bit SHA-256 of source_id",
+    "reload_equal": true,
+    "validated_after_reload": true
+  },
+  "native_weave": {
+    "bytes": 1049968,
+    "file_sha256": "10cb7a80b2b7ed553c808a915690f35da95155d3413157498a4ff068aa422936",
+    "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/native-weave-target/release/chreatures-weave"
+  },
+  "not_claimed": [
+    "No terminal evaluation inferred from the recording.",
+    "No acquired suffix completion observed.",
+    "The later final world checkpoint is separate life evidence and does not replace this covering checkpoint."
+  ],
+  "private_bindings": {
+    "bytes": 1454,
+    "file_sha256": "d1911702f1d302e5bc6eb0c83cff7db0c8e1874b610de9c52792c6506e44fc1d",
+    "path": "/Users/ember/paperbin/chreatures/deployments/ecological-specialization-v8/run/recordings/private/body-bindings-v4.json"
+  },
+  "public_transport": {
+    "bytes": 37100430,
+    "file_sha256": "2a4da28be59716894e34b3b6ddf8f217317bac2768470eb1f9100d02df917db6",
+    "path": "/Users/ember/dev/chreatures/site/assets/ecological-specialization-recording.json.gz"
+  },
+  "record_types": {
+    "birth": 8,
+    "descriptor_epoch": 1,
+    "development_event": 1408,
+    "embodied_recording": 1,
+    "environment_candidate": 10,
+    "environment_event": 59745,
+    "environment_probe_panel": 1,
+    "genome_candidate": 81,
+    "interaction_event": 3690,
+    "life_checkpoint": 8,
+    "population_run": 1
+  },
+  "recorder_source_revision": "8b9185d",
+  "recording": {
+    "bytes": 175734121,
+    "content_sha256": "1fb939dadbab1b927f5067c374f2a0b292abd9b21e1b427472e7848bb4c50884",
+    "events": 64843,
+    "file_sha256": "767706751e1eab65b450452da946cce7cb5e07f6490ecb7f0be4959884c295b2",
+    "first_tick": 5301,
+    "frames": 360,
+    "last_tick": 7053,
+    "path": "/Users/ember/paperbin/chreatures/deployments/ecological-specialization-v8/run/recordings/headless-v4.json",
+    "residents": 8
+  },
+  "runtime_source_revision": "5a030ddaab4addd2de69ad36c1def197314a5307",
+  "scope": "Actual fresh founder campaign and recorded events; external evidence, never organism memory.",
+  "source_overlay": {
+    "bytes": 2996,
+    "file_sha256": "31647373a777eb1f3f3880903a766e9dbb926d108372c24f99750536ca34e7f4",
+    "path": "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v8-evidence/native-weave-v4.patch"
+  },
+  "status": "passed",
+  "world_id": "db6b342e-0878-415f-b503-facaccd67f16"
+}

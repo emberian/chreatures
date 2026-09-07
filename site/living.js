@@ -5,6 +5,10 @@ import {habitatView} from './habitat-view.js';
 const FORMATS = new Set(['chreatures-living-reef-public-recording-v1','chreatures-living-reef-public-recording-v2','chreatures-living-reef-public-recording-v3','chreatures-living-reef-public-recording-v4']);
 const GEOMETRY_ENCODING = 'entity-replacement-delta-v1';
 const REGIONAL_MATTER_ENCODING = 'keyframe-state-delta-v1';
+const ACQUIRED_LOCAL_CANDIDATES = 4;
+const ACQUIRED_SUFFIX_SLOTS = 32;
+const MAX_VISIBLE_EVENT_ROWS = 240;
+const MAX_VISIBLE_FLOW_ROWS = 24;
 const ACTIONS = ['thrust','yaw','gaze_pitch','grip','signal_low','signal_mid','signal_high','posture','oral'];
 const ACTOR_ACTIONS = ACTIONS.slice(0,8);
 const $ = (selector) => document.querySelector(selector);
@@ -54,6 +58,29 @@ function finiteArray(value, length, label) {
   }
 }
 
+function validateV4Acquired(value, frameIndex, actionCount) {
+  const integers=['slot','generation','phase','length_ticks','support'];
+  for(const key of ['available','recalled'])if(value[key].some(item=>typeof item!=='boolean'))throw new Error(`Frame ${frameIndex} acquired-action ${key} is invalid`);
+  for(const key of integers)if(value[key].some(item=>!Number.isInteger(item)))throw new Error(`Frame ${frameIndex} acquired-action ${key} is invalid`);
+  for(const key of ['empirical_score','recall_score'])if(value[key].some(item=>!Number.isFinite(item)))throw new Error(`Frame ${frameIndex} acquired-action ${key} is invalid`);
+  value.first_action.forEach(row=>finiteArray(row,actionCount,`Frame ${frameIndex} acquired-action first action`));
+  for(let candidate=0;candidate<8;candidate++){
+    const available=value.available[candidate],recalled=value.recalled[candidate];
+    const suffix=[value.slot[candidate],value.generation[candidate],value.phase[candidate],value.length_ticks[candidate],value.support[candidate]];
+    if(candidate<ACQUIRED_LOCAL_CANDIDATES&&(!available||recalled))throw new Error(`Frame ${frameIndex} acquired-action local candidate is invalid`);
+    if(candidate>=ACQUIRED_LOCAL_CANDIDATES&&available!==recalled)throw new Error(`Frame ${frameIndex} acquired-action recalled availability is invalid`);
+    if(!recalled){
+      if(suffix.some((item,index)=>item!==[-1,0,0,0,0][index]))throw new Error(`Frame ${frameIndex} acquired-action suffix sentinel is invalid`);
+      continue;
+    }
+    const [slot,generation,phase,length,support]=suffix;
+    if(slot<0||slot>=ACQUIRED_SUFFIX_SLOTS||generation<=0||phase<0||phase>=8||length<1||length>8||phase+length<4||phase+length>8||support<=0)throw new Error(`Frame ${frameIndex} acquired-action recalled suffix is invalid`);
+  }
+  for(const key of ['selected_candidate','occupied_slots','learned_total','completed_total','interrupted_total'])if(!Number.isInteger(value[key])||value[key]<0)throw new Error(`Frame ${frameIndex} acquired-action ${key} is invalid`);
+  if(value.selected_candidate>=8||!value.available[value.selected_candidate])throw new Error(`Frame ${frameIndex} acquired-action selection is invalid`);
+  if(value.occupied_slots>ACQUIRED_SUFFIX_SLOTS)throw new Error(`Frame ${frameIndex} acquired-action occupied slots are invalid`);
+}
+
 function validate(data) {
   if (!data || !FORMATS.has(data.format)) throw new Error('Unsupported public recording format');
   if (data.geometry_encoding !== GEOMETRY_ENCODING) throw new Error(`Expected ${GEOMETRY_ENCODING}`);
@@ -88,9 +115,8 @@ function validate(data) {
       const value=acquired.value,keys=['available','recalled','slot','generation','length_ticks','support','empirical_score','recall_score','first_action'];
       if(!value||keys.some(key=>!Array.isArray(value[key])||value[key].length!==8)||value.first_action.some(row=>!Array.isArray(row)||row.length!==actionOrder.length))throw new Error(`Frame ${index} acquired-action contract is invalid`);
       if(v4){
-        if(!Array.isArray(value.phase)||value.phase.length!==8||value.phase.some(item=>!Number.isInteger(item)||item<0))throw new Error(`Frame ${index} acquired-action phase is invalid`);
-        for(const key of ['length_ticks','support'])if(value[key].some(item=>!Number.isInteger(item)||item<0))throw new Error(`Frame ${index} acquired-action ${key} is invalid`);
-        for(const key of ['completed_total','interrupted_total'])if(!Number.isInteger(value[key])||value[key]<0)throw new Error(`Frame ${index} acquired-action ${key} is invalid`);
+        if(!Array.isArray(value.phase)||value.phase.length!==8)throw new Error(`Frame ${index} acquired-action phase is invalid`);
+        validateV4Acquired(value,index,actionOrder.length);
       }
     }
     }
@@ -404,9 +430,9 @@ function rebuildResidentOverlays(){
   pathLine.geometry.setDrawRange(0,1);
   const eventPositions=[];
   for(const event of (recording.events||[]).filter(value=>activeEventKind==='all'||value.kind===activeEventKind)){
-    const frame=recording.frames.reduce((best,item,index)=>Math.abs(item.tick-event.tick)<Math.abs(recording.frames[best].tick-event.tick)?index:best,0);
-    const body=event.actors?.bodies?.[0],pose=body===undefined?null:bodyPose(recording.frames[frame],body);
-    const entityKey=event.actors?.entities?.[0],entity=entityKey===undefined?null:recording.frames[frame].entities.find(value=>value.entity===entityKey);
+    const body=event.actors?.bodies?.[0],entityKey=event.actors?.entities?.[0];if(body===undefined&&entityKey===undefined)continue;
+    const frame=nearestFrame(event.tick),pose=body===undefined?null:bodyPose(recording.frames[frame],body);
+    const entity=entityKey===undefined?null:recording.frames[frame].entities.find(value=>value.entity===entityKey);
     const marker=pose?.position||entity?.shapes?.[0]?.position;
     if(marker)eventPositions.push(...marker);
   }
@@ -573,8 +599,10 @@ function paintMatter(frame){
   ui.matterContract.textContent=`step ${matter.step_index} · pools in synthetic chemical amount`;
   const inventories=matter.nodes.map(node=>{const row=document.createElement('div'),name=document.createElement('strong'),values=document.createElement('span');row.className='matter-node';name.textContent=`region ${node.node}`;values.textContent=Object.entries(node.pools).map(([pool,value])=>`${pool} ${formatNative(value)}`).join(' · ')||'empty';row.append(name,values);return row;});ui.matterInventory.replaceChildren(...inventories);
   const regionalEvents=frameEvents(frame).filter(event=>['physical-material-entered-region','regional-material-flow','regional-material-outlet'].includes(event.kind));
-  const flows=[];for(const event of regionalEvents){if(event.kind!=='regional-material-flow')continue;for(const [pool,direction] of Object.entries(event.details?.directions||{})){const quantity=event.quantities?.find(item=>item.name===pool),row=document.createElement('div');row.className='matter-flow';row.textContent=`${pool}: region ${direction.source} → region ${direction.target}${quantity?` · ${formatNative(quantity.value)} ${quantity.unit}`:''} · receipt ${event.sequence}`;flows.push(row);}}
-  if(!flows.length)for(const event of matter.last_events||[]){if(event.kind!=='regional-material-flow')continue;for(const [pool,direction] of Object.entries(event.details?.directions||{})){const quantity=event.quantities?.find(item=>item.name===pool),row=document.createElement('div');row.className='matter-flow';row.textContent=`${pool}: region ${direction.source} → region ${direction.target}${quantity?` · ${formatNative(quantity.value)} ${quantity.unit}`:''} · recorded route event`;flows.push(row);}}
+  const flowLabels=[];for(const event of regionalEvents){if(event.kind!=='regional-material-flow')continue;for(const [pool,direction] of Object.entries(event.details?.directions||{})){const quantity=event.quantities?.find(item=>item.name===pool);flowLabels.push(`${pool}: region ${direction.source} → region ${direction.target}${quantity?` · ${formatNative(quantity.value)} ${quantity.unit}`:''} · receipt ${event.sequence}`);}}
+  if(!flowLabels.length)for(const event of matter.last_events||[]){if(event.kind!=='regional-material-flow')continue;for(const [pool,direction] of Object.entries(event.details?.directions||{})){const quantity=event.quantities?.find(item=>item.name===pool);flowLabels.push(`${pool}: region ${direction.source} → region ${direction.target}${quantity?` · ${formatNative(quantity.value)} ${quantity.unit}`:''} · recorded route event`);}}
+  const visibleFlows=flowLabels.slice(-MAX_VISIBLE_FLOW_ROWS),flows=visibleFlows.map(label=>{const row=document.createElement('div');row.className='matter-flow';row.textContent=label;return row;});
+  if(flowLabels.length>visibleFlows.length){const row=document.createElement('div');row.className='matter-flow flow-limit';row.textContent=`Showing the latest ${visibleFlows.length} of ${flowLabels.length} directional flow rows at this frame; every receipt remains in the recording.`;flows.unshift(row);}
   if(!flows.length){const row=document.createElement('div');row.className='matter-flow';row.textContent='No directional regional flow event was recorded at this frame.';flows.push(row);}ui.matterFlows.replaceChildren(...flows);
   updateMatterGeometry(matter);
 }
@@ -655,13 +683,14 @@ function populateMoments() {
 function populateEvents(){
   const events=recording.events||[],kinds=['all',...new Set(events.map(event=>event.kind))];
   ui.eventFilters.replaceChildren(...kinds.map(kind=>{const button=document.createElement('button');button.type='button';button.textContent=kind.replaceAll('_',' ');button.dataset.kind=kind;button.setAttribute('aria-pressed',String(kind===activeEventKind));button.addEventListener('click',()=>{activeEventKind=kind;populateEvents();rebuildResidentOverlays();});return button;}));
-  const shown=events.filter(event=>activeEventKind==='all'||event.kind===activeEventKind);
-  ui.events.replaceChildren(...shown.map(event=>{const item=document.createElement('li'),button=document.createElement('button'),time=document.createElement('time'),content=document.createElement('span'),title=document.createElement('span'),quantity=document.createElement('span');time.textContent=`${event.model_time.toFixed(2)} s`;title.textContent=event.kind.replaceAll('_',' ');quantity.className='event-quantity';quantity.textContent=(event.quantities||[]).map(value=>`${value.name.replaceAll('_',' ')} ${formatNative(value.value)} ${value.unit}`).join(' · ')||'recorded event receipt';content.append(title,quantity);button.append(time,content);button.addEventListener('click',()=>seek(nearestFrame(event.tick)));item.append(button);return item;}));
+  const shown=events.filter(event=>activeEventKind==='all'||event.kind===activeEventKind),visible=shown.slice(-MAX_VISIBLE_EVENT_ROWS);
+  ui.events.replaceChildren(...visible.map(event=>{const item=document.createElement('li'),button=document.createElement('button'),time=document.createElement('time'),content=document.createElement('span'),title=document.createElement('span'),quantity=document.createElement('span');time.textContent=`${event.model_time.toFixed(2)} s`;title.textContent=event.kind.replaceAll('_',' ');quantity.className='event-quantity';quantity.textContent=(event.quantities||[]).map(value=>`${value.name.replaceAll('_',' ')} ${formatNative(value.value)} ${value.unit}`).join(' · ')||'recorded event receipt';content.append(title,quantity);button.append(time,content);button.addEventListener('click',()=>seek(nearestFrame(event.tick)));item.append(button);return item;}));
+  if(shown.length>visible.length){const item=document.createElement('li');item.className='event-list-limit';item.textContent=`Showing the latest ${visible.length} of ${shown.length.toLocaleString()} matching receipts. The recording retains the complete authenticated event chain.`;ui.events.children[0]?.before(item);}
   if(!shown.length){const item=document.createElement('li');item.textContent=events.length?'No events match this filter.':'This recording does not contain the world event stream.';ui.events.append(item);}
-  ui.eventContract.textContent=events.length?`${events.length} exact events`:'unavailable in this recording';
+  ui.eventContract.textContent=events.length?`${events.length.toLocaleString()} exact events`:'unavailable in this recording';
 }
 
-function nearestFrame(tick){let best=0;for(let index=1;index<recording.frames.length;index++)if(Math.abs(recording.frames[index].tick-tick)<Math.abs(recording.frames[best].tick-tick))best=index;return best;}
+function nearestFrame(tick){const frames=recording.frames;let low=0,high=frames.length-1;while(low<high){const middle=Math.floor((low+high)/2);if(frames[middle].tick<tick)low=middle+1;else high=middle;}if(low===0)return 0;return Math.abs(frames[low].tick-tick)<Math.abs(frames[low-1].tick-tick)?low:low-1;}
 
 function sonifyFrame(index){
   if(!hearingSignals||document.hidden||!audioContext||index===lastAudibleFrame)return;lastAudibleFrame=index;
@@ -769,8 +798,8 @@ export function consumeRecordingInstrumentsForTest(data){
 }
 
 export function inspectRecordingStructureForTest(data){
-  const decoded=validate(expandRecording(data)),regional=decoded.frames.filter(frame=>frame.regional_matter?.status==='recorded'),details=decoded.frames.flatMap(frame=>frame.resident_details||[]),suffixes=details.map(detail=>detail.acquired_action_candidates?.status==='recorded'?detail.acquired_action_candidates.value:null).filter(Boolean);
-  return {format:decoded.format,frames:decoded.frames.length,events:(decoded.events||[]).length,regional_frames:regional.length,regional_steps:regional.map(frame=>frame.regional_matter.step_index),regional_event_copies:regional.reduce((total,frame)=>total+(frame.regional_matter.last_events?.length||0),0),regional_flow_receipts:(decoded.events||[]).filter(event=>event.kind==='regional-material-flow').length,selected_continuation_frames:suffixes.filter(value=>value.recalled[value.selected_candidate]&&value.phase[value.selected_candidate]>0).length,completed_executions_max:Math.max(0,...suffixes.map(value=>value.completed_total)),interrupted_executions_max:Math.max(0,...suffixes.map(value=>value.interrupted_total))};
+  const decoded=validate(expandRecording(data)),regional=decoded.frames.filter(frame=>frame.regional_matter?.status==='recorded'),details=decoded.frames.flatMap(frame=>frame.resident_details||[]),suffixes=details.map(detail=>detail.acquired_action_candidates?.status==='recorded'?detail.acquired_action_candidates.value:null).filter(Boolean),isContinuation=value=>value.recalled[value.selected_candidate]&&value.phase[value.selected_candidate]>0;
+  return {format:decoded.format,frames:decoded.frames.length,events:(decoded.events||[]).length,regional_frames:regional.length,regional_steps:regional.map(frame=>frame.regional_matter.step_index),regional_event_copies:regional.reduce((total,frame)=>total+(frame.regional_matter.last_events?.length||0),0),regional_flow_receipts:(decoded.events||[]).filter(event=>event.kind==='regional-material-flow').length,selected_continuation_decisions:suffixes.filter(isContinuation).length,selected_continuation_frames:decoded.frames.filter(frame=>(frame.resident_details||[]).some(detail=>{const value=detail.acquired_action_candidates?.status==='recorded'?detail.acquired_action_candidates.value:null;return value&&isContinuation(value);})).length,completed_executions_max:Math.max(0,...suffixes.map(value=>value.completed_total)),interrupted_executions_max:Math.max(0,...suffixes.map(value=>value.interrupted_total))};
 }
 
 ui.resident.addEventListener('change',()=>{activeBody=Number(ui.resident.value);rebuildResidentOverlays();updateInstruments(Math.round(cursor));const bodyButton=document.querySelector('[data-camera="body"]'),hasPose=recording.frames.some(frame=>residentDetail(frame)?.retina_pose);bodyButton.disabled=!hasPose;bodyButton.title=hasPose?'Recorded retinal viewpoint':'This resident has no recorded retinal pose';});
@@ -796,10 +825,11 @@ for(const button of document.querySelectorAll('[data-overlay]'))button.addEventL
 
 if(!globalThis.__CHREATURES_LIVING_DOM_STUB__)initThree();
 const recordingKey=globalThis.__CHREATURES_LIVING_DOM_STUB__?null:new URLSearchParams(location.search).get('recording');
-const recordingAsset=recordingKey==='trained-organs'?'./assets/trained-organs-recording.json':recordingKey==='regional-wave'?'./assets/regional-wave-recording.json':recordingKey==='courtyard'?'./assets/living-reef-recording.json':'./assets/reciprocal-wave-recording.json.gz';
+const recordingAsset=recordingKey==='trained-organs'?'./assets/trained-organs-recording.json':recordingKey==='regional-wave'?'./assets/regional-wave-recording.json':recordingKey==='courtyard'?'./assets/living-reef-recording.json':recordingKey==='reciprocal-wave'?'./assets/reciprocal-wave-recording.json.gz':'./assets/ecological-specialization-recording.json.gz';
 if(recordingKey==='regional-wave'){document.title='Regional world recording — Chreatures';ui.evidenceLink.textContent='Population atlas →';ui.evidenceLink.href='population.html'}
 if(recordingKey==='trained-organs'){document.title='Trained organs in a regional world — Chreatures';ui.evidenceLink.textContent='Trained controller receipt →';ui.evidenceLink.href='https://github.com/emberian/chreatures/tree/main/data/training/population-v5-update20'}
-if(!recordingKey){document.title='Reciprocal-wave recording — Chreatures';ui.evidenceLink.textContent='Typed recording evidence →';ui.evidenceLink.href='https://github.com/emberian/chreatures/blob/main/integrations/artifacts/reciprocal-v6-research-branch-v1/recording-link.json'}
+if(recordingKey==='reciprocal-wave'){document.title='Archived reciprocal-wave recording — Chreatures';ui.evidenceLink.textContent='Typed recording evidence →';ui.evidenceLink.href='https://github.com/emberian/chreatures/blob/main/integrations/artifacts/reciprocal-v6-research-branch-v1/recording-link.json';$('#reciprocal-recording').setAttribute('aria-current','page')}
+if(!recordingKey){document.title='Ecological specialization recording — Chreatures';ui.evidenceLink.textContent='Typed recording evidence →';ui.evidenceLink.href='assets/ecological-specialization-evidence.json';$('#ecological-recording').setAttribute('aria-current','page')}
 async function fetchRecording(path){
   const response=await fetch(path);if(!response.ok)throw new Error(`HTTP ${response.status}`);
   if(!path.endsWith('.gz'))return response.json();

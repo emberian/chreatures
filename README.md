@@ -8,6 +8,25 @@ Inspired by *Creatures* and the changing societies and environments of *Children
 
 ## The current build
 
+**September 7: making the CNS the required sensory-to-control route.** The
+anatomy audit found that the v8 controller received raw vision and physiology
+alongside actual connectome activity. Its coarse retinal ports also mixed
+hemispheres and skipped photoreceptors. The full measured graph was running;
+it was not the sole route from sensation to action. That architecture is now a
+historical baseline. The replacement under development uses bilateral optical
+sampling, trainable afferent adapters, the full recurrent CNS, and a learned
+CNS readout feeding personal memory and motor control. New adapters and control
+weights have not yet demonstrated physical competence.
+[Audit, actual atlas and remaining assumptions](docs/development/OPTIC_INPUT_ANATOMY_AUDIT.md).
+
+The new atlas identifies 1,771 side-specific optic column sites. Measured
+connections anchor 3,936 of 4,107 photoreceptors to 1,486 sites; unsupported
+cells and sites remain explicit. Anatomical column coordinates are not measured
+angular receptive fields. A headless video-stimulus experiment and public
+“Bad Apple” playback are being built around this corrected input path.
+
+## The completed ecological v8 baseline
+
 The **ecological specialization wave** adds connected finite material stores,
 physical outlets, inherited metabolic acclimation, and private recall of executed
 motor sequences. Construction can obstruct the material routes. Enzyme changes
@@ -15,14 +34,15 @@ have inherited time constants, expression budgets and ATP costs; an offspring
 inherits response rules rather than an adult's current expression. Native v8
 residents compare four local plans and up to four remembered action sequences
 through the recurrent predictor, then act for one physical tick and reconsider.
-Development has resumed: the joined physical ecology now runs, and the new
-resident can continue through remembered action sequences. Fresh population
-collection and fitting are being integrated. These mechanisms are not yet
-evidence of ecological competence. [Current wave](docs/development/ECOLOGICAL_SPECIALIZATION_WAVE.md) · [Earlier shutdown record](docs/development/ECOLOGICAL_SPECIALIZATION_HANDOFF.md).
+The joined eight-founder physical world reached tick 10,006 and was paused
+with a complete checkpoint. Its public recording contains short sequence
+continuations but no completed eight-tick sequences. Per-tick reselection
+interrupts them too frequently; learned termination is part of the replacement.
+These mechanisms are not evidence of ecological competence. [Current wave](docs/development/ECOLOGICAL_SPECIALIZATION_WAVE.md) · [Earlier shutdown record](docs/development/ECOLOGICAL_SPECIALIZATION_HANDOFF.md).
 
 The preceding reciprocal ecology wave completed **160 research lives** and
-327,680 physical transitions. Its recording remains the default observatory
-until the new coupled world produces its own evidence. Its longer private
+327,680 physical transitions. Its recording remains available as an archived observatory selection; the
+default now shows the completed v8 ecological world. Its longer private
 continuation exposed a material lifecycle fault: a loose packet escaped the
 finite terrain and kept falling. The new regional accounting transfers a
 packet's complete contents into a regional store and retires its physical body
@@ -41,7 +61,9 @@ Some inherited bodies also capture light through a dorsal surface. Its area is b
 
 The current neural substrate is the **MaleCNS v1.0 brain and ventral nerve cord**: **165,122 traced neurons**, **25,563,197 directed edges** and **124,025,046 synapses** represented by those edges. Anatomical wiring constrains the recurrent network. The rate dynamics, chemical rules, bodies and sensory/motor interfaces include explicit engineering assumptions. This is a synthetic species project, not a recovered fly.
 
-A resident's current control loop combines:
+The recorded v8 control loop combined the following mechanisms. Its direct
+sensory paths are being removed from the replacement; this list describes the
+frozen recording, not the intended CNS-only data flow:
 
 - **Body-bound vision:** 1,024 native collision rays, divided between an 8×32 peripheral field and a 24×32 central field. Each supplies RGB and proximity. Bodies, constructed surfaces and movable objects can occlude them.
 - **Measured recurrence:** 351 sensory channels enter the full connectome; 384 named population readouts reach the resident's goal selector. These are population summaries, not recordings of 384 individual neurons.
@@ -57,7 +79,7 @@ The inherited **Torch v5 policy** trains pathways from all twelve physiology cha
 
 ## GAM × Universal Weave
 
-[**SauersML/gam**](https://github.com/SauersML/gam) is part of the mechanism, not just a plotting dependency. Native GAM fits compress experienced nonlinear body responses into small, immutable consequence models. Rust evaluates these models while the resident compares motor proposals with the bodily component of a remembered sensory goal. Each resident learns its own bounded corrections from its own experience; shared inherited predictions remain unchanged. Out-of-domain candidates retain the underlying actor's support without receiving a GAM refinement. This is an explicitly engineered control layer, not a happiness measure or proof of causal understanding. [Implementation and fitted data](docs/GAM_MECHANISMS.md).
+[**SauersML/gam**](https://github.com/SauersML/gam) supplied fitted mechanisms in the recorded v8 controller. Native GAM fits compress experienced nonlinear body responses into small, immutable consequence models. The frozen v8 Rust engine evaluates these models while comparing motor proposals with the bodily component of a remembered sensory goal. Direct physiology-based candidate scoring is being removed from the replacement. GAM remains useful for physical law fitting and external analysis; future control-facing models must consume CNS-derived state. Each resident learns its own bounded corrections from its own experience; shared inherited predictions remain unchanged. Out-of-domain candidates retain the underlying actor's support without receiving a GAM refinement. This is an explicitly engineered control layer, not a happiness measure or proof of causal understanding. [Implementation and fitted data](docs/GAM_MECHANISMS.md).
 
 [**transkatgirl/universal-weave**](https://github.com/transkatgirl/universal-weave) connects recorded development, model artifacts, snapshots, experiments and competing explanations. Its native adapter supplies stable event identities, multi-parent evidence records and deterministic serialization. The scientific archive is separate from the incomplete, private memory available to an organism. [Native integration](docs/LIBRARIES.md).
 
@@ -99,12 +121,19 @@ records now inform the search, with 74 archive entries in 21 cells and no pendin
 assignments. [Challenge outcomes and selection scope](data/development/population-v6-challenge-wave.receipt.json).
 
 The [default observatory](https://emberian.github.io/chreatures/living.html)
-replays **360 frames from eight residents**, covering model seconds 79.05–200.65.
-It records direct retinal input, neural population readouts, private-memory
-summaries, forecasts and physical consequences. This is an explicit research
-copy of a coherent tick-118 checkpoint under the fixed engine. Two independent
-restores of its later tick-4095 checkpoint produced byte-identical world and
-neural snapshots after one step. [Recording, branch and restoration scope](data/development/reciprocal-v6-research-continuation.receipt.json).
+now replays **360 v8 frames from eight residents**, covering model seconds
+265.05–352.65. Its 64,843 recorded events include regional material transport,
+contact, growth, signals and eight outside light/tone stimuli. The recording
+contains 179 continuation selections across all residents, zero complete
+sequences, and 6,164 observed interruption increments. Native Universal Weave
+preserves its evidence as 64,954 nodes and 134,994 links, with exact
+serialization/reload equality. The [public projection](site/assets/ecological-specialization-evidence.json)
+contains hashes and counts without private checkpoint contents.
+
+The previous reciprocal v6 recording remains selectable as an archive. Its
+independent restore check produced byte-identical world and neural snapshots
+after one step; that result belongs to the frozen v6 engine.
+[Previous restoration scope](data/development/reciprocal-v6-research-continuation.receipt.json).
 
 The longer private continuation later paused at tick 9,170: a free material
 packet escaped the finite terrain and eventually exceeded the field coordinate
@@ -155,6 +184,8 @@ uv sync --extra dev
 uv run python native/world-kernels/build_extension.py
 uv run python native/cognitive-core/build_extension.py
 ```
+
+**Frozen v8 reproduction:** use pinned source `5a030ddaab4addd2de69ad36c1def197314a5307` for the commands below. The current CNS-only development interfaces intentionally break old artifacts; a trained replacement is not yet published.
 
 Acquire the [MaleCNS graph](docs/MALECNS.md), build the current [retinal-v2 port bundle](docs/NEURAL_PORTS.md), and start a dedicated [AMD neural service](docs/REMOTE_BRAIN.md) or [Apple Metal service](docs/METAL_BRAIN.md). Reserve 32 neural slots for an ecology world so its founders leave room for offspring. New worlds require the **same graph and port identities** as the resident artifact. Existing frozen lives keep their loaded engine and service.
 
