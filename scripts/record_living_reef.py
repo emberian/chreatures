@@ -1779,8 +1779,9 @@ def main() -> int:
             "source_entity_ids_exported": False,
             "private_state": (
                 "bounded memory counts, learning diagnostics, goal timing, and optional sequence "
-                "summaries are exported; memory content, slots, account identity, raw hidden "
-                "state, and native RNG are excluded"
+                "summaries are exported; acquired-suffix slot and generation identifiers are "
+                "exported only to track a continuation across decisions; memory content, account "
+                "identity, raw hidden state, and native RNG are excluded"
             ),
         },
         "capabilities": capabilities,
