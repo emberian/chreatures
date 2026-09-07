@@ -1,0 +1,201 @@
+{
+  "action": {
+    "changedResidentRows": 887,
+    "changedTicks": 567,
+    "filmMinusBlank": {
+      "changedSamples": 10420,
+      "max": 0.25636331737041473,
+      "maxAbs": 0.25636331737041473,
+      "min": -0.25451552867889404,
+      "negativeSamples": 4794,
+      "positiveSamples": 5626,
+      "rms": 0.03177871526731606,
+      "samples": 21600,
+      "signedMean": 0.00035205670506254844
+    },
+    "scope": "all three residents",
+    "valuesPerCondition": 21600
+  },
+  "adapter": "apple-m2-max",
+  "engineIdentity": "ff22382f50114a7c26d6818e158ce67675c16d77f114e372a288aa74ca3f8754",
+  "execution": {
+    "batch": 3,
+    "blankMeanTickMs": 71.93148983333346,
+    "dt": 0.05,
+    "filmMeanTickMs": 70.5999055416666,
+    "modelSeconds": 30,
+    "ticks": 600
+  },
+  "format": "chreatures-public-screen-response-v1",
+  "interpretation": "Paired differences exceeded the declared threshold in retinal, neural, action, and physical streams during the executed 30-second comparison.",
+  "limitations": [
+    "Retinal and neural captures are for resident 0; action and physical summaries cover all three residents.",
+    "Each stream has its own sampled or aggregated first-change time; the receipt does not establish one simultaneous response.",
+    "Responsive means the neuron exceeded an absolute paired-condition difference of 1e-6 at least once across 600 ticks.",
+    "The result does not establish recovered physiology, stimulus understanding, or learned motor competence."
+  ],
+  "matchedInitialState": {
+    "cnsSha256": "1270eaa05b1c89c93c34a8a416e84888e006c1f5ee85c88e44ee4f1788f1d6f4",
+    "exactAcrossConditions": true,
+    "physicalSha256": "dd4d6c27285956616c3e1c3f2d98819029eaeb8ece8fd29aced3a3f5ebb258cd",
+    "residentSha256": "41ed1f3717a2fc850a6054ff9bfd5327f77ceee4b887bec4273311dda71cc730"
+  },
+  "model": {
+    "cnsArtifactSha256": "6875314d15f46806abb0fab04802856d4427d3a6ef29b19b12c70bb79706806d",
+    "cnsFormat": "chreatures-cns-webgpu-v2",
+    "cnsServiceArtifactSha256": "ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+    "cnsTrainingStatus": "trained",
+    "residentArtifactSha256": "c63c9f2db4bf62ffade3265dd1e162a2c26693b0ba27ba3d92e94fcc3fe7d255",
+    "residentTrainingStatus": "initialized-untrained"
+  },
+  "neural": {
+    "afferent": {
+      "filmMinusBlank": {
+        "changedSamples": 8439962,
+        "max": 0.35074528865516186,
+        "maxAbs": 0.35074528865516186,
+        "min": -0.24541689455509186,
+        "negativeSamples": 4137129,
+        "positiveSamples": 4302833,
+        "rms": 0.020587104737188694,
+        "samples": 9204000,
+        "signedMean": 0.0017117551938705114
+      },
+      "neurons": 15340,
+      "responsiveNeurons": 15331
+    },
+    "capturedResident": 0,
+    "capturesPerCondition": 600,
+    "nonafferent": {
+      "filmMinusBlank": {
+        "changedSamples": 61117587,
+        "max": 0.094614177942276,
+        "maxAbs": 0.2555162310600281,
+        "min": -0.2555162310600281,
+        "negativeSamples": 27677108,
+        "positiveSamples": 33440479,
+        "rms": 0.0017864489907152355,
+        "samples": 89869200,
+        "signedMean": -5.4439494793021014e-05
+      },
+      "neurons": 149782,
+      "responsiveNeurons": 140200
+    }
+  },
+  "originalReceiptSha256": "d94c7a8b48a55ca0b3396234f65d246350214c47e4f8a1cfe39b2fe75643cd62",
+  "physical": {
+    "blankPathLengthMeters": [
+      1.5739561492047132,
+      1.5140492219385238,
+      0.19807634645465969
+    ],
+    "bodyPositionFilmMinusBlank": {
+      "changedSamples": 34990,
+      "max": 0.2585086226463318,
+      "maxAbs": 0.2585086226463318,
+      "min": -0.11382946372032166,
+      "negativeSamples": 13352,
+      "positiveSamples": 21638,
+      "rms": 0.030224827811015906,
+      "samples": 122400,
+      "signedMean": 0.0063875551753391335
+    },
+    "filmPathLengthMeters": [
+      1.6479810644096684,
+      1.5522528810996237,
+      0.19807741253682032
+    ],
+    "finalRootDivergenceMeters": [
+      0.07103425767736316,
+      0.07086581640173954,
+      1.4901161193847656e-08
+    ],
+    "maxRootDivergenceMeters": [
+      0.1861182667687366,
+      0.0762079206929435,
+      9.5367431640625e-07
+    ],
+    "scope": "all three residents"
+  },
+  "resultNodeId": "physical-screen-response-v2",
+  "retina": {
+    "anatomicalSites": 1771,
+    "capturedResident": 0,
+    "capturesPerCondition": 600,
+    "everChangedSites": 1370,
+    "filmMinusBlank": {
+      "changedSamples": 905220,
+      "max": 1,
+      "maxAbs": 1,
+      "min": -0.41760000586509705,
+      "negativeSamples": 271609,
+      "positiveSamples": 633611,
+      "rms": 0.13900114451051354,
+      "samples": 3187800,
+      "signedMean": 0.024887101590056734
+    },
+    "maxChangedSitesPerTick": 1007,
+    "meanChangedSitesPerTick": 502.9,
+    "supportedSites": 1486,
+    "unsupportedSitesEverNonzero": 0
+  },
+  "scope": "Actual current V2 browser engine on Node Dawn; film enters only through the physical screen. Initialized resident behavior is not a competence claim.",
+  "sourceRevision": "10b4b4c0c46d99866af623824e633ac1b04a61b5",
+  "stimulus": {
+    "comparison": "decoded film on physical emitting screen versus black physical screen",
+    "decodedFrames": 600,
+    "decodedHeight": 120,
+    "decodedRgbSha256": "10153971d0e8bfd8d490896c38b8007e365b804296181ec98d2a5d4b7dc9e572",
+    "decodedWidth": 160,
+    "sourceAsset": "bad-apple-source-30s.mp4",
+    "sourceDurationSeconds": 30.03,
+    "sourceSha256": "c84678a072e0365e9acaa3687075d1e35a6fc4bbe9db93d6b730af7af0589529"
+  },
+  "temporalResponse": {
+    "actions": {
+      "firstModelSeconds": 1.5,
+      "firstTick": 30,
+      "peakModelSeconds": 27.3,
+      "peakTick": 546,
+      "peakValue": 0.06145424803706151
+    },
+    "afferentRates": {
+      "firstModelSeconds": 1.4000000000000001,
+      "firstTick": 28,
+      "peakModelSeconds": 12.350000000000001,
+      "peakTick": 247,
+      "peakValue": 0.0323913851482908
+    },
+    "bodyPositions": {
+      "firstModelSeconds": 1.5,
+      "firstTick": 30,
+      "peakModelSeconds": 16.85,
+      "peakTick": 337,
+      "peakValue": 0.04899026239125802
+    },
+    "nonafferentRates": {
+      "firstModelSeconds": 1.4000000000000001,
+      "firstTick": 28,
+      "peakModelSeconds": 27.85,
+      "peakTick": 557,
+      "peakValue": 0.003006692325631095
+    },
+    "retina": {
+      "firstModelSeconds": 1.4000000000000001,
+      "firstTick": 28,
+      "peakModelSeconds": 29.85,
+      "peakTick": 597,
+      "peakValue": 1007
+    }
+  },
+  "threshold": {
+    "absoluteDifference": 1e-06
+  },
+  "trace": {
+    "bytes": 216374,
+    "file": "live-cns-screen-response.traces.json.gz",
+    "format": "chreatures-screen-response-trace-v1",
+    "samples": 600,
+    "sha256": "c1018f24e20c0044374f8437db6b66148d62232f1a76540acf48a2137a2a9942"
+  }
+}

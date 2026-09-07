@@ -1,20 +1,26 @@
 {
-  "edge_count": 31,
+  "edge_count": 35,
   "format": "chreatures-live-cns-weave-export-v1",
-  "multi_parent_nodes": 10,
-  "node_count": 18,
-  "portable_sha256": "645bb5a76da70460b9bfdfd0962f97a9e7d05d2e339f104448438964920fb267",
+  "multi_parent_nodes": 11,
+  "node_count": 20,
+  "original_screen_response_receipt_sha256": "d94c7a8b48a55ca0b3396234f65d246350214c47e4f8a1cfe39b2fe75643cd62",
+  "portable_sha256": "a592cc345321aae519f44fbd91d5929af8e080dd986899e44e80ac2437d70f8e",
   "public_files": [
     "live-cns-evidence.json",
-    "live-cns-evidence.weave.json"
+    "live-cns-evidence.weave.json",
+    "live-cns-screen-response.json",
+    "live-cns-screen-response.traces.json.gz"
   ],
+  "public_screen_response_sha256": "6aeee4dad30ca2c26612379ae9cca178bd7d1129c77fa05210a9971decaa494c",
+  "public_screen_trace_sha256": "c1018f24e20c0044374f8437db6b66148d62232f1a76540acf48a2137a2a9942",
   "reload_equal": true,
-  "request_sha256": "18d65146560baeecf39875a79c36c37bbbe40c4fb7c30341d02e9cd2282ddf98",
+  "request_sha256": "af5da2fa2001356f1055fc9d261ec5e1b5e59390550609862d46bc4bdb7d7ed3",
   "source_directories": [
     "dynamics-v2-crossed-20260907",
     "dynamics-v2-temporal-fit-20260907",
     "browser-v2-temporal-pack-20260907",
-    "browser-v2-teacher-skills-20260907"
+    "browser-v2-teacher-skills-20260907",
+    "screen-response-v2-20260907"
   ],
   "universal_weave": {
     "name": "universal-weave",
@@ -22,5 +28,5 @@
     "version": "0.5.0"
   },
   "validated_after_reload": true,
-  "weave_sha256": "a271799ca96f910c26106fce71027fd052d3d4bc927be898d932b61e1876a027"
+  "weave_sha256": "17fe44a44053086ed1fef80ded414c05b1a8f28d290907154148d62cea829ef5"
 }

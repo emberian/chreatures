@@ -149,6 +149,12 @@ function choose(sourceId, updateHash = false) {
   ui.title.textContent = displayType(record.record_type); ui.status.textContent = status.label; ui.status.className = `status ${status.kind}`.trim();
   ui.text.textContent = record.text;
   const fields = {...record.source.fields}; delete fields.parent_roles;
+  const figure = $('#record-figure');
+  const plot = fields.plot_url;
+  const showPlot = typeof plot === 'string' && /^assets\/[A-Za-z0-9_.-]+\.svg$/.test(plot);
+  figure.hidden = !showPlot;
+  if (showPlot) { $('#figure-image').src = plot; $('#figure-link').href = plot; }
+  else { $('#figure-image').removeAttribute('src'); $('#figure-link').removeAttribute('href'); }
   ui.fields.textContent = JSON.stringify(fields, null, 2);
   fillRelations(ui.parents, incoming.get(sourceId) || [], 'parent');
   fillRelations(ui.children, outgoing.get(sourceId) || [], 'child');

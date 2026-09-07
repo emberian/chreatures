@@ -1151,3 +1151,35 @@ The live and home pages link this observatory. Bulk state stays outside Git; the
 public native serialization and portable projection carry artifact hashes. The
 physical limits now explicitly document browser ingestion’s 0.28 m root-radius
 rule, distinguishing it from the native engine’s precise mouth-contact law.
+
+### Full physical-screen response and a broader movement corpus
+
+The V2 film-versus-blank comparison completed 600 physical ticks per condition
+with exactly matched initial world, full CNS and private resident/RNG state.
+The emitting screen, physical rays and ordinary neural ports were the only
+stimulus route. For captured resident 0, 1,370 supported retinal sites and
+140,200 of 149,782 non-afferent rows differed at some point above 1e-6; these
+are episode-wide counts, not simultaneous activity or physiological firing.
+Actions and body positions diverged after the first retinal response. The public
+native Weave graph now carries 20 nodes, 35 edges and 11 joins, including this
+experiment, its exact compressed traces and a standalone response figure.
+
+Eight fresh three-body worlds supplied 512 ticks each: 12,288 physical resident
+transitions through the current CNS. Six worlds train the controller; two are
+held out. The collection retains successful and unsuccessful approaches,
+heading corrections, stops, withdrawals and contact recovery. Placement-only
+collector amendments preserve useful completed episodes with explicit source
+identities. Raw afferent sidecars stay separate from the strict CNS-only resident
+training inputs. Node Dawn's documented context lifetime now has explicit global
+ownership in long headless collectors and assays; earlier native crashes remain
+recorded with their cause unproven.
+
+The wider trainer reconstructs up to 32 prior CNS/action ticks without gradients,
+then learns over a 32-tick credit window. It balances movement bouts, predicts all
+one-to-eight-step outcomes, and separates selector gradients from dynamics fits.
+Root review caught a future achieved-goal key entering a forecasting input: that
+is valid hindsight information for inverse action learning, but a shortcut for
+predicting the actual future. The forecasting context now uses the current
+experienced key. Both completed fits remain preserved. Autonomous comparisons
+measure physical resources, reserves, fatigue and motion; a low training loss or
+more varied action does not establish useful control.
