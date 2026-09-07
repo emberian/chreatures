@@ -103,10 +103,10 @@ function initThree() {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.08;
+  renderer.toneMappingExposure = 1.22;
   renderer.setClearColor('#10251d');
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2('#10251d', .008);
+  scene.fog = new THREE.FogExp2('#10251d', .0055);
   camera = new THREE.PerspectiveCamera(40, 1, .015, 180);
   camera.up.set(0, 0, 1);
   camera.position.set(11, -12, 8);
@@ -123,13 +123,15 @@ function initThree() {
   physicalSun = new THREE.DirectionalLight('#fff0c7', 0);
   scene.add(physicalSun);
   inspectionLights = new THREE.Group();
-  const sky = new THREE.HemisphereLight('#f6efda', '#7b9188', 1.8);
+  const sky = new THREE.HemisphereLight('#fff7df', '#779087', 2.25);
   sky.position.set(0, 0, 1);
-  const key = new THREE.DirectionalLight('#fff0cf', 2.4);
+  const key = new THREE.DirectionalLight('#fff0cf', 3);
   key.position.set(-8, -10, 18);
-  const fill = new THREE.DirectionalLight('#b7d5dc', .8);
+  const fill = new THREE.DirectionalLight('#b7d5dc', 1.25);
   fill.position.set(10, 12, 10);
-  inspectionLights.add(sky, key, fill);
+  const rim = new THREE.DirectionalLight('#9fc4b1', .75);
+  rim.position.set(2, -12, 5);
+  inspectionLights.add(sky, key, fill, rim);
   scene.add(inspectionLights);
   worldRoot = new THREE.Group();
   scene.add(worldRoot);
@@ -185,7 +187,7 @@ function makePools(data) {
     const shapeKeys=[...keySet].sort(), count=shapeKeys.length;
     // setColorAt supplies instance colours. These primitive meshes have no
     // vertex colour attribute; USE_COLOR would multiply them by a missing input.
-    const material = new THREE.MeshStandardMaterial({roughness: .84, metalness: .02});
+    const material = new THREE.MeshStandardMaterial({roughness: .72, metalness: .01});
     const mesh = new THREE.InstancedMesh(geometries[kind](), material, count);
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled = false;
