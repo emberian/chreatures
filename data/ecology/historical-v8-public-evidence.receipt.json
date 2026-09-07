@@ -1,0 +1,12 @@
+{
+  "format": "chreatures-historical-v8-public-evidence-load-v1",
+  "status": "passed",
+  "scope": "Historical ecological-specialization-v8 recording; not newer CNS-only architecture.",
+  "asset": "assets/ecological-specialization-evidence.json",
+  "bytes": 2158,
+  "file_sha256": "71eb796d4ddf0c9686e61dd22868bf3b5aec7b31533f92cc9d1e68431799c24d",
+  "content_sha256": "441efb031c8b71b840af099ed28ac5a359e064086a9f5f0aea057b6b6fe986c2",
+  "node_count": 64954,
+  "edge_count": 134994,
+  "check": "Headless HTTP fetch of exact viewer-linked JSON; schema, native counts, historical label and private-field exclusion checked."
+}

@@ -998,3 +998,31 @@ changed rows; authenticated physical events occur once in the recording and
 have explicit frame ranges. The previous actual recording remains published
 until the new full-neural world supplies its own clip. Existing lives and their
 frozen engines remain untouched.
+
+
+## 2026-09-07 — recorded v8 ecology and the CNS routing correction
+
+The eight-founder full-MaleCNS v8 world completed tick 10,006 and paused with
+its coherent checkpoint. The actual 360-frame recording spans ticks
+5,301–7,053, with 64,843 committed events and 179 selected short continuations,
+but zero completed sequences. Its evidence graph passed native Universal
+Weave serialization and reload: 64,954 nodes and 134,994 edges. The public
+recording and compact evidence projection now replace the previous default;
+that prior recording remains an archive.
+
+The user's video prompt exposed a structural issue: the graph was running,
+but raw visual and physiological channels also reached memory, predictors and
+control directly. The old optic port map mixed hemispheres and drove intrinsic
+optic neurons without photoreceptors. The extracted actual atlas establishes
+1,771 bilateral column sites and measured-edge assignments for 3,936 of 4,107
+photoreceptors. It preserves unsupported cases rather than manufacturing them.
+
+The new development contract requires trainable afferents → actual full CNS →
+learned CNS readout → memory/control. Raw body/sensory information remains
+available to physics, external observations and training targets, not a
+parallel forward policy route. The direct-physiology predictor refit was
+cancelled before launch. The in-flight v8 collection is a frozen historical
+baseline; its data cannot reconstruct unrecorded full-neuron activity for the
+new readout. Native bilateral optical sampling, a physical video screen,
+trainable CNS adapters and CNS-only recurrent control are being implemented
+jointly. No new trained controller or video response is claimed in this entry.

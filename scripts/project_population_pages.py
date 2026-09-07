@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import hashlib
 import json
 import math
@@ -379,10 +380,72 @@ def project(search: dict[str, Any], status: str, evidence: dict[str, Any] | None
     return result
 
 
+def project_recording_summary(ledger_path: Path, receipt: dict[str, Any]) -> dict[str, Any]:
+    """Publish an authenticated recording summary without private ledger records."""
+    ledger_bytes = ledger_path.read_bytes()
+    ledger = json.loads(ledger_bytes)
+    records = evidence_records(ledger)
+    native = receipt["native"]
+    if (
+        receipt["campaign_id"] != ledger["campaign_id"]
+        or receipt["artifacts"]["ledger"]["sha256"] != hashlib.sha256(ledger_bytes).hexdigest()
+        or receipt["record_count"] != len(records)
+        or native["node_count"] != len(records)
+        or native["edge_count"] != sum(len(row["parent_ids"]) for row in records)
+        or native["validated_after_reload"] is not True
+        or native["reload_equal"] is not True
+    ):
+        raise ValueError("recording ledger differs from its verified native Weave receipt")
+    recordings = [row for row in records if row["record_type"] == "embodied_recording"]
+    if len(recordings) != 1:
+        raise ValueError("recording summary requires exactly one authenticated recording")
+    fields = recordings[0]["fields"]
+    if fields["recording_format"] != "chreatures-living-reef-public-recording-v4":
+        raise ValueError("recording summary requires current v4 evidence")
+    # Explicit allowlists: never serialize private body bindings, life IDs,
+    # source records, filesystem artifact locators, or checkpoint contents.
+    public_recording = {key: fields[key] for key in (
+        "recording_format", "recording_content_sha256", "recording_sha256",
+        "recording_transport_sha256", "recording_transport_decoded_sha256",
+        "recording_transport_encoding", "first_tick", "last_tick", "frame_count",
+        "resident_count", "event_count",
+    )}
+    result = {
+        "format": FORMAT,
+        "status": "completed",
+        "name": "Historical v8 ecological specialization recording evidence",
+        "scope": "Completed historical recording and its external evidence graph; not the newer CNS-only controller architecture or a competence evaluation.",
+        "campaign_id": ledger["campaign_id"],
+        "campaign_summary": {
+            "architecture": "ecological-specialization-v8",
+            "historical": True,
+            "record_types": dict(sorted(Counter(row["record_type"] for row in records).items())),
+            "event_kinds": dict(sorted(Counter(row["fields"]["kind"] for row in records if row["record_type"] in {
+                "organism_transfer", "development_event", "environment_event", "interaction_event"
+            }).items())),
+            "private_records_published": False,
+        },
+        "recording_references": [public_recording],
+        "evidence_records": [],
+        "weave_receipt": {
+            **{key: native[key] for key in (
+                "integration", "library", "node_count", "edge_count", "multi_parent_nodes",
+                "validated_after_reload", "reload_equal",
+            )},
+            "artifact_sha256": sha(receipt["artifacts"]["weave"]["sha256"], "Weave artifact"),
+            "ledger_sha256": sha(receipt["artifacts"]["ledger"]["sha256"], "ledger artifact"),
+        },
+    }
+    result["content_sha256"] = hashlib.sha256(canonical(result)).hexdigest()
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--search", type=Path, required=True)
-    parser.add_argument("--status", choices=("campaign-in-progress", "completed"), required=True)
+    parser.add_argument("--search", type=Path)
+    parser.add_argument("--status", choices=("campaign-in-progress", "completed"))
+    parser.add_argument("--historical-v8-recording-summary", action="store_true",
+                        help="Project only public recording facts and native graph counts from --evidence and --weave-receipt")
     parser.add_argument("--evidence", type=Path)
     parser.add_argument("--supplements", type=Path)
     parser.add_argument("--evaluation-output", type=Path, action="append", default=[])
@@ -393,15 +456,22 @@ def main() -> None:
     args = parser.parse_args()
     if args.output.exists():
         raise SystemExit("output already exists")
-    result = project(
-        load_object(args.search, "search"), args.status,
-        load_object(args.evidence, "evidence") if args.evidence else None,
-        load_object(args.supplements, "supplements") if args.supplements else None,
-        [load_object(path, "evaluation output") for path in args.evaluation_output],
-        [load_object(path, "regional analyst") for path in args.regional_analyst],
-        [load_object(path, "trajectory curves") for path in args.trajectory_curves],
-        load_object(args.weave_receipt, "Weave receipt") if args.weave_receipt else None,
-    )
+    if args.historical_v8_recording_summary:
+        if not args.evidence or not args.weave_receipt or args.search or args.status:
+            parser.error("--historical-v8-recording-summary requires --evidence and --weave-receipt, without --search or --status")
+        result = project_recording_summary(args.evidence, load_object(args.weave_receipt, "Weave receipt"))
+    else:
+        if not args.search or not args.status:
+            parser.error("population projection requires --search and --status")
+        result = project(
+            load_object(args.search, "search"), args.status,
+            load_object(args.evidence, "evidence") if args.evidence else None,
+            load_object(args.supplements, "supplements") if args.supplements else None,
+            [load_object(path, "evaluation output") for path in args.evaluation_output],
+            [load_object(path, "regional analyst") for path in args.regional_analyst],
+            [load_object(path, "trajectory curves") for path in args.trajectory_curves],
+            load_object(args.weave_receipt, "Weave receipt") if args.weave_receipt else None,
+        )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_name(f".{args.output.name}.tmp-{os.getpid()}")
     temporary.write_bytes(canonical(result) + b"\n")

@@ -1251,10 +1251,16 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                 {
                     return Err(format!("recording {} transport differs", record.id).into());
                 }
-                if required_string(record, "recording_format")?
-                    != "chreatures-living-reef-public-recording-v2"
+                // Archived v2 evidence remains immutable and readable; current
+                // recording ingestion emits v4 with explicit frame associations.
+                if !matches!(
+                    required_string(record, "recording_format")?,
+                    "chreatures-living-reef-public-recording-v2"
+                        | "chreatures-living-reef-public-recording-v4"
+                )
                     || required_u64(record, "frame_count")? == 0
                     || required_u64(record, "resident_count")? == 0
+                    || required_u64(record, "last_tick")? < required_u64(record, "first_tick")?
                 {
                     return Err(format!("recording {} has invalid extent", record.id).into());
                 }
@@ -1313,8 +1319,26 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                     return Err(format!("event {} has invalid scope", record.id).into());
                 }
                 required_u64(record, "sequence")?;
-                required_u64(record, "tick")?;
+                let tick = required_u64(record, "tick")?;
                 let recording_id = population_parent_for_role(record, "recording")?;
+                let recording = by_id[recording_id.as_str()];
+                if required_string(recording, "recording_format")?
+                    == "chreatures-living-reef-public-recording-v4"
+                {
+                    let frame_index = required_u64(record, "frame_index")?;
+                    let frame_tick = required_u64(record, "frame_tick")?;
+                    if frame_index >= required_u64(recording, "frame_count")?
+                        || frame_tick < required_u64(recording, "first_tick")?
+                        || frame_tick > required_u64(recording, "last_tick")?
+                        || tick > frame_tick
+                    {
+                        return Err(format!(
+                            "event {} has invalid recorded frame association",
+                            record.id
+                        )
+                        .into());
+                    }
+                }
                 if required_sha256(record, "recording_content_sha256")?
                     != required_sha256(by_id[recording_id.as_str()], "recording_content_sha256")?
                     || population_parent_for_role(record, "observed_environment")?
