@@ -1,6 +1,6 @@
 {
   "archive_id": "live-cns-wave-v2-20260907",
-  "description": "Actual live-CNS research chain: dynamics, temporal fit, browser export, paired physical-screen response, teacher fit, and matched physical rollout.",
+  "description": "Actual live-CNS research chain: dynamics, temporal fit, browser export, paired physical-screen response, teacher curricula, and matched physical rollouts.",
   "evidence": [
     {
       "artifact_uri": "urn:sha256:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
@@ -659,6 +659,915 @@
       "time": {
         "domain": "live_cns_evidence_stage",
         "value": 7
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:75ed2d59169327490b073ecd6db3d856458badd90b91ebaea48f3871f962355b",
+      "blob_refs": [
+        {
+          "bytes": 16854,
+          "media_type": "application/json",
+          "role": "curriculum_collection_receipt",
+          "sha256": "75ed2d59169327490b073ecd6db3d856458badd90b91ebaea48f3871f962355b",
+          "uri": "urn:sha256:75ed2d59169327490b073ecd6db3d856458badd90b91ebaea48f3871f962355b",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 7375,
+          "media_type": "application/json",
+          "role": "curriculum_corpus_manifest",
+          "sha256": "0336bb6637ed7a5507911166ee550412e0692f72364126aae3fb25f2993aca71",
+          "uri": "urn:sha256:0336bb6637ed7a5507911166ee550412e0692f72364126aae3fb25f2993aca71",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 3282295,
+          "media_type": "application/x-npz",
+          "role": "curriculum_source_episode_0",
+          "sha256": "a83375931b1aa3261f5697464dc1d0811f761c03a799dbe4622ab57178adde4f",
+          "uri": "urn:sha256:a83375931b1aa3261f5697464dc1d0811f761c03a799dbe4622ab57178adde4f",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 3282239,
+          "media_type": "application/x-npz",
+          "role": "curriculum_source_episode_1",
+          "sha256": "f9122bd877381718d1f76eaec949051d2ee495b244a811554fbca04948b25027",
+          "uri": "urn:sha256:f9122bd877381718d1f76eaec949051d2ee495b244a811554fbca04948b25027",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 3282615,
+          "media_type": "application/x-npz",
+          "role": "curriculum_source_episode_2",
+          "sha256": "6e4447b762fbe5243f84a5be0d6706f6f75b841736d5b2ba2716a68524251c2e",
+          "uri": "urn:sha256:6e4447b762fbe5243f84a5be0d6706f6f75b841736d5b2ba2716a68524251c2e",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 3282939,
+          "media_type": "application/x-npz",
+          "role": "curriculum_source_episode_3",
+          "sha256": "ac6cd4374a289947010a6be056bea9d92b7063bdbc44a62ac674bb2161901fb7",
+          "uri": "urn:sha256:ac6cd4374a289947010a6be056bea9d92b7063bdbc44a62ac674bb2161901fb7",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 3282711,
+          "media_type": "application/x-npz",
+          "role": "curriculum_source_episode_4",
+          "sha256": "b2b86bcc0ffafc738318d40a52bec961ddbd55f0614bd7d8b14c7cdd69bb5e70",
+          "uri": "urn:sha256:b2b86bcc0ffafc738318d40a52bec961ddbd55f0614bd7d8b14c7cdd69bb5e70",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 3282699,
+          "media_type": "application/x-npz",
+          "role": "curriculum_source_episode_5",
+          "sha256": "f2208692cd5cbe8db68ef3981c174fb03b12e17f63b4b3db980529fbbe1df289",
+          "uri": "urn:sha256:f2208692cd5cbe8db68ef3981c174fb03b12e17f63b4b3db980529fbbe1df289",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 3282871,
+          "media_type": "application/x-npz",
+          "role": "curriculum_source_episode_6",
+          "sha256": "36c0dd77ebc4b7fd5b61f07dfe1683fad4e09aa595d867010669d4c8aab0fb36",
+          "uri": "urn:sha256:36c0dd77ebc4b7fd5b61f07dfe1683fad4e09aa595d867010669d4c8aab0fb36",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 3283015,
+          "media_type": "application/x-npz",
+          "role": "curriculum_source_episode_7",
+          "sha256": "8476698d385967e1d14f6e5916776b9b1a96ba308e77037e7e8518020879178b",
+          "uri": "urn:sha256:8476698d385967e1d14f6e5916776b9b1a96ba308e77037e7e8518020879178b",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2854107,
+          "media_type": "application/x-npz",
+          "role": "curriculum_corpus_episode_0",
+          "sha256": "68eb42f348c7319f7ba27ce1f33af4418c51815b7b3d5890eb0c68598b367382",
+          "uri": "urn:sha256:68eb42f348c7319f7ba27ce1f33af4418c51815b7b3d5890eb0c68598b367382",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2858131,
+          "media_type": "application/x-npz",
+          "role": "curriculum_corpus_episode_1",
+          "sha256": "4211f6a001ff15b53bc6cdf2fe0eca6b9f33186a414d98c9def987220a9f7f19",
+          "uri": "urn:sha256:4211f6a001ff15b53bc6cdf2fe0eca6b9f33186a414d98c9def987220a9f7f19",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2867827,
+          "media_type": "application/x-npz",
+          "role": "curriculum_corpus_episode_2",
+          "sha256": "1f55d912a90ec9dbfea307a6fb80cd0c1fd6ff3ea0c075979d993fcb373b2e35",
+          "uri": "urn:sha256:1f55d912a90ec9dbfea307a6fb80cd0c1fd6ff3ea0c075979d993fcb373b2e35",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2868373,
+          "media_type": "application/x-npz",
+          "role": "curriculum_corpus_episode_3",
+          "sha256": "441c09007cf5d8c2aaed209d1ebe1c00d41df7840e16662a10e8b9f241a57b89",
+          "uri": "urn:sha256:441c09007cf5d8c2aaed209d1ebe1c00d41df7840e16662a10e8b9f241a57b89",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2861340,
+          "media_type": "application/x-npz",
+          "role": "curriculum_corpus_episode_4",
+          "sha256": "ba215932f74dc3de55ca0032ae5336b691e612acaec64bcecebf552ae1ecc3e7",
+          "uri": "urn:sha256:ba215932f74dc3de55ca0032ae5336b691e612acaec64bcecebf552ae1ecc3e7",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2862633,
+          "media_type": "application/x-npz",
+          "role": "curriculum_corpus_episode_5",
+          "sha256": "64b8252712ea403aa393f8375b4c3f25f626f9e653bf227f61b277d34785f866",
+          "uri": "urn:sha256:64b8252712ea403aa393f8375b4c3f25f626f9e653bf227f61b277d34785f866",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2863257,
+          "media_type": "application/x-npz",
+          "role": "curriculum_corpus_episode_6",
+          "sha256": "9c0313c6bb2fc77bcbdc3407754f5618e37f5cc4eeeeb9f4ee66b9b4a5e20577",
+          "uri": "urn:sha256:9c0313c6bb2fc77bcbdc3407754f5618e37f5cc4eeeeb9f4ee66b9b4a5e20577",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2862493,
+          "media_type": "application/x-npz",
+          "role": "curriculum_corpus_episode_7",
+          "sha256": "c1ead84dfb63f6f451b50677701d41ed5fd39a7f256836d97fd3b69d7580cea9",
+          "uri": "urn:sha256:c1ead84dfb63f6f451b50677701d41ed5fd39a7f256836d97fd3b69d7580cea9",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "action_source": "privileged-physical-teacher",
+        "afferent_sidecars_excluded_from_training": true,
+        "controller_input_fields": [
+          "cns_latent",
+          "previous_delivered_command",
+          "reset"
+        ],
+        "curriculum_contract_sha256": "53d07f6dcc778ca6999839072c0c8a9cd64a0bdd315f5baeb16b7745399541eb",
+        "default_resident_artifact_sha256": "c63c9f2db4bf62ffade3265dd1e162a2c26693b0ba27ba3d92e94fcc3fe7d255",
+        "episodes": 8,
+        "heldout_worlds": 2,
+        "parent_roles": {
+          "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea": "initialized_resident",
+          "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee": "executed_runtime_lineage",
+          "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378": "same_cns_service"
+        },
+        "physical_transitions": 12288,
+        "raw_geometry_retained": false,
+        "raw_senses_retained": false,
+        "rehydrated_corpus_manifest_sha256": "0336bb6637ed7a5507911166ee550412e0692f72364126aae3fb25f2993aca71",
+        "resident_batch": 3,
+        "source_amendment_scopes": [
+          "layout-placement-only",
+          "dawn-lifetime-pin-only"
+        ],
+        "source_collection_sha256": "75ed2d59169327490b073ecd6db3d856458badd90b91ebaea48f3871f962355b",
+        "teacher_only_fields": [
+          "delivered_command",
+          "physical_reward",
+          "terminal",
+          "teacher_bouts"
+        ],
+        "train_worlds": 6,
+        "training_input_corpus_sha256": "949eb9ddd180436fc80a458ea818db681e9f556ac3c7b2e1fbc1593a91b312d8",
+        "transitions_per_episode": 512
+      },
+      "id": "curriculum-corpus:0336bb6637ed7a5507911166ee550412e0692f72364126aae3fb25f2993aca71",
+      "parent_ids": [
+        "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+        "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+        "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378"
+      ],
+      "record_type": "resident_teacher_curriculum",
+      "text": "Eight fresh three-resident worlds supplied 12,288 physical transitions through the current CNS, split into six training worlds and two identity-disjoint held-out worlds.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 6
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:f598eca59e420e94e41945b0634cd08e85612e318354bf6c3504a78d594b1e18",
+      "blob_refs": [
+        {
+          "bytes": 128001,
+          "media_type": "application/json",
+          "role": "future_key_contaminated_fit_receipt",
+          "sha256": "f598eca59e420e94e41945b0634cd08e85612e318354bf6c3504a78d594b1e18",
+          "uri": "urn:sha256:f598eca59e420e94e41945b0634cd08e85612e318354bf6c3504a78d594b1e18",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 10986417,
+          "media_type": "application/x-npz",
+          "role": "future_key_contaminated_resident",
+          "sha256": "dbbc7b55619b77f3e4c249f3a035e6138b2a9098dd4a92c2cf86758675006e13",
+          "uri": "urn:sha256:dbbc7b55619b77f3e4c249f3a035e6138b2a9098dd4a92c2cf86758675006e13",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 1640685,
+          "media_type": "application/x-npz",
+          "role": "future_key_contaminated_sequence_control",
+          "sha256": "8ded53583756b3e82fd682ba7635b27e058af3f2288bc097ef305ae67ef568dd",
+          "uri": "urn:sha256:8ded53583756b3e82fd682ba7635b27e058af3f2288bc097ef305ae67ef568dd",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 479,
+          "media_type": "application/json",
+          "role": "future_key_contaminated_native_comparison",
+          "sha256": "b2ba8e9b069c001c2e65c44c9b1f275da52c50278e3187ce3df40e86087bba3c",
+          "uri": "urn:sha256:b2ba8e9b069c001c2e65c44c9b1f275da52c50278e3187ce3df40e86087bba3c",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 4699,
+          "media_type": "application/json",
+          "role": "browser_release_manifest",
+          "sha256": "945a2f802aa471bda4a1f12f4ea700f8a42c69a1cb73b54e61973a24da843c56",
+          "uri": "urn:sha256:945a2f802aa471bda4a1f12f4ea700f8a42c69a1cb73b54e61973a24da843c56",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "forecast_input": "future achieved key",
+        "hindsight_inverse_action_use_valid": true,
+        "native_comparison": {
+          "errors": {
+            "current_key_max_abs": 1.4901161193847656e-07,
+            "local_proposal_max_abs": 4.470348358154297e-08,
+            "recurrent_state_max_abs": 2.421438694000244e-08
+          },
+          "passed": true,
+          "tolerance": 3e-05
+        },
+        "parent_roles": {
+          "curriculum-corpus:0336bb6637ed7a5507911166ee550412e0692f72364126aae3fb25f2993aca71": "training_corpus"
+        },
+        "publication_status": "research only; not the default resident",
+        "rejection_reason": "future target information entered the dynamics forecast context",
+        "resident_artifact_sha256": "44c76960ec6aa8a4d004817ac53036363c9222390c2c349667aea2bd3b281d7e",
+        "seconds": 57.63637191802263,
+        "sequence_control_artifact_sha256": "ecfc82730f5e79a688a91f2358cad2412ed3ea3695af17bf286f684457e8aee0",
+        "status": "executed fit rejected for forecasting contamination",
+        "updates": 256,
+        "validation": {
+          "after_overall": {
+            "action": 0.03881919011473656,
+            "hazard": 0.6928572475910186,
+            "memory": 4.750526201725006,
+            "prediction": 0.005531805887585506,
+            "selector": 1.455523020029068,
+            "total": 0.8980677932500839,
+            "value": 0.2856986422033515
+          },
+          "before_overall": {
+            "action": 0.07934567965567112,
+            "hazard": 1.1064864933490752,
+            "memory": 5.844047689437867,
+            "prediction": 0.005629930750001222,
+            "selector": 1.6094378054141998,
+            "total": 1.096184965968132,
+            "value": 0.2900891932426021
+          },
+          "total_by_skill": {
+            "approach": {
+              "after": 0.7594871819019318,
+              "before": 0.931352436542511
+            },
+            "contact-recovery": {
+              "after": 1.4936017990112305,
+              "before": 1.7124658524990082
+            },
+            "heading-correction": {
+              "after": 0.7367492616176605,
+              "before": 0.8734645694494247
+            },
+            "stop": {
+              "after": 0.7558082640171051,
+              "before": 1.0384121090173721
+            },
+            "withdraw": {
+              "after": 0.7446924597024918,
+              "before": 0.925229862332344
+            }
+          }
+        }
+      },
+      "id": "rejected-future-key-fit:f598eca59e420e94e41945b0634cd08e85612e318354bf6c3504a78d594b1e18",
+      "parent_ids": [
+        "curriculum-corpus:0336bb6637ed7a5507911166ee550412e0692f72364126aae3fb25f2993aca71"
+      ],
+      "record_type": "rejected_controller_fit",
+      "text": "The first 256-update curriculum fit reduced recorded held-out losses, but its dynamics forecast received the future achieved key and was rejected as causally contaminated.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 7
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:43f6d37908608b2b31c146dcd06e02bb64c4a5d346c9fadfc81bd9a652581802",
+      "blob_refs": [
+        {
+          "bytes": 127985,
+          "media_type": "application/json",
+          "role": "current_key_fit_receipt",
+          "sha256": "43f6d37908608b2b31c146dcd06e02bb64c4a5d346c9fadfc81bd9a652581802",
+          "uri": "urn:sha256:43f6d37908608b2b31c146dcd06e02bb64c4a5d346c9fadfc81bd9a652581802",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 10985456,
+          "media_type": "application/x-npz",
+          "role": "current_key_resident",
+          "sha256": "2590fca219d7648c8112a9dd236c390b071bc0dbd0dfc5fabd14bfc429bfba1b",
+          "uri": "urn:sha256:2590fca219d7648c8112a9dd236c390b071bc0dbd0dfc5fabd14bfc429bfba1b",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 1640805,
+          "media_type": "application/x-npz",
+          "role": "current_key_sequence_control",
+          "sha256": "b7ac6c21f26e86978b9541352a9e5646d8a790d3b1dcfc4ccf6996b11412c75d",
+          "uri": "urn:sha256:b7ac6c21f26e86978b9541352a9e5646d8a790d3b1dcfc4ccf6996b11412c75d",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 478,
+          "media_type": "application/json",
+          "role": "current_key_native_comparison",
+          "sha256": "7a9e6bf622072cf662a513b923b2b32014e27e7a535748ee56eff7c668155951",
+          "uri": "urn:sha256:7a9e6bf622072cf662a513b923b2b32014e27e7a535748ee56eff7c668155951",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 4699,
+          "media_type": "application/json",
+          "role": "browser_release_manifest",
+          "sha256": "cca33ddd8f22d11bc2f797e79f45b8af2bbda8f98adee51330e009b4524947ee",
+          "uri": "urn:sha256:cca33ddd8f22d11bc2f797e79f45b8af2bbda8f98adee51330e009b4524947ee",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "browser_release_sha256": "cca33ddd8f22d11bc2f797e79f45b8af2bbda8f98adee51330e009b4524947ee",
+        "forecast_input": "current experienced key",
+        "future_achieved_key_scope": "hindsight inverse-action supervision only",
+        "native_comparison": {
+          "errors": {
+            "current_key_max_abs": 1.4156103134155273e-07,
+            "local_proposal_max_abs": 4.470348358154297e-08,
+            "recurrent_state_max_abs": 2.60770320892334e-08
+          },
+          "passed": true,
+          "tolerance": 3e-05
+        },
+        "parent_roles": {
+          "curriculum-corpus:0336bb6637ed7a5507911166ee550412e0692f72364126aae3fb25f2993aca71": "same_training_corpus",
+          "rejected-future-key-fit:f598eca59e420e94e41945b0634cd08e85612e318354bf6c3504a78d594b1e18": "causal_correction"
+        },
+        "publication_status": "research candidate only; not the default resident",
+        "resident_artifact_sha256": "805518a08394ef5d7b93f44c0611917b73d639c092e4357817492300196c5c9a",
+        "seconds": 57.67976956162602,
+        "sequence_control_artifact_sha256": "75ea8eacc25aaec83ae7df2f1ae5ef3cea60485ecff941901f6dba960436d5f4",
+        "updates": 256,
+        "validation": {
+          "after_overall": {
+            "action": 0.03881917353719473,
+            "hazard": 0.6928577870130539,
+            "memory": 4.750517988204956,
+            "prediction": 0.00560182175540831,
+            "selector": 1.4555822610855103,
+            "total": 0.8982140451669693,
+            "value": 0.28568212896352635
+          },
+          "before_overall": {
+            "action": 0.07934567965567112,
+            "hazard": 1.1064864933490752,
+            "memory": 5.844047689437867,
+            "prediction": 0.005629930750001222,
+            "selector": 1.6094378054141998,
+            "total": 1.096184965968132,
+            "value": 0.2900891932426021
+          },
+          "total_by_skill": {
+            "approach": {
+              "after": 0.7592682838439941,
+              "before": 0.931352436542511
+            },
+            "contact-recovery": {
+              "after": 1.4940006583929062,
+              "before": 1.7124658524990082
+            },
+            "heading-correction": {
+              "after": 0.7370104491710663,
+              "before": 0.8734645694494247
+            },
+            "stop": {
+              "after": 0.7558451294898987,
+              "before": 1.0384121090173721
+            },
+            "withdraw": {
+              "after": 0.7449457049369812,
+              "before": 0.925229862332344
+            }
+          }
+        }
+      },
+      "id": "current-key-controller-fit:43f6d37908608b2b31c146dcd06e02bb64c4a5d346c9fadfc81bd9a652581802",
+      "parent_ids": [
+        "curriculum-corpus:0336bb6637ed7a5507911166ee550412e0692f72364126aae3fb25f2993aca71",
+        "rejected-future-key-fit:f598eca59e420e94e41945b0634cd08e85612e318354bf6c3504a78d594b1e18"
+      ],
+      "record_type": "causal_controller_fit",
+      "text": "A second 256-update fit retained the held-out loss reductions while forecasting from the current experienced key; the future achieved key remained only in hindsight inverse-action supervision.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 8
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:283c36625fdd71a7bc2b5a229f2ab108959787d94e180fc1b4745f1b8dc87bfb",
+      "blob_refs": [
+        {
+          "bytes": 31147,
+          "media_type": "application/json",
+          "role": "candidate_01_autonomous_assay",
+          "sha256": "283c36625fdd71a7bc2b5a229f2ab108959787d94e180fc1b4745f1b8dc87bfb",
+          "uri": "urn:sha256:283c36625fdd71a7bc2b5a229f2ab108959787d94e180fc1b4745f1b8dc87bfb",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 38774,
+          "media_type": "application/json",
+          "role": "candidate_02_autonomous_assay",
+          "sha256": "47ed38f40586666d36ca487e22693613ed0eec4bf7cd84c4f45b7f126c68789d",
+          "uri": "urn:sha256:47ed38f40586666d36ca487e22693613ed0eec4bf7cd84c4f45b7f126c68789d",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "claims_not_established": [
+          "goal conditioning",
+          "general embodied competence"
+        ],
+        "corrected_current_key_candidate": {
+          "assimilable_reserve_change": [
+            -0.3526494491379074,
+            -0.3583028791565743,
+            -0.3561601666098966
+          ],
+          "distinct_action_rows_rounded_1e3": 379,
+          "execution": {
+            "failed": false,
+            "failures": [],
+            "maxTickMs": 81.12587500001246,
+            "meanTickMs": 69.6165332871087,
+            "wallSeconds": 37.615063250000006
+          },
+          "fatigue_change": [
+            0.5049775747796144,
+            0.48387067037878745,
+            0.47883188830170503
+          ],
+          "label": "trained",
+          "mean_squared_effort": 0.11335134320159544,
+          "net_target_food_stock_loss": [
+            0.01909571886062622,
+            0,
+            0
+          ],
+          "path_length_meters": [
+            1.1864377357540539,
+            1.2743867513678795,
+            1.2737634187583455
+          ],
+          "resident_artifact_sha256": "805518a08394ef5d7b93f44c0611917b73d639c092e4357817492300196c5c9a",
+          "stop_ticks_below_1cm_per_second": [
+            17,
+            15,
+            14
+          ],
+          "target_proximity_ticks_below_34cm": [
+            152,
+            104,
+            179
+          ],
+          "training_status": "trained"
+        },
+        "earlier_candidate_01_assay_trained_arm": {
+          "assimilable_reserve_change": [
+            -0.363038374860459,
+            -0.36851304956177067,
+            -0.36484606497048044
+          ],
+          "distinct_action_rows_rounded_1e3": 382,
+          "execution": {
+            "failed": false,
+            "failures": [],
+            "maxTickMs": 83.58537500000966,
+            "meanTickMs": 69.11696565820361,
+            "wallSeconds": 37.320725792
+          },
+          "fatigue_change": [
+            0.5214494714447665,
+            0.5042916393431176,
+            0.4958866374690874
+          ],
+          "label": "trained",
+          "mean_squared_effort": 0.14156009316423154,
+          "net_target_food_stock_loss": [
+            0.016542673110961914,
+            0,
+            0
+          ],
+          "path_length_meters": [
+            1.1538823328844379,
+            1.320641860949154,
+            1.302360182727029
+          ],
+          "resident_artifact_sha256": "44c76960ec6aa8a4d004817ac53036363c9222390c2c349667aea2bd3b281d7e",
+          "stop_ticks_below_1cm_per_second": [
+            19,
+            13,
+            16
+          ],
+          "target_proximity_ticks_below_34cm": [
+            236,
+            1,
+            187
+          ],
+          "training_status": "trained"
+        },
+        "future_key_contaminated_candidate": {
+          "assimilable_reserve_change": [
+            -0.363038374860459,
+            -0.36851304956177067,
+            -0.36484606497048044
+          ],
+          "distinct_action_rows_rounded_1e3": 382,
+          "execution": {
+            "failed": false,
+            "failures": [],
+            "maxTickMs": 88.82379199999559,
+            "meanTickMs": 70.49178663281211,
+            "wallSeconds": 38.01005141699999
+          },
+          "fatigue_change": [
+            0.5214494714447665,
+            0.5042916393431176,
+            0.4958866374690874
+          ],
+          "label": "candidate01-future-key-contaminated",
+          "mean_squared_effort": 0.14156009316423154,
+          "net_target_food_stock_loss": [
+            0.016542673110961914,
+            0,
+            0
+          ],
+          "path_length_meters": [
+            1.1538823328844379,
+            1.320641860949154,
+            1.302360182727029
+          ],
+          "resident_artifact_sha256": "44c76960ec6aa8a4d004817ac53036363c9222390c2c349667aea2bd3b281d7e",
+          "stop_ticks_below_1cm_per_second": [
+            19,
+            13,
+            16
+          ],
+          "target_proximity_ticks_below_34cm": [
+            236,
+            1,
+            187
+          ],
+          "training_status": "trained"
+        },
+        "initialized_parent": {
+          "assimilable_reserve_change": [
+            -0.16528265699913347,
+            -0.3561591495285583,
+            -0.3415223109628285
+          ],
+          "distinct_action_rows_rounded_1e3": 271,
+          "execution": {
+            "failed": false,
+            "failures": [],
+            "maxTickMs": 80.73804199999904,
+            "meanTickMs": 68.44692178320315,
+            "wallSeconds": 37.08595158399999
+          },
+          "fatigue_change": [
+            0.4549533583722029,
+            0.4745485239691339,
+            0.4447616975992331
+          ],
+          "label": "parent",
+          "mean_squared_effort": 0.02831138089007472,
+          "net_target_food_stock_loss": [
+            0.22223371267318726,
+            0,
+            0
+          ],
+          "path_length_meters": [
+            1.346207184776533,
+            1.2905287048857867,
+            1.355885022620272
+          ],
+          "resident_artifact_sha256": "c63c9f2db4bf62ffade3265dd1e162a2c26693b0ba27ba3d92e94fcc3fe7d255",
+          "stop_ticks_below_1cm_per_second": [
+            13,
+            20,
+            14
+          ],
+          "target_proximity_ticks_below_34cm": [
+            360,
+            19,
+            0
+          ],
+          "training_status": "initialized-untrained"
+        },
+        "matched_initial_world_and_cns_state": true,
+        "outcome": "offline validation losses improved; autonomous physical cost regressed in this matched world",
+        "parent_roles": {
+          "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea": "initialized_parent_arm",
+          "current-key-controller-fit:43f6d37908608b2b31c146dcd06e02bb64c4a5d346c9fadfc81bd9a652581802": "corrected_candidate_arm",
+          "rejected-future-key-fit:f598eca59e420e94e41945b0634cd08e85612e318354bf6c3504a78d594b1e18": "rejected_candidate_arm"
+        },
+        "policy_input_contract": [
+          "cns_latent[512]",
+          "previous_delivered_command[12]",
+          "reset"
+        ],
+        "resident_batch": 3,
+        "teacher_geometry_used_by_policy": false,
+        "ticks": 512,
+        "variation_seed": 271828,
+        "world_seed": 20270331,
+        "zero_command_baseline": {
+          "assimilable_reserve_change": [
+            -0.038473616124118926,
+            -0.03847361612374767,
+            -0.03847361612457201
+          ],
+          "distinct_action_rows_rounded_1e3": 1,
+          "execution": {
+            "failed": false,
+            "failures": [],
+            "maxTickMs": 6.278083000011975,
+            "meanTickMs": 1.6785344960939028,
+            "wallSeconds": 2.5907802089999894
+          },
+          "fatigue_change": [
+            -0.05,
+            -0.05,
+            -0.05
+          ],
+          "label": "zero-command",
+          "mean_squared_effort": 0,
+          "net_target_food_stock_loss": [
+            0,
+            0,
+            0
+          ],
+          "path_length_meters": [
+            0.015924254462573575,
+            0.015924571632304547,
+            0.015924559063093424
+          ],
+          "resident_artifact_sha256": "c63c9f2db4bf62ffade3265dd1e162a2c26693b0ba27ba3d92e94fcc3fe7d255",
+          "stop_ticks_below_1cm_per_second": [
+            509,
+            509,
+            509
+          ],
+          "target_proximity_ticks_below_34cm": [
+            512,
+            0,
+            0
+          ],
+          "training_status": "zero-command physical baseline"
+        }
+      },
+      "id": "autonomous-controller-outcomes:47ed38f40586666d36ca487e22693613ed0eec4bf7cd84c4f45b7f126c68789d",
+      "parent_ids": [
+        "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+        "rejected-future-key-fit:f598eca59e420e94e41945b0634cd08e85612e318354bf6c3504a78d594b1e18",
+        "current-key-controller-fit:43f6d37908608b2b31c146dcd06e02bb64c4a5d346c9fadfc81bd9a652581802"
+      ],
+      "record_type": "autonomous_controller_outcomes",
+      "text": "Matched 512-tick autonomous assays found that the corrected fit kept its offline loss gains but used more effort, lost more reserve, and produced less net target food-stock loss than the initialized parent in this world.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 9
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:228b02e8efe9054afb3c3ffbef203e4eae74f9f82ffcc96f01e46328cb112916",
+      "blob_refs": [
+        {
+          "bytes": 2845,
+          "media_type": "application/json",
+          "role": "map_action_derivative_manifest",
+          "sha256": "228b02e8efe9054afb3c3ffbef203e4eae74f9f82ffcc96f01e46328cb112916",
+          "uri": "urn:sha256:228b02e8efe9054afb3c3ffbef203e4eae74f9f82ffcc96f01e46328cb112916",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 9403,
+          "media_type": "application/json",
+          "role": "map_action_autonomous_assay",
+          "sha256": "d2aff99db7735b0fea5ae23928aa03916b0020e1b40f9215f65826df6d0d1fe1",
+          "uri": "urn:sha256:d2aff99db7735b0fea5ae23928aa03916b0020e1b40f9215f65826df6d0d1fe1",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "changed_configuration": {
+          "action_mode": {
+            "from": "sample",
+            "to": "map"
+          }
+        },
+        "derivative_resident_artifact_sha256": "e246a91f94c398f9c3d5c8a84f6e62e2fe2a5ec7ada9c41190b6c4a0f8cb8770",
+        "immutable_weight_buffers_equal": true,
+        "parent_resident_artifact_sha256": "805518a08394ef5d7b93f44c0611917b73d639c092e4357817492300196c5c9a",
+        "parent_roles": {
+          "autonomous-controller-outcomes:47ed38f40586666d36ca487e22693613ed0eec4bf7cd84c4f45b7f126c68789d": "motivating_sampled_action_outcome",
+          "current-key-controller-fit:43f6d37908608b2b31c146dcd06e02bb64c4a5d346c9fadfc81bd9a652581802": "identical_trained_weights"
+        },
+        "reference_autonomous_assay_sha256": "47ed38f40586666d36ca487e22693613ed0eec4bf7cd84c4f45b7f126c68789d",
+        "single_world_outcome": {
+          "assimilable_reserve_change": [
+            -0.19512741035475278,
+            -0.35625295482683483,
+            -0.34216470931057696
+          ],
+          "distinct_action_rows_rounded_1e3": 12,
+          "execution": {
+            "failed": false,
+            "failures": [],
+            "maxTickMs": 81.4128329999985,
+            "meanTickMs": 69.16457168750006,
+            "wallSeconds": 37.465775791
+          },
+          "fatigue_change": [
+            0.5032106618929783,
+            0.47641261399970297,
+            0.4486294786497834
+          ],
+          "label": "candidate02-map-action-research",
+          "mean_squared_effort": 0.04464315170059555,
+          "net_target_food_stock_loss": [
+            0.21041542291641235,
+            0,
+            0
+          ],
+          "path_length_meters": [
+            1.2068516490205166,
+            0.9518735922009088,
+            0.9102633822803295
+          ],
+          "resident_artifact_sha256": "e246a91f94c398f9c3d5c8a84f6e62e2fe2a5ec7ada9c41190b6c4a0f8cb8770",
+          "stop_ticks_below_1cm_per_second": [
+            27,
+            43,
+            58
+          ],
+          "target_proximity_ticks_below_34cm": [
+            512,
+            0,
+            0
+          ],
+          "training_status": "trained-weights-map-action-research-intervention"
+        },
+        "status": "research intervention; not the default resident"
+      },
+      "id": "map-action-intervention:228b02e8efe9054afb3c3ffbef203e4eae74f9f82ffcc96f01e46328cb112916",
+      "parent_ids": [
+        "current-key-controller-fit:43f6d37908608b2b31c146dcd06e02bb64c4a5d346c9fadfc81bd9a652581802",
+        "autonomous-controller-outcomes:47ed38f40586666d36ca487e22693613ed0eec4bf7cd84c4f45b7f126c68789d"
+      ],
+      "record_type": "map_action_intervention",
+      "text": "A research-only derivative kept every corrected controller weight fixed and changed action selection from sampling to maximum a posteriori selection for an executed matched assay.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 10
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:64fdfaa76cb4de29dc620fedd7fc138f73d4e09694ce3b777a091be6f94162d7",
+      "blob_refs": [
+        {
+          "bytes": 798,
+          "media_type": "application/json",
+          "role": "map_generalization_recipe",
+          "sha256": "64fdfaa76cb4de29dc620fedd7fc138f73d4e09694ce3b777a091be6f94162d7",
+          "uri": "urn:sha256:64fdfaa76cb4de29dc620fedd7fc138f73d4e09694ce3b777a091be6f94162d7",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 23532,
+          "media_type": "application/json",
+          "role": "map_generalization_world_20270411",
+          "sha256": "bee1536e4b0594d6466aac772a2d3929cf692a638998272a18a71fd4b23e7d0a",
+          "uri": "urn:sha256:bee1536e4b0594d6466aac772a2d3929cf692a638998272a18a71fd4b23e7d0a",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 23568,
+          "media_type": "application/json",
+          "role": "map_generalization_world_20270412",
+          "sha256": "27a3062dddf441c31aec0dfedfb1156d14535b1d9bdc61cac8f178896be1b792",
+          "uri": "urn:sha256:27a3062dddf441c31aec0dfedfb1156d14535b1d9bdc61cac8f178896be1b792",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 23574,
+          "media_type": "application/json",
+          "role": "map_generalization_world_20270413",
+          "sha256": "fddc0fa333f8c79632235060838919804abc4ffeb38bc134770431a19a4444e2",
+          "uri": "urn:sha256:fddc0fa333f8c79632235060838919804abc4ffeb38bc134770431a19a4444e2",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "claims_not_established": [
+          "generalization beyond these three contexts",
+          "goal conditioning",
+          "general embodied competence"
+        ],
+        "contexts": [
+          {
+            "report_sha256": "bee1536e4b0594d6466aac772a2d3929cf692a638998272a18a71fd4b23e7d0a",
+            "variation_seed": 314159,
+            "world_seed": 20270411
+          },
+          {
+            "report_sha256": "27a3062dddf441c31aec0dfedfb1156d14535b1d9bdc61cac8f178896be1b792",
+            "variation_seed": 271829,
+            "world_seed": 20270412
+          },
+          {
+            "report_sha256": "fddc0fa333f8c79632235060838919804abc4ffeb38bc134770431a19a4444e2",
+            "variation_seed": 161803,
+            "world_seed": 20270413
+          }
+        ],
+        "default_resident_unchanged": true,
+        "initialized_parent": {
+          "mean_assimilable_reserve_change": -0.3257620208830644,
+          "mean_fatigue_change": 0.4627731100401163,
+          "mean_stop_ticks_below_1cm_per_second": 20.11111111111111,
+          "mean_target_proximity_ticks_below_34cm": 60.55555555555556,
+          "mean_world_batch_squared_effort": 0.029921841312634506,
+          "mean_world_total_net_target_food_stock_loss": 0.0901506741841634,
+          "resident_world_count": 9,
+          "world_count": 3
+        },
+        "map_action_candidate": {
+          "mean_assimilable_reserve_change": -0.35021425151079577,
+          "mean_fatigue_change": 0.46787477648269743,
+          "mean_stop_ticks_below_1cm_per_second": 42.888888888888886,
+          "mean_target_proximity_ticks_below_34cm": 70.88888888888889,
+          "mean_world_batch_squared_effort": 0.045554406219799115,
+          "mean_world_total_net_target_food_stock_loss": 0.004755159219106038,
+          "resident_world_count": 9,
+          "world_count": 3
+        },
+        "outcome": "mixed, with worse physiology and net food-stock-loss measures; no promotion",
+        "parent_roles": {
+          "autonomous-controller-outcomes:47ed38f40586666d36ca487e22693613ed0eec4bf7cd84c4f45b7f126c68789d": "prior_single_world_assay",
+          "map-action-intervention:228b02e8efe9054afb3c3ffbef203e4eae74f9f82ffcc96f01e46328cb112916": "tested_configuration"
+        },
+        "resident_batch": 3,
+        "ticks_per_world": 512,
+        "unit_of_analysis": "reserve, fatigue, stopping, and proximity means cover 9 resident-worlds; food-stock loss is a per-world resident-total mean; effort is a 3-world batch mean; adjacent ticks are not independent replicates"
+      },
+      "id": "map-generalization-3worlds:a58cb11ae1ddd2d5a84cbd46f8437a16d5603382220e5772fae97c53e1a673f4",
+      "parent_ids": [
+        "map-action-intervention:228b02e8efe9054afb3c3ffbef203e4eae74f9f82ffcc96f01e46328cb112916",
+        "autonomous-controller-outcomes:47ed38f40586666d36ca487e22693613ed0eec4bf7cd84c4f45b7f126c68789d"
+      ],
+      "record_type": "map_action_generalization",
+      "text": "Across three new matched worlds, MAP selection increased stopping and proximity but had slightly worse mean reserve and fatigue changes, higher effort, and less net target food-stock loss than the initialized parent.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 11
       }
     },
     {
