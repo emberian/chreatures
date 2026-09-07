@@ -2676,7 +2676,13 @@ impl DevelopmentalResidentCohort {
                 };
                 self.last_goal_attained[row] = attained;
                 self.last_goal_normalized_progress[row] = normalized_progress;
-                if measurement_matches && self.personal_goals.config().learning_enabled {
+                // A cached target can remain measurable after reservoir eviction,
+                // but its receipt must never be attached to the replacement slot.
+                // Let the pending ten-tick receipt finish (unattributed) normally.
+                if measurement_matches
+                    && receipt.attributed
+                    && self.personal_goals.config().learning_enabled
+                {
                     let context: [f64; CONTEXT] = self.goal_measurement_context
                         [row * CONTEXT..(row + 1) * CONTEXT]
                         .try_into()
