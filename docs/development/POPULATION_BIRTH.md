@@ -29,8 +29,13 @@ independent of the body-facing organism-interface v4 contract, which remains
 4,459 observations, 12 physiology fields, and 12 actions. New controller weights
 are exported from current v5 inherited policy weights together with an
 authenticated recurrent-v3 predictor using
-`scripts/export_developmental_resident.py`. There is no implicit controller
-conversion or bundled downloadable controller in this workflow.
+`scripts/export_developmental_resident.py`. The fitted native-v6 controller is
+available in the [research release](https://github.com/emberian/chreatures/releases/tag/reciprocal-v6-research-20260906).
+Its file SHA-256 is
+`00bbd8580baa0f5f016b5c69548210f86412bc54ced32e737793fcedbd0019c4`.
+This download contains inherited weights and fitted laws; it contains no personal
+memory, neural activity, bulk connectome or complete birth bundle. There is no
+implicit conversion of an old controller.
 
 The prior population-v4 controller artifact
 `92a1f264e91dd0d3ce156e7e289837d82c1770bf50afb92ef785dfcb66fd6356`
@@ -43,7 +48,7 @@ python scripts/export_population_birth.py \
   --profile /tank/chreatures/campaigns/v1/campaign/profile.json \
   --assignments /tank/chreatures/campaigns/v1/campaign/plans/plan-0000/batch-0000.json \
   --world-index 0 \
-  --resident-artifact /path/to/developmental-resident-reciprocal-v6.npz \
+  --resident-artifact /path/to/developmental-resident-population-v6.npz \
   --graph /tank/chreatures/data/malecns/derived \
   --port-bundle /tank/chreatures/data/ports/retinal-v2-maps.npz \
   --neural-recipe data/ports/neural-variant-canonical-v1.json \
