@@ -1,0 +1,35 @@
+{
+  "controller_status": "initialized controller; motor and memory core untrained",
+  "format": "chreatures-bad-apple-public-playback-v1",
+  "frames": 600,
+  "model_status": "trained rate model with cited training receipt",
+  "neural_display": "maximum positive and negative rate delta per soma display pixel from first recorded frame; fixed symmetric global scale; not spikes or calcium",
+  "neurons": 165122,
+  "playback_fps": 20,
+  "receipt": {
+    "sha256": "99e05574a588f93834ab0889e1fdb412b3b9b2cd0acdaec455a0986b081dbe4d",
+    "url": "assets/bad-apple-response.receipt.json"
+  },
+  "source_time_seconds": [
+    2.0499999999999785,
+    31.999999999997918
+  ],
+  "sources": {
+    "body_recording_sha256": "aa47a583bef98f8f33794b3468f20e4357350d19a875b1e3885d80e5cd0c9dd2",
+    "malecns_graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "rate_capture_sha256": "e250c3ccd0b7f27032b13a6fbecc3d4af07cea77b6f4c604793089e6afd67b1e",
+    "stimulus_receipt_sha256": "b93372fed3d87b113dfd62ca88fba91176df1644c43c09db5965c923ddcc2e76",
+    "stimulus_sha256": "c84678a072e0365e9acaa3687075d1e35a6fc4bbe9db93d6b730af7af0589529",
+    "world_source_revision": "3b89440f4edc2723e3ae126027b9e218e55b9ec8"
+  },
+  "status": "recorded synchronized stimulus, MaleCNS rate-model state, and physical response",
+  "valid_soma_positions": 140024,
+  "video": {
+    "bytes": 4368946,
+    "file": "bad-apple-response.mp4",
+    "height": 1080,
+    "sha256": "72a6c62495632e8e37d96b66091fe28315489b5cb45175cff24f6e187b708778",
+    "url": "assets/bad-apple-response.mp4",
+    "width": 1920
+  }
+}

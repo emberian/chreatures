@@ -1,0 +1,63 @@
+{
+  "format": "chreatures-bad-apple-public-provenance-v1",
+  "status": "visually pretrained CNS service; held-out optic prediction did not improve; initialized untrained motor and memory controller",
+  "stimulus": {
+    "title": "Bad Apple!! feat. nomico — Shadow Animation Version",
+    "source_url": "https://www.youtube.com/watch?v=i41KoE0iMYU",
+    "source_publisher": "Alstroemeria Records",
+    "excerpt_seconds": [
+      0,
+      30
+    ],
+    "audio_in_excerpt": false,
+    "video_sha256": "c84678a072e0365e9acaa3687075d1e35a6fc4bbe9db93d6b730af7af0589529",
+    "source_receipt_sha256": "b93372fed3d87b113dfd62ca88fba91176df1644c43c09db5965c923ddcc2e76",
+    "sampled_frames": {
+      "shape": [
+        600,
+        480,
+        642,
+        3
+      ],
+      "fps": 20,
+      "sha256": "c53713aa8ee59ea7292e4b971bae0fa59612f54fc2ec658bb5a1166e60ab3b86",
+      "receipt_sha256": "e9a15136de393870024fc06134cad829893765ecab2ab0f8eaa81bdfc0709937"
+    },
+    "credits": {
+      "shadow_animation": "あにら (Anira), original niconico sm8628149",
+      "music": "Masayoshi Minoshima / Alstroemeria Records",
+      "vocals": "nomico",
+      "original_composition": "ZUN"
+    },
+    "license_note": "Visual stimulus excerpt; not included under the Chreatures source-code license."
+  },
+  "cns_model": {
+    "scope": "full MaleCNS v1.0 graph rate model",
+    "neurons": 165122,
+    "edges": 25563197,
+    "synapses": 124025046,
+    "optic_sites": 1771,
+    "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "atlas_sha256": "6a59c4282ffc912e1c0304498686819cdcc16c059f453fd5bc19c55938218482",
+    "service_artifact_sha256": "395120785a56a5f9bfe0f70edf744e1251e6141656f799ff1b5963d3e0217da9",
+    "service_export_receipt_sha256": "fc01e68907f6e2290feda8a885eb17ff380e127404755a05394c5981e861f008",
+    "training": {
+      "status": "optic-focused procedural visual pretraining complete",
+      "stimuli": "independent moving color bars, checker fields, and occluders",
+      "bad_apple_in_training": false,
+      "updates": 128,
+      "resident_ticks": 32768,
+      "heldout_seed": 20270920,
+      "training_receipt_sha256": "78114ed16f4ff9c89770806b80266fc8c4de2e107be87a4f66f3635a94560cd8",
+      "initialized_heldout_current_optic_mse": 0.04518796503543854,
+      "fitted_heldout_current_optic_mse": 0.04545961692929268,
+      "initialized_heldout_future_optic_mse": 0.04517253115773201,
+      "fitted_heldout_future_optic_mse": 0.045351892709732056,
+      "result": "held-out current and future optic prediction did not improve"
+    }
+  },
+  "controller": {
+    "status": "initialized; motor and memory core untrained",
+    "competence_claim": false
+  }
+}

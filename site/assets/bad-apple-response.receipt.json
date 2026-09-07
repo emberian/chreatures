@@ -1,0 +1,88 @@
+{
+  "bundle_content_sha256": "11806ba5f42fada69eabd156778c8d07338b25a2d78f434e8e052c500a500986",
+  "bundle_format": "chreatures-bad-apple-response-bundle-v1",
+  "content_sha256": "53400d2bc32dad2fdc1f9ca8b520f14557bd2f0a18cd9c2e8f869388a0260b51",
+  "controller": {
+    "artifact_sha256": "002a3a20915f1d157ad7e5f5a85a2c2ad5efe412de05bd47a4f80c34eb2f1036",
+    "status": "initialized controller; motor and memory core untrained",
+    "training_receipt_sha256": null
+  },
+  "format": "chreatures-bad-apple-composition-receipt-v1",
+  "frames": 600,
+  "neural_model": {
+    "artifact_sha256": "395120785a56a5f9bfe0f70edf744e1251e6141656f799ff1b5963d3e0217da9",
+    "status": "trained rate model with cited training receipt",
+    "training_receipt_sha256": "e9a95337f7472ae656da6a10cc20ee445ab4806f5137981e9e2eab1618ee9d67"
+  },
+  "neural_projection": {
+    "axes": [
+      0,
+      1
+    ],
+    "bounds_source_units": [
+      [
+        2468.0,
+        93668.0
+      ],
+      [
+        4758.0,
+        68996.0
+      ]
+    ],
+    "delta_reference": "first recorded frame",
+    "display_mode": "signed delta rate",
+    "rate_ceiling": 0.004420164972543716,
+    "rate_floor": 0,
+    "rate_unit": "model-rate change (clipped)"
+  },
+  "neural_raster_semantics": "maximum positive and negative rate delta among actual soma rows landing in each display pixel, relative to the first recorded frame on a fixed symmetric scale",
+  "neural_values_per_frame": 165122,
+  "playback_fps": 20,
+  "source_time_seconds": [
+    2.0499999999999785,
+    31.999999999997918
+  ],
+  "sources": {
+    "body_recording_sha256": "aa47a583bef98f8f33794b3468f20e4357350d19a875b1e3885d80e5cd0c9dd2",
+    "malecns_graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "rate_capture_sha256": "e250c3ccd0b7f27032b13a6fbecc3d4af07cea77b6f4c604793089e6afd67b1e",
+    "stimulus_receipt_sha256": "b93372fed3d87b113dfd62ca88fba91176df1644c43c09db5965c923ddcc2e76",
+    "stimulus_sha256": "c84678a072e0365e9acaa3687075d1e35a6fc4bbe9db93d6b730af7af0589529",
+    "world_source_revision": "3b89440f4edc2723e3ae126027b9e218e55b9ec8"
+  },
+  "status": "composed from hash-verified recorded streams; no generated neural or body frames",
+  "stream_files": {
+    "body_frames": {
+      "bytes": 552960128,
+      "sha256": "5818bda506f1019a556acfe708489eb4416c31e9eb3aca87f6cbb25524fcd598"
+    },
+    "neural_rates": {
+      "bytes": 396292928,
+      "sha256": "e250c3ccd0b7f27032b13a6fbecc3d4af07cea77b6f4c604793089e6afd67b1e"
+    },
+    "soma_positions": {
+      "bytes": 1981592,
+      "sha256": "49ac7b7b5191399a90427cda9e0220bd66af732a45480ba24d8b181fc065c307"
+    },
+    "soma_valid": {
+      "bytes": 165250,
+      "sha256": "7747d84a1723328e504373e5ef5aba65667dc030291db5b839811605a4e2a177"
+    },
+    "stimulus_frames": {
+      "bytes": 554688128,
+      "sha256": "c53713aa8ee59ea7292e4b971bae0fa59612f54fc2ec658bb5a1166e60ab3b86"
+    },
+    "time_seconds": {
+      "bytes": 4928,
+      "sha256": "657fbcf684daec8b79a724d8d78a7205776c92a0fba478a8b0e0a7276d1ff137"
+    }
+  },
+  "valid_soma_positions": 140024,
+  "video": {
+    "bytes": 4368946,
+    "file": "bad-apple-response.mp4",
+    "height": 1080,
+    "sha256": "72a6c62495632e8e37d96b66091fe28315489b5cb45175cff24f6e187b708778",
+    "width": 1920
+  }
+}

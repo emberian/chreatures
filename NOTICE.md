@@ -27,3 +27,10 @@ This notice does not replace the licenses of third-party components or data:
 - Pretrained model weights, other scientific data, and derived artifacts retain
   the licenses and provenance identified in their accompanying manifests and
   upstream model cards. The code license does not relicense those assets.
+
+The public Bad Apple research video and its poster include a silent 30-second
+visual excerpt from the [official Alstroemeria Records upload](https://www.youtube.com/watch?v=i41KoE0iMYU).
+Shadow animation: あにら (Anira), original niconico sm8628149. Music credits:
+Masayoshi Minoshima / Alstroemeria Records, nomico, and original composition by
+ZUN. The visual excerpt is not relicensed under AGPL. Source hashes, processing
+and credits are recorded in [the public provenance](site/assets/bad-apple-provenance.json).
