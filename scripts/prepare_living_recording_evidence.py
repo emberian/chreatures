@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Authenticate a research birth/checkpoint and prepare recording evidence links."""
+"""Bind a fresh canonical v8 life and actual v4 recording to its own campaign."""
 
 from __future__ import annotations
 
@@ -27,16 +27,18 @@ from chreatures.population_evidence import (
     read_json,
     sha256_file,
     validate_records,
+    empty_ledger,
 )
 from chreatures.resident_birth import validate_manifest
+from chreatures.population import CandidateGenome, PopulationSearch
+from chreatures.population_launch import value_sha256
 
 
 BINDING_FORMAT = "chreatures-living-recording-private-binding-v1"
 BIRTH_EXPORT_FORMAT = "chreatures-population-birth-export-v1"
 CHECKPOINT_FORMAT = "chreatures-developmental-habitat-checkpoint-v4"
 LINK_FORMAT = "chreatures-living-recording-evidence-link-v2"
-MIGRATION_FORMAT = "chreatures-research-continuation-migration-v1"
-RECORDING_FORMAT = "chreatures-living-reef-public-recording-v2"
+RECORDING_FORMAT = "chreatures-living-reef-public-recording-v4"
 
 
 def _hash(value: Any, label: str) -> str:
@@ -45,15 +47,6 @@ def _hash(value: Any, label: str) -> str:
     ):
         raise PopulationEvidenceError(f"{label} must be a lowercase SHA-256")
     return value
-
-
-def _authenticated(value: Mapping[str, Any], label: str) -> str:
-    declared = _hash(value.get("sha256"), f"{label} identity")
-    body = dict(value)
-    body.pop("sha256")
-    if hashlib.sha256(canonical_bytes(body)).hexdigest() != declared:
-        raise PopulationEvidenceError(f"{label} content differs from its identity")
-    return declared
 
 
 def _checkpoint(path: Path) -> tuple[dict[str, Any], str, str]:
@@ -76,7 +69,11 @@ def _birth_export(path: Path) -> tuple[dict[str, Any], dict[str, Any], str]:
     receipt = read_json(receipt_path)
     if receipt.get("format") != BIRTH_EXPORT_FORMAT:
         raise PopulationEvidenceError("unsupported cold-birth export")
-    receipt_sha = _authenticated(receipt, "cold-birth receipt")
+    receipt_sha = _hash(receipt.get("sha256"), "cold-birth receipt")
+    body = dict(receipt)
+    body.pop("sha256")
+    if value_sha256(body) != receipt_sha:
+        raise PopulationEvidenceError("cold-birth receipt content differs")
     outputs = receipt.get("outputs")
     if not isinstance(outputs, Mapping):
         raise PopulationEvidenceError("cold-birth receipt lacks output hashes")
@@ -85,6 +82,20 @@ def _birth_export(path: Path) -> tuple[dict[str, Any], dict[str, Any], str]:
         if not target.is_file() or sha256_file(target) != outputs.get(name):
             raise PopulationEvidenceError(f"cold-birth output differs: {name}")
     manifest = validate_manifest(read_json(path / "resident-birth.json"))
+    phenotypes = receipt.get("phenotypes")
+    if not isinstance(phenotypes, list) or len(phenotypes) != len(manifest["residents"]):
+        raise PopulationEvidenceError("birth phenotype receipts differ from founders")
+    for index, (resident, phenotype) in enumerate(zip(manifest["residents"], phenotypes, strict=True)):
+        target = (path / str(phenotype.get("local_path"))).resolve()
+        if (
+            phenotype.get("index") != index
+            or phenotype.get("candidate_sha256") != resident["candidate"]["sha256"]
+            or any(phenotype.get(key) != value for key, value in resident["neural_phenotype"].items())
+            or not target.is_relative_to(path.resolve())
+            or not target.is_file()
+            or sha256_file(target) != phenotype.get("artifact_sha256")
+        ):
+            raise PopulationEvidenceError("birth neural phenotype artifact differs")
     return receipt, manifest, receipt_sha
 
 
@@ -135,86 +146,6 @@ def _recording(path: Path) -> dict[str, Any]:
     return recording
 
 
-def _migration(
-    path: Path,
-    *,
-    source_checkpoint: tuple[Mapping[str, Any], str, str],
-    target_initial_checkpoint: tuple[Mapping[str, Any], str, str],
-) -> tuple[dict[str, Any], str, str]:
-    receipt = read_json(path)
-    expected_fields = {
-        "format", "from_world_id", "to_world_id", "tick", "from_revision",
-        "to_revision", "from_engine_sha256", "to_engine_sha256",
-        "source_checkpoint_file_sha256", "source_checkpoint_state_sha256",
-        "source_neural_file_sha256", "source_neural_payload_sha256",
-        "source_event_snapshot_sha256", "source_event_head_sha256",
-        "target_neural_file_sha256", "target_neural_payload_sha256",
-        "reason", "body_identity_mapping", "no_model_advance_during_migration",
-        "state_changes", "future_numerics", "output_checkpoint_file_sha256",
-        "output_checkpoint_state_sha256", "output_neural_bytes",
-        "retained_component_sha256", "source_execution_migration_count", "sha256",
-    }
-    if receipt.get("format") != MIGRATION_FORMAT or set(receipt) != expected_fields:
-        raise PopulationEvidenceError("unsupported research-continuation migration receipt")
-    receipt_sha = _authenticated(receipt, "research-continuation migration receipt")
-    receipt_file_sha = sha256_file(path)
-    source_state, source_state_sha, source_file_sha = source_checkpoint
-    target_state, target_state_sha, target_file_sha = target_initial_checkpoint
-    tick = receipt.get("tick")
-    mapping = receipt.get("body_identity_mapping")
-    if (
-        isinstance(tick, bool)
-        or not isinstance(tick, int)
-        or tick < 0
-        or source_state.get("tick") != tick
-        or target_state.get("tick") != tick
-    ):
-        raise PopulationEvidenceError("migration tick differs from its checkpoints")
-    if any(
-        receipt.get(key) != expected
-        for key, expected in (
-            ("from_world_id", source_state.get("id")),
-            ("to_world_id", target_state.get("id")),
-            ("source_checkpoint_file_sha256", source_file_sha),
-            ("source_checkpoint_state_sha256", source_state_sha),
-            ("output_checkpoint_file_sha256", target_file_sha),
-            ("output_checkpoint_state_sha256", target_state_sha),
-            ("from_engine_sha256", source_state.get("engine_identity", {}).get("sha256")),
-            ("to_engine_sha256", target_state.get("engine_identity", {}).get("sha256")),
-        )
-    ):
-        raise PopulationEvidenceError("migration receipt differs from checkpoint identity")
-    for key in (
-        "from_engine_sha256", "to_engine_sha256", "source_neural_file_sha256",
-        "source_neural_payload_sha256", "source_event_snapshot_sha256",
-        "source_event_head_sha256", "target_neural_file_sha256",
-        "target_neural_payload_sha256",
-    ):
-        _hash(receipt.get(key), f"migration {key}")
-    if (
-        receipt.get("no_model_advance_during_migration") is not True
-        or receipt.get("source_neural_payload_sha256")
-        != receipt.get("target_neural_payload_sha256")
-        or receipt.get("source_execution_migration_count") != 0
-    ):
-        raise PopulationEvidenceError("migration does not preserve frozen neural state")
-    retained = receipt.get("retained_component_sha256")
-    if not isinstance(retained, Mapping) or not retained:
-        raise PopulationEvidenceError("migration lacks retained component identities")
-    for name, digest in retained.items():
-        _hash(digest, f"migration retained component {name}")
-    if (
-        not isinstance(mapping, Mapping)
-        or not mapping
-        or len(set(mapping.values())) != len(mapping)
-        or any(not isinstance(key, str) or not isinstance(value, str) for key, value in mapping.items())
-    ):
-        raise PopulationEvidenceError("migration body identity mapping is invalid")
-    if not isinstance(receipt.get("state_changes"), list) or not receipt["state_changes"]:
-        raise PopulationEvidenceError("migration receipt lacks explicit state changes")
-    return receipt, receipt_sha, receipt_file_sha
-
-
 def _hatch_parent_indices(recording: Mapping[str, Any]) -> dict[int, tuple[int, int]]:
     result: dict[int, tuple[int, int]] = {}
     for event in recording.get("events", []):
@@ -248,530 +179,341 @@ def _law_ids(args: argparse.Namespace) -> tuple[list[str], dict[str, list[str]]]
     return laws, event_laws
 
 
+def _preparation(path: Path, birth: Mapping[str, Any], founders: Mapping[str, Any]):
+    """Authenticate the fresh bank/assignment/search chain without claiming trials."""
+    receipt = read_json(path / "receipt.json")
+    if (
+        receipt.get("format") != "chreatures-rich-collection-launch-v1"
+        or receipt.get("version") != 1
+        or value_sha256(dict(receipt, sha256="")) != receipt.get("sha256")
+    ):
+        raise PopulationEvidenceError("fresh collection preparation identity differs")
+    files = {}
+    for key, name in (
+        ("profile", "profile.json"), ("founding_bank", "founding-bank.json"),
+        ("founder_assignments", "founder-assignments.json"), ("search", "search.json"),
+    ):
+        target = path / name
+        reference = receipt.get(key, {})
+        if reference.get("path") != name or sha256_file(target) != reference.get("file_sha256"):
+            raise PopulationEvidenceError(f"fresh preparation file differs: {name}")
+        files[key] = read_json(target)
+    bank, assignments, search = (
+        files["founding_bank"], files["founder_assignments"], files["search"]
+    )
+    if (
+        bank.get("format") != "chreatures-rich-collection-founding-bank-v1"
+        or value_sha256(dict(bank, sha256="")) != bank.get("sha256")
+        or bank.get("sha256") != receipt["founding_bank"].get("semantic_sha256")
+        or assignments.get("format") != "chreatures-population-evaluation-assignments-v1"
+        or value_sha256({k: v for k, v in assignments.items() if k != "sha256"})
+        != assignments.get("sha256")
+        or assignments.get("sha256") != receipt["founder_assignments"].get("semantic_sha256")
+        or assignments.get("founding_bank_sha256") != bank.get("sha256")
+        or bank.get("search_state_sha256") != receipt["search"].get("file_sha256")
+        or value_sha256(search.get("config")) != search.get("config_sha256")
+        or search.get("config_sha256") != bank.get("search_config_sha256")
+        or search.get("config_sha256") != receipt["search"].get("config_sha256")
+    ):
+        raise PopulationEvidenceError("founding bank, assignments and search provenance differ")
+    # Use the current native validator for registry content and parent identities.
+    PopulationSearch(path / "search.json").validate()
+    candidates = bank.get("candidates", [])
+    if len(candidates) != bank.get("candidate_count") or any(
+        search.get("genomes", {}).get(candidate.get("sha256")) != candidate
+        for candidate in candidates
+    ):
+        raise PopulationEvidenceError("founding candidates differ from native search")
+    for candidate in candidates:
+        CandidateGenome(candidate)
+    source = birth["source"]
+    index = source.get("assignments", {}).get("world_index")
+    worlds = assignments.get("worlds", [])
+    if isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < len(worlds):
+        raise PopulationEvidenceError("birth assignment world index is invalid")
+    selected = worlds[index]
+    if (
+        source["assignments"].get("file_sha256") != receipt["founder_assignments"]["file_sha256"]
+        or source["assignments"].get("content_sha256") != assignments["sha256"]
+        or selected.get("candidates") != [row["candidate"] for row in founders["residents"]]
+        or selected.get("world_id") != birth["world"].get("assignment_world_id")
+        or selected.get("environment") != birth["world"].get("environment")
+        or selected.get("seed") != birth["world"].get("seed")
+        or source["profile"].get("file_sha256") != receipt["profile"]["file_sha256"]
+        or source["profile"].get("sha256") != bank.get("profile_sha256")
+        or assignments.get("profile_sha256") != bank.get("profile_sha256")
+        or assignments.get("resident_artifact_sha256") != bank["controller"].get("file_sha256")
+        or source["resident_artifact"].get("file_sha256") != bank["controller"].get("file_sha256")
+        or source["resident_artifact"].get("artifact_sha256") != bank["controller"].get("artifact_sha256")
+    ):
+        raise PopulationEvidenceError("canonical birth differs from fresh founding assignments")
+    panel = receipt["search"].get("probe_panel")
+    if (
+        not isinstance(panel, Mapping)
+        or value_sha256(panel) != search["config"].get("environment_probe_panel_sha256")
+        or panel.get("controller_file_sha256") != bank["controller"].get("file_sha256")
+    ):
+        raise PopulationEvidenceError("fresh probe-policy provenance differs")
+    return receipt, search, panel
+
+
+def _blob_value(directory: Path, value: Any, role: str):
+    digest = hashlib.sha256(canonical_bytes(value)).hexdigest()
+    target = directory / f"{digest}.json"
+    if target.exists():
+        if read_json(target) != value:
+            raise PopulationEvidenceError("existing provenance blob differs")
+    else:
+        atomic_write_json(target, value)
+    return local_blob(target, role=role, media_type="application/json")
+
+
+def _foundation(preparation, search, panel, campaign_id, blob_dir):
+    config = search["config"]
+    campaign_record_id = f"population-run:{campaign_id}"
+    records = [evidence_record(
+        id=campaign_record_id, time={"domain": "identity", "value": 0},
+        record_type="population_run",
+        text="Fresh embodied campaign from authenticated founding assignments; search pending rows are generation provenance, not executed evaluations.",
+        blobs=[_blob_value(blob_dir, config, "search_config")],
+        fields={"campaign_id": campaign_id, "search_config_sha256": search["config_sha256"],
+                "search_state_format": search["format"],
+                "preparation_receipt_sha256": preparation["sha256"]},
+    )]
+    recipe = {"descriptor_version": search["descriptor_version"],
+              "descriptor_axes": config["descriptor_axes"],
+              "source_search_config_sha256": search["config_sha256"]}
+    recipe_blob = _blob_value(blob_dir, recipe, "descriptor_recipe")
+    epoch_id = f"descriptor-epoch:{recipe_blob['sha256']}"
+    records.append(evidence_record(
+        id=epoch_id, time={"domain": "identity", "value": 0},
+        record_type="descriptor_epoch", text="Declared fresh campaign physical descriptor recipe; no outcomes inferred.",
+        parents={campaign_record_id: "campaign"}, blobs=[recipe_blob],
+        fields={"descriptor_epoch_id": epoch_id, "descriptor_epoch_index": 0,
+                "environment_epoch": config["environment_epoch"],
+                "descriptor_recipe_sha256": recipe_blob["sha256"],
+                "descriptor_dimension": len(config["descriptor_axes"])},
+    ))
+    panel_sha = value_sha256(panel)
+    panel_id = f"probe-panel:{panel_sha}"
+    records.append(evidence_record(
+        id=panel_id, time={"domain": "identity", "value": 0},
+        record_type="environment_probe_panel", text="Declared probe-policy panel from fresh preparation; no probe execution claimed.",
+        parents={campaign_record_id: "campaign", epoch_id: "descriptor_epoch"},
+        blobs=[_blob_value(blob_dir, panel, "probe_policy_panel")],
+        fields={"probe_panel_id": panel_id, "probe_panel_sha256": panel_sha,
+                "descriptor_epoch_id": epoch_id,
+                "policy_artifact_sha256s": [panel["controller_file_sha256"]]},
+    ))
+    for genome in sorted(search["genomes"].values(), key=lambda item: item["sha256"]):
+        records.append(genome_record_from_native(
+            genome, campaign_record_id=campaign_record_id,
+            time={"domain": "identity", "value": 0},
+            artifact=_blob_value(blob_dir, genome, "genome_artifact"),
+        ))
+    for environment in sorted(search["environments"].values(), key=lambda item: item["sha256"]):
+        records.append(environment_record_from_native(
+            environment, campaign_record_id=campaign_record_id,
+            probe_panel_record_id=panel_id, probe_panel_sha256=panel_sha,
+            time={"domain": "identity", "value": 0},
+            artifact=_blob_value(blob_dir, environment, "environment_artifact"),
+        ))
+    return records, campaign_record_id, panel_id, panel_sha
+
+
 def build(args: argparse.Namespace) -> dict[str, Any]:
-    ledger = read_json(args.ledger)
-    if ledger.get("format") != LEDGER_FORMAT:
-        raise PopulationEvidenceError("unsupported population evidence ledger")
-    validate_records(ledger["records"], campaign_id=ledger["campaign_id"])
-    prior_batch = read_json(args.output_batch) if args.output_batch.exists() else None
-    prior_records = {
-        record["id"]: record
-        for record in (prior_batch or {}).get("records", [])
-        if isinstance(record, Mapping) and isinstance(record.get("id"), str)
-    }
     recording = _recording(args.recording)
     binding, binding_sha = _binding(args.binding, recording)
     state, checkpoint_state_sha, checkpoint_file_sha = _checkpoint(args.checkpoint)
-    source_checkpoint = _checkpoint(args.source_checkpoint)
-    target_initial_checkpoint = _checkpoint(args.target_initial_checkpoint)
-    source_state, source_checkpoint_state_sha, source_checkpoint_file_sha = source_checkpoint
-    initial_state, target_initial_state_sha, target_initial_file_sha = (
-        target_initial_checkpoint
-    )
-    migration, migration_sha, migration_file_sha = _migration(
-        args.migration_receipt,
-        source_checkpoint=source_checkpoint,
-        target_initial_checkpoint=target_initial_checkpoint,
-    )
     receipt, founder_manifest, birth_receipt_sha = _birth_export(args.birth_export)
-
+    preparation, search, panel = _preparation(args.preparation, receipt, founder_manifest)
     provenance = recording.get("provenance", {})
-    if not isinstance(provenance, Mapping):
-        raise PopulationEvidenceError("public recording lacks provenance")
-    capture_tool = provenance.get("capture_tool")
-    if not isinstance(capture_tool, Mapping):
-        raise PopulationEvidenceError("public recording lacks capture-tool provenance")
-    _hash(binding.get("world_source_content_sha256"), "world source content")
-    _hash(binding.get("capture_tool_file_sha256"), "capture tool file")
-    if any(
-        binding.get(key) != provenance.get(provenance_key)
-        for key, provenance_key in (
-            ("world_source_revision", "world_source_revision"),
-            ("world_source_content_sha256", "world_source_content_sha256"),
-            ("physical_profile_sha256", "physical_profile_sha256"),
-            ("graph_sha256", "graph_sha256"),
-            ("resident_artifact_sha256", "resident_artifact_sha256"),
-        )
-    ) or binding.get("engine_identity_sha256") != provenance.get(
-        "engine_identity", {}
-    ).get("sha256") or any(
-        binding.get(key) != capture_tool.get(provenance_key)
-        for key, provenance_key in (
-            ("capture_tool_revision", "revision"),
-            ("capture_tool_file_sha256", "file_sha256"),
-        )
-    ):
-        raise PopulationEvidenceError("private binding and public provenance differ")
-    world_id = str(binding.get("source_world_id", ""))
-    if not world_id or state.get("id") != world_id or recording.get(
-        "event_stream", {}
-    ).get("world_id") != world_id:
-        raise PopulationEvidenceError("recording, binding and checkpoint world identities differ")
-    if isinstance(state.get("tick"), bool) or not isinstance(state.get("tick"), int) or state["tick"] < 0:
-        raise PopulationEvidenceError("life binding checkpoint tick is invalid")
-    if state.get("engine_identity", {}).get("sha256") != binding["engine_identity_sha256"]:
-        raise PopulationEvidenceError("checkpoint engine differs from recording")
-    if state.get("id") != initial_state.get("id") or state.get("tick", -1) <= migration["tick"]:
-        raise PopulationEvidenceError("recorded checkpoint is not the migrated research branch")
-    neural_identity = state.get("neural_identity", {})
-    checkpoint_graph = neural_identity.get("graph_sha256") or neural_identity.get(
-        "graph", {}
-    ).get("sha256")
-    if checkpoint_graph != binding["graph_sha256"]:
-        raise PopulationEvidenceError("checkpoint neural graph differs from recording")
-    controller = state.get("resident_controller", {}).get("model_identity", {})
-    controller_artifact = controller.get("artifact_sha256") or state.get(
-        "resident_controller", {}
-    ).get("artifact_sha256")
-    if controller_artifact != binding["resident_artifact_sha256"]:
-        raise PopulationEvidenceError("checkpoint resident artifact differs from recording")
-
-    source_manifest = validate_manifest(source_state.get("birth_manifest", {}))
-    initial_manifest = validate_manifest(initial_state.get("birth_manifest", {}))
-    checkpoint_manifest = validate_manifest(state.get("birth_manifest", {}))
-    founders = founder_manifest["residents"]
-    source_residents = source_manifest["residents"]
-    residents = checkpoint_manifest["residents"]
+    capture_tool = provenance.get("capture_tool", {})
+    world_id = binding.get("source_world_id")
+    if not isinstance(world_id, str) or not world_id or any(
+        binding.get(key) != provenance.get(key)
+        for key in ("world_source_revision", "world_source_content_sha256", "physical_profile_sha256",
+                    "graph_sha256", "resident_artifact_sha256")
+    ) or any(binding.get(key) != capture_tool.get(other) for key, other in (
+        ("capture_tool_revision", "revision"), ("capture_tool_file_sha256", "file_sha256")
+    )) or binding.get("engine_identity_sha256") != provenance.get("engine_identity", {}).get("sha256"):
+        raise PopulationEvidenceError("private binding and recording provenance differ")
     if (
-        source_residents != founders
-        or initial_manifest["residents"] != source_residents
-        or residents[: len(source_residents)] != source_residents
+        state.get("id") != world_id
+        or recording.get("event_stream", {}).get("world_id") != world_id
+        or state.get("execution_migrations") != []
+        or state.get("engine_identity") != provenance.get("engine_identity")
+        or state.get("engine_identity", {}).get("sha256") != binding["engine_identity_sha256"]
+        or state.get("resident_controller", {}).get("format")
+        != "chreatures-developmental-resident-population-snapshot-v8"
     ):
-        raise PopulationEvidenceError("migration founders differ from cold-birth export")
-    source_bodies = source_state.get("world", {}).get("bodies")
-    if not isinstance(source_bodies, list) or len(source_bodies) != len(source_residents):
-        raise PopulationEvidenceError("source checkpoint body order differs from birth manifest")
-    migrated_bodies = initial_state.get("world", {}).get("bodies")
-    if not isinstance(migrated_bodies, list) or len(migrated_bodies) != len(source_bodies):
-        raise PopulationEvidenceError("migration changed the initial resident count")
-    identity_mapping = migration["body_identity_mapping"]
-    for source_body, target_body in zip(source_bodies, migrated_bodies, strict=True):
-        source_identity = f"{migration['from_world_id']}:{source_body.get('id')}"
-        target_identity = f"{migration['to_world_id']}:{target_body.get('id')}"
-        if identity_mapping.get(source_identity) != target_identity:
-            raise PopulationEvidenceError("migration body identity mapping differs from checkpoints")
-    target_bodies = state.get("world", {}).get("bodies")
-    if not isinstance(target_bodies, list) or len(target_bodies) != len(residents):
-        raise PopulationEvidenceError("checkpoint body order differs from its birth manifest")
-    body_rows = binding.get("bodies")
-    if not isinstance(body_rows, list) or len(body_rows) != len(target_bodies):
-        raise PopulationEvidenceError("private binding does not cover the checkpoint cohort")
-    for index, (body, bound) in enumerate(zip(target_bodies, body_rows, strict=True)):
-        if not isinstance(bound, Mapping) or bound.get("public_body") != index or bound.get(
-            "source_body_id"
-        ) != body.get("id"):
-            raise PopulationEvidenceError("public body order differs from checkpoint body order")
-
-    source = receipt.get("source", {})
-    world = receipt.get("world", {})
-    environment_receipt = world.get("environment_receipt", {})
+        raise PopulationEvidenceError("recording checkpoint is not this fresh current-engine life")
+    tick = state.get("tick")
+    observed_ticks = recording.get("sampling", {}).get("observed_ticks", [])
+    if (isinstance(tick, bool) or not isinstance(tick, int) or tick < 0
+        or not observed_ticks or tick < max(observed_ticks)):
+        raise PopulationEvidenceError("checkpoint precedes the recorded life")
+    neural = state.get("neural_identity", {})
+    graph = neural.get("graph_sha256") or neural.get("graph", {}).get("sha256")
+    controller = state["resident_controller"].get("model_identity", {})
+    if graph != binding["graph_sha256"] or controller.get("artifact_sha256") != binding["resident_artifact_sha256"]:
+        raise PopulationEvidenceError("checkpoint neural/controller identity differs")
+    source = receipt["source"]
+    if (
+        source["profile"].get("sha256") != binding["physical_profile_sha256"]
+        or source["graph"].get("sha256") != binding["graph_sha256"]
+        or source["resident_artifact"].get("artifact_sha256") != binding["resident_artifact_sha256"]
+    ):
+        raise PopulationEvidenceError("canonical birth and recorded mechanisms differ")
+    residents = validate_manifest(state.get("birth_manifest", {}))["residents"]
+    founders = founder_manifest["residents"]
+    bodies = state.get("world", {}).get("bodies", [])
+    birth_bodies = read_json(args.birth_export / "habitat.json").get("bodies", [])
+    if (residents[:len(founders)] != founders or len(bodies) != len(residents)
+        or len(birth_bodies) != len(founders) or len(binding["bodies"]) != len(bodies)
+        or [body.get("id") for body in bodies[:len(founders)]] != [body.get("id") for body in birth_bodies]):
+        raise PopulationEvidenceError("actual founder/body order differs from canonical birth")
+    for index, (body, bound) in enumerate(zip(bodies, binding["bodies"], strict=True)):
+        if bound.get("public_body") != index or bound.get("source_body_id") != body.get("id"):
+            raise PopulationEvidenceError("public body binding differs from checkpoint")
+    environment_receipt = receipt["world"].get("environment_receipt", {})
     environment = environment_receipt.get("environment_record", {})
     environment_sha = _hash(environment.get("sha256"), "birth environment")
-    if world.get("assignment_world_id") != environment_sha or environment_receipt.get(
-        "environment_sha256"
-    ) != environment_sha:
-        raise PopulationEvidenceError("cold-birth environment identities differ")
-    if source.get("profile", {}).get("sha256") != binding["physical_profile_sha256"]:
-        raise PopulationEvidenceError("cold-birth profile differs from recording")
-    if source.get("graph", {}).get("sha256") != binding["graph_sha256"]:
-        raise PopulationEvidenceError("cold-birth graph differs from recording")
-    if source.get("resident_artifact", {}).get("artifact_sha256") != binding[
-        "resident_artifact_sha256"
-    ]:
-        raise PopulationEvidenceError("cold-birth controller differs from recording")
-
-    existing = {record["id"]: record for record in ledger["records"]}
-    campaigns = [
-        record for record in ledger["records"] if record["record_type"] == "population_run"
-    ]
-    panels = [
-        record for record in ledger["records"]
-        if record["record_type"] == "environment_probe_panel"
-        and record["fields"].get("descriptor_epoch_id")
-    ]
-    if len(campaigns) != 1 or len(panels) != 1:
-        raise PopulationEvidenceError("living research binding requires one campaign and probe panel")
-    campaign_id = campaigns[0]["id"]
-    panel_id = panels[0]["id"]
-    panel_sha = panels[0]["fields"]["probe_panel_sha256"]
-    birth_blob = local_blob(
-        args.birth_export / "resident-birth.json",
-        role="genome_artifact",
-        media_type="application/json",
-    )
-    receipt_blob = local_blob(
-        args.birth_export / "receipt.json",
-        role="environment_artifact",
-        media_type="application/json",
-    )
-    checkpoint_blob = local_blob(
-        args.checkpoint, role="life_checkpoint", media_type="application/json"
-    )
-    source_checkpoint_blob = local_blob(
-        args.source_checkpoint, role="life_checkpoint", media_type="application/json"
-    )
-    migration_blob = local_blob(
-        args.migration_receipt, role="migration_receipt", media_type="application/json"
-    )
-    target_initial_blob = local_blob(
-        args.target_initial_checkpoint,
-        role="target_initial_checkpoint",
-        media_type="application/json",
-    )
-    records: list[dict[str, Any]] = []
-    genomes: dict[str, Mapping[str, Any]] = {}
-    for row in residents:
-        genome = row["candidate"]
-        genomes[str(genome["sha256"])] = genome
-    for genome_sha, genome in sorted(genomes.items()):
-        record_id = f"genome:{genome_sha}"
-        candidate_record = genome_record_from_native(
-            genome,
-            campaign_record_id=campaign_id,
-            time={"domain": "research_birth", "value": 0},
-            artifact=birth_blob,
-        )
-        if record_id in prior_records and canonical_bytes(
-            prior_records[record_id]
-        ) != canonical_bytes(candidate_record):
-            raise PopulationEvidenceError(
-                f"existing birth batch candidate differs: {record_id}"
-            )
-        if record_id not in existing or record_id in prior_records:
-            records.append(
-                prior_records.get(record_id, candidate_record)
-            )
-    environment_id = f"environment:{environment_sha}"
-    environment_record = environment_record_from_native(
-        environment,
-        campaign_record_id=campaign_id,
-        probe_panel_record_id=panel_id,
-        probe_panel_sha256=panel_sha,
-        time={"domain": "research_birth", "value": 0},
-        artifact=receipt_blob,
-    )
-    if environment_id in prior_records and canonical_bytes(
-        prior_records[environment_id]
-    ) != canonical_bytes(environment_record):
-        raise PopulationEvidenceError(
-            "existing birth batch environment differs from authenticated export"
-        )
-    if environment_id not in existing or environment_id in prior_records:
-        records.append(
-            prior_records.get(environment_id, environment_record)
-        )
-
-    hatch_parents = _hatch_parent_indices(recording)
-    source_life_ids: list[str] = []
-    life_ids: list[str] = []
-    life_root_ids: list[str] = []
-    observed_life_record_ids: list[str] = []
-    for index, (source_body, resident) in enumerate(
-        zip(source_bodies, source_residents, strict=True)
+    if (
+        receipt["world"].get("assignment_world_id") != environment_sha
+        or environment_receipt.get("environment_sha256") != environment_sha
+        or search["environments"].get(environment_sha) != environment
     ):
-        source_body_id = str(source_body["id"])
-        genome_sha = str(resident["candidate"]["sha256"])
-        source_life_id = hashlib.sha256(
-            canonical_bytes(
-                {
-                    "format": "chreatures-independent-research-life-v1",
-                    "world_id": migration["from_world_id"],
-                    "source_body_id": source_body_id,
-                    "genome_sha256": genome_sha,
-                }
-            )
-        ).hexdigest()
-        source_life_ids.append(source_life_id)
-        birth_id = f"birth:{source_life_id}"
-        records.append(
-            evidence_record(
-                id=birth_id,
-                time={"domain": "model_tick", "value": 0},
-                record_type="birth",
-                text="Original research resident instantiated by the authenticated canonical birth export.",
-                parents={
-                    f"genome:{genome_sha}": "candidate_genome",
-                    environment_id: "environment",
-                },
-                fields={
-                    "life_id": source_life_id,
-                    "birth_mode": "experimental_initialization",
-                    "genome_sha256": genome_sha,
-                    "environment_sha256": environment_sha,
-                    "birth_export_receipt_sha256": birth_receipt_sha,
-                    "birth_proof_checkpoint_state_sha256": source_checkpoint_state_sha,
-                    "world_instance_sha256": hashlib.sha256(
-                        migration["from_world_id"].encode()
-                    ).hexdigest(),
-                    "source_body_id_sha256": hashlib.sha256(
-                        source_body_id.encode()
-                    ).hexdigest(),
-                    "public_body": index,
-                },
-            )
-        )
-        source_checkpoint_id = (
-            f"life-checkpoint:{source_life_id}:{migration['tick']}:"
-            f"{source_checkpoint_file_sha}"
-        )
-        records.append(
-            evidence_record(
-                id=source_checkpoint_id,
-                time={"domain": "model_tick", "value": migration["tick"]},
-                record_type="life_checkpoint",
-                text="Last coherent checkpoint of the original paused research life.",
-                parents={birth_id: "life_continuation"},
-                blobs=[source_checkpoint_blob],
-                fields={
-                    "life_id": source_life_id,
-                    "checkpoint_sha256": source_checkpoint_file_sha,
-                    "checkpoint_state_sha256": source_checkpoint_state_sha,
-                    "tick": migration["tick"],
-                },
-            )
-        )
-        target_body_id = str(migrated_bodies[index]["id"])
-        branch_life_id = hashlib.sha256(
-            canonical_bytes(
-                {
-                    "format": "chreatures-research-branch-life-v1",
-                    "migration_receipt_sha256": migration_sha,
-                    "source_life_id": source_life_id,
-                    "target_world_id": migration["to_world_id"],
-                    "target_body_id": target_body_id,
-                    "genome_sha256": genome_sha,
-                }
-            )
-        ).hexdigest()
-        life_ids.append(branch_life_id)
-        branch_id = f"research-branch:{migration_sha}:{index}"
-        life_root_ids.append(branch_id)
-        records.append(
-            evidence_record(
-                id=branch_id,
-                time={"domain": "model_tick", "value": migration["tick"]},
-                record_type="research_branch",
-                text="Authenticated research copy branched from a coherent paused-life checkpoint.",
-                parents={
-                    source_checkpoint_id: "source_checkpoint",
-                    f"genome:{genome_sha}": "candidate_genome",
-                    environment_id: "environment",
-                },
-                blobs=[migration_blob, target_initial_blob],
-                fields={
-                    "life_id": branch_life_id,
-                    "source_life_id": source_life_id,
-                    "source_tick": migration["tick"],
-                    "branch_mode": "authenticated_research_copy",
-                    "genome_sha256": genome_sha,
-                    "environment_sha256": environment_sha,
-                    "migration_receipt_sha256": migration_sha,
-                    "migration_receipt_file_sha256": migration_file_sha,
-                    "source_checkpoint_sha256": source_checkpoint_file_sha,
-                    "source_checkpoint_state_sha256": source_checkpoint_state_sha,
-                    "source_neural_snapshot_sha256": migration["source_neural_file_sha256"],
-                    "source_neural_payload_sha256": migration["source_neural_payload_sha256"],
-                    "source_event_snapshot_sha256": migration[
-                        "source_event_snapshot_sha256"
-                    ],
-                    "source_event_head_sha256": migration["source_event_head_sha256"],
-                    "target_initial_checkpoint_sha256": target_initial_file_sha,
-                    "target_initial_checkpoint_state_sha256": target_initial_state_sha,
-                    "target_neural_snapshot_sha256": migration["target_neural_file_sha256"],
-                    "target_neural_payload_sha256": migration["target_neural_payload_sha256"],
-                    "from_source_revision": migration["from_revision"],
-                    "to_source_revision": migration["to_revision"],
-                    "from_engine_identity_sha256": migration["from_engine_sha256"],
-                    "to_engine_identity_sha256": migration["to_engine_sha256"],
-                    "no_model_advance_during_migration": True,
-                    "world_instance_sha256": hashlib.sha256(
-                        migration["to_world_id"].encode()
-                    ).hexdigest(),
-                    "source_body_id_sha256": hashlib.sha256(
-                        target_body_id.encode()
-                    ).hexdigest(),
-                    "public_body": index,
-                },
-            )
-        )
-
-    for index, (bound, resident) in enumerate(zip(body_rows, residents, strict=True)):
-        source_body_id = str(bound["source_body_id"])
-        genome_sha = str(resident["candidate"]["sha256"])
-        if index < len(source_residents):
-            life_id = life_ids[index]
-            root_id = life_root_ids[index]
-        else:
-            life_id = hashlib.sha256(
-                canonical_bytes(
-                    {
-                        "format": "chreatures-independent-research-life-v1",
-                        "world_id": world_id,
-                        "source_body_id": source_body_id,
-                        "genome_sha256": genome_sha,
-                    }
-                )
-            ).hexdigest()
-            life_ids.append(life_id)
+        raise PopulationEvidenceError("birth environment differs from fresh search provenance")
+    campaign_identity = {"preparation_sha256": preparation["sha256"],
+                         "birth_export_sha256": birth_receipt_sha,
+                         "world_id": world_id}
+    campaign_id = "fresh-ecology-" + hashlib.sha256(canonical_bytes(campaign_identity)).hexdigest()
+    description = "Fresh canonical embodied ecology; authenticated observed lives and events only."
+    ledger = read_json(args.ledger) if args.ledger.exists() else empty_ledger(campaign_id, description)
+    if ledger.get("format") != LEDGER_FORMAT or ledger.get("campaign_id") != campaign_id:
+        raise PopulationEvidenceError("ledger is not the fresh birth's independent campaign")
+    if ledger["records"]:
+        validate_records(ledger["records"], campaign_id=campaign_id)
+    existing = {record["id"]: record for record in ledger["records"]}
+    foundation, run_id, _, _ = _foundation(
+        preparation, search, panel, campaign_id, args.output_batch.parent / "blobs"
+    )
+    prior = read_json(args.output_batch) if args.output_batch.exists() else None
+    prior_records = {record["id"]: record for record in (prior or {}).get("records", [])}
+    records = []
+    def add(record):
+        previous = existing.get(record["id"])
+        if previous is not None and canonical_bytes(previous) != canonical_bytes(record):
+            raise PopulationEvidenceError(f"stable life/provenance record differs: {record['id']}")
+        if previous is None or record["id"] in prior_records:
+            records.append(record)
+    for record in foundation:
+        add(record)
+    environment_id = f"environment:{environment_sha}"
+    actual_genome_blob = local_blob(args.checkpoint, role="genome_artifact", media_type="application/json")
+    checkpoint_blob = local_blob(args.checkpoint, role="life_checkpoint", media_type="application/json")
+    hatch_parents = _hatch_parent_indices(recording)
+    roots = []
+    checkpoints = []
+    known_genomes = {record["id"] for record in foundation}
+    for index, (body, resident) in enumerate(zip(bodies, residents, strict=True)):
+        genome = resident["candidate"]
+        genome_id = f"genome:{genome['sha256']}"
+        if genome_id not in known_genomes:
+            add(genome_record_from_native(genome, campaign_record_id=run_id,
+                time={"domain": "model_tick", "value": tick}, artifact=actual_genome_blob))
+            known_genomes.add(genome_id)
+        life_id = hashlib.sha256(canonical_bytes({
+            "format": "chreatures-independent-research-life-v1", "world_id": world_id,
+            "source_body_id": body["id"], "genome_sha256": genome["sha256"],
+        })).hexdigest()
+        birth_id = f"birth:{life_id}"
+        roots.append(birth_id)
+        parents = {genome_id: "candidate_genome", environment_id: "environment"}
+        birth_tick = 0
+        mode = "experimental_initialization"
+        if index >= len(founders):
+            mode = "embodied_reproduction"
             hatch = hatch_parents.get(index)
             if hatch is None:
-                raise PopulationEvidenceError(
-                    "a post-migration resident lacks a captured hatching parent receipt"
-                )
-            parent_index, birth_tick = hatch
-            if parent_index >= index:
-                raise PopulationEvidenceError("hatching parent must precede its offspring")
-            root_id = f"birth:{life_id}"
-            life_root_ids.append(root_id)
-            records.append(
-                evidence_record(
-                    id=root_id,
-                    time={"domain": "model_tick", "value": birth_tick},
-                    record_type="birth",
-                    text="Funded offspring committed by the recorded physical world.",
-                    parents={
-                        f"genome:{genome_sha}": "candidate_genome",
-                        environment_id: "environment",
-                        life_root_ids[parent_index]: "physical_parent_birth",
-                    },
-                    fields={
-                        "life_id": life_id,
-                        "birth_mode": "embodied_reproduction",
-                        "genome_sha256": genome_sha,
-                        "environment_sha256": environment_sha,
-                        "birth_export_receipt_sha256": birth_receipt_sha,
-                        "birth_proof_checkpoint_state_sha256": checkpoint_state_sha,
-                        "world_instance_sha256": hashlib.sha256(world_id.encode()).hexdigest(),
-                        "source_body_id_sha256": hashlib.sha256(
-                            source_body_id.encode()
-                        ).hexdigest(),
-                        "public_body": index,
-                    },
-                )
+                previous = existing.get(birth_id)
+                if previous is None:
+                    raise PopulationEvidenceError("offspring lacks an authenticated captured hatching event")
+                birth_tick = previous["time"]["value"]
+                parents = dict(previous["fields"]["parent_roles"])
+            else:
+                parent_index, birth_tick = hatch
+                if not 0 <= parent_index < index:
+                    raise PopulationEvidenceError("hatching parent must precede its offspring")
+                parents[roots[parent_index]] = "physical_parent_birth"
+        add(evidence_record(
+            id=birth_id, time={"domain": "model_tick", "value": birth_tick}, record_type="birth",
+            text=("Founder instantiated from authenticated fresh canonical birth." if index < len(founders)
+                  else "Funded offspring committed by the recorded physical world."),
+            parents=parents,
+            fields={"life_id": life_id, "birth_mode": mode, "genome_sha256": genome["sha256"],
+                    "environment_sha256": environment_sha, "birth_export_receipt_sha256": birth_receipt_sha,
+                    "world_instance_sha256": hashlib.sha256(world_id.encode()).hexdigest(),
+                    "source_body_id_sha256": hashlib.sha256(body["id"].encode()).hexdigest(), "public_body": index},
+        ))
+        checkpoint_id = f"life-checkpoint:{life_id}:{tick}:{checkpoint_file_sha}"
+        if checkpoint_id in existing:
+            checkpoint_record = existing[checkpoint_id]
+        else:
+            prior_checkpoints = [record for record in ledger["records"]
+                if record["record_type"] == "life_checkpoint" and record["fields"].get("life_id") == life_id]
+            predecessor = max(prior_checkpoints, key=lambda record: record["fields"]["tick"], default=None)
+            if predecessor is not None and predecessor["fields"]["tick"] >= tick:
+                raise PopulationEvidenceError("new life checkpoint does not advance its continuation")
+            checkpoint_record = evidence_record(
+                id=checkpoint_id, time={"domain": "model_tick", "value": tick}, record_type="life_checkpoint",
+                text="Authenticated whole-world checkpoint containing this independently born life.",
+                parents={(predecessor["id"] if predecessor else birth_id): "life_continuation"},
+                blobs=[checkpoint_blob], fields={"life_id": life_id, "checkpoint_sha256": checkpoint_file_sha,
+                    "checkpoint_state_sha256": checkpoint_state_sha, "tick": tick},
             )
-        checkpoint_id = (
-            f"life-checkpoint:{life_id}:{state['tick']}:"
-            f"{checkpoint_file_sha}"
-        )
-        records.append(
-            evidence_record(
-                id=checkpoint_id,
-                time={"domain": "model_tick", "value": int(state["tick"])},
-                record_type="life_checkpoint",
-                text="Authenticated whole-world checkpoint containing this research branch.",
-                parents={root_id: "life_continuation"},
-                blobs=[checkpoint_blob],
-                fields={
-                    "life_id": life_id,
-                    "checkpoint_sha256": checkpoint_file_sha,
-                    "checkpoint_state_sha256": checkpoint_state_sha,
-                    "tick": int(state["tick"]),
-                },
-            )
-        )
-
-        observed_life_record_ids.append(checkpoint_id)
-
-    candidate_records = {record["id"]: record for record in records}
-    for record in records:
-        for parent_id in record["parent_ids"]:
-            if parent_id not in existing and parent_id not in candidate_records:
-                raise PopulationEvidenceError(
-                    f"living research evidence parent is absent: {parent_id}"
-                )
-    batch_digest = hashlib.sha256(canonical_bytes(records)).hexdigest()
-    batch = {
-        "format": BATCH_FORMAT,
-        "schema_version": 1,
-        "campaign_id": ledger["campaign_id"],
-        "batch_id": f"population-campaign:{batch_digest}",
-        "records": records,
-        "sources": {
-            "birth_export_receipt_sha256": birth_receipt_sha,
-            "binding_content_sha256": binding_sha,
-            "checkpoint_file_sha256": checkpoint_file_sha,
-            "checkpoint_state_sha256": checkpoint_state_sha,
-            "migration_receipt_sha256": migration_sha,
-            "migration_receipt_file_sha256": migration_file_sha,
-            "source_checkpoint_file_sha256": source_checkpoint_file_sha,
-            "source_checkpoint_state_sha256": source_checkpoint_state_sha,
-            "target_initial_checkpoint_file_sha256": target_initial_file_sha,
-            "target_initial_checkpoint_state_sha256": target_initial_state_sha,
-            "recording_content_sha256": recording["content_sha256"],
-        },
-    }
-    duplicate = set(existing).intersection(candidate_records)
-    if duplicate:
-        if batch["batch_id"] not in ledger.get("applied_batches", []) or any(
-            canonical_bytes(existing[record_id])
-            != canonical_bytes(candidate_records[record_id])
-            for record_id in duplicate
-        ):
-            raise PopulationEvidenceError(
-                "living research life identity was already recorded outside this batch"
-            )
-    validate_records(
-        [
-            *ledger["records"],
-            *(record for record in records if record["id"] not in existing),
-        ],
-        campaign_id=ledger["campaign_id"],
-    )
+        add(checkpoint_record)
+        checkpoints.append(checkpoint_id)
+    validate_records([*ledger["records"], *(record for record in records if record["id"] not in existing)], campaign_id=campaign_id)
+    sources = {"preparation_receipt_sha256": preparation["sha256"], "birth_export_receipt_sha256": birth_receipt_sha,
+               "binding_content_sha256": binding_sha, "checkpoint_file_sha256": checkpoint_file_sha,
+               "checkpoint_state_sha256": checkpoint_state_sha, "recording_content_sha256": recording["content_sha256"]}
+    batch_id = f"population-campaign:{hashlib.sha256(canonical_bytes(records)).hexdigest()}"
+    batch = {"format": BATCH_FORMAT, "schema_version": 1, "campaign_id": campaign_id,
+             "batch_id": batch_id, "records": records, "sources": sources}
+    if prior is not None and prior != batch:
+        raise PopulationEvidenceError("existing prepared birth batch differs")
     laws, event_laws = _law_ids(args)
     for record_id in {value for values in [laws, *event_laws.values()] for value in values}:
         law = existing.get(record_id)
-        if law is None or law.get("record_type") != "gam_fit_attempt" or law.get(
-            "fields", {}
-        ).get("status") != "completed":
-            raise PopulationEvidenceError(
-                f"living recording law link is not a completed fit: {record_id}"
-            )
-    link = {
-        "format": LINK_FORMAT,
-        "campaign_id": ledger["campaign_id"],
-        "campaign_record_id": campaign_id,
-        "environment_record_id": environment_id,
-        "body_life_record_ids": {
-            str(index): record_id
-            for index, record_id in enumerate(observed_life_record_ids)
-        },
-        "associated_law_fit_record_ids": laws,
-        "event_law_fit_record_ids": event_laws,
-        "recording_content_sha256": recording["content_sha256"],
-        "birth_batch_id": batch["batch_id"],
-        "sources": dict(batch["sources"]),
-    }
+        if law is None or law["record_type"] != "gam_fit_attempt" or law["fields"].get("status") != "completed":
+            raise PopulationEvidenceError(f"law link is not a completed fit in this campaign: {record_id}")
+    link = {"format": LINK_FORMAT, "campaign_id": campaign_id, "campaign_record_id": run_id,
+            "environment_record_id": environment_id,
+            "body_life_record_ids": {str(index): record_id for index, record_id in enumerate(checkpoints)},
+            "associated_law_fit_record_ids": laws, "event_law_fit_record_ids": event_laws,
+            "recording_content_sha256": recording["content_sha256"], "birth_batch_id": batch_id, "sources": sources}
     for target, value in ((args.output_batch, batch), (args.output_link, link)):
         if target.exists():
             if read_json(target) != value:
                 raise PopulationEvidenceError(f"existing output differs: {target}")
         else:
             atomic_write_json(target, value)
-    return {
-        "birth_batch": str(args.output_batch),
-        "birth_batch_id": batch["batch_id"],
-        "link": str(args.output_link),
-        "founders": len(founders),
-        "offspring": len(residents) - len(founders),
-        "lives": len(life_ids),
-        "research_branches": len(source_life_ids),
-        "source_checkpoint_tick": migration["tick"],
-        "new_genomes": sum(record["record_type"] == "genome_candidate" for record in records),
-        "new_environments": sum(record["record_type"] == "environment_candidate" for record in records),
-        "checkpoint_tick": int(state["tick"]),
-        "recording_content_sha256": recording["content_sha256"],
-    }
+    return {"campaign_id": campaign_id, "description": description, "birth_batch": str(args.output_batch),
+            "birth_batch_id": batch_id, "link": str(args.output_link), "founders": len(founders),
+            "offspring": len(residents) - len(founders), "checkpoint_tick": tick,
+            "new_records": len(records), "recording_content_sha256": recording["content_sha256"],
+            "next_step": "Apply the batch with build_population_weave.py using this campaign_id and description; then link the actual v4 recording."}
 
 
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--preparation", required=True, type=Path)
     parser.add_argument("--ledger", required=True, type=Path)
     parser.add_argument("--recording", required=True, type=Path)
     parser.add_argument("--binding", required=True, type=Path)
     parser.add_argument("--checkpoint", required=True, type=Path)
-    parser.add_argument("--source-checkpoint", required=True, type=Path)
-    parser.add_argument("--target-initial-checkpoint", required=True, type=Path)
-    parser.add_argument("--migration-receipt", required=True, type=Path)
     parser.add_argument("--birth-export", required=True, type=Path)
     parser.add_argument("--associated-law-fit", action="append", default=[])
     parser.add_argument("--event-law", action="append", default=[])
