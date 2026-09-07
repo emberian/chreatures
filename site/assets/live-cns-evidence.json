@@ -1,0 +1,1648 @@
+{
+  "archive": {
+    "archive_id": "live-cns-wave-v2-20260907",
+    "description": "Actual live-CNS research chain: dynamics, temporal fit, browser export, teacher fit, and matched physical rollout.",
+    "habitat_id": null,
+    "library": "universal-weave 0.5.0",
+    "schema_version": 2,
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f"
+  },
+  "artifact": "live-cns-evidence.weave.json",
+  "artifact_sha256": "a271799ca96f910c26106fce71027fd052d3d4bc927be898d932b61e1876a027",
+  "bytes": 51705,
+  "edge_count": 31,
+  "edges": [
+    {
+      "role": "fit_source",
+      "source": "fullgraph-sweep:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
+      "target": "gam-fit:6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2"
+    },
+    {
+      "role": "predictive_model",
+      "source": "gam-fit:6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2",
+      "target": "heldout-setting-prediction:48458a2290d6e3d91b1555596d696a44788be95da5b2ffaa0429dcd17cd186cb"
+    },
+    {
+      "role": "predicted_setting",
+      "source": "heldout-setting-prediction:48458a2290d6e3d91b1555596d696a44788be95da5b2ffaa0429dcd17cd186cb",
+      "target": "executed-setting-confirmation:f77f06d2d7b60e5d2b008a30bb8e44c039a647210d9240c5d1c58cf19081c02a"
+    },
+    {
+      "role": "comparison_sweep",
+      "source": "fullgraph-sweep:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
+      "target": "executed-setting-confirmation:f77f06d2d7b60e5d2b008a30bb8e44c039a647210d9240c5d1c58cf19081c02a"
+    },
+    {
+      "role": "audited_fit",
+      "source": "temporal-cns-fit:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+      "target": "graph-edge-ablation:9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f"
+    },
+    {
+      "role": "trained_parameters",
+      "source": "temporal-cns-fit:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+      "target": "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378"
+    },
+    {
+      "role": "edge_dependence_audit",
+      "source": "graph-edge-ablation:9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f",
+      "target": "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378"
+    },
+    {
+      "role": "cns_service",
+      "source": "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+      "target": "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea"
+    },
+    {
+      "role": "browser_release",
+      "source": "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+      "target": "browser-numeric-probe:17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b"
+    },
+    {
+      "role": "browser_release",
+      "source": "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+      "target": "browser-load-failure:bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949"
+    },
+    {
+      "role": "browser_release",
+      "source": "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+      "target": "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee"
+    },
+    {
+      "role": "numeric_confirmation",
+      "source": "browser-numeric-probe:17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b",
+      "target": "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee"
+    },
+    {
+      "role": "repaired_failure",
+      "source": "browser-load-failure:bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949",
+      "target": "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee"
+    },
+    {
+      "role": "runtime_predecessor",
+      "source": "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+      "target": "teacher-collection-failure:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8"
+    },
+    {
+      "role": "collection_release",
+      "source": "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+      "target": "teacher-collection-failure:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8"
+    },
+    {
+      "role": "executed_runtime",
+      "source": "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+      "target": "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0"
+    },
+    {
+      "role": "collection_release",
+      "source": "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+      "target": "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0"
+    },
+    {
+      "role": "repaired_attempt",
+      "source": "teacher-collection-failure:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8",
+      "target": "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0"
+    },
+    {
+      "role": "training_data",
+      "source": "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+      "target": "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e"
+    },
+    {
+      "role": "parent_controller",
+      "source": "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+      "target": "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e"
+    },
+    {
+      "role": "trained_controller",
+      "source": "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+      "target": "native-controller-check:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99"
+    },
+    {
+      "role": "heldout_episode",
+      "source": "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+      "target": "native-controller-check:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99"
+    },
+    {
+      "role": "trained_controller",
+      "source": "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+      "target": "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42"
+    },
+    {
+      "role": "same_cns_service",
+      "source": "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+      "target": "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42"
+    },
+    {
+      "role": "native_confirmation",
+      "source": "native-controller-check:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99",
+      "target": "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42"
+    },
+    {
+      "role": "initialized_controller_arm",
+      "source": "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+      "target": "rollout-identity-diagnostic:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57"
+    },
+    {
+      "role": "trained_controller_arm",
+      "source": "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+      "target": "rollout-identity-diagnostic:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57"
+    },
+    {
+      "role": "initialized_controller_arm",
+      "source": "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+      "target": "matched-physical-rollout:ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc"
+    },
+    {
+      "role": "trained_controller_arm",
+      "source": "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+      "target": "matched-physical-rollout:ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc"
+    },
+    {
+      "role": "training_result",
+      "source": "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+      "target": "matched-physical-rollout:ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc"
+    },
+    {
+      "role": "refined_identity_comparison",
+      "source": "rollout-identity-diagnostic:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57",
+      "target": "matched-physical-rollout:ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc"
+    }
+  ],
+  "format": "chreatures-portable-weave-biography-v1",
+  "integration": "native-universal-weave-dag",
+  "library": {
+    "name": "universal-weave",
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+    "version": "0.5.0"
+  },
+  "multi_parent_nodes": 10,
+  "node_count": 18,
+  "node_id_contract": "lowercase first-128-bit SHA-256 of source_id",
+  "public_summary": {
+    "claims_not_established": [
+      "biological parameter recovery",
+      "general optic/body prediction improvement beyond the procedural fit split",
+      "general embodied competence"
+    ],
+    "edges": 25563197,
+    "fullgraph_settings": 27,
+    "matched_rollout_outcome": "mixed",
+    "neurons": 165122,
+    "status": "executed research chain with mixed outcomes",
+    "teacher_updates": 128
+  },
+  "records": [
+    {
+      "artifact_uri": "urn:sha256:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
+      "blob_refs": [
+        {
+          "bytes": 9329,
+          "media_type": "application/json",
+          "role": "fullgraph_sweep_receipt",
+          "sha256": "2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
+          "uri": "urn:sha256:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "a8c6cca539259d3acb5cdac7329c9f59",
+      "parent_source_ids": [],
+      "parents": [],
+      "record_type": "fullgraph_parameter_sweep",
+      "source": {
+        "artifact_uri": "urn:sha256:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
+        "blob_refs": [
+          {
+            "bytes": 9329,
+            "media_type": "application/json",
+            "role": "fullgraph_sweep_receipt",
+            "sha256": "2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
+            "uri": "urn:sha256:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "heldout_streams": 4,
+          "metric": "heldout 0.2-second delta decoder skill against persistence",
+          "parent_roles": {},
+          "scope": "procedural full-graph diagnostic; not behavior",
+          "settings": 27,
+          "ticks_per_setting": 128,
+          "train_streams": 8
+        },
+        "id": "fullgraph-sweep:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
+        "parent_ids": [],
+        "record_type": "fullgraph_parameter_sweep",
+        "text": "Executed 27-setting crossed dynamics sweep on all 165,122 neurons and 25,563,197 graph edges.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 0
+        }
+      },
+      "source_id": "fullgraph-sweep:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b",
+      "text": "Executed 27-setting crossed dynamics sweep on all 165,122 neurons and 25,563,197 graph edges.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 0
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2",
+      "blob_refs": [
+        {
+          "bytes": 29201,
+          "media_type": "application/json",
+          "role": "gam_fit_report",
+          "sha256": "6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2",
+          "uri": "urn:sha256:6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 502664,
+          "media_type": "application/octet-stream",
+          "role": "native_gam_skill",
+          "sha256": "1ca2b9c132a6bb408537093a10caf472da3a89d39e53f5f655c79d2eeb54c823",
+          "uri": "urn:sha256:1ca2b9c132a6bb408537093a10caf472da3a89d39e53f5f655c79d2eeb54c823",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 51747,
+          "media_type": "application/octet-stream",
+          "role": "native_gam_skill_additive",
+          "sha256": "b92862a599acf2dbd323905a431992d4647c86944963e9afca50efd7d2a812c0",
+          "uri": "urn:sha256:b92862a599acf2dbd323905a431992d4647c86944963e9afca50efd7d2a812c0",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 500647,
+          "media_type": "application/octet-stream",
+          "role": "native_gam_recovery_memory",
+          "sha256": "e0439b868b647e4e6a7e04ee1e3d8b7672bc76825c8d8a3b4a6cc493d300f719",
+          "uri": "urn:sha256:e0439b868b647e4e6a7e04ee1e3d8b7672bc76825c8d8a3b4a6cc493d300f719",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "1ac81f4c3b055cfc93850beaf2935d40",
+      "parent_source_ids": [
+        "fullgraph-sweep:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b"
+      ],
+      "parents": [
+        "a8c6cca539259d3acb5cdac7329c9f59"
+      ],
+      "record_type": "native_gam_fit",
+      "source": {
+        "artifact_uri": "urn:sha256:6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2",
+        "blob_refs": [
+          {
+            "bytes": 29201,
+            "media_type": "application/json",
+            "role": "gam_fit_report",
+            "sha256": "6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2",
+            "uri": "urn:sha256:6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 502664,
+            "media_type": "application/octet-stream",
+            "role": "native_gam_skill",
+            "sha256": "1ca2b9c132a6bb408537093a10caf472da3a89d39e53f5f655c79d2eeb54c823",
+            "uri": "urn:sha256:1ca2b9c132a6bb408537093a10caf472da3a89d39e53f5f655c79d2eeb54c823",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 51747,
+            "media_type": "application/octet-stream",
+            "role": "native_gam_skill_additive",
+            "sha256": "b92862a599acf2dbd323905a431992d4647c86944963e9afca50efd7d2a812c0",
+            "uri": "urn:sha256:b92862a599acf2dbd323905a431992d4647c86944963e9afca50efd7d2a812c0",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 500647,
+            "media_type": "application/octet-stream",
+            "role": "native_gam_recovery_memory",
+            "sha256": "e0439b868b647e4e6a7e04ee1e3d8b7672bc76825c8d8a3b4a6cc493d300f719",
+            "uri": "urn:sha256:e0439b868b647e4e6a7e04ee1e3d8b7672bc76825c8d8a3b4a6cc493d300f719",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "library": {
+            "abi": "cp310+",
+            "name": "gamfit",
+            "native_crate": "gam-pyffi",
+            "native_engine_crate": "gam",
+            "native_extension_available": true,
+            "source_commit": "7c7eca8ac4826de95c8e743a20294bee132a9bcc",
+            "version": "0.1.259"
+          },
+          "parent_roles": {
+            "fullgraph-sweep:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b": "fit_source"
+          },
+          "recovery_loo": {
+            "mae": 0.034741342956145956,
+            "r_squared": -1.2914679302263403,
+            "rmse": 0.060182261567961734
+          },
+          "recovery_predictive_useful": false,
+          "scope": "Offline descriptive interpolation of full-graph response metrics; no causal or physiological parameter claim and no resident controller input.",
+          "skill_loo": {
+            "mae": 0.008907868113167293,
+            "r_squared": 0.9574606165000598,
+            "rmse": 0.012760307910555569
+          },
+          "skill_predictive_useful": true
+        },
+        "id": "gam-fit:6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2",
+        "parent_ids": [
+          "fullgraph-sweep:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b"
+        ],
+        "record_type": "native_gam_fit",
+        "text": "Native GAM surfaces fit the crossed sweep; held-out skill prediction was useful while recovery-memory prediction was not.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 1
+        }
+      },
+      "source_id": "gam-fit:6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2",
+      "text": "Native GAM surfaces fit the crossed sweep; held-out skill prediction was useful while recovery-memory prediction was not.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 1
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "1c4456bc23ce1b20ad5c54fe36b5ded5",
+      "parent_source_ids": [
+        "gam-fit:6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2"
+      ],
+      "parents": [
+        "1ac81f4c3b055cfc93850beaf2935d40"
+      ],
+      "record_type": "heldout_parameter_prediction",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "confidence_interval": false,
+          "parent_roles": {
+            "gam-fit:6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2": "predictive_model"
+          },
+          "predicted_recovery_memory": 0.104119852248893,
+          "predicted_skill": 0.8173972411489785,
+          "required_next_step": "Run this exact setting on the full graph; the fitted value does not establish improvement over the best measured setting.",
+          "setting": {
+            "adaptation_gain": 0.0875,
+            "gain": 1.4,
+            "tau": 0.04
+          },
+          "skill_error_scale_rmse": 0.012760307910555569
+        },
+        "id": "heldout-setting-prediction:48458a2290d6e3d91b1555596d696a44788be95da5b2ffaa0429dcd17cd186cb",
+        "parent_ids": [
+          "gam-fit:6d66d4baa00adfa3f6c7d69386d2fd51922257b3fc713c88c52c109b80dd3de2"
+        ],
+        "record_type": "heldout_parameter_prediction",
+        "text": "The fitted surface proposed one previously unmeasured in-bounds setting for an explicit full-graph rerun.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 2
+        }
+      },
+      "source_id": "heldout-setting-prediction:48458a2290d6e3d91b1555596d696a44788be95da5b2ffaa0429dcd17cd186cb",
+      "text": "The fitted surface proposed one previously unmeasured in-bounds setting for an explicit full-graph rerun.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 2
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:f77f06d2d7b60e5d2b008a30bb8e44c039a647210d9240c5d1c58cf19081c02a",
+      "blob_refs": [
+        {
+          "bytes": 877,
+          "media_type": "application/json",
+          "role": "fullgraph_confirmation_receipt",
+          "sha256": "f77f06d2d7b60e5d2b008a30bb8e44c039a647210d9240c5d1c58cf19081c02a",
+          "uri": "urn:sha256:f77f06d2d7b60e5d2b008a30bb8e44c039a647210d9240c5d1c58cf19081c02a",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "c3fa52bd311d1991e051d376a6b4cfba",
+      "parent_source_ids": [
+        "heldout-setting-prediction:48458a2290d6e3d91b1555596d696a44788be95da5b2ffaa0429dcd17cd186cb",
+        "fullgraph-sweep:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b"
+      ],
+      "parents": [
+        "1c4456bc23ce1b20ad5c54fe36b5ded5",
+        "a8c6cca539259d3acb5cdac7329c9f59"
+      ],
+      "record_type": "executed_parameter_confirmation",
+      "source": {
+        "artifact_uri": "urn:sha256:f77f06d2d7b60e5d2b008a30bb8e44c039a647210d9240c5d1c58cf19081c02a",
+        "blob_refs": [
+          {
+            "bytes": 877,
+            "media_type": "application/json",
+            "role": "fullgraph_confirmation_receipt",
+            "sha256": "f77f06d2d7b60e5d2b008a30bb8e44c039a647210d9240c5d1c58cf19081c02a",
+            "uri": "urn:sha256:f77f06d2d7b60e5d2b008a30bb8e44c039a647210d9240c5d1c58cf19081c02a",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "absolute_prediction_error": 0.001612304556106614,
+          "best_measured_skill": 0.8213755229319663,
+          "improved_over_best_measured": false,
+          "observed_recovery_memory": 0.12184766178079685,
+          "observed_skill": 0.8157849365928719,
+          "parent_roles": {
+            "fullgraph-sweep:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b": "comparison_sweep",
+            "heldout-setting-prediction:48458a2290d6e3d91b1555596d696a44788be95da5b2ffaa0429dcd17cd186cb": "predicted_setting"
+          },
+          "predicted_skill": 0.8173972411489785,
+          "recovery_prediction_was_reliable": false
+        },
+        "id": "executed-setting-confirmation:f77f06d2d7b60e5d2b008a30bb8e44c039a647210d9240c5d1c58cf19081c02a",
+        "parent_ids": [
+          "heldout-setting-prediction:48458a2290d6e3d91b1555596d696a44788be95da5b2ffaa0429dcd17cd186cb",
+          "fullgraph-sweep:2c65a68998193f30aa078284e8bc5fa478146a8d1e2e1927f599b5d83884b72b"
+        ],
+        "record_type": "executed_parameter_confirmation",
+        "text": "The proposed setting was executed on the full graph; its skill was close to the prediction without exceeding the best measured sweep result.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 3
+        }
+      },
+      "source_id": "executed-setting-confirmation:f77f06d2d7b60e5d2b008a30bb8e44c039a647210d9240c5d1c58cf19081c02a",
+      "text": "The proposed setting was executed on the full graph; its skill was close to the prediction without exceeding the best measured sweep result.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 3
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+      "blob_refs": [
+        {
+          "bytes": 4862,
+          "media_type": "application/json",
+          "role": "temporal_training_receipt",
+          "sha256": "287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+          "uri": "urn:sha256:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "c5d9b951c8f3c7cba6a7d204195383de",
+      "parent_source_ids": [],
+      "parents": [],
+      "record_type": "temporal_cns_fit",
+      "source": {
+        "artifact_uri": "urn:sha256:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+        "blob_refs": [
+          {
+            "bytes": 4862,
+            "media_type": "application/json",
+            "role": "temporal_training_receipt",
+            "sha256": "287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+            "uri": "urn:sha256:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "limitations": [
+            "procedural optic/body excitation, not embodied competence",
+            "body adapter and optical adapter frozen",
+            "Z512 plus 6 dimensional supervised head, not a trained controller"
+          ],
+          "parent_roles": {},
+          "procedural_frequency_split_after_skill": [
+            0.9931281208992004,
+            0.9751017093658447,
+            0.6802853941917419,
+            0.9727910161018372,
+            0.9188671112060547,
+            0.12031280994415283
+          ],
+          "procedural_future_body_skill_vs_persistence": 0.12031280994415283,
+          "procedural_future_optic_skill_vs_persistence": [
+            0.9727910161018372,
+            0.9188671112060547
+          ],
+          "seconds": 397.1219690591097,
+          "status": "research-fit-not-controller",
+          "updates": 192
+        },
+        "id": "temporal-cns-fit:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+        "parent_ids": [],
+        "record_type": "temporal_cns_fit",
+        "text": "A 192-update ROCm research fit trained full-graph temporal parameters and a supervised probe head.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 0
+        }
+      },
+      "source_id": "temporal-cns-fit:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+      "text": "A 192-update ROCm research fit trained full-graph temporal parameters and a supervised probe head.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 0
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f",
+      "blob_refs": [
+        {
+          "bytes": 3373,
+          "media_type": "application/json",
+          "role": "canonical_edge_ablation_receipt",
+          "sha256": "9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f",
+          "uri": "urn:sha256:9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "aaed4ef644da8a9a18e7ef7ab0fe7807",
+      "parent_source_ids": [
+        "temporal-cns-fit:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993"
+      ],
+      "parents": [
+        "c5d9b951c8f3c7cba6a7d204195383de"
+      ],
+      "record_type": "graph_edge_ablation",
+      "source": {
+        "artifact_uri": "urn:sha256:9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f",
+        "blob_refs": [
+          {
+            "bytes": 3373,
+            "media_type": "application/json",
+            "role": "canonical_edge_ablation_receipt",
+            "sha256": "9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f",
+            "uri": "urn:sha256:9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "audit_scope": "fullgraph replay, masked edge-dependence, joint optic/body/type/readout gradient; not behavior",
+          "claim": "edge dependence of trained temporal-probe outputs plus finite startup gradients; not biological validation or behavior",
+          "parent_roles": {
+            "temporal-cns-fit:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993": "audited_fit"
+          },
+          "trained_temporal_probe": {
+            "intact_skill": [
+              0.9931281208992004,
+              0.9751017093658447,
+              0.6802854537963867,
+              0.9727910161018372,
+              0.9188671112060547,
+              0.12031292915344238
+            ],
+            "scope": "trained temporal probe replay and graph-edge ablation",
+            "zero_edge_skill": [
+              -0.0003434419631958008,
+              -0.0018658638000488281,
+              0.0003161430358886719,
+              -0.005548715591430664,
+              0.0037108659744262695,
+              -0.003541707992553711
+            ]
+          },
+          "untrained_broad_head_startup": {
+            "future_body_skill_vs_persistence": -4.933181285858154,
+            "future_optic_skill_vs_persistence": -1.344064474105835,
+            "loss": 0.09857665747404099,
+            "scope": "gradient and execution startup check of newly initialized broad sensory heads; not a trained-head evaluation"
+          }
+        },
+        "id": "graph-edge-ablation:9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f",
+        "parent_ids": [
+          "temporal-cns-fit:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993"
+        ],
+        "record_type": "graph_edge_ablation",
+        "text": "The canonical audit retained strong trained temporal-probe skill with graph edges intact and reduced it to approximately zero when all graph edges were removed.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 1
+        }
+      },
+      "source_id": "graph-edge-ablation:9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f",
+      "text": "The canonical audit retained strong trained temporal-probe skill with graph edges intact and reduced it to approximately zero when all graph edges were removed.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 1
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+      "blob_refs": [
+        {
+          "bytes": 255084953,
+          "media_type": "application/octet-stream",
+          "role": "trained_cns_service",
+          "sha256": "ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+          "uri": "urn:sha256:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 11033,
+          "media_type": "application/json",
+          "role": "cns_service_receipt",
+          "sha256": "ebe6603dfee0ee224a8b4de5ccb344d588b2bb9d115492372fcb4ac55b56ebd7",
+          "uri": "urn:sha256:ebe6603dfee0ee224a8b4de5ccb344d588b2bb9d115492372fcb4ac55b56ebd7",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "de599bac4df9bd455fb44a88d76ed116",
+      "parent_source_ids": [
+        "temporal-cns-fit:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+        "graph-edge-ablation:9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f"
+      ],
+      "parents": [
+        "c5d9b951c8f3c7cba6a7d204195383de",
+        "aaed4ef644da8a9a18e7ef7ab0fe7807"
+      ],
+      "record_type": "trained_cns_export",
+      "source": {
+        "artifact_uri": "urn:sha256:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+        "blob_refs": [
+          {
+            "bytes": 255084953,
+            "media_type": "application/octet-stream",
+            "role": "trained_cns_service",
+            "sha256": "ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+            "uri": "urn:sha256:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 11033,
+            "media_type": "application/json",
+            "role": "cns_service_receipt",
+            "sha256": "ebe6603dfee0ee224a8b4de5ccb344d588b2bb9d115492372fcb4ac55b56ebd7",
+            "uri": "urn:sha256:ebe6603dfee0ee224a8b4de5ccb344d588b2bb9d115492372fcb4ac55b56ebd7",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "atlas_sha256": "6a59c4282ffc912e1c0304498686819cdcc16c059f453fd5bc19c55938218482",
+          "controller_status": "not trained",
+          "edges": 25563197,
+          "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+          "neurons": 165122,
+          "parent_roles": {
+            "graph-edge-ablation:9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f": "edge_dependence_audit",
+            "temporal-cns-fit:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993": "trained_parameters"
+          },
+          "training_status": "trained"
+        },
+        "id": "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+        "parent_ids": [
+          "temporal-cns-fit:287eabfd014b8e6e14923830fcc97498e327dc7e67494ed674bb7a61b7799993",
+          "graph-edge-ablation:9ecd6e7231b09442e892ca67fd7fc35f3cc2eb1e2de4be3367d74b628ab28b5f"
+        ],
+        "record_type": "trained_cns_export",
+        "text": "The audited temporal fit was serialized as one hash-bound full MaleCNS service artifact.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 2
+        }
+      },
+      "source_id": "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+      "text": "The audited temporal fit was serialized as one hash-bound full MaleCNS service artifact.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 2
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+      "blob_refs": [
+        {
+          "bytes": 4699,
+          "media_type": "application/json",
+          "role": "browser_release_manifest",
+          "sha256": "02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+          "uri": "urn:sha256:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "6e4c0277f1032ecafd5ae453897f971b",
+      "parent_source_ids": [
+        "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378"
+      ],
+      "parents": [
+        "de599bac4df9bd455fb44a88d76ed116"
+      ],
+      "record_type": "browser_model_export",
+      "source": {
+        "artifact_uri": "urn:sha256:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+        "blob_refs": [
+          {
+            "bytes": 4699,
+            "media_type": "application/json",
+            "role": "browser_release_manifest",
+            "sha256": "02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+            "uri": "urn:sha256:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "cns_service_artifact_sha256": "ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+          "controller_status": "initialized-untrained",
+          "parent_roles": {
+            "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378": "cns_service"
+          },
+          "release_bytes": 123592257,
+          "release_files": 37,
+          "resident_artifact_sha256": "c63c9f2db4bf62ffade3265dd1e162a2c26693b0ba27ba3d92e94fcc3fe7d255",
+          "source_revision": "3a6d7a710fa0500ca48653203a2811bb813a2b7b"
+        },
+        "id": "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+        "parent_ids": [
+          "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378"
+        ],
+        "record_type": "browser_model_export",
+        "text": "The trained CNS and initialized-untrained resident were packed into a complete hash-verified browser release.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 3
+        }
+      },
+      "source_id": "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+      "text": "The trained CNS and initialized-untrained resident were packed into a complete hash-verified browser release.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 3
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b",
+      "blob_refs": [
+        {
+          "bytes": 1675,
+          "media_type": "application/json",
+          "role": "dawn_webgpu_probe_receipt",
+          "sha256": "17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b",
+          "uri": "urn:sha256:17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "b95d83dff120d63e21d83e0f8d644039",
+      "parent_source_ids": [
+        "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea"
+      ],
+      "parents": [
+        "6e4c0277f1032ecafd5ae453897f971b"
+      ],
+      "record_type": "browser_numeric_confirmation",
+      "source": {
+        "artifact_uri": "urn:sha256:17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b",
+        "blob_refs": [
+          {
+            "bytes": 1675,
+            "media_type": "application/json",
+            "role": "dawn_webgpu_probe_receipt",
+            "sha256": "17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b",
+            "uri": "urn:sha256:17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "adapter": "apple-m2-max",
+          "byte_exact_restore": {
+            "latent": true,
+            "snapshot": true
+          },
+          "final_max_abs": {
+            "adaptation": 3.361143171787262e-06,
+            "rate": 2.5451183319091797e-05,
+            "support": 1.7881393432617188e-07
+          },
+          "limit_basis": "Approximately four times the observed binary16-versus-float32 numerical error; regression bound only, not a biological tolerance.",
+          "limits": {
+            "adaptation": 1e-05,
+            "latent": 0.0001,
+            "neutralRate": 2e-06,
+            "rate": 0.0001,
+            "support": 2e-06
+          },
+          "parent_roles": {
+            "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea": "browser_release"
+          },
+          "ticks": 8
+        },
+        "id": "browser-numeric-probe:17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b",
+        "parent_ids": [
+          "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea"
+        ],
+        "record_type": "browser_numeric_confirmation",
+        "text": "The browser WebGPU kernels executed eight full-graph ticks within pinned binary16 regression bounds and restored state byte-exactly.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 4
+        }
+      },
+      "source_id": "browser-numeric-probe:17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b",
+      "text": "The browser WebGPU kernels executed eight full-graph ticks within pinned binary16 regression bounds and restored state byte-exactly.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 4
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949",
+      "blob_refs": [
+        {
+          "bytes": 302,
+          "media_type": "application/json",
+          "role": "joined_load_failure_receipt",
+          "sha256": "bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949",
+          "uri": "urn:sha256:bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "a1f3315b06eb81a913361936d9ec1976",
+      "parent_source_ids": [
+        "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea"
+      ],
+      "parents": [
+        "6e4c0277f1032ecafd5ae453897f971b"
+      ],
+      "record_type": "executed_integration_failure",
+      "source": {
+        "artifact_uri": "urn:sha256:bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949",
+        "blob_refs": [
+          {
+            "bytes": 302,
+            "media_type": "application/json",
+            "role": "joined_load_failure_receipt",
+            "sha256": "bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949",
+            "uri": "urn:sha256:bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "error": "MuJoCo Emscripten mutates its factory options; reusing that object aborted on noExitRuntime getter",
+          "operation": "whole life load after authenticated Wasm boot",
+          "parent_roles": {
+            "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea": "browser_release"
+          },
+          "repair": "retain immutable Wasm bytes and give each new MuJoCo instance a fresh options object",
+          "superseded_result": "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee"
+        },
+        "id": "browser-load-failure:bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949",
+        "parent_ids": [
+          "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea"
+        ],
+        "record_type": "executed_integration_failure",
+        "text": "The first whole-life load attempt failed because a reused MuJoCo Emscripten options object had been mutated.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 4
+        }
+      },
+      "source_id": "browser-load-failure:bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949",
+      "text": "The first whole-life load attempt failed because a reused MuJoCo Emscripten options object had been mutated.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 4
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+      "blob_refs": [
+        {
+          "bytes": 981,
+          "media_type": "application/json",
+          "role": "joined_execution_receipt",
+          "sha256": "91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+          "uri": "urn:sha256:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "c784f016d71fd57dce9a1139bed989df",
+      "parent_source_ids": [
+        "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+        "browser-numeric-probe:17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b",
+        "browser-load-failure:bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949"
+      ],
+      "parents": [
+        "6e4c0277f1032ecafd5ae453897f971b",
+        "b95d83dff120d63e21d83e0f8d644039",
+        "a1f3315b06eb81a913361936d9ec1976"
+      ],
+      "record_type": "joined_execution_confirmation",
+      "source": {
+        "artifact_uri": "urn:sha256:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+        "blob_refs": [
+          {
+            "bytes": 981,
+            "media_type": "application/json",
+            "role": "joined_execution_receipt",
+            "sha256": "91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+            "uri": "urn:sha256:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "controllerStatus": "initialized-untrained",
+          "edges": 25563197,
+          "fullNeuralReplayExact": true,
+          "maxCompleteTickMs": 181.90599999999995,
+          "meanCompleteTickMs": 102.67621612499997,
+          "modelSeconds": 0.8500000000000002,
+          "modelStatus": "trained",
+          "neurons": 165122,
+          "parent_roles": {
+            "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea": "browser_release",
+            "browser-load-failure:bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949": "repaired_failure",
+            "browser-numeric-probe:17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b": "numeric_confirmation"
+          },
+          "physicalReplayExact": true,
+          "residents": 3,
+          "restoredGrownWorld": true,
+          "scope": "Actual Node Dawn Metal + same browser Wasm/WGSL; no browser UI performance or learned motor competence claim",
+          "wholeLifeReplayExact": true
+        },
+        "id": "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+        "parent_ids": [
+          "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+          "browser-numeric-probe:17e9d07465223d58707d60bb03f5ce906c60728dec827a405b5806b734b1993b",
+          "browser-load-failure:bdb63283566f7ff8abb2a6758035d638094530ab9c2d0ca5d513c93aa650e949"
+        ],
+        "record_type": "joined_execution_confirmation",
+        "text": "After the recorded options-lifetime repair, the full CNS, Rust resident and MuJoCo world advanced and replayed one grown life exactly.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 5
+        }
+      },
+      "source_id": "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+      "text": "After the recorded options-lifetime repair, the full CNS, Rust resident and MuJoCo world advanced and replayed one grown life exactly.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 5
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8",
+      "blob_refs": [
+        {
+          "bytes": 760,
+          "media_type": "application/json",
+          "role": "teacher_collection_failure_receipt",
+          "sha256": "14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8",
+          "uri": "urn:sha256:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "f13f6cbf9eb5d9b9b01d80d2cd9828ac",
+      "parent_source_ids": [
+        "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+        "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea"
+      ],
+      "parents": [
+        "c784f016d71fd57dce9a1139bed989df",
+        "6e4c0277f1032ecafd5ae453897f971b"
+      ],
+      "record_type": "executed_collection_failure",
+      "source": {
+        "artifact_uri": "urn:sha256:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8",
+        "blob_refs": [
+          {
+            "bytes": 760,
+            "media_type": "application/json",
+            "role": "teacher_collection_failure_receipt",
+            "sha256": "14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8",
+            "uri": "urn:sha256:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "completed_before_failure": [
+            "episode-00-train.npz"
+          ],
+          "diagnosis": "The failed collector reused an options object mutated by the Emscripten factory; this was a caller/options-lifetime bug, not a MuJoCo singleton restriction.",
+          "error": "MuJoCo Emscripten singleton refused a second factory initialization: noExitRuntime was not exported",
+          "failed_phase": "heldout-world-reinitialization",
+          "parent_roles": {
+            "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea": "collection_release",
+            "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee": "runtime_predecessor"
+          },
+          "resolution": "LiveEngine now retains immutable Wasm bytes and passes a fresh {wasmBinary} object to every factory initialization; later independent initialization passed."
+        },
+        "id": "teacher-collection-failure:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8",
+        "parent_ids": [
+          "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+          "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea"
+        ],
+        "record_type": "executed_collection_failure",
+        "text": "The first teacher collection stopped when a mutated Emscripten options object prevented held-out world reinitialization.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 6
+        }
+      },
+      "source_id": "teacher-collection-failure:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8",
+      "text": "The first teacher collection stopped when a mutated Emscripten options object prevented held-out world reinitialization.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 6
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+      "blob_refs": [
+        {
+          "bytes": 5413,
+          "media_type": "application/json",
+          "role": "teacher_collection_receipt",
+          "sha256": "a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+          "uri": "urn:sha256:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 620099,
+          "media_type": "application/x-npz",
+          "role": "teacher_episode_0",
+          "sha256": "bbc7d43d14ac202021b80236f021cb745b4e7ce3087fce0ba848ba7fb3a17742",
+          "uri": "urn:sha256:bbc7d43d14ac202021b80236f021cb745b4e7ce3087fce0ba848ba7fb3a17742",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 620291,
+          "media_type": "application/x-npz",
+          "role": "teacher_episode_1",
+          "sha256": "6d52ca02f7196fa8354b89def4435098c0577884a04f82f16d3f3db670d9656e",
+          "uri": "urn:sha256:6d52ca02f7196fa8354b89def4435098c0577884a04f82f16d3f3db670d9656e",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "b1d60b3d1bafbb74801f01d710854c2b",
+      "parent_source_ids": [
+        "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+        "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+        "teacher-collection-failure:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8"
+      ],
+      "parents": [
+        "c784f016d71fd57dce9a1139bed989df",
+        "6e4c0277f1032ecafd5ae453897f971b",
+        "f13f6cbf9eb5d9b9b01d80d2cd9828ac"
+      ],
+      "record_type": "physical_teacher_collection",
+      "source": {
+        "artifact_uri": "urn:sha256:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+        "blob_refs": [
+          {
+            "bytes": 5413,
+            "media_type": "application/json",
+            "role": "teacher_collection_receipt",
+            "sha256": "a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+            "uri": "urn:sha256:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 620099,
+            "media_type": "application/x-npz",
+            "role": "teacher_episode_0",
+            "sha256": "bbc7d43d14ac202021b80236f021cb745b4e7ce3087fce0ba848ba7fb3a17742",
+            "uri": "urn:sha256:bbc7d43d14ac202021b80236f021cb745b4e7ce3087fce0ba848ba7fb3a17742",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 620291,
+            "media_type": "application/x-npz",
+            "role": "teacher_episode_1",
+            "sha256": "6d52ca02f7196fa8354b89def4435098c0577884a04f82f16d3f3db670d9656e",
+            "uri": "urn:sha256:6d52ca02f7196fa8354b89def4435098c0577884a04f82f16d3f3db670d9656e",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "action_source": "privileged-physical-teacher",
+          "episodes": [
+            {
+              "batch": 3,
+              "commandRms": 0.278404176235199,
+              "positiveRewardFraction": 0.3645833333333333,
+              "rawGeometryRetained": false,
+              "rawSensesRetained": false,
+              "split": "train",
+              "transitions": 96
+            },
+            {
+              "batch": 3,
+              "commandRms": 0.2898027300834656,
+              "positiveRewardFraction": 0.21180555555555555,
+              "rawGeometryRetained": false,
+              "rawSensesRetained": false,
+              "split": "heldout-starts",
+              "transitions": 96
+            }
+          ],
+          "heldout_contact_attempts": 0,
+          "limitations": [
+            "Teacher labels are privileged offline supervision and were not selected by the resident.",
+            "The sealed held-out run reached no near-contact grip labels (contactAttempts=0); it tests different physical targets/start perturbations, turning, approach, stopping, and recovery."
+          ],
+          "parent_roles": {
+            "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea": "collection_release",
+            "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee": "executed_runtime",
+            "teacher-collection-failure:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8": "repaired_attempt"
+          },
+          "transitions": 576
+        },
+        "id": "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+        "parent_ids": [
+          "joined-browser-equivalent:91deac6ae8b6f5466818667b94960ff1ce5a225bb11ad7a23705bda9ccaf50ee",
+          "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+          "teacher-collection-failure:14417fb6d5b72e9abc9162f0f054f9582e33ed6fbe8d9b588e42b8e467dec1d8"
+        ],
+        "record_type": "physical_teacher_collection",
+        "text": "Two actual full-CNS physical episodes supplied 576 transitions of privileged offline teacher supervision across train and held-out starts.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 6
+        }
+      },
+      "source_id": "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+      "text": "Two actual full-CNS physical episodes supplied 576 transitions of privileged offline teacher supervision across train and held-out starts.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 6
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:979cb328f9da973d311c9aa3954201d42143516a73354072e04f26a8eba77994",
+      "blob_refs": [
+        {
+          "bytes": 49316,
+          "media_type": "application/json",
+          "role": "resident_training_result",
+          "sha256": "979cb328f9da973d311c9aa3954201d42143516a73354072e04f26a8eba77994",
+          "uri": "urn:sha256:979cb328f9da973d311c9aa3954201d42143516a73354072e04f26a8eba77994",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 10981749,
+          "media_type": "application/x-npz",
+          "role": "trained_resident",
+          "sha256": "b54d31d0d1772c1c2e274138bda2ab63278cb3179fe4736b3f2709487be955b5",
+          "uri": "urn:sha256:b54d31d0d1772c1c2e274138bda2ab63278cb3179fe4736b3f2709487be955b5",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 1640229,
+          "media_type": "application/x-npz",
+          "role": "trained_sequence_control",
+          "sha256": "e8bd5542987ef2dbf92d5bd5eaede0b994b2fc54e3e71c38c769197ec92d8ffc",
+          "uri": "urn:sha256:e8bd5542987ef2dbf92d5bd5eaede0b994b2fc54e3e71c38c769197ec92d8ffc",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "22330f6e27581c00dde7a82a5ed4bfc1",
+      "parent_source_ids": [
+        "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+        "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea"
+      ],
+      "parents": [
+        "b1d60b3d1bafbb74801f01d710854c2b",
+        "6e4c0277f1032ecafd5ae453897f971b"
+      ],
+      "record_type": "resident_controller_training",
+      "source": {
+        "artifact_uri": "urn:sha256:979cb328f9da973d311c9aa3954201d42143516a73354072e04f26a8eba77994",
+        "blob_refs": [
+          {
+            "bytes": 49316,
+            "media_type": "application/json",
+            "role": "resident_training_result",
+            "sha256": "979cb328f9da973d311c9aa3954201d42143516a73354072e04f26a8eba77994",
+            "uri": "urn:sha256:979cb328f9da973d311c9aa3954201d42143516a73354072e04f26a8eba77994",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 10981749,
+            "media_type": "application/x-npz",
+            "role": "trained_resident",
+            "sha256": "b54d31d0d1772c1c2e274138bda2ab63278cb3179fe4736b3f2709487be955b5",
+            "uri": "urn:sha256:b54d31d0d1772c1c2e274138bda2ab63278cb3179fe4736b3f2709487be955b5",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 1640229,
+            "media_type": "application/x-npz",
+            "role": "trained_sequence_control",
+            "sha256": "e8bd5542987ef2dbf92d5bd5eaede0b994b2fc54e3e71c38c769197ec92d8ffc",
+            "uri": "urn:sha256:e8bd5542987ef2dbf92d5bd5eaede0b994b2fc54e3e71c38c769197ec92d8ffc",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "parent_roles": {
+            "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea": "parent_controller",
+            "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0": "training_data"
+          },
+          "resident_artifact_sha256": "42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+          "scope": "offline privileged-teacher fit; physical competence requires matched rollout",
+          "seconds": 26.222630351781845,
+          "sequence_control_artifact_sha256": "daffbc1aeccd18455bce4901cf0a0705dc90b3f442428dd6db4b054e87d1a056",
+          "updates": 128,
+          "validation_after": {
+            "action": 0.06900688260793686,
+            "hazard": 0.9646561741828918,
+            "memory": 4.245122909545898,
+            "prediction": 0.008908339776098728,
+            "selector": 1.7832494974136353,
+            "total": 0.9227871894836426,
+            "value": 0.06639325618743896
+          },
+          "validation_before": {
+            "action": 0.09495948255062103,
+            "hazard": 2.02755069732666,
+            "memory": 4.843925952911377,
+            "prediction": 0.007099553942680359,
+            "selector": 1.6094377040863037,
+            "total": 1.065831184387207,
+            "value": 0.015968486666679382
+          }
+        },
+        "id": "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+        "parent_ids": [
+          "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0",
+          "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea"
+        ],
+        "record_type": "resident_controller_training",
+        "text": "The current teacher data drove 128 optimizer updates and produced a new resident plus sequence-control artifact.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 7
+        }
+      },
+      "source_id": "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+      "text": "The current teacher data drove 128 optimizer updates and produced a new resident plus sequence-control artifact.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 7
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99",
+      "blob_refs": [
+        {
+          "bytes": 480,
+          "media_type": "application/json",
+          "role": "native_controller_comparison",
+          "sha256": "3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99",
+          "uri": "urn:sha256:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "c8fd4089b58b75192603c3393320d2cf",
+      "parent_source_ids": [
+        "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+        "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0"
+      ],
+      "parents": [
+        "22330f6e27581c00dde7a82a5ed4bfc1",
+        "b1d60b3d1bafbb74801f01d710854c2b"
+      ],
+      "record_type": "native_controller_confirmation",
+      "source": {
+        "artifact_uri": "urn:sha256:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99",
+        "blob_refs": [
+          {
+            "bytes": 480,
+            "media_type": "application/json",
+            "role": "native_controller_comparison",
+            "sha256": "3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99",
+            "uri": "urn:sha256:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "errors": {
+            "current_key_max_abs": 1.9371509552001953e-07,
+            "local_proposal_max_abs": 4.470348358154297e-08,
+            "recurrent_state_max_abs": 2.2351741790771484e-08
+          },
+          "parent_roles": {
+            "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e": "trained_controller",
+            "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0": "heldout_episode"
+          },
+          "passed": true,
+          "residents": 3,
+          "tolerance": 3e-05
+        },
+        "id": "native-controller-check:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99",
+        "parent_ids": [
+          "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+          "teacher-collection:a74e576690a6535548c9e11bad466d2f3c40bc9300dea7337e5aca997cc6fba0"
+        ],
+        "record_type": "native_controller_confirmation",
+        "text": "The trained resident matched the Python reference at the native Rust boundary within the declared tolerance.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 8
+        }
+      },
+      "source_id": "native-controller-check:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99",
+      "text": "The trained resident matched the Python reference at the native Rust boundary within the declared tolerance.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 8
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+      "blob_refs": [
+        {
+          "bytes": 4699,
+          "media_type": "application/json",
+          "role": "browser_release_manifest",
+          "sha256": "915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+          "uri": "urn:sha256:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "71e965a1b048bedc3e3c19fa38d740af",
+      "parent_source_ids": [
+        "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+        "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+        "native-controller-check:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99"
+      ],
+      "parents": [
+        "22330f6e27581c00dde7a82a5ed4bfc1",
+        "de599bac4df9bd455fb44a88d76ed116",
+        "c8fd4089b58b75192603c3393320d2cf"
+      ],
+      "record_type": "trained_browser_export",
+      "source": {
+        "artifact_uri": "urn:sha256:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+        "blob_refs": [
+          {
+            "bytes": 4699,
+            "media_type": "application/json",
+            "role": "browser_release_manifest",
+            "sha256": "915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+            "uri": "urn:sha256:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "parent_roles": {
+            "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e": "trained_controller",
+            "native-controller-check:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99": "native_confirmation",
+            "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378": "same_cns_service"
+          },
+          "release_bytes": 125082761,
+          "release_files": 37,
+          "resident_artifact_sha256": "42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+          "service_artifact_sha256": "ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+          "source_revision": "7c4daa1e822d7e472cca2fdfbc7bd80d9934e9ae",
+          "training_status": "trained"
+        },
+        "id": "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+        "parent_ids": [
+          "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+          "trained-cns-export:ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
+          "native-controller-check:3752dbe77f2b9cf704ede01f5f8bd580f30fc46a0ff05da4a5bb438ea2bf6f99"
+        ],
+        "record_type": "trained_browser_export",
+        "text": "The trained resident was repacked with the same CNS service into a second complete hash-verified browser release.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 8
+        }
+      },
+      "source_id": "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+      "text": "The trained resident was repacked with the same CNS service into a second complete hash-verified browser release.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 8
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57",
+      "blob_refs": [
+        {
+          "bytes": 5902,
+          "media_type": "application/json",
+          "role": "initial_rollout_identity_receipt",
+          "sha256": "4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57",
+          "uri": "urn:sha256:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "afd53a8432aea7be0da8135214701f9a",
+      "parent_source_ids": [
+        "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+        "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42"
+      ],
+      "parents": [
+        "6e4c0277f1032ecafd5ae453897f971b",
+        "71e965a1b048bedc3e3c19fa38d740af"
+      ],
+      "record_type": "comparison_identity_diagnostic",
+      "source": {
+        "artifact_uri": "urn:sha256:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57",
+        "blob_refs": [
+          {
+            "bytes": 5902,
+            "media_type": "application/json",
+            "role": "initial_rollout_identity_receipt",
+            "sha256": "4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57",
+            "uri": "urn:sha256:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "action_and_suffix_seeds_matched": true,
+          "diagnostic_false_negative": true,
+          "difference_scope": "sourceRevision identity header only; decoded GPU state bytes and canonical host state matched",
+          "numeric_cns_buffers_matched": true,
+          "parent_roles": {
+            "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea": "initialized_controller_arm",
+            "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42": "trained_controller_arm"
+          },
+          "physical_run_executed": true,
+          "reported_initial_world_and_cns_state_matched": false,
+          "world_seed_matched": true
+        },
+        "id": "rollout-identity-diagnostic:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57",
+        "parent_ids": [
+          "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+          "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42"
+        ],
+        "record_type": "comparison_identity_diagnostic",
+        "text": "An initial two-arm physical run executed with matching numeric CNS buffers; its snapshot envelope hashes differed only in the sourceRevision identity header, producing a diagnostic false negative.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 9
+        }
+      },
+      "source_id": "rollout-identity-diagnostic:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57",
+      "text": "An initial two-arm physical run executed with matching numeric CNS buffers; its snapshot envelope hashes differed only in the sourceRevision identity header, producing a diagnostic false negative.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 9
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc",
+      "blob_refs": [
+        {
+          "bytes": 6714,
+          "media_type": "application/json",
+          "role": "matched_physical_rollout_receipt",
+          "sha256": "ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc",
+          "uri": "urn:sha256:ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "53fe96f7e4541b4dcafe9d32b60cab26",
+      "parent_source_ids": [
+        "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+        "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+        "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+        "rollout-identity-diagnostic:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57"
+      ],
+      "parents": [
+        "6e4c0277f1032ecafd5ae453897f971b",
+        "71e965a1b048bedc3e3c19fa38d740af",
+        "22330f6e27581c00dde7a82a5ed4bfc1",
+        "afd53a8432aea7be0da8135214701f9a"
+      ],
+      "record_type": "matched_physical_rollout",
+      "source": {
+        "artifact_uri": "urn:sha256:ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc",
+        "blob_refs": [
+          {
+            "bytes": 6714,
+            "media_type": "application/json",
+            "role": "matched_physical_rollout_receipt",
+            "sha256": "ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc",
+            "uri": "urn:sha256:ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "action_and_suffix_seeds_matched": true,
+          "arms": [
+            {
+              "action_distinct_rows_rounded_1e3": 86,
+              "action_mean_channel_std": 0.02495354486279544,
+              "execution": {
+                "failed": false,
+                "failures": [],
+                "maxTickMs": 171.67525000000023,
+                "meanTickMs": 112.72707810156258,
+                "wallSeconds": 16.400618
+              },
+              "label": "parent",
+              "net_displacement_meters": [
+                0.13802793612148861,
+                0.0015486710789404249,
+                0.10893077274800118
+              ],
+              "path_length_meters": [
+                0.4003900738852054,
+                0.3402990588426025,
+                0.122705535867513
+              ],
+              "physical_stop_ticks_at_1cm_per_second": [
+                4,
+                4,
+                119
+              ],
+              "resident_artifact_sha256": "c63c9f2db4bf62ffade3265dd1e162a2c26693b0ba27ba3d92e94fcc3fe7d255",
+              "training_status": "initialized-untrained"
+            },
+            {
+              "action_distinct_rows_rounded_1e3": 120,
+              "action_mean_channel_std": 0.08227677607283879,
+              "execution": {
+                "failed": false,
+                "failures": [],
+                "maxTickMs": 181.3029170000009,
+                "meanTickMs": 113.07909080468741,
+                "wallSeconds": 16.246798832999996
+              },
+              "label": "trained",
+              "net_displacement_meters": [
+                0.0262742638975611,
+                0.02896662978168093,
+                0.1091809825599721
+              ],
+              "path_length_meters": [
+                0.5010937608566725,
+                0.3405825629791003,
+                0.12304990264129283
+              ],
+              "physical_stop_ticks_at_1cm_per_second": [
+                1,
+                2,
+                120
+              ],
+              "resident_artifact_sha256": "42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+              "training_status": "trained"
+            }
+          ],
+          "initial_cns_comparison": "decoded GPU state bytes and host metadata after removing only identity.sourceRevision; full snapshot hashes remain in each result",
+          "initial_world_and_cns_state_matched": true,
+          "interpretation": "Fresh-life closed-loop comparison only; metrics do not establish general embodied competence.",
+          "outcome": "mixed",
+          "parent_roles": {
+            "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea": "initialized_controller_arm",
+            "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e": "training_result",
+            "rollout-identity-diagnostic:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57": "refined_identity_comparison",
+            "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42": "trained_controller_arm"
+          },
+          "teacher_geometry_used_by_policy": false,
+          "world_seed_matched": true
+        },
+        "id": "matched-physical-rollout:ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc",
+        "parent_ids": [
+          "browser-export:02327b42ba2723e05f5def345bc6ba6c3e0d074435c0f6d04fdcf784beff5aea",
+          "trained-browser-export:915490babca6eb0326057dc1131813552d221c5ff9ea914553b57717c65ccd42",
+          "controller-training:42d18dc614e282f065b7c7c1bd262a3e12eaf9975a45e3a0b55fcfa433fb5d0e",
+          "rollout-identity-diagnostic:4687a841c236d96efef4c31f5c718ebd36060c5620df02807dce3de84d079b57"
+        ],
+        "record_type": "matched_physical_rollout",
+        "text": "The refined matched-state receipt confirmed the numeric CNS and host state, then fresh-life rollouts executed both initialized and trained controllers; action diversity increased while physical outcomes differed by resident and did not establish competence.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 10
+        }
+      },
+      "source_id": "matched-physical-rollout:ef4e20e8e44c466417590f515f76037b41889b846715748effda6a2b6f5d42cc",
+      "text": "The refined matched-state receipt confirmed the numeric CNS and host state, then fresh-life rollouts executed both initialized and trained controllers; action diversity increased while physical outcomes differed by resident and did not establish competence.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 10
+      }
+    }
+  ],
+  "reload_equal": true,
+  "topological_order": [
+    "a8c6cca539259d3acb5cdac7329c9f59",
+    "1ac81f4c3b055cfc93850beaf2935d40",
+    "1c4456bc23ce1b20ad5c54fe36b5ded5",
+    "c3fa52bd311d1991e051d376a6b4cfba",
+    "c5d9b951c8f3c7cba6a7d204195383de",
+    "aaed4ef644da8a9a18e7ef7ab0fe7807",
+    "de599bac4df9bd455fb44a88d76ed116",
+    "6e4c0277f1032ecafd5ae453897f971b",
+    "b95d83dff120d63e21d83e0f8d644039",
+    "a1f3315b06eb81a913361936d9ec1976",
+    "c784f016d71fd57dce9a1139bed989df",
+    "f13f6cbf9eb5d9b9b01d80d2cd9828ac",
+    "b1d60b3d1bafbb74801f01d710854c2b",
+    "22330f6e27581c00dde7a82a5ed4bfc1",
+    "c8fd4089b58b75192603c3393320d2cf",
+    "71e965a1b048bedc3e3c19fa38d740af",
+    "afd53a8432aea7be0da8135214701f9a",
+    "53fe96f7e4541b4dcafe9d32b60cab26"
+  ],
+  "validated_after_reload": true
+}

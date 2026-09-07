@@ -1135,3 +1135,19 @@ A wider physical encounter curriculum and balanced recurrent training proceed on
 the AMD nodes. This is additional current-architecture experience, not relabeling
 old V1 corpora or advancing frozen residents. The public controller remains the
 explicitly initialized artifact while this new experiment converges.
+
+### An inspectable native Weave chain
+
+The current live-CNS experiments now form an executed native Universal Weave DAG:
+18 nodes, 31 edges and 10 multi-parent joins. The public evidence reader derives
+its records and links from the serialized artifacts. It connects the dynamics
+sweep, actual GAM interpolation and confirmation, trained temporal-probe ablation,
+service/browser exports, first physical teacher fit and mixed body comparison.
+Initialized broad-head startup scores remain separate from the trained temporal
+probe. The first comparison’s identity-envelope false negative remains visible
+without incorrectly claiming its numeric initial CNS state differed.
+
+The live and home pages link this observatory. Bulk state stays outside Git; the
+public native serialization and portable projection carry artifact hashes. The
+physical limits now explicitly document browser ingestion’s 0.28 m root-radius
+rule, distinguishing it from the native engine’s precise mouth-contact law.
