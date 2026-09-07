@@ -166,6 +166,7 @@ def main():
                 if not all(restore_checks.values()):
                     raise RuntimeError(f'whole-loop continuation differs: {restore_checks}')
                 model_identity=copy.deepcopy(brain.cns_identity)
+                execution_identity=copy.deepcopy(brain.execution_identity)
                 habitat.neural.close()
             finally:
                 server.shutdown();server.server_close();thread.join(timeout=5)
@@ -177,7 +178,7 @@ def main():
         np.save(out/'soma_positions.npy',soma,allow_pickle=False);np.save(out/'soma_valid.npy',valid,allow_pickle=False)
         summary={'format':'chreatures-cns-screen-response-v1','status':'completed','condition':args.condition,
             'frames':args.frames,'final_tick':final_tick,'seconds':time.perf_counter()-started,'memory_count':final_counts,
-            'cns_identity':model_identity,'whole_loop_restore':restore_checks,'rate_capture_sha256':sha(out/'neural_rates.npy'),
+            'cns_identity':model_identity,'neural_execution':execution_identity,'whole_loop_restore':restore_checks,'rate_capture_sha256':sha(out/'neural_rates.npy'),
             'commands_sha256':sha(out/'commands.npy'),'positions_sha256':sha(out/'positions.npy'),
             'controller_sha256':sha(args.controller),'world_source_revision':revision,
             'frame_semantics':'input is sampled before each 50ms tick; CNS and physical outputs are recorded after that same tick'}

@@ -357,7 +357,7 @@ fn pad_matrix_rows(
 #[serde(tag = "op", rename_all = "snake_case")]
 enum Request {
     Step {
-        dt: f32,
+        dt: f64,
         active_mask: u32,
         sensory: Vec<f32>,
         #[serde(default)]
@@ -860,7 +860,7 @@ impl Engine {
 
     fn step(
         &mut self,
-        dt: f32,
+        dt: f64,
         mask: u32,
         sensory: &[f32],
         selected_indices: &[u32],
@@ -908,8 +908,9 @@ impl Engine {
             (!selected_indices.is_empty()).then(|| buf(&self.device, selected_indices));
         let selected_buffer = (!selected_indices.is_empty())
             .then(|| zeros(&self.device, selected_indices.len() * self.tiles));
-        let p0 = buf(&self.device, &[self.params(dt, mask, false)]);
-        let p1 = buf(&self.device, &[self.params(dt, mask, true)]);
+        let gpu_dt = dt as f32;
+        let p0 = buf(&self.device, &[self.params(gpu_dt, mask, false)]);
+        let p1 = buf(&self.device, &[self.params(gpu_dt, mask, true)]);
         let hidden_rows = buf(&self.device, &[BODY_HIDDEN as u32]);
         let latent_rows = buf(&self.device, &[LATENT as u32]);
         let cb_afferents = self.queue.new_command_buffer();
@@ -1125,7 +1126,7 @@ impl Engine {
         }
         for slot in 0..self.capacity {
             if mask & (1u32 << slot) != 0 {
-                self.times[slot] += dt as f64;
+                self.times[slot] += dt;
             }
         }
         Ok((

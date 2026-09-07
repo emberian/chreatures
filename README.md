@@ -194,27 +194,57 @@ uv run python native/world-kernels/build_extension.py
 uv run python native/cognitive-core/build_extension.py
 ```
 
-**Frozen v8 reproduction:** use pinned source `5a030ddaab4addd2de69ad36c1def197314a5307` for the commands below. The current CNS-only development interfaces intentionally break old artifacts; a trained replacement is not yet published.
+The research release [`cns-optic-v1-research-20260907`](https://github.com/emberian/chreatures/releases/tag/cns-optic-v1-research-20260907) pins its exact source and supplies the fitted `CHCNS1` service, a source-bound initialized resident, its immutable sequence-control head and provenance receipts. The service received 128 updates of procedural optical pretraining. Held-out optic prediction MSE did not improve, and the resident motor controller is initialized but untrained; the release establishes an executable CNS-only path, not behavioral competence. The prior v8 life remains reproducible only from its [archival source pin](https://github.com/emberian/chreatures/tree/5a030ddaab4addd2de69ad36c1def197314a5307).
 
-Acquire the [MaleCNS graph](docs/MALECNS.md), build the current [retinal-v2 port bundle](docs/NEURAL_PORTS.md), and start a dedicated [AMD neural service](docs/REMOTE_BRAIN.md) or [Apple Metal service](docs/METAL_BRAIN.md). Reserve 32 neural slots for an ecology world so its founders leave room for offspring. New worlds require the **same graph and port identities** as the resident artifact. Existing frozen lives keep their loaded engine and service.
-
-Current worlds require an ecological-v8 native controller, matching v3 candidate genomes and a birth manifest referencing their compiled neural phenotypes. The body interface remains v4. The **[previous v6 controller and fit receipts](https://github.com/emberian/chreatures/releases/tag/reciprocal-v6-research-20260906)** remain an archived release for that engine. Export the current v5 policy weights with a recurrent-v3 predictor using:
+Build the native Metal service and start a dedicated empty instance. Capacity 32 leaves room for offspring when the founding cohort is smaller:
 
 ```sh
-python scripts/export_developmental_resident.py --help
+cargo build --release --manifest-path native/metal-brain/Cargo.toml \
+  --bin metal-brain-server
+
+RELEASE_DIR=/path/to/cns-optic-v1-research-20260907
+RESIDENT="$RELEASE_DIR/cns-resident.npz"
+uv run python scripts/serve_metal.py \
+  --artifact "$RELEASE_DIR/cns-service-fitted-v1.bin" \
+  --binary native/metal-brain/target/release/metal-brain-server \
+  --capacity 32 --kernel simd \
+  --snapshot-dir /path/to/cns-snapshots \
+  --pid-file /path/to/cns-service.pid \
+  --bind 127.0.0.1 --port 18790
 ```
 
-Follow the [population birth export guide](docs/development/POPULATION_BIRTH.md) to materialize a pinned campaign world and its heterogeneous founders. Environment generation by itself does not create the required candidate genomes or neural artifacts. With those outputs and a dedicated empty neural service, a new world uses:
+The packaged resident already binds that exact service identity. To reproduce it from the fitted service, write to new paths because artifact publication refuses overwrites:
+
+```sh
+uv run python scripts/export_developmental_resident.py \
+  --cns-service "$RELEASE_DIR/cns-service-fitted-v1.bin" \
+  --output /path/to/reproduced/cns-resident.npz \
+  --sequence-control-output /path/to/reproduced/sequence-control.npz \
+  --seed 20260907
+```
+
+Materialize one physical world and its CNS-only birth manifest from a population profile and founder assignments. Candidate body and metabolic loci remain inherited; retired neural-gain and policy-adapter loci are not active controller inputs:
+
+```sh
+uv run python scripts/export_population_birth.py \
+  --profile /path/to/profile.json \
+  --assignments /path/to/founder-assignments.json \
+  --world-index 0 \
+  --resident-artifact "$RESIDENT" \
+  --output /path/to/cns-birth
+```
+
+Start the world against the same dedicated service:
 
 ```sh
 uv run chreatures --port 8790 \
   --brain-url http://127.0.0.1:18790 \
   --body articulated --ecology diffusion --physics-backend vectorized \
-  --resident-artifact /path/to/developmental-resident-population-v8.npz \
-  --population-birth /path/to/export/resident-birth.json \
-  --habitat /path/to/export/habitat.json \
-  --biosphere /path/to/export/biosphere.json \
-  --checkpoint runs/new-regional-life.json
+  --resident-artifact "$RESIDENT" \
+  --population-birth /path/to/cns-birth/resident-birth.json \
+  --habitat /path/to/cns-birth/habitat.json \
+  --biosphere /path/to/cns-birth/biosphere.json \
+  --checkpoint runs/new-cns-life.json
 ```
 
 Use a fresh checkpoint path and a dedicated empty neural service for a new birth. The example ports are placeholders; choose unused local ports.
