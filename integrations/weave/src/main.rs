@@ -296,6 +296,7 @@ const POPULATION_TYPES: &[&str] = &[
     "genome_candidate",
     "environment_candidate",
     "birth",
+    "research_branch",
     "life_checkpoint",
     "evaluation_completed",
     "evaluation_failed",
@@ -470,9 +471,12 @@ fn role_rule(
         }
         ("birth", "candidate_genome") => Some((&["genome_candidate"], 1, Some(1))),
         ("birth", "environment") => Some((&["environment_candidate"], 1, Some(1))),
-        ("birth", "physical_parent_birth") => Some((&["birth"], 0, Some(2))),
+        ("birth", "physical_parent_birth") => Some((&["birth", "research_branch"], 0, Some(2))),
+        ("research_branch", "source_checkpoint") => Some((&["life_checkpoint"], 1, Some(1))),
+        ("research_branch", "candidate_genome") => Some((&["genome_candidate"], 1, Some(1))),
+        ("research_branch", "environment") => Some((&["environment_candidate"], 1, Some(1))),
         ("life_checkpoint", "life_continuation") => {
-            Some((&["birth", "life_checkpoint"], 1, Some(1)))
+            Some((&["birth", "research_branch", "life_checkpoint"], 1, Some(1)))
         }
         ("evaluation_completed", "life_continuation") => {
             Some((&["birth", "life_checkpoint"], 1, Some(1)))
@@ -639,6 +643,7 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
             "candidate_genome",
             "environment",
             "physical_parent_birth",
+            "source_checkpoint",
             "life_continuation",
             "planned_campaign",
             "evaluated_candidate",
@@ -872,6 +877,116 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                         record.id
                     )
                     .into());
+                }
+            }
+            "research_branch" => {
+                let life_id = required_string(record, "life_id")?;
+                if !life_ids.insert(life_id.to_owned()) {
+                    return Err(format!("life_id {life_id} has more than one life root").into());
+                }
+                let source_id = population_parent_for_role(record, "source_checkpoint")?;
+                let source = by_id[source_id.as_str()];
+                let source_root_id = population_parent_for_role(source, "life_continuation")?;
+                let source_root = by_id[source_root_id.as_str()];
+                let source_life_id = required_string(record, "source_life_id")?;
+                if required_string(source, "life_id")? != source_life_id
+                    || source_life_id == life_id
+                {
+                    return Err(format!(
+                        "research branch {} does not establish a distinct life",
+                        record.id
+                    )
+                    .into());
+                }
+                if required_u64(record, "source_tick")? != required_u64(source, "tick")? {
+                    return Err(format!("research branch {} source tick differs", record.id).into());
+                }
+                let genome = population_parent_for_role(record, "candidate_genome")?;
+                let environment = population_parent_for_role(record, "environment")?;
+                if required_sha256(record, "genome_sha256")?
+                    != required_sha256(by_id[genome.as_str()], "genome_sha256")?
+                    || required_sha256(record, "environment_sha256")?
+                        != required_sha256(by_id[environment.as_str()], "environment_sha256")?
+                {
+                    return Err(format!(
+                        "research branch {} artifact identities differ from edges",
+                        record.id
+                    )
+                    .into());
+                }
+                if required_string(record, "branch_mode")? != "authenticated_research_copy" {
+                    return Err(format!("research branch {} has invalid mode", record.id).into());
+                }
+                if population_fields(record)?
+                    .get("no_model_advance_during_migration")
+                    .and_then(Value::as_bool)
+                    != Some(true)
+                {
+                    return Err(
+                        format!("research branch {} advanced model state", record.id).into(),
+                    );
+                }
+                for field in [
+                    "migration_receipt_sha256",
+                    "migration_receipt_file_sha256",
+                    "source_checkpoint_sha256",
+                    "source_checkpoint_state_sha256",
+                    "source_neural_snapshot_sha256",
+                    "source_neural_payload_sha256",
+                    "source_event_snapshot_sha256",
+                    "source_event_head_sha256",
+                    "target_initial_checkpoint_sha256",
+                    "target_initial_checkpoint_state_sha256",
+                    "target_neural_snapshot_sha256",
+                    "target_neural_payload_sha256",
+                    "from_engine_identity_sha256",
+                    "to_engine_identity_sha256",
+                    "world_instance_sha256",
+                    "source_body_id_sha256",
+                ] {
+                    required_sha256(record, field)?;
+                }
+                if required_sha256(record, "source_checkpoint_sha256")?
+                    != required_sha256(source, "checkpoint_sha256")?
+                    || required_sha256(record, "source_checkpoint_state_sha256")?
+                        != required_sha256(source, "checkpoint_state_sha256")?
+                    || required_sha256(record, "source_neural_payload_sha256")?
+                        != required_sha256(record, "target_neural_payload_sha256")?
+                {
+                    return Err(
+                        format!("research branch {} migration hashes differ", record.id).into(),
+                    );
+                }
+                if required_sha256(record, "genome_sha256")?
+                    != required_sha256(source_root, "genome_sha256")?
+                    || required_sha256(record, "environment_sha256")?
+                        != required_sha256(source_root, "environment_sha256")?
+                {
+                    return Err(format!(
+                        "research branch {} changes candidate or environment",
+                        record.id
+                    )
+                    .into());
+                }
+                let public_body = required_u64(record, "public_body")?;
+                let expected_id = format!(
+                    "research-branch:{}:{public_body}",
+                    required_sha256(record, "migration_receipt_sha256")?
+                );
+                if record.id != expected_id {
+                    return Err(format!("research branch {} identity is invalid", record.id).into());
+                }
+                require_blob_role(record, "migration_receipt")?;
+                let receipt_blob = record
+                    .blob_refs
+                    .iter()
+                    .find(|blob| blob.role == "migration_receipt")
+                    .expect("required migration receipt exists");
+                if receipt_blob.sha256 != required_sha256(record, "migration_receipt_file_sha256")?
+                {
+                    return Err(
+                        format!("research branch {} receipt blob differs", record.id).into(),
+                    );
                 }
             }
             "life_checkpoint" => {
@@ -1124,6 +1239,18 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                 if blob.sha256 != recording {
                     return Err(format!("recording {} blob identity differs", record.id).into());
                 }
+                let transport = record
+                    .blob_refs
+                    .iter()
+                    .find(|blob| blob.role == "public_recording_gzip")
+                    .ok_or_else(|| format!("recording {} lacks gzip transport", record.id))?;
+                if transport.sha256 != required_sha256(record, "recording_transport_sha256")?
+                    || required_sha256(record, "recording_transport_decoded_sha256")? != recording
+                    || required_string(record, "recording_transport_encoding")?
+                        != "gzip-level9-mtime0-empty-filename"
+                {
+                    return Err(format!("recording {} transport differs", record.id).into());
+                }
                 if required_string(record, "recording_format")?
                     != "chreatures-living-reef-public-recording-v2"
                     || required_u64(record, "frame_count")? == 0
@@ -1159,7 +1286,9 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                     "root-material-acquisition"
                     | "mobile-material-release"
                     | "colony-material-emission" => "organism_transfer",
-                    "hatching" | "goal_episode_completed" => "development_event",
+                    "hatching" | "goal_episode_completed" | "research_continuation" => {
+                        "development_event"
+                    }
                     "developmental-growth-committed"
                     | "developmental-attachment-invalidated"
                     | "developmental-parts-removed"
@@ -1171,6 +1300,14 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                 };
                 if record.record_type != expected {
                     return Err(format!("event {} kind differs from type", record.id).into());
+                }
+                let expected_scope = if kind == "research_continuation" {
+                    "observer_provenance"
+                } else {
+                    "committed_world_event"
+                };
+                if required_string(record, "event_scope")? != expected_scope {
+                    return Err(format!("event {} has invalid scope", record.id).into());
                 }
                 required_u64(record, "sequence")?;
                 required_u64(record, "tick")?;
@@ -1423,7 +1560,7 @@ fn run(args: &Args) -> Result<Value, Box<dyn Error>> {
     let mut topological_order = Vec::new();
     weave.get_ordered_identifiers(&mut topological_order);
 
-    let bytes = serde_json::to_vec_pretty(&weave)?;
+    let bytes = serde_json::to_vec(&weave)?;
     if let Some(parent) = args.output.parent() {
         fs::create_dir_all(parent)?;
     }

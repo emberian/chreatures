@@ -850,3 +850,45 @@ habitat, biosphere, analyst and environment hashes. Snapshot encoding now preser
 native bytes; the complete B8 wrapper survived JSON serialization and restoration.
 These repairs retain strict identities and one current implementation. The
 replacement profile, campaign and birth have new identities under `b5efde9`.
+
+## Reciprocal joined completion, 7 September 2026 UTC
+
+The fitted native-v6 controller completed 2,048 physical ticks in each of ten
+regional environments: 80 lives and 163,840 resident transitions. The original
+supervised run took 986 seconds including startup, checkpoints and its initial
+report-assembly failure. Transport stepping and observation accounted for
+572.25 seconds; that hot-path figure must not be used as end-to-end throughput.
+The principal receipt retains every world's and resident's outcomes. There were
+five mouth-contact ticks, 15,237 private goal-association updates and 1,003
+unattributed receipts after reservoir replacement. These are executed mechanisms
+and recorded events; improved control and ecological viability remain open.
+The native archive retained 62 candidates in 19 cells, then selected an independent
+80-life challenge wave under source `61aeb1e`.
+
+Two coupled interface faults were repaired in `3c9b0c1`: the fixed numeric training
+transport now recognizes the separate contact/signal metadata, and sequence
+learning ignores receipts whose original memory slot was replaced. The cached
+goal can remain measurable until its episode ends; its outcome must not attach
+to the new occupant. Final result assembly exposed a second scalar/vector seam.
+The completed trajectories and final checkpoint were preserved and decoded
+without simulation. Current checkpoint v2 now keeps all twenty resident fields,
+the shared model identities, and actual last actions/outcomes. Invocation timing
+explicitly distinguishes new work from resumed history.
+
+On M2, the original failed world remains paused. An explicit research copy of its
+coherent tick-118 checkpoint preserved private numerical state and neural payload
+while changing engine and world identity. Its observer history starts with a
+source-checkpoint reference. The branch passed the old failure and recorded 360
+frames from ticks 1,581–4,013, with 9,081 captured committed events. Two independent
+same-engine restores of tick 4,095 then advanced one step and produced identical
+checkpoint and neural snapshot bytes. The authoritative research branch resumed.
+The public viewer uses brighter inspection lighting, all-resident instruments,
+recorded event sonification and compressed transport for the unchanged recording.
+No browser was used; source, actual-data DOM checks and the Pages build were run.
+
+The fitted controller and its source/fit receipts are downloadable from the
+[reciprocal-v6 research release](https://github.com/emberian/chreatures/releases/tag/reciprocal-v6-research-20260906).
+It contains inherited weights and fitted laws, separate from private lifetime
+state and the bulk MaleCNS graph. See the [principal campaign receipt](../data/development/population-v6-principal-wave.receipt.json)
+and [research-continuation receipt](../data/development/reciprocal-v6-research-continuation.receipt.json)
+for exact identities, numerical scope and unresolved claims.

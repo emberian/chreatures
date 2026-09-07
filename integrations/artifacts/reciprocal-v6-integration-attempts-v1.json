@@ -90,15 +90,132 @@
         "archive_sha256": "8085f35c66cae7366695d7f9c7df5174d51543a4e3455e2ac32d464bdd7f106a",
         "revision": "5355e671703123c9ff54f543466540146bdb8a4f"
       }
+    },
+    {
+      "allocation": {
+        "allocated_neural_residents": 80,
+        "allocated_worlds": 10,
+        "planned_resident_assignments": 80,
+        "planned_residents_per_world": 8,
+        "planned_worlds": 10,
+        "status": "fully allocated and cold-initialized; first advance dispatched to all ten workers"
+      },
+      "attempt_id": "population-outcome-schema-gate",
+      "birth_receipt": {
+        "reason": "The authenticated allocation and initial checkpoint establish 80 life identities; their full private artifacts are not included in this compact ledger.",
+        "status": "not-included"
+      },
+      "brain_snapshot": {
+        "reason": "The full coupled tick-zero checkpoint includes neural state; no coherent post-advance snapshot was committed.",
+        "status": "retained-private"
+      },
+      "classification": "one shared infrastructure failure projected across 80 planned assignments; not 80 independent organism failures",
+      "committed_physical_ticks": 0,
+      "failure": {
+        "cause": "the numeric outcome projector rejected observer-only fields contacted_entities and emitted_signals after at least one worker completed world.advance and wrote post-step body, physiology and organ-flow buffers",
+        "scope": "shared first-advance reporting failure; at least one uncommitted worker-local advance occurred, but the parent barrier failed before reading advanced buffers or committing any outer tick",
+        "trace_sha256": "450d3fc5020a9f1c46d1bd676f90b1e5c101ddbdc85e72e66924850affcf60a8"
+      },
+      "inputs": {
+        "assignment_content_sha256": "a368d0f5c434ee8b5b57e96d728238bf2ed305132207908768ac8650aa1ba64b",
+        "assignment_file_sha256": "94269667ffdbc4d2a66b4b43c1c93860a19660d97d73130b954cced781351de1",
+        "controller_artifact_sha256": "4e8d04176fc013eadc18bb71124e38925a98c469c6ca9cbf458562740a191596",
+        "controller_file_sha256": "00bbd8580baa0f5f016b5c69548210f86412bc54ced32e737793fcedbd0019c4",
+        "developmental_base_sha256": "7313420e6f8b507bf45b8ab2ec733064033af127897a3bab135a964fb519fe0e",
+        "gam_bank_sha256": "4d535c586c899609a51c14792b6dda6a50c66dc84e2b763c1a99a74842947b92",
+        "physical_profile_sha256": "81e421f84d4c1e1a83811fd332520dc0c830bddee32d2c296ed0f37bd24e6471",
+        "plan_content_sha256": "731da309bf539138bc918b7b5e457935fce59b4e5e2217b7fb8af83f961f7f9e",
+        "post_ingest_plan_file_sha256": "0a58d133f9c899424eb0d79842edc460d3f12ee48307b844ad9517ce136db02c",
+        "post_ingest_search_state_sha256": "c3695a47cb611484a922967b1ee00a57518f155bac28dcde9df6598bea19d270"
+      },
+      "private_failure_receipt": {
+        "content_sha256": "febf96affc6510006dbc6686d78505af14cb4219aaf3b4a7ea277fd384f2e57b",
+        "file_sha256": "6f080222d08d442350718311cc182928f35817cf01f2752fa8c9bc7abc8d105b",
+        "format": "chreatures-population-evaluation-failure-v1",
+        "recorded_at": "2026-09-07T00:33:05Z"
+      },
+      "resolution": {
+        "revision": "3c9b0c1c8d93b99b9dca371a29b5e1471c46ab6d",
+        "status": "source fix recorded; this failed attempt was preserved, not replayed as a successful evaluation"
+      },
+      "source": {
+        "archive_sha256": "e0599a89b04d6150de54be29b4887c519ad4eff2dbb851058366f4d6088a3a4c",
+        "revision": "b5efde9930a035fe7356032cb33fdb25d3a9c74e"
+      },
+      "terminal_ingestion": {
+        "classification": "infrastructure-failure",
+        "projected_assignment_records": 80
+      },
+      "uncommitted_physical_advance": {
+        "committed_resident_transitions": 0,
+        "exact_completed_worker_advances": "not established; abort may have interrupted other workers",
+        "first_advance_dispatched_worlds": 10,
+        "minimum_known_completed_worker_advances": 1
+      }
+    },
+    {
+      "allocation": {
+        "allocated_neural_residents": 8,
+        "status": "allocated-and-physically-advanced; coherently paused"
+      },
+      "attempt_id": "migrated-sequence-attribution-gate",
+      "birth_receipt": {
+        "file_sha256": "452ae801b113aae1913bdaebb8910602f7b717d63c0c70315f724adb9550d65d",
+        "format": "chreatures-population-birth-export-v1",
+        "logical_sha256": "b544a638c0d397ae8c6f5dff12c5db4c294e2e5752aed104ac35c5f6bea2855a",
+        "manifest_file_sha256": "a47baad36859c287142ab1e84abb0042f716645494549346bfc5be520022aa6d"
+      },
+      "brain_snapshot": {
+        "bytes": 63442947,
+        "sha256": "65fc00843c411525100373764f46dad9c0e75c344d39727392f93000a62dc3be",
+        "status": "retained-private",
+        "tick": 118
+      },
+      "classification": "paused research life with a coherent tick-118 recovery boundary; no terminal organism outcome",
+      "committed_physical_ticks": 149,
+      "failure": {
+        "cause": "achieved-goal reservoir replacement left the completed personal-goal receipt unattributed, but the host still attempted to attach goal-sequence learning to the replacement slot identity",
+        "error": "goal sequence episode identity differs from the current slot",
+        "scope": "shared host invariant failure"
+      },
+      "inputs": {
+        "capture_tool_file_sha256": "2c88819ae89327395fae3836365efc25e2208c868aac6ab83a101ed6dd2e955d",
+        "capture_tool_revision": "7e1ec04e1230c512005773b5feac20f5529ac28b",
+        "controller_artifact_sha256": "4e8d04176fc013eadc18bb71124e38925a98c469c6ca9cbf458562740a191596",
+        "controller_file_sha256": "00bbd8580baa0f5f016b5c69548210f86412bc54ced32e737793fcedbd0019c4"
+      },
+      "last_coherent_checkpoint": {
+        "file_sha256": "799f4ec930461346cc9d31ab0f9a3cc792bbbb999366f7f390c5c77dc732b5e3",
+        "state_sha256": "c35db1787a3ae3987019447c146f515fec0d00c74100e9ebec814ccfe190bcc0",
+        "tick": 118
+      },
+      "private_failure_receipt": {
+        "reason": "the distributed host paused on the invariant; no immutable terminal failure receipt was produced",
+        "status": "unavailable"
+      },
+      "public_recording": {
+        "reason": "the capture remained an incomplete private temporary stream and was not finalized or authenticated",
+        "status": "unavailable"
+      },
+      "resolution": {
+        "revision": "3c9b0c1c8d93b99b9dca371a29b5e1471c46ab6d",
+        "status": "migration receipt prepared; successful branch recording is not claimed here",
+        "strategy": "create an authenticated research branch from the coherent tick-118 checkpoint; preserve the original paused life"
+      },
+      "source": {
+        "archive_sha256": "e0599a89b04d6150de54be29b4887c519ad4eff2dbb851058366f4d6088a3a4c",
+        "engine_identity_sha256": "926c5b484d9db81b24e85ec750bc292bed952a2b16881136ae1d09778aae77ab",
+        "revision": "b5efde9930a035fe7356032cb33fdb25d3a9c74e"
+      }
     }
   ],
-  "content_sha256": "e275e4beed7fcb87fd06ade2b2819688622c4dd7ac1d28ff53dc8c184a672870",
+  "content_sha256": "9f16ac65e6441c158155b9abb7926ab5805cd7d961b56496b98b20dfb77b0bec",
   "format": "chreatures-reciprocal-v6-integration-attempts-v1",
   "limitations": [
     "These receipts establish integration boundaries and failure causes only; they contain no ecological, behavioral, welfare, or learning evidence.",
     "No world or body identifiers, resident labels, host locators, service identifiers, ports, or private filesystem paths are included.",
-    "The two failures have separate causes and allocation boundaries and must not be combined into an organism-level outcome count.",
-    "A successful reciprocal-v6 birth, physical tick, checkpoint, or public recording is not claimed here; the final portability gate only clears a launch prerequisite."
+    "Each failure has its own shared cause and allocation boundary; projected assignment counts are not organism-level outcome counts.",
+    "This ledger preserves failed attempts. The subsequent research continuation and completed principal campaign have separate receipts; neither rewrites these failures."
   ],
   "remediation": {
     "stages": [
@@ -125,5 +242,9 @@
     ],
     "status": "resolved for the cross-platform generation gate; no successful life is claimed"
   },
-  "scope": "public-safe authenticated receipt for two pre-tick reciprocal-v6 integration attempts"
+  "scope": "public-safe receipt ledger for four reciprocal-v6 integration attempts with distinct allocation, physical-advance and commit boundaries",
+  "subsequent_results": {
+    "principal_campaign": "data/development/population-v6-principal-wave.receipt.json",
+    "research_continuation": "data/development/reciprocal-v6-research-continuation.receipt.json"
+  }
 }

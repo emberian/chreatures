@@ -46,6 +46,26 @@ def _bindings(value: Mapping[str, Any]) -> dict[int, str]:
     return result
 
 
+def _life_root(
+    record_id: str, records: Mapping[str, Mapping[str, Any]]
+) -> Mapping[str, Any]:
+    seen: set[str] = set()
+    current = records.get(record_id)
+    while current is not None and current.get("record_type") == "life_checkpoint":
+        if record_id in seen:
+            raise PopulationEvidenceError("life checkpoint ancestry contains a cycle")
+        seen.add(record_id)
+        roles = current.get("fields", {}).get("parent_roles", {})
+        parents = [key for key, role in roles.items() if role == "life_continuation"]
+        if len(parents) != 1:
+            raise PopulationEvidenceError("life checkpoint lacks one continuation parent")
+        record_id = parents[0]
+        current = records.get(record_id)
+    if current is None:
+        raise PopulationEvidenceError("life checkpoint ancestry is absent")
+    return current
+
+
 def build(args: argparse.Namespace) -> dict[str, Any]:
     ledger = read_json(args.ledger)
     if ledger.get("format") != LEDGER_FORMAT:
@@ -72,14 +92,19 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     environment_id = str(link.get("environment_record_id", ""))
     for body, record_id in bindings.items():
         life = by_id.get(record_id)
-        if life is None or life.get("record_type") != "birth":
+        if life is None or life.get("record_type") != "life_checkpoint":
             raise PopulationEvidenceError(
-                f"public body {body} must bind to its explicit research birth"
+                f"public body {body} must bind to its authenticated final checkpoint"
             )
-        roles = life.get("fields", {}).get("parent_roles", {})
+        root = _life_root(record_id, by_id)
+        if root.get("record_type") not in {"research_branch", "birth"}:
+            raise PopulationEvidenceError(
+                f"public body {body} checkpoint lacks a recognized life root"
+            )
+        roles = root.get("fields", {}).get("parent_roles", {})
         if roles.get(environment_id) != "environment":
             raise PopulationEvidenceError(
-                f"public body {body} birth belongs to a different environment"
+                f"public body {body} life belongs to a different environment"
             )
     records = recording_evidence_records(
         recording,
@@ -87,6 +112,11 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             args.recording,
             role="public_recording",
             media_type="application/json",
+        ),
+        transport_artifact=local_blob(
+            args.public_transport,
+            role="public_recording_gzip",
+            media_type="application/gzip",
         ),
         campaign_record_id=str(link.get("campaign_record_id", "")),
         environment_record_id=environment_id,
@@ -127,6 +157,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "sources": {
             "recording_file_sha256": sha256_file(args.recording),
             "recording_content_sha256": recording["content_sha256"],
+            "recording_transport_file_sha256": sha256_file(args.public_transport),
             "link_file_sha256": sha256_file(args.link),
             "birth_batch_id": birth_batch_id,
         },
@@ -151,6 +182,7 @@ def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ledger", required=True, type=Path)
     parser.add_argument("--recording", required=True, type=Path)
+    parser.add_argument("--public-transport", required=True, type=Path)
     parser.add_argument("--link", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     return parser.parse_args()
