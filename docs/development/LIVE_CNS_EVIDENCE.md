@@ -1,8 +1,8 @@
 # Live CNS evidence graph
 
 The live browser wave has one portable evidence graph built by the repository's
-existing native Universal Weave adapter. It links three executed research
-chains without treating a fit, export, or physical motion as proof of general
+existing native Universal Weave adapter. It links the executed research
+branches without treating a fit, export, or physical motion as proof of general
 competence:
 
 - A complete 27-setting, full-MaleCNS dynamics sweep feeds native GAM fits, a
@@ -34,6 +34,31 @@ competence:
   header differed. Its decoded GPU bytes and canonical host numeric state did
   match. The refined successor records that distinction explicitly; it did not
   repair or replace different numeric initial states.
+- A broader physical curriculum adds eight fresh 512-tick, three-resident
+  worlds: six training and two held-out, for 12,288 transitions through the
+  current CNS. The graph preserves the first 256-update fit as rejected because
+  it supplied the future achieved key to the dynamics forecast. That key is
+  valid hindsight context for inverse-action supervision, but it contains target
+  information when used to forecast the actual future. A second 256-update fit
+  forecasts from the current experienced key and confines the future achieved
+  key to hindsight inverse-action supervision. It retained the recorded
+  held-out loss reductions and passed the native comparison, but remains a
+  research candidate. In a matched 512-tick autonomous world it used more
+  effort, lost more reserve, and produced less net target food-stock loss than
+  the initialized parent. That stock measure includes concurrent resource
+  growth and is not gross ingestion.
+- A separate maximum-a-posteriori action-selection intervention keeps all
+  corrected controller weights fixed. Its first matched assay and three further
+  matched worlds are recorded. Across the three-world batch, initialized-parent
+  to MAP means were `-0.32576 → -0.35021` reserve change, `0.46277 →
+  0.46787` fatigue change, `0.09015 → 0.00476` per-world total target-stock
+  loss, `20.11 → 42.89` stop ticks per resident-world, `0.02992 → 0.04555`
+  batch mean-squared effort, and `60.56 → 70.89` near-target ticks per
+  resident-world. Adjacent ticks are not independent samples. More stopping and
+  proximity accompanied worse physiology, effort, and the net food-stock-loss
+  measure,
+  so the outcome is mixed and the candidate was not promoted. The default
+  initialized resident remains unchanged.
 - A matched physical-screen comparison starts the current V2 runtime twice from
   byte-identical physical, CNS, and resident state. One arm decodes the 30-second
   film onto the emitting screen; the other keeps that physical screen black.
@@ -67,7 +92,11 @@ python3 integrations/export_live_cns_weave.py
 
 The exporter verifies the receipt formats, source-to-fit links, all release
 members, teacher episode hashes, trained artifacts, and matched-rollout
-identities. It also checks the paired-run source and model identities, exact
+identities. For the broader curriculum it verifies the eight source and packed
+episodes, train/held-out identities, both fit artifacts and native comparisons,
+the causal forecast-input revision, both autonomous comparison receipts, the
+weight-identical MAP derivative, and all three generalization contexts. It also
+checks the paired-run source and model identities, exact
 initial-state hashes, 600-sample trace dimensions, resident scopes, and the
 original receipt and trace hashes before invoking `cargo run --locked --release`
 for the pinned Universal Weave revision. The Rust adapter validates the DAG,

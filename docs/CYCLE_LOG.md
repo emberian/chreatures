@@ -1183,3 +1183,29 @@ predicting the actual future. The forecasting context now uses the current
 experienced key. Both completed fits remain preserved. Autonomous comparisons
 measure physical resources, reserves, fatigue and motion; a low training loss or
 more varied action does not establish useful control.
+
+### Learning results, action selection and the completed live-wave handoff
+
+The corrected 256-update resident fit reduced held-out action error 51% and
+memory retrieval loss 19%, but its stochastic autonomous policy used more effort
+and obtained less net resource than the initialized parent. An existing MAP
+configuration cut the learned candidate's effort about 61% in the first matched
+context. Three additional prescribed starting contexts confirmed more stopping,
+but still worse reserve and resource outcomes. These candidates remain research
+artifacts; the public default was not changed on the basis of offline losses.
+
+Hbox also completed 521 seconds of actual physical-sensory probing and full-CNS
+fine tuning. A linear current-state probe and command-free GRU64 future probe
+showed weak transfer from procedural training, with only a small body-current
+gain after the bounded fit. This does not prove absence of nonlinear information
+or rule out action-conditioned forecasting. No new public CNS lineage was created.
+
+Native Weave now contains 26 nodes, 48 edges and 16 multi-parent evidence joins.
+A separate public research release includes the eight-world resident corpus,
+corrected learned tensors, MAP overlay, actual comparisons and per-file hashes.
+The live Bad Apple route starts a fresh simulation in the tab. The final handoff
+is `docs/development/LIVE_WAVE_HANDOFF.md`: the next integrated frontier is learning
+from consequences under the resident's own goals, body-information calibration
+through the CNS, and richer native ecology joined to the current live world.
+All assigned compute campaigns completed; their artifacts and failed outcomes
+are retained. Frozen lives and unrelated node jobs remain untouched.

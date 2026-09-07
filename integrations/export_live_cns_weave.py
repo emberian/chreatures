@@ -146,12 +146,72 @@ def metric_triplet(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def training_validation_summary(result: dict[str, Any]) -> dict[str, Any]:
+    before = result["validation"]["before"]
+    after = result["validation"]["after"]
+    return {
+        "before_overall": before["overall"],
+        "after_overall": after["overall"],
+        "total_by_skill": {
+            skill: {"before": metrics["total"], "after": after["by_skill"][skill]["total"]}
+            for skill, metrics in before["by_skill"].items()
+        },
+    }
+
+
+def autonomous_arm(result: dict[str, Any]) -> dict[str, Any]:
+    physical = result["physical"]
+    action = result["action"]
+    return {
+        "label": result["label"],
+        "training_status": result["trainingStatus"],
+        "resident_artifact_sha256": require_hash(result["residentArtifactSha256"], "autonomous resident"),
+        "assimilable_reserve_change": physical["assimilableReserveChange"],
+        "fatigue_change": physical["fatigueChange"],
+        "net_target_food_stock_loss": physical["netTargetFoodStockLoss"],
+        "stop_ticks_below_1cm_per_second": physical["physicalStopTicksAt1cmPerSecond"],
+        "target_proximity_ticks_below_34cm": physical["targetProximityTicksBelow34cm"],
+        "path_length_meters": physical["pathLengthMeters"],
+        "mean_squared_effort": action["meanSquaredEffort"],
+        "distinct_action_rows_rounded_1e3": action["distinctRowsRounded1e3"],
+        "execution": result["execution"],
+    }
+
+
+def mean(values: list[float | int]) -> float:
+    require(bool(values), "cannot average an empty measurement")
+    return sum(values) / len(values)
+
+
+def aggregate_map_outcomes(reports: list[dict[str, Any]], label: str) -> dict[str, Any]:
+    arms = []
+    for report in reports:
+        matches = [result for result in report["results"] if result["label"] == label]
+        require(len(matches) == 1, f"MAP report must contain one {label} arm")
+        arms.append(matches[0])
+    reserve = [value for arm in arms for value in arm["physical"]["assimilableReserveChange"]]
+    fatigue = [value for arm in arms for value in arm["physical"]["fatigueChange"]]
+    stops = [value for arm in arms for value in arm["physical"]["physicalStopTicksAt1cmPerSecond"]]
+    proximity = [value for arm in arms for value in arm["physical"]["targetProximityTicksBelow34cm"]]
+    return {
+        "resident_world_count": len(reserve),
+        "mean_assimilable_reserve_change": mean(reserve),
+        "mean_fatigue_change": mean(fatigue),
+        "mean_stop_ticks_below_1cm_per_second": mean(stops),
+        "mean_target_proximity_ticks_below_34cm": mean(proximity),
+        "world_count": len(arms),
+        "mean_world_total_net_target_food_stock_loss": mean([sum(arm["physical"]["netTargetFoodStockLoss"]) for arm in arms]),
+        "mean_world_batch_squared_effort": mean([arm["action"]["meanSquaredEffort"] for arm in arms]),
+    }
+
+
 def build(args: argparse.Namespace) -> dict[str, Any]:
     crossed = args.paperbin / "dynamics-v2-crossed-20260907"
     temporal = args.paperbin / "dynamics-v2-temporal-fit-20260907"
     browser = args.paperbin / "browser-v2-temporal-pack-20260907"
     teacher = args.paperbin / "browser-v2-teacher-skills-20260907"
     screen = args.paperbin / "screen-response-v2-20260907"
+    curriculum = args.paperbin / "browser-v2-teacher-curriculum-512x8-20260907"
 
     sweep_path, fit_path, confirm_path = crossed / "receipt.json", crossed / "gam" / "fit_report.json", crossed / "gam-confirm.receipt.json"
     sweep, fit, confirmation = map(read_json, (sweep_path, fit_path, confirm_path))
@@ -309,6 +369,120 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     public_screen_bytes = json.dumps(public_screen_receipt, indent=2, sort_keys=True, allow_nan=False).encode() + b"\n"
     public_screen_blob = byte_blob(public_screen_bytes, "public_screen_response_receipt", "application/json")
 
+    curriculum_source_path = curriculum / "source" / "combined-receipt.json"
+    curriculum_collection_path = curriculum / "corpus" / "collection-receipt.json"
+    curriculum_corpus_path = curriculum / "corpus" / "corpus.json"
+    curriculum_source = read_json(curriculum_source_path)
+    curriculum_collection = read_json(curriculum_collection_path)
+    curriculum_corpus = read_json(curriculum_corpus_path)
+    curriculum_source_blob = blob(curriculum_source_path, "curriculum_collection_receipt", "application/json")
+    require(curriculum_source_blob["sha256"] == sha256(curriculum_collection_path), "curriculum source and packed collection receipts differ")
+    require(curriculum_source.get("format") == "chreatures-browser-teacher-collection-combined-receipt-v2" and curriculum_source.get("complete") is True, "curriculum collection is incomplete")
+    require(curriculum_source.get("episode_count") == 8 and curriculum_source.get("transitions_per_episode") == 512 and curriculum_source.get("batch") == 3, "curriculum collection extent differs")
+    require(curriculum_source.get("cns_service_artifact_sha256") == service_sha and curriculum_source.get("resident_artifact_sha256") == base_release["residentArtifactSha256"], "curriculum collection model identity differs")
+    require(curriculum_source.get("action_source") == "privileged-physical-teacher" and curriculum_source.get("raw_geometry_retained") is False and curriculum_source.get("raw_senses_retained_by_resident_episodes") is False, "curriculum teacher boundary differs")
+    require(curriculum_source.get("afferent_sidecars_excluded_from_resident_training") is True and curriculum_source.get("validation", {}).get("all_coverage_flags_passed") is True, "curriculum corpus boundary validation differs")
+    source_episode_blobs = []
+    for episode in curriculum_source.get("episodes", []):
+        source_episode_blobs.append(blob(curriculum / "source" / Path(episode["file"]).name, f"curriculum_source_episode_{episode['episode_index']}", "application/x-npz", episode["sha256"]))
+    require(len(source_episode_blobs) == 8, "curriculum source episode count differs")
+
+    require(curriculum_corpus.get("format") == "chreatures-cns-resident-corpus-v1", "curriculum corpus format differs")
+    require(curriculum_corpus.get("collection_receipt", {}).get("file_sha256") == curriculum_source_blob["sha256"], "curriculum corpus collection identity differs")
+    require(curriculum_corpus.get("parent", {}).get("artifact_sha256") == base_release["residentArtifactSha256"], "curriculum corpus parent differs")
+    require(curriculum_corpus.get("controller_input_fields") == ["cns_latent", "previous_delivered_command", "reset"], "curriculum controller inputs differ")
+    require(curriculum_corpus.get("teacher_only_fields") == ["delivered_command", "physical_reward", "terminal", "teacher_bouts"], "curriculum teacher-only fields differ")
+    require(len(curriculum_corpus.get("train", [])) == 6 and len(curriculum_corpus.get("heldout_worlds", [])) == 2, "curriculum split differs")
+    corpus_episode_blobs = []
+    for episode in curriculum_corpus.get("episodes", []):
+        require(sha256(curriculum / "source" / Path(episode["source"]).name) == require_hash(episode["source_file_sha256"], "curriculum source episode"), "curriculum source-to-corpus identity differs")
+        corpus_episode_blobs.append(blob(curriculum / "corpus" / episode["file"], f"curriculum_corpus_episode_{episode['episode_index']}", "application/x-npz", episode["file_sha256"]))
+    require(len(corpus_episode_blobs) == 8 and len({entry["layout_identity"] for entry in curriculum_corpus["episodes"]}) == 8, "curriculum corpus episode identities differ")
+    curriculum_corpus_blob = blob(curriculum_corpus_path, "curriculum_corpus_manifest", "application/json")
+
+    first_fit_path = curriculum / "artifacts" / "result.json"
+    first_native_path = curriculum / "artifacts" / "native-comparison.json"
+    corrected_fit_path = curriculum / "artifacts-causal-currentkey" / "result.json"
+    corrected_native_path = curriculum / "artifacts-causal-currentkey" / "native-comparison.json"
+    first_fit, first_native, corrected_fit, corrected_native = map(read_json, (first_fit_path, first_native_path, corrected_fit_path, corrected_native_path))
+    for label, fit_result in (("first curriculum", first_fit), ("corrected curriculum", corrected_fit)):
+        require(fit_result.get("format") == "chreatures-cns-resident-training-result-v1" and fit_result.get("complete") is True and len(fit_result.get("history", [])) == 256, f"{label} fit is incomplete")
+        require(fit_result.get("parent", {}).get("artifact_sha256") == base_release["residentArtifactSha256"], f"{label} parent differs")
+        require(fit_result.get("corpus", {}).get("file_sha256") == first_fit["corpus"]["file_sha256"], f"{label} training corpus identity differs")
+        require(fit_result.get("source", {}).get("data_sha256") == "b6e6f420294b7edf3ce79a310d8d971db16e9b4627d92bb111df2be91a2a453c" and fit_result.get("source", {}).get("trainer_sha256") == "a68ebfe22ba6ae4347bc538be96dfc8dc74c9340bdd29bb1bf0d86f074279f3d", f"{label} training source differs")
+    require(first_fit["source"].get("model_sha256") == "13b74aee8f4ca27a634b7929c59addde47372d91cd8a56d9ce59720d01da1e0a", "first curriculum model source differs")
+    require(corrected_fit["source"].get("model_sha256") == "84d1dbce05b76fc97c8169ad98fa904237d48ec36ebdfb1100f294956c04f8ab", "corrected curriculum model source differs")
+    first_resident = first_fit["publication"]["resident"]
+    first_sequence = first_fit["publication"]["sequence_control"]
+    corrected_resident = corrected_fit["publication"]["resident"]
+    corrected_sequence = corrected_fit["publication"]["sequence_control"]
+    first_fit_blobs = [
+        blob(first_fit_path, "future_key_contaminated_fit_receipt", "application/json"),
+        blob(curriculum / "artifacts" / "cns-resident-trained.npz", "future_key_contaminated_resident", "application/x-npz", first_resident["file_sha256"]),
+        blob(curriculum / "artifacts" / "sequence-control-trained.npz", "future_key_contaminated_sequence_control", "application/x-npz", first_sequence["file_sha256"]),
+        blob(first_native_path, "future_key_contaminated_native_comparison", "application/json"),
+    ]
+    corrected_fit_blobs = [
+        blob(corrected_fit_path, "current_key_fit_receipt", "application/json"),
+        blob(curriculum / "artifacts-causal-currentkey" / "cns-resident-trained.npz", "current_key_resident", "application/x-npz", corrected_resident["file_sha256"]),
+        blob(curriculum / "artifacts-causal-currentkey" / "sequence-control-trained.npz", "current_key_sequence_control", "application/x-npz", corrected_sequence["file_sha256"]),
+        blob(corrected_native_path, "current_key_native_comparison", "application/json"),
+    ]
+    require(first_native.get("format") == "chreatures-cns-resident-native-comparison-v1" and first_native.get("passed") is True and first_native.get("resident_file_sha256") == first_resident["file_sha256"], "first curriculum native comparison differs")
+    require(corrected_native.get("format") == "chreatures-cns-resident-native-comparison-v1" and corrected_native.get("passed") is True and corrected_native.get("resident_file_sha256") == corrected_resident["file_sha256"], "corrected curriculum native comparison differs")
+    first_curriculum_release, first_curriculum_release_blob = verify_release(curriculum / "trained-browser-model")
+    corrected_release, corrected_release_blob = verify_release(curriculum / "trained-browser-model-causal-currentkey")
+    require(first_curriculum_release.get("residentArtifactSha256") == first_resident["artifact_sha256"], "first curriculum browser release differs")
+    require(corrected_release.get("residentArtifactSha256") == corrected_resident["artifact_sha256"] and corrected_release.get("serviceArtifactSha256") == service_sha, "corrected curriculum browser release differs")
+
+    candidate01_path = curriculum / "autonomous-outcome-assay-candidate01-512.json"
+    candidate02_path = curriculum / "autonomous-outcome-assay-candidate02-512.json"
+    map_assay_path = curriculum / "autonomous-outcome-assay-candidate02-map-512.json"
+    candidate01, candidate02, map_assay = map(read_json, (candidate01_path, candidate02_path, map_assay_path))
+    for label, assay in (("candidate 01", candidate01), ("candidate 02", candidate02), ("MAP intervention", map_assay)):
+        require(assay.get("format") == "chreatures-autonomous-physical-outcome-assay-v1", f"{label} assay format differs")
+        require(assay.get("initialWorldAndCnsStateMatched") is True and assay.get("worldSeedMatched") is True and assay.get("actionAndSuffixSeedsMatched") is True and assay.get("cnsNumericBuffersMatched") is True, f"{label} assay initial state differs")
+        require(assay.get("teacherGeometryUsedByPolicy") is False and assay.get("policyInputContract") == ["cns_latent[512]", "previous_delivered_command[12]", "reset"], f"{label} policy boundary differs")
+        require(assay.get("cnsServiceArtifactSha256") == service_sha and all(result.get("transitions") == 512 and result.get("execution", {}).get("failed") is False for result in assay.get("results", [])), f"{label} execution differs")
+    candidate01_arms = {entry["label"]: entry for entry in candidate01["results"]}
+    candidate02_arms = {entry["label"]: entry for entry in candidate02["results"]}
+    require(candidate01_arms.get("trained", {}).get("residentArtifactSha256") == first_resident["artifact_sha256"], "candidate 01 assay used another fit")
+    require(candidate02_arms.get("candidate01-future-key-contaminated", {}).get("residentArtifactSha256") == first_resident["artifact_sha256"] and candidate02_arms.get("trained", {}).get("residentArtifactSha256") == corrected_resident["artifact_sha256"], "candidate 02 assay arms differ")
+    require(candidate02_arms.get("parent", {}).get("residentArtifactSha256") == base_release["residentArtifactSha256"] and "zero-command" in candidate02_arms, "candidate 02 baselines differ")
+
+    corrected_manifest_path = curriculum / "trained-browser-model-causal-currentkey" / "resident-manifest.json"
+    map_manifest_path = curriculum / "trained-browser-model-causal-currentkey-map" / "resident-manifest.json"
+    corrected_manifest, map_manifest = map(read_json, (corrected_manifest_path, map_manifest_path))
+    require(map_manifest.get("format") == "chreatures-browser-resident-v1" and map_manifest.get("parentArtifactSha256") == corrected_resident["artifact_sha256"], "MAP derivative parent differs")
+    require(map_manifest.get("buffers") == corrected_manifest.get("buffers") and map_manifest.get("cnsServiceArtifactSha256") == service_sha, "MAP derivative changed immutable weights")
+    require(map_manifest.get("actionModeIntervention", {}).get("action_mode") == "map" and map_manifest.get("config", {}).get("action_mode") == "map", "MAP derivative action mode differs")
+    require({key: value for key, value in map_manifest["config"].items() if key != "action_mode"} == {key: value for key, value in corrected_manifest["config"].items() if key != "action_mode"}, "MAP derivative changed configuration beyond action mode")
+    require(map_manifest.get("trainingStatus") == "trained-weights-map-action-research-intervention", "MAP derivative status differs")
+    for buffer in map_manifest["buffers"].values():
+        blob(curriculum / "trained-browser-model-causal-currentkey-map" / buffer["url"], "map_intervention_shared_weight", "application/gzip", buffer["transportSha256"])
+    map_manifest_blob = blob(map_manifest_path, "map_action_derivative_manifest", "application/json")
+    require(map_assay.get("referenceReportSha256") == sha256(candidate02_path), "MAP assay reference report differs")
+    require(len(map_assay.get("results", [])) == 1 and map_assay["results"][0].get("residentArtifactSha256") == map_manifest["artifactSha256"], "MAP assay used another derivative")
+
+    map_generalization = curriculum / "map-generalization-3worlds"
+    map_recipe_path = map_generalization / "recipe.json"
+    map_recipe = read_json(map_recipe_path)
+    require(map_recipe.get("format") == "chreatures-map-generalization-recipe-v1" and map_recipe.get("ticks") == 512 and len(map_recipe.get("contexts", [])) == 3, "MAP generalization recipe differs")
+    map_reports = []
+    map_report_blobs = []
+    for context in map_recipe["contexts"]:
+        report_path = map_generalization / context["report"]
+        report = read_json(report_path)
+        require(report.get("format") == "chreatures-autonomous-physical-outcome-assay-v1" and report.get("worldSeed") == context["world_seed"] and report.get("variationSeed") == context["variation_seed"], "MAP generalization context differs")
+        require(report.get("initialWorldAndCnsStateMatched") is True and report.get("worldSeedMatched") is True and report.get("actionAndSuffixSeedsMatched") is True and report.get("cnsNumericBuffersMatched") is True and report.get("teacherGeometryUsedByPolicy") is False, "MAP generalization state or policy boundary differs")
+        report_arms = {entry["label"]: entry for entry in report.get("results", [])}
+        require(report_arms.get("parent", {}).get("residentArtifactSha256") == base_release["residentArtifactSha256"] and report_arms.get("trained", {}).get("residentArtifactSha256") == map_manifest["artifactSha256"], "MAP generalization arms differ")
+        require(all(entry.get("transitions") == 512 and entry.get("execution", {}).get("failed") is False for entry in report_arms.values()), "MAP generalization execution differs")
+        map_reports.append(report)
+        map_report_blobs.append(blob(report_path, f"map_generalization_world_{context['world_seed']}", "application/json"))
+    parent_map_aggregate = aggregate_map_outcomes(map_reports, "parent")
+    trained_map_aggregate = aggregate_map_outcomes(map_reports, "trained")
+
     sweep_id = f"fullgraph-sweep:{sha256(sweep_path)}"
     gam_id = f"gam-fit:{sha256(fit_path)}"
     prediction_id = f"heldout-setting-prediction:{hashlib.sha256(canonical(prediction)).hexdigest()}"
@@ -329,6 +503,12 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     rollout_id = f"matched-physical-rollout:{sha256(rollout_path)}"
     screen_intervention_id = f"matched-physical-screen-intervention:{screen_receipt_blob['sha256']}"
     screen_result_id = "physical-screen-response-v2"
+    curriculum_id = f"curriculum-corpus:{curriculum_corpus_blob['sha256']}"
+    rejected_fit_id = f"rejected-future-key-fit:{sha256(first_fit_path)}"
+    corrected_fit_id = f"current-key-controller-fit:{sha256(corrected_fit_path)}"
+    autonomous_id = f"autonomous-controller-outcomes:{sha256(candidate02_path)}"
+    map_intervention_id = f"map-action-intervention:{map_manifest_blob['sha256']}"
+    map_generalization_id = f"map-generalization-3worlds:{hashlib.sha256(canonical([blob_ref['sha256'] for blob_ref in map_report_blobs])).hexdigest()}"
 
     records = [
         node(sweep_id, 0, "fullgraph_parameter_sweep", "Executed 27-setting crossed dynamics sweep on all 165,122 neurons and 25,563,197 graph edges.", blobs=[blob(sweep_path, "fullgraph_sweep_receipt", "application/json")], fields={"settings": 27, "ticks_per_setting": sweep["ticks"], "train_streams": 8, "heldout_streams": 4, "metric": sweep["metric"], "scope": "procedural full-graph diagnostic; not behavior"}),
@@ -344,6 +524,135 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         node(joined_id, 5, "joined_execution_confirmation", "After the recorded options-lifetime repair, the full CNS, Rust resident and MuJoCo world advanced and replayed one grown life exactly.", parents={browser_id: "browser_release", dawn_id: "numeric_confirmation", failure_id: "repaired_failure"}, blobs=[blob(joined_path, "joined_execution_receipt", "application/json")], fields={key: joined[key] for key in ("neurons", "edges", "residents", "modelSeconds", "meanCompleteTickMs", "maxCompleteTickMs", "wholeLifeReplayExact", "fullNeuralReplayExact", "physicalReplayExact", "restoredGrownWorld", "modelStatus", "controllerStatus", "scope")}),
         node(screen_intervention_id, 6, "matched_physical_screen_intervention", "From an exact shared initial state, the current V2 runtime executed 600 ticks with the official film decoded onto its physical screen and 600 matched ticks with that screen black.", parents={service_id: "trained_cns_service", browser_id: "initialized_resident", joined_id: "executed_runtime_predecessor"}, blobs=[screen_receipt_blob, screen_trace_blob, public_screen_blob], fields={"engine_identity": screen_receipt["engineIdentity"], "source_revision": screen_receipt["sourceRevision"], "cns_artifact_sha256": screen_receipt["model"]["cnsArtifactSha256"], "cns_service_artifact_sha256": screen_receipt["model"]["cnsServiceArtifactSha256"], "resident_artifact_sha256": screen_receipt["model"]["residentArtifactSha256"], "cns_training_status": "trained", "resident_training_status": "initialized-untrained", "stimulus": public_screen_receipt["stimulus"], "execution": execution, "matched_initial_state": initial, "screen_only_intervention": True}),
         node(screen_result_id, 7, "physical_screen_response", "The paired film and blank executions differed in resident 0 retina and neural rates, and in actions and physical motion across the three-resident batch.", parents={screen_intervention_id: "paired_execution"}, blobs=[public_screen_blob, screen_trace_blob], fields={"plot_url": "assets/live-cns-screen-response.svg", "threshold_absolute_difference": 1e-6, "retinal_neural_capture_resident": 0, "action_physical_batch": 3, "retinal_sites_ever_changed": retina["everChangedSites"], "retinal_supported_sites": retina["supportedSites"], "afferent_neurons_ever_changed": neural["afferent"]["responsiveNeurons"], "afferent_neurons": neural["afferent"]["neurons"], "nonafferent_neurons_ever_changed": neural["nonafferent"]["responsiveNeurons"], "nonafferent_neurons": neural["nonafferent"]["neurons"], "action_changed_ticks": action["changedTicks"], "action_changed_resident_rows": action["changedResidentRows"], "film_path_length_meters": physical["filmPathLengthMeters"], "blank_path_length_meters": physical["blankPathLengthMeters"], "maximum_root_divergence_meters": physical["maxRootDivergenceMeters"], "temporal_response": screen_receipt["temporalResponse"], "response_semantics": "ever exceeded absolute paired-condition difference 1e-6 over 600 ticks; stream timings are not a simultaneous-response claim", "outcome": "measured differences", "claims_not_established": ["recovered physiology", "stimulus understanding", "learned motor competence"]}),
+        node(
+            curriculum_id,
+            6,
+            "resident_teacher_curriculum",
+            "Eight fresh three-resident worlds supplied 12,288 physical transitions through the current CNS, split into six training worlds and two identity-disjoint held-out worlds.",
+            parents={browser_id: "initialized_resident", joined_id: "executed_runtime_lineage", service_id: "same_cns_service"},
+            blobs=[curriculum_source_blob, curriculum_corpus_blob, *source_episode_blobs, *corpus_episode_blobs],
+            fields={
+                "episodes": 8,
+                "transitions_per_episode": 512,
+                "resident_batch": 3,
+                "physical_transitions": 12288,
+                "train_worlds": 6,
+                "heldout_worlds": 2,
+                "curriculum_contract_sha256": curriculum_source["curriculum_contract_sha256"],
+                "source_collection_sha256": curriculum_source_blob["sha256"],
+                "rehydrated_corpus_manifest_sha256": curriculum_corpus_blob["sha256"],
+                "training_input_corpus_sha256": first_fit["corpus"]["file_sha256"],
+                "action_source": curriculum_source["action_source"],
+                "controller_input_fields": curriculum_corpus["controller_input_fields"],
+                "teacher_only_fields": curriculum_corpus["teacher_only_fields"],
+                "raw_geometry_retained": False,
+                "raw_senses_retained": False,
+                "afferent_sidecars_excluded_from_training": True,
+                "source_amendment_scopes": [entry["scope"] for entry in curriculum_source["source_amendments"]],
+                "default_resident_artifact_sha256": base_release["residentArtifactSha256"],
+            },
+        ),
+        node(
+            rejected_fit_id,
+            7,
+            "rejected_controller_fit",
+            "The first 256-update curriculum fit reduced recorded held-out losses, but its dynamics forecast received the future achieved key and was rejected as causally contaminated.",
+            parents={curriculum_id: "training_corpus"},
+            blobs=[*first_fit_blobs, first_curriculum_release_blob],
+            fields={
+                "updates": 256,
+                "seconds": first_fit["seconds"],
+                "validation": training_validation_summary(first_fit),
+                "resident_artifact_sha256": first_resident["artifact_sha256"],
+                "sequence_control_artifact_sha256": first_sequence["artifact_sha256"],
+                "native_comparison": {"passed": first_native["passed"], "tolerance": first_native["tolerance"], "errors": first_native["errors"]},
+                "forecast_input": "future achieved key",
+                "rejection_reason": "future target information entered the dynamics forecast context",
+                "hindsight_inverse_action_use_valid": True,
+                "status": "executed fit rejected for forecasting contamination",
+                "publication_status": "research only; not the default resident",
+            },
+        ),
+        node(
+            corrected_fit_id,
+            8,
+            "causal_controller_fit",
+            "A second 256-update fit retained the held-out loss reductions while forecasting from the current experienced key; the future achieved key remained only in hindsight inverse-action supervision.",
+            parents={curriculum_id: "same_training_corpus", rejected_fit_id: "causal_correction"},
+            blobs=[*corrected_fit_blobs, corrected_release_blob],
+            fields={
+                "updates": 256,
+                "seconds": corrected_fit["seconds"],
+                "validation": training_validation_summary(corrected_fit),
+                "resident_artifact_sha256": corrected_resident["artifact_sha256"],
+                "sequence_control_artifact_sha256": corrected_sequence["artifact_sha256"],
+                "native_comparison": {"passed": corrected_native["passed"], "tolerance": corrected_native["tolerance"], "errors": corrected_native["errors"]},
+                "forecast_input": "current experienced key",
+                "future_achieved_key_scope": "hindsight inverse-action supervision only",
+                "browser_release_sha256": corrected_release_blob["sha256"],
+                "publication_status": "research candidate only; not the default resident",
+            },
+        ),
+        node(
+            autonomous_id,
+            9,
+            "autonomous_controller_outcomes",
+            "Matched 512-tick autonomous assays found that the corrected fit kept its offline loss gains but used more effort, lost more reserve, and produced less net target food-stock loss than the initialized parent in this world.",
+            parents={browser_id: "initialized_parent_arm", rejected_fit_id: "rejected_candidate_arm", corrected_fit_id: "corrected_candidate_arm"},
+            blobs=[blob(candidate01_path, "candidate_01_autonomous_assay", "application/json"), blob(candidate02_path, "candidate_02_autonomous_assay", "application/json")],
+            fields={
+                "world_seed": candidate02["worldSeed"],
+                "variation_seed": candidate02["variationSeed"],
+                "ticks": 512,
+                "resident_batch": 3,
+                "matched_initial_world_and_cns_state": True,
+                "teacher_geometry_used_by_policy": False,
+                "policy_input_contract": candidate02["policyInputContract"],
+                "initialized_parent": autonomous_arm(candidate02_arms["parent"]),
+                "future_key_contaminated_candidate": autonomous_arm(candidate02_arms["candidate01-future-key-contaminated"]),
+                "corrected_current_key_candidate": autonomous_arm(candidate02_arms["trained"]),
+                "zero_command_baseline": autonomous_arm(candidate02_arms["zero-command"]),
+                "earlier_candidate_01_assay_trained_arm": autonomous_arm(candidate01_arms["trained"]),
+                "outcome": "offline validation losses improved; autonomous physical cost regressed in this matched world",
+                "claims_not_established": ["goal conditioning", "general embodied competence"],
+            },
+        ),
+        node(
+            map_intervention_id,
+            10,
+            "map_action_intervention",
+            "A research-only derivative kept every corrected controller weight fixed and changed action selection from sampling to maximum a posteriori selection for an executed matched assay.",
+            parents={corrected_fit_id: "identical_trained_weights", autonomous_id: "motivating_sampled_action_outcome"},
+            blobs=[map_manifest_blob, blob(map_assay_path, "map_action_autonomous_assay", "application/json")],
+            fields={
+                "parent_resident_artifact_sha256": corrected_resident["artifact_sha256"],
+                "derivative_resident_artifact_sha256": map_manifest["artifactSha256"],
+                "changed_configuration": {"action_mode": {"from": corrected_manifest["config"]["action_mode"], "to": map_manifest["config"]["action_mode"]}},
+                "immutable_weight_buffers_equal": True,
+                "reference_autonomous_assay_sha256": map_assay["referenceReportSha256"],
+                "single_world_outcome": autonomous_arm(map_assay["results"][0]),
+                "status": "research intervention; not the default resident",
+            },
+        ),
+        node(
+            map_generalization_id,
+            11,
+            "map_action_generalization",
+            "Across three new matched worlds, MAP selection increased stopping and proximity but had slightly worse mean reserve and fatigue changes, higher effort, and less net target food-stock loss than the initialized parent.",
+            parents={map_intervention_id: "tested_configuration", autonomous_id: "prior_single_world_assay"},
+            blobs=[blob(map_recipe_path, "map_generalization_recipe", "application/json"), *map_report_blobs],
+            fields={
+                "contexts": [{"world_seed": context["world_seed"], "variation_seed": context["variation_seed"], "report_sha256": map_report_blobs[index]["sha256"]} for index, context in enumerate(map_recipe["contexts"])],
+                "ticks_per_world": 512,
+                "resident_batch": 3,
+                "initialized_parent": parent_map_aggregate,
+                "map_action_candidate": trained_map_aggregate,
+                "unit_of_analysis": "reserve, fatigue, stopping, and proximity means cover 9 resident-worlds; food-stock loss is a per-world resident-total mean; effort is a 3-world batch mean; adjacent ticks are not independent replicates",
+                "outcome": "mixed, with worse physiology and net food-stock-loss measures; no promotion",
+                "default_resident_unchanged": True,
+                "claims_not_established": ["generalization beyond these three contexts", "goal conditioning", "general embodied competence"],
+            },
+        ),
         node(collection_failure_id, 6, "executed_collection_failure", "The first teacher collection stopped when a mutated Emscripten options object prevented held-out world reinitialization.", parents={joined_id: "runtime_predecessor", browser_id: "collection_release"}, blobs=[blob(collection_failure_path, "teacher_collection_failure_receipt", "application/json")], fields={"completed_before_failure": collection_failure["completed"], "failed_phase": collection_failure["failed_phase"], "error": collection_failure["error"], "diagnosis": collection_failure["diagnosis"], "resolution": collection_failure["resolution"]}),
         node(teacher_id, 6, "physical_teacher_collection", "Two actual full-CNS physical episodes supplied 576 transitions of privileged offline teacher supervision across train and held-out starts.", parents={joined_id: "executed_runtime", browser_id: "collection_release", collection_failure_id: "repaired_attempt"}, blobs=[blob(collection_path, "teacher_collection_receipt", "application/json"), *episode_blobs], fields={"action_source": collection["action_source"], "transitions": sum(item["transitions"] * item["batch"] for item in collection["episodes"]), "episodes": [{key: item[key] for key in ("split", "transitions", "batch", "positiveRewardFraction", "commandRms", "rawGeometryRetained", "rawSensesRetained")} for item in collection["episodes"]], "heldout_contact_attempts": collection["executionMetrics"]["heldout"]["contactAttempts"], "limitations": collection["limitations"]}),
         node(controller_id, 7, "resident_controller_training", "The current teacher data drove 128 optimizer updates and produced a new resident plus sequence-control artifact.", parents={teacher_id: "training_data", browser_id: "parent_controller"}, blobs=[blob(result_path, "resident_training_result", "application/json"), trained_blob, sequence_blob], fields={"updates": len(result["history"]), "seconds": result["seconds"], "validation_before": result["validation"]["before"], "validation_after": result["validation"]["after"], "resident_artifact_sha256": trained["artifact_sha256"], "sequence_control_artifact_sha256": sequence["artifact_sha256"], "scope": "offline privileged-teacher fit; physical competence requires matched rollout"}),
@@ -355,7 +664,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
 
     request = {
         "archive_id": "live-cns-wave-v2-20260907",
-        "description": "Actual live-CNS research chain: dynamics, temporal fit, browser export, paired physical-screen response, teacher fit, and matched physical rollout.",
+        "description": "Actual live-CNS research chain: dynamics, temporal fit, browser export, paired physical-screen response, teacher curricula, and matched physical rollouts.",
         "evidence": records,
     }
     for record in records:
@@ -394,6 +703,16 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "neurons": 165122,
         "edges": 25563197,
         "teacher_updates": 128,
+        "curriculum_controller": {
+            "worlds": 8,
+            "physical_transitions": 12288,
+            "updates": 256,
+            "forecast_input": "current experienced key",
+            "hindsight_future_key_scope": "inverse-action supervision only",
+            "autonomous_outcome": "offline loss improvement with physical cost regression in the first matched world",
+            "map_three_world_outcome": "mixed, with worse physiology and net food-stock-loss measures; no promotion",
+            "default_resident_unchanged": True,
+        },
         "screen_response": {
             "result_node_id": screen_result_id,
             "model_seconds_per_condition": execution["modelSeconds"],
@@ -404,7 +723,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "threshold_absolute_difference": 1e-6,
         },
         "matched_rollout_outcome": "mixed",
-        "claims_not_established": ["biological parameter recovery", "general optic/body prediction improvement beyond the procedural fit split", "simultaneous cross-stream response", "stimulus understanding", "general embodied competence"],
+        "claims_not_established": ["biological parameter recovery", "general optic/body prediction improvement beyond the procedural fit split", "simultaneous cross-stream response", "stimulus understanding", "goal conditioning", "general embodied competence"],
     }
     encoded = json.dumps(portable, indent=2, sort_keys=True, allow_nan=False).encode() + b"\n"
     public.write_bytes(encoded)
@@ -428,7 +747,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "public_screen_response_sha256": public_screen_blob["sha256"],
         "public_screen_trace_sha256": screen_trace_blob["sha256"],
         "original_screen_response_receipt_sha256": screen_receipt_blob["sha256"],
-        "source_directories": [path.name for path in (crossed, temporal, browser, teacher, screen)],
+        "source_directories": [path.name for path in (crossed, temporal, browser, teacher, screen, curriculum)],
     }
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     return receipt
