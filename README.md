@@ -14,7 +14,7 @@ chemistry, and organism–environment search. Its native controller format is v6
 the twelve-action body interface remains v4 and inherited Torch policy weights
 remain v5. Existing recorded lives keep their original mechanisms. The new
 predictor has been fitted and exported to native execution. The joined population
-run completed 80 research lives, and a 360-frame recording follows eight residents
+run completed 160 research lives in two waves, and a 360-frame recording follows eight residents
 in a separate M2 research continuation. The first joined
 physical run built 32 funded parts and released newly produced fermentate into
 physical packets. Recipient uptake and a sustained food web are not established.
@@ -70,8 +70,15 @@ reconstructed from preserved data without replay. Private goal associations
 received 15,237 updates, while 1,003 evicted-memory receipts correctly received
 no attribution. There were only **five mouth-contact ticks**: these results
 establish coupled execution and recorded learning updates, not learned feeding
-or a sustained food web. The search retained 62 candidates in 19 archive cells
+or a sustained food web. The search retained 62 entries in 19 archive cells
 and selected a separate challenge wave. [Per-life results and costs](data/development/population-v6-principal-wave.receipt.json).
+
+That challenge wave also completed: another **80 lives and 163,840 transitions**
+in **969.03 seconds**, with 16 mouth-contact ticks and 15,162 private learning
+updates. These 80 transfer assignments used ten selected genomes, so their difference from the first wave
+is not a matched estimate of improvement. Across both waves, 160 completed life
+records now inform the search, with 74 archive entries in 21 cells and no pending
+assignments. [Challenge outcomes and selection scope](data/development/population-v6-challenge-wave.receipt.json).
 
 The [default observatory](https://emberian.github.io/chreatures/living.html)
 replays **360 frames from eight residents**, covering model seconds 79.05–200.65.
