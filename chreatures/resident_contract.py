@@ -1,19 +1,24 @@
-"""Torch-free identities for the one current rich controller lineage."""
+"""Torch-free identities for the one current CNS-only resident lineage."""
 
-BOOTSTRAP_FORMAT = "chreatures-rich-sensorimotor-bootstrap-v5"
-DEVELOPMENT_FORMAT = "chreatures-rich-online-sensorimotor-development-v5"
-NATIVE_POPULATION_FORMAT = "chreatures-native-developmental-resident-population-v8"
-NATIVE_EXECUTION = "developmental-resident-native-population-v8"
-NATIVE_POPULATION_VERSION = 8
-TORCH_POPULATION_PLAN_FORMAT = "chreatures-torch-population-training-candidates-v2"
-TORCH_POPULATION_PLAN_VERSION = 2
+CONTROLLER_INPUT_FORMAT = "chreatures-cns-only-controller-v1"
+NATIVE_POPULATION_FORMAT = "chreatures-native-cns-only-resident-population-v1"
+NATIVE_EXECUTION = "native-cns-only-resident-v1"
+NATIVE_POPULATION_VERSION = 1
+NATIVE_SNAPSHOT_FORMAT = "chreatures-native-cns-only-resident-snapshot-v1"
+NATIVE_SNAPSHOT_VERSION = 1
+
+# Archived Torch-v5 research corpus tools may identify their own source data
+# with these values.  The current native resident wrapper never accepts them.
+LEGACY_BOOTSTRAP_FORMAT = "chreatures-rich-sensorimotor-bootstrap-v5"
+LEGACY_DEVELOPMENT_FORMAT = "chreatures-rich-online-sensorimotor-development-v5"
 
 __all__ = [
-    "BOOTSTRAP_FORMAT",
-    "DEVELOPMENT_FORMAT",
+    "CONTROLLER_INPUT_FORMAT",
+    "LEGACY_BOOTSTRAP_FORMAT",
+    "LEGACY_DEVELOPMENT_FORMAT",
     "NATIVE_EXECUTION",
     "NATIVE_POPULATION_FORMAT",
     "NATIVE_POPULATION_VERSION",
-    "TORCH_POPULATION_PLAN_FORMAT",
-    "TORCH_POPULATION_PLAN_VERSION",
+    "NATIVE_SNAPSHOT_FORMAT",
+    "NATIVE_SNAPSHOT_VERSION",
 ]

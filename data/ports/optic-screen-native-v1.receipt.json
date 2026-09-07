@@ -1,0 +1,23 @@
+{
+  "format": "chreatures-optic-screen-native-check-v1",
+  "status": "executed synthetic bounded world-screen sampler check; no neural/physical resident stepped",
+  "atlas_sha256": "6a59c4282ffc912e1c0304498686819cdcc16c059f453fd5bc19c55938218482",
+  "optical_identity": "5443ee808f2ae4a1dd7dcaa0dbffbf20dc8dda8b1c5daecd81307f4185dd8e6e",
+  "module_sha256": "6b37d4f0380e7d7923af6c33adcc0eca0fae5a95ffb1143459539307eb397185",
+  "residents": 4,
+  "sites": 1771,
+  "supported_sites": 1486,
+  "screen_hit_counts": [
+    1771,
+    0,
+    1420,
+    0
+  ],
+  "elapsed_ms_one_call": 0.15387500752694905,
+  "pose_translation_changes_rgb": true,
+  "head_yaw_pi_misses": true,
+  "opaque_occlusion_preserves_scene_rgb": true,
+  "frame_inversion_changes_actual_ray_samples": true,
+  "invalid_rotation_rejected": true,
+  "limits": "Synthetic texture, standalone screen and supplied occlusion; actual MuJoCo join and Bad Apple clip are separate integration work."
+}

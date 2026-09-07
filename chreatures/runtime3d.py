@@ -25,18 +25,14 @@ MODEL_DT = 0.05
 from .organism_interface import (
     ACTION_DIM,
     ACTION_NAMES,
-    NEURAL_DIM,
     PHYSIOLOGY_DIM,
     PREVIOUS_DIM,
     RECTIFIED_AXES,
 )
-from .organism_interface import (
-    identity as organism_identity,
-)
 
-SOURCE_SENSE_DIM = 351
-RICH_RETINA_DIM = 4096
-CHECKPOINT_FORMAT = "chreatures-developmental-habitat-checkpoint-v4"
+SOURCE_SENSE_DIM = 5356
+NEURAL_DIM = 512
+CHECKPOINT_FORMAT = "chreatures-developmental-habitat-checkpoint-v5"
 INTERRUPTED_FORMAT = "chreatures-developmental-habitat-interrupted-v1"
 
 
@@ -84,7 +80,6 @@ class Habitat3D:
         physics_backend: str | None = None,
         visitor_materials: str | Path | None = None,
         population_birth: str | Path | None = None,
-        population_response_artifact: str | Path | None = None,
     ) -> None:
         from .acoustics import Acoustics
         from .ecology import Ecology
@@ -96,8 +91,8 @@ class Habitat3D:
             raise ValueError("A new population life requires --population-birth and --biosphere")
         from .population import compose_population_birth
         from .resident_birth import (
-            candidate_adapters,
             inherited_body_templates,
+            cns_service_birth_records,
             load_manifest,
             verify_controller,
         )
@@ -134,6 +129,8 @@ class Habitat3D:
         )
         world_type = physical_world_type(body_mode, self.physics_backend)
         self.world = world_type(seed=seed, spec=spec)
+        from .visual_stimulus import ScreenStimulus
+        self.screen_stimulus = ScreenStimulus(spec["optic_stimulus"]) if "optic_stimulus" in spec else None
         self.field = (
             FieldEnvironment.from_world(self.world) if ecology == "diffusion" else None
         )
@@ -171,10 +168,8 @@ class Habitat3D:
             self.resident_artifact,
             cohort_size,
             action_mode="sample",
-            goal_seed=(seed * 1009 + 17) % 2**64,
+            suffix_seed=(seed * 1009 + 17) % 2**64,
             action_seed=(seed * 1009 + 31) % 2**64,
-            candidate_adapters=candidate_adapters(self.birth_manifest),
-            population_response_artifact=population_response_artifact,
         )
         self._validate_resident_interface()
 
@@ -188,10 +183,8 @@ class Habitat3D:
         self.remote_ids = {
             body.id: f"{self.id}:{body.id}" for body in self.world.bodies
         }
-        self.neural.create([
-            {"id": self.remote_ids[body.id], "neural_phenotype": entry["neural_phenotype"]}
-            for body, entry in zip(self.world.bodies, self.birth_manifest["residents"], strict=True)
-        ])
+        self.neural.create(cns_service_birth_records(
+            self.birth_manifest, [self.remote_ids[body.id] for body in self.world.bodies]))
         self.actual_previous = np.zeros((cohort_size, PREVIOUS_DIM), dtype=np.float32)
         self.reset_rows = np.ones(cohort_size, dtype=np.bool_)
         self.outcomes = {body.id: {} for body in self.world.bodies}
@@ -223,66 +216,23 @@ class Habitat3D:
         )
 
     def _validate_neural_interface(self) -> None:
-        if len(self.neural.input_names) != SOURCE_SENSE_DIM:
-            raise ValueError(
-                "Current resident artifacts require exactly 351 physical neural inputs"
-            )
-        if len(self.neural.output_names) != NEURAL_DIM:
-            raise ValueError(
-                "Current resident artifacts require exactly 384 neural readouts"
-            )
+        if len(self.neural.input_names) != SOURCE_SENSE_DIM or len(self.neural.output_names) != NEURAL_DIM:
+            raise ValueError("Current life requires bilateral5356 afferents and a learned512 CNS readout")
+        if self.physics_backend != "vectorized" or self.body_mode != "articulated":
+            raise ValueError("Current CNS-only body requires native articulated optical sampling")
 
     def _validate_resident_interface(self) -> None:
-
-        trained_neural = self.residents.neural_contract
-        remote_ports = self.neural.metadata["brain"].get("ports", {})
-        if trained_neural["graph_sha256"] != self.neural.graph[
-            "sha256"
-        ] or trained_neural["port_spec_sha256"] != remote_ports.get("spec_hash"):
-            raise ValueError(
-                "Resident artifact was trained with a different graph or neural port"
-            )
-        expected = organism_identity()
-        if self.residents.observation_contract != expected:
-            raise ValueError(
-                "Resident artifact observation contract differs from this host"
-            )
+        if self.residents.neural_contract != self.neural.cns_identity:
+            raise ValueError("Resident and neural service learned adapter, atlas or dynamics differ")
 
     def _empty_cognition(self, body_id: str) -> dict[str, Any]:
         return {
-            "controller": "native-developmental-resident",
-            "resident": body_id,
-            "memory_count": 0,
-            "memory_inserted_slot": -1,
-            "goal": {
-                "valid": False,
-                "changed": False,
-                "slot": -1,
-                "recorded_tick": 0,
-                "recorded_time": 0.0,
-                "generation": 0,
-                "remaining_ticks": 0,
-            },
-            "sampled_proposal": {name: 0.0 for name in ACTION_NAMES},
-            "executed_action": {
-                **{name: 0.0 for name in ACTION_NAMES},
-            },
-            "outcome": {},
-            "personal_goal_learning": {
-                "selected_bias": 0.0,
-                "prediction": 0.0,
-                "last_transition_reward": 0.0,
-                "last_completed_return": 0.0,
-                "completed": False,
-                "attributed": False,
-                "learned": False,
-                "completed_total": 0,
-                "learned_total": 0,
-                "frozen_total": 0,
-                "skipped_replaced_total": 0,
-                "cancelled_total": 0,
-                "learning_enabled": True,
-            },
+            "controller": "native-cns-only-resident", "resident": body_id,
+            "memory_count": 0, "memory_inserted_slot": -1,
+            "goal": {"valid": False, "slot": -1},
+            "sampled_proposal": dict.fromkeys(ACTION_NAMES, 0.0),
+            "executed_action": dict.fromkeys(ACTION_NAMES, 0.0), "outcome": {},
+            "sequence_control": {"selected_candidate": -1, "active_phase": 0, "active_remaining": 0},
             "model_identity": copy.deepcopy(self.residents.model_identity),
         }
 
@@ -343,15 +293,6 @@ class Habitat3D:
             })
         for body in self.world.bodies:
             outcome = self.outcomes[body.id]
-            learning = self.cognition_state[body.id]["personal_goal_learning"]
-            if learning["completed"]:
-                events.append({
-                    "kind": "goal_episode_completed", "actors": {"bodies": [body.id], "entities": []},
-                    "details": {"observed_attainment": learning["observed_attainment"],
-                                "attributed": learning["attributed"], "learned": learning["learned"],
-                                "goal": self.cognition_state[body.id].get("goal", {})},
-                    "source": {"stream": "private-goal-episode"},
-                })
             for signal in outcome.get("emitted_signals", []):
                 events.append({
                     "kind": "signal_emission", "actors": {"bodies": [body.id], "entities": []},
@@ -373,18 +314,16 @@ class Habitat3D:
         self._committed_events(events)
 
     def _source_rows(self, sensed: dict[str, dict[str, Any]]) -> np.ndarray:
-        rows = []
-        for body in self.world.bodies:
-            encoded = self.neural.encode(sensed[body.id])
-            if set(encoded) != set(self.neural.input_names):
-                raise ValueError(
-                    "Physical encoder channel identity differs from the neural service"
-                )
-            rows.append([encoded[name] for name in self.neural.input_names])
-        values = _finite_row(rows, (len(rows), SOURCE_SENSE_DIM), "physical senses")
-        if np.any((values < 0.0) | (values > 1.0)):
-            raise ValueError("Physical senses exceed their declared [0,1] range")
-        return values
+        # Physics owns rays and transduction. Neither stream reaches cognition
+        # until the service has advanced the actual full-CNS recurrent state.
+        count = len(self.world.bodies)
+        frame = None if self.screen_stimulus is None else self.screen_stimulus.frame(self.tick, MODEL_DT)
+        optic = _finite_row(self.world.optic_retina_batch(frame), (count, 1771, 3), "bilateral optics")
+        body = _finite_row(self.world.nonvisual_body_batch(sensed, self._physiology_rows(self.neural_state)),
+                           (count, 43), "body afferents")
+        if np.any((optic < 0) | (optic > 1)):
+            raise ValueError("Optical transducers exceed [0,1]")
+        return np.ascontiguousarray(np.concatenate((optic.reshape(count, -1), body), axis=1))
 
     def _physiology_rows(self, responses: dict[str, dict[str, Any]]) -> np.ndarray:
         if self.biosphere is None or self.biosphere.mobility is None:
@@ -454,12 +393,11 @@ class Habitat3D:
         prepared = self.biosphere.prepare_newborn(transaction.candidate, proposal, bundle)
         seed = int(hashlib.sha256(f"{self.id}:{offer['offer_id']}".encode()).hexdigest()[:16], 16)
         expanded = self.residents.expanded(
-            [CandidateGenome(inherited["candidate"]).controller_adapter()],
-            goal_seed=seed, action_seed=seed ^ 0xAC7100,
+            1, suffix_seed=seed, action_seed=seed ^ 0xAC7100,
         )
         remote_id = f"{self.id}:{child_id}"
         self.pending_step = {"tick": self.tick, "phase": "birth-neural", "offer_id": offer["offer_id"], "resident_id": child_id}
-        self.neural.create([{"id": remote_id, "neural_phenotype": inherited["neural_phenotype"]}])
+        self.neural.create([{"id": remote_id, "cns_adapter_sha256": inherited["cns_adapter_sha256"]}])
         self.pending_step["phase"] = "birth-physical"
         transaction.commit()
         self.biosphere = self.biosphere.commit_newborn(prepared)
@@ -493,20 +431,6 @@ class Habitat3D:
             "source": {"stream": "funded-brood-hatch", "offer_id": offer["offer_id"]},
         }])
 
-    def _resident_observations(
-        self, source: np.ndarray, physiology: np.ndarray
-    ) -> np.ndarray:
-        rich = _finite_row(
-            self.world.rich_retina_batch(),
-            (len(self.world.bodies), RICH_RETINA_DIM),
-            "rich body senses",
-        )
-        if np.any((rich < 0.0) | (rich > 1.0)):
-            raise ValueError("Rich body senses exceed their declared [0,1] range")
-        return np.ascontiguousarray(
-            np.concatenate((rich, source, physiology), axis=1), dtype=np.float32
-        )
-
     def _actions(self, proposed: np.ndarray) -> dict[str, dict[str, float]]:
         values = _finite_row(proposed, (len(self.world.bodies), ACTION_DIM), "native action")
         if np.any((values < -1.0) | (values > 1.0)) or np.any(values[:, RECTIFIED_AXES] < 0):
@@ -516,132 +440,32 @@ class Habitat3D:
             for index, body in enumerate(self.world.bodies)
         }
 
-    def _record_cognition(
-        self, result: dict[str, np.ndarray], actions: np.ndarray
-    ) -> None:
+    def _record_cognition(self, result: dict[str, np.ndarray], actions: np.ndarray) -> None:
+        # Public observer fields are explicit. They never re-enter the controller.
         for index, body in enumerate(self.world.bodies):
+            sequence = {
+                "policy_version": int(result["sequence_control_policy_version"]),
+                "policy_sha256": str(result["sequence_control_policy_sha256"]),
+                "selected_candidate": int(result["selected_candidate"][index]),
+                "hazard_logit": float(result["sequence_control_hazard_logit"][index]),
+                "hazard_decision": bool(result["sequence_control_hazard_decision"][index]),
+                "active_source_slot": int(result["active_source_slot"][index]),
+                "active_source_generation": int(result["active_source_generation"][index]),
+                "active_phase": int(result["active_phase"][index]),
+                "active_remaining": int(result["active_remaining"][index]),
+                "cancellation_totals": result["motor_suffix_cancellation_totals"][index].astype(int).tolist(),
+                "cancellation_reason": str(result["motor_suffix_cancellation_reason"][index]),
+                "meaning": "learned selection and termination of CNS-conditioned local and acquired command sequences",
+            }
             self.cognition_state[body.id] = {
-                "controller": "native-developmental-resident",
-                "resident": body.id,
+                "controller": "native-cns-only-resident", "resident": body.id,
                 "memory_count": int(result["memory_count"][index]),
                 "memory_inserted_slot": int(result["memory_inserted_slot"][index]),
-                "goal": {
-                    "valid": bool(result["goal_valid"][index]),
-                    "changed": bool(result["goal_changed"][index]),
-                    "slot": int(result["goal_slot"][index]),
-                    "recorded_tick": int(result["goal_recorded_tick"][index]),
-                    "recorded_time": float(result["goal_recorded_time"][index]),
-                    "generation": int(result["goal_generation"][index]),
-                    "remaining_ticks": int(result["goal_remaining_ticks"][index]),
-                },
-                "sampled_proposal": dict(
-                    zip(
-                        ACTION_NAMES, actions[index].astype(float).tolist(), strict=True
-                    )
-                ),
-                "consequence_refinement": {
-                    "candidate_scores": result["candidate_scores"][index]
-                    .astype(float)
-                    .tolist(),
-                    "candidate_out_of_domain": result["candidate_out_of_domain"][index]
-                    .astype(bool)
-                    .tolist(),
-                    "selected_candidate": int(result["selected_candidate"][index]),
-                    "selected_private_correction": result[
-                        "selected_consequence_correction"
-                    ][index]
-                    .astype(float)
-                    .tolist(),
-                    "completed_private_updates_before_action": int(
-                        result["personal_consequence_updates"][index]
-                    ),
-                    "meaning": "predicted body component of the remembered sensory goal",
-                },
-                "sensory_forecast": {
-                    "candidate_progress": result["forecast_progress"][index]
-                    .astype(float)
-                    .tolist(),
-                    "candidate_disagreement": result["forecast_disagreement"][index]
-                    .astype(float)
-                    .tolist(),
-                    "candidate_forecast_invalid": result["forecast_invalid"][index]
-                    .astype(bool)
-                    .tolist(),
-                    "candidate_logit_tilt": result["forecast_tilt"][index]
-                    .astype(float)
-                    .tolist(),
-                    "empirical_goal_error_scale": float(result["forecast_goal_rms"]),
-                    "horizon_ticks": int(result["forecast_horizon_ticks"]),
-                    "horizon_seconds": MODEL_DT * int(result["forecast_horizon_ticks"]),
-                    "candidate_physiology": result["forecast_physiology"][index].astype(float).tolist(),
-                    "proposal_suffix": "four constant-action plans over eight ticks and up to four actually experienced sequences scored over their stored lengths; execute the first action and replan",
-                    "meaning": "predicted progress toward an achieved sensory goal; member disagreement is not calibrated confidence",
-                },
-                "acquired_action_candidates": {
-                    "available": result["candidate_available"][index].astype(bool).tolist(),
-                    "recalled": result["candidate_is_recalled_suffix"][index].astype(bool).tolist(),
-                    "slot": result["candidate_suffix_slot"][index].astype(int).tolist(),
-                    "generation": result["candidate_suffix_generation"][index].astype(int).tolist(),
-                    "phase": result["candidate_suffix_phase"][index].astype(int).tolist(),
-                    "length_ticks": result["candidate_suffix_length"][index].astype(int).tolist(),
-                    "support": result["candidate_suffix_support"][index].astype(int).tolist(),
-                    "empirical_score": result["candidate_suffix_empirical_score"][index].astype(float).tolist(),
-                    "recall_score": result["candidate_suffix_recall_score"][index].astype(float).tolist(),
-                    "first_action": result["candidate_first_action"][index].astype(float).tolist(),
-                    "selected_candidate": int(result["selected_candidate"][index]),
-                    "occupied_slots": int(result["motor_suffix_slots"][index]),
-                    "learned_total": int(result["motor_suffix_learned_total"][index]),
-                    "completed_total": int(result["motor_suffix_completed_total"][index]),
-                    "interrupted_total": int(result["motor_suffix_interrupted_total"][index]),
-                    "empirical_component_order": result["motor_suffix_empirical_components"].astype(str).tolist(),
-                    # Coefficients of the v8 artifact's validated empirical
-                    # utility: tanh(movement - energy cost + fatigue recovery).
-                    "empirical_component_weights": [1.0, -1.0, 1.0],
-                    "empirical_tilt_limit": float(result["motor_suffix_empirical_tilt_limit"]),
-                    "meaning": "private recall and interruptible continuation of executed sequences; support counts complete executions and does not certify success or reachability",
-                },
-                "contextual_memory": {
-                    "retrieval_bias": float(result["contextual_retrieval_bias"][index]),
-                    "updates": int(result["contextual_episodic_updates"][index]),
-                },
-                "sequence_memory": {
-                    "selected_bias": float(result["goal_sequence_selected_bias"][index]),
-                    "experienced_path_depth": int(result["goal_sequence_experienced_path_depth"][index]),
-                    "selected_evidence_weight": float(result["goal_sequence_selected_confidence"][index]),
-                    "learned_transitions_total": int(result["goal_sequence_learned_transitions_total"][index]),
-                    "failed_attempts_total": int(result["goal_sequence_failed_attempts_total"][index]),
-                    "attainment_rms_threshold": float(result["goal_attainment_rms_threshold"]),
-                    "meaning": "past sampled sensory-goal succession, not a guarantee of reachability or physical skill",
-                },
-                "personal_goal_learning": {
-                    "observed_attainment": copy.deepcopy(self.cognition_state[body.id].get("personal_goal_learning", {}).get("observed_attainment")),
-                    "selected_bias": float(
-                        result["personal_goal_selected_bias"][index]
-                    ),
-                    "prediction": float(result["personal_goal_prediction"][index]),
-                    "last_transition_reward": float(
-                        result["personal_goal_last_reward"][index]
-                    ),
-                    "last_completed_return": float(
-                        result["personal_goal_last_return"][index]
-                    ),
-                    "completed": bool(result["personal_goal_completed"][index]),
-                    "attributed": bool(result["personal_goal_attributed"][index]),
-                    "learned": bool(result["personal_goal_learned"][index]),
-                    "completed_total": int(
-                        result["personal_goal_completed_total"][index]
-                    ),
-                    "learned_total": int(result["personal_goal_learned_total"][index]),
-                    "frozen_total": int(result["personal_goal_frozen_total"][index]),
-                    "skipped_replaced_total": int(
-                        result["personal_goal_skipped_total"][index]
-                    ),
-                    "cancelled_total": int(
-                        result["personal_goal_cancelled_total"][index]
-                    ),
-                    "learning_enabled": bool(result["personal_goal_learning_enabled"]),
-                    "meaning": "private association between selected achieved goals and actual finite-energy transition returns",
-                },
+                "goal": {"valid": int(result["goal_origin_slot"][index]) >= 0, "slot": int(result["goal_origin_slot"][index]),
+                         "recorded_tick": int(result["goal_origin_tick"][index]),
+                         "latent_code": result["latent_goal"][index].astype(float).tolist()},
+                "sampled_proposal": dict(zip(ACTION_NAMES, actions[index].astype(float).tolist(), strict=True)),
+                "sequence_control": sequence,
                 "model_identity": copy.deepcopy(self.residents.model_identity),
             }
 
@@ -660,48 +484,6 @@ class Habitat3D:
             self.cognition_state[body.id]["outcome"] = copy.deepcopy(
                 self.outcomes[body.id]
             )
-
-    def _record_goal_receipts(self, receipts: dict[str, np.ndarray]) -> None:
-        for index, body in enumerate(self.world.bodies):
-            state = self.cognition_state[body.id]["personal_goal_learning"]
-            state["last_transition_reward"] = float(receipts["reward"][index])
-            completed = bool(receipts["completed"][index])
-            state["completed"] = completed
-            state["attributed"] = bool(receipts["attributed"][index])
-            state["learned"] = bool(receipts["learned"][index])
-            state["completed_total"] = int(receipts["completed_total"][index])
-            state["learned_total"] = int(receipts["learned_total"][index])
-            state["frozen_total"] = int(receipts["frozen_total"][index])
-            state["skipped_replaced_total"] = int(receipts["skipped_total"][index])
-            state["cancelled_total"] = int(receipts["cancelled_total"][index])
-            if completed:
-                state["last_completed_return"] = float(receipts["summed_return"][index])
-                state["observed_attainment"] = {
-                    "attained": bool(receipts["actual_attained"][index]),
-                    "normalized_progress": float(receipts["observed_normalized_progress"][index]),
-                    "start_rms": float(receipts["measurement_start_rms"][index]),
-                    "min_rms": float(receipts["measurement_min_rms"][index]),
-                    "latest_rms": float(receipts["measurement_latest_rms"][index]),
-                    "samples": int(receipts["measurement_samples"][index]),
-                    "last_observed_tick": int(receipts["measurement_window_ending_last_observed_tick"][index]),
-                }
-            if self.residents.population_response_artifact is not None:
-                self.cognition_state[body.id]["population_response"] = {
-                    "artifact_sha256": str(receipts["population_response_identity"]),
-                    "feature_contract_sha256": str(
-                        receipts["population_feature_contract_identity"]
-                    ),
-                    "executed_transition_in_domain": bool(
-                        receipts["population_response_in_domain"][index]
-                    ),
-                    "in_domain_total": int(
-                        receipts["population_response_in_domain_total"][index]
-                    ),
-                    "out_of_domain_total": int(
-                        receipts["population_response_out_of_domain_total"][index]
-                    ),
-                    "meaning": "fitted-domain coverage of committed actions; not evidence that the model changed the selected action",
-                }
 
     def step(self, steps: int = 1) -> None:
         if type(steps) is not int or steps < 1:
@@ -722,16 +504,7 @@ class Habitat3D:
             self.sensed_at = self.world.time
             source = self._source_rows(sensed)
             entries = [
-                {
-                    "id": self.remote_ids[body.id],
-                    "senses": dict(
-                        zip(
-                            self.neural.input_names,
-                            source[index].astype(float).tolist(),
-                            strict=True,
-                        )
-                    ),
-                }
+                {"id": self.remote_ids[body.id], "sensory": source[index].astype(float).tolist()}
                 for index, body in enumerate(self.world.bodies)
             ]
             sensed_done = time.perf_counter()
@@ -760,29 +533,15 @@ class Habitat3D:
                 (len(self.world.bodies), NEURAL_DIM),
                 "neural readouts",
             )
-            physiology = self._physiology_rows(response_by_body)
-            observation = self._resident_observations(source, physiology)
+            if any(row.get("cns_adapter_sha256") != self.neural.cns_identity["adapter_sha256"]
+                   for row in remote):
+                raise ValueError("Neural response learned adapter changed within a life")
             self.pending_step["phase"] = "resident"
             native = self.residents.step(
-                observation,
-                neural,
-                physiology,
-                self.actual_previous,
-                np.full(len(self.world.bodies), self.tick, dtype=np.uint64),
-                np.full(len(self.world.bodies), self.world.time, dtype=np.float64),
-                self.reset_rows,
+                neural, self.actual_previous,
+                np.full(len(self.world.bodies), self.tick, dtype=np.uint64), self.reset_rows,
             )
-            if not np.array_equal(
-                native["actual_previous_action"], self.actual_previous
-            ):
-                raise RuntimeError("Native resident previous-action accounting differs")
-            if not np.array_equal(native["physiology"], physiology):
-                raise RuntimeError("Native resident physiology accounting differs")
-            proposed = _finite_row(
-                native["proposed_action"],
-                (len(self.world.bodies), ACTION_DIM),
-                "native proposed action",
-            )
+            proposed = _finite_row(native["proposed_command"], (len(self.world.bodies), ACTION_DIM), "native proposed command")
             actions = self._actions(proposed)
             self._record_cognition(native, proposed)
             for body in self.world.bodies:
@@ -790,6 +549,11 @@ class Habitat3D:
             cognition_done = time.perf_counter()
             self.pending_step["phase"] = "physics"
             self.outcomes = self.world.advance(actions, MODEL_DT)
+            self.pending_step["phase"] = "acknowledge"
+            acknowledgement = self.residents.acknowledge(
+                np.full(len(self.world.bodies), self.tick, dtype=np.uint64), proposed)
+            if not np.asarray(acknowledgement["acknowledged"]).all():
+                raise RuntimeError("Native controller did not acknowledge the committed physical tick")
             physics_done = time.perf_counter()
             self.actual_previous = np.ascontiguousarray(
                 proposed, dtype=np.float32
@@ -818,19 +582,6 @@ class Habitat3D:
                     ),
                 )
             fields_done = time.perf_counter()
-            self.pending_step["phase"] = "personal-consequences"
-            goal_receipts = self.residents.observe_consequences(
-                np.full(len(self.world.bodies), self.tick, dtype=np.uint64),
-                physiology,
-                self._physiology_rows(response_by_body),
-                self.actual_previous,
-                np.asarray(
-                    [self.outcomes[body.id]["effort"] for body in self.world.bodies],
-                    dtype=np.float32,
-                ),
-                dt=MODEL_DT,
-            )
-            self._record_goal_receipts(goal_receipts)
             personal_done = time.perf_counter()
             self.phase_timings.append(
                 {
@@ -842,7 +593,7 @@ class Habitat3D:
                     "resources": (resources_done - acoustics_done) * 1000,
                     "biosphere": (biosphere_done - resources_done) * 1000,
                     "fields": (fields_done - biosphere_done) * 1000,
-                    "personal_learning": (personal_done - fields_done) * 1000,
+                    "commit": (personal_done - fields_done) * 1000,
                 }
             )
             self.tick += 1
@@ -889,17 +640,6 @@ class Habitat3D:
                 raise ValueError("speed must be 1, 2 or 4")
             self.speed = command["value"]
             return {"speed": self.speed}
-        if op == "personal_goal_learning":
-            if type(command.get("enabled")) is not bool:
-                raise ValueError("personal goal learning enabled must be boolean")
-            enabled = command["enabled"]
-            self.residents.set_personal_goal_learning(enabled)
-            self.note(
-                "research-intervention",
-                "Private goal association learning changed.",
-                personal_goal_learning_enabled=enabled,
-            )
-            return {"personal_goal_learning_enabled": enabled}
         if op == "bookmark":
             text = command.get("text", "A moment in the garden.")
             if not isinstance(text, str) or len(text) > 500:
@@ -995,10 +735,9 @@ class Habitat3D:
                 "resident_controller": {
                     **copy.deepcopy(self.residents.model_identity),
                     "neural_contract": copy.deepcopy(self.residents.neural_contract),
-                    "observation_contract": copy.deepcopy(
-                        self.residents.observation_contract
-                    ),
-                    "rich_retina_available": hasattr(self.world, "rich_retina_batch"),
+                    "controller_ingress": {"latent_dim": NEURAL_DIM, "previous_delivered_command_dim": PREVIOUS_DIM,
+                                           "clock": "committed tick and reset", "raw_senses": False},
+                    "optic_sites": 1771, "sensory_to_control": "trainable afferents → full MaleCNS → learned CNS readout",
                 },
                 "engine_identity": copy.deepcopy(self.engine_identity),
                 "performance": {
@@ -1063,7 +802,7 @@ class Habitat3D:
         if self.pending_step is not None:
             raise RuntimeError("Cannot checkpoint an incomplete distributed tick")
         state = {
-            "version": 4,
+            "version": 5,
             "kind": "chreatures-developmental-habitat",
             "id": self.id,
             "birth_manifest": copy.deepcopy(self.birth_manifest),
@@ -1091,6 +830,7 @@ class Habitat3D:
             else None,
             "acoustic_state": self.acoustic_state,
             "visitor": self.visitor.snapshot(),
+            "screen_stimulus": None if self.screen_stimulus is None else self.screen_stimulus.snapshot(),
             "last_senses": self._public_senses() if self.last_senses else {},
             "sensed_at": self.sensed_at,
             "neural_identity": _neural_model_identity(self.neural.metadata["brain"]),
@@ -1111,7 +851,7 @@ class Habitat3D:
         if self.visitor_materials is not None:
             state["visitor_materials"] = self.visitor_materials.snapshot()
         request = {
-            "name": f"world-{self.id}-{self.tick}",
+            "name": f"world-{self.id}-{self.tick}-{uuid.uuid4().hex[:8]}",
             "resident_ids": list(self.remote_ids.values()),
             "seq": self.neural.next_seq,
             "service_incarnation": self.neural.service_incarnation,
@@ -1141,7 +881,6 @@ class Habitat3D:
         path: str | Path,
         brain_url: str | None = None,
         resident_artifact: str | Path | None = None,
-        population_response_artifact: str | Path | None = None,
     ) -> Habitat3D:
         from .acoustics import Acoustics
         from .ecology import Ecology
@@ -1158,7 +897,7 @@ class Habitat3D:
         ).hexdigest() != envelope.get("sha256"):
             raise ValueError("3D checkpoint checksum mismatch")
         if (
-            value.get("version") != 4
+            value.get("version") != 5
             or value.get("kind") != "chreatures-developmental-habitat"
         ):
             raise ValueError("Unsupported developmental habitat state")
@@ -1197,6 +936,8 @@ class Habitat3D:
         instance.execution_migrations = copy.deepcopy(value["execution_migrations"])
         world_type = physical_world_type(instance.body_mode, instance.physics_backend)
         instance.world = world_type.restore(value["world"])
+        from .visual_stimulus import ScreenStimulus
+        instance.screen_stimulus = None if value["screen_stimulus"] is None else ScreenStimulus(value["screen_stimulus"])
         instance.visitor = VisitorPerformances.restore(value["visitor"], instance.world)
         instance.field = (
             FieldEnvironment.restore(value["field"])
@@ -1253,7 +994,6 @@ class Habitat3D:
             raise ValueError("saved birth templates differ from the resident population")
         instance.residents = DevelopmentalResidentCohort.restore_value(
             value["resident_controller"], instance.resident_artifact,
-            population_response_artifact=population_response_artifact,
         )
         instance._validate_resident_interface()
         cohort_size = len(instance.world.bodies)

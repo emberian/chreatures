@@ -1,0 +1,22 @@
+{
+  "format": "chreatures-optic-screen-native-check-v2",
+  "status": "executed strict geometry receipt startup check; no resident stepped",
+  "atlas_sha256": "6a59c4282ffc912e1c0304498686819cdcc16c059f453fd5bc19c55938218482",
+  "optical_identity": "5443ee808f2ae4a1dd7dcaa0dbffbf20dc8dda8b1c5daecd81307f4185dd8e6e",
+  "module_sha256": "744a5f2aa88a3499228c1675ac8c0dc9836d06a4164b273f6b87c59de0638c26",
+  "screen_hit_counts": [
+    1771,
+    0,
+    0,
+    0
+  ],
+  "cases": [
+    "matching screen geom and distance",
+    "different nearest geom",
+    "scene ray miss",
+    "distance mismatch0.001"
+  ],
+  "distance_tolerance_world_units": 1e-05,
+  "invalid_pairing_rejected": true,
+  "limits": "Supplied scene receipts validate gating only. Actual MuJoCo ray receipt production is joined separately."
+}

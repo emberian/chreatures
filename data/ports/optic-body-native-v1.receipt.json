@@ -1,0 +1,27 @@
+{
+  "format": "chreatures-native-optic-nonvisual-check-v1",
+  "status": "executed native screen plus exact nonvisual transduction boundary check; no resident stepped",
+  "body_shape": [
+    4,
+    43
+  ],
+  "optic_shape": [
+    4,
+    1771,
+    3
+  ],
+  "nonvisual_matches_reference_exactly": true,
+  "max_absolute_error": 0.0,
+  "opposing_contacts_preserved": true,
+  "odor_override_changes_native_afferents": true,
+  "interoception_preserved_exactly": true,
+  "contact_capacity_rejected": true,
+  "strict_screen_hits": [
+    1771,
+    0,
+    0,
+    0
+  ],
+  "module_sha256": "6c26f7b33863f5ab1ee6774d0150b6d39d4c6f9f586f998f060a1562ca99b549",
+  "limits": "Old351 encoding used only as an isolated numeric reference with zero retina; production native nonvisual function reads no retina and does not call Python encoding."
+}

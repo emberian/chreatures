@@ -8,22 +8,31 @@ Inspired by *Creatures* and the changing societies and environments of *Children
 
 ## The current build
 
-**September 7: making the CNS the required sensory-to-control route.** The
-anatomy audit found that the v8 controller received raw vision and physiology
-alongside actual connectome activity. Its coarse retinal ports also mixed
-hemispheres and skipped photoreceptors. The full measured graph was running;
-it was not the sole route from sensation to action. That architecture is now a
-historical baseline. The replacement under development uses bilateral optical
-sampling, trainable afferent adapters, the full recurrent CNS, and a learned
-CNS readout feeding personal memory and motor control. New adapters and control
-weights have not yet demonstrated physical competence.
-[Audit, actual atlas and remaining assumptions](docs/development/OPTIC_INPUT_ANATOMY_AUDIT.md).
+**September 7: the CNS is now the required sensory-to-control route.**
+The previous full graph really ran, but its controller also received raw vision
+and physiology. Those direct paths are removed from the current native resident.
+Bilateral body-attached rays feed trainable afferents; the complete 165,122-neuron
+MaleCNS graph advances; a learned 512-dimensional readout alone supplies perception,
+goal memory, recurrent control and acquired motor sequences. Afferent neurons are
+masked out of that readout, so inputs must traverse actual measured connections.
+[Architecture and executed limits](docs/development/CNS_ONLY_CONTROLLER.md).
 
-The new atlas identifies 1,771 side-specific optic column sites. Measured
-connections anchor 3,936 of 4,107 photoreceptors to 1,486 sites; unsupported
-cells and sites remain explicit. Anatomical column coordinates are not measured
-angular receptive fields. A headless video-stimulus experiment and public
-“Bad Apple” playback are being built around this corrected input path.
+The retina samples 1,771 side-specific anatomical column sites. Measured edges
+anchor 3,936 of 4,107 photoreceptors to 1,486 sites; unsupported cells stay explicit.
+The angular layout is an engineered eye model, not measured receptive fields.
+Physical screens, occlusion and head movement change the actual retinal input.
+[Anatomy audit](docs/development/OPTIC_INPUT_ANATOMY_AUDIT.md) ·
+[Physical screen implementation](docs/development/BILATERAL_OPTIC_SCREEN.md).
+
+The first full-graph ROCm training run completed 128 updates and 32,768 resident
+steps. Optical latent responses increased, but held-out visual prediction error
+slightly worsened. Motor and memory controller weights remain initialized and
+untrained. This is working infrastructure for learning, not demonstrated visual
+understanding or useful behavior. Actual Torch/Metal recurrence agrees within
+2.1e-7; a tiled Metal readout reduced the measured two-resident neural step from
+about 420 ms to 7.25–8.35 ms. Eight physical residents now execute the joined
+CNS-only loop with private memory and complete checkpoints. A headless Bad Apple
+recording is being captured for the public observatory.
 
 ## The completed ecological v8 baseline
 
@@ -49,7 +58,7 @@ packet's complete contents into a regional store and retires its physical body
 at a declared exit face. The old failed life remains preserved under its frozen
 engine. [Previous wave](docs/development/RECIPROCAL_ECOLOGY_WAVE.md).
 
-The current **v4 organism and population wave** exposes twelve explicit actions—thrust, yaw, gaze pitch, posture, grip, three signal bands, eating, release, secretion and allocation—against twelve measured physical channels spanning movement, energy, digestion, fatigue, neural support, structure, development, gland and brood stores, reproductive maturity and exchange load. Native cohort execution keeps learning, memory and recurrent state private to each life. Immutable candidate genomes can inherit full-MaleCNS interface gains and completed GAM law fits without inheriting that private state.
+The earlier **v4 organism and population wave** exposes twelve explicit actions—thrust, yaw, gaze pitch, posture, grip, three signal bands, eating, release, secretion and allocation—against twelve measured physical channels spanning movement, energy, digestion, fatigue, neural support, structure, development, gland and brood stores, reproductive maturity and exchange load. Native cohort execution keeps learning, memory and recurrent state private to each life. Immutable candidate genomes can inherit full-MaleCNS interface gains and completed GAM law fits without inheriting that private state.
 
 Regional grammars generate connected physical habitats with variable elevation, cavities, ramps, finite resources and growing material. Clonal births debit a parent's actual brood stores and commit a new body with fresh private state. A native quality-diversity search evaluates genome–environment pairs and retains a bounded archive of varied candidates, including terminal failure records. The first campaign has closed **80 candidate lives across ten environments** on hbox: 16 completed their allotted run, while two shared engine faults ended the other 64. Twelve evaluations received archive admission; nine members remain after subsequent replacement. The project has executed separate 32-resident training populations on hbox and persvati and eight-founder interactive worlds on M2. The [population observatory](https://emberian.github.io/chreatures/population.html) publishes actual genomes, environments and recorded lives. Archive retention does not establish evolutionary improvement or ecological adaptation.
 
@@ -75,7 +84,7 @@ frozen recording, not the intended CNS-only data flow:
 
 Eating is an explicit current action. Physical mouth contact, available material and digestive chemistry determine its consequences. Remembered goals are previously experienced states, not guarantees of present reachability. The first v4 cold inheritance conservatively initializes new action heads and extends the sensory interface; that initialization does not supply competence with the new organs. Useful navigation, durable learned habits and reciprocal interaction are still being developed.
 
-The inherited **Torch v5 policy** trains pathways from all twelve physiology channels into recurrent state and from the policy into the four new organ actions. Achieved-goal encoding stays fixed. Its completed hbox lineage reached 160 PPO updates and 655,360 resident transitions. The native-v8 export combines those weights with the fitted recurrent predictor and private acquired action sequences. The preceding update-20 recording remains available as evidence of that earlier deployment; initialized exploration and nonzero actuator weights alone do not establish competence. [Organ implementation](docs/development/POPULATION_V5_NATIVE.md) · [Current export identity](data/training/rich-recurrent-v3/fit-export-receipt.json).
+The historical **Torch v5 policy** trains pathways from all twelve physiology channels into recurrent state and from the policy into the four new organ actions. Achieved-goal encoding stays fixed. Its completed hbox lineage reached 160 PPO updates and 655,360 resident transitions. The native-v8 export combines those weights with the fitted recurrent predictor and private acquired action sequences. The preceding update-20 recording remains available as evidence of that earlier deployment; initialized exploration and nonzero actuator weights alone do not establish competence. [Organ implementation](docs/development/POPULATION_V5_NATIVE.md) · [Current export identity](data/training/rich-recurrent-v3/fit-export-receipt.json).
 
 ## GAM × Universal Weave
 

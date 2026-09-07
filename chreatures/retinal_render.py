@@ -182,6 +182,9 @@ class RetinalRenderer:
         if self._closed:
             raise RuntimeError("retinal renderer is closed")
         pose = self.camera_pose(resident_id)
+        prepare = getattr(self.world, "prepare_observer_renderer", None)
+        if callable(prepare):
+            prepare(self.renderer)
         self.renderer.update_scene(self.world.data, scene_option=self.option)
         self.renderer.scene.stereo = mujoco.mjtStereo.mjSTEREO_NONE
         half_angle = math.radians(pose.vertical_fov_degrees / 2.0)

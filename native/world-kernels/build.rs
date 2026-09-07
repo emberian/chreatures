@@ -13,6 +13,7 @@ fn main() {
             "src/contact_shim.c",
             "src/actuation_shim.c",
             "src/acoustics_shim.c",
+            "src/batch_ray_shim.c",
             "src/environment_shim.c",
             "src/sensorium_shim.c",
             "src/regional_matter_shim.c",
@@ -45,6 +46,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/contact_shim.c");
     println!("cargo:rerun-if-changed=src/actuation_shim.c");
     println!("cargo:rerun-if-changed=src/acoustics_shim.c");
+    println!("cargo:rerun-if-changed=src/batch_ray_shim.c");
     println!("cargo:rerun-if-changed=src/environment_shim.c");
     println!("cargo:rerun-if-changed=src/sensorium_shim.c");
     println!("cargo:rerun-if-changed=src/regional_matter_shim.c");

@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 
 mod acoustics;
 mod actuation;
+mod batch_ray;
 mod biosphere_tissue;
 mod contacts;
 mod developmental_cues;
@@ -13,6 +14,7 @@ mod illumination;
 mod lifecycle;
 mod material_overlap;
 mod metabolism;
+mod optic_retina;
 mod population_trajectory;
 mod regional_matter;
 mod sensorium;
@@ -22,6 +24,7 @@ mod transport;
 #[pymodule]
 fn _world_kernels(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<actuation::ActuationCohort>()?;
+    module.add_class::<batch_ray::SceneRayBatch>()?;
     module.add_class::<acoustics::AcousticEngine>()?;
     module.add_class::<contacts::ContactBatch>()?;
     module.add_function(wrap_pyfunction!(
@@ -43,6 +46,8 @@ fn _world_kernels(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module
     )?)?;
     module.add_class::<metabolism::MetabolicCohort>()?;
+    module.add_class::<optic_retina::OpticRetina>()?;
+    module.add_function(wrap_pyfunction!(optic_retina::nonvisual_afferent_batch, module)?)?;
     module.add_class::<population_trajectory::PopulationTrajectory>()?;
     module.add_class::<regional_matter::RegionalMatter>()?;
     module.add_class::<somatic::SomaticCohort>()?;
