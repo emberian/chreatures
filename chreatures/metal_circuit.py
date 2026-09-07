@@ -49,6 +49,7 @@ class MetalCircuit:
         self.artifact = Path(artifact).resolve()
         self.artifact_sha256 = _sha256(self.artifact)
         binary = Path(binary) if binary else Path(__file__).resolve().parents[1] / "native/metal-brain/target/release/metal-brain-server"
+        self.execution_identity = {"binary_sha256": _sha256(binary), "kernel": kernel, "clock": "float64 declared interval; float32 neural integration"}
         self._process = subprocess.Popen([str(binary), str(self.artifact), kernel, str(capacity)],
                                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1)
         self._lock = threading.RLock()
@@ -197,7 +198,7 @@ class MetalCircuit:
                 "capacity": self.capacity, "residents": self.resident_ids,
                 "device": {"type": "metal", "name": self.native_startup.get("device"), "kernel": self.kernel},
                 "inputs": self.input_names, "readouts": self.readout_names,
-                "cns_adapter": copy.deepcopy(self.cns_identity)}
+                "cns_adapter": copy.deepcopy(self.cns_identity), "execution": copy.deepcopy(self.execution_identity)}
 
     def _path(self, directory, name):
         if not isinstance(name, str) or not SAFE_NAME.fullmatch(name):
@@ -211,7 +212,8 @@ class MetalCircuit:
             path = self._path(directory, name)
             path.parent.mkdir(parents=True, exist_ok=True)
             metadata = {"format": "chreatures-cns-host-state-v1", "identity": self.cns_identity,
-                        "capacity": self.capacity, "resident_slots": self._resident_for_slot}
+                        "capacity": self.capacity, "resident_slots": self._resident_for_slot,
+                        "execution": self.execution_identity}
             self._call({"op": "snapshot", "path": str(path), "metadata": _canonical(metadata)}, mutation=False)
             return {"name": name, "sha256": _sha256(path), "bytes": path.stat().st_size,
                     "scope": "all", "residents": self.resident_ids, "cns_identity": copy.deepcopy(self.cns_identity)}
@@ -225,6 +227,7 @@ class MetalCircuit:
             metadata = json.loads(inspected["metadata"])
             slots = metadata.get("resident_slots")
             if (metadata.get("format") != "chreatures-cns-host-state-v1" or metadata.get("identity") != self.cns_identity
+                    or metadata.get("execution") != self.execution_identity
                     or metadata.get("capacity") != self.capacity or not isinstance(slots, list) or len(slots) != self.capacity):
                 raise ValueError("CNS snapshot host identity differs")
             ids = [rid for rid in slots if rid is not None]

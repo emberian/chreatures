@@ -1054,3 +1054,11 @@ channels. Anatomy display uses the 140024 measured soma locations; other neurons
 still simulate but receive no invented plotting coordinates. The official silent
 30-second Bad Apple excerpt is held out from training. Full recorded comparison
 and public playback follow this source freeze. Prior v8 lives stay frozen.
+
+The longer screen assay stopped at the strict clock check because the service
+was adding a float32 interval to its float64 clock. The native service now retains
+the declared float64 interval for timestamps and converts only neural integration
+parameters to float32; recurrence is unchanged. A 135-tick actual service run
+matched the host clock exactly. Checkpoints also bind the native service binary
+hash. Paired full screen/blank recordings restart as new research runs after this
+fix; failed prefixes remain preserved.
