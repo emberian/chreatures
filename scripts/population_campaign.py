@@ -15,50 +15,26 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from chreatures.organism_interface import identity as organism_identity
 from chreatures.population import (
     PopulationSearch,
     canonical_bytes,
-    current_parameter_recipe,
     response_bank_identity,
 )
-from chreatures.training_environment import EmbodiedTrainingProfile
-from chreatures.resident_contract import (
-    NATIVE_EXECUTION,
-    NATIVE_POPULATION_FORMAT,
-    NATIVE_POPULATION_VERSION,
+from chreatures.population_launch import (
+    DESCRIPTOR_RECIPE,
+    QUALITY_RECIPE,
+    SPATIAL_CELL_SCALE,
+    current_search_contract,
+    file_sha256,
+    resident_artifact_identity,
+    valid_sha256 as valid_sha,
+    value_sha256,
 )
+from chreatures.training_environment import EmbodiedTrainingProfile
 
 FORMAT = "chreatures-population-campaign-v2"
 PLAN_FORMAT = "chreatures-population-campaign-plan-v2"
 ASSIGNMENT_FORMAT = "chreatures-population-evaluation-assignments-v1"
-DESCRIPTOR_RECIPE = "physical-population-descriptor-v2"
-QUALITY_RECIPE = "finite-life-quality-v2"
-SPATIAL_CELL_SCALE = 256.0
-
-
-def file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(8 << 20), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
-def value_sha256(value: Any) -> str:
-    return hashlib.sha256(canonical_bytes(value)).hexdigest()
-
-
-def valid_sha(value: Any, name: str) -> str:
-    if (
-        not isinstance(value, str)
-        or len(value) != 64
-        or any(c not in "0123456789abcdef" for c in value)
-    ):
-        raise ValueError(f"{name} must be a lowercase SHA-256")
-    return value
-
-
 def atomic_json(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.tmp-{os.getpid()}")
@@ -80,30 +56,8 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def controller_identity(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
-    with np.load(path, allow_pickle=False) as archive:
-        metadata = json.loads(str(archive["metadata"]))
-    bank = metadata.get("population_adapters")
-    if (
-        metadata.get("format") != NATIVE_POPULATION_FORMAT
-        or metadata.get("version") != NATIVE_POPULATION_VERSION
-        or metadata.get("execution") != NATIVE_EXECUTION
-        or not isinstance(bank, dict)
-        or not isinstance(bank.get("count"), int)
-        or not isinstance(bank.get("rank"), int)
-    ):
-        raise ValueError("controller is not the current native population artifact")
-    valid_sha(bank.get("identity"), "population adapter bank")
-    artifact = {
-        "path": str(path.resolve()),
-        "file_sha256": file_sha256(path),
-        "artifact_sha256": valid_sha(
-            metadata.get("artifact_sha256"), "controller artifact"
-        ),
-        "population_adapter_bank_sha256": bank["identity"],
-        "population_adapter_count": bank["count"],
-        "population_adapter_rank": bank["rank"],
-    }
-    return artifact, metadata
+    artifact, metadata = resident_artifact_identity(path)
+    return {"path": str(path.resolve()), **artifact}, metadata
 
 
 def init_command(args: argparse.Namespace) -> None:
@@ -111,81 +65,16 @@ def init_command(args: argparse.Namespace) -> None:
     if destination.exists() and any(destination.iterdir()):
         raise SystemExit("campaign output must be absent or empty")
     profile_raw = load_json(args.profile)
-    profile = EmbodiedTrainingProfile.from_value(profile_raw)
-    controller, metadata = controller_identity(args.controller)
+    profile = EmbodiedTrainingProfile.from_value(
+        profile_raw, locators=profile_raw.get("locators")
+    )
+    controller, _metadata = controller_identity(args.controller)
     population_response = response_bank_identity(args.population_response_artifact)
-    sources = profile.component("sources")
-    developmental_base = valid_sha(
-        sources["biosphere_birth"]["sha256"], "biosphere birth"
-    )
-    graph_sha = valid_sha(
-        metadata["training_identity"]["graph_sha256"], "training graph"
-    )
-    port_spec_sha = valid_sha(
-        metadata["training_identity"]["port_spec_sha256"], "training ports"
-    )
-    interface_sha = value_sha256(organism_identity())
-    if metadata.get("organism_interface") != organism_identity():
-        raise ValueError("controller organism interface differs")
     variants = profile.component("family")["variants"]
-    epochs = {int(item["environment_record"]["epoch"]) for item in variants}
-    if len(epochs) != 1:
-        raise ValueError("campaign environments span archive epochs")
-    specs, founder = current_parameter_recipe(
-        policy_adapter_count=controller["population_adapter_count"],
-        heritable_policy_adapter_rows=False,
+    search_config, _variation_receipt, probe_panel = current_search_contract(
+        profile, controller
     )
-    variation_receipt = {
-        "operator": "bounded-genome-variation-v3",
-        "parameters": specs,
-        "policy_adapter_selection": "fixed-row-zero-v1",
-    }
-    probe_panel = {
-        "format": "chreatures-population-probe-panel-v1",
-        "controller_file_sha256": controller["file_sha256"],
-        "action_mode": "sample",
-        "fine_tuning": False,
-    }
-    search_config = {
-        "graph_sha256": graph_sha,
-        "port_spec_sha256": port_spec_sha,
-        "base_controller_sha256": controller["file_sha256"],
-        "developmental_base_sha256": developmental_base,
-        "population_adapter_bank_sha256": controller["population_adapter_bank_sha256"],
-        "organism_interface_sha256": interface_sha,
-        "policy_adapter_count": controller["population_adapter_count"],
-        "policy_adapter_rank": controller["population_adapter_rank"],
-        "parameter_specs": specs,
-        "founder_values": founder,
-        "descriptor_axes": [
-            {"component": "mean_action_thrust", "low": -1.0, "high": 1.0, "bins": 8},
-            {"component": "spatial_coverage", "low": 0.0, "high": 1.0, "bins": 8},
-            {"component": "elevation_fraction", "low": 0.0, "high": 1.0, "bins": 6},
-            {"component": "signal_activity_rate", "low": 0.0, "high": 2.0, "bins": 6},
-            {"component": "allocated_mass_rate", "low": 0.0, "high": 0.02, "bins": 6},
-        ],
-        "quality_terms": [
-            {"component": "mean_energy", "scale": 1.0, "weight": 0.5, "direction": 1.0},
-            {
-                "component": "energy_delta",
-                "scale": 1.0,
-                "weight": 0.3,
-                "direction": 1.0,
-            },
-            {
-                "component": "mean_effort",
-                "scale": 1.0,
-                "weight": 0.2,
-                "direction": -1.0,
-            },
-        ],
-        "archive_members_per_cell": 4,
-        "variation_recipe_sha256": value_sha256(variation_receipt),
-        "environment_probe_panel_sha256": value_sha256(probe_panel),
-        "environment_epoch": epochs.pop(),
-        "environment_novelty_weight": 0.25,
-        "environment_cost_weight": 0.10,
-    }
+    interface_sha = search_config["organism_interface_sha256"]
     destination.parent.mkdir(parents=True, exist_ok=True)
     root = destination.with_name(f".{destination.name}.init-{os.getpid()}")
     root.mkdir()

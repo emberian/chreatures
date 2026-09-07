@@ -1,5 +1,10 @@
 # Ecological specialization: quiescent handoff
 
+**Historical shutdown record.** Development resumed on 7 September. The joined
+physical run and native v8 continuation are now complete; follow the
+[current wave](ECOLOGICAL_SPECIALIZATION_WAVE.md) for the resumed work. Statements
+below describe the earlier shutdown, including work that has since landed.
+
 The user requested winding toward quiescence after implementation commit
 `ad90191d76b12e0db299ccedf98e62b302f593c0` was pushed. No new full-neural world,
 655,360-transition collection, or AMD refit was launched. Resume deliberately
