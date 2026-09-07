@@ -50,6 +50,9 @@ BODY_STATE_FIELDS = {
 }
 PERIPHERAL_SHAPE = (8, 32, 4)
 FOVEAL_SHAPE = (24, 32, 4)
+ACQUIRED_LOCAL_CANDIDATES = 4
+ACQUIRED_RECALLED_CANDIDATES = 4
+ACQUIRED_SUFFIX_SLOTS = 32
 EVENT_KINDS = (
     "research_continuation",
     "root-material-acquisition",
@@ -344,7 +347,7 @@ def acquired_action_summary(value: Any, action_count: int) -> dict[str, Any]:
         return optional_summary(None, "acquired-action candidate summary")
     if not isinstance(value, Mapping):
         raise ValueError("acquired-action candidate summary must be an object")
-    count = 8
+    count = ACQUIRED_LOCAL_CANDIDATES + ACQUIRED_RECALLED_CANDIDATES
     arrays = {}
     for key, convert in (
         ("available", bool),
@@ -360,16 +363,51 @@ def acquired_action_summary(value: Any, action_count: int) -> dict[str, Any]:
         source = value.get(key)
         if not isinstance(source, list) or len(source) != count:
             raise ValueError(f"acquired-action {key} must contain eight candidates")
-        if key in {"slot", "generation", "phase", "length_ticks", "support"} and any(
-            isinstance(item, bool)
-            or not isinstance(item, (int, float))
-            or not math.isfinite(item)
-            or item != int(item)
-            or item < 0
-            for item in source
+        if key in {"available", "recalled"} and any(
+            not isinstance(item, bool) for item in source
         ):
-            raise ValueError(f"acquired-action {key} must contain nonnegative integers")
+            raise ValueError(f"acquired-action {key} must contain booleans")
+        if key in {"slot", "generation", "phase", "length_ticks", "support"} and any(
+            isinstance(item, bool) or not isinstance(item, int) for item in source
+        ):
+            raise ValueError(f"acquired-action {key} must contain integers")
         arrays[key] = [convert(item) for item in source]
+    for candidate in range(count):
+        available = arrays["available"][candidate]
+        recalled = arrays["recalled"][candidate]
+        slot = arrays["slot"][candidate]
+        generation = arrays["generation"][candidate]
+        phase = arrays["phase"][candidate]
+        length = arrays["length_ticks"][candidate]
+        support = arrays["support"][candidate]
+        if candidate < ACQUIRED_LOCAL_CANDIDATES:
+            if not available or recalled:
+                raise ValueError(
+                    "acquired-action local candidates must be available and not recalled"
+                )
+        elif available != recalled:
+            raise ValueError(
+                "acquired-action recalled candidate availability differs from recall status"
+            )
+        if not recalled:
+            if (slot, generation, phase, length, support) != (-1, 0, 0, 0, 0):
+                raise ValueError(
+                    "acquired-action non-recalled candidates must carry the native "
+                    "(-1, 0, 0, 0, 0) suffix sentinel"
+                )
+            continue
+        if not 0 <= slot < ACQUIRED_SUFFIX_SLOTS:
+            raise ValueError("acquired-action recalled suffix slot is outside native storage")
+        if generation <= 0:
+            raise ValueError("acquired-action recalled suffix generation must be positive")
+        if not 0 <= phase < 8 or not 1 <= length <= 8:
+            raise ValueError("acquired-action recalled suffix cursor is outside native bounds")
+        if not 4 <= phase + length <= 8:
+            raise ValueError(
+                "acquired-action recalled suffix phase and remaining length differ"
+            )
+        if support <= 0:
+            raise ValueError("acquired-action recalled suffix support must be positive")
     first_actions = value.get("first_action")
     if not isinstance(first_actions, list) or len(first_actions) != count:
         raise ValueError("acquired-action first actions must contain eight candidates")
@@ -384,15 +422,15 @@ def acquired_action_summary(value: Any, action_count: int) -> dict[str, Any]:
         item = value.get(key)
         if (
             isinstance(item, bool)
-            or not isinstance(item, (int, float))
-            or not math.isfinite(item)
-            or item != int(item)
+            or not isinstance(item, int)
             or item < 0
         ):
             raise ValueError(f"acquired-action {key} must be a nonnegative integer")
         arrays[key] = int(item)
     if arrays["selected_candidate"] >= count:
         raise ValueError("acquired-action selected candidate is outside the candidate set")
+    if arrays["occupied_slots"] > ACQUIRED_SUFFIX_SLOTS:
+        raise ValueError("acquired-action occupied slots exceed native storage")
     components = value.get("empirical_component_weights")
     arrays["empirical_component_weights"] = vector(
         components, 3, "acquired-action empirical component weights"
