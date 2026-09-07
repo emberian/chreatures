@@ -30,7 +30,7 @@ from research.sensorimotor_skills.cns_adapter import (
 )
 
 
-FORMAT = "chreatures-cns-torch-parity-fixture-v1"
+FORMAT = "chreatures-cns-torch-parity-fixture-v2"
 
 
 def arguments() -> argparse.Namespace:

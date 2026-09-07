@@ -1,0 +1,11 @@
+{
+  "name": "@chreatures/webgpu-probe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "probe:cns": "node probe-cns-webgpu.mjs"
+  },
+  "devDependencies": {
+    "webgpu": "0.6.0"
+  }
+}

@@ -32,8 +32,8 @@ from research.sensorimotor_skills.cns_adapter import (
 )
 
 
-RUN_FORMAT = "chreatures-cns-optic-pretraining-v1"
-GENERATOR_FORMAT = "chreatures-procedural-optic-sequences-v1"
+RUN_FORMAT = "chreatures-cns-sensory-pretraining-v2"
+GENERATOR_FORMAT = "chreatures-procedural-sensory-sequences-v2"
 
 
 def arguments() -> argparse.Namespace:
@@ -186,7 +186,14 @@ class ProceduralOpticSequences:
             clean_optic
             + 0.018 * torch.randn(clean_optic.shape, generator=noise_rng, device=self.device)
         ).clamp(0.0, 1.0)
-        body = torch.zeros((t, b, BODY_CHANNELS), device=self.device)
+        # Independent procedural body-local channels train the coupled afferent path.
+        # These are calibration signals, not physically collected physiology.
+        body_phase = parameter(-np.pi, np.pi, BODY_CHANNELS)
+        body_frequency = parameter(0.025, 0.18, BODY_CHANNELS)
+        body_amplitude = parameter(0.1, 0.7, BODY_CHANNELS)
+        body = body_amplitude[None] * torch.sin(
+            tick * body_frequency[None] + body_phase[None]
+        )
         reset = torch.zeros((t, b), dtype=torch.bool, device=self.device)
         reset[0] = True
         next_valid = torch.ones((t, b), dtype=torch.bool, device=self.device)
@@ -223,7 +230,10 @@ def compute_loss(
         packet["next_valid"],
         model.body_mean,
         model.body_scale,
-        body_coefficient=0.02,
+        body_coefficient=0.1,
+        variance_coefficient=0.0,
+        covariance_coefficient=0.0,
+        forecast_horizon=4,
     )
     return loss, metrics, latent
 
@@ -256,8 +266,8 @@ def packet_identity(packet: dict[str, torch.Tensor]) -> dict[str, str]:
 
 def main() -> None:
     args = arguments()
-    if args.updates < 1 or args.batch_size < 1 or args.ticks < 2:
-        raise ValueError("updates/batch-size must be positive and ticks at least two")
+    if args.updates < 1 or args.batch_size < 1 or args.ticks < 5:
+        raise ValueError("updates/batch-size must be positive and ticks at least five")
     if not 1 <= args.checkpoint_ticks <= args.ticks:
         raise ValueError("checkpoint tick group differs")
     args.output = args.output.expanduser().resolve()
@@ -265,7 +275,7 @@ def main() -> None:
     log_path = args.output / "metrics.jsonl"
     status_path = args.output / "status.json"
     initial_path = args.output / "cns-adapter-initialized-untrained.npz"
-    fitted_path = args.output / "cns-adapter-optic-pretrained.npz"
+    fitted_path = args.output / "cns-adapter-sensory-pretrained.npz"
     checkpoint_path = args.output / f"training-checkpoint-update{args.updates}.pt"
 
     if args.device.startswith("cuda") and not torch.cuda.is_available():
@@ -302,10 +312,10 @@ def main() -> None:
         "static_identity": static.identity,
         "source_sha256": sources,
         "objective": {
-            "description": "current and action-conditioned next clean sensory prediction through the recurrent full MaleCNS latent",
-            "training_stimuli": "independent procedural moving color bars, checker fields, and occluders",
+            "description": "current and action-conditioned four-tick clean sensory prediction through the recurrent full MaleCNS V2 latent",
+            "training_stimuli": "independent procedural moving color bars, checker fields, occluders and body-local oscillations",
             "raw_target_use": "training-only discarded decoders",
-            "body": "fixed zero in this optic-focused phase; no body competence claim",
+            "body": "independent finite 43-channel procedural calibration; not physically collected physiology or competence",
             "bad_apple_probe_in_training": False,
             "controller_inputs": "CNS latent only; no raw target or generator coordinate",
         },
@@ -344,16 +354,17 @@ def main() -> None:
                 "optic_spectral_logits": float(model.optic_spectral_logits.grad.norm()),
                 "optic_gain_raw": float(model.optic_gain_raw.grad.norm()),
                 "optic_bias": float(model.optic_bias.grad.norm()),
-                "dynamics_bias_raw": float(model.dynamics_bias_raw.grad.norm()),
+                "dynamics_baseline_raw": float(model.dynamics_baseline_raw.grad.norm()),
                 "dynamics_tau_raw": float(model.dynamics_tau_raw.grad.norm()),
-                "dynamics_source_raw": float(model.dynamics_source_raw.grad.norm()),
-                "dynamics_target_raw": float(model.dynamics_target_raw.grad.norm()),
-                "dynamics_excitability_raw": float(model.dynamics_excitability_raw.grad.norm()),
-                "readout_weight": float(model.readout.weight.grad.norm()),
+                "dynamics_recurrent_gain_raw": float(model.dynamics_recurrent_gain_raw.grad.norm()),
+                "dynamics_adaptation_gain_raw": float(model.dynamics_adaptation_gain_raw.grad.norm()),
+                "dynamics_adaptation_tau_raw": float(model.dynamics_adaptation_tau_raw.grad.norm()),
+                "readout_projection_weight": float(model.readout_projection.weight.grad.norm()),
+                "readout_output_weight": float(model.readout_output.weight.grad.norm()),
             }
             optimizer.step()
             with torch.no_grad():
-                model.readout.weight.mul_(model.readout_mask.unsqueeze(0))
+                model.readout_projection.weight.mul_(model.readout_mask.unsqueeze(0))
             elapsed = time.perf_counter() - started
             record = {
                 "update": update,
@@ -386,7 +397,7 @@ def main() -> None:
         training_status="trained",
         provenance={
             **configuration["objective"],
-            "qualification": "optic procedural sensory pretraining only; initialized controller; no motor or feeding competence claim",
+            "qualification": "procedural optic/body sensory pretraining only; initialized controller; no motor, feeding or physiological competence claim",
             "seed": args.seed,
             "heldout_seed": args.heldout_seed,
             "updates": args.updates,

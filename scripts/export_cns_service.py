@@ -13,7 +13,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from chreatures.cns_adapter_contract import (
-    ARRAY_SPECS, PARAMETER_ORDER, service_identity, write_service_artifact,
+    ARRAY_SPECS, PARAMETER_ORDER, service_identity, write_service_artifact, neutral_afferent_drive,
 )
 from chreatures.malecns import MaleCNSGraph
 
@@ -61,13 +61,14 @@ def assemble(graph, atlas_path, parameter_path):
             arrays[name] = np.asarray(parameters[name])
         parameter_metadata = json.loads(str(parameters["metadata"])) if "metadata" in parameters.files else {}
     if (
-        parameter_metadata.get("format") != "chreatures-cns-adapter-parameters-v1"
-        or parameter_metadata.get("service_format") != "chreatures-cns-service-v1"
+        parameter_metadata.get("format") != "chreatures-cns-adapter-parameters-v2"
+        or parameter_metadata.get("service_format") != "chreatures-cns-service-v2"
         or parameter_metadata.get("parameter_order") != list(PARAMETER_ORDER)
         or parameter_metadata.get("static_identity", {}).get("graph_dataset_sha256") != graph.hash
         or parameter_metadata.get("static_identity", {}).get("atlas_file_sha256") != sha(atlas_path)
     ):
         raise ValueError("parameter provenance differs from the actual graph/atlas/interface")
+    arrays["afferent.neutral_drive"] = neutral_afferent_drive(arrays)
     for name, dtype, shape in ARRAY_SPECS:
         value = arrays[name]
         if value.shape != shape or value.dtype != np.dtype(dtype):

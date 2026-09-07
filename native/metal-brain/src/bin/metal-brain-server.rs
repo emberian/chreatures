@@ -24,10 +24,10 @@ use std::{
 };
 
 const SHADER: &str = include_str!("../brain.metal");
-const ARTIFACT_MAGIC: &[u8; 8] = b"CHCNS1\0\0";
-const SNAPSHOT_MAGIC: &[u8; 9] = b"CNSSTATE1";
-const FORMAT: &str = "chreatures-cns-service-v1";
-const SNAPSHOT_FORMAT: &str = "chreatures-cns-state-v1";
+const ARTIFACT_MAGIC: &[u8; 8] = b"CHCNS2\0\0";
+const SNAPSHOT_MAGIC: &[u8; 9] = b"CNSSTATE2";
+const FORMAT: &str = "chreatures-cns-service-v2";
+const SNAPSHOT_FORMAT: &str = "chreatures-cns-state-v2";
 const N: usize = 165_122;
 const E: usize = 25_563_197;
 const SITES: usize = 1_771;
@@ -40,8 +40,9 @@ const BODY_INPUTS: usize = 43;
 const BODY_HIDDEN: usize = 128;
 const INPUTS: usize = 5_356;
 const LATENT: usize = 512;
+const READOUT_RANK: usize = 64;
 const MAX_CAPACITY: usize = 32;
-const PARAMETER_ORDER: [&str; 16] = [
+const PARAMETER_ORDER: [&str; 17] = [
     "optic.spectral_logits",
     "optic.gain_raw",
     "optic.bias",
@@ -51,15 +52,16 @@ const PARAMETER_ORDER: [&str; 16] = [
     "body.input.bias",
     "body.output.weight",
     "body.output.bias",
-    "dynamics.bias_raw",
+    "dynamics.baseline_raw",
+    "dynamics.recurrent_gain_raw",
     "dynamics.tau_raw",
-    "dynamics.source_raw",
-    "dynamics.target_raw",
-    "dynamics.excitability_raw",
-    "readout.weight",
-    "readout.bias",
+    "dynamics.adaptation_gain_raw",
+    "dynamics.adaptation_tau_raw",
+    "readout.projection.weight",
+    "readout.output.weight",
+    "readout.output.bias",
 ];
-const ARRAY_NAMES: [&str; 26] = [
+const ARRAY_NAMES: [&str; 28] = [
     "graph.crow",
     "graph.col",
     "graph.weight",
@@ -79,13 +81,15 @@ const ARRAY_NAMES: [&str; 26] = [
     "body.input.bias",
     "body.output.weight",
     "body.output.bias",
-    "dynamics.bias_raw",
+    "dynamics.baseline_raw",
+    "dynamics.recurrent_gain_raw",
     "dynamics.tau_raw",
-    "dynamics.source_raw",
-    "dynamics.target_raw",
-    "dynamics.excitability_raw",
-    "readout.weight",
-    "readout.bias",
+    "dynamics.adaptation_gain_raw",
+    "dynamics.adaptation_tau_raw",
+    "afferent.neutral_drive",
+    "readout.projection.weight",
+    "readout.output.weight",
+    "readout.output.bias",
 ];
 
 #[repr(C)]
@@ -113,6 +117,7 @@ struct Dimensions {
     body_hidden: usize,
     inputs: usize,
     latent: usize,
+    readout_rank: usize,
 }
 
 fn dimensions() -> Dimensions {
@@ -129,6 +134,7 @@ fn dimensions() -> Dimensions {
         body_hidden: BODY_HIDDEN,
         inputs: INPUTS,
         latent: LATENT,
+        readout_rank: READOUT_RANK,
     }
 }
 
@@ -416,7 +422,7 @@ fn validate_physical_state(
             let index = row * tiles + slot / 4;
             let lane = slot % 4;
             if !(0.0..=1.0).contains(&rate[index][lane])
-                || !(0.0..=1.0).contains(&adapt[index][lane])
+                || !(-1.0..=1.0).contains(&adapt[index][lane])
                 || !(0.65..=1.0).contains(&support[index][lane])
             {
                 return Err("snapshot CNS state is nonfinite or outside physical bounds".into());
@@ -450,9 +456,11 @@ struct Engine {
     _body_output_weight: Buffer,
     body_output_bias: Buffer,
     dynamics: [Buffer; 5],
-    readout_weight: Buffer,
-    readout_stride: Buffer,
-    readout_bias: Buffer,
+    neutral_drive: Buffer,
+    readout_projection_weight: Buffer,
+    readout_projection_stride: Buffer,
+    readout_output_weight: Buffer,
+    readout_output_bias: Buffer,
     sensory: Buffer,
     body_normalized: Buffer,
     body_hidden_pre: Buffer,
@@ -462,7 +470,7 @@ struct Engine {
     adapt: Buffer,
     support: Buffer,
     drive: Buffer,
-    latent_pre: Buffer,
+    readout_hidden: Buffer,
     latent: Buffer,
     physiology_partial: Buffer,
     physiology: Buffer,
@@ -475,7 +483,8 @@ struct Engine {
     k_body_scatter: ComputePipelineState,
     k_rec: ComputePipelineState,
     k_gather: ComputePipelineState,
-    k_readout: ComputePipelineState,
+    k_projection: ComputePipelineState,
+    k_readout_output: ComputePipelineState,
     k_phys: ComputePipelineState,
     k_phys_final: ComputePipelineState,
 }
@@ -490,7 +499,7 @@ impl Engine {
         let mut magic = [0u8; 8];
         reader.read_exact(&mut magic)?;
         if &magic != ARTIFACT_MAGIC {
-            return Err("artifact header differs; only CHCNS1 is accepted".into());
+            return Err("artifact header differs; only CHCNS2 is accepted".into());
         }
         let mut length = [0u8; 4];
         reader.read_exact(&mut length)?;
@@ -528,17 +537,21 @@ impl Engine {
         let body_output_weight =
             reader.array::<f32>(&metadata, "body.output.weight", BODY_TARGETS * BODY_HIDDEN)?;
         let body_output_bias = reader.array::<f32>(&metadata, "body.output.bias", BODY_TARGETS)?;
-        let dynamics_bias_raw =
-            reader.array::<f32>(&metadata, "dynamics.bias_raw", NEURON_TYPES)?;
+        let dynamics_baseline_raw =
+            reader.array::<f32>(&metadata, "dynamics.baseline_raw", NEURON_TYPES)?;
+        let dynamics_recurrent_gain_raw =
+            reader.array::<f32>(&metadata, "dynamics.recurrent_gain_raw", NEURON_TYPES)?;
         let dynamics_tau_raw = reader.array::<f32>(&metadata, "dynamics.tau_raw", NEURON_TYPES)?;
-        let dynamics_source_raw =
-            reader.array::<f32>(&metadata, "dynamics.source_raw", NEURON_TYPES)?;
-        let dynamics_target_raw =
-            reader.array::<f32>(&metadata, "dynamics.target_raw", NEURON_TYPES)?;
-        let dynamics_excitability_raw =
-            reader.array::<f32>(&metadata, "dynamics.excitability_raw", NEURON_TYPES)?;
-        let mut readout_weight = reader.array::<f32>(&metadata, "readout.weight", LATENT * N)?;
-        let readout_bias = reader.array::<f32>(&metadata, "readout.bias", LATENT)?;
+        let dynamics_adaptation_gain_raw =
+            reader.array::<f32>(&metadata, "dynamics.adaptation_gain_raw", NEURON_TYPES)?;
+        let dynamics_adaptation_tau_raw =
+            reader.array::<f32>(&metadata, "dynamics.adaptation_tau_raw", NEURON_TYPES)?;
+        let neutral_drive = reader.array::<f32>(&metadata, "afferent.neutral_drive", N)?;
+        let mut readout_projection =
+            reader.array::<f32>(&metadata, "readout.projection.weight", READOUT_RANK * N)?;
+        let readout_output =
+            reader.array::<f32>(&metadata, "readout.output.weight", LATENT * READOUT_RANK)?;
+        let readout_output_bias = reader.array::<f32>(&metadata, "readout.output.bias", LATENT)?;
         let artifact_sha256 = reader.finish()?;
 
         if graph_crow.first() != Some(&0)
@@ -601,16 +614,24 @@ impl Engine {
             ("body.input.bias", body_input_bias.as_slice()),
             ("body.output.weight", body_output_weight.as_slice()),
             ("body.output.bias", body_output_bias.as_slice()),
-            ("dynamics.bias_raw", dynamics_bias_raw.as_slice()),
-            ("dynamics.tau_raw", dynamics_tau_raw.as_slice()),
-            ("dynamics.source_raw", dynamics_source_raw.as_slice()),
-            ("dynamics.target_raw", dynamics_target_raw.as_slice()),
+            ("dynamics.baseline_raw", dynamics_baseline_raw.as_slice()),
             (
-                "dynamics.excitability_raw",
-                dynamics_excitability_raw.as_slice(),
+                "dynamics.recurrent_gain_raw",
+                dynamics_recurrent_gain_raw.as_slice(),
             ),
-            ("readout.weight", readout_weight.as_slice()),
-            ("readout.bias", readout_bias.as_slice()),
+            ("dynamics.tau_raw", dynamics_tau_raw.as_slice()),
+            (
+                "dynamics.adaptation_gain_raw",
+                dynamics_adaptation_gain_raw.as_slice(),
+            ),
+            (
+                "dynamics.adaptation_tau_raw",
+                dynamics_adaptation_tau_raw.as_slice(),
+            ),
+            ("afferent.neutral_drive", neutral_drive.as_slice()),
+            ("readout.projection.weight", readout_projection.as_slice()),
+            ("readout.output.weight", readout_output.as_slice()),
+            ("readout.output.bias", readout_output_bias.as_slice()),
         ] {
             all_finite(name, values)?;
         }
@@ -625,10 +646,20 @@ impl Engine {
         if sha256_hex(&readout_mask) != metadata.readout_mask_sha256 {
             return Err("readout_mask_sha256 differs from the enforced afferent mask".into());
         }
-        for latent_row in 0..LATENT {
-            let base = latent_row * N;
+        if neutral_drive.iter().enumerate().any(|(row, &value)| {
+            !(0.0..=1.0).contains(&value) || (readout_mask[row] != 0 && value != 0.0)
+        }) {
+            return Err("afferent.neutral_drive violates the afferent-only [0,1] contract".into());
+        }
+        if receptor_ptr.windows(2).enumerate().any(|(receptor, span)| {
+            span[0] == span[1] && neutral_drive[receptor_rows[receptor] as usize] != 0.0
+        }) {
+            return Err("unsupported receptors must have zero neutral drive".into());
+        }
+        for projection_row in 0..READOUT_RANK {
+            let base = projection_row * N;
             for &afferent in receptor_rows.iter().chain(body_rows.iter()) {
-                readout_weight[base + afferent as usize] = 0.0;
+                readout_projection[base + afferent as usize] = 0.0;
             }
         }
 
@@ -648,11 +679,11 @@ impl Engine {
                 .map(|&ty| transform(raw[ty as usize]))
                 .collect()
         };
-        let dyn_bias = expand(&dynamics_bias_raw, |x| 0.5 * x.tanh());
-        let dyn_tau = expand(&dynamics_tau_raw, |x| 0.025 + 0.475 * sigmoid(x));
-        let dyn_source = expand(&dynamics_source_raw, |x| 0.5 + sigmoid(x));
-        let dyn_target = expand(&dynamics_target_raw, |x| 0.5 + sigmoid(x));
-        let dyn_excitability = expand(&dynamics_excitability_raw, |x| 0.5 + sigmoid(x));
+        let dyn_baseline = expand(&dynamics_baseline_raw, |x| 0.05 + 0.4 * sigmoid(x));
+        let dyn_recurrent_gain = expand(&dynamics_recurrent_gain_raw, |x| 0.5 + 1.5 * sigmoid(x));
+        let dyn_tau = expand(&dynamics_tau_raw, |x| 0.02 + 0.23 * sigmoid(x));
+        let dyn_adaptation_gain = expand(&dynamics_adaptation_gain_raw, |x| 0.5 * sigmoid(x));
+        let dyn_adaptation_tau = expand(&dynamics_adaptation_tau_raw, |x| 0.25 + 4.75 * sigmoid(x));
 
         let device = Device::system_default().ok_or_else(|| "no Metal device".to_string())?;
         let library = device
@@ -668,7 +699,13 @@ impl Engine {
         };
 
         let z = vec![[0f32; 4]; N * tiles];
+        let mut initial_rate = vec![[0f32; 4]; N * tiles];
         let mut ones = vec![[1f32; 4]; N * tiles];
+        for row in 0..N {
+            for slot in 0..capacity {
+                initial_rate[row * tiles + slot / 4][slot % 4] = dyn_baseline[row];
+            }
+        }
         if capacity % 4 != 0 {
             for row in 0..N {
                 for lane in capacity % 4..4 {
@@ -706,27 +743,31 @@ impl Engine {
         let body_output_weight_buffer = buf(&device, &body_output_weight);
         let body_output_bias_buffer = buf(&device, &body_output_bias);
         let dynamics = [
-            buf(&device, &dyn_bias),
+            buf(&device, &dyn_baseline),
+            buf(&device, &dyn_recurrent_gain),
             buf(&device, &dyn_tau),
-            buf(&device, &dyn_source),
-            buf(&device, &dyn_target),
-            buf(&device, &dyn_excitability),
+            buf(&device, &dyn_adaptation_gain),
+            buf(&device, &dyn_adaptation_tau),
         ];
-        let readout_row_bytes = recommended_row_bytes(N);
-        let readout_weight_padded = pad_matrix_rows(&readout_weight, LATENT, N, readout_row_bytes)?;
-        let readout_weight_buffer = buf(&device, &readout_weight_padded);
-        let readout_stride_buffer = buf(&device, &[(readout_row_bytes / size_of::<f32>()) as u32]);
-        let readout_bias_buffer = buf(&device, &readout_bias);
+        let neutral_drive_buffer = buf(&device, &neutral_drive);
+        let projection_row_bytes = recommended_row_bytes(N);
+        let projection_weight_padded =
+            pad_matrix_rows(&readout_projection, READOUT_RANK, N, projection_row_bytes)?;
+        let projection_weight_buffer = buf(&device, &projection_weight_padded);
+        let projection_stride_buffer =
+            buf(&device, &[(projection_row_bytes / size_of::<f32>()) as u32]);
+        let readout_output_weight_buffer = buf(&device, &readout_output);
+        let readout_output_bias_buffer = buf(&device, &readout_output_bias);
         let sensory = zeros(&device, INPUTS * tiles);
         let body_normalized = zeros(&device, BODY_INPUTS * tiles);
         let body_hidden_pre = zeros(&device, BODY_HIDDEN * tiles);
         let body_hidden = zeros(&device, BODY_HIDDEN * tiles);
         let body_current_pre = zeros(&device, BODY_TARGETS * tiles);
-        let rate = [buf(&device, &z), buf(&device, &z)];
+        let rate = [buf(&device, &initial_rate), buf(&device, &initial_rate)];
         let adapt = buf(&device, &z);
         let support = buf(&device, &ones);
         let drive = zeros(&device, N * tiles);
-        let latent_pre = zeros(&device, LATENT * tiles);
+        let readout_hidden = zeros(&device, READOUT_RANK * tiles);
         let latent = zeros(&device, LATENT * tiles);
         let physiology_partial = zeros(&device, N.div_ceil(256) * tiles * 3);
         let physiology = zeros(&device, 3 * tiles);
@@ -781,9 +822,11 @@ impl Engine {
             _body_output_weight: body_output_weight_buffer,
             body_output_bias: body_output_bias_buffer,
             dynamics,
-            readout_weight: readout_weight_buffer,
-            readout_stride: readout_stride_buffer,
-            readout_bias: readout_bias_buffer,
+            neutral_drive: neutral_drive_buffer,
+            readout_projection_weight: projection_weight_buffer,
+            readout_projection_stride: projection_stride_buffer,
+            readout_output_weight: readout_output_weight_buffer,
+            readout_output_bias: readout_output_bias_buffer,
             sensory,
             body_normalized,
             body_hidden_pre,
@@ -793,7 +836,7 @@ impl Engine {
             adapt,
             support,
             drive,
-            latent_pre,
+            readout_hidden,
             latent,
             physiology_partial,
             physiology,
@@ -810,7 +853,8 @@ impl Engine {
                 "csr_rate"
             })?,
             k_gather: pipeline("gather_rates")?,
-            k_readout: pipeline("dense_readout")?,
+            k_projection: pipeline("dense_projection")?,
+            k_readout_output: pipeline("dense_readout_output")?,
             k_phys: pipeline("physiology_partials")?,
             k_phys_final: pipeline("physiology_final")?,
             device,
@@ -912,7 +956,6 @@ impl Engine {
         let p0 = buf(&self.device, &[self.params(gpu_dt, mask, false)]);
         let p1 = buf(&self.device, &[self.params(gpu_dt, mask, true)]);
         let hidden_rows = buf(&self.device, &[BODY_HIDDEN as u32]);
-        let latent_rows = buf(&self.device, &[LATENT as u32]);
         let cb_afferents = self.queue.new_command_buffer();
 
         self.encode_compute(
@@ -953,6 +996,7 @@ impl Engine {
             enc.set_buffer(8, Some(&p0), 0);
             enc.set_buffer(9, Some(&self.optic_bias), 0);
             enc.set_buffer(10, Some(&self.drive), 0);
+            enc.set_buffer(11, Some(&self.neutral_drive), 0);
             Self::grid(enc, &self.k_optic, RECEPTORS * self.tiles);
             enc.end_encoding();
         }
@@ -982,6 +1026,8 @@ impl Engine {
                 &self.body_output_bias,
                 &self.body_rows,
                 &self.drive,
+                &self.body_normalized,
+                &self.neutral_drive,
             ],
             &p0,
             BODY_TARGETS * self.tiles,
@@ -1010,6 +1056,7 @@ impl Engine {
             for (slot, parameter) in self.dynamics.iter().enumerate() {
                 enc.set_buffer(9 + slot as u64, Some(parameter), 0);
             }
+            enc.set_buffer(14, Some(&self.neutral_drive), 0);
             if self.simd_rows {
                 enc.dispatch_threads(
                     MTLSize::new((N * self.tiles * 32) as u64, 1, 1),
@@ -1025,29 +1072,34 @@ impl Engine {
             let enc = cb_readout.new_compute_command_encoder();
             bind(
                 enc,
-                &self.k_readout,
-                &[&self.readout_weight, &self.rate[0], &self.latent_pre],
+                &self.k_projection,
+                &[
+                    &self.readout_projection_weight,
+                    &self.rate[0],
+                    &self.dynamics[0],
+                    &self.readout_hidden,
+                ],
             );
             enc.set_buffer(8, Some(&p1), 0);
-            enc.set_buffer(9, Some(&self.readout_stride), 0);
+            enc.set_buffer(9, Some(&self.readout_projection_stride), 0);
             enc.dispatch_thread_groups(
-                MTLSize::new((LATENT * self.tiles) as u64, 1, 1),
+                MTLSize::new((READOUT_RANK * self.tiles) as u64, 1, 1),
                 MTLSize::new(256, 1, 1),
             );
             enc.end_encoding();
         }
-        {
-            let enc = cb_readout.new_compute_command_encoder();
-            bind(
-                enc,
-                &self.k_tanh_bias,
-                &[&self.latent_pre, &self.readout_bias, &self.latent],
-            );
-            enc.set_buffer(8, Some(&p1), 0);
-            enc.set_buffer(9, Some(&latent_rows), 0);
-            Self::grid(enc, &self.k_tanh_bias, LATENT * self.tiles);
-            enc.end_encoding();
-        }
+        self.encode_compute(
+            cb_readout,
+            &self.k_readout_output,
+            &[
+                &self.readout_output_weight,
+                &self.readout_hidden,
+                &self.readout_output_bias,
+                &self.latent,
+            ],
+            &p1,
+            LATENT * self.tiles,
+        );
         let cb_observer = self.queue.new_command_buffer();
         if let (Some(indices), Some(selected)) = (&selected_index_buffer, &selected_buffer) {
             self.encode_compute(
@@ -1143,6 +1195,7 @@ impl Engine {
         if mask == 0 || mask & !self.valid_mask() != 0 {
             return Err("reset mask must select slots within capacity".into());
         }
+        let baseline = copy::<f32>(&self.dynamics[0], N);
         unsafe {
             let rate0 = self.rate[0].contents() as *mut [f32; 4];
             let rate1 = self.rate[1].contents() as *mut [f32; 4];
@@ -1152,8 +1205,8 @@ impl Engine {
                 for slot in 0..self.capacity {
                     if mask & (1u32 << slot) != 0 {
                         let index = row * self.tiles + slot / 4;
-                        (*rate0.add(index))[slot % 4] = 0.0;
-                        (*rate1.add(index))[slot % 4] = 0.0;
+                        (*rate0.add(index))[slot % 4] = baseline[row];
+                        (*rate1.add(index))[slot % 4] = baseline[row];
                         (*adapt.add(index))[slot % 4] = 0.0;
                         (*support.add(index))[slot % 4] = 1.0;
                     }
@@ -1193,6 +1246,9 @@ impl Engine {
             "kernel": if self.simd_rows { "simd" } else { "row" },
             "capacity": self.capacity,
             "storage_tiles": self.tiles,
+            "dynamics": "operating-point-relative-v2",
+            "readout_rank": READOUT_RANK,
+            "snapshot_format": SNAPSHOT_FORMAT,
             "sensory_order": "optic_site_major_rgb_then_body43",
             "training_status": self.metadata.training_status,
             "provenance": self.metadata.provenance,
@@ -1276,7 +1332,7 @@ impl Engine {
         file.read_exact(&mut magic)
             .map_err(|e| format!("read snapshot header: {e}"))?;
         if &magic != SNAPSHOT_MAGIC {
-            return Err("snapshot header differs; only CNSSTATE1 is accepted".into());
+            return Err("snapshot header differs; only CNSSTATE2 is accepted".into());
         }
         let mut length = [0u8; 8];
         file.read_exact(&mut length)

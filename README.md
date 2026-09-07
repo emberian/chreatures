@@ -8,6 +8,13 @@ Inspired by *Creatures* and the changing societies and environments of *Children
 
 ## The current build
 
+**A live habitat now runs inside the tab.** [Start three new research lives](https://emberian.github.io/chreatures/live.html): actual MuJoCo articulated physics, Rust/Wasm sensation and private cognition, and WebGPU recurrence over the complete MaleCNS. Put Bad Apple on the physical screen, make a three-note signal, add a movable object, or save the entire interacting world. The model download is about 124 MB; a WebGPU-capable browser is required. The movie remains a separate historical recording.
+
+The new V2 model has a positive operating point, signed adaptation and a learned rank-64 CNS readout. In a controlled held-out temporal experiment, its visual-change prediction achieved skills of .973/.919 against persistence; removing the graph edges reduced those values to approximately zero. These are sensory-processing results, not trained movement or fly physiology. Actual native GAM fits characterize a 27-setting gain/timing/adaptation sweep, including a subsequently executed parameter prediction. [Equations, training and controls](docs/development/CNS_DYNAMICS_V2.md).
+
+The complete three-body Wasm/WebGPU loop ran headlessly through Dawn/Metal on M2 Max at about 93 ms per physical tick. A full-life snapshot reproduced neural activity, physical motion and private memory exactly, including restored added geometry. That is an execution measurement, not a browser UI benchmark. The deployed motor controller is still initialized and untrained; the current CNS-only skill-learning path trains recurrent control, prediction, goals and suffix termination together. [Live architecture](docs/development/LIVE_CNS_WAVE.md) · [Browser physics and limits](docs/development/IN_TAB_PHYSICS.md).
+
+
 **September 7: the CNS is now the required sensory-to-control route.**
 The previous full graph really ran, but its controller also received raw vision
 and physiology. Those direct paths are removed from the current native resident.
@@ -24,7 +31,7 @@ Physical screens, occlusion and head movement change the actual retinal input.
 [Anatomy audit](docs/development/OPTIC_INPUT_ANATOMY_AUDIT.md) ·
 [Physical screen implementation](docs/development/BILATERAL_OPTIC_SCREEN.md).
 
-The first full-graph ROCm training run completed 128 updates and 32,768 resident
+The preceding V1 full-graph ROCm training run completed 128 updates and 32,768 resident
 steps. Optical latent responses increased, but held-out visual prediction error
 slightly worsened. Motor and memory controller weights remain initialized and
 untrained. This is working infrastructure for learning, not demonstrated visual

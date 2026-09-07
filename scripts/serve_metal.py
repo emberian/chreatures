@@ -189,7 +189,7 @@ def handler_type(state):
                     self.send_json(
                         200,
                         {
-                            "backend": "metal-cns-service-v1",
+                            "backend": "metal-cns-service-v2",
                             "next_seq": state.next_sequence,
                             "brain": state.brain.metadata(),
                             "service_incarnation": state.incarnation,
@@ -358,7 +358,7 @@ def handler_type(state):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--artifact", type=Path, required=True,
-                   help="Current CHCNS1 graph, afferent and learned-readout service artifact")
+                   help="Current CHCNS2 graph, afferent and learned-readout service artifact")
     p.add_argument("--binary", type=Path)
     p.add_argument("--capacity", type=int, default=8)
     p.add_argument("--snapshot-dir", type=Path, required=True)

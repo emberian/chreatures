@@ -156,7 +156,7 @@ def _load_resident(
     initialization = metadata.get("initialization", {})
     service_provenance = metadata.get("cns_service_provenance", {})
     if (
-        initialization.get("training_status") != "initialized-untrained"
+        initialization.get("training_status") not in {"initialized-untrained", "trained"}
         or initialization.get("competence_claim") is not None
         or service_provenance.get("training_status") not in {
             "initialized-untrained", "trained"

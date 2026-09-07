@@ -6,11 +6,6 @@ use crate::learned_sequence_control::{
 };
 use crate::motor_suffix::{CancellationReason, MotorSuffixMemory, ACTIONS, CONTEXT, MAX_HORIZON};
 use crate::{gemm_into, gru, linear, tanh_all, Gru, Linear};
-use numpy::{
-    ndarray::{Array1, Array2, Array3},
-    IntoPyArray, PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3, PyUntypedArrayMethods,
-};
-use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 use serde::{Deserialize, Serialize};
 
 const FORMAT: &str = "chreatures-cns-resident-native-v10";
@@ -235,9 +230,9 @@ struct PrivateSnapshot {
     acknowledged_goal: Vec<f32>,
 }
 
-#[pyclass(skip_from_py_object)]
+#[cfg_attr(feature = "python", pyo3::pyclass(skip_from_py_object))]
 #[derive(Clone)]
-pub(crate) struct DevelopmentalResidentCohort {
+pub struct DevelopmentalResidentCohort {
     batch: usize,
     sample: bool,
     research_training: bool,
@@ -906,241 +901,49 @@ impl DevelopmentalResidentCohort {
             acknowledged_goal: self.acknowledged_goal.clone(),
         }
     }
-
-    fn output<'py>(&self, py: Python<'py>, proposed: Vec<f32>) -> PyResult<Bound<'py, PyDict>> {
-        let out = PyDict::new(py);
-        out.set_item("format", FORMAT)?;
-        out.set_item(
-            "proposed_command",
-            Array2::from_shape_vec((self.batch, ACTIONS), proposed)
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "cns_recurrent_state",
-            Array2::from_shape_vec((self.batch, HIDDEN), self.state.clone())
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "latent_goal",
-            Array2::from_shape_vec((self.batch, GOAL), self.goal.clone())
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "current_cns_key",
-            Array2::from_shape_vec((self.batch, GOAL), self.current_key.clone())
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "goal_origin_slot",
-            Array1::from_vec(self.goal_origin_slot.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "goal_origin_generation",
-            Array1::from_vec(self.goal_origin_generation.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "goal_origin_tick",
-            Array1::from_vec(self.goal_origin_tick.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "goal_selected_tick",
-            Array1::from_vec(self.goal_selected_tick.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "memory_inserted_slot",
-            Array1::from_vec(self.memory_inserted_slot.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "memory_count",
-            Array1::from_vec(
-                self.goal_memory
-                    .count
-                    .iter()
-                    .map(|count| *count as u16)
-                    .collect::<Vec<_>>(),
-            )
-            .into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_policy_version",
-            self.sequence_control.policy_version,
-        )?;
-        out.set_item(
-            "sequence_control_policy_sha256",
-            self.sequence_control.policy_sha256.clone(),
-        )?;
-        out.set_item(
-            "sequence_control_state",
-            Array2::from_shape_vec((self.batch, CONTROL_STATE), self.control_state.clone())
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_proposal",
-            Array3::from_shape_vec(
-                (self.batch, CANDIDATES, CHOICE),
-                self.control_proposal.clone(),
-            )
-            .unwrap()
-            .into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_active",
-            Array2::from_shape_vec((self.batch, CHOICE), self.control_active.clone())
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_proposal_mask",
-            Array2::from_shape_vec((self.batch, CANDIDATES), self.candidate_mask.clone())
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_active_mask",
-            Array1::from_vec(self.control_active_mask.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_hazard_logit",
-            Array1::from_vec(self.decision.hazard_logits.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_selector_logits",
-            Array2::from_shape_vec(
-                (self.batch, CANDIDATES),
-                self.decision.selector_logits.clone(),
-            )
-            .unwrap()
-            .into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_value",
-            Array1::from_vec(self.decision.values.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_hazard_decision",
-            Array1::from_vec(self.decision.terminate.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "selected_candidate",
-            Array1::from_vec(self.decision.selected.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_hazard_mask",
-            Array1::from_vec(self.decision.hazard_mask.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_selector_mask",
-            Array1::from_vec(self.decision.selector_mask.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_behavior_hazard_logp",
-            Array1::from_vec(self.decision.hazard_logp.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_behavior_selector_logp",
-            Array1::from_vec(self.decision.selector_logp.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_behavior_logp",
-            Array1::from_vec(self.decision.logp.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "candidate_is_recalled_suffix",
-            Array2::from_shape_vec((self.batch, CANDIDATES), self.candidate_recalled.clone())
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "candidate_suffix_slot",
-            Array2::from_shape_vec((self.batch, CANDIDATES), self.candidate_slot.clone())
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "candidate_suffix_generation",
-            Array2::from_shape_vec((self.batch, CANDIDATES), self.candidate_generation.clone())
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "candidate_suffix_length",
-            Array2::from_shape_vec((self.batch, CANDIDATES), self.candidate_length.clone())
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "active_source_slot",
-            Array1::from_vec(self.active_source_slot.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "active_source_generation",
-            Array1::from_vec(self.active_source_generation.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "active_phase",
-            Array1::from_vec(self.active_phase.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "active_remaining",
-            Array1::from_vec(self.active_remaining.clone()).into_pyarray(py),
-        )?;
-        let cancellation: Vec<_> = (0..self.batch)
-            .flat_map(|row| self.suffixes.cancellation_counts(row))
-            .collect();
-        out.set_item(
-            "motor_suffix_cancellation_totals",
-            Array2::from_shape_vec((self.batch, 5), cancellation)
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "motor_suffix_cancellation_reason",
-            (0..self.batch)
-                .map(|row| self.suffixes.cancellation_reason(row))
-                .collect::<Vec<_>>(),
-        )?;
-        out.set_item(
-            "command_pending",
-            Array1::from_vec(self.command_pending.clone()).into_pyarray(py),
-        )?;
-        Ok(out)
-    }
 }
 
-#[pymethods]
+#[cfg(feature = "python")]
+mod python;
+
+/// Existing v10 snapshot envelope, encoded as UTF-8 JSON for portable byte hosts.
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ResidentSnapshot {
+    pub format: String,
+    pub version: u8,
+    pub private: String,
+    pub motor_suffix_memory: String,
+    pub goal_memory: String,
+    pub sequence_control: String,
+}
+
 impl DevelopmentalResidentCohort {
-    #[new]
-    #[allow(clippy::too_many_arguments)]
-    fn new(
+    pub fn from_packed(
         batch: usize,
         action_mode: &str,
         action_seed: u64,
         suffix_seed: u64,
-        core_packed: PyReadonlyArray1<'_, f32>,
+        core_packed: &[f32],
         core_sha256: String,
-        predictor_packed: PyReadonlyArray1<'_, f32>,
+        predictor_packed: &[f32],
         predictor_sha256: String,
-        sequence_control_packed: PyReadonlyArray1<'_, f32>,
+        sequence_control_packed: &[f32],
         sequence_control_version: u64,
         sequence_control_sha256: String,
         research_training: bool,
-    ) -> PyResult<Self> {
+    ) -> Result<Self, String> {
         if batch == 0
             || batch > 4096
             || !matches!(action_mode, "sample" | "map")
             || !valid_hash(&core_sha256)
             || !valid_hash(&predictor_sha256)
         {
-            return Err(PyValueError::new_err("CNS resident configuration differs"));
+            return Err("CNS resident configuration differs".to_string());
         }
-        let flat = core_packed.as_slice()?;
+        let flat = core_packed;
         if flat.iter().any(|x| !x.is_finite()) {
-            return Err(PyValueError::new_err("CNS core weights must be finite"));
+            return Err("CNS core weights must be finite".to_string());
         }
         let mut c = 0;
         let core = Core {
@@ -1150,15 +953,11 @@ impl DevelopmentalResidentCohort {
             proposal_out: linear(flat, &mut c, LOCAL * ACTIONS, PROPOSAL_HIDDEN)?,
         };
         if c != flat.len() {
-            return Err(PyValueError::new_err(
-                "CNS core weights have trailing values",
-            ));
+            return Err("CNS core weights have trailing values".to_string());
         }
-        let pflat = predictor_packed.as_slice()?;
+        let pflat = predictor_packed;
         if pflat.iter().any(|x| !x.is_finite()) {
-            return Err(PyValueError::new_err(
-                "CNS predictor weights must be finite",
-            ));
+            return Err("CNS predictor weights must be finite".to_string());
         }
         let mut pc = 0;
         let mut predictor = Vec::new();
@@ -1170,18 +969,15 @@ impl DevelopmentalResidentCohort {
             });
         }
         if pc != pflat.len() {
-            return Err(PyValueError::new_err(
-                "CNS predictor weights have trailing values",
-            ));
+            return Err("CNS predictor weights have trailing values".to_string());
         }
         let sequence_control = LearnedSequenceControl::from_flat(
             batch,
-            sequence_control_packed.as_slice()?,
+            sequence_control_packed,
             sequence_control_version,
             sequence_control_sha256,
             action_seed ^ 0x5345_515f_4354_524c,
-        )
-        .map_err(PyValueError::new_err)?;
+        )?;
         Ok(Self {
             batch,
             sample: action_mode == "sample",
@@ -1191,7 +987,7 @@ impl DevelopmentalResidentCohort {
             core,
             predictor,
             sequence_control,
-            suffixes: MotorSuffixMemory::new(batch, suffix_seed).map_err(PyValueError::new_err)?,
+            suffixes: MotorSuffixMemory::new(batch, suffix_seed)?,
             goal_memory: CnsGoalMemory::new(batch, suffix_seed ^ 0x474f_414c_4d45_4d31),
             state: vec![0.0; batch * HIDDEN],
             previous_command: vec![0.0; batch * ACTIONS],
@@ -1235,71 +1031,56 @@ impl DevelopmentalResidentCohort {
             decision: decision_empty(batch),
         })
     }
-
-    fn expanded(&self, additions: usize, action_seed: u64, suffix_seed: u64) -> PyResult<Self> {
-        self.expanded_inner(additions, action_seed, suffix_seed)
-            .map_err(PyValueError::new_err)
+    pub fn batch_size(&self) -> usize {
+        self.batch
     }
-
-    fn step<'py>(
-        &mut self,
-        py: Python<'py>,
-        cns_latent: PyReadonlyArray2<'_, f32>,
-        previous_command: PyReadonlyArray2<'_, f32>,
-        ticks: PyReadonlyArray1<'_, u64>,
-        reset: PyReadonlyArray1<'_, bool>,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        if cns_latent.shape() != [self.batch, Z]
-            || previous_command.shape() != [self.batch, ACTIONS]
-            || ticks.shape() != [self.batch]
-            || reset.shape() != [self.batch]
-        {
-            return Err(PyValueError::new_err("CNS resident step shapes differ"));
-        }
-        let z = cns_latent.as_slice()?;
-        let previous = previous_command.as_slice()?;
-        if z.iter().any(|x| !x.is_finite()) || !commands_valid(previous) {
-            return Err(PyValueError::new_err(
-                "CNS latent must be finite and previous commands must obey canonical bounds",
-            ));
-        }
-        let proposed = self
-            .prepare_decision(z, previous, ticks.as_slice()?, reset.as_slice()?)
-            .map_err(PyValueError::new_err)?;
-        self.output(py, proposed)
-    }
-
-    fn preview_sequence_control<'py>(
+    pub fn expanded_portable(
         &self,
-        py: Python<'py>,
-        cns_latent: PyReadonlyArray2<'_, f32>,
-        previous_command: PyReadonlyArray2<'_, f32>,
-        ticks: PyReadonlyArray1<'_, u64>,
-        reset: PyReadonlyArray1<'_, bool>,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        let mut fork = self.clone();
-        fork.step(py, cns_latent, previous_command, ticks, reset)
+        additions: usize,
+        action_seed: u64,
+        suffix_seed: u64,
+    ) -> Result<Self, String> {
+        self.expanded_inner(additions, action_seed, suffix_seed)
     }
-
-    fn acknowledge<'py>(
+    /// The only sensory input is the trainable CNS-derived latent. Commands are
+    /// the resident's own previous motor output, never body/world observations.
+    pub fn step_flat(
         &mut self,
-        py: Python<'py>,
-        ticks: PyReadonlyArray1<'_, u64>,
-        delivered_command: PyReadonlyArray2<'_, f32>,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        if ticks.shape() != [self.batch] || delivered_command.shape() != [self.batch, ACTIONS] {
-            return Err(PyValueError::new_err("command receipt shapes differ"));
+        z: &[f32],
+        previous: &[f32],
+        ticks: &[u64],
+        reset: &[bool],
+    ) -> Result<Vec<f32>, String> {
+        if z.len() != self.batch * Z
+            || previous.len() != self.batch * ACTIONS
+            || ticks.len() != self.batch
+            || reset.len() != self.batch
+        {
+            return Err("CNS resident step shapes differ".into());
         }
-        let t = ticks.as_slice()?;
-        let delivered = delivered_command.as_slice()?;
+        if z.iter().any(|x| !x.is_finite()) || !commands_valid(previous) {
+            return Err(
+                "CNS latent must be finite and previous commands must obey canonical bounds".into(),
+            );
+        }
+        self.prepare_decision(z, previous, ticks, reset)
+    }
+    pub fn acknowledge_flat(
+        &mut self,
+        ticks: &[u64],
+        delivered_command: &[f32],
+    ) -> Result<Vec<bool>, String> {
+        if ticks.len() != self.batch || delivered_command.len() != self.batch * ACTIONS {
+            return Err("command receipt shapes differ".into());
+        }
+        let t = ticks;
+        let delivered = delivered_command;
         if !commands_valid(delivered) {
-            return Err(PyValueError::new_err(
-                "delivered commands must obey canonical bounds",
-            ));
+            return Err("delivered commands must obey canonical bounds".to_string());
         }
         for row in 0..self.batch {
             if !self.command_pending[row] || self.pending_tick[row] != t[row] {
-                return Err(PyValueError::new_err("command receipt boundary differs"));
+                return Err("command receipt boundary differs".to_string());
             }
         }
         let mut exact = vec![false; self.batch];
@@ -1322,181 +1103,30 @@ impl DevelopmentalResidentCohort {
                 .copy_from_slice(&self.pending_goal[row * GOAL..(row + 1) * GOAL]);
             self.command_pending[row] = false;
         }
-        let out = PyDict::new(py);
-        out.set_item("format", FORMAT)?;
-        out.set_item(
-            "sequence_control_policy_version",
-            self.sequence_control.policy_version,
-        )?;
-        out.set_item(
-            "sequence_control_policy_sha256",
-            self.sequence_control.policy_sha256.clone(),
-        )?;
-        out.set_item(
-            "acknowledged",
-            Array1::from_vec(vec![true; self.batch]).into_pyarray(py),
-        )?;
-        out.set_item("command_exact", Array1::from_vec(exact).into_pyarray(py))?;
-        out.set_item(
-            "command_pending",
-            Array1::from_vec(self.command_pending.clone()).into_pyarray(py),
-        )?;
-        out.set_item(
-            "cns_outcome_pending",
-            Array1::from_vec(self.acknowledged_valid.clone()).into_pyarray(py),
-        )?;
-        let cancellation: Vec<_> = (0..self.batch)
-            .flat_map(|row| self.suffixes.cancellation_counts(row))
-            .collect();
-        out.set_item(
-            "motor_suffix_cancellation_totals",
-            Array2::from_shape_vec((self.batch, 5), cancellation)
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "motor_suffix_cancellation_reason",
-            (0..self.batch)
-                .map(|row| self.suffixes.cancellation_reason(row))
-                .collect::<Vec<_>>(),
-        )?;
-        Ok(out)
+        Ok(exact)
     }
-
-    #[allow(clippy::too_many_arguments)]
-    fn sequence_control_likelihood<'py>(
-        &self,
-        py: Python<'py>,
-        state: PyReadonlyArray2<'_, f32>,
-        proposal: PyReadonlyArray3<'_, f32>,
-        active: PyReadonlyArray2<'_, f32>,
-        proposal_mask: PyReadonlyArray2<'_, bool>,
-        active_mask: PyReadonlyArray1<'_, bool>,
-        hazard_decision: PyReadonlyArray1<'_, bool>,
-        selected_candidate: PyReadonlyArray1<'_, i32>,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        if state.shape() != [self.batch, CONTROL_STATE]
-            || proposal.shape() != [self.batch, CANDIDATES, CHOICE]
-            || active.shape() != [self.batch, CHOICE]
-            || proposal_mask.shape() != [self.batch, CANDIDATES]
-            || active_mask.shape() != [self.batch]
-            || hazard_decision.shape() != [self.batch]
-            || selected_candidate.shape() != [self.batch]
-        {
-            return Err(PyValueError::new_err(
-                "sequence-control likelihood shapes differ",
-            ));
-        }
-        let decision = self
-            .sequence_control
-            .likelihood(
-                state.as_slice()?,
-                proposal.as_slice()?,
-                active.as_slice()?,
-                proposal_mask.as_slice()?,
-                active_mask.as_slice()?,
-                hazard_decision.as_slice()?,
-                selected_candidate.as_slice()?,
-            )
-            .map_err(PyValueError::new_err)?;
-        let out = PyDict::new(py);
-        out.set_item("format", FORMAT)?;
-        out.set_item(
-            "sequence_control_policy_version",
-            self.sequence_control.policy_version,
-        )?;
-        out.set_item(
-            "sequence_control_policy_sha256",
-            self.sequence_control.policy_sha256.clone(),
-        )?;
-        out.set_item(
-            "sequence_control_hazard_logit",
-            Array1::from_vec(decision.hazard_logits).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_selector_logits",
-            Array2::from_shape_vec((self.batch, CANDIDATES), decision.selector_logits)
-                .unwrap()
-                .into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_value",
-            Array1::from_vec(decision.values).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_hazard_decision",
-            Array1::from_vec(decision.terminate).into_pyarray(py),
-        )?;
-        out.set_item(
-            "selected_candidate",
-            Array1::from_vec(decision.selected).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_hazard_mask",
-            Array1::from_vec(decision.hazard_mask).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_selector_mask",
-            Array1::from_vec(decision.selector_mask).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_behavior_hazard_logp",
-            Array1::from_vec(decision.hazard_logp).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_behavior_selector_logp",
-            Array1::from_vec(decision.selector_logp).into_pyarray(py),
-        )?;
-        out.set_item(
-            "sequence_control_behavior_logp",
-            Array1::from_vec(decision.logp).into_pyarray(py),
-        )?;
-        Ok(out)
+    pub fn snapshot_data(&self) -> Result<ResidentSnapshot, String> {
+        Ok(ResidentSnapshot {
+            format: FORMAT.into(),
+            version: 10,
+            private: serde_json::to_string(&self.private_snapshot()).map_err(|e| e.to_string())?,
+            motor_suffix_memory: self.suffixes.snapshot_json()?,
+            goal_memory: serde_json::to_string(&self.goal_memory).map_err(|e| e.to_string())?,
+            sequence_control: self.sequence_control.snapshot_json()?,
+        })
     }
-
-    fn snapshot<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        let out = PyDict::new(py);
-        out.set_item("format", FORMAT)?;
-        out.set_item("version", 10u8)?;
-        out.set_item(
-            "private",
-            serde_json::to_string(&self.private_snapshot())
-                .map_err(|e| PyValueError::new_err(e.to_string()))?,
-        )?;
-        out.set_item(
-            "motor_suffix_memory",
-            self.suffixes
-                .snapshot_json()
-                .map_err(PyValueError::new_err)?,
-        )?;
-        out.set_item(
-            "goal_memory",
-            serde_json::to_string(&self.goal_memory)
-                .map_err(|e| PyValueError::new_err(e.to_string()))?,
-        )?;
-        out.set_item(
-            "sequence_control",
-            self.sequence_control
-                .snapshot_json()
-                .map_err(PyValueError::new_err)?,
-        )?;
-        Ok(out)
+    pub fn save_bytes(&self) -> Result<Vec<u8>, String> {
+        serde_json::to_vec(&self.snapshot_data()?).map_err(|e| e.to_string())
     }
-
-    fn restore(&mut self, value: &Bound<'_, PyDict>) -> PyResult<()> {
-        if value.len() != 6 {
-            return Err(PyValueError::new_err("CNS snapshot fields differ"));
+    pub fn load_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
+        let value = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
+        self.restore_snapshot(&value)
+    }
+    pub fn restore_snapshot(&mut self, value: &ResidentSnapshot) -> Result<(), String> {
+        if value.format != FORMAT || value.version != 10 {
+            return Err("CNS snapshot identity differs".into());
         }
-        let get = |name: &str| {
-            value
-                .get_item(name)?
-                .ok_or_else(|| PyValueError::new_err(format!("CNS snapshot lacks {name}")))
-        };
-        if get("format")?.extract::<String>()? != FORMAT || get("version")?.extract::<u8>()? != 10 {
-            return Err(PyValueError::new_err("CNS snapshot identity differs"));
-        }
-        let p: PrivateSnapshot = serde_json::from_str(&get("private")?.extract::<String>()?)
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let p: PrivateSnapshot = serde_json::from_str(&value.private).map_err(|e| e.to_string())?;
         let expected = self.private_snapshot();
         if p.format != FORMAT
             || p.batch != self.batch
@@ -1545,18 +1175,13 @@ impl DevelopmentalResidentCohort {
                 .chain(&p.acknowledged_goal)
                 .any(|x| !x.is_finite())
         {
-            return Err(PyValueError::new_err("CNS snapshot state differs"));
+            return Err("CNS snapshot state differs".to_string());
         }
-        let suffixes = MotorSuffixMemory::restore_json(
-            &get("motor_suffix_memory")?.extract::<String>()?,
-            self.batch,
-        )
-        .map_err(PyValueError::new_err)?;
+        let suffixes = MotorSuffixMemory::restore_json(&value.motor_suffix_memory, self.batch)?;
         let goal_memory: CnsGoalMemory =
-            serde_json::from_str(&get("goal_memory")?.extract::<String>()?)
-                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            serde_json::from_str(&value.goal_memory).map_err(|e| e.to_string())?;
         if !goal_memory.validate(self.batch) {
-            return Err(PyValueError::new_err("CNS goal memory differs"));
+            return Err("CNS goal memory differs".to_string());
         }
         for row in 0..self.batch {
             let slot = p.goal_origin_slot[row];
@@ -1566,7 +1191,7 @@ impl DevelopmentalResidentCohort {
                     || p.goal[row * GOAL..(row + 1) * GOAL]
                         != p.current_key[row * GOAL..(row + 1) * GOAL]
                 {
-                    return Err(PyValueError::new_err("CNS goal origin differs"));
+                    return Err("CNS goal origin differs".to_string());
                 }
                 continue;
             }
@@ -1577,13 +1202,11 @@ impl DevelopmentalResidentCohort {
                 || goal_memory.keys[index * GOAL..(index + 1) * GOAL]
                     != p.goal[row * GOAL..(row + 1) * GOAL]
             {
-                return Err(PyValueError::new_err("CNS goal origin differs"));
+                return Err("CNS goal origin differs".to_string());
             }
         }
         let mut sequence_control = self.sequence_control.clone();
-        sequence_control
-            .restore_checked(&get("sequence_control")?.extract::<String>()?)
-            .map_err(PyValueError::new_err)?;
+        sequence_control.restore_checked(&value.sequence_control)?;
         self.state = p.state;
         self.previous_command = p.previous_command;
         self.current_key = p.current_key;
@@ -1609,42 +1232,27 @@ impl DevelopmentalResidentCohort {
         self.sequence_control = sequence_control;
         Ok(())
     }
-
-    fn replace_sequence_control<'py>(
-        &mut self,
-        py: Python<'py>,
-        packed: PyReadonlyArray1<'_, f32>,
-        new_version: u64,
-        new_sha256: String,
-        expected_version: u64,
-        expected_sha256: String,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        if !self.research_training {
-            return Err(PyValueError::new_err(
-                "sequence-control replacement is restricted to research cohorts",
-            ));
-        }
-        if self.command_pending.iter().any(|x| *x) || self.acknowledged_valid.iter().any(|x| *x) {
-            return Err(PyValueError::new_err(
-                "sequence-control replacement requires a fully coherent boundary",
-            ));
-        }
-        let old_version = self.sequence_control.policy_version;
-        let old_sha256 = self.sequence_control.policy_sha256.clone();
-        self.sequence_control
-            .replace(
-                packed.as_slice()?,
-                new_version,
-                new_sha256,
-                expected_version,
-                &expected_sha256,
-            )
-            .map_err(PyValueError::new_err)?;
-        let out = PyDict::new(py);
-        out.set_item("old_version", old_version)?;
-        out.set_item("old_sha256", old_sha256)?;
-        out.set_item("new_version", self.sequence_control.policy_version)?;
-        out.set_item("new_sha256", self.sequence_control.policy_sha256.clone())?;
-        Ok(out)
+    /// Flat, row-major diagnostics; engine tensors remain native and private.
+    pub fn diagnostics_json(&self) -> Result<String, String> {
+        serde_json::to_string(&serde_json::json!({
+            "format": FORMAT, "batch": self.batch,
+            "cns_recurrent_state": self.state, "latent_goal": self.goal,
+            "current_cns_key": self.current_key, "goal_origin_slot": self.goal_origin_slot,
+            "goal_origin_generation": self.goal_origin_generation, "goal_origin_tick": self.goal_origin_tick,
+            "goal_selected_tick": self.goal_selected_tick, "memory_inserted_slot": self.memory_inserted_slot,
+            "memory_count": self.goal_memory.count, "command_pending": self.command_pending,
+            "cns_outcome_pending": self.acknowledged_valid,
+            "sequence_control_policy_version": self.sequence_control.policy_version,
+            "sequence_control_policy_sha256": self.sequence_control.policy_sha256,
+            "sequence_control_hazard_logit": self.decision.hazard_logits,
+            "sequence_control_selector_logits": self.decision.selector_logits,
+            "sequence_control_value": self.decision.values, "selected_candidate": self.decision.selected,
+            "sequence_control_hazard_decision": self.decision.terminate,
+            "sequence_control_behavior_logp": self.decision.logp,
+            "candidate_is_recalled_suffix": self.candidate_recalled,
+            "active_source_slot": self.active_source_slot, "active_phase": self.active_phase,
+            "active_remaining": self.active_remaining,
+            "motor_suffix_cancellation_totals": (0..self.batch).map(|row| self.suffixes.cancellation_counts(row)).collect::<Vec<_>>()
+        })).map_err(|e| e.to_string())
     }
 }

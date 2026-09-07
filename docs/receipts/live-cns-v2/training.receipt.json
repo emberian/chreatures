@@ -1,0 +1,209 @@
+{
+  "format": "chreatures-dynamics-v2-temporal-research-fit-v1",
+  "source_adapter_sha256": "cfedd0ed4286b9ea5a2cde36a0b66ee4443dfb7a459cde70851b95cc8230aab4",
+  "neurons": 165122,
+  "edges": 25563197,
+  "device": "AMD Radeon Graphics",
+  "torch": "2.9.1+rocm6.3",
+  "hip": "6.3.42134-a9a80e791",
+  "updates": 192,
+  "initialization": "/tank/chreatures/runs/live-wave-v2/dynamics-fit-20260907/fit/fitted-parameters.npz",
+  "frequency_split": "training .35-.75 or .9-1.6 Hz; heldout .75-.9 Hz; independent optical/body phases",
+  "supervised_head": "current linear Z512; future GRU128 on Z512 only",
+  "seconds": 397.1219690591097,
+  "target_order": [
+    "current_visual_sin",
+    "current_visual_cos",
+    "current_body0",
+    "future_visual_sin_delta",
+    "future_visual_cos_delta",
+    "future_body0_delta"
+  ],
+  "before": {
+    "mse": [
+      0.494886189699173,
+      0.5088556408882141,
+      1.0596613883972168,
+      0.5281570553779602,
+      0.5005938410758972,
+      1.0514185428619385
+    ],
+    "zero_or_persistence_mse": [
+      0.4925972819328308,
+      0.507402777671814,
+      1.0596674680709839,
+      0.5278299450874329,
+      0.5004026293754578,
+      1.051387071609497
+    ],
+    "skill": [
+      -0.004646658897399902,
+      -0.002863287925720215,
+      5.7220458984375e-06,
+      -0.0006197690963745117,
+      -0.0003820657730102539,
+      -2.9921531677246094e-05
+    ]
+  },
+  "after": {
+    "mse": [
+      0.0033850567415356636,
+      0.01263347640633583,
+      0.338791161775589,
+      0.01436172891408205,
+      0.040599118918180466,
+      0.9248917102813721
+    ],
+    "zero_or_persistence_mse": [
+      0.4925972819328308,
+      0.507402777671814,
+      1.0596674680709839,
+      0.5278299450874329,
+      0.5004026293754578,
+      1.051387071609497
+    ],
+    "skill": [
+      0.9931281208992004,
+      0.9751017093658447,
+      0.6802853941917419,
+      0.9727910161018372,
+      0.9188671112060547,
+      0.12031280994415283
+    ]
+  },
+  "history": [
+    {
+      "update": 0,
+      "loss": 3.2175943851470947,
+      "seconds": 2.637759760953486
+    },
+    {
+      "update": 8,
+      "loss": 1.5827515125274658,
+      "seconds": 18.861918774433434
+    },
+    {
+      "update": 16,
+      "loss": 1.7855842113494873,
+      "seconds": 34.62323799356818
+    },
+    {
+      "update": 24,
+      "loss": 1.586405873298645,
+      "seconds": 50.35369184240699
+    },
+    {
+      "update": 32,
+      "loss": 2.3844642639160156,
+      "seconds": 66.48641233239323
+    },
+    {
+      "update": 40,
+      "loss": 2.053243637084961,
+      "seconds": 82.1362576726824
+    },
+    {
+      "update": 48,
+      "loss": 1.8577295541763306,
+      "seconds": 98.71691880840808
+    },
+    {
+      "update": 56,
+      "loss": 1.5751502513885498,
+      "seconds": 114.75801638327539
+    },
+    {
+      "update": 64,
+      "loss": 1.5134611129760742,
+      "seconds": 130.54229321423918
+    },
+    {
+      "update": 72,
+      "loss": 1.6831670999526978,
+      "seconds": 146.78694237582386
+    },
+    {
+      "update": 80,
+      "loss": 1.2754499912261963,
+      "seconds": 165.78717260435224
+    },
+    {
+      "update": 88,
+      "loss": 0.6556425094604492,
+      "seconds": 183.57256102375686
+    },
+    {
+      "update": 96,
+      "loss": 1.3259247541427612,
+      "seconds": 200.14319637790322
+    },
+    {
+      "update": 104,
+      "loss": 0.7010284662246704,
+      "seconds": 216.5465510673821
+    },
+    {
+      "update": 112,
+      "loss": 0.8646992444992065,
+      "seconds": 234.34943591430783
+    },
+    {
+      "update": 120,
+      "loss": 1.277528166770935,
+      "seconds": 250.8789187585935
+    },
+    {
+      "update": 128,
+      "loss": 1.199528455734253,
+      "seconds": 267.1261574598029
+    },
+    {
+      "update": 136,
+      "loss": 1.1114978790283203,
+      "seconds": 283.44524925109
+    },
+    {
+      "update": 144,
+      "loss": 0.9509121775627136,
+      "seconds": 299.76970806345344
+    },
+    {
+      "update": 152,
+      "loss": 0.8996742963790894,
+      "seconds": 315.9648191900924
+    },
+    {
+      "update": 160,
+      "loss": 0.7354249954223633,
+      "seconds": 332.07058943156153
+    },
+    {
+      "update": 168,
+      "loss": 1.1635791063308716,
+      "seconds": 348.25011014938354
+    },
+    {
+      "update": 176,
+      "loss": 0.5009188055992126,
+      "seconds": 364.83931066002697
+    },
+    {
+      "update": 184,
+      "loss": 1.120583415031433,
+      "seconds": 380.9019774561748
+    }
+  ],
+  "status": "research-fit-not-controller",
+  "fixed_parameters": {
+    "baseline": 0.2,
+    "adaptation_gain": 0.15,
+    "adaptation_tau": 1.5,
+    "support_recovery": 0.024,
+    "support_cost": 0.003
+  },
+  "limitations": [
+    "procedural optic/body excitation, not embodied competence",
+    "body adapter and optical adapter frozen",
+    "Z512 plus 6 dimensional supervised head, not a trained controller"
+  ]
+}

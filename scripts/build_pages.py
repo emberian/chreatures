@@ -7,6 +7,8 @@ import argparse
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 import json
+import hashlib
+import urllib.request
 import os
 from pathlib import Path
 import re
@@ -49,6 +51,8 @@ class _HtmlReferences(HTMLParser):
 def _copy_tree(source: Path, destination: Path) -> None:
     """Copy regular files while refusing links out of the publication root."""
     for path in sorted(source.rglob("*")):
+        if any(part in {"node_modules", "__pycache__", ".git"} for part in path.relative_to(source).parts):
+            continue
         if path.is_symlink():
             raise ValueError(f"public site must not contain symlinks: {path.relative_to(ROOT)}")
         relative = path.relative_to(source)
@@ -145,7 +149,48 @@ def _validate_public_urls() -> None:
                     _validate_reference(path, reference)
 
 
-def build(revision: str | None = None, built_at: str | None = None) -> Path:
+def _copy_model(model_directory: Path | None) -> None:
+    """Materialize only the pinned public model release, outside source Git."""
+    lock_path = SITE / "live" / "model.lock.json"
+    if model_directory is not None:
+        source = model_directory.resolve()
+        receipt = json.loads((source / "release.json").read_text())
+        files = receipt["files"]
+    elif lock_path.exists():
+        receipt = json.loads(lock_path.read_text())
+        if receipt.get("format") != "chreatures-pages-model-lock-v1":
+            raise ValueError("Unknown browser model lock format")
+        base = receipt["baseURL"]
+        if not base.startswith("https://github.com/emberian/chreatures/releases/download/") or not base.endswith("/"):
+            raise ValueError("Model release must belong to the authorized project")
+        source = None
+        files = receipt["files"]
+    else:
+        return
+    destination = OUTPUT / "live" / "model"
+    destination.mkdir(parents=True, exist_ok=True)
+    for name, expected in files.items():
+        if not re.fullmatch(r"[a-zA-Z0-9_.-]+", name):
+            raise ValueError("Invalid public model asset name")
+        target = destination / name
+        digest = hashlib.sha256()
+        size = 0
+        if source is None:
+            stream = urllib.request.urlopen(base + name, timeout=90)
+        else:
+            stream = (source / name).open("rb")
+        with stream, target.open("wb") as output:
+            while chunk := stream.read(1024 * 1024):
+                size += len(chunk)
+                if size > expected["bytes"]:
+                    raise ValueError(f"Oversized model asset: {name}")
+                digest.update(chunk)
+                output.write(chunk)
+        if size != expected["bytes"] or digest.hexdigest() != expected["sha256"]:
+            raise ValueError(f"Model asset identity differs: {name}")
+
+
+def build(revision: str | None = None, built_at: str | None = None, model_directory: Path | None = None) -> Path:
     if not (SITE / "index.html").is_file():
         raise FileNotFoundError("site/index.html is required")
     if SITE.is_symlink():
@@ -164,6 +209,7 @@ def build(revision: str | None = None, built_at: str | None = None) -> Path:
         PUBLIC_THREE_ASSETS,
         OUTPUT / "vendor" / "three",
     )
+    _copy_model(model_directory)
     info = {
         "format": "chreatures-pages-build-v1",
         "revision": _revision(revision),
@@ -181,8 +227,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--revision", help="full source Git commit SHA")
     parser.add_argument("--built-at", help="ISO-8601 build timestamp")
+    parser.add_argument("--model-directory", type=Path, help="Verified local export for headless integration; deployed builds use the pinned release lock")
     args = parser.parse_args()
-    output = build(args.revision, args.built_at)
+    output = build(args.revision, args.built_at, args.model_directory)
     print(output.relative_to(ROOT))
 
 

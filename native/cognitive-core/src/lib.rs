@@ -1,8 +1,9 @@
+#[cfg(feature = "python")]
 use pyo3::{exceptions::PyValueError, prelude::*};
 
-mod cns_adapter;
+pub mod cns_adapter;
 mod contextual_episodic;
-mod developmental;
+pub mod developmental;
 pub mod gam_law;
 mod learned_sequence_control;
 mod motor_suffix;
@@ -28,7 +29,7 @@ pub(crate) struct Gru {
     pub(crate) b_hh: Vec<f32>,
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", feature = "accelerate"))]
 fn dense_sgemm(
     input: &[f32],
     rows: usize,
@@ -89,7 +90,10 @@ fn dense_sgemm(
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(
+    all(target_os = "macos", feature = "accelerate"),
+    all(target_arch = "wasm32", target_feature = "simd128")
+)))]
 fn dense_sgemm(
     input: &[f32],
     rows: usize,
@@ -236,15 +240,20 @@ impl Gru {
     }
 }
 
-pub(crate) fn take(flat: &[f32], cursor: &mut usize, count: usize) -> PyResult<Vec<f32>> {
-    if *cursor + count > flat.len() {
-        return Err(PyValueError::new_err("packed weights are truncated"));
+pub(crate) fn take(flat: &[f32], cursor: &mut usize, count: usize) -> Result<Vec<f32>, CoreError> {
+    if count > flat.len().saturating_sub(*cursor) || *cursor > flat.len() {
+        return Err(CoreError("packed weights are truncated".into()));
     }
     let v = flat[*cursor..*cursor + count].to_vec();
     *cursor += count;
     Ok(v)
 }
-pub(crate) fn linear(flat: &[f32], c: &mut usize, out: usize, input: usize) -> PyResult<Linear> {
+pub(crate) fn linear(
+    flat: &[f32],
+    c: &mut usize,
+    out: usize,
+    input: usize,
+) -> Result<Linear, CoreError> {
     Ok(Linear {
         out,
         input,
@@ -252,7 +261,7 @@ pub(crate) fn linear(flat: &[f32], c: &mut usize, out: usize, input: usize) -> P
         bias: take(flat, c, out)?,
     })
 }
-pub(crate) fn gru(flat: &[f32], c: &mut usize, h: usize, input: usize) -> PyResult<Gru> {
+pub(crate) fn gru(flat: &[f32], c: &mut usize, h: usize, input: usize) -> Result<Gru, CoreError> {
     Ok(Gru {
         hidden: h,
         input,
@@ -263,9 +272,72 @@ pub(crate) fn gru(flat: &[f32], c: &mut usize, h: usize, input: usize) -> PyResu
     })
 }
 
+#[cfg(feature = "python")]
 #[pymodule]
 fn _cognitive_core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<cns_adapter::CnsAdapter>()?;
     module.add_class::<developmental::DevelopmentalResidentCohort>()?;
     Ok(())
+}
+
+/// Host-independent failure at an artifact or state boundary.
+#[derive(Debug, Clone)]
+pub struct CoreError(pub String);
+impl std::fmt::Display for CoreError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+impl std::error::Error for CoreError {}
+impl From<CoreError> for String {
+    fn from(error: CoreError) -> Self {
+        error.0
+    }
+}
+#[cfg(feature = "python")]
+impl From<CoreError> for PyErr {
+    fn from(error: CoreError) -> Self {
+        PyValueError::new_err(error.0)
+    }
+}
+
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+fn dense_sgemm(
+    input: &[f32],
+    rows: usize,
+    cols: usize,
+    weight: &[f32],
+    out: usize,
+    output: &mut [f32],
+) {
+    use std::arch::wasm32::*;
+    // Four independent lanes avoid scalar loads and multiply-add dispatch in the
+    // batch-one browser path. All addresses are bounded by the checked GEMM shapes.
+    for row in 0..rows {
+        for neuron in 0..out {
+            let a = &input[row * cols..(row + 1) * cols];
+            let b = &weight[neuron * cols..(neuron + 1) * cols];
+            let mut sum = f32x4_splat(0.0);
+            let end = cols / 4 * 4;
+            for k in (0..end).step_by(4) {
+                unsafe {
+                    sum = f32x4_add(
+                        sum,
+                        f32x4_mul(
+                            v128_load(a.as_ptr().add(k).cast()),
+                            v128_load(b.as_ptr().add(k).cast()),
+                        ),
+                    );
+                }
+            }
+            let mut value = f32x4_extract_lane::<0>(sum)
+                + f32x4_extract_lane::<1>(sum)
+                + f32x4_extract_lane::<2>(sum)
+                + f32x4_extract_lane::<3>(sum);
+            for k in end..cols {
+                value += a[k] * b[k];
+            }
+            output[row * out + neuron] = value;
+        }
+    }
 }

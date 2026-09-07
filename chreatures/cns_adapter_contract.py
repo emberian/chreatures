@@ -14,13 +14,13 @@ from collections.abc import Mapping
 
 import numpy as np
 
-FORMAT = "chreatures-cns-service-v1"
+FORMAT = "chreatures-cns-service-v2"
 CONTROLLER_FORMAT = "chreatures-cns-only-controller-v1"
-MAGIC = b"CHCNS1\0\0"
+MAGIC = b"CHCNS2\0\0"
 DIMENSIONS = dict(neurons=165122, edges=25563197, sites=1771, receptors=4107,
                   receptor_types=10, site_edges=4669, body_targets=11233,
                   neuron_types=11752, body_inputs=43, body_hidden=128,
-                  inputs=5356, latent=512)
+                  inputs=5356, latent=512, readout_rank=64)
 ARRAY_SPECS = (
     ("graph.crow", "<u4", (165123,)),
     ("graph.col", "<u4", (25563197,)),
@@ -41,16 +41,18 @@ ARRAY_SPECS = (
     ("body.input.bias", "<f4", (128,)),
     ("body.output.weight", "<f4", (11233, 128)),
     ("body.output.bias", "<f4", (11233,)),
-    ("dynamics.bias_raw", "<f4", (11752,)),
+    ("dynamics.baseline_raw", "<f4", (11752,)),
+    ("dynamics.recurrent_gain_raw", "<f4", (11752,)),
     ("dynamics.tau_raw", "<f4", (11752,)),
-    ("dynamics.source_raw", "<f4", (11752,)),
-    ("dynamics.target_raw", "<f4", (11752,)),
-    ("dynamics.excitability_raw", "<f4", (11752,)),
-    ("readout.weight", "<f4", (512, 165122)),
-    ("readout.bias", "<f4", (512,)),
+    ("dynamics.adaptation_gain_raw", "<f4", (11752,)),
+    ("dynamics.adaptation_tau_raw", "<f4", (11752,)),
+    ("afferent.neutral_drive", "<f4", (165122,)),
+    ("readout.projection.weight", "<f4", (64, 165122)),
+    ("readout.output.weight", "<f4", (512, 64)),
+    ("readout.output.bias", "<f4", (512,)),
 )
-PARAMETER_ORDER = tuple(name for name, _, _ in ARRAY_SPECS[10:])
-PARAMETER_COUNT = sum(int(np.prod(shape)) for _, _, shape in ARRAY_SPECS[10:])
+PARAMETER_ORDER = tuple(name for name, _, _ in ARRAY_SPECS[10:] if name != "afferent.neutral_drive")
+PARAMETER_COUNT = sum(int(np.prod(shape)) for name, _, shape in ARRAY_SPECS if name in PARAMETER_ORDER)
 SENSORY_DIM = DIMENSIONS["inputs"]
 LATENT_DIM = DIMENSIONS["latent"]
 
@@ -89,6 +91,19 @@ def service_identity(metadata, service_artifact_sha256):
                 sensory_dim=SENSORY_DIM, latent_dim=LATENT_DIM)
 
 
+def neutral_afferent_drive(arrays: Mapping[str, np.ndarray]) -> np.ndarray:
+    """Immutable export calculation at gray retina/standardized-zero body input."""
+    out = np.zeros(DIMENSIONS["neurons"], dtype="<f4")
+    receptor_type = arrays["atlas.receptor_type"]
+    supported = np.diff(arrays["atlas.receptor_ptr"]) > 0
+    bias = arrays["optic.bias"][receptor_type]
+    out[arrays["atlas.receptor_rows"]] = (1 / (1 + np.exp(-bias))) * supported
+    hidden = np.tanh(arrays["body.input.bias"])
+    current = arrays["body.output.weight"] @ hidden + arrays["body.output.bias"]
+    out[arrays["atlas.body_rows"]] = 1 / (1 + np.exp(-current))
+    return out
+
+
 def validate_arrays(arrays: Mapping[str, np.ndarray]) -> np.ndarray:
     """Validate exact topology/packing and return the enforced readout mask."""
     if set(arrays) != {x[0] for x in ARRAY_SPECS}:
@@ -121,9 +136,15 @@ def validate_arrays(arrays: Mapping[str, np.ndarray]) -> np.ndarray:
             raise ValueError("supported receptor site mixtures must sum to one")
     if np.any(arrays["body.scale"] <= 0):
         raise ValueError("body normalizer scale must be positive")
+    if np.any(arrays["afferent.neutral_drive"] < 0) or np.any(arrays["afferent.neutral_drive"] > 1):
+        raise ValueError("neutral afferent drive outside [0, 1]")
     mask = np.ones(165122, dtype=np.uint8)
     mask[receptors] = 0
     mask[body] = 0
+    if np.any(arrays["afferent.neutral_drive"][mask.astype(bool)] != 0):
+        raise ValueError("neutral drive on non-afferent rows")
+    if not np.allclose(arrays["afferent.neutral_drive"], neutral_afferent_drive(arrays), rtol=0, atol=2e-7):
+        raise ValueError("neutral drive differs from immutable afferent operating point")
     return mask
 
 

@@ -1,0 +1,12 @@
+{
+  "name": "@chreatures/browser-world",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test.mjs",
+    "build:wasm": "sh build.sh"
+  },
+  "dependencies": {
+    "@mujoco/mujoco": "3.12.0"
+  }
+}

@@ -43,7 +43,7 @@ class NeuralClient:
         if (self.input_names != input_names()
                 or self.output_names != [f"cns.latent.{i}" for i in range(512)]
                 or not isinstance(self.cns_identity, dict)
-                or self.cns_identity.get("format") != "chreatures-cns-service-v1"
+                or self.cns_identity.get("format") != "chreatures-cns-service-v2"
                 or self.cns_identity.get("sensory_dim") != 5356
                 or self.cns_identity.get("latent_dim") != 512):
             raise ValueError("Neural service does not implement the current CNS-only interface")

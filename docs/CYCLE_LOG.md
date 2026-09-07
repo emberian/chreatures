@@ -1082,3 +1082,34 @@ replicated behavioral improvement. The initialized motor/memory controller stays
 explicitly untrained. Public video uses actual rate captures and measured soma
 positions, a fixed 99.5th-percentile display scale, and actual physical frames.
 The full-range first render was retained privately; raw rates were not changed.
+
+## 2026-09-07 — Live CNS wave: the organism runs in the tab
+
+Root-led parallel build implemented full MaleCNS WebGPU recurrence, pure Rust
+resident cognition shared with Wasm, and actual official MuJoCo Wasm bodies in
+an interactive physical garden. The new live page offers a physical Bad Apple
+screen, three-band sound sequences, object insertion and forces, selectable CNS
+soma activity, and full-life save/restore. The movie remains its own V1 record.
+
+The new centered V2 dynamics and factorized learned readout retain all anatomical
+edges and the mandatory masked CNS route. Two real hbox ROCm fits, a 27-setting
+crossed dynamics campaign, native GAM fits and a held-out parameter confirmation
+were executed. The stronger 192-update fit predicts held-out four-tick visual
+changes with skills .9728/.9189 against persistence. Zeroing graph edges removes
+that advantage. This is controlled temporal information, not learned motor or
+social competence. A separate canonical CNS-only controller-learning path now
+trains inverse skills, recurrent prediction, achieved-key memory and termination;
+its first GPU/export fixture is still preparation for physical learning.
+
+Actual fullgraph Torch/CPU/Metal/WebGPU comparisons passed. The joined headless
+Dawn/Metal + browser Wasm run used three bodies, averaged 93.18 ms per physical
+tick on M2 Max, moved body roots and restored the complete interacting world
+exactly, including added collision geometry. No browser automation was used.
+Receipts are in `docs/receipts/live-cns-v2`; exact equations and interpretation
+limits are in `docs/development/CNS_DYNAMICS_V2.md`. The packed live model is about
+124 MB and the life checkpoint about 14.5 MB. Browser UI performance is unmeasured.
+
+Frozen resident services and unrelated jobs remain untouched. The native core
+and Wasm were rebuilt for new research lives; historic artifacts are not loaded
+as V2 state. Root is publishing the source and immutable model assets together,
+then continuing physical skill collection and the next coupled development wave.
