@@ -862,7 +862,7 @@ The principal receipt retains every world's and resident's outcomes. There were
 five mouth-contact ticks, 15,237 private goal-association updates and 1,003
 unattributed receipts after reservoir replacement. These are executed mechanisms
 and recorded events; improved control and ecological viability remain open.
-The native archive retained 62 candidates in 19 cells, then selected an independent
+The native archive retained 62 entries in 19 cells, then selected an independent
 80-life challenge wave under source `61aeb1e`.
 
 Two coupled interface faults were repaired in `3c9b0c1`: the fixed numeric training
@@ -892,3 +892,14 @@ It contains inherited weights and fitted laws, separate from private lifetime
 state and the bulk MaleCNS graph. See the [principal campaign receipt](../data/development/population-v6-principal-wave.receipt.json)
 and [research-continuation receipt](../data/development/reciprocal-v6-research-continuation.receipt.json)
 for exact identities, numerical scope and unresolved claims.
+
+The separate history-selected challenge wave then completed under `61aeb1e`
+with exit code zero and no report repair: another 80 lives, 163,840 transitions
+and 969.03 seconds including startup and checkpoints. It recorded sixteen
+mouth-contact ticks, 15,162 private goal-association updates and 1,078 skipped
+receipts. Both waves are ingested: 160 completed evaluations and pair histories,
+74 archive entries in 21 cells, and no pending assignments. The 80 challenge assignments used ten selected genomes. Selection changed
+the cohort, so the difference in outcomes is not a matched measure of improvement.
+The [challenge receipt](../data/development/population-v6-challenge-wave.receipt.json)
+retains the actual per-life results, transfer assignments, costs and identities.
+No further campaign was launched during this publication pass.
