@@ -40,7 +40,9 @@ the existing selector, value estimate, and acquired-suffix termination head use
 the same physical sequence and scalar return. Held-out teacher variations and
 world starts can be supplied as validation episodes, with before/after losses
 recorded both overall and per skill in the final receipt. Predictor loss covers
-every horizon from one through eight. Selector/value gradients stop at the
+every horizon from one through eight and receives only the current experienced
+CNS key; the future achieved key is reserved for hindsight inverse-action
+supervision and never enters a dynamics forecast context. Selector/value gradients stop at the
 canonical head inputs so they cannot distort the CNS transition model to create
 an easy classification shortcut. Termination learns from both the suffix that
 was useful in the current context and a mismatched experienced suffix.
