@@ -386,11 +386,11 @@ def recording_evidence_records(
     recorded body to an existing birth/checkpoint/terminal record; this
     function never infers a life from scene geometry or a display name.
     """
-    if recording.get("format") != "chreatures-living-reef-public-recording-v2":
+    if recording.get("format") != "chreatures-living-reef-public-recording-v4":
         raise PopulationEvidenceError("unsupported embodied recording format")
     content_sha256 = recording.get("content_sha256")
     _valid_hash(content_sha256, "recording content identity")
-    authenticated = deepcopy(dict(recording))
+    authenticated = dict(recording)
     authenticated.pop("content_sha256", None)
     if hashlib.sha256(canonical_bytes(authenticated)).hexdigest() != content_sha256:
         raise PopulationEvidenceError("recording content SHA-256 differs")
@@ -409,13 +409,34 @@ def recording_evidence_records(
     if not isinstance(events, list):
         raise PopulationEvidenceError("embodied recording events must be an array")
     ticks = []
+    event_frame_indexes: list[int] = []
+    next_event = 0
     observed_bodies: set[int] = set()
-    for frame in frames:
+    for frame_index, frame in enumerate(frames):
         if not isinstance(frame, Mapping):
             raise PopulationEvidenceError("embodied recording frame is not an object")
         tick = frame.get("tick")
         if isinstance(tick, bool) or not isinstance(tick, int) or tick < 0:
             raise PopulationEvidenceError("embodied recording frame has invalid tick")
+        event_range = frame.get("event_range")
+        if (
+            not isinstance(event_range, list) or len(event_range) != 2
+            or any(type(value) is not int for value in event_range)
+            or event_range[0] != next_event
+            or not next_event <= event_range[1] <= len(events)
+        ):
+            raise PopulationEvidenceError("recording frame event ranges have a gap or overlap")
+        for event in events[next_event:event_range[1]]:
+            event_tick = event.get("tick") if isinstance(event, Mapping) else None
+            # Goal receipts and outside commands can be committed at the
+            # preceding boundary's tick; they must not be assigned to an
+            # earlier frame or to a frame preceding the event itself.
+            if type(event_tick) is not int or event_tick > tick or (
+                ticks and event_tick < ticks[-1]
+            ):
+                raise PopulationEvidenceError("recording event lies outside its frame boundary")
+        event_frame_indexes.extend([frame_index] * (event_range[1] - next_event))
+        next_event = event_range[1]
         ticks.append(tick)
         details = frame.get("resident_details")
         if not isinstance(details, list):
@@ -425,6 +446,8 @@ def recording_evidence_records(
             if isinstance(body, bool) or not isinstance(body, int) or body < 0:
                 raise PopulationEvidenceError("recorded resident has invalid public body index")
             observed_bodies.add(body)
+    if next_event != len(events):
+        raise PopulationEvidenceError("recording frame ranges omit committed events")
     if ticks != sorted(ticks) or len(set(ticks)) != len(ticks):
         raise PopulationEvidenceError("embodied recording ticks are not strictly increasing")
     bindings = dict(body_life_record_ids)
@@ -500,7 +523,7 @@ def recording_evidence_records(
     previous_public_sha256 = "0" * 64
     previous_source_sha256 = None
     seen_event_ids: set[str] = set()
-    for event in events:
+    for event_index, event in enumerate(events):
         if not isinstance(event, Mapping):
             raise PopulationEvidenceError("recording event is not an object")
         kind = event.get("kind")
@@ -594,6 +617,8 @@ def recording_evidence_records(
                     "public_event_sha256": event_sha256,
                     "source_event_sha256": source_event_sha256,
                     "recording_content_sha256": content_sha256,
+                    "frame_index": event_frame_indexes[event_index],
+                    "frame_tick": ticks[event_frame_indexes[event_index]],
                     "sequence": sequence,
                     "tick": tick,
                     "model_time": float(model_time),
@@ -1609,7 +1634,13 @@ def _validate_type_fields(
             != "gzip-level9-mtime0-empty-filename"
         ):
             raise PopulationEvidenceError(f"{record_id} recording transport differs")
-        if fields.get("recording_format") != "chreatures-living-reef-public-recording-v2":
+        # Immutable v2 evidence already in archived ledgers remains readable.
+        # New ingestion above has one current v4 path; this does not load an
+        # earlier simulator or reinterpret an earlier recording's events.
+        if fields.get("recording_format") not in {
+            "chreatures-living-reef-public-recording-v2",
+            "chreatures-living-reef-public-recording-v4",
+        }:
             raise PopulationEvidenceError(f"{record_id} has unsupported recording format")
         first_tick = _integer(fields, "first_tick", record_id)
         last_tick = _integer(fields, "last_tick", record_id)
@@ -1677,6 +1708,14 @@ def _validate_type_fields(
         ) or not math.isfinite(model_time):
             raise PopulationEvidenceError(f"{record_id} has invalid event time")
         recording = by_id[_single_parent(record, "recording")]
+        if recording["fields"].get("recording_format") == "chreatures-living-reef-public-recording-v4":
+            frame_index = _integer(fields, "frame_index", record_id)
+            frame_tick = _integer(fields, "frame_tick", record_id)
+            if not 0 <= frame_index < recording["fields"]["frame_count"] or not (
+                recording["fields"]["first_tick"] <= frame_tick
+                <= recording["fields"]["last_tick"]
+            ) or tick > frame_tick:
+                raise PopulationEvidenceError(f"{record_id} has invalid recorded frame association")
         if fields.get("recording_content_sha256") != recording["fields"].get(
             "recording_content_sha256"
         ):
