@@ -11,11 +11,11 @@ use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 
-const FORMAT: &str = "chreatures-regional-habitat-family-v2";
-const GENOME_FORMAT: &str = "chreatures-environment-genome-v2";
+const FORMAT: &str = "chreatures-regional-habitat-family-v3";
+const GENOME_FORMAT: &str = "chreatures-environment-genome-v3";
 const RESIDENT_FORMAT: &str = "chreatures-regional-residents-v2";
-const ANALYST_FORMAT: &str = "chreatures-regional-analyst-v2";
-const RECORD_FORMAT: &str = "chreatures-environment-record-v2";
+const ANALYST_FORMAT: &str = "chreatures-regional-analyst-v3";
+const RECORD_FORMAT: &str = "chreatures-environment-record-v3";
 const MAX_REGIONS: usize = 48;
 const MAX_EDGES: usize = 128;
 const MAX_RESIDENTS: usize = 32;
@@ -402,10 +402,38 @@ fn entity_index(values: &[Value]) -> HashMap<String, usize> {
         .collect()
 }
 fn ramp_quaternion(dx: f64, dy: f64, dz: f64) -> [f64; 4] {
-    let yaw = dy.atan2(dx);
-    let pitch = -dz.atan2((dx * dx + dy * dy).sqrt());
-    let (sy, cy) = (yaw * 0.5).sin_cos();
-    let (sp, cp) = (pitch * 0.5).sin_cos();
+    let horizontal = (dx * dx + dy * dy).sqrt();
+    if horizontal == 0.0 {
+        if dz == 0.0 {
+            return [1.0, 0.0, 0.0, 0.0];
+        }
+        let half = 2.0_f64.sqrt() * 0.5;
+        return if dz >= 0.0 {
+            [half, 0.0, -half, 0.0]
+        } else {
+            [half, 0.0, half, 0.0]
+        };
+    }
+
+    // Closed-form half angles avoid platform libm differences from
+    // atan2/sin_cos. The branch avoids cancellation around yaw=pi while
+    // preserving a deterministic sign on the negative-x axis.
+    let (cy, sy) = if dx >= 0.0 {
+        let cy = ((horizontal + dx) / (2.0 * horizontal)).sqrt();
+        (cy, dy / (2.0 * horizontal * cy))
+    } else {
+        let sy =
+            ((horizontal - dx) / (2.0 * horizontal)).sqrt() * if dy < 0.0 { -1.0 } else { 1.0 };
+        let cy = if dy == 0.0 {
+            0.0
+        } else {
+            dy / (2.0 * horizontal * sy)
+        };
+        (cy, sy)
+    };
+    let length = (horizontal * horizontal + dz * dz).sqrt();
+    let cp = ((length + horizontal) / (2.0 * length)).sqrt();
+    let sp = -dz / (2.0 * length * cp);
     [cy * cp, -sy * sp, cy * sp, sy * cp]
 }
 
@@ -439,7 +467,7 @@ fn validate_config(config: &Config) -> PyResult<()> {
         || !(0.2..=2.5).contains(&config.catchment.wall_height_m)
         || !identifier(&config.catchment.material)
         || !identifier(&config.catchment.physical_material)
-        || config.mutation.operator != "bounded-regional-perturbation-v2"
+        || config.mutation.operator != "bounded-regional-perturbation-v3"
         || !valid_sha(&config.mutation.recipe_sha256)
         || !(0.0..=0.3).contains(&config.mutation.scalar_fraction)
         || config.mutation.integer_delta > 8
@@ -900,7 +928,7 @@ impl HabitatFamily {
             parents: vec![],
             environment_parents: vec![],
             variation: Variation {
-                operator: "initial-regional-sample-v2".into(),
+                operator: "initial-regional-sample-v3".into(),
                 seed,
                 recipe_sha256: self.config.mutation.recipe_sha256.clone(),
             },

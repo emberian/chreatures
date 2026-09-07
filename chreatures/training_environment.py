@@ -17,7 +17,7 @@ from .homeostasis import FiniteEnergyConfig, FiniteEnergyObjective
 from .physical_batch import FastArticulatedSensoriumWorld
 from .sensorium import ArticulatedSensoriumWorld, profile_identity
 from .organism_interface import (
-    ACTION_DIM, BODY_DIM, MAX_RESIDENTS, OBSERVATION_DIM, PHYSIOLOGY_DIM,
+    ACTION_DIM, MAX_RESIDENTS, OBSERVATION_DIM, PHYSIOLOGY_DIM,
     PHYSIOLOGY_NAMES, identity as organism_identity,
 )
 
@@ -182,7 +182,7 @@ class EmbodiedTrainingProfile:
                 "format", "selector", "generator_config", "schedule",
                 "resident_bundle", "transport", "variants",
             }
-            or value.get("format") != "chreatures-regional-training-identity-v2"
+            or value.get("format") != "chreatures-regional-training-identity-v3"
             or value.get("selector") != "environment-genome-round-robin-v1"
         ):
             raise ValueError("invalid regional training identity")
@@ -256,7 +256,7 @@ class EmbodiedTrainingProfile:
                     "resource_sha256", "profile_sha256", "epoch", "descriptors",
                     "generation_cost",
                 }
-                or record.get("format") != "chreatures-environment-record-v2"
+                or record.get("format") != "chreatures-environment-record-v3"
                 or record.get("genome_sha256") != variant["genome_sha256"]
                 or hashlib.sha256(_canonical(record_body)).hexdigest() != record["sha256"]
                 or not isinstance(parents, list) or len(parents) > 2
@@ -475,7 +475,7 @@ class EmbodiedTrainingProfile:
             "homeostasis": FiniteEnergyConfig().to_value(),
             "physiology": physiology_identity(),
             "family": {
-                "format": "chreatures-regional-training-identity-v2",
+                "format": "chreatures-regional-training-identity-v3",
                 "selector": schedule_value["selector"],
                 "generator_config": {"sha256": _sha(config_path)},
                 "schedule": {"sha256": _sha(schedule_path)},

@@ -319,6 +319,8 @@ def _candidate_arrays(adapters, count, population, organism_sha256):
 
 
 def _encode(value: Any) -> Any:
+    if isinstance(value, bytes):
+        return {"bytes_base64": base64.b64encode(value).decode()}
     if isinstance(value, np.ndarray):
         array = np.ascontiguousarray(value)
         return {
@@ -332,6 +334,8 @@ def _encode(value: Any) -> Any:
 
 
 def _decode(value: Any) -> Any:
+    if isinstance(value, dict) and set(value) == {"bytes_base64"}:
+        return base64.b64decode(value["bytes_base64"], validate=True)
     if isinstance(value, dict) and set(value) == {"dtype", "shape", "base64"}:
         dtype = np.dtype(value["dtype"])
         shape = tuple(value["shape"])

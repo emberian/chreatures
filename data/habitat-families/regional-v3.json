@@ -1,5 +1,5 @@
 {
-  "format": "chreatures-regional-habitat-family-v2",
+  "format": "chreatures-regional-habitat-family-v3",
   "habitat_template_sha256": "70d3659059564ee3ba75ccca91fe82cfc81d6c28ac2626141def38ec302628e7",
   "biosphere_template_sha256": "7313420e6f8b507bf45b8ab2ec733064033af127897a3bab135a964fb519fe0e",
   "replace_entity_ids": [
@@ -140,8 +140,8 @@
     "physical_material": "masonry"
   },
   "mutation": {
-    "operator": "bounded-regional-perturbation-v2",
-    "recipe_sha256": "deaad04d9e6f0711457c49d6b88ab97106f734c1be805e945ad1e2762bd0224e",
+    "operator": "bounded-regional-perturbation-v3",
+    "recipe_sha256": "f9fab78fff009d4dfa33ef3f6fbab1339d00d6021b4a5fc15f471e88db38f16b",
     "scalar_fraction": 0.12,
     "integer_delta": 3,
     "resident_delta": 0
@@ -160,17 +160,50 @@
     }
   },
   "developmental_rule_alleles": {
-    "vertical_weight": {"min": 0.75, "max": 1.25},
-    "clearance_weight": {"min": 0.75, "max": 1.25},
-    "surface_weight": {"min": 0.75, "max": 1.25},
-    "surface_reach": {"min": 0.75, "max": 1.25},
-    "clearance_distance": {"min": 0.75, "max": 1.25},
-    "conductivity": {"min": 0.75, "max": 1.25},
-    "half_resistance": {"min": 0.75, "max": 1.25},
-    "response_light": {"min": 0.75, "max": 1.25},
-    "response_nutrient": {"min": 0.75, "max": 1.25},
-    "response_support": {"min": 0.75, "max": 1.25},
-    "response_competition": {"min": 0.75, "max": 1.25}
+    "vertical_weight": {
+      "min": 0.75,
+      "max": 1.25
+    },
+    "clearance_weight": {
+      "min": 0.75,
+      "max": 1.25
+    },
+    "surface_weight": {
+      "min": 0.75,
+      "max": 1.25
+    },
+    "surface_reach": {
+      "min": 0.75,
+      "max": 1.25
+    },
+    "clearance_distance": {
+      "min": 0.75,
+      "max": 1.25
+    },
+    "conductivity": {
+      "min": 0.75,
+      "max": 1.25
+    },
+    "half_resistance": {
+      "min": 0.75,
+      "max": 1.25
+    },
+    "response_light": {
+      "min": 0.75,
+      "max": 1.25
+    },
+    "response_nutrient": {
+      "min": 0.75,
+      "max": 1.25
+    },
+    "response_support": {
+      "min": 0.75,
+      "max": 1.25
+    },
+    "response_competition": {
+      "min": 0.75,
+      "max": 1.25
+    }
   },
   "archetypes": [
     {
