@@ -13,8 +13,9 @@ private sequence memory, material-funded local growth, seven-pool synthetic
 chemistry, and organism–environment search. Its native controller format is v6;
 the twelve-action body interface remains v4 and inherited Torch policy weights
 remain v5. Existing recorded lives keep their original mechanisms. The new
-predictor has been fitted and exported to native execution; its joined neural
-deployment is in progress. The first joined
+predictor has been fitted and exported to native execution. The joined population
+run completed 80 research lives, and a 360-frame recording follows eight residents
+in a separate M2 research continuation. The first joined
 physical run built 32 funded parts and released newly produced fermentate into
 physical packets. Recipient uptake and a sustained food web are not established.
 [Wave contract and implementation](docs/development/RECIPROCAL_ECOLOGY_WAVE.md).
@@ -62,6 +63,24 @@ regulation or genotype–environment transfer. [Fit and support](docs/GAM_POPULA
 
 ## What has run
 
+The reciprocal population campaign completed **163,840 resident transitions**
+across ten environments and 80 lives. It took **986 wall seconds**, including
+startup, checkpoints and the first result-assembly failure; the final report was
+reconstructed from preserved data without replay. Private goal associations
+received 15,237 updates, while 1,003 evicted-memory receipts correctly received
+no attribution. There were only **five mouth-contact ticks**: these results
+establish coupled execution and recorded learning updates, not learned feeding
+or a sustained food web. The search retained 62 candidates in 19 archive cells
+and selected a separate challenge wave. [Per-life results and costs](data/development/population-v6-principal-wave.receipt.json).
+
+The [default observatory](https://emberian.github.io/chreatures/living.html)
+replays **360 frames from eight residents**, covering model seconds 79.05–200.65.
+It records direct retinal input, neural population readouts, private-memory
+summaries, forecasts and physical consequences. This is an explicit research
+copy of a coherent tick-118 checkpoint under the fixed engine. Two independent
+restores of its later tick-4095 checkpoint produced byte-identical world and
+neural snapshots after one step. [Recording, branch and restoration scope](data/development/reciprocal-v6-research-continuation.receipt.json).
+
 The new predictor corpus contains **393,216 actual transitions**, collected in
 six eight-resident worlds at **229.06 resident transitions/s**, including sealing
 and checkpoints. Its three-member recurrent fit took **399.79 seconds** on
@@ -74,7 +93,7 @@ transfer to the new chemistry and improved physical control remain unestablished
 
 The earlier regional observatory replays **240 actual frames from eight v4 residents**, covering model seconds 51.65–118.50. The source recording contains delivered actions, body measurements, real geometry and private learning diagnostics. Its simulation ran on the M2 with the full MaleCNS graph. This is a recorded episode, not a live connection to the private world, and it does not establish successful feeding, reproduction or social learning. [Watch the regional world](https://emberian.github.io/chreatures/living.html?recording=regional-wave).
 
-The homepage now leads with a **new trained v5 research world**, also eight
+The earlier **trained v5 research world** also contains eight
 residents, using the update-20 controller and the two additional population GAM
 laws. Its 240 recorded frames cover model seconds 40.35–100.20 after an outside
 material offering and light/sound sequence. During that interval, 7,694 committed

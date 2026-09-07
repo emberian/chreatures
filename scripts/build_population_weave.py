@@ -55,6 +55,7 @@ def _native_build(request: dict[str, Any], weave_output: Path) -> dict[str, Any]
         command = [
             "cargo",
             "run",
+            "--release",
             "--quiet",
             "--",
             "--input",

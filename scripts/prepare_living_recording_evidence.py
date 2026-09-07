@@ -35,6 +35,7 @@ BINDING_FORMAT = "chreatures-living-recording-private-binding-v1"
 BIRTH_EXPORT_FORMAT = "chreatures-population-birth-export-v1"
 CHECKPOINT_FORMAT = "chreatures-developmental-habitat-checkpoint-v4"
 LINK_FORMAT = "chreatures-living-recording-evidence-link-v2"
+MIGRATION_FORMAT = "chreatures-research-continuation-migration-v1"
 RECORDING_FORMAT = "chreatures-living-reef-public-recording-v2"
 
 
@@ -134,6 +135,86 @@ def _recording(path: Path) -> dict[str, Any]:
     return recording
 
 
+def _migration(
+    path: Path,
+    *,
+    source_checkpoint: tuple[Mapping[str, Any], str, str],
+    target_initial_checkpoint: tuple[Mapping[str, Any], str, str],
+) -> tuple[dict[str, Any], str, str]:
+    receipt = read_json(path)
+    expected_fields = {
+        "format", "from_world_id", "to_world_id", "tick", "from_revision",
+        "to_revision", "from_engine_sha256", "to_engine_sha256",
+        "source_checkpoint_file_sha256", "source_checkpoint_state_sha256",
+        "source_neural_file_sha256", "source_neural_payload_sha256",
+        "source_event_snapshot_sha256", "source_event_head_sha256",
+        "target_neural_file_sha256", "target_neural_payload_sha256",
+        "reason", "body_identity_mapping", "no_model_advance_during_migration",
+        "state_changes", "future_numerics", "output_checkpoint_file_sha256",
+        "output_checkpoint_state_sha256", "output_neural_bytes",
+        "retained_component_sha256", "source_execution_migration_count", "sha256",
+    }
+    if receipt.get("format") != MIGRATION_FORMAT or set(receipt) != expected_fields:
+        raise PopulationEvidenceError("unsupported research-continuation migration receipt")
+    receipt_sha = _authenticated(receipt, "research-continuation migration receipt")
+    receipt_file_sha = sha256_file(path)
+    source_state, source_state_sha, source_file_sha = source_checkpoint
+    target_state, target_state_sha, target_file_sha = target_initial_checkpoint
+    tick = receipt.get("tick")
+    mapping = receipt.get("body_identity_mapping")
+    if (
+        isinstance(tick, bool)
+        or not isinstance(tick, int)
+        or tick < 0
+        or source_state.get("tick") != tick
+        or target_state.get("tick") != tick
+    ):
+        raise PopulationEvidenceError("migration tick differs from its checkpoints")
+    if any(
+        receipt.get(key) != expected
+        for key, expected in (
+            ("from_world_id", source_state.get("id")),
+            ("to_world_id", target_state.get("id")),
+            ("source_checkpoint_file_sha256", source_file_sha),
+            ("source_checkpoint_state_sha256", source_state_sha),
+            ("output_checkpoint_file_sha256", target_file_sha),
+            ("output_checkpoint_state_sha256", target_state_sha),
+            ("from_engine_sha256", source_state.get("engine_identity", {}).get("sha256")),
+            ("to_engine_sha256", target_state.get("engine_identity", {}).get("sha256")),
+        )
+    ):
+        raise PopulationEvidenceError("migration receipt differs from checkpoint identity")
+    for key in (
+        "from_engine_sha256", "to_engine_sha256", "source_neural_file_sha256",
+        "source_neural_payload_sha256", "source_event_snapshot_sha256",
+        "source_event_head_sha256", "target_neural_file_sha256",
+        "target_neural_payload_sha256",
+    ):
+        _hash(receipt.get(key), f"migration {key}")
+    if (
+        receipt.get("no_model_advance_during_migration") is not True
+        or receipt.get("source_neural_payload_sha256")
+        != receipt.get("target_neural_payload_sha256")
+        or receipt.get("source_execution_migration_count") != 0
+    ):
+        raise PopulationEvidenceError("migration does not preserve frozen neural state")
+    retained = receipt.get("retained_component_sha256")
+    if not isinstance(retained, Mapping) or not retained:
+        raise PopulationEvidenceError("migration lacks retained component identities")
+    for name, digest in retained.items():
+        _hash(digest, f"migration retained component {name}")
+    if (
+        not isinstance(mapping, Mapping)
+        or not mapping
+        or len(set(mapping.values())) != len(mapping)
+        or any(not isinstance(key, str) or not isinstance(value, str) for key, value in mapping.items())
+    ):
+        raise PopulationEvidenceError("migration body identity mapping is invalid")
+    if not isinstance(receipt.get("state_changes"), list) or not receipt["state_changes"]:
+        raise PopulationEvidenceError("migration receipt lacks explicit state changes")
+    return receipt, receipt_sha, receipt_file_sha
+
+
 def _hatch_parent_indices(recording: Mapping[str, Any]) -> dict[int, tuple[int, int]]:
     result: dict[int, tuple[int, int]] = {}
     for event in recording.get("events", []):
@@ -181,6 +262,17 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     recording = _recording(args.recording)
     binding, binding_sha = _binding(args.binding, recording)
     state, checkpoint_state_sha, checkpoint_file_sha = _checkpoint(args.checkpoint)
+    source_checkpoint = _checkpoint(args.source_checkpoint)
+    target_initial_checkpoint = _checkpoint(args.target_initial_checkpoint)
+    source_state, source_checkpoint_state_sha, source_checkpoint_file_sha = source_checkpoint
+    initial_state, target_initial_state_sha, target_initial_file_sha = (
+        target_initial_checkpoint
+    )
+    migration, migration_sha, migration_file_sha = _migration(
+        args.migration_receipt,
+        source_checkpoint=source_checkpoint,
+        target_initial_checkpoint=target_initial_checkpoint,
+    )
     receipt, founder_manifest, birth_receipt_sha = _birth_export(args.birth_export)
 
     provenance = recording.get("provenance", {})
@@ -219,6 +311,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         raise PopulationEvidenceError("life binding checkpoint tick is invalid")
     if state.get("engine_identity", {}).get("sha256") != binding["engine_identity_sha256"]:
         raise PopulationEvidenceError("checkpoint engine differs from recording")
+    if state.get("id") != initial_state.get("id") or state.get("tick", -1) <= migration["tick"]:
+        raise PopulationEvidenceError("recorded checkpoint is not the migrated research branch")
     neural_identity = state.get("neural_identity", {})
     checkpoint_graph = neural_identity.get("graph_sha256") or neural_identity.get(
         "graph", {}
@@ -232,18 +326,37 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     if controller_artifact != binding["resident_artifact_sha256"]:
         raise PopulationEvidenceError("checkpoint resident artifact differs from recording")
 
+    source_manifest = validate_manifest(source_state.get("birth_manifest", {}))
+    initial_manifest = validate_manifest(initial_state.get("birth_manifest", {}))
     checkpoint_manifest = validate_manifest(state.get("birth_manifest", {}))
     founders = founder_manifest["residents"]
+    source_residents = source_manifest["residents"]
     residents = checkpoint_manifest["residents"]
-    if residents[: len(founders)] != founders:
-        raise PopulationEvidenceError("checkpoint founders differ from cold-birth export")
-    source_bodies = state.get("world", {}).get("bodies")
-    if not isinstance(source_bodies, list) or len(source_bodies) != len(residents):
+    if (
+        source_residents != founders
+        or initial_manifest["residents"] != source_residents
+        or residents[: len(source_residents)] != source_residents
+    ):
+        raise PopulationEvidenceError("migration founders differ from cold-birth export")
+    source_bodies = source_state.get("world", {}).get("bodies")
+    if not isinstance(source_bodies, list) or len(source_bodies) != len(source_residents):
+        raise PopulationEvidenceError("source checkpoint body order differs from birth manifest")
+    migrated_bodies = initial_state.get("world", {}).get("bodies")
+    if not isinstance(migrated_bodies, list) or len(migrated_bodies) != len(source_bodies):
+        raise PopulationEvidenceError("migration changed the initial resident count")
+    identity_mapping = migration["body_identity_mapping"]
+    for source_body, target_body in zip(source_bodies, migrated_bodies, strict=True):
+        source_identity = f"{migration['from_world_id']}:{source_body.get('id')}"
+        target_identity = f"{migration['to_world_id']}:{target_body.get('id')}"
+        if identity_mapping.get(source_identity) != target_identity:
+            raise PopulationEvidenceError("migration body identity mapping differs from checkpoints")
+    target_bodies = state.get("world", {}).get("bodies")
+    if not isinstance(target_bodies, list) or len(target_bodies) != len(residents):
         raise PopulationEvidenceError("checkpoint body order differs from its birth manifest")
     body_rows = binding.get("bodies")
-    if not isinstance(body_rows, list) or len(body_rows) != len(source_bodies):
+    if not isinstance(body_rows, list) or len(body_rows) != len(target_bodies):
         raise PopulationEvidenceError("private binding does not cover the checkpoint cohort")
-    for index, (body, bound) in enumerate(zip(source_bodies, body_rows, strict=True)):
+    for index, (body, bound) in enumerate(zip(target_bodies, body_rows, strict=True)):
         if not isinstance(bound, Mapping) or bound.get("public_body") != index or bound.get(
             "source_body_id"
         ) != body.get("id"):
@@ -294,6 +407,17 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     checkpoint_blob = local_blob(
         args.checkpoint, role="life_checkpoint", media_type="application/json"
     )
+    source_checkpoint_blob = local_blob(
+        args.source_checkpoint, role="life_checkpoint", media_type="application/json"
+    )
+    migration_blob = local_blob(
+        args.migration_receipt, role="migration_receipt", media_type="application/json"
+    )
+    target_initial_blob = local_blob(
+        args.target_initial_checkpoint,
+        role="target_initial_checkpoint",
+        media_type="application/json",
+    )
     records: list[dict[str, Any]] = []
     genomes: dict[str, Mapping[str, Any]] = {}
     for row in residents:
@@ -338,73 +462,204 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         )
 
     hatch_parents = _hatch_parent_indices(recording)
-    life_ids = []
-    for index, (bound, resident) in enumerate(zip(body_rows, residents, strict=True)):
-        source_body_id = str(bound["source_body_id"])
+    source_life_ids: list[str] = []
+    life_ids: list[str] = []
+    life_root_ids: list[str] = []
+    observed_life_record_ids: list[str] = []
+    for index, (source_body, resident) in enumerate(
+        zip(source_bodies, source_residents, strict=True)
+    ):
+        source_body_id = str(source_body["id"])
         genome_sha = str(resident["candidate"]["sha256"])
-        life_id = hashlib.sha256(
+        source_life_id = hashlib.sha256(
             canonical_bytes(
                 {
                     "format": "chreatures-independent-research-life-v1",
-                    "world_id": world_id,
+                    "world_id": migration["from_world_id"],
                     "source_body_id": source_body_id,
                     "genome_sha256": genome_sha,
                 }
             )
         ).hexdigest()
-        life_ids.append(life_id)
-        parents = {
-            f"genome:{genome_sha}": "candidate_genome",
-            environment_id: "environment",
-        }
-        birth_tick = 0
-        birth_mode = "experimental_initialization"
-        if index >= len(founders):
-            hatch = hatch_parents.get(index)
-            if hatch is None:
-                raise PopulationEvidenceError(
-                    "a non-founder resident lacks a captured hatching parent receipt"
-                )
-            parent_index, birth_tick = hatch
-            if parent_index >= index:
-                raise PopulationEvidenceError("hatching parent must precede its offspring")
-            parents[f"birth:{life_ids[parent_index]}"] = "physical_parent_birth"
-            birth_mode = "embodied_reproduction"
-        birth_id = f"birth:{life_id}"
+        source_life_ids.append(source_life_id)
+        birth_id = f"birth:{source_life_id}"
         records.append(
             evidence_record(
                 id=birth_id,
-                time={"domain": "model_tick", "value": birth_tick},
+                time={"domain": "model_tick", "value": 0},
                 record_type="birth",
-                text=(
-                    "Fresh research resident instantiated from an authenticated cold birth."
-                    if birth_mode == "experimental_initialization"
-                    else "Funded offspring committed by the recorded physical world."
-                ),
-                parents=parents,
+                text="Original research resident instantiated by the authenticated canonical birth export.",
+                parents={
+                    f"genome:{genome_sha}": "candidate_genome",
+                    environment_id: "environment",
+                },
                 fields={
-                    "life_id": life_id,
-                    "birth_mode": birth_mode,
+                    "life_id": source_life_id,
+                    "birth_mode": "experimental_initialization",
                     "genome_sha256": genome_sha,
                     "environment_sha256": environment_sha,
                     "birth_export_receipt_sha256": birth_receipt_sha,
-                    "birth_proof_checkpoint_state_sha256": checkpoint_state_sha,
-                    "world_instance_sha256": hashlib.sha256(world_id.encode()).hexdigest(),
-                    "source_body_id_sha256": hashlib.sha256(source_body_id.encode()).hexdigest(),
+                    "birth_proof_checkpoint_state_sha256": source_checkpoint_state_sha,
+                    "world_instance_sha256": hashlib.sha256(
+                        migration["from_world_id"].encode()
+                    ).hexdigest(),
+                    "source_body_id_sha256": hashlib.sha256(
+                        source_body_id.encode()
+                    ).hexdigest(),
                     "public_body": index,
                 },
             )
         )
+        source_checkpoint_id = (
+            f"life-checkpoint:{source_life_id}:{migration['tick']}:"
+            f"{source_checkpoint_file_sha}"
+        )
         records.append(
             evidence_record(
-                id=(
-                    f"life-checkpoint:{life_id}:{state['tick']}:"
-                    f"{checkpoint_file_sha}"
-                ),
+                id=source_checkpoint_id,
+                time={"domain": "model_tick", "value": migration["tick"]},
+                record_type="life_checkpoint",
+                text="Last coherent checkpoint of the original paused research life.",
+                parents={birth_id: "life_continuation"},
+                blobs=[source_checkpoint_blob],
+                fields={
+                    "life_id": source_life_id,
+                    "checkpoint_sha256": source_checkpoint_file_sha,
+                    "checkpoint_state_sha256": source_checkpoint_state_sha,
+                    "tick": migration["tick"],
+                },
+            )
+        )
+        target_body_id = str(migrated_bodies[index]["id"])
+        branch_life_id = hashlib.sha256(
+            canonical_bytes(
+                {
+                    "format": "chreatures-research-branch-life-v1",
+                    "migration_receipt_sha256": migration_sha,
+                    "source_life_id": source_life_id,
+                    "target_world_id": migration["to_world_id"],
+                    "target_body_id": target_body_id,
+                    "genome_sha256": genome_sha,
+                }
+            )
+        ).hexdigest()
+        life_ids.append(branch_life_id)
+        branch_id = f"research-branch:{migration_sha}:{index}"
+        life_root_ids.append(branch_id)
+        records.append(
+            evidence_record(
+                id=branch_id,
+                time={"domain": "model_tick", "value": migration["tick"]},
+                record_type="research_branch",
+                text="Authenticated research copy branched from a coherent paused-life checkpoint.",
+                parents={
+                    source_checkpoint_id: "source_checkpoint",
+                    f"genome:{genome_sha}": "candidate_genome",
+                    environment_id: "environment",
+                },
+                blobs=[migration_blob, target_initial_blob],
+                fields={
+                    "life_id": branch_life_id,
+                    "source_life_id": source_life_id,
+                    "source_tick": migration["tick"],
+                    "branch_mode": "authenticated_research_copy",
+                    "genome_sha256": genome_sha,
+                    "environment_sha256": environment_sha,
+                    "migration_receipt_sha256": migration_sha,
+                    "migration_receipt_file_sha256": migration_file_sha,
+                    "source_checkpoint_sha256": source_checkpoint_file_sha,
+                    "source_checkpoint_state_sha256": source_checkpoint_state_sha,
+                    "source_neural_snapshot_sha256": migration["source_neural_file_sha256"],
+                    "source_neural_payload_sha256": migration["source_neural_payload_sha256"],
+                    "source_event_snapshot_sha256": migration[
+                        "source_event_snapshot_sha256"
+                    ],
+                    "source_event_head_sha256": migration["source_event_head_sha256"],
+                    "target_initial_checkpoint_sha256": target_initial_file_sha,
+                    "target_initial_checkpoint_state_sha256": target_initial_state_sha,
+                    "target_neural_snapshot_sha256": migration["target_neural_file_sha256"],
+                    "target_neural_payload_sha256": migration["target_neural_payload_sha256"],
+                    "from_source_revision": migration["from_revision"],
+                    "to_source_revision": migration["to_revision"],
+                    "from_engine_identity_sha256": migration["from_engine_sha256"],
+                    "to_engine_identity_sha256": migration["to_engine_sha256"],
+                    "no_model_advance_during_migration": True,
+                    "world_instance_sha256": hashlib.sha256(
+                        migration["to_world_id"].encode()
+                    ).hexdigest(),
+                    "source_body_id_sha256": hashlib.sha256(
+                        target_body_id.encode()
+                    ).hexdigest(),
+                    "public_body": index,
+                },
+            )
+        )
+
+    for index, (bound, resident) in enumerate(zip(body_rows, residents, strict=True)):
+        source_body_id = str(bound["source_body_id"])
+        genome_sha = str(resident["candidate"]["sha256"])
+        if index < len(source_residents):
+            life_id = life_ids[index]
+            root_id = life_root_ids[index]
+        else:
+            life_id = hashlib.sha256(
+                canonical_bytes(
+                    {
+                        "format": "chreatures-independent-research-life-v1",
+                        "world_id": world_id,
+                        "source_body_id": source_body_id,
+                        "genome_sha256": genome_sha,
+                    }
+                )
+            ).hexdigest()
+            life_ids.append(life_id)
+            hatch = hatch_parents.get(index)
+            if hatch is None:
+                raise PopulationEvidenceError(
+                    "a post-migration resident lacks a captured hatching parent receipt"
+                )
+            parent_index, birth_tick = hatch
+            if parent_index >= index:
+                raise PopulationEvidenceError("hatching parent must precede its offspring")
+            root_id = f"birth:{life_id}"
+            life_root_ids.append(root_id)
+            records.append(
+                evidence_record(
+                    id=root_id,
+                    time={"domain": "model_tick", "value": birth_tick},
+                    record_type="birth",
+                    text="Funded offspring committed by the recorded physical world.",
+                    parents={
+                        f"genome:{genome_sha}": "candidate_genome",
+                        environment_id: "environment",
+                        life_root_ids[parent_index]: "physical_parent_birth",
+                    },
+                    fields={
+                        "life_id": life_id,
+                        "birth_mode": "embodied_reproduction",
+                        "genome_sha256": genome_sha,
+                        "environment_sha256": environment_sha,
+                        "birth_export_receipt_sha256": birth_receipt_sha,
+                        "birth_proof_checkpoint_state_sha256": checkpoint_state_sha,
+                        "world_instance_sha256": hashlib.sha256(world_id.encode()).hexdigest(),
+                        "source_body_id_sha256": hashlib.sha256(
+                            source_body_id.encode()
+                        ).hexdigest(),
+                        "public_body": index,
+                    },
+                )
+            )
+        checkpoint_id = (
+            f"life-checkpoint:{life_id}:{state['tick']}:"
+            f"{checkpoint_file_sha}"
+        )
+        records.append(
+            evidence_record(
+                id=checkpoint_id,
                 time={"domain": "model_tick", "value": int(state["tick"])},
                 record_type="life_checkpoint",
-                text="Authenticated whole-world checkpoint containing this research life.",
-                parents={birth_id: "life_continuation"},
+                text="Authenticated whole-world checkpoint containing this research branch.",
+                parents={root_id: "life_continuation"},
                 blobs=[checkpoint_blob],
                 fields={
                     "life_id": life_id,
@@ -414,6 +669,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
                 },
             )
         )
+
+        observed_life_record_ids.append(checkpoint_id)
 
     candidate_records = {record["id"]: record for record in records}
     for record in records:
@@ -434,6 +691,12 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "binding_content_sha256": binding_sha,
             "checkpoint_file_sha256": checkpoint_file_sha,
             "checkpoint_state_sha256": checkpoint_state_sha,
+            "migration_receipt_sha256": migration_sha,
+            "migration_receipt_file_sha256": migration_file_sha,
+            "source_checkpoint_file_sha256": source_checkpoint_file_sha,
+            "source_checkpoint_state_sha256": source_checkpoint_state_sha,
+            "target_initial_checkpoint_file_sha256": target_initial_file_sha,
+            "target_initial_checkpoint_state_sha256": target_initial_state_sha,
             "recording_content_sha256": recording["content_sha256"],
         },
     }
@@ -469,7 +732,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "campaign_record_id": campaign_id,
         "environment_record_id": environment_id,
         "body_life_record_ids": {
-            str(index): f"birth:{life_id}" for index, life_id in enumerate(life_ids)
+            str(index): record_id
+            for index, record_id in enumerate(observed_life_record_ids)
         },
         "associated_law_fit_record_ids": laws,
         "event_law_fit_record_ids": event_laws,
@@ -490,6 +754,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "founders": len(founders),
         "offspring": len(residents) - len(founders),
         "lives": len(life_ids),
+        "research_branches": len(source_life_ids),
+        "source_checkpoint_tick": migration["tick"],
         "new_genomes": sum(record["record_type"] == "genome_candidate" for record in records),
         "new_environments": sum(record["record_type"] == "environment_candidate" for record in records),
         "checkpoint_tick": int(state["tick"]),
@@ -503,6 +769,9 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--recording", required=True, type=Path)
     parser.add_argument("--binding", required=True, type=Path)
     parser.add_argument("--checkpoint", required=True, type=Path)
+    parser.add_argument("--source-checkpoint", required=True, type=Path)
+    parser.add_argument("--target-initial-checkpoint", required=True, type=Path)
+    parser.add_argument("--migration-receipt", required=True, type=Path)
     parser.add_argument("--birth-export", required=True, type=Path)
     parser.add_argument("--associated-law-fit", action="append", default=[])
     parser.add_argument("--event-law", action="append", default=[])

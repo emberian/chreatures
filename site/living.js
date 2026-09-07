@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from './vendor/three/OrbitControls.js';
 import {habitatView} from './habitat-view.js';
 
-const FORMAT = 'chreatures-living-reef-public-recording-v1';
+const FORMATS = new Set(['chreatures-living-reef-public-recording-v1','chreatures-living-reef-public-recording-v2']);
 const GEOMETRY_ENCODING = 'entity-replacement-delta-v1';
 const ACTIONS = ['thrust','yaw','gaze_pitch','grip','signal_low','signal_mid','signal_high','posture','oral'];
 const ACTOR_ACTIONS = ACTIONS.slice(0,8);
@@ -52,7 +52,7 @@ function finiteArray(value, length, label) {
 }
 
 function validate(data) {
-  if (!data || data.format !== FORMAT) throw new Error(`Expected ${FORMAT}`);
+  if (!data || !FORMATS.has(data.format)) throw new Error('Unsupported public recording format');
   if (data.geometry_encoding !== GEOMETRY_ENCODING) throw new Error(`Expected ${GEOMETRY_ENCODING}`);
   if (!Array.isArray(data.frames) || data.frames.length < 2) throw new Error('Recording has no frame sequence');
   if (!data.geometry || !Array.isArray(data.geometry.bounds)) throw new Error('Recording has no geometry bounds');
@@ -648,6 +648,13 @@ export function loadRecording(data) {
   updateInstruments(0);return recording;
 }
 
+export function consumeRecordingInstrumentsForTest(data){
+  recording=validate(expandEntityDeltas(data));makeActionBars();makeDecisionDisplay();populateMoments();populateEvents();
+  const bodies=residentIds(),frames=[0,Math.floor(recording.frames.length/2),recording.frames.length-1];
+  let updates=0;for(const body of bodies){activeBody=body;for(const frame of frames){updateInstruments(frame);updates++;}}
+  return {format:recording.format,residents:bodies.length,frames:recording.frames.length,instrument_updates:updates,events:(recording.events||[]).length};
+}
+
 ui.resident.addEventListener('change',()=>{activeBody=Number(ui.resident.value);rebuildResidentOverlays();updateInstruments(Math.round(cursor));const bodyButton=document.querySelector('[data-camera="body"]'),hasPose=recording.frames.some(frame=>residentDetail(frame)?.retina_pose);bodyButton.disabled=!hasPose;bodyButton.title=hasPose?'Recorded retinal viewpoint':'This resident has no recorded retinal pose';});
 
 ui.play.addEventListener('click',()=>{
@@ -669,12 +676,19 @@ ui.hearSignals.addEventListener('click',async()=>{if(ui.hearSignals.disabled)ret
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopActiveVoices();if(audioContext?.state==='running')audioContext.suspend();}else if(hearingSignals&&audioContext?.state==='suspended')audioContext.resume();});
 for(const button of document.querySelectorAll('[data-overlay]'))button.addEventListener('click',()=>{const key=button.dataset.overlay;overlayVisibility[key]=!overlayVisibility[key];button.setAttribute('aria-pressed',String(overlayVisibility[key]));});
 
-initThree();
-const recordingKey=new URLSearchParams(location.search).get('recording');
-const recordingAsset=recordingKey==='trained-organs'?'./assets/trained-organs-recording.json':recordingKey==='regional-wave'?'./assets/regional-wave-recording.json':'./assets/living-reef-recording.json';
+if(!globalThis.__CHREATURES_LIVING_DOM_STUB__)initThree();
+const recordingKey=globalThis.__CHREATURES_LIVING_DOM_STUB__?null:new URLSearchParams(location.search).get('recording');
+const recordingAsset=recordingKey==='trained-organs'?'./assets/trained-organs-recording.json':recordingKey==='regional-wave'?'./assets/regional-wave-recording.json':recordingKey==='courtyard'?'./assets/living-reef-recording.json':'./assets/reciprocal-wave-recording.json.gz';
 if(recordingKey==='regional-wave'){document.title='Regional world recording — Chreatures';ui.evidenceLink.textContent='Population atlas →';ui.evidenceLink.href='population.html'}
 if(recordingKey==='trained-organs'){document.title='Trained organs in a regional world — Chreatures';ui.evidenceLink.textContent='Trained controller receipt →';ui.evidenceLink.href='https://github.com/emberian/chreatures/tree/main/data/training/population-v5-update20'}
-fetch(recordingAsset)
-  .then(response=>{if(!response.ok)throw new Error(`HTTP ${response.status}`);return response.json();})
+if(!recordingKey){document.title='Reciprocal-wave recording — Chreatures';ui.evidenceLink.textContent='Typed recording evidence →';ui.evidenceLink.href='https://github.com/emberian/chreatures/blob/main/integrations/artifacts/reciprocal-v6-research-branch-v1/recording-link.json'}
+async function fetchRecording(path){
+  const response=await fetch(path);if(!response.ok)throw new Error(`HTTP ${response.status}`);
+  if(!path.endsWith('.gz'))return response.json();
+  if(typeof DecompressionStream==='undefined')throw new Error('This browser cannot open gzip recordings');
+  const stream=response.body.pipeThrough(new DecompressionStream('gzip'));
+  return JSON.parse(await new Response(stream).text());
+}
+if(!globalThis.__CHREATURES_LIVING_DOM_STUB__)fetchRecording(recordingAsset)
   .then(loadRecording)
   .catch(reason=>fail('The recorded reef is being prepared. This observatory will open when its public recording arrives.',reason));

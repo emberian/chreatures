@@ -28,6 +28,7 @@ RECORD_TYPES = frozenset(
         "genome_candidate",
         "environment_candidate",
         "birth",
+        "research_branch",
         "life_checkpoint",
         "evaluation_completed",
         "evaluation_failed",
@@ -67,10 +68,17 @@ _ROLE_RULES: dict[str, dict[str, tuple[frozenset[str], int, int | None]]] = {
     "birth": {
         "candidate_genome": (frozenset({"genome_candidate"}), 1, 1),
         "environment": (frozenset({"environment_candidate"}), 1, 1),
-        "physical_parent_birth": (frozenset({"birth"}), 0, 2),
+        "physical_parent_birth": (frozenset({"birth", "research_branch"}), 0, 2),
+    },
+    "research_branch": {
+        "source_checkpoint": (frozenset({"life_checkpoint"}), 1, 1),
+        "candidate_genome": (frozenset({"genome_candidate"}), 1, 1),
+        "environment": (frozenset({"environment_candidate"}), 1, 1),
     },
     "life_checkpoint": {
-        "life_continuation": (frozenset({"birth", "life_checkpoint"}), 1, 1),
+        "life_continuation": (
+            frozenset({"birth", "research_branch", "life_checkpoint"}), 1, 1
+        ),
     },
     "evaluation_completed": {
         "life_continuation": (frozenset({"birth", "life_checkpoint"}), 1, 1),
@@ -182,6 +190,7 @@ _REQUIRED_BLOBS = {
     "environment_probe_panel": frozenset({"probe_policy_panel"}),
     "genome_candidate": frozenset({"genome_artifact"}),
     "environment_candidate": frozenset({"environment_artifact"}),
+    "research_branch": frozenset({"migration_receipt"}),
     "life_checkpoint": frozenset({"life_checkpoint"}),
     "evaluation_completed": frozenset({"evaluation_result", "evaluation_trace"}),
     "evaluation_failed": frozenset({"evaluation_result", "evaluation_trace"}),
@@ -212,6 +221,24 @@ _HASH_FIELDS = {
         "profile_sha256",
         "variation_recipe_sha256",
     ),
+    "research_branch": (
+        "migration_receipt_sha256",
+        "migration_receipt_file_sha256",
+        "source_checkpoint_sha256",
+        "source_checkpoint_state_sha256",
+        "source_neural_snapshot_sha256",
+        "source_neural_payload_sha256",
+        "source_event_snapshot_sha256",
+        "source_event_head_sha256",
+        "target_initial_checkpoint_sha256",
+        "target_initial_checkpoint_state_sha256",
+        "target_neural_snapshot_sha256",
+        "target_neural_payload_sha256",
+        "from_engine_identity_sha256",
+        "to_engine_identity_sha256",
+        "world_instance_sha256",
+        "source_body_id_sha256",
+    ),
     "life_checkpoint": ("checkpoint_sha256",),
     "evaluation_completed": ("trajectory_sha256",),
     "evaluation_failed": ("trajectory_sha256",),
@@ -221,7 +248,12 @@ _HASH_FIELDS = {
         "original_support_report_sha256",
         "surface_sha256",
     ),
-    "embodied_recording": ("recording_sha256", "recording_content_sha256"),
+    "embodied_recording": (
+        "recording_sha256",
+        "recording_content_sha256",
+        "recording_transport_sha256",
+        "recording_transport_decoded_sha256",
+    ),
     "organism_transfer": (
         "public_event_sha256", "source_event_sha256", "recording_content_sha256",
     ),
@@ -242,6 +274,7 @@ _RECORDING_EVENT_TYPES = {
     "colony-material-emission": "organism_transfer",
     "hatching": "development_event",
     "goal_episode_completed": "development_event",
+    "research_continuation": "development_event",
     "developmental-growth-committed": "environment_event",
     "developmental-attachment-invalidated": "environment_event",
     "developmental-parts-removed": "environment_event",
@@ -337,6 +370,7 @@ def recording_evidence_records(
     recording: Mapping[str, Any],
     *,
     recording_artifact: Mapping[str, Any],
+    transport_artifact: Mapping[str, Any],
     campaign_record_id: str,
     environment_record_id: str,
     body_life_record_ids: Mapping[int, str],
@@ -360,7 +394,11 @@ def recording_evidence_records(
     if recording_artifact.get("role") != "public_recording":
         raise PopulationEvidenceError("recording artifact needs public_recording role")
     _validate_blob(recording_artifact, "embodied recording")
+    if transport_artifact.get("role") != "public_recording_gzip":
+        raise PopulationEvidenceError("recording transport needs public_recording_gzip role")
+    _validate_blob(transport_artifact, "embodied recording transport")
     recording_sha256 = recording_artifact.get("sha256")
+    transport_sha256 = transport_artifact.get("sha256")
     frames = recording.get("frames")
     events = recording.get("events")
     if not isinstance(frames, list) or not frames:
@@ -431,10 +469,13 @@ def recording_evidence_records(
             record_type="embodied_recording",
             text="Authenticated multi-resident physical-world recording.",
             parents=recording_parents,
-            blobs=[recording_artifact],
+            blobs=[recording_artifact, transport_artifact],
             fields={
                 "recording_sha256": recording_sha256,
                 "recording_content_sha256": content_sha256,
+                "recording_transport_sha256": transport_sha256,
+                "recording_transport_encoding": "gzip-level9-mtime0-empty-filename",
+                "recording_transport_decoded_sha256": recording_sha256,
                 "recording_format": recording["format"],
                 "first_tick": ticks[0],
                 "last_tick": ticks[-1],
@@ -539,7 +580,11 @@ def recording_evidence_records(
                 id=f"embodied-event:{event_sha256}",
                 time={"domain": "model_tick", "value": tick},
                 record_type=record_type,
-                text=f"Committed physical event: {kind}.",
+                text=(
+                    "Authenticated observer provenance event: research continuation."
+                    if kind == "research_continuation"
+                    else f"Committed physical event: {kind}."
+                ),
                 parents=parents,
                 fields={
                     "public_event_id": event_id,
@@ -550,6 +595,11 @@ def recording_evidence_records(
                     "tick": tick,
                     "model_time": float(model_time),
                     "kind": kind,
+                    "event_scope": (
+                        "observer_provenance"
+                        if kind == "research_continuation"
+                        else "committed_world_event"
+                    ),
                     "actors": deepcopy(dict(actors)),
                     "quantities": deepcopy(quantities),
                     "details": deepcopy(event.get("details", {})),
@@ -1135,10 +1185,10 @@ def validate_records(records: Sequence[Mapping[str, Any]], *, campaign_id: str) 
             if panel_id in panel_ids:
                 raise PopulationEvidenceError("probe panel identity is duplicated")
             panel_ids.add(panel_id)
-        elif record_type == "birth":
+        elif record_type in {"birth", "research_branch"}:
             life_id = _string(fields, "life_id", record["id"])
             if life_id in life_ids:
-                raise PopulationEvidenceError(f"life_id {life_id} has more than one birth")
+                raise PopulationEvidenceError(f"life_id {life_id} has more than one life root")
             life_ids.add(life_id)
 
     embodied_counts: Counter[str] = Counter()
@@ -1330,6 +1380,51 @@ def _validate_type_fields(
         if any(by_id[parent]["fields"].get("life_id") == life_id for parent in physical):
             raise PopulationEvidenceError(f"{record_id} reuses a physical parent's life_id")
         _validate_linked_identity(record, by_id)
+    elif record_type == "research_branch":
+        life_id = _string(fields, "life_id", record_id)
+        source_life_id = _string(fields, "source_life_id", record_id)
+        source = by_id[_single_parent(record, "source_checkpoint")]
+        source_root = by_id[_single_parent(source, "life_continuation")]
+        if source["fields"].get("life_id") != source_life_id or life_id == source_life_id:
+            raise PopulationEvidenceError(
+                f"{record_id} does not establish a distinct branch from its source life"
+            )
+        source_tick = _integer(fields, "source_tick", record_id)
+        if source_tick != source["fields"].get("tick"):
+            raise PopulationEvidenceError(f"{record_id} source tick differs from its edge")
+        if fields.get("branch_mode") != "authenticated_research_copy":
+            raise PopulationEvidenceError(f"{record_id} has invalid branch mode")
+        if fields.get("no_model_advance_during_migration") is not True:
+            raise PopulationEvidenceError(f"{record_id} migration advanced model state")
+        if fields.get("source_neural_payload_sha256") != fields.get(
+            "target_neural_payload_sha256"
+        ):
+            raise PopulationEvidenceError(f"{record_id} migration changes neural payload")
+        public_body = _integer(fields, "public_body", record_id)
+        if public_body < 0 or record_id != (
+            f"research-branch:{fields['migration_receipt_sha256']}:{public_body}"
+        ):
+            raise PopulationEvidenceError(f"{record_id} branch identity is invalid")
+        if fields.get("source_checkpoint_sha256") != source["fields"].get(
+            "checkpoint_sha256"
+        ) or fields.get("source_checkpoint_state_sha256") != source["fields"].get(
+            "checkpoint_state_sha256"
+        ):
+            raise PopulationEvidenceError(f"{record_id} source checkpoint hashes differ")
+        if fields.get("genome_sha256") != source_root["fields"].get(
+            "genome_sha256"
+        ) or fields.get("environment_sha256") != source_root["fields"].get(
+            "environment_sha256"
+        ):
+            raise PopulationEvidenceError(
+                f"{record_id} changes candidate or environment across the research copy"
+            )
+        receipt_blob = next(
+            blob for blob in record["blob_refs"] if blob["role"] == "migration_receipt"
+        )
+        if receipt_blob["sha256"] != fields["migration_receipt_file_sha256"]:
+            raise PopulationEvidenceError(f"{record_id} migration blob identity differs")
+        _validate_linked_identity(record, by_id)
     elif record_type == "life_checkpoint":
         _string(fields, "life_id", record_id)
         if _integer(fields, "tick", record_id) < 0:
@@ -1495,6 +1590,22 @@ def _validate_type_fields(
         )
         if recording_blob["sha256"] != recording_sha256:
             raise PopulationEvidenceError(f"{record_id} recording blob identity differs")
+        transport_blob = next(
+            (
+                blob
+                for blob in record["blob_refs"]
+                if blob["role"] == "public_recording_gzip"
+            ),
+            None,
+        )
+        if (
+            transport_blob is None
+            or transport_blob["sha256"] != fields.get("recording_transport_sha256")
+            or fields.get("recording_transport_decoded_sha256") != recording_sha256
+            or fields.get("recording_transport_encoding")
+            != "gzip-level9-mtime0-empty-filename"
+        ):
+            raise PopulationEvidenceError(f"{record_id} recording transport differs")
         if fields.get("recording_format") != "chreatures-living-reef-public-recording-v2":
             raise PopulationEvidenceError(f"{record_id} has unsupported recording format")
         first_tick = _integer(fields, "first_tick", record_id)
@@ -1548,6 +1659,13 @@ def _validate_type_fields(
         kind = _string(fields, "kind", record_id)
         if _RECORDING_EVENT_TYPES.get(kind) != record_type:
             raise PopulationEvidenceError(f"{record_id} kind differs from record type")
+        expected_scope = (
+            "observer_provenance"
+            if kind == "research_continuation"
+            else "committed_world_event"
+        )
+        if fields.get("event_scope") != expected_scope:
+            raise PopulationEvidenceError(f"{record_id} has invalid event scope")
         sequence = _integer(fields, "sequence", record_id)
         tick = _integer(fields, "tick", record_id)
         model_time = fields.get("model_time")
