@@ -39,16 +39,14 @@ BODY_AFFERENTS = 11_233
 CNS_TYPES = 11_752
 LATENT_DIM = 512
 DT_SECONDS = 0.05
-RECURRENT_GAIN = 0.92
-ADAPTATION_RATE = 1.0 / 5.0
-ADAPTATION_COEFFICIENT = 0.10
 SUPPORT_RECOVERY = 0.024
 SUPPORT_COST = 0.003
 SUPPORT_MINIMUM = 0.65
 NORMALIZED_BODY_CLIP = 8.0
 CHECKPOINT_TICKS = 4
-ARTIFACT_FORMAT = "chreatures-trainable-cns-adapter-v1"
-PARAMETER_ARTIFACT_FORMAT = "chreatures-cns-adapter-parameters-v1"
+READOUT_RANK = 64
+ARTIFACT_FORMAT = "chreatures-trainable-cns-adapter-v2"
+PARAMETER_ARTIFACT_FORMAT = "chreatures-cns-adapter-parameters-v2"
 RAW_SENSORY_DIM = OPTIC_SITES * OPTIC_CHANNELS + BODY_CHANNELS
 
 
@@ -60,13 +58,14 @@ TRAINABLE_SHAPES = {
     "body.input.bias": (128,),
     "body.output.weight": (BODY_AFFERENTS, 128),
     "body.output.bias": (BODY_AFFERENTS,),
-    "dynamics.bias_raw": (CNS_TYPES,),
+    "dynamics.baseline_raw": (CNS_TYPES,),
+    "dynamics.recurrent_gain_raw": (CNS_TYPES,),
     "dynamics.tau_raw": (CNS_TYPES,),
-    "dynamics.source_raw": (CNS_TYPES,),
-    "dynamics.target_raw": (CNS_TYPES,),
-    "dynamics.excitability_raw": (CNS_TYPES,),
-    "readout.weight": (LATENT_DIM, CNS_NEURONS),
-    "readout.bias": (LATENT_DIM,),
+    "dynamics.adaptation_gain_raw": (CNS_TYPES,),
+    "dynamics.adaptation_tau_raw": (CNS_TYPES,),
+    "readout.projection.weight": (READOUT_RANK, CNS_NEURONS),
+    "readout.output.weight": (LATENT_DIM, READOUT_RANK),
+    "readout.output.bias": (LATENT_DIM,),
 }
 BUFFER_SHAPES = {
     "body.mean": (BODY_CHANNELS,),
@@ -297,6 +296,74 @@ class CNSStaticArrays:
             identity,
         )
 
+    @classmethod
+    def from_service_arrays(
+        cls, arrays: Mapping[str, np.ndarray], identity: Mapping[str, Any]
+    ) -> "CNSStaticArrays":
+        """Build canonical training topology from authenticated service arrays."""
+
+        from scipy import sparse
+
+        required = {
+            "graph.crow",
+            "graph.col",
+            "graph.weight",
+            "atlas.receptor_rows",
+            "atlas.receptor_type",
+            "atlas.receptor_ptr",
+            "atlas.site_indices",
+            "atlas.site_weight",
+            "atlas.body_rows",
+            "atlas.neuron_type",
+        }
+        if not required.issubset(arrays):
+            raise ValueError("CNS service anatomy arrays are incomplete")
+        expected = {
+            name: shape
+            for name, _, shape in SERVICE_ARRAY_SPECS
+            if name in required
+        }
+        for name, shape in expected.items():
+            value = np.asarray(arrays[name])
+            if value.shape != shape or (
+                value.dtype.kind == "f" and not np.isfinite(value).all()
+            ):
+                raise ValueError(f"CNS service anatomy tensor differs: {name}")
+
+        recurrent = sparse.csr_matrix(
+            (
+                np.asarray(arrays["graph.weight"], dtype=np.float32),
+                np.asarray(arrays["graph.col"], dtype=np.int32),
+                np.asarray(arrays["graph.crow"], dtype=np.int32),
+            ),
+            shape=(CNS_NEURONS, CNS_NEURONS),
+        )
+        recurrent_t = recurrent.transpose().tocsr()
+        optic_crow = np.asarray(arrays["atlas.receptor_ptr"], dtype=np.int32)
+        optic_rows = np.asarray(arrays["atlas.receptor_rows"], dtype=np.int64)
+        body_rows = np.asarray(arrays["atlas.body_rows"], dtype=np.int64)
+        mask = np.ones(CNS_NEURONS, dtype=np.float32)
+        mask[optic_rows] = 0.0
+        mask[body_rows] = 0.0
+        return cls(
+            np.ascontiguousarray(recurrent.indptr, dtype=np.int32),
+            np.ascontiguousarray(recurrent.indices, dtype=np.int32),
+            np.ascontiguousarray(recurrent.data, dtype=np.float32),
+            np.ascontiguousarray(recurrent_t.indptr, dtype=np.int32),
+            np.ascontiguousarray(recurrent_t.indices, dtype=np.int32),
+            np.ascontiguousarray(recurrent_t.data, dtype=np.float32),
+            np.ascontiguousarray(optic_crow),
+            np.ascontiguousarray(arrays["atlas.site_indices"], dtype=np.int32),
+            np.ascontiguousarray(arrays["atlas.site_weight"], dtype=np.float32),
+            np.ascontiguousarray(optic_rows),
+            np.ascontiguousarray(arrays["atlas.receptor_type"], dtype=np.int64),
+            np.ascontiguousarray(np.diff(optic_crow) > 0, dtype=np.float32),
+            np.ascontiguousarray(body_rows),
+            np.ascontiguousarray(arrays["atlas.neuron_type"], dtype=np.int64),
+            mask,
+            copy.deepcopy(dict(identity)),
+        )
+
 
 def _csr(crow, columns, values, shape, device) -> torch.Tensor:
     return torch.sparse_csr_tensor(
@@ -350,20 +417,35 @@ class TrainableCNSAdapter(nn.Module):
             "body_scale", torch.ones(BODY_CHANNELS, device=device), persistent=True
         )
 
-        initial_bias = math.atanh(0.005 / 0.5)
-        initial_tau = inverse_sigmoid((0.16 - 0.025) / 0.475)
-        self.dynamics_bias_raw = nn.Parameter(
-            torch.full((CNS_TYPES,), initial_bias, device=device)
+        self.dynamics_baseline_raw = nn.Parameter(
+            torch.full(
+                (CNS_TYPES,), inverse_sigmoid((0.2 - 0.05) / 0.4), device=device
+            )
+        )
+        self.dynamics_recurrent_gain_raw = nn.Parameter(
+            torch.full(
+                (CNS_TYPES,), inverse_sigmoid((0.9 - 0.5) / 1.5), device=device
+            )
         )
         self.dynamics_tau_raw = nn.Parameter(
-            torch.full((CNS_TYPES,), initial_tau, device=device)
+            torch.full(
+                (CNS_TYPES,), inverse_sigmoid((0.08 - 0.02) / 0.23), device=device
+            )
         )
-        self.dynamics_source_raw = nn.Parameter(torch.zeros(CNS_TYPES, device=device))
-        self.dynamics_target_raw = nn.Parameter(torch.zeros(CNS_TYPES, device=device))
-        self.dynamics_excitability_raw = nn.Parameter(
-            torch.zeros(CNS_TYPES, device=device)
+        self.dynamics_adaptation_gain_raw = nn.Parameter(
+            torch.full((CNS_TYPES,), inverse_sigmoid(0.15 / 0.5), device=device)
         )
-        self.readout = nn.Linear(CNS_NEURONS, LATENT_DIM, device=device)
+        self.dynamics_adaptation_tau_raw = nn.Parameter(
+            torch.full(
+                (CNS_TYPES,), inverse_sigmoid((1.5 - 0.25) / 4.75), device=device
+            )
+        )
+        self.readout_projection = nn.Linear(
+            CNS_NEURONS, READOUT_RANK, bias=False, device=device
+        )
+        self.readout_output = nn.Linear(
+            READOUT_RANK, LATENT_DIM, bias=True, device=device
+        )
 
         self.register_buffer(
             "recurrent",
@@ -437,9 +519,10 @@ class TrainableCNSAdapter(nn.Module):
             self.body_input.bias.zero_()
             nn.init.xavier_uniform_(self.body_output.weight)
             self.body_output.bias.fill_(math.log(0.05 / 0.95))
-            nn.init.xavier_uniform_(self.readout.weight)
-            self.readout.weight.mul_(self.readout_mask.unsqueeze(0))
-            self.readout.bias.zero_()
+            nn.init.xavier_uniform_(self.readout_projection.weight)
+            self.readout_projection.weight.mul_(self.readout_mask.unsqueeze(0))
+            nn.init.xavier_uniform_(self.readout_output.weight)
+            self.readout_output.bias.zero_()
 
     def set_body_moments(self, mean: torch.Tensor, scale: torch.Tensor) -> None:
         if (
@@ -458,8 +541,9 @@ class TrainableCNSAdapter(nn.Module):
         if batch_size < 1:
             raise ValueError("batch size must be positive")
         shape = (CNS_NEURONS, batch_size)
+        baseline = self.effective_dynamics()[0]
         return CNSState(
-            torch.zeros(shape, device=self.device),
+            baseline.expand(shape).clone(),
             torch.zeros(shape, device=self.device),
             torch.ones(shape, device=self.device),
         )
@@ -506,54 +590,157 @@ class TrainableCNSAdapter(nn.Module):
 
     def effective_dynamics(self) -> tuple[torch.Tensor, ...]:
         type_index = self.neuron_type_index
-        bias = (0.5 * torch.tanh(self.dynamics_bias_raw))[type_index]
-        tau = (0.025 + 0.475 * torch.sigmoid(self.dynamics_tau_raw))[type_index]
-        source = (0.5 + torch.sigmoid(self.dynamics_source_raw))[type_index]
-        target = (0.5 + torch.sigmoid(self.dynamics_target_raw))[type_index]
-        excitability = (0.5 + torch.sigmoid(self.dynamics_excitability_raw))[type_index]
-        return bias[:, None], tau[:, None], source[:, None], target[:, None], excitability[:, None]
+        baseline = (
+            0.05 + 0.4 * torch.sigmoid(self.dynamics_baseline_raw)
+        )[type_index]
+        recurrent_gain = (
+            0.5 + 1.5 * torch.sigmoid(self.dynamics_recurrent_gain_raw)
+        )[type_index]
+        tau = (0.02 + 0.23 * torch.sigmoid(self.dynamics_tau_raw))[type_index]
+        adaptation_gain = (
+            0.5 * torch.sigmoid(self.dynamics_adaptation_gain_raw)
+        )[type_index]
+        adaptation_tau = (
+            0.25 + 4.75 * torch.sigmoid(self.dynamics_adaptation_tau_raw)
+        )[type_index]
+        return tuple(
+            value[:, None]
+            for value in (
+                baseline,
+                recurrent_gain,
+                tau,
+                adaptation_gain,
+                adaptation_tau,
+            )
+        )
 
-    def step(
-        self, optic_rgb: torch.Tensor, body: torch.Tensor, state: CNSState
-    ) -> tuple[torch.Tensor, CNSState]:
-        batch = optic_rgb.shape[0]
-        expected = (CNS_NEURONS, batch)
+    def neutral_afferent_drive(self, batch_size: int) -> torch.Tensor:
+        """Recompute the learned neutral input without severing gradients."""
+
+        if batch_size < 1:
+            raise ValueError("batch size must be positive")
+        optic = torch.full(
+            (batch_size, OPTIC_SITES, OPTIC_CHANNELS),
+            0.5,
+            dtype=torch.float32,
+            device=self.device,
+        )
+        body = self.body_mean.unsqueeze(0).expand(batch_size, -1)
+        return self.afferent_drive(optic, body)
+
+    def _validate_state(self, state: CNSState, batch_size: int) -> None:
+        expected = (CNS_NEURONS, batch_size)
         if any(
-            value.shape != expected or value.dtype != torch.float32 or value.device != self.device
+            value.shape != expected
+            or value.dtype != torch.float32
+            or value.device != self.device
             for value in (state.rates, state.adaptation, state.support)
         ):
             raise ValueError("CNS recurrent state shape, dtype, or device differs")
-        drive = self.afferent_drive(optic_rgb, body)
-        bias, tau, source, target_gain, excitability = self.effective_dynamics()
-        alpha = (DT_SECONDS / (2.0 * tau)).clamp_max(1.0)
+
+    def step_from_drive(
+        self,
+        drive: torch.Tensor,
+        state: CNSState,
+        dt: float = DT_SECONDS,
+        *,
+        dynamics: tuple[torch.Tensor, ...] | None = None,
+        neutral_drive: torch.Tensor | None = None,
+    ) -> CNSState:
+        """Advance the exact V2 recurrence from an afferent-only neural drive."""
+
+        if drive.ndim != 2 or drive.shape[0] != CNS_NEURONS:
+            raise ValueError("CNS drive must have shape [165122,batch]")
+        if (
+            drive.dtype != torch.float32
+            or drive.device != self.device
+            or not torch.all(torch.isfinite(drive))
+            or not math.isfinite(dt)
+            or dt <= 0.0
+        ):
+            raise ValueError("CNS drive and dt must be finite float32 values")
+        self._validate_state(state, drive.shape[1])
+        effective = self.effective_dynamics() if dynamics is None else dynamics
+        if len(effective) != 5 or any(
+            value.shape != (CNS_NEURONS, 1)
+            or value.dtype != torch.float32
+            or value.device != self.device
+            for value in effective
+        ):
+            raise ValueError("effective CNS dynamics differ")
+        baseline, recurrent_gain, tau, adaptation_gain, adaptation_tau = effective
+        neutral = (
+            self.neutral_afferent_drive(drive.shape[1])
+            if neutral_drive is None
+            else neutral_drive
+        )
+        if (
+            neutral.shape != drive.shape
+            or neutral.dtype != drive.dtype
+            or neutral.device != drive.device
+        ):
+            raise ValueError("neutral CNS drive differs")
+
+        half_range = torch.minimum(baseline, 1.0 - baseline)
+        alpha = -torch.expm1(drive.new_tensor(-dt / 2.0) / tau)
         rates = state.rates
         for _ in range(2):
-            recurrent = target_gain * fixed_sparse_mm(
-                self.recurrent, self.recurrent_transpose, source * rates
+            deviation = rates - baseline
+            recurrent = fixed_sparse_mm(
+                self.recurrent, self.recurrent_transpose, deviation
             )
-            target_rate = torch.relu(
-                torch.tanh(
-                    bias
-                    + excitability * (drive + RECURRENT_GAIN * recurrent)
-                    - ADAPTATION_COEFFICIENT * state.adaptation
-                )
+            current = (
+                drive
+                - neutral
+                + recurrent_gain * recurrent
+                - adaptation_gain * state.adaptation
             )
-            rates = rates + alpha * (target_rate * state.support - rates)
-        adaptation = state.adaptation + DT_SECONDS * ADAPTATION_RATE * (
-            rates - state.adaptation
+            target = baseline + state.support * half_range * torch.tanh(
+                current / half_range
+            )
+            rates = rates + alpha * (target - rates)
+
+        deviation = rates - baseline
+        adaptation_alpha = -torch.expm1(
+            drive.new_tensor(-dt) / adaptation_tau
+        )
+        adaptation = state.adaptation + adaptation_alpha * (
+            deviation - state.adaptation
         )
         support = torch.clamp(
             state.support
-            + DT_SECONDS
+            + dt
             * (
                 SUPPORT_RECOVERY * (1.0 - state.support)
-                - SUPPORT_COST * rates
+                - SUPPORT_COST * deviation.abs() / half_range
             ),
             SUPPORT_MINIMUM,
             1.0,
         )
-        latent = torch.tanh(self.readout((rates.T * self.readout_mask)))
-        return latent, CNSState(rates, adaptation, support)
+        return CNSState(rates, adaptation, support)
+
+    def readout_from_state(
+        self,
+        state: CNSState,
+        *,
+        dynamics: tuple[torch.Tensor, ...] | None = None,
+    ) -> torch.Tensor:
+        """Read the masked rank-64 latent from CNS deviations only."""
+
+        self._validate_state(state, state.rates.shape[1])
+        effective = self.effective_dynamics() if dynamics is None else dynamics
+        baseline = effective[0]
+        deviation = (state.rates - baseline) * self.readout_mask[:, None]
+        hidden = self.readout_projection(deviation.T)
+        return torch.tanh(self.readout_output(hidden))
+
+    def step(
+        self, optic_rgb: torch.Tensor, body: torch.Tensor, state: CNSState
+    ) -> tuple[torch.Tensor, CNSState]:
+        drive = self.afferent_drive(optic_rgb, body)
+        dynamics = self.effective_dynamics()
+        next_state = self.step_from_drive(drive, state, dynamics=dynamics)
+        return self.readout_from_state(next_state, dynamics=dynamics), next_state
 
     def _group(
         self,
@@ -566,10 +753,11 @@ class TrainableCNSAdapter(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         values = []
         state = CNSState(rates, adaptation, support)
+        baseline = self.effective_dynamics()[0]
         for index in range(optic.shape[0]):
             keep = (~reset[index]).to(rates.dtype).unsqueeze(0)
             state = CNSState(
-                state.rates * keep,
+                state.rates * keep + baseline * (1.0 - keep),
                 state.adaptation * keep,
                 state.support * keep + (1.0 - keep),
             )
@@ -626,13 +814,14 @@ def export_arrays(model: TrainableCNSAdapter) -> dict[str, np.ndarray]:
         "body.input.bias": model.body_input.bias,
         "body.output.weight": model.body_output.weight,
         "body.output.bias": model.body_output.bias,
-        "dynamics.bias_raw": model.dynamics_bias_raw,
+        "dynamics.baseline_raw": model.dynamics_baseline_raw,
+        "dynamics.recurrent_gain_raw": model.dynamics_recurrent_gain_raw,
         "dynamics.tau_raw": model.dynamics_tau_raw,
-        "dynamics.source_raw": model.dynamics_source_raw,
-        "dynamics.target_raw": model.dynamics_target_raw,
-        "dynamics.excitability_raw": model.dynamics_excitability_raw,
-        "readout.weight": model.readout.weight,
-        "readout.bias": model.readout.bias,
+        "dynamics.adaptation_gain_raw": model.dynamics_adaptation_gain_raw,
+        "dynamics.adaptation_tau_raw": model.dynamics_adaptation_tau_raw,
+        "readout.projection.weight": model.readout_projection.weight,
+        "readout.output.weight": model.readout_output.weight,
+        "readout.output.bias": model.readout_output.bias,
         "body.mean": model.body_mean,
         "body.scale": model.body_scale,
     }
@@ -646,9 +835,17 @@ def export_arrays(model: TrainableCNSAdapter) -> dict[str, np.ndarray]:
     for name, shape in BUFFER_SHAPES.items():
         if result[name].shape != shape:
             raise RuntimeError(f"CNS adapter buffer shape differs: {name}")
-    direct = model.readout_mask.detach().cpu().numpy() == 0
-    if np.any(result["readout.weight"][:, direct] != 0):
-        raise RuntimeError("CNS readout contains nonzero direct-afferent columns")
+    return result
+
+
+def export_neutral_drive(model: TrainableCNSAdapter) -> np.ndarray:
+    """Materialize the derived immutable service buffer at batch size one."""
+
+    with torch.no_grad():
+        neutral = model.neutral_afferent_drive(1)[:, 0]
+    result = np.ascontiguousarray(neutral.detach().cpu().numpy(), dtype=np.float32)
+    if result.shape != (CNS_NEURONS,) or not np.isfinite(result).all():
+        raise RuntimeError("neutral CNS drive buffer differs")
     return result
 
 
@@ -677,13 +874,22 @@ def load_export_arrays(
         model.body_input.bias.copy_(tensor["body.input.bias"])
         model.body_output.weight.copy_(tensor["body.output.weight"])
         model.body_output.bias.copy_(tensor["body.output.bias"])
-        model.dynamics_bias_raw.copy_(tensor["dynamics.bias_raw"])
+        model.dynamics_baseline_raw.copy_(tensor["dynamics.baseline_raw"])
+        model.dynamics_recurrent_gain_raw.copy_(
+            tensor["dynamics.recurrent_gain_raw"]
+        )
         model.dynamics_tau_raw.copy_(tensor["dynamics.tau_raw"])
-        model.dynamics_source_raw.copy_(tensor["dynamics.source_raw"])
-        model.dynamics_target_raw.copy_(tensor["dynamics.target_raw"])
-        model.dynamics_excitability_raw.copy_(tensor["dynamics.excitability_raw"])
-        model.readout.weight.copy_(tensor["readout.weight"])
-        model.readout.bias.copy_(tensor["readout.bias"])
+        model.dynamics_adaptation_gain_raw.copy_(
+            tensor["dynamics.adaptation_gain_raw"]
+        )
+        model.dynamics_adaptation_tau_raw.copy_(
+            tensor["dynamics.adaptation_tau_raw"]
+        )
+        model.readout_projection.weight.copy_(
+            tensor["readout.projection.weight"]
+        )
+        model.readout_output.weight.copy_(tensor["readout.output.weight"])
+        model.readout_output.bias.copy_(tensor["readout.output.bias"])
 
 
 def parameter_artifact_identity(
@@ -724,17 +930,18 @@ def write_parameter_artifact(
         "dynamics": {
             "dt_seconds": DT_SECONDS,
             "substeps": 2,
-            "recurrent_gain": RECURRENT_GAIN,
-            "adaptation_rate": ADAPTATION_RATE,
-            "adaptation_coefficient": ADAPTATION_COEFFICIENT,
             "support_recovery": SUPPORT_RECOVERY,
             "support_cost": SUPPORT_COST,
             "support_minimum": SUPPORT_MINIMUM,
             "type_parameterization": {
-                "bias": "0.5*tanh(raw)",
-                "tau": "0.025+0.475*sigmoid(raw)",
-                "source_target_excitability": "0.5+sigmoid(raw)",
+                "baseline": "0.05+0.4*sigmoid(raw)",
+                "recurrent_gain": "0.5+1.5*sigmoid(raw)",
+                "tau_seconds": "0.02+0.23*sigmoid(raw)",
+                "adaptation_gain": "0.5*sigmoid(raw)",
+                "adaptation_tau_seconds": "0.25+4.75*sigmoid(raw)",
             },
+            "state": "rate, signed adaptation, support",
+            "neutral_drive": "differentiably recomputed from optic RGB 0.5 and body.mean",
         },
         "afferents": {
             "raw_input_shape": [OPTIC_SITES, OPTIC_CHANNELS],
@@ -744,7 +951,10 @@ def write_parameter_artifact(
             "unsupported_receptors": "zero drive including tonic",
         },
         "readout": {
-            "shape": [LATENT_DIM, CNS_NEURONS],
+            "projection_shape": [READOUT_RANK, CNS_NEURONS],
+            "output_shape": [LATENT_DIM, READOUT_RANK],
+            "projection_bias": False,
+            "intermediate_activation": None,
             "activation": "tanh",
             "direct_afferents_masked": PHOTORECEPTORS + BODY_AFFERENTS,
         },
@@ -839,8 +1049,9 @@ def sensory_prediction_loss(
     current_coefficient: float = 0.5,
     future_coefficient: float = 1.0,
     body_coefficient: float = 0.1,
-    variance_coefficient: float = 0.02,
-    covariance_coefficient: float = 0.002,
+    variance_coefficient: float = 0.0,
+    covariance_coefficient: float = 0.0,
+    forecast_horizon: int = 4,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """Predict only clean raw senses; raw tensors never bypass the CNS into control."""
 
@@ -849,6 +1060,8 @@ def sensory_prediction_loss(
         or clean_body.shape != (*latent.shape[:2], BODY_CHANNELS)
         or next_valid.shape != latent.shape[:2]
         or next_valid.dtype != torch.bool
+        or not isinstance(forecast_horizon, int)
+        or not 1 <= forecast_horizon < latent.shape[0]
     ):
         raise ValueError("clean sensory targets differ from latent sequence")
     current, future = heads(latent, delivered_action, reset)
@@ -858,16 +1071,37 @@ def sensory_prediction_loss(
     )
     current_optic = F.mse_loss(current[0], optic_target)
     current_body = F.smooth_l1_loss(current[1], body_target)
-    if not torch.any(next_valid):
-        raise ValueError("sequence contains no valid next-sensory target")
-    # ``future[t]`` predicts the acknowledged raw senses at t+1.  Explicit
-    # indexing prevents reset or clip seams from becoming training targets.
-    predict_mask = next_valid[:-1]
+    # ``future[t]`` predicts the senses at t+h. Every intervening transition
+    # must be valid, and no reset boundary may occur before the target.
+    target_count = latent.shape[0] - forecast_horizon
+    predict_mask = torch.ones_like(next_valid[:target_count])
+    for offset in range(forecast_horizon):
+        predict_mask = predict_mask & next_valid[offset : offset + target_count]
+    for offset in range(1, forecast_horizon + 1):
+        predict_mask = predict_mask & ~reset[offset : offset + target_count]
     if not torch.any(predict_mask):
         raise ValueError("sequence contains no within-clip future target")
-    future_optic = F.mse_loss(future[0][:-1][predict_mask], optic_target[1:][predict_mask])
+    source_slice = slice(None, -forecast_horizon)
+    target_slice = slice(forecast_horizon, None)
+    future_optic = F.mse_loss(
+        future[0][source_slice][predict_mask],
+        optic_target[target_slice][predict_mask],
+    )
     future_body = F.smooth_l1_loss(
-        future[1][:-1][predict_mask], body_target[1:][predict_mask]
+        future[1][source_slice][predict_mask],
+        body_target[target_slice][predict_mask],
+    )
+    future_body_mse = F.mse_loss(
+        future[1][source_slice][predict_mask],
+        body_target[target_slice][predict_mask],
+    )
+    persistence_optic = F.mse_loss(
+        optic_target[source_slice][predict_mask],
+        optic_target[target_slice][predict_mask],
+    )
+    persistence_body = F.mse_loss(
+        body_target[source_slice][predict_mask],
+        body_target[target_slice][predict_mask],
     )
 
     samples = latent.reshape(-1, LATENT_DIM)
@@ -891,6 +1125,15 @@ def sensory_prediction_loss(
         "current_body_huber": current_body.detach(),
         "future_optic_mse": future_optic.detach(),
         "future_body_huber": future_body.detach(),
+        "future_body_mse": future_body_mse.detach(),
+        "persistence_optic_mse": persistence_optic.detach(),
+        "persistence_body_mse": persistence_body.detach(),
+        "future_optic_skill_vs_persistence": (
+            1.0 - future_optic / persistence_optic.clamp_min(1e-9)
+        ).detach(),
+        "future_body_skill_vs_persistence": (
+            1.0 - future_body_mse / persistence_body.clamp_min(1e-9)
+        ).detach(),
         "latent_variance_penalty": variance.detach(),
         "latent_covariance_penalty": covariance_loss.detach(),
         "latent_std_mean": standard_deviation.mean().detach(),

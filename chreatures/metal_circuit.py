@@ -65,7 +65,7 @@ class MetalCircuit:
             if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value)
                    for value in self.cns_identity.values()):
                 raise ValueError("native CNS artifact lacks authenticated model identities")
-            self.cns_identity.update(format="chreatures-cns-service-v1", service_artifact_sha256=self.artifact_sha256,
+            self.cns_identity.update(format="chreatures-cns-service-v2", service_artifact_sha256=self.artifact_sha256,
                                      sensory_dim=INPUT_COUNT, latent_dim=LATENT_COUNT)
             self.native_startup = ready
         except Exception:

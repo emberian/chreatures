@@ -8,10 +8,15 @@ license = "AGPL-3.0-or-later"
 name = "_cognitive_core"
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = ["python", "accelerate"]
+python = ["dep:numpy", "dep:pyo3"]
+accelerate = []
+
 [dependencies]
 matrixmultiply = "0.3.10"
-numpy = "0.28"
-pyo3 = { version = "0.28.3", features = ["extension-module"] }
+numpy = { version = "0.28", optional = true }
+pyo3 = { version = "0.28.3", features = ["extension-module"], optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "0.10"

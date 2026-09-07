@@ -1,0 +1,99 @@
+{
+  "format": "chreatures-canonical-v2-joined-training-audit-v1",
+  "source_fit_sha256": "f08ca8285da8b259b57ce3bfb2cd59aa74b0bcc05fb318a61b9d41e1fecb107b",
+  "intact": {
+    "mse": [
+      0.003385057905688882,
+      0.012633467093110085,
+      0.3387911021709442,
+      0.014361729845404625,
+      0.04059911519289017,
+      0.9248915910720825
+    ],
+    "zero_or_persistence_mse": [
+      0.4925972819328308,
+      0.507402777671814,
+      1.0596674680709839,
+      0.5278299450874329,
+      0.5004026293754578,
+      1.051387071609497
+    ],
+    "skill": [
+      0.9931281208992004,
+      0.9751017093658447,
+      0.6802854537963867,
+      0.9727910161018372,
+      0.9188671112060547,
+      0.12031292915344238
+    ]
+  },
+  "zero_edges": {
+    "mse": [
+      0.49276643991470337,
+      0.5083495378494263,
+      1.0593324899673462,
+      0.5307587385177612,
+      0.49854570627212524,
+      1.0551108121871948
+    ],
+    "zero_or_persistence_mse": [
+      0.4925972819328308,
+      0.507402777671814,
+      1.0596674680709839,
+      0.5278299450874329,
+      0.5004026293754578,
+      1.051387071609497
+    ],
+    "skill": [
+      -0.0003434419631958008,
+      -0.0018658638000488281,
+      0.0003161430358886719,
+      -0.005548715591430664,
+      0.0037108659744262695,
+      -0.003541707992553711
+    ]
+  },
+  "canonical_loss": 0.09857665747404099,
+  "canonical_metrics": {
+    "loss": 0.09857665747404099,
+    "current_optic_mse": 0.06060849875211716,
+    "current_body_huber": 0.04777272418141365,
+    "future_optic_mse": 0.06112563610076904,
+    "future_body_huber": 0.047581374645233154,
+    "future_body_mse": 0.09516274929046631,
+    "persistence_optic_mse": 0.026076771318912506,
+    "persistence_body_mse": 0.016039077192544937,
+    "future_optic_skill_vs_persistence": -1.344064474105835,
+    "future_body_skill_vs_persistence": -4.933181285858154,
+    "latent_variance_penalty": 0.9025274515151978,
+    "latent_covariance_penalty": 0.038764823228120804,
+    "latent_std_mean": 0.09747248888015747
+  },
+  "canonical_gradient_norms": {
+    "optic_spectral_logits": 8.149803761625662e-05,
+    "optic_gain_raw": 0.00018398492829874158,
+    "optic_bias": 2.9018026907579042e-05,
+    "dynamics_baseline_raw": 2.6579535187920555e-05,
+    "dynamics_recurrent_gain_raw": 7.628471939824522e-05,
+    "dynamics_tau_raw": 5.327976032276638e-05,
+    "dynamics_adaptation_gain_raw": 2.0296185994084226e-06,
+    "dynamics_adaptation_tau_raw": 1.6754285070419428e-06,
+    "body_input.weight": 0.0002171280502807349,
+    "body_input.bias": 6.777076123398729e-06,
+    "body_output.weight": 0.0007766212220303714,
+    "body_output.bias": 8.872119906300213e-06,
+    "readout_projection.weight": 0.0006593988509848714,
+    "readout_output.weight": 0.0016496428288519382,
+    "readout_output.bias": 0.0013813595287501812
+  },
+  "parameter_artifact": {
+    "path": "/tank/chreatures/runs/live-wave-v2/canonical-audit-20260907/results/canonical-trained-parameters.npz",
+    "bytes": 42164493,
+    "file_sha256": "e37fea1082e274a467997db731a833581a037e1a95a7ed6f630e5f7bc86a4f59",
+    "artifact_sha256": "368a1e8f3b84ce804c19066a4faa92911ff5e853468cac4cf8248a981548553a",
+    "training_status": "trained"
+  },
+  "torch": "2.9.1+rocm6.3",
+  "hip": "6.3.42134-a9a80e791",
+  "scope": "fullgraph replay, masked edge-dependence, joint optic/body/type/readout gradient; not behavior"
+}

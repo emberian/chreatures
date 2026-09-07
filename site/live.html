@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#e9f0df">
+  <title>Live garden — Chreatures</title>
+  <meta name="description" content="Run a full MaleCNS Chreature locally in an actual MuJoCo and Rust physical garden.">
+  <link rel="stylesheet" href="live.css">
+</head>
+<body>
+  <header class="live-header">
+    <a class="live-brand" href="index.html">chreatures</a>
+    <div class="live-state" aria-live="polite"><i id="state-light"></i><span id="state-label">waiting to load</span></div>
+    <a class="archive-link" href="bad-apple.html">Watch the recorded experiment ↗</a>
+  </header>
+
+  <main class="live-shell">
+    <section class="world-panel" aria-label="Live physical garden">
+      <canvas id="world-canvas"></canvas>
+      <div class="world-wash" aria-hidden="true"></div>
+      <div class="clock-card">
+        <span>model time <strong id="model-time">0.00 s</strong></span>
+        <span>screen film <strong id="film-time">independent · blank</strong></span>
+      </div>
+      <div class="world-title"><span>Local physical world</span><strong id="selected-name">—</strong></div>
+      <div class="camera-bar" role="group" aria-label="Observer camera">
+        <button type="button" data-camera="orbit" aria-pressed="true">Orbit</button>
+        <button type="button" data-camera="follow" aria-pressed="false">Follow</button>
+        <button type="button" data-camera="body" aria-pressed="false">Body camera</button>
+      </div>
+      <div id="resident-list" class="resident-list" aria-label="Residents"></div>
+    </section>
+
+    <aside class="instrument-panel">
+      <section class="brain-card" aria-labelledby="brain-title">
+        <div class="section-head"><div><small>selected resident</small><h2 id="brain-title">Full MaleCNS</h2></div><output id="brain-count">165,122 rows</output></div>
+        <canvas id="brain-canvas" aria-label="Actual MaleCNS soma point cloud colored by rate-model change"></canvas>
+        <div class="brain-legend"><span><i class="negative"></i> lower</span><span>signed change from loaded baseline</span><span><i class="positive"></i> higher</span></div>
+        <label class="scale-control"><span>Fixed display scale <output id="scale-output">±0.10</output></span><input id="neural-scale" type="range" min="0.01" max="0.50" step="0.01" value="0.10"></label>
+        <p class="rate-note">Model activity, not measured firing rate or Hz. Points use only supplied atlas coordinates; missing somata are absent.</p>
+      </section>
+
+      <section class="control-card">
+        <div class="section-head"><div><small>physical screen</small><h2>Choose a stimulus</h2></div></div>
+        <div class="segmented" role="group" aria-label="Screen stimulus">
+          <button type="button" data-stimulus="bad-apple">Bad Apple</button>
+          <button type="button" data-stimulus="grating">Grating</button>
+          <button type="button" data-stimulus="blank" aria-pressed="true">Blank</button>
+        </div>
+        <p>The film clock follows wall time. Pausing the life does not rewrite or advance model time.</p>
+      </section>
+
+      <section class="control-card compact-controls">
+        <div class="section-head"><div><small>shared world</small><h2>Visit the garden</h2></div></div>
+        <div class="action-grid">
+          <button id="greet" type="button">Three-note greeting</button>
+          <button id="add-toy" type="button">Place a movable toy</button>
+          <button id="shove-toy" type="button" disabled>Shove selected toy</button>
+        </div>
+        <p>Sound and force enter through the physical world. They are not labels or commands sent to the controller.</p>
+      </section>
+
+      <section class="checkpoint-card">
+        <button id="pause" type="button">Pause</button>
+        <button id="save" type="button">Save life</button>
+        <label class="load-button">Load life<input id="load" type="file" accept=".chreature,application/octet-stream"></label>
+      </section>
+
+      <section class="identity-card">
+        <p><strong>Neural model</strong><span id="model-status">loads from the pinned release</span></p>
+        <p><strong>Controller</strong><span id="controller-status">loads from its manifest</span></p>
+        <p><strong>Engine</strong><span id="engine-status">MuJoCo 3.12.0 Wasm + Rust/Wasm</span></p>
+      </section>
+    </aside>
+  </main>
+
+  <section id="start-layer" class="start-layer" aria-live="polite">
+    <div class="start-card">
+      <p class="eyebrow">Runs on this device</p>
+      <h1>Open the live garden.</h1>
+      <p>The full 165,122-row rate model is large. Starting downloads its pinned weights, initializes WebGPU, MuJoCo Wasm and the Rust resident, then creates a new private life in this tab.</p>
+      <div class="load-track"><i id="load-progress"></i></div>
+      <p id="load-detail" class="load-detail">Nothing has been loaded yet.</p>
+      <button id="start" type="button">Start a new life</button>
+      <p class="support-note">Requires a browser with WebGPU. If initialization fails, the world remains stopped and the reason appears here.</p>
+    </div>
+  </section>
+
+  <video id="stimulus-video" src="assets/bad-apple-source-30s.mp4" muted loop playsinline preload="metadata" hidden></video>
+  <canvas id="stimulus-canvas" width="160" height="120" hidden></canvas>
+  <script type="module" src="live.js"></script>
+</body>
+</html>

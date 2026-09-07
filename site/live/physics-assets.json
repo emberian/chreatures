@@ -1,0 +1,47 @@
+{
+  "format": "chreatures-browser-physics-assets-v1",
+  "engine": "mujoco-3.12.0-wasm-browser-epoch-1",
+  "upstream": {
+    "name": "@mujoco/mujoco",
+    "version": "3.12.0",
+    "source": "https://github.com/google-deepmind/mujoco/tree/3.12.0/wasm",
+    "license": "Apache-2.0",
+    "license_path": "vendor/mujoco/LICENSE"
+  },
+  "original_code_license": "AGPL-3.0-or-later",
+  "fixture_notice": "Engineered twelve-hinge body, anatomical optic membership; source and data notices in repository NOTICE.md and fixture metadata.",
+  "assets": {
+    "world-runtime.mjs": {
+      "bytes": 20862,
+      "sha256": "103bd68ac9e7a705a45c8cee37847a8f851d16986a3a43fbae7764a8dd4f938d"
+    },
+    "fixtures/garden.json": {
+      "bytes": 51499,
+      "sha256": "d667e428703c60068820f281d0e78b39571602bdd38510358b6803f6ebfa3338"
+    },
+    "fixtures/garden.xml": {
+      "bytes": 32745,
+      "sha256": "a0787d95e11204ea15b65c611b45344f21c4dabe12c26dd76cc5a1fbfde4176c"
+    },
+    "pkg/chreatures_browser_world.js": {
+      "bytes": 18937,
+      "sha256": "06c653ed7e9eb2517d3238c1808bb56929b3d23993585449c990ed4ca6b12c27"
+    },
+    "pkg/chreatures_browser_world_bg.wasm": {
+      "bytes": 321611,
+      "sha256": "1db947b7eb77b0eff32bb7f623a0d42b999748854a543a12b937ff75b33e5d11"
+    },
+    "vendor/mujoco/mujoco.js": {
+      "bytes": 293092,
+      "sha256": "214dd7ead76aecd6e9b6525b2b83eca88e9ed3b893231361b4f1e2716a123a0a"
+    },
+    "vendor/mujoco/mujoco.wasm": {
+      "bytes": 10125422,
+      "sha256": "70f991e34b22674611d0cba181a9afb7b66914557c0817d5b5b0f7de10e6d548"
+    },
+    "vendor/mujoco/LICENSE": {
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    }
+  }
+}

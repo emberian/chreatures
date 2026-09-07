@@ -34,3 +34,9 @@ Shadow animation: あにら (Anira), original niconico sm8628149. Music credits:
 Masayoshi Minoshima / Alstroemeria Records, nomico, and original composition by
 ZUN. The visual excerpt is not relicensed under AGPL. Source hashes, processing
 and credits are recorded in [the public provenance](site/assets/bad-apple-provenance.json).
+
+The live tab vendors the official Google DeepMind MuJoCo 3.12.0 JavaScript/Wasm
+runtime under [Apache-2.0](site/live/vendor/mujoco/LICENSE). Its version and file
+hashes are recorded in [the physics asset manifest](site/live/physics-assets.json).
+The live physical screen uses the same attributed silent Bad Apple excerpt;
+placing it on an interactive surface does not relicense the animation.
