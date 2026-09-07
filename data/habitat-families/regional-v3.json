@@ -141,7 +141,7 @@
   },
   "mutation": {
     "operator": "bounded-regional-perturbation-v3",
-    "recipe_sha256": "f9fab78fff009d4dfa33ef3f6fbab1339d00d6021b4a5fc15f471e88db38f16b",
+    "recipe_sha256": "d53a82f7f7280bbd0641c79fb75038a1f17783383f3db2e10ff41b0f495e04a0",
     "scalar_fraction": 0.12,
     "integer_delta": 3,
     "resident_delta": 0
