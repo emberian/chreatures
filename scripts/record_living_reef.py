@@ -397,9 +397,10 @@ def acquired_action_summary(value: Any, action_count: int) -> dict[str, Any]:
     arrays["empirical_component_weights"] = vector(
         components, 3, "acquired-action empirical component weights"
     )
-    arrays["empirical_component_order"] = [
-        "movement_response", "energy_cost", "fatigue_recovery"
-    ]
+    order = value.get("empirical_component_order")
+    if order != ["movement_response", "energy_cost", "fatigue_recovery"]:
+        raise ValueError("acquired-action empirical component order differs")
+    arrays["empirical_component_order"] = list(order)
     arrays["empirical_tilt_limit"] = finite(value["empirical_tilt_limit"], "acquired-action empirical tilt limit")
     arrays["length_semantics"] = "remaining ticks in the candidate sequence"
     arrays["phase_semantics"] = (
