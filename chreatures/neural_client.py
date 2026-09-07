@@ -7,9 +7,7 @@ import json
 import time
 from urllib.parse import urlencode, urlsplit
 
-import numpy as np
-
-from .malecns import DEFAULT_INPUT_CHANNELS
+from .metal_circuit import IDENTITY_KEYS, input_names
 
 
 class NeuralServiceError(RuntimeError):
@@ -41,31 +39,23 @@ class NeuralClient:
         self.graph = self.metadata["brain"]["graph"]
         self.input_names = self.metadata["brain"]["inputs"]
         self.output_names = self.metadata["brain"]["readouts"]
-        self.port_spec = None
-        if self.input_names != DEFAULT_INPUT_CHANNELS:
-            from .neural_ports import encoding_sha256, load_port_spec
-            spec = load_port_spec()
-            if self.input_names != spec["physical_inputs"]["ordered_names"]:
-                raise ValueError("Remote sensory map differs from the supported versioned interfaces")
-            expected_hash = hashlib.sha256(json.dumps(spec, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
-            ports = self.metadata["brain"].get("ports", {})
-            if ports.get("spec_hash") != expected_hash:
-                expected_encoding = encoding_sha256(spec)
-                if (
-                    ports.get("mode") != "versioned_bundle"
-                    or ports.get("encoding_sha256") != expected_encoding
-                ):
-                    raise ValueError(
-                        "Remote sensory preprocessing differs from the local specification"
-                    )
-            self.port_spec = spec
-
-    def encode(self, senses):
-        if self.port_spec is None:
-            return sensory_channels(senses)
-        from .neural_ports import encode_physical_senses
-        names, values = encode_physical_senses(senses, self.port_spec)
-        return dict(zip(names, values.astype(float).tolist(), strict=True))
+        self.cns_identity = self.metadata["brain"].get("cns_adapter")
+        if (self.input_names != input_names()
+                or self.output_names != [f"cns.latent.{i}" for i in range(512)]
+                or not isinstance(self.cns_identity, dict)
+                or self.cns_identity.get("format") != "chreatures-cns-service-v1"
+                or self.cns_identity.get("sensory_dim") != 5356
+                or self.cns_identity.get("latent_dim") != 512):
+            raise ValueError("Neural service does not implement the current CNS-only interface")
+        for key in (*IDENTITY_KEYS, "service_artifact_sha256"):
+            value = self.cns_identity.get(key)
+            if (not isinstance(value, str) or len(value) != 64
+                    or any(char not in "0123456789abcdef" for char in value)):
+                raise ValueError(f"Neural service has invalid {key}")
+        if self.cns_identity["graph_sha256"] != self.graph["sha256"]:
+            raise ValueError("Neural service graph and learned adapter disagree")
+        if self.receipt_protocol != "chreatures-request-receipt-v1":
+            raise ValueError("Current neural service requires authenticated mutation receipts")
 
     def _request(self, method, path, value=None, *, timeout=None):
         # Reuse the SSH-forwarded transport while actively stepping, but discard
@@ -181,20 +171,23 @@ class NeuralClient:
         return receipt["response"]
 
     def create(self, residents):
-        """Bind fresh neural lives to authenticated inherited phenotypes."""
+        """Bind fresh private neural state to its immutable learned CNS adapter."""
         if not isinstance(residents, list) or not residents or any(
-            not isinstance(row, dict) or set(row) != {"id", "neural_phenotype"}
+            not isinstance(row, dict) or set(row) != {"id", "cns_adapter_sha256"}
             for row in residents
         ):
-            raise ValueError("neural birth requires resident identities and phenotypes")
+            raise ValueError("neural birth requires resident identities and a learned CNS adapter")
         return self.mutate("/v1/residents/create", residents=residents)
 
     def step(self, entries, dt):
         return self.mutate("/v1/step", residents=entries, dt=dt, compact=True)["residents"]
 
+    def capture_rates(self, name, resident_id):
+        return self.mutate("/v1/observer/capture-rates", name=name, resident_id=resident_id)["capture"]
+
     def snapshot(self, name, ids=None):
         values = {"name": name}
-        if ids is not None and self.metadata["brain"].get("ports"):
+        if ids is not None and self.metadata["brain"].get("cns_adapter"):
             values["resident_ids"] = ids
         return self.mutate("/v1/snapshot", **values)["snapshot"]
 
@@ -203,23 +196,3 @@ class NeuralClient:
         if receipt.get("scope") == "cohort":
             values["resident_ids"] = receipt["residents"]
         return self.mutate("/v1/restore", **values)
-
-
-def sensory_channels(senses):
-    """Sensory transduction without object identities or a food-color prior."""
-    odor = np.asarray(senses["odor"], dtype=np.float32).reshape(2, 3)
-    retina = np.asarray(senses["vision"], dtype=np.float32).reshape(16, 4)
-    # Proximity is a raw sensory coordinate here; an adaptive policy learns its
-    # consequences. There is no reflex that labels all seen objects obstacles.
-    values = np.concatenate((odor.ravel(), [retina[:8, 3].max(initial=0), retina[8:, 3].max(initial=0)],
-                             retina[:, :3].mean(axis=0), senses.get("sound", [0, 0, 0]),
-                             [senses.get("shade", 0), np.max(senses.get("touch", [0, 0]))]))
-    if values.shape != (16,) or not np.isfinite(values).all():
-        raise ValueError("Invalid physical sensory observations")
-    return dict(
-        zip(
-            DEFAULT_INPUT_CHANNELS,
-            np.clip(values, 0, 1).astype(float).tolist(),
-            strict=True,
-        )
-    )

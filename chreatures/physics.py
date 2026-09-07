@@ -567,6 +567,45 @@ class PhysicsWorld:
                     _number(component.get("hinge_damping", 0.002), "acoustic hinge damping", 0.0, 100.0)
                     _number(component.get("max_hinge_torque", 0.03), "acoustic hinge torque", 0.0, 100.0)
                     _vector(component.get("source_offset", [0, 0, 0]), 3, "acoustic source offset", 5.0)
+        optic_screen = spec.get("optic_screen")
+        if optic_screen is not None:
+            if (
+                not isinstance(optic_screen, dict)
+                or set(optic_screen) - {"entity", "shape_index", "front", "texture_shape"}
+                or not {"entity", "shape_index", "front"}.issubset(optic_screen)
+                or not isinstance(optic_screen["entity"], str)
+                or optic_screen["entity"] not in entity_ids
+                or isinstance(optic_screen["shape_index"], bool)
+                or not isinstance(optic_screen["shape_index"], int)
+                or optic_screen["front"] not in {"+x", "-x"}
+            ):
+                raise ValueError("optic_screen binding is invalid")
+            screen_entity = next(
+                entity for entity in expanded_entities
+                if entity["id"] == optic_screen["entity"]
+            )
+            screen_index = optic_screen["shape_index"]
+            if (
+                screen_index < 0
+                or screen_index >= len(screen_entity["shapes"])
+                or screen_entity["shapes"][screen_index]["type"] != "box"
+            ):
+                raise ValueError("optic_screen must select an existing box shape")
+            screen_size = screen_entity["shapes"][screen_index]["size"]
+            if screen_size[0] >= min(screen_size[1], screen_size[2]):
+                raise ValueError("optic_screen front +/-x must be the box's thin axis")
+            texture_shape = optic_screen.get("texture_shape", [90, 120])
+            if (
+                not isinstance(texture_shape, list)
+                or len(texture_shape) != 2
+                or any(
+                    isinstance(value, bool)
+                    or not isinstance(value, int)
+                    or not 2 <= value <= 2048
+                    for value in texture_shape
+                )
+            ):
+                raise ValueError("optic_screen texture_shape must be [height,width] in 2..2048")
         limits = spec.get("limits", {})
         if not isinstance(limits, dict):
             raise ValueError("habitat limits must be a mapping")
@@ -635,10 +674,18 @@ class PhysicsWorld:
         physical = self.spec["physical_materials"][entity["physical_material"]]
         for index, shape in enumerate(entity["shapes"]):
             material = shape.get("material", entity["material"])
+            optic_screen = self.spec.get("optic_screen")
+            material_name = (
+                "optic-screen:material"
+                if optic_screen is not None
+                and entity_id == optic_screen["entity"]
+                and index == optic_screen["shape_index"]
+                else f"mat:{material}"
+            )
             attrs = {
                 "name": f"entity:{entity_id}:geom:{index}", "type": shape["type"], "size": shape["size"],
                 "pos": shape.get("position"), "quat": _unit_quaternion(shape["quaternion"]) if "quaternion" in shape else None,
-                "fromto": shape.get("fromto"), "material": f"mat:{material}", "density": physical["density"],
+                "fromto": shape.get("fromto"), "material": material_name, "density": physical["density"],
                 "friction": physical["friction"], "condim": 4,
             }
             pieces.append(f"<geom {self._attrs(attrs)}/>")
@@ -662,6 +709,13 @@ class PhysicsWorld:
         for name in material_order:
             material = self.spec["materials"][name]
             assets.append(f'<material {self._attrs({"name": f"mat:{name}", "rgba": material["rgba"]})}/>')
+        optic_screen = self.spec.get("optic_screen")
+        if optic_screen is not None:
+            texture_height, texture_width = optic_screen.get("texture_shape", [90, 120])
+            assets.extend((
+                f'<texture {self._attrs({"name": "optic-screen:texture", "type": "2d", "builtin": "flat", "rgb1": [0.015, 0.020, 0.025], "width": texture_width, "height": texture_height})}/>',
+                f'<material {self._attrs({"name": "optic-screen:material", "texture": "optic-screen:texture", "rgba": [1, 1, 1, 1], "emission": 1, "specular": 0, "shininess": 0})}/>',
+            ))
         world = [
             '<light name="caregiver-light" pos="6 4 3" dir="0 0 -1" diffuse="0 0 0" specular="0 0 0" directional="false"/>',
             '<body name="caregiver-hand" mocap="true" pos="0 0 -10"><geom name="caregiver-hand:geom" type="sphere" size="0.085" rgba="0.95 0.88 0.68 0.75" contype="0" conaffinity="0"/></body>',

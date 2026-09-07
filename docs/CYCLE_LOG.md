@@ -1026,3 +1026,31 @@ baseline; its data cannot reconstruct unrecorded full-neuron activity for the
 new readout. Native bilateral optical sampling, a physical video screen,
 trainable CNS adapters and CNS-only recurrent control are being implemented
 jointly. No new trained controller or video response is claimed in this entry.
+
+
+## September 7 — CNS-only sensory, memory and motor wave
+
+Replaced the production raw-retinal/physiological control routes with bilateral
+1771-site optics, trainable photoreceptor and body-afferent interfaces, full
+165122-neuron recurrence, and a masked learned Z512 readout. Native GRU memory,
+private achieved-goal reservoir, copied acquired suffixes and learned sequence
+termination/selection now consume that latent plus previous delivered commands.
+Removed obsolete public raw goal-memory/predictive classes instead of retaining
+a compatibility engine. Physical metabolism, funded social signals, regional
+materials, construction and clonal body growth remain coupled. Native cohort
+expansion preserves private prefixes and appends cold newborns.
+
+ROCm training executed 128 updates/32768 resident ticks in 528.12 seconds. The
+latent became more responsive to optical changes; held-out optic prediction MSE
+did not improve. Controller motor/memory weights are initialized, untrained.
+Torch/native/M2 Metal recurrence agrees within 2.1e-7 and neural restore is
+byte-exact. Replacing a slow skinny MPS readout with a tiled Metal reduction
+reduced measured capacity-two steps from about 420ms to 7.25–8.35ms.
+
+The first whole eight-founder physical-screen run completed with actual CNS,
+physics, cognition, full neural captures and offscreen body frames. Integration
+fixed a body-afferent validator that incorrectly rejected the two signed rhythm
+channels. Anatomy display uses the 140024 measured soma locations; other neurons
+still simulate but receive no invented plotting coordinates. The official silent
+30-second Bad Apple excerpt is held out from training. Full recorded comparison
+and public playback follow this source freeze. Prior v8 lives stay frozen.

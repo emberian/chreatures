@@ -187,6 +187,7 @@ class Biosphere:
         illumination_cycle: dict[str, Any],
         mobile_phototrophy: dict[str, Any],
         mobiles=None,
+        _normalized_mobile_ids=(),
     ):
         self.world = world
         self.web = web
@@ -356,7 +357,9 @@ class Biosphere:
         if mobiles is not None:
             from .somatic import SomaticPhysiology
 
-            self.mobility = SomaticPhysiology(self, mobiles)
+            self.mobility = SomaticPhysiology(
+                self, mobiles, _normalized_ids=_normalized_mobile_ids,
+            )
             world.bind_physiology(self.mobility)
 
     @classmethod
@@ -1008,6 +1011,7 @@ class Biosphere:
             illumination_cycle=self.illumination_config,
             mobile_phototrophy=self.mobile_photo_config,
             mobiles=mobile_config,
+            _normalized_mobile_ids=list(self.mobility.residents),
         )
         saved = self.snapshot()
         candidate._sync_solar_state(
@@ -1592,6 +1596,10 @@ class Biosphere:
         }:
             raise ValueError("invalid saved mobile phototrophy")
         mobile_state = snapshot["mobility"]
+        if mobile_state is not None and hashlib.sha256(
+            canonical(mobile_state["config"])
+        ).hexdigest() != mobile_state["sha256"]:
+            raise ValueError("saved mobile configuration checksum differs")
         instance = cls(
             world,
             MetabolicWeb.restore(snapshot["web"]),
@@ -1599,6 +1607,10 @@ class Biosphere:
             illumination_cycle=illumination["config"],
             mobile_phototrophy=mobile_photo["config"],
             mobiles=mobile_state["config"] if mobile_state is not None else None,
+            _normalized_mobile_ids=(
+                [spec["id"] for spec in mobile_state["config"]]
+                if mobile_state is not None else ()
+            ),
         )
         if instance.config_sha256 != snapshot["config_sha256"]:
             raise ValueError("developmental colony configuration differs")

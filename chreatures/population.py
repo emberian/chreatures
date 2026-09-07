@@ -532,12 +532,11 @@ def compose_population_birth(
         receipts.append({
             "candidate_sha256": candidate.sha256,
             "physical_phenotype_sha256": hashlib.sha256(canonical_bytes(physical)).hexdigest(),
-            "controller_adapter": candidate.controller_adapter(),
-            "neural_population_loci": candidate.neural_population_loci(),
         })
     receipt_body = {
         "format": "chreatures-population-cold-birth-v1",
         "sha256": "",
+        "genome_scope": "physical-body-and-metabolism-only",
         "base_habitat_sha256": hashlib.sha256(canonical_bytes(habitat)).hexdigest(),
         "base_biosphere_sha256": hashlib.sha256(canonical_bytes(biosphere)).hexdigest(),
         "candidate_order": [candidate.sha256 for candidate in genomes],

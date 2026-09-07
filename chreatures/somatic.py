@@ -80,12 +80,18 @@ def _native_bytes(value: Any, name: str) -> dict[str, str]:
 class SomaticPhysiology:
     """Own recurring somatic accounting for one stable physical body order."""
 
-    def __init__(self, biosphere: Any, config: list[dict[str, Any]]):
+    def __init__(
+        self, biosphere: Any, config: list[dict[str, Any]], *,
+        _normalized_ids: Sequence[str] = (),
+    ):
         self.biosphere = biosphere
         self.config = copy.deepcopy(config)
         if not isinstance(config, list) or not 1 <= len(config) <= 32:
             raise ValueError("mobile physiology requires 1..32 residents")
         identities = [body.id for body in self.world.bodies]
+        normalized_ids = set(_normalized_ids)
+        if not normalized_ids <= set(identities):
+            raise ValueError("normalized physiology identities differ")
         self.residents: dict[str, dict[str, Any]] = {}
         used_rows = {
             colony[key]
@@ -129,7 +135,12 @@ class SomaticPhysiology:
             total = sum(clean_weights.values())
             if total <= 0:
                 raise ValueError("allocation weights require positive mass")
-            spec["allocation_weights"] = {
+            # Saved traits are already normalized causal state. Dividing them
+            # again can change one ULP and invalidate the native cohort identity.
+            retained = identity in normalized_ids
+            if retained and not np.isclose(total, 1.0, rtol=0.0, atol=4 * np.finfo(np.float64).eps):
+                raise ValueError("saved allocation weights are not normalized")
+            spec["allocation_weights"] = clean_weights if retained else {
                 key: value / total for key, value in clean_weights.items()
             }
             profile = np.asarray(spec["secretion_profile"], dtype=np.float64)
@@ -142,7 +153,11 @@ class SomaticPhysiology:
                 raise ValueError(
                     "secretion profile must contain three nonnegative channels"
                 )
-            spec["secretion_profile"] = (profile / profile.sum()).tolist()
+            if retained and not np.isclose(profile.sum(), 1.0, rtol=0.0, atol=4 * np.finfo(np.float64).eps):
+                raise ValueError("saved secretion profile is not normalized")
+            spec["secretion_profile"] = (
+                profile if retained else profile / profile.sum()
+            ).tolist()
             self.residents[identity] = spec
         if list(self.residents) != identities:
             raise ValueError("mobile configuration must follow physical resident order")
@@ -248,7 +263,9 @@ class SomaticPhysiology:
         config: list[dict[str, Any]],
     ) -> SomaticPhysiology:
         """Build a private B+1 owner while retaining all prior native state."""
-        candidate = cls(biosphere, config)
+        if config[:-1] != previous.config:
+            raise ValueError("somatic expansion changed retained resident traits")
+        candidate = cls(biosphere, config, _normalized_ids=list(previous.residents))
         old_ids = list(previous.residents)
         new_ids = list(candidate.residents)
         if new_ids[:-1] != old_ids or len(new_ids) != len(old_ids) + 1:

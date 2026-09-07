@@ -20,10 +20,6 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from chreatures.metal_circuit import MetalCircuit
-from chreatures.mushroom_plasticity import (
-    MushroomBodySubstrate,
-    MushroomFullGraphBridgeSpec,
-)
 
 HASH = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -193,7 +189,7 @@ def handler_type(state):
                     self.send_json(
                         200,
                         {
-                            "backend": "metal-local-v3",
+                            "backend": "metal-cns-service-v1",
                             "next_seq": state.next_sequence,
                             "brain": state.brain.metadata(),
                             "service_incarnation": state.incarnation,
@@ -218,6 +214,7 @@ def handler_type(state):
                     "/v1/residents/create",
                     "/v1/residents/remove",
                     "/v1/step",
+                    "/v1/observer/capture-rates",
                     "/v1/snapshot",
                     "/v1/restore",
                     "/v1/shutdown",
@@ -273,7 +270,7 @@ def handler_type(state):
                         if q.get("compact") is True:
                             keys = (
                                 "id",
-                                "neural_phenotype_sha256",
+                                "cns_adapter_sha256",
                                 "time",
                                 "features",
                                 "activity",
@@ -287,6 +284,10 @@ def handler_type(state):
                         return result
 
                     answer = state.mutate(seq, supplied_hash, step)
+                elif self.path == "/v1/observer/capture-rates":
+                    answer = state.mutate(seq, supplied_hash, lambda: {
+                        "seq": seq, "capture": state.brain.capture_rates(
+                            state.snapshots, q.get("name"), q.get("resident_id"))})
                 elif self.path == "/v1/snapshot":
                     answer = state.mutate(
                         seq,
@@ -356,31 +357,16 @@ def handler_type(state):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument(
-        "--artifact",
-        type=Path,
-        default=ROOT / "data/metal-brain/metal-csr-retinal-v2.bin",
-    )
-    p.add_argument(
-        "--port-bundle", type=Path, default=ROOT / "data/ports/retinal-v2-maps.npz"
-    )
-    p.add_argument("--capacity", type=int, default=6)
+    p.add_argument("--artifact", type=Path, required=True,
+                   help="Current CHCNS1 graph, afferent and learned-readout service artifact")
+    p.add_argument("--binary", type=Path)
+    p.add_argument("--capacity", type=int, default=8)
     p.add_argument("--snapshot-dir", type=Path, required=True)
     p.add_argument("--pid-file", type=Path, required=True)
     p.add_argument("--bind", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8766)
-    p.add_argument("--kernel", choices=("row", "simd"), default="row")
-    p.add_argument("--mushroom-substrate", type=Path)
-    p.add_argument("--mushroom-bridge", type=Path)
-    p.add_argument(
-        "--mushroom-modulator-mode",
-        choices=("synthetic", "actual_ppl101_rate"),
-        default="synthetic",
-    )
-    p.add_argument("--mushroom-frozen", action="store_true")
+    p.add_argument("--kernel", choices=("row", "simd"), default="simd")
     a = p.parse_args()
-    if (a.mushroom_substrate is None) != (a.mushroom_bridge is None):
-        p.error("--mushroom-substrate and --mushroom-bridge must be supplied together")
     if a.bind not in {"127.0.0.1", "localhost"}:
         p.error("only loopback binding is supported")
     a.pid_file.parent.mkdir(parents=True, exist_ok=True)
@@ -393,33 +379,8 @@ def main():
             raise RuntimeError(f"PID file belongs to a live process: {a.pid_file}")
     a.pid_file.write_text(f"{os.getpid()}\n")
     try:
-        substrate = None
-        bridge = None
-        if a.mushroom_substrate is not None:
-            substrate_receipt = json.loads(
-                a.mushroom_substrate.with_suffix(".json").read_text(encoding="utf-8")
-            )
-            bridge_receipt = json.loads(
-                a.mushroom_bridge.with_suffix(".json").read_text(encoding="utf-8")
-            )
-            substrate = MushroomBodySubstrate.load(
-                a.mushroom_substrate,
-                expected_sha256=substrate_receipt["sha256"],
-            )
-            bridge = MushroomFullGraphBridgeSpec.load(
-                a.mushroom_bridge,
-                expected_sha256=bridge_receipt["sha256"],
-            )
-        with MetalCircuit(
-            a.artifact,
-            a.port_bundle,
-            capacity=a.capacity,
-            kernel=a.kernel,
-            mushroom_substrate=substrate,
-            mushroom_bridge=bridge,
-            mushroom_modulator_mode=a.mushroom_modulator_mode,
-            mushroom_plasticity_enabled=not a.mushroom_frozen,
-        ) as brain:
+        with MetalCircuit(a.artifact, capacity=a.capacity, kernel=a.kernel,
+                          binary=a.binary) as brain:
             ThreadingHTTPServer(
                 (a.bind, a.port), handler_type(Sequenced(brain, a.snapshot_dir))
             ).serve_forever()
