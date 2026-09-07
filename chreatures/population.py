@@ -11,12 +11,18 @@ import subprocess
 import tempfile
 from typing import Any, Mapping, Sequence
 
-FORMAT = "chreatures-population-search-v2"
-GENOME_FORMAT = "chreatures-population-genome-v2"
+FORMAT = "chreatures-population-search-v3"
+GENOME_FORMAT = "chreatures-population-genome-v3"
 ACTION_ORDER = (
     "thrust", "yaw", "gaze_pitch", "posture", "grip", "signal_low",
     "signal_mid", "signal_high", "eat", "release", "secrete", "allocate",
 )
+REGULATED_REACTIONS = (
+    "respiration", "carbon_fixation", "soft_digestion", "tough_digestion",
+    "detritus_digestion", "reserve_fermentation", "fermentate_respiration",
+    "detritus_hydrolysis",
+)
+REGULATED_COMPARTMENTS = ("body", "gut")
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MANIFEST = ROOT / "native" / "population-core" / "Cargo.toml"
 PRIVATE_WORDS = {"state", "memory", "optimizer", "rng", "rates", "support", "pools", "atp", "context", "history"}
@@ -25,7 +31,7 @@ PRIVATE_WORDS = {"state", "memory", "optimizer", "rng", "rates", "support", "poo
 def current_parameter_recipe(
     *, policy_adapter_count: int, heritable_policy_adapter_rows: bool = False,
 ) -> tuple[list[dict[str, Any]], dict[str, float]]:
-    """Return bounded v4 loci and a neutral founder; no lifetime values."""
+    """Return bounded v5 cold loci and a neutral founder; no lifetime values."""
     from .body_genome import TRAIT_BOUNDS
 
     specs: list[dict[str, Any]] = []
@@ -62,6 +68,7 @@ def current_parameter_recipe(
             "simplex:secretion_profile", 0.0, 1.0, value, 0.04,
         )
     for name in (
+        "respiration",
         "carbon_fixation",
         "soft_digestion",
         "tough_digestion",
@@ -71,6 +78,24 @@ def current_parameter_recipe(
         "detritus_hydrolysis",
     ):
         add(f"metabolic.enzyme_activity_gain.{name}", "metabolic", 0.5, 1.5, 1.0, 0.06)
+    for compartment in REGULATED_COMPARTMENTS:
+        add(
+            f"metabolic.regulation.time_constant_seconds.{compartment}",
+            "metabolic", 0.5, 120.0, 24.0, 8.0,
+        )
+        add(
+            f"metabolic.regulation.expression_change_cost.{compartment}",
+            "metabolic", 0.01, 2.0, 0.18, 0.08,
+        )
+    for name in REGULATED_REACTIONS:
+        add(
+            f"metabolic.regulation.substrate_response_gain.{name}",
+            "metabolic", -0.06, 0.06, 0.0, 0.012,
+        )
+        add(
+            f"metabolic.regulation.atp_response_gain.{name}",
+            "metabolic", -0.06, 0.06, 0.0, 0.012,
+        )
     for name, value in (("structure", 0.45), ("gland", 0.20), ("brood", 0.35)):
         add(f"developmental.allocation.{name}", "simplex:developmental_allocation", 0.0, 1.0, value, 0.04)
     for name in (
@@ -204,7 +229,11 @@ class CandidateGenome:
             raise ValueError("candidate values are absent")
         for name, value in values.items():
             words = str(name).lower().replace("/", ".").replace("_", ".").split(".")
-            if PRIVATE_WORDS.intersection(words) and not str(name).endswith("_gain"):
+            inherited_gain = (
+                str(name).endswith("_gain")
+                or ".atp_response_gain." in str(name)
+            )
+            if PRIVATE_WORDS.intersection(words) and not inherited_gain:
                 raise ValueError(f"private lifetime field in candidate: {name}")
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                 raise ValueError(f"candidate locus {name} is nonfinite")
@@ -432,7 +461,7 @@ def compose_population_birth(
         mobile["secretion_profile"] = [somatic[f"secretion_profile.{index}"] for index in range(3)]
         metabolism = candidate.loci("metabolic")
         inherited_enzymes = {
-            "body_row": ("carbon_fixation", "fermentate_respiration"),
+            "body_row": ("respiration", "carbon_fixation", "fermentate_respiration"),
             "gut_row": (
                 "soft_digestion",
                 "tough_digestion",
@@ -442,6 +471,7 @@ def compose_population_birth(
             ),
         }
         compiled_enzymes = {}
+        compiled_regulation = {}
         for row_name, inherited_names in inherited_enzymes.items():
             row = mobile.get(row_name)
             if isinstance(row, bool) or not isinstance(row, int) or not 0 <= row < len(compartments):
@@ -470,6 +500,26 @@ def compose_population_birth(
             if any(not 0.0 <= float(value) <= 0.06 for value in enzymes.values()):
                 raise ValueError("compiled enzyme activity exceeds reaction bound")
             compiled_enzymes[row_name] = copy.deepcopy(enzymes)
+            compartment = row_name.removesuffix("_row")
+            regulation = compartments[row].get("regulation")
+            if not isinstance(regulation, dict):
+                raise ValueError("private founder regulation differs")
+            regulation["baseline"] = copy.deepcopy(enzymes)
+            regulation["substrate_response"] = {
+                name: metabolism[f"regulation.substrate_response_gain.{name}"]
+                for name in enzymes
+            }
+            regulation["atp_response"] = {
+                name: metabolism[f"regulation.atp_response_gain.{name}"]
+                for name in enzymes
+            }
+            regulation["time_constant_seconds"] = metabolism[
+                f"regulation.time_constant_seconds.{compartment}"
+            ]
+            regulation["change_cost_atp_per_expression"] = metabolism[
+                f"regulation.expression_change_cost.{compartment}"
+            ]
+            compiled_regulation[row_name] = copy.deepcopy(regulation)
         physical = {
             "body_id": body["id"],
             "body_traits": body["articulated_traits"],
@@ -477,6 +527,7 @@ def compose_population_birth(
             "metabolic_traits": traits,
             "metabolic_enzyme_activity_gains": metabolism,
             "compiled_enzyme_rows": compiled_enzymes,
+            "compiled_regulation_rows": compiled_regulation,
         }
         receipts.append({
             "candidate_sha256": candidate.sha256,

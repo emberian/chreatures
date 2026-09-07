@@ -1,0 +1,17 @@
+{
+  "atlas_file_sha256": "d930bc2e67567fd1fd95b82c1b817d9e36e022d7f3d6fd401de8cc2367782c5c",
+  "format": "chreatures-native-gxe-transfer-atlas-receipt-v1",
+  "life_rows_file_sha256": "f9788656da82741b0daa20e798a53a43df63f5f0693584f1d49b0f6dd45545d3",
+  "native_models": {
+    "allocation_rate-additive.gam": "a999c8dd2c25be3a528d9b7d0a5121e0bb0dba66ef4b3b85459625153beb14c2",
+    "allocation_rate-interaction.gam": "56a90e37109609881de91275f20ced93fce86efaec4988e9dfc46c6fd9503a29",
+    "contact_ticks-additive.gam": "a675c30bfd6ab513efd1b712f1829fd310b804dd4ef1e51c81e2bfedbb6ed8d8",
+    "contact_ticks-interaction.gam": "29d45599e7890d28b3a3485c1b3a77f68d6ede1994571331161b8466b669df58",
+    "energy-change-realized-diagnostic.gam": "4e6b6a5622e70370cc6251742782a5cbc16226eb971eb2be4103e55113df59fb",
+    "energy_change-additive.gam": "859990d8ad8b0abe84d6e62645862785d5327eeef6a5c62db05d6ed5fcc4c47b",
+    "energy_change-interaction.gam": "1aa02c7283f5eea303b1f1edf2e32cd3bedef3606d40d403461b606f48993da3",
+    "mechanical_work_rate-additive.gam": "41fe32033a0768190cd336023ca1aa048ca3246f7dfdfa9934dd929a637eaf22",
+    "mechanical_work_rate-interaction.gam": "2f0553072482c6531fed016dfa1f0657d7f9281908ba62943c078d1043f50f0b"
+  },
+  "sha256": "9d9863b1a516e29446ae6a56565680642e389ffffc01920216840e1bce0198fb"
+}

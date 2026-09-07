@@ -1,0 +1,34 @@
+{
+  "fit": {
+    "atlas_file_sha256": "d930bc2e67567fd1fd95b82c1b817d9e36e022d7f3d6fd401de8cc2367782c5c",
+    "atlas_receipt_file_sha256": "ec30464172225bc81dbca224f36e54ed2343c2d7f36753b74a2e6fb945b82d6a",
+    "atlas_receipt_sha256": "9d9863b1a516e29446ae6a56565680642e389ffffc01920216840e1bce0198fb",
+    "life_observation_rows": 160,
+    "native_extension_sha256": "31e6052dbefee525ac5249ce7c9f146ac4f9a41861ca8c100adca7ada6e0fd8c",
+    "native_fit_seconds": 3.725831999996444,
+    "split_rows": {
+      "heldout": 48,
+      "train": 75,
+      "validation": 37
+    },
+    "statistical_independence_claim": false
+  },
+  "format": "chreatures-native-gxe-transfer-atlas-execution-v1",
+  "proposal": {
+    "canonical_score_hash_verified": true,
+    "criterion": "interaction_information",
+    "pairs": 32,
+    "policy_file_sha256": "c09554164dde7ca43c9ca2a8380de8d68d3dea97329599a89d09d0a4405b6b1b",
+    "scope": "frozen search-v2 experiments only; current search-v3 and new regulation mechanisms are out of support and unranked",
+    "scores_file_sha256": "81328aa76b31657485752d15ea6887edd013b84ec60f05e363a9eb5999e761c6",
+    "scores_sha256": "9f7e0675fb94acd6b24751be24a2735bb33790c2b266c2b1bfc5182c54facab7"
+  },
+  "ranking": {
+    "request_file_sha256": "07aa7e26992a4db31c381307c2397bc15f8f3a6de2da108d1609b9228210714b",
+    "response_file_sha256": "de8b3e8702448e50418c49a0133a6acda08935b6210120c15b2c200e76b2de7e",
+    "supported_pairs": 323,
+    "unobserved_pairs": 650,
+    "unsupported_pairs": 327
+  },
+  "sha256": "9ce4fe414ad902febc39f470a6adf3c47fee72c92b60fc546d283a9a01d27a89"
+}

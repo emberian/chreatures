@@ -21,7 +21,7 @@ import numpy as np
 from .native_world import load_world_kernels
 
 CHEMISTRY_FORMAT = "chreatures-common-chemistry-v1"
-SNAPSHOT_FORMAT = "chreatures-metabolic-web-v1"
+SNAPSHOT_FORMAT = "chreatures-metabolic-web-v2"
 
 
 def canonical(value: Any) -> bytes:
@@ -148,6 +148,7 @@ class MetabolicWeb:
         atp: Sequence[float],
         atp_capacity: Sequence[float],
         *,
+        regulation: Sequence[Mapping[str, Any]],
         bulk: Mapping[str, float] | None = None,
         bulk_atp: float = 0.0,
     ):
@@ -155,16 +156,58 @@ class MetabolicWeb:
         self.count = len(enzymes)
         if len(pools) != self.count:
             raise ValueError("enzyme and pool row counts differ")
+        enzyme_array = chemistry.enzymes(enzymes)
         self._native = load_world_kernels().MetabolicCohort(
             *chemistry._arrays,
-            chemistry.enzymes(enzymes),
+            enzyme_array,
             np.ascontiguousarray([chemistry.resources(row) for row in pools]),
             np.ascontiguousarray(atp, dtype=np.float64),
             np.ascontiguousarray(atp_capacity, dtype=np.float64),
             chemistry.resources(bulk or {}),
             float(bulk_atp),
         )
+        self._regulation, arrays = self._regulation_arrays(regulation)
+        if not np.array_equal(arrays[0], enzyme_array):
+            raise ValueError("regulation baseline must equal initial enzyme expression")
+        self._native.enable_regulation(
+            *arrays, chemistry.enzyme_maximum, chemistry.enzyme_row_sum
+        )
         self.program_sha256 = str(self._native.program_sha256)
+
+    def _regulation_arrays(
+        self, rows: Sequence[Mapping[str, Any]], *, expected_count: int | None = None
+    ) -> tuple[list[dict[str, Any]], tuple[np.ndarray, ...]]:
+        expected = self.count if expected_count is None else expected_count
+        if self.chemistry.enzyme_maximum is None or len(rows) != expected:
+            raise ValueError("regulated metabolism requires an enzyme budget and one rule per row")
+        normalized: list[dict[str, Any]] = []
+        for value in rows:
+            row = copy.deepcopy(dict(value))
+            if set(row) != {
+                "baseline", "substrate_response", "atp_response",
+                "time_constant_seconds", "change_cost_atp_per_expression",
+            }:
+                raise ValueError("metabolic regulation rule fields differ")
+            for field in ("baseline", "substrate_response", "atp_response"):
+                if not isinstance(row[field], dict) or set(row[field]) - set(self.chemistry.reactions):
+                    raise ValueError("metabolic regulation reaction names differ")
+            normalized.append(row)
+        baseline = self.chemistry.enzymes([row["baseline"] for row in normalized])
+        named = []
+        for field in ("substrate_response", "atp_response"):
+            values = np.asarray(
+                [[row[field].get(name, 0.0) for name in self.chemistry.reactions] for row in normalized],
+                np.float64,
+            )
+            if not np.isfinite(values).all() or np.any(np.abs(values) > self.chemistry.enzyme_maximum):
+                raise ValueError("metabolic regulation response is invalid")
+            named.append(np.ascontiguousarray(values))
+        tau = np.asarray([row["time_constant_seconds"] for row in normalized], np.float64)
+        cost = np.asarray([row["change_cost_atp_per_expression"] for row in normalized], np.float64)
+        if (not np.isfinite(tau).all() or np.any((tau < 0.5) | (tau > 120.0))
+                or not np.isfinite(cost).all() or np.any((cost < 0.01) | (cost > 2.0))):
+            raise ValueError("metabolic regulation timing or cost is invalid")
+        return normalized, (np.ascontiguousarray(baseline), *named, tau, cost)
 
     @property
     def pools(self) -> np.ndarray:
@@ -197,6 +240,23 @@ class MetabolicWeb:
         return {
             "elements": dict(zip(self.chemistry.elements, elements.tolist())),
             "stored_energy": float(energy),
+        }
+
+    def regulation_view(self) -> dict[str, Any]:
+        """Return whole-web audit state; this is not an organism sensory input."""
+        return {
+            "reaction_order": list(self.chemistry.reactions),
+            "expression": self.enzyme_activity.tolist(),
+            "expression_unit": "synthetic_enzyme_expression",
+            "maximum_expression": self.chemistry.enzyme_maximum,
+            "total_expression_budget": self.chemistry.enzyme_row_sum,
+            "time_constant_seconds": [
+                float(row["time_constant_seconds"]) for row in self._regulation
+            ],
+            "cumulative_atp_cost": np.asarray(
+                self._native.cumulative_regulation_atp
+            ).tolist(),
+            "atp_cost_unit": "synthetic_ATP",
         }
 
     def step(self, dt: float, photons: Any, work: Any) -> dict[str, np.ndarray]:
@@ -262,6 +322,7 @@ class MetabolicWeb:
         self,
         enzymes: Sequence[Mapping[str, float]],
         atp_capacity: Sequence[float],
+        regulation: Sequence[Mapping[str, Any]],
     ) -> MetabolicWeb:
         """Return a private owner with appended empty rows and exact old state."""
         if not 1 <= len(enzymes) <= 5 or len(atp_capacity) != len(enzymes):
@@ -272,8 +333,13 @@ class MetabolicWeb:
         instance = object.__new__(type(self))
         instance.chemistry = self.chemistry
         instance.count = self.count + len(enzymes)
+        instance._regulation = self._regulation + copy.deepcopy(list(regulation))
+        _, arrays = instance._regulation_arrays(regulation, expected_count=len(regulation))
+        new_enzymes = self.chemistry.enzymes(enzymes)
+        if not np.array_equal(arrays[0], new_enzymes):
+            raise ValueError("newborn regulation baseline must equal enzyme expression")
         instance._native = self._native.expanded(
-            self.chemistry.enzymes(enzymes), capacities
+            arrays[0], capacities, *arrays[1:]
         )
         instance.program_sha256 = str(instance._native.program_sha256)
         if instance.program_sha256 != self.program_sha256:
@@ -298,6 +364,8 @@ class MetabolicWeb:
             "chemistry_sha256": self.chemistry.sha256,
             "program_sha256": self.program_sha256,
             "compartments": self.count,
+            "regulation": copy.deepcopy(self._regulation),
+            "regulation_sha256": hashlib.sha256(canonical(self._regulation)).hexdigest(),
             "native_sha256": hashlib.sha256(data).hexdigest(),
             "native_base64": base64.b64encode(data).decode("ascii"),
         }
@@ -315,8 +383,16 @@ class MetabolicWeb:
         native = base64.b64decode(value["native_base64"], validate=True)
         if hashlib.sha256(native).hexdigest() != value["native_sha256"]:
             raise ValueError("metabolic state checksum differs")
+        regulation = value["regulation"]
+        if hashlib.sha256(canonical(regulation)).hexdigest() != value["regulation_sha256"]:
+            raise ValueError("metabolic regulation identity differs")
         instance = cls(
-            chemistry, [{}] * count, [{}] * count, [0.0] * count, [0.0] * count
+            chemistry,
+            [row["baseline"] for row in regulation],
+            [{}] * count,
+            [0.0] * count,
+            [0.0] * count,
+            regulation=regulation,
         )
         if instance.program_sha256 != value["program_sha256"]:
             raise ValueError("metabolic program identity differs")

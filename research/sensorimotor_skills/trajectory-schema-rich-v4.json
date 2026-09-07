@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "chreatures-sensorimotor-play-rich-trajectory-v4",
+  "title": "Chreatures sharded organism-interface-v4 rich sensorimotor trajectory",
+  "description": "Current-only 512-tick sealed NPZ shard contract. Partition keys and immutable sensor identities live in the manifest. Model arrays contain no resident identity, object label, world coordinate, heading, distance, or bearing.",
+  "type": "object",
+  "required": [
+    "observation",
+    "executed_actions",
+    "transition_outcomes",
+    "canonical_channels",
+    "worker_recurrent_context",
+    "organ_flows",
+    "reset",
+    "dt_seconds"
+  ],
+  "properties": {
+    "observation": {
+      "description": "C-contiguous float32 [T+1,N,4459] in exact order rich-body-v1 rays4096, canonical channels351, current physiology12",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": [
+        "S+1",
+        "N",
+        4459
+      ],
+      "x-column-groups": [
+        {
+          "name": "rich_body_v1",
+          "start": 0,
+          "stop": 4096
+        },
+        {
+          "name": "canonical_channels",
+          "start": 4096,
+          "stop": 4447
+        },
+        {
+          "name": "physiology",
+          "start": 4447,
+          "stop": 4459
+        }
+      ]
+    },
+    "executed_actions": {
+      "description": "float32 [T,N,12], delivered actions in organism-interface-v4 order",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": [
+        "S",
+        "N",
+        12
+      ],
+      "x-column-order": [
+        "thrust",
+        "yaw",
+        "gaze_pitch",
+        "posture",
+        "grip",
+        "signal_low",
+        "signal_mid",
+        "signal_high",
+        "eat",
+        "release",
+        "secrete",
+        "allocate"
+      ]
+    },
+    "transition_outcomes": {
+      "description": "float32 [T,N,8] actual t-to-t+1 outcomes in nutrition,contact,distance,effort,mechanical_work,ingested_mass,mouth_material_contacts,homeostatic_reward order; audit/training targets, never controller inputs",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": [
+        "S",
+        "N",
+        8
+      ],
+      "x-column-order": [
+        "nutrition",
+        "contact",
+        "distance",
+        "effort",
+        "mechanical_work",
+        "ingested_mass",
+        "mouth_material_contacts",
+        "homeostatic_reward"
+      ]
+    },
+    "reset": {
+      "description": "bool [S+1,N]; all true only at episode tick0, otherwise false, including interior shard boundaries",
+      "x-numpy-dtype": "|b1",
+      "x-numpy-shape": [
+        "S+1",
+        "N"
+      ]
+    },
+    "dt_seconds": {
+      "description": "float64 scalar physical observation/action interval",
+      "x-numpy-dtype": "<f8",
+      "x-numpy-shape": []
+    },
+    "canonical_channels": {
+      "description": "diagnostic float32 [T+1,N,351], exactly observation[...,4096:4447]",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": [
+        "S+1",
+        "N",
+        351
+      ]
+    },
+    "neural_readouts": {
+      "description": "optional float32 [T+1,N,384] canonical full-MaleCNS readouts for the slow manager; not part of the 4459 worker observation",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": [
+        "S+1",
+        "N",
+        384
+      ]
+    },
+    "worker_recurrent_context": {
+      "description": "float32 [T,N,128] exact private effective worker context after current observation encoding and recurrent-gain adaptation, used for executed action[t]",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": [
+        "S",
+        "N",
+        128
+      ]
+    },
+    "organ_flows": {
+      "description": "audit-only float32 [S,N,3] actual donor-side release, secretion and allocation after each physical barrier; never a predictor input or target",
+      "x-numpy-dtype": "<f4",
+      "x-numpy-shape": [
+        "S",
+        "N",
+        3
+      ],
+      "x-column-order": [
+        "release",
+        "secretion",
+        "allocation"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "x-required-manifest-identity": {
+    "dataset_format": "chreatures-sensorimotor-play-rich-v4",
+    "rich_profile_sha256": "c71380718ba5535dbaebdeaf8aa2e88cc45cf218312a03e13507877f02a5554e",
+    "rich_channel_names_sha256": "b4c6b328116d820143e16ee922ccffd7b950dbe008efc580ad93056e01349bfa",
+    "observation_order": [
+      "rich_body_v1_4096",
+      "canonical_channels_351",
+      "physiology_12"
+    ],
+    "transition_outcome_order": [
+      "nutrition",
+      "contact",
+      "distance",
+      "effort",
+      "mechanical_work",
+      "ingested_mass",
+      "mouth_material_contacts",
+      "homeostatic_reward"
+    ],
+    "organism_interface": "chreatures-organism-interface-v4",
+    "organ_flow_order": [
+      "release",
+      "secretion",
+      "allocation"
+    ]
+  }
+}

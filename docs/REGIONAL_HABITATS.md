@@ -36,8 +36,10 @@ colored geoms. Their analyst annotations are never delivered to a controller.
 World dimensions vary from 10–24 m by 7–16 m, with configurable depth. The
 generator replaces the template ground and walls at those dimensions. A second,
 wider catchment basin sits below the habitat and has physical perimeter walls.
-Escaped finite packets therefore fall, collide, and settle without clamping,
-teleportation, or chemistry deletion.
+Escaped finite packets therefore fall and collide normally. Crossing a declared
+world face transfers their remaining pools into that face's ordinary regional
+chemistry row and retires the physical packet in one transaction; no coordinate
+clamp or material refill occurs.
 
 Existing passive mechanisms remain ordinary MuJoCo assemblies. The pressure
 lift and linked gate move as one cluster; balance, resonant bell, hinged leaf,
@@ -50,7 +52,22 @@ The biosphere output is coupled to the generated physics. All existing colonies
 and active finite material packets are placed on generated platforms. A bounded
 resource-scale allele multiplies only the declared founder pools of the finite
 packets; it is an initial-condition budget recorded in the resource hash, never a
-runtime refill. Colony chemistry and reaction laws remain the common chemistry.
+runtime refill. A second inherited fraction moves part of that exact packet
+inventory into one ordinary MetabolicWeb row per generated node. Extraction is
+capped per packet so its authored first geometry boundary remains valid. The
+generator records the quantities moved; their sum is a redistribution rather
+than a source. Colony chemistry and reaction laws remain the common chemistry.
+
+Each graph ramp has a material route whose center and four radial clearance rays
+occupy a declared world-space tube above that ramp. The ramp body alone is
+excluded from its rays. Any other actual geometry, including committed colony
+growth, can reduce the measured clear fraction and therefore the route's finite
+conductance. Six world faces transfer escaped packets into their nearest regional
+rows. Distributed outlets can debit regional rows into reserved dormant packet
+slots only at their physical positions; blocked slots retain the inventory. The
+genome inherits bounded partition, storage, conductance, route-radius, interval,
+and release parameters. Region coordinates, graph IDs, and flow state remain
+outside resident observations.
 
 Resident count is an environment/campaign parameter from 1 through 32. The cold
 composer supplies a resident bundle containing each physical body, somatic
@@ -85,7 +102,7 @@ body-local rays, chemistry, contact, sound, and private physiology; region IDs,
 resource placement, graph connectivity, ancestry, and world coordinates are not
 sensory features.
 
-Generator v3 computes ramp orientations with closed-form half angles using
+Generator v4 computes ramp orientations with closed-form half angles using
 basic arithmetic and square roots. It avoids platform-specific `atan2` and
 `sin_cos` results, which changed environment hashes by a few final quaternion
 bits between macOS and Linux in the first reciprocal campaign. A bounded
@@ -97,15 +114,19 @@ their original v2 generator rather than being relabeled.
 
 Current sources are:
 
-- `data/habitat-families/regional-v3.json`: bounds, archetypes, mutation recipe,
+- `data/habitat-families/regional-v4.json`: bounds, archetypes, mutation recipe,
   physical cluster definitions, and initial training genomes.
-- `data/habitat-families/regional-residents-v2.json`: the 32-resident capacity
+- `data/habitat-families/regional-residents-v3.json`: the 32-resident capacity
   bundle of somatic-v3 founders at the five-compartment boundary. A campaign
   selects one fixed prefix from 1 through 32 residents. Gut founders carry
   bounded, lineage-varying fermentation, fermentate-respiration, and detritus-
   hydrolysis enzyme allocations. The fermenting founders' initial gut reserve
   is transferred from their own body founder pool, so generation does not add
-  chemical material.
+  chemical material. Current v3 founders also carry private inherited reaction
+  regulation rules. Rules contain baseline expression, signed substrate and ATP
+  response gains, response time, and ATP cost; acquired expression state is not
+  part of the cold bundle. Structural rows may respond only through the two
+  declared tissue-turnover reactions.
 - `data/training/regional-environment-schedule-v1.json`: explicit current
   training and held-out environment founder seeds.
 - `chreatures/habitat_family.py`: the thin hash-checking host boundary.
@@ -130,5 +151,5 @@ uv run python scripts/generate_regional_family.py \
   --variation-seed 20260907
 ```
 
-Each output directory contains the genome, concrete habitat, concrete birth-v6
+Each output directory contains the genome, concrete habitat, concrete birth-v7
 biosphere, analyst-only graph, and a manifest hashing all inputs and outputs.

@@ -25,8 +25,8 @@ from .organism_interface import (
 PROFILE_FORMAT = "chreatures-embodied-nursery-family-profile-v7"
 PROFILE_VERSION = 7
 SNAPSHOT_FORMAT = "chreatures-embodied-training-world-v8"
-BIOSPHERE_BIRTH_FORMAT = "chreatures-biosphere-birth-v6"
-BIOSPHERE_SNAPSHOT_FORMAT = "chreatures-biosphere-v8"
+BIOSPHERE_BIRTH_FORMAT = "chreatures-biosphere-birth-v7"
+BIOSPHERE_SNAPSHOT_FORMAT = "chreatures-biosphere-v9"
 ROOT = Path(__file__).resolve().parents[1]
 PHYSICAL_BACKENDS = {
     "reference": ArticulatedSensoriumWorld,
@@ -182,7 +182,7 @@ class EmbodiedTrainingProfile:
                 "format", "selector", "generator_config", "schedule",
                 "resident_bundle", "transport", "variants",
             }
-            or value.get("format") != "chreatures-regional-training-identity-v3"
+            or value.get("format") != "chreatures-regional-training-identity-v4"
             or value.get("selector") != "environment-genome-round-robin-v1"
         ):
             raise ValueError("invalid regional training identity")
@@ -331,7 +331,7 @@ class EmbodiedTrainingProfile:
         biosphere_path = Path(biosphere).resolve()
         config_path = Path(family_config).resolve()
         schedule_path = Path(schedule).resolve()
-        resident_path = config_path.with_name("regional-residents-v2.json")
+        resident_path = config_path.with_name("regional-residents-v3.json")
         paths = (habitat_path, biosphere_path, config_path, schedule_path, resident_path)
         if any(not path.is_file() for path in paths):
             raise ValueError("regional profile source is absent")
@@ -343,13 +343,13 @@ class EmbodiedTrainingProfile:
         residents_value = json.loads(residents_text)
         cls._validate_family_schedule(schedule_value)
         if (
-            residents_value.get("format") != "chreatures-regional-residents-v2"
+            residents_value.get("format") != "chreatures-regional-residents-v3"
             or not isinstance(residents_value.get("residents"), list)
             or len(residents_value["residents"]) != MAX_RESIDENTS
         ):
             raise ValueError("regional resident founder bundle must declare capacity 32")
         campaign_residents = {
-            "format": "chreatures-regional-residents-v2",
+            "format": "chreatures-regional-residents-v3",
             "residents": residents_value["residents"][:schedule_value["resident_count"]],
         }
         campaign_residents_text = _canonical(campaign_residents).decode()
@@ -475,7 +475,7 @@ class EmbodiedTrainingProfile:
             "homeostasis": FiniteEnergyConfig().to_value(),
             "physiology": physiology_identity(),
             "family": {
-                "format": "chreatures-regional-training-identity-v3",
+                "format": "chreatures-regional-training-identity-v4",
                 "selector": schedule_value["selector"],
                 "generator_config": {"sha256": _sha(config_path)},
                 "schedule": {"sha256": _sha(schedule_path)},
@@ -611,7 +611,7 @@ def _generated_family_spec(
     config_text = config_path.read_text()
     resident_source = json.loads(resident_path.read_text())
     residents_text = _canonical({
-        "format": "chreatures-regional-residents-v2",
+        "format": "chreatures-regional-residents-v3",
         "residents": resident_source["residents"][:identity["transport"]["residents"]],
     }).decode()
     from .native_world import load_world_kernels

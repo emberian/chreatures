@@ -306,7 +306,9 @@ def main() -> None:
                 "manager_commit_ticks": 10,
             },
             "consequence_refinement": {
-                "candidates": 4,
+                "candidates": 8,
+                "local_candidates": 4,
+                "recalled_suffix_candidates": 4,
                 "tilt": 0.5,
                 "learning_rate": 0.05,
                 "error_decay": 0.99,
@@ -323,13 +325,28 @@ def main() -> None:
             "candidate_actions": "[B,K,H,12], H=1..8, delivered canonical actions",
             "outputs": "per-tick frame-code delta256 + raw physiology delta12",
             "runtime_scoring": {
-                "horizon_ticks": 4,
-                "horizon_seconds": 0.2,
-                "proposal_suffix": "hold the proposed delivered action constant for four ticks",
+                "maximum_horizon_ticks": 8,
+                "maximum_horizon_seconds": 0.4,
+                "local_proposal_suffix": "hold the proposed delivered action constant for eight ticks",
+                "recalled_proposal_suffix": "actual previously executed contiguous actions, length4..8; score ends at its observed length",
                 "goal_error_rms": predictor_metadata["validation"][
                     "goal_calibration"
-                ]["empirical_goal_rms_by_horizon"][3],
+                ]["empirical_goal_rms_by_horizon"][3:8],
             },
+        },
+        "private_motor_suffix": {
+            "format": "chreatures-private-motor-suffix-v1",
+            "slots_per_resident": 32,
+            "maximum_ticks": 8,
+            "context": "private achieved-goal key64 at the physical decision boundary",
+            "actions": "actual executed canonical action12 only",
+            "outcomes": ["movement_response", "energy_cost", "fatigue_recovery"],
+            "empirical_utility": "tanh(movement_response - energy_cost + fatigue_recovery)",
+            "recall_score": "negative context-key RMS plus 0.25 times empirical utility",
+            "empirical_tilt_limit": 0.10,
+            "support_semantics": "execution frequency; not calibrated confidence",
+            "birth": "empty private library and fresh RNG",
+            "imagination": "predictor forecasts are never admitted as experience",
         },
         "consequence_laws": {
             "value": laws,

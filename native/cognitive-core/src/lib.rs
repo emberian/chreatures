@@ -9,6 +9,7 @@ mod contextual_episodic;
 mod developmental;
 pub mod gam_law;
 mod goal_memory;
+mod motor_suffix;
 pub mod personal_consequences;
 pub mod personal_goals;
 pub mod population_response;

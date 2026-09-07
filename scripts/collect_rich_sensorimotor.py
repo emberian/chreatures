@@ -29,11 +29,18 @@ from chreatures.training_cohort import (
     load_training_graph,
 )
 
-FORMAT = "chreatures-sensorimotor-play-rich-v3"
-SCHEMA = ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v3.json"
+FORMAT = "chreatures-sensorimotor-play-rich-v4"
+VERSION = 4
+SHARD_STEPS = 512
+CHECKPOINT_STEPS = 1024
+SCHEMA = ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v4.json"
 from chreatures.organism_interface import (
-    ACTION_NAMES, ACTION_DIM, PREVIOUS_DIM, PHYSIOLOGY_DIM,
-    OBSERVATION_DIM, OBSERVATION_ORDER,
+    ACTION_DIM,
+    ACTION_NAMES,
+    OBSERVATION_DIM,
+    OBSERVATION_ORDER,
+    PHYSIOLOGY_DIM,
+    PREVIOUS_DIM,
 )
 
 
@@ -58,7 +65,7 @@ def source_identity() -> dict[str, Any]:
         Path("chreatures/training_cohort.py"),
         Path("chreatures/sensorimotor_worker_native.py"),
         Path("chreatures/training_environment.py"),
-        Path("research/sensorimotor_skills/trajectory-schema-rich-v3.json"),
+        Path("research/sensorimotor_skills/trajectory-schema-rich-v4.json"),
     )
     revision = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -155,6 +162,8 @@ def validate(args: argparse.Namespace) -> None:
         raise SystemExit("world split requires train, validation, and final holdout worlds")
     if not 1 <= args.episodes <= 64 or not 44 <= args.steps <= 100_000:
         raise SystemExit("episodes or steps outside bounded training-data range")
+    if args.steps % SHARD_STEPS:
+        raise SystemExit("steps must be divisible by the fixed 512-tick shard size")
     if args.output.exists() and any(args.output.iterdir()):
         raise SystemExit("output must be absent or empty")
     for path in (
@@ -276,6 +285,7 @@ def main() -> int:
         "rich_channel_names_sha256": RICH_CHANNEL_NAMES_SHA256,
         "observation_order": list(OBSERVATION_ORDER),
         "transition_outcome_order": list(OUTCOME_FIELDS),
+        "organ_flow_order": ["release", "secretion", "allocation"],
         "split": {
             "train_world_slots": list(
                 range(args.worlds - args.validation_worlds - args.heldout_worlds)
@@ -299,6 +309,24 @@ def main() -> int:
     identity_receipt = atomic_json(args.output / "identity.json", identity)
     packets = []
     end_checkpoints = []
+    progress_sequence = 0
+
+    def publish_progress() -> None:
+        nonlocal progress_sequence
+        progress_sequence += 1
+        progress = {
+            "format": f"{FORMAT}-progress",
+            "version": VERSION,
+            "completed": False,
+            "sequence": progress_sequence,
+            "collection_identity_sha256": identity["sha256"],
+            "identity_receipt": identity_receipt,
+            "packets": packets,
+            "checkpoints": end_checkpoints,
+        }
+        progress["content_sha256"] = canonical_hash(progress)
+        atomic_json(args.output / "progress.json", progress)
+
     transport_timing = None
     started = time.perf_counter()
     try:
@@ -342,148 +370,202 @@ def main() -> int:
             previous = np.zeros((count, PREVIOUS_DIM), dtype=np.float32)
             reset = np.ones(count, dtype=np.bool_)
             observation, canonical, physical, neural, bodies = observe(pool, brain, 0.05)
-            buffer_dir = args.output / f".episode-{episode:03d}.buffers"
-            buffer_dir.mkdir()
+            for shard, start_tick in enumerate(range(0, args.steps, SHARD_STEPS)):
+                stop_tick = start_tick + SHARD_STEPS
+                buffer_dir = args.output / (
+                    f".episode-{episode:03d}-shard-{shard:03d}.buffers"
+                )
+                buffer_dir.mkdir()
 
-            def episode_buffer(name, shape, dtype):
-                return np.lib.format.open_memmap(
-                    buffer_dir / f"{name}.npy", mode="w+", dtype=dtype, shape=shape
-                )
+                def shard_buffer(name, shape, dtype):
+                    return np.lib.format.open_memmap(
+                        buffer_dir / f"{name}.npy",
+                        mode="w+",
+                        dtype=dtype,
+                        shape=shape,
+                    )
 
-            observations = episode_buffer(
-                "observation",
-                (args.steps + 1, count, OBSERVATION_DIM), dtype=np.float32
-            )
-            canonicals = episode_buffer(
-                "canonical_channels",
-                (args.steps + 1, count, len(ports.input_names)), dtype=np.float32
-            )
-            neurals = episode_buffer(
-                "neural_readouts",
-                (args.steps + 1, count, len(ports.readout_names)), dtype=np.float32
-            )
-            resets = episode_buffer(
-                "reset", (args.steps + 1, count), dtype=np.bool_
-            )
-            resets[:] = False
-            actions = episode_buffer(
-                "executed_actions", (args.steps, count, ACTION_DIM), dtype=np.float32
-            )
-            worker_contexts = episode_buffer(
-                "worker_recurrent_context",
-                (args.steps, count, 128),
-                dtype=np.float32,
-            )
-            outcomes_sequence = episode_buffer(
-                "transition_outcomes",
-                (args.steps, count, len(OUTCOME_FIELDS)), dtype=np.float32
-            )
-            observations[0] = observation
-            canonicals[0] = canonical
-            neurals[0] = neural
-            resets[0] = reset
-            for tick in range(args.steps):
-                result = residents.step(
-                    observation,
-                    neural,
-                    physical,
-                    previous,
-                    np.full(count, tick, dtype=np.uint64),
-                    np.full(count, tick * 0.05, dtype=np.float64),
-                    reset,
+                observations = shard_buffer(
+                    "observation",
+                    (SHARD_STEPS + 1, count, OBSERVATION_DIM),
+                    np.float32,
                 )
-                action = np.ascontiguousarray(result["proposed_action"], dtype=np.float32)
-                worker_context = np.ascontiguousarray(
-                    result["worker_recurrent_context"], dtype=np.float32
-                ).copy()
-                if worker_context.shape != (count, 128) or not np.isfinite(
-                    worker_context
-                ).all():
-                    raise RuntimeError("native effective worker context differs")
-                before = physical.copy()
-                advanced = pool.advance(action_payload(action, bodies))
-                world_outcomes = [value[0] for value in advanced]
-                observation, canonical, physical, neural, bodies = observe(pool, brain, 0.05)
-                executed = np.ascontiguousarray(
-                    action, dtype=np.float32
+                canonicals = shard_buffer(
+                    "canonical_channels",
+                    (SHARD_STEPS + 1, count, len(ports.input_names)),
+                    np.float32,
                 )
-                effort = np.asarray(
-                    [
-                        world_outcomes[world][str(body["id"])]["effort"]
-                        for world, world_bodies in enumerate(bodies)
-                        for body in world_bodies
-                    ],
-                    dtype=np.float32,
+                neurals = shard_buffer(
+                    "neural_readouts",
+                    (SHARD_STEPS + 1, count, len(ports.readout_names)),
+                    np.float32,
                 )
-                residents.observe_consequences(
-                    np.full(count, tick, dtype=np.uint64),
-                    before,
-                    physical,
-                    executed,
-                    effort,
-                    dt=0.05,
+                resets = shard_buffer(
+                    "reset", (SHARD_STEPS + 1, count), np.bool_
                 )
-                previous = executed
-                reset = np.zeros(count, dtype=np.bool_)
-                observations[tick + 1] = observation
-                canonicals[tick + 1] = canonical
-                neurals[tick + 1] = neural
-                resets[tick + 1] = reset
-                actions[tick] = action
-                worker_contexts[tick] = worker_context
-                outcomes_sequence[tick] = outcome_rows(world_outcomes, bodies)
-            arrays = {
-                "observation": observations,
-                "canonical_channels": canonicals,
-                "neural_readouts": neurals,
-                "executed_actions": actions,
-                "worker_recurrent_context": worker_contexts,
-                "transition_outcomes": outcomes_sequence,
-                "reset": resets,
-                "dt_seconds": np.asarray(0.05, dtype=np.float64),
-            }
-            for value in arrays.values():
-                if isinstance(value, np.memmap):
-                    value.flush()
-            array_shapes = {key: list(value.shape) for key, value in arrays.items()}
-            packet = atomic_npz(args.output / f"episode-{episode:03d}.npz", arrays)
-            for value in arrays.values():
-                if isinstance(value, np.memmap):
-                    value._mmap.close()
-            for path in buffer_dir.iterdir():
-                path.unlink()
-            buffer_dir.rmdir()
-            packets.append(
-                {
-                    "episode": episode,
-                    "stage": 0,
-                    **packet,
-                    "model_array_shapes": array_shapes,
-                    "resident_partitions": resident_ids,
+                resets[:] = False
+                actions = shard_buffer(
+                    "executed_actions", (SHARD_STEPS, count, ACTION_DIM), np.float32
+                )
+                worker_contexts = shard_buffer(
+                    "worker_recurrent_context", (SHARD_STEPS, count, 128), np.float32
+                )
+                outcomes_sequence = shard_buffer(
+                    "transition_outcomes",
+                    (SHARD_STEPS, count, len(OUTCOME_FIELDS)),
+                    np.float32,
+                )
+                organ_flows = shard_buffer(
+                    "organ_flows", (SHARD_STEPS, count, 3), np.float32
+                )
+                observations[0] = observation
+                canonicals[0] = canonical
+                neurals[0] = neural
+                resets[0] = reset
+                for local_tick, tick in enumerate(range(start_tick, stop_tick)):
+                    result = residents.step(
+                        observation,
+                        neural,
+                        physical,
+                        previous,
+                        np.full(count, tick, dtype=np.uint64),
+                        np.full(count, tick * 0.05, dtype=np.float64),
+                        reset,
+                    )
+                    action = np.ascontiguousarray(
+                        result["proposed_action"], dtype=np.float32
+                    )
+                    worker_context = np.ascontiguousarray(
+                        result["worker_recurrent_context"], dtype=np.float32
+                    ).copy()
+                    if worker_context.shape != (count, 128) or not np.isfinite(
+                        worker_context
+                    ).all():
+                        raise RuntimeError("native effective worker context differs")
+                    before = physical.copy()
+                    advanced = pool.advance(action_payload(action, bodies))
+                    world_outcomes = [value[0] for value in advanced]
+                    observation, canonical, physical, neural, bodies = observe(
+                        pool, brain, 0.05
+                    )
+                    executed = np.ascontiguousarray(action, dtype=np.float32)
+                    effort = np.asarray(
+                        [
+                            world_outcomes[world][str(body["id"])]["effort"]
+                            for world, world_bodies in enumerate(bodies)
+                            for body in world_bodies
+                        ],
+                        dtype=np.float32,
+                    )
+                    residents.observe_consequences(
+                        np.full(count, tick, dtype=np.uint64),
+                        before,
+                        physical,
+                        executed,
+                        effort,
+                        dt=0.05,
+                    )
+                    previous = executed
+                    reset = np.zeros(count, dtype=np.bool_)
+                    observations[local_tick + 1] = observation
+                    canonicals[local_tick + 1] = canonical
+                    neurals[local_tick + 1] = neural
+                    resets[local_tick + 1] = reset
+                    actions[local_tick] = executed
+                    worker_contexts[local_tick] = worker_context
+                    outcomes_sequence[local_tick] = outcome_rows(
+                        world_outcomes, bodies
+                    )
+                    organ_flows[local_tick] = pool.organ_flows_array()
+                arrays = {
+                    "observation": observations,
+                    "canonical_channels": canonicals,
+                    "neural_readouts": neurals,
+                    "executed_actions": actions,
+                    "worker_recurrent_context": worker_contexts,
+                    "transition_outcomes": outcomes_sequence,
+                    "organ_flows": organ_flows,
+                    "reset": resets,
+                    "dt_seconds": np.asarray(0.05, dtype=np.float64),
                 }
-            )
-            checkpoint_dir = args.output / f"episode-{episode:03d}-end"
-            checkpoint_dir.mkdir(parents=True, exist_ok=True)
-            neural_receipt = brain.snapshot(checkpoint_dir, "neural")
-            world_receipt = atomic_json(checkpoint_dir / "worlds.json", pool.snapshot())
-            private_receipt = atomic_json(
-                checkpoint_dir / "developmental-private.json",
-                residents.snapshot_value(),
-            )
-            end_checkpoints.append(
-                {
-                    "episode": episode,
-                    "worlds": world_receipt,
-                    "neural": neural_receipt,
-                    "private": private_receipt,
+                for value in arrays.values():
+                    if isinstance(value, np.memmap):
+                        value.flush()
+                array_shapes = {
+                    key: list(value.shape) for key, value in arrays.items()
                 }
-            )
+                packet_path = args.output / (
+                    f"episode-{episode:03d}-shard-{shard:03d}.npz"
+                )
+                packet = atomic_npz(packet_path, arrays)
+                for value in arrays.values():
+                    if isinstance(value, np.memmap):
+                        value._mmap.close()
+                for path in buffer_dir.iterdir():
+                    path.unlink()
+                buffer_dir.rmdir()
+                packets.append(
+                    {
+                        "episode": episode,
+                        "shard": shard,
+                        "start_tick": start_tick,
+                        "stop_tick": stop_tick,
+                        "stage": 0,
+                        **packet,
+                        "model_array_shapes": array_shapes,
+                        "resident_partitions": resident_ids,
+                    }
+                )
+                publish_progress()
+                if stop_tick % CHECKPOINT_STEPS == 0 or stop_tick == args.steps:
+                    checkpoint_dir = args.output / (
+                        f"episode-{episode:03d}-tick-{stop_tick:08d}"
+                    )
+                    checkpoint_dir.mkdir(parents=True, exist_ok=False)
+                    neural_receipt = brain.snapshot(checkpoint_dir, "neural")
+                    neural_receipt["path"] = "neural.npz"
+                    neural_receipt.pop("name", None)
+                    files = {
+                        "boundary": atomic_npz(
+                            checkpoint_dir / "boundary.npz",
+                            {
+                                "observation": observation,
+                                "canonical_channels": canonical,
+                                "physiology": physical,
+                                "neural_readouts": neural,
+                                "previous_action": previous,
+                                "reset": reset,
+                                "tick": np.asarray(stop_tick, dtype=np.uint64),
+                                "time_seconds": np.asarray(
+                                    stop_tick * 0.05, dtype=np.float64
+                                ),
+                            },
+                        ),
+                        "worlds": atomic_json(
+                            checkpoint_dir / "worlds.json", pool.snapshot()
+                        ),
+                        "neural": neural_receipt,
+                        "private": atomic_json(
+                            checkpoint_dir / "developmental-private.json",
+                            residents.snapshot_value(),
+                        ),
+                    }
+                    end_checkpoints.append(
+                        {
+                            "episode": episode,
+                            "tick": stop_tick,
+                            "path": checkpoint_dir.name,
+                            "files": files,
+                            "tree_sha256": canonical_hash(files),
+                        }
+                    )
+                    publish_progress()
         transport_timing = pool.timing_snapshot()
     finally:
         pool.close()
     manifest = {
         "format": FORMAT,
-        "version": 3,
+        "version": VERSION,
         "completed": True,
         "collection_identity": identity,
         "identity_receipt": identity_receipt,
@@ -493,6 +575,8 @@ def main() -> int:
             "residents_per_world": residents_per_world,
             "episodes": args.episodes,
             "steps_per_episode": args.steps,
+            "shard_steps": SHARD_STEPS,
+            "checkpoint_steps": CHECKPOINT_STEPS,
             "dt_seconds": 0.05,
             "train_world_slots": identity["split"]["train_world_slots"],
             "validation_world_slots": identity["split"]["validation_world_slots"],
@@ -510,8 +594,9 @@ def main() -> int:
             "observation_order": list(OBSERVATION_ORDER),
         },
         "transition_outcome_order": list(OUTCOME_FIELDS),
+        "organ_flow_order": ["release", "secretion", "allocation"],
         "packets": packets,
-        "end_checkpoints": end_checkpoints,
+        "checkpoints": end_checkpoints,
         "transitions": count * args.episodes * args.steps,
         "elapsed_seconds": time.perf_counter() - started,
         "world_transport_timing": transport_timing,

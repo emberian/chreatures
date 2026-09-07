@@ -22,7 +22,7 @@ from .growth import GrowthSystem
 from .metabolism import Chemistry, MetabolicWeb, canonical
 from .native_world import load_world_kernels
 
-FORMAT = "chreatures-biosphere-v8"
+FORMAT = "chreatures-biosphere-v9"
 KINDS = ("branch", "root", "leaf")
 
 
@@ -288,12 +288,22 @@ class Biosphere:
                 raise ValueError(
                     "allocated geometry currently supports only tissue turnover"
                 )
+            structure_regulation = web._regulation[colony["structure_row"]]
+            if any(
+                value != 0 and reaction not in supported
+                for field in ("baseline", "substrate_response", "atp_response")
+                for reaction, value in structure_regulation[field].items()
+            ):
+                raise ValueError(
+                    "allocated geometry regulation may only modulate tissue turnover"
+                )
         self.initial_totals = web.totals()
         self.initial_ledger = self._ledger().tolist()
         self.last_report: dict[str, Any] = {}
         self.mobility = None
         self.materials = None
         self.exchange = None
+        self.regional_matter = None
         self._tissue = load_world_kernels().BiosphereTissue(
             list(self.web.chemistry.pools),
             list(self.growth),
@@ -356,7 +366,7 @@ class Biosphere:
         if not isinstance(config, dict):
             raise TypeError("biosphere birth configuration must be an object")
         config = copy.deepcopy(config)
-        if config.get("format") != "chreatures-biosphere-birth-v6" or set(config) != {
+        if config.get("format") != "chreatures-biosphere-birth-v7" or set(config) != {
             "format",
             "chemistry",
             "compartments",
@@ -367,13 +377,14 @@ class Biosphere:
             "exchange",
             "illumination_cycle",
             "mobile_phototrophy",
+            "regional_matter",
         }:
             raise ValueError("invalid biosphere birth configuration")
         compartments = config["compartments"]
         if not isinstance(compartments, list) or not compartments:
             raise ValueError("biosphere requires physical material compartments")
         if any(
-            set(row) != {"enzymes", "pools", "atp", "atp_capacity"}
+            set(row) != {"enzymes", "pools", "atp", "atp_capacity", "regulation"}
             for row in compartments
         ):
             raise ValueError("invalid compartment founder")
@@ -385,6 +396,7 @@ class Biosphere:
             [row["atp"] for row in compartments],
             [row["atp_capacity"] for row in compartments],
             bulk=config["bulk"],
+            regulation=[row["regulation"] for row in compartments],
         )
         instance = cls(
             world, web, config["colonies"],
@@ -405,6 +417,10 @@ class Biosphere:
             from .ecological_exchange import EcologicalExchange
 
             instance.exchange = EcologicalExchange(instance, config["exchange"])
+        if config["regional_matter"] is not None:
+            from .regional_matter import RegionalMatter
+
+            instance.regional_matter = RegionalMatter(instance, config["regional_matter"])
         instance._bind_tissue()
         return instance
 
@@ -784,6 +800,8 @@ class Biosphere:
         if not np.isfinite(dt) or not 0 < dt <= 1.0:
             raise ValueError("biosphere step must be in (0, 1] seconds")
         self._check_structure()
+        if self.regional_matter is not None:
+            self.regional_matter.before_reactions(dt)
         if self.exchange is not None:
             self.exchange.before_reactions(dt)
         for colony in self.config:
@@ -806,6 +824,8 @@ class Biosphere:
             self.exchange.after_reactions(dt)
         if self.mobility is not None:
             self.mobility.after_reactions(dt)
+        if self.regional_matter is not None:
+            self.regional_matter.after_reactions(dt)
         self._distribute_turnover(ledger)
         reports = self._develop()
         if self.materials is not None:
@@ -816,7 +836,8 @@ class Biosphere:
             "captured_photons": float(ledger["photon_used"].sum()),
             "developments": reports,
             "evidence_events": copy.deepcopy(self._growth_evidence)
-            + ([] if self.exchange is None else self.exchange.step_events),
+            + ([] if self.exchange is None else self.exchange.step_events)
+            + ([] if self.regional_matter is None else self.regional_matter.last_events),
             "parts": len(self.parts),
             "illumination": copy.deepcopy(self._solar_state),
             "mobile_phototrophy": self._mobile_photo_report(
@@ -824,6 +845,10 @@ class Biosphere:
             ),
             "accounting": self.accounting(),
             "exchange": self.exchange.view() if self.exchange is not None else None,
+            "regional_matter": (
+                self.regional_matter.view() if self.regional_matter is not None else None
+            ),
+            "metabolic_regulation": self.web.regulation_view(),
             "hatch_offers": self.hatch_offers(),
         }
         self._growth_evidence.clear()
@@ -918,7 +943,7 @@ class Biosphere:
         for name in ("body", "gut", "structure", "gland", "brood"):
             row = founders[name]
             if not isinstance(row, Mapping) or set(row) != {
-                "enzymes", "pools", "atp", "atp_capacity",
+                "enzymes", "pools", "atp", "atp_capacity", "regulation",
             }:
                 raise ValueError("newborn founder fields differ")
             if row["pools"] or float(row["atp"]) != 0.0:
@@ -949,6 +974,7 @@ class Biosphere:
         expanded_web = self.web.expanded(
             [row["enzymes"] for row in founder_rows],
             [row["atp_capacity"] for row in founder_rows],
+            regulation=[row["regulation"] for row in founder_rows],
         )
         assigned = {
             f"{name}_row": base + index
@@ -1028,6 +1054,10 @@ class Biosphere:
         candidate.exchange = EcologicalExchange.expanded_from(
             self.exchange, candidate, exchange_config
         )
+        if saved["regional_matter"] is not None:
+            from .regional_matter import RegionalMatter
+
+            candidate.regional_matter = RegionalMatter.restore(candidate, saved["regional_matter"])
         candidate.mobility._lifecycle.commit(
             np.asarray([offer["resident_index"]], dtype=np.int32),
             np.asarray([offer["serial"]], dtype=np.int64),
@@ -1547,6 +1577,9 @@ class Biosphere:
             else None,
             "mobility": self.mobility.snapshot() if self.mobility is not None else None,
             "exchange": self.exchange.snapshot() if self.exchange is not None else None,
+            "regional_matter": (
+                self.regional_matter.snapshot() if self.regional_matter is not None else None
+            ),
         }
 
     @classmethod
@@ -1628,6 +1661,10 @@ class Biosphere:
             instance.exchange = EcologicalExchange.restore(
                 instance, snapshot["exchange"]
             )
+        if snapshot["regional_matter"] is not None:
+            from .regional_matter import RegionalMatter
+
+            instance.regional_matter = RegionalMatter.restore(instance, snapshot["regional_matter"])
         return instance
 
 

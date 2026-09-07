@@ -2,11 +2,11 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
-pub const STATE_FORMAT: &str = "chreatures-population-search-v2";
-pub const GENOME_FORMAT: &str = "chreatures-population-genome-v2";
+pub const STATE_FORMAT: &str = "chreatures-population-search-v3";
+pub const GENOME_FORMAT: &str = "chreatures-population-genome-v3";
 pub const DESCRIPTOR_VERSION: &str = "physical-descriptor-v2";
 pub const QUALITY_VERSION: &str = "finite-life-quality-v2";
-pub const VARIATION_VERSION: &str = "bounded-genome-variation-v2";
+pub const VARIATION_VERSION: &str = "bounded-genome-variation-v3";
 
 fn default_capacity() -> usize {
     4
@@ -300,7 +300,7 @@ fn reflected(value: f64, low: f64, high: f64) -> f64 {
 }
 fn private_name(v: &str) -> bool {
     let x = v.to_ascii_lowercase();
-    if x.ends_with("_gain") {
+    if x.ends_with("_gain") || x.split(['.', '/']).any(|part| part == "atp_response_gain") {
         return false;
     }
     [

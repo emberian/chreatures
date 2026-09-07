@@ -451,13 +451,15 @@ class DevelopmentalResidentCohort:
                 refinement.get(x)
                 for x in (
                     "candidates",
+                    "local_candidates",
+                    "recalled_suffix_candidates",
                     "tilt",
                     "learning_rate",
                     "error_decay",
                     "innovation_limit",
                 )
             ]
-            != [4, 0.5, 0.05, 0.99, 4.0]
+            != [8, 4, 4, 0.5, 0.05, 0.99, 4.0]
         ):
             raise ValueError("developmental consequence refinement differs")
         predictor = metadata.get("recurrent_predictor", {})
@@ -481,7 +483,7 @@ class DevelopmentalResidentCohort:
         predictor_identity = predictor_metadata.get("artifact_identity")
         scoring = predictor.get("runtime_scoring", {})
         calibration = predictor_metadata.get("validation", {}).get("goal_calibration", {}).get("empirical_goal_rms_by_horizon", [])
-        goal_rms = scoring.get("goal_error_rms")
+        goal_rms_by_horizon = scoring.get("goal_error_rms")
         predictor_arrays = {
             name.removeprefix("predictor."): arrays[name]
             for name in PREDICTOR_RUNTIME_ORDER
@@ -520,12 +522,33 @@ class DevelopmentalResidentCohort:
             or predictor_metadata.get("output_contract", {}).get("physiology_link") != PREDICTOR_PHYSIOLOGY_LINK
             or input_contract.get("action_names") != list(ACTION_NAMES)
             or input_contract.get("physiology_names") != list(PHYSIOLOGY_NAMES)
-            or scoring.get("horizon_ticks") != 4 or scoring.get("horizon_seconds") != 0.2
-            or scoring.get("proposal_suffix") != "hold the proposed delivered action constant for four ticks"
-            or len(calibration) != 8 or goal_rms != calibration[3]
-            or not isinstance(goal_rms, (int, float)) or not np.isfinite(goal_rms) or goal_rms < 1e-4
+            or scoring.get("maximum_horizon_ticks") != 8
+            or scoring.get("maximum_horizon_seconds") != 0.4
+            or scoring.get("local_proposal_suffix") != "hold the proposed delivered action constant for eight ticks"
+            or scoring.get("recalled_proposal_suffix") != "actual previously executed contiguous actions, length4..8; score ends at its observed length"
+            or len(calibration) != 8
+            or not isinstance(goal_rms_by_horizon, list)
+            or goal_rms_by_horizon != calibration[3:8]
+            or any(not isinstance(value, (int, float)) or not np.isfinite(value) or value < 1e-4 for value in goal_rms_by_horizon)
         ):
             raise ValueError("recurrent predictive consequence contract differs")
+        suffix = metadata.get("private_motor_suffix", {})
+        if suffix != {
+            "format": "chreatures-private-motor-suffix-v1",
+            "slots_per_resident": 32,
+            "maximum_ticks": 8,
+            "context": "private achieved-goal key64 at the physical decision boundary",
+            "actions": "actual executed canonical action12 only",
+            "outcomes": ["movement_response", "energy_cost", "fatigue_recovery"],
+            "empirical_utility": "tanh(movement_response - energy_cost + fatigue_recovery)",
+            "recall_score": "negative context-key RMS plus 0.25 times empirical utility",
+            "empirical_tilt_limit": 0.10,
+            "support_semantics": "execution frequency; not calibrated confidence",
+            "birth": "empty private library and fresh RNG",
+            "imagination": "predictor forecasts are never admitted as experience",
+        }:
+            raise ValueError("private motor suffix contract differs")
+        goal_rms = max(goal_rms_by_horizon)
         if action_mode not in {"sample", "map"}:
             raise ValueError("action_mode must be sample or map")
         if (
@@ -599,8 +622,13 @@ class DevelopmentalResidentCohort:
                 "sha256"
             ],
             "population_response": copy.deepcopy(self.population_response_artifact),
-            "recurrent_predictor": {"artifact_identity": predictor_identity, "horizon_ticks": 4,
-                                    "proposal_suffix": scoring["proposal_suffix"]},
+            "recurrent_predictor": {
+                "artifact_identity": predictor_identity,
+                "maximum_horizon_ticks": 8,
+                "local_proposal_suffix": scoring["local_proposal_suffix"],
+                "recalled_proposal_suffix": scoring["recalled_proposal_suffix"],
+            },
+            "private_motor_suffix": copy.deepcopy(suffix),
         }
         trained = metadata.get("training_identity", {})
         self.neural_contract = {
@@ -798,18 +826,32 @@ class DevelopmentalResidentCohort:
         result = {name: np.asarray(value) for name, value in result.items()}
         expected = {
             "proposed_action": (self.batch_size, ACTION_DIM),
-            "candidate_scores": (self.batch_size, 4),
-            "candidate_out_of_domain": (self.batch_size, 4),
+            "candidate_scores": (self.batch_size, 8),
+            "candidate_out_of_domain": (self.batch_size, 8),
+            "candidate_is_recalled_suffix": (self.batch_size, 8),
+            "candidate_available": (self.batch_size, 8),
+            "candidate_suffix_slot": (self.batch_size, 8),
+            "candidate_suffix_generation": (self.batch_size, 8),
+            "candidate_suffix_length": (self.batch_size, 8),
+            "candidate_suffix_support": (self.batch_size, 8),
+            "candidate_suffix_empirical_score": (self.batch_size, 8),
+            "candidate_suffix_recall_score": (self.batch_size, 8),
+            "candidate_first_action": (self.batch_size, 8, ACTION_DIM),
+            "motor_suffix_slots": (self.batch_size,),
+            "motor_suffix_learned_total": (self.batch_size,),
+            "motor_suffix_empirical_components": (3,),
+            "motor_suffix_empirical_tilt_limit": (),
+            "candidate_count": (),
             "selected_candidate": (self.batch_size,),
             "selected_consequence_correction": (self.batch_size, 3),
             "personal_consequence_updates": (self.batch_size,),
-            "forecast_progress": (self.batch_size, 4),
+            "forecast_progress": (self.batch_size, 8),
             "worker_recurrent_context": (self.batch_size, 128),
             "forecast_horizon_ticks": (),
-            "forecast_physiology": (self.batch_size, 4, 12),
-            "forecast_disagreement": (self.batch_size, 4),
-            "forecast_invalid": (self.batch_size, 4),
-            "forecast_tilt": (self.batch_size, 4),
+            "forecast_physiology": (self.batch_size, 8, 12),
+            "forecast_disagreement": (self.batch_size, 8),
+            "forecast_invalid": (self.batch_size, 8),
+            "forecast_tilt": (self.batch_size, 8),
             "forecast_goal_rms": (),
             "actual_previous_action": (self.batch_size, ACTION_DIM),
             "hidden": (self.batch_size, 128),
@@ -933,8 +975,8 @@ class DevelopmentalResidentCohort:
 
     def snapshot_value(self) -> dict[str, Any]:
         return {
-            "format": "chreatures-developmental-resident-population-snapshot-v5",
-            "version": 5,
+            "format": "chreatures-developmental-resident-population-snapshot-v7",
+            "version": 7,
             "model_identity": copy.deepcopy(self.model_identity),
             "batch_size": self.batch_size,
             "observation_contract": copy.deepcopy(self.observation_contract),
@@ -954,8 +996,8 @@ class DevelopmentalResidentCohort:
         if (
             not isinstance(value, dict)
             or value.get("format")
-            != "chreatures-developmental-resident-population-snapshot-v5"
-            or value.get("version") != 5
+            != "chreatures-developmental-resident-population-snapshot-v7"
+            or value.get("version") != 7
         ):
             raise ValueError("unsupported developmental resident snapshot")
         instance = cls(

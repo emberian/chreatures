@@ -1,0 +1,20 @@
+{
+  "format": "chreatures-metabolic-regulation-receipt-v1",
+  "scope": "One native regulated metabolic row, including substrate/ATP response, ATP-limited allocation cost, unchanged reaction conservation, exact snapshot continuation, and regulated newborn expansion; no full world or neural controller.",
+  "command": "cd /tmp && PYTHONPATH=/tmp/chreatures-regulation-v3:/Users/ember/dev/chreatures /Users/ember/dev/chreatures/.venv/bin/python /Users/ember/dev/chreatures/scripts/probe_metabolic_regulation.py",
+  "result": {
+    "element_conservation": true,
+    "energy_residual": 9.280770596475918e-17,
+    "enzyme_after_first_step": 0.022713762011736725,
+    "expanded_parent_state_exact": true,
+    "newborn_initialized_from_baseline": true,
+    "regulation_atp_cost": 0.0013568810058683628,
+    "snapshot_continuation_exact": true
+  },
+  "sha256": {
+    "native/world-kernels/src/metabolism.rs": "6c2afd3f17f04181d0c69318f000345eaa569344fa496d6f6f366976b0b29d30",
+    "chreatures/metabolism.py": "de7b48022bdfc6e73d87bb875861257bb9822260544d337448845040ffca2da9",
+    "scripts/probe_metabolic_regulation.py": "d3f27f88ce5802f3389125b07914c097ab4a1ba18bd3a66aa72d7b4ecf1496c9",
+    "/tmp/chreatures-regulation-v3/_world_kernels.cpython-312-darwin.so": "4da50a1440318a8ed8ff46b203402e0139b03a7828e35ae317ea93d6d03335b5"
+  }
+}

@@ -14,6 +14,7 @@ mod lifecycle;
 mod material_overlap;
 mod metabolism;
 mod population_trajectory;
+mod regional_matter;
 mod sensorium;
 mod somatic;
 mod transport;
@@ -43,6 +44,7 @@ fn _world_kernels(module: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     module.add_class::<metabolism::MetabolicCohort>()?;
     module.add_class::<population_trajectory::PopulationTrajectory>()?;
+    module.add_class::<regional_matter::RegionalMatter>()?;
     module.add_class::<somatic::SomaticCohort>()?;
     module.add_class::<sensorium::RetinaCohort>()?;
     module.add_class::<transport::TransportSolver>()?;

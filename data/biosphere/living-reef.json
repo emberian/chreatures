@@ -1,5 +1,5 @@
 {
-  "format": "chreatures-biosphere-birth-v5",
+  "format": "chreatures-biosphere-birth-v7",
   "chemistry": {
     "format": "chreatures-common-chemistry-v1",
     "description": "Synthetic conserved carbon-equivalent/mineral-equivalent chemistry with finite fermentate cross-feeding; not calibrated molecular biochemistry.",
@@ -251,7 +251,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.022,
+          "soft_growth": 0.011699999999999999,
+          "tough_growth": 0.01145,
+          "respiration": 0.0282,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -260,7 +273,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00055,
+          "tough_turnover": 0.00035999999999999997
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -278,7 +301,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.0232,
+          "soft_growth": 0.0124,
+          "tough_growth": 0.0121,
+          "respiration": 0.0293,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -287,7 +323,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00059,
+          "tough_turnover": 0.00039
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -305,7 +351,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.024399999999999998,
+          "soft_growth": 0.013099999999999999,
+          "tough_growth": 0.0095,
+          "respiration": 0.0304,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -314,7 +373,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00063,
+          "tough_turnover": 0.00041999999999999996
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -332,7 +401,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.025599999999999998,
+          "soft_growth": 0.0138,
+          "tough_growth": 0.01015,
+          "respiration": 0.0315,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -341,7 +423,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00067,
+          "tough_turnover": 0.0003
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -359,7 +451,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.026799999999999997,
+          "soft_growth": 0.011,
+          "tough_growth": 0.0108,
+          "respiration": 0.026,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -368,7 +473,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00071,
+          "tough_turnover": 0.00033
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -386,7 +501,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.027999999999999997,
+          "soft_growth": 0.011699999999999999,
+          "tough_growth": 0.01145,
+          "respiration": 0.0271,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -395,7 +523,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00055,
+          "tough_turnover": 0.00035999999999999997
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -413,7 +551,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.022,
+          "soft_growth": 0.0124,
+          "tough_growth": 0.0121,
+          "respiration": 0.0282,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -422,7 +573,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00059,
+          "tough_turnover": 0.00039
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -440,7 +601,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.0232,
+          "soft_growth": 0.013099999999999999,
+          "tough_growth": 0.0095,
+          "respiration": 0.0293,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -449,7 +623,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00063,
+          "tough_turnover": 0.00041999999999999996
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -467,7 +651,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.024399999999999998,
+          "soft_growth": 0.0138,
+          "tough_growth": 0.01015,
+          "respiration": 0.0304,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -476,7 +673,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00067,
+          "tough_turnover": 0.0003
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -494,7 +701,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.025599999999999998,
+          "soft_growth": 0.011,
+          "tough_growth": 0.0108,
+          "respiration": 0.0315,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -503,7 +723,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00071,
+          "tough_turnover": 0.00033
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -521,7 +751,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.026799999999999997,
+          "soft_growth": 0.011699999999999999,
+          "tough_growth": 0.01145,
+          "respiration": 0.026,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -530,7 +773,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00055,
+          "tough_turnover": 0.00035999999999999997
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -548,7 +801,20 @@
         "tough_tissue": 0.8
       },
       "atp": 5.0,
-      "atp_capacity": 12.0
+      "atp_capacity": 12.0,
+      "regulation": {
+        "baseline": {
+          "carbon_fixation": 0.027999999999999997,
+          "soft_growth": 0.0124,
+          "tough_growth": 0.0121,
+          "respiration": 0.0271,
+          "fermentate_respiration": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -557,7 +823,17 @@
       },
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {
+          "soft_turnover": 0.00059,
+          "tough_turnover": 0.00039
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -571,7 +847,17 @@
         "inorganic_carbon": 0.02
       },
       "atp": 0.78,
-      "atp_capacity": 1.05
+      "atp_capacity": 1.05,
+      "regulation": {
+        "baseline": {
+          "respiration": 0.0105,
+          "fermentate_respiration": 0.0018
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -587,7 +873,21 @@
         "reserve": 0.04
       },
       "atp": 0.07,
-      "atp_capacity": 0.17
+      "atp_capacity": 0.17,
+      "regulation": {
+        "baseline": {
+          "soft_digestion": 0.03,
+          "tough_digestion": 0.007,
+          "detritus_digestion": 0.014,
+          "reserve_fermentation": 0.025,
+          "fermentate_respiration": 0.003,
+          "detritus_hydrolysis": 0.002
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -602,7 +902,18 @@
         "inorganic_carbon": 0.02
       },
       "atp": 0.78,
-      "atp_capacity": 1.05
+      "atp_capacity": 1.05,
+      "regulation": {
+        "baseline": {
+          "respiration": 0.0112,
+          "carbon_fixation": 0.00035,
+          "fermentate_respiration": 0.015
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -617,7 +928,21 @@
         "soft_tissue": 0.017
       },
       "atp": 0.07,
-      "atp_capacity": 0.17
+      "atp_capacity": 0.17,
+      "regulation": {
+        "baseline": {
+          "soft_digestion": 0.033,
+          "tough_digestion": 0.008,
+          "detritus_digestion": 0.016,
+          "reserve_fermentation": 0.003,
+          "fermentate_respiration": 0.025,
+          "detritus_hydrolysis": 0.005
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -631,7 +956,17 @@
         "inorganic_carbon": 0.02
       },
       "atp": 0.78,
-      "atp_capacity": 1.05
+      "atp_capacity": 1.05,
+      "regulation": {
+        "baseline": {
+          "respiration": 0.0119,
+          "fermentate_respiration": 0.0036
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -646,7 +981,21 @@
         "soft_tissue": 0.018000000000000002
       },
       "atp": 0.07,
-      "atp_capacity": 0.17
+      "atp_capacity": 0.17,
+      "regulation": {
+        "baseline": {
+          "soft_digestion": 0.036,
+          "tough_digestion": 0.009000000000000001,
+          "detritus_digestion": 0.01,
+          "reserve_fermentation": 0.003,
+          "fermentate_respiration": 0.006,
+          "detritus_hydrolysis": 0.025
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -661,7 +1010,18 @@
         "inorganic_carbon": 0.02
       },
       "atp": 0.78,
-      "atp_capacity": 1.05
+      "atp_capacity": 1.05,
+      "regulation": {
+        "baseline": {
+          "respiration": 0.0126,
+          "carbon_fixation": 0.0028,
+          "fermentate_respiration": 0.003
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -677,7 +1037,21 @@
         "reserve": 0.04
       },
       "atp": 0.07,
-      "atp_capacity": 0.17
+      "atp_capacity": 0.17,
+      "regulation": {
+        "baseline": {
+          "soft_digestion": 0.039,
+          "tough_digestion": 0.006,
+          "detritus_digestion": 0.012,
+          "reserve_fermentation": 0.021,
+          "fermentate_respiration": 0.005,
+          "detritus_hydrolysis": 0.003
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -692,7 +1066,18 @@
         "inorganic_carbon": 0.02
       },
       "atp": 0.78,
-      "atp_capacity": 1.05
+      "atp_capacity": 1.05,
+      "regulation": {
+        "baseline": {
+          "respiration": 0.0105,
+          "carbon_fixation": 0.0011,
+          "fermentate_respiration": 0.013199999999999998
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -707,7 +1092,21 @@
         "soft_tissue": 0.017
       },
       "atp": 0.07,
-      "atp_capacity": 0.17
+      "atp_capacity": 0.17,
+      "regulation": {
+        "baseline": {
+          "soft_digestion": 0.03,
+          "tough_digestion": 0.007,
+          "detritus_digestion": 0.014,
+          "reserve_fermentation": 0.004,
+          "fermentate_respiration": 0.022,
+          "detritus_hydrolysis": 0.006
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -722,7 +1121,18 @@
         "inorganic_carbon": 0.02
       },
       "atp": 0.78,
-      "atp_capacity": 1.05
+      "atp_capacity": 1.05,
+      "regulation": {
+        "baseline": {
+          "respiration": 0.0112,
+          "carbon_fixation": 0.00018,
+          "fermentate_respiration": 0.0048
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {
@@ -737,7 +1147,21 @@
         "soft_tissue": 0.018000000000000002
       },
       "atp": 0.07,
-      "atp_capacity": 0.17
+      "atp_capacity": 0.17,
+      "regulation": {
+        "baseline": {
+          "soft_digestion": 0.033,
+          "tough_digestion": 0.008,
+          "detritus_digestion": 0.016,
+          "reserve_fermentation": 0.002,
+          "fermentate_respiration": 0.008,
+          "detritus_hydrolysis": 0.023
+        },
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -746,7 +1170,14 @@
         "soft_tissue": 0.055
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -756,7 +1187,14 @@
         "detritus": 0.055
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -766,7 +1204,14 @@
         "detritus": 0.04
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -775,7 +1220,14 @@
         "soft_tissue": 0.055
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -785,7 +1237,14 @@
         "detritus": 0.055
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -795,7 +1254,14 @@
         "detritus": 0.04
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -804,7 +1270,14 @@
         "soft_tissue": 0.055
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -814,7 +1287,14 @@
         "detritus": 0.055
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -824,7 +1304,14 @@
         "detritus": 0.04
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -833,7 +1320,14 @@
         "soft_tissue": 0.055
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -843,7 +1337,14 @@
         "detritus": 0.055
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -853,295 +1354,638 @@
         "detritus": 0.04
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -1150,19 +1994,40 @@
         "soft_tissue": 0.3
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
@@ -1173,19 +2038,40 @@
         "detritus": 0.72
       },
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     },
     {
       "enzymes": {},
       "pools": {},
       "atp": 0.0,
-      "atp_capacity": 0.0
+      "atp_capacity": 0.0,
+      "regulation": {
+        "baseline": {},
+        "substrate_response": {},
+        "atp_response": {},
+        "time_constant_seconds": 120.0,
+        "change_cost_atp_per_expression": 0.01
+      }
     }
   ],
   "bulk": {},
@@ -13963,5 +14849,6 @@
       ],
       "occluded_transmission": 0.08
     }
-  }
+  },
+  "regional_matter": null
 }

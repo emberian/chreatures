@@ -1292,7 +1292,10 @@ fn validate_population_evidence(records: &[ImportedEvidence]) -> Result<(), Box<
                     "developmental-growth-committed"
                     | "developmental-attachment-invalidated"
                     | "developmental-parts-removed"
-                    | "visitor_material" => "environment_event",
+                    | "visitor_material"
+                    | "physical-material-entered-region"
+                    | "regional-material-flow"
+                    | "regional-material-outlet" => "environment_event",
                     "signal_emission" | "contact_begin" | "contact_end" | "visitor_stimulus" => {
                         "interaction_event"
                     }

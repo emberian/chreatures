@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import json
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from .native_world import load_world_kernels
 
@@ -16,7 +17,9 @@ def _sha_bytes(value: bytes) -> str:
 
 
 def _canonical(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    return json.dumps(
+        value, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()
 
 
 @dataclass(frozen=True)
@@ -57,7 +60,9 @@ class RegionalHabitatFamily:
         native_type = getattr(native, "HabitatFamily", None)
         if native_type is None:
             raise RuntimeError("native world kernels omit HabitatFamily")
-        self._native = native_type(self.config_text, _sha_bytes(self.config_text.encode()))
+        self._native = native_type(
+            self.config_text, _sha_bytes(self.config_text.encode())
+        )
 
     @property
     def archetypes(self) -> tuple[str, ...]:
@@ -105,13 +110,13 @@ class RegionalHabitatFamily:
         resident_count = int(genome["parameters"]["resident_count"])
         resident_values = residents.get("residents")
         if (
-            residents.get("format") != "chreatures-regional-residents-v2"
+            residents.get("format") != "chreatures-regional-residents-v3"
             or not isinstance(resident_values, list)
             or len(resident_values) < resident_count
         ):
             raise ValueError("regional resident bundle lacks requested capacity")
         selected_residents = {
-            "format": "chreatures-regional-residents-v2",
+            "format": "chreatures-regional-residents-v3",
             "residents": resident_values[:resident_count],
         }
         habitat_text, biosphere_text, analyst_text = self._native.generate(
@@ -123,15 +128,53 @@ class RegionalHabitatFamily:
         habitat = json.loads(habitat_text)
         biosphere = json.loads(biosphere_text)
         analyst = json.loads(analyst_text)
-        if analyst.get("runtime_visible") is not False:
+        if (
+            biosphere.get("format") != "chreatures-biosphere-birth-v7"
+            or analyst.get("format") != "chreatures-regional-analyst-v4"
+            or analyst.get("runtime_visible") is not False
+        ):
             raise ValueError("regional analyst geometry must remain host-private")
         record = analyst.get("environment_record")
-        if not isinstance(record, dict):
+        if (
+            not isinstance(record, dict)
+            or record.get("format") != "chreatures-environment-record-v4"
+            or record.get("genome_sha256") != genome.get("sha256")
+        ):
             raise ValueError("generated region omits environment ancestry")
-        if record.get("topology_sha256") != _sha_bytes(habitat_text.encode()) or record.get(
-            "resource_sha256"
-        ) != _sha_bytes(biosphere_text.encode()):
+        if record.get("topology_sha256") != _sha_bytes(
+            habitat_text.encode()
+        ) or record.get("resource_sha256") != _sha_bytes(biosphere_text.encode()):
             raise ValueError("generated environment record hashes differ")
+        matter = biosphere.get("regional_matter")
+        matter_analyst = analyst.get("regional_matter")
+        if (
+            not isinstance(matter, dict)
+            or matter.get("format") != "chreatures-regional-matter-v1"
+            or not isinstance(matter_analyst, dict)
+            or matter_analyst.get("sha256") != _sha_bytes(_canonical(matter))
+        ):
+            raise ValueError("generated regional matter identity differs")
+        compartments = biosphere.get("compartments")
+        regions = matter.get("regions")
+        if (
+            not isinstance(compartments, list)
+            or not isinstance(regions, list)
+            or len(regions) != len(analyst.get("graph", {}).get("nodes", []))
+            or len(
+                {region.get("row") for region in regions if isinstance(region, dict)}
+            )
+            != len(regions)
+            or any(
+                not isinstance(region, dict)
+                or not isinstance(region.get("row"), int)
+                or not 0 <= region["row"] < len(compartments)
+                or not isinstance(region.get("position"), list)
+                or len(region["position"]) != 3
+                for region in regions
+            )
+            or matter.get("world_size_m") != genome["parameters"]["dimensions_m"]
+        ):
+            raise ValueError("generated regional matter rows differ")
         return GeneratedRegion(
             habitat=habitat,
             biosphere=biosphere,
