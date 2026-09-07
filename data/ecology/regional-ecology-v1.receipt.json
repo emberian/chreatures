@@ -1,0 +1,39 @@
+{
+  "format": "chreatures-regional-ecology-probe-receipt-v1",
+  "status": "incomplete",
+  "scope": "Attempted one composed regional-v4, birth-v7 PhysicsWorld and Biosphere assay with native regulation, routes, outlets, growth, a physical obstruction, one complete face exit, and exact continuation. Execution stopped during the analyst exit setup before the 1200-tick continuation; no claim is made for the unexecuted portion.",
+  "command": "cd /tmp && PYTHONPATH=/tmp/chreatures-specialization-gen8:/Users/ember/dev/chreatures /Users/ember/dev/chreatures/.venv/bin/python /Users/ember/dev/chreatures/scripts/probe_regional_ecology.py --fixture /tmp/specialization-regional-v4-final --steps 1200 --continuation 12 --dt 0.05 --output /tmp/regional-ecology-v1-result.json",
+  "executed_findings": {
+    "construction": "B8 PhysicsWorld and Biosphere construction succeeded before each attempt.",
+    "route_accessibility": "All authored route accessibility values were already zero in the initial physical scene, so an additional route-obstruction effect was not feasible and is not claimed.",
+    "outlet_obstruction": "Physical play-block entities were placed at every outlet. Advancing the regional owner through the first outlet interval emitted no outlet slot and retained total regional inventory within 1e-12.",
+    "exit_setup_failure": "A finite deposit into living-deposit-18 returned no active physical free entity, including when requested at its authored material-outlet-00 position. The assay stopped rather than bypass physical clearance or fabricate an exit.",
+    "long_run_executed": false,
+    "restore_continuation_checked": false
+  },
+  "sha256": {
+    "scripts/probe_regional_ecology.py": "a373d8bdfebfff92c1f8d68cf626a89935dd83f58771dfc90e0f4bb8af2b61ef",
+    "/tmp/chreatures-specialization-gen8/_world_kernels.cpython-312-darwin.so": "d9a42c5437aaa8c27920f969c051dac9a4b1e6d20fe5595c312c9f83e5d5ecc5",
+    "/tmp/specialization-regional-v4-final/habitat.json": "4d3d08e359a7e65003c804c5bfd8f5d8b7fba4cd47d0806556cad04d1e776a18",
+    "/tmp/specialization-regional-v4-final/biosphere.json": "e76bf0e67ce7f4df8283c98092351d1da33ee12e46ac62633b2e09e083b8429e",
+    "/tmp/specialization-regional-v4-final/manifest.json": "6e2e60e6dbb101d9e4c940a05b7a7e74cc6707c046c944bd11bc8e45919c3786"
+  },
+  "retained_inputs": {
+    "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v7-incomplete/_world_kernels.cpython-312-darwin.so": {
+      "sha256": "d9a42c5437aaa8c27920f969c051dac9a4b1e6d20fe5595c312c9f83e5d5ecc5",
+      "bytes": 2560456
+    },
+    "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v7-incomplete/habitat.json": {
+      "sha256": "4d3d08e359a7e65003c804c5bfd8f5d8b7fba4cd47d0806556cad04d1e776a18",
+      "bytes": 123469
+    },
+    "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v7-incomplete/biosphere.json": {
+      "sha256": "e76bf0e67ce7f4df8283c98092351d1da33ee12e46ac62633b2e09e083b8429e",
+      "bytes": 447097
+    },
+    "/Users/ember/paperbin/chreatures/integration/ecological-specialization-v7-incomplete/manifest.json": {
+      "sha256": "6e2e60e6dbb101d9e4c940a05b7a7e74cc6707c046c944bd11bc8e45919c3786",
+      "bytes": 3222
+    }
+  }
+}

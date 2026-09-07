@@ -18,6 +18,14 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from chreatures.organism_interface import (
+    ACTION_DIM,
+    ACTION_NAMES,
+    OBSERVATION_DIM,
+    OBSERVATION_ORDER,
+    PHYSIOLOGY_DIM,
+    PREVIOUS_DIM,
+)
 from chreatures.sensorimotor_worker_native import DevelopmentalResidentCohort
 from chreatures.training_cohort import (
     OUTCOME_FIELDS,
@@ -34,14 +42,6 @@ VERSION = 4
 SHARD_STEPS = 512
 CHECKPOINT_STEPS = 1024
 SCHEMA = ROOT / "research/sensorimotor_skills/trajectory-schema-rich-v4.json"
-from chreatures.organism_interface import (
-    ACTION_DIM,
-    ACTION_NAMES,
-    OBSERVATION_DIM,
-    OBSERVATION_ORDER,
-    PHYSIOLOGY_DIM,
-    PREVIOUS_DIM,
-)
 
 
 def sha256(path: Path) -> str:
