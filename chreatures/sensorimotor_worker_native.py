@@ -525,25 +525,28 @@ class DevelopmentalResidentCohort:
             or scoring.get("maximum_horizon_ticks") != 8
             or scoring.get("maximum_horizon_seconds") != 0.4
             or scoring.get("local_proposal_suffix") != "hold the proposed delivered action constant for eight ticks"
-            or scoring.get("recalled_proposal_suffix") != "actual previously executed contiguous actions, length4..8; score ends at its observed length"
+            or scoring.get("recalled_proposal_suffix") != "actual previously executed contiguous actions, initial length4..8 or remaining length1..7; score ends at its observed length"
             or len(calibration) != 8
             or not isinstance(goal_rms_by_horizon, list)
-            or goal_rms_by_horizon != calibration[3:8]
+            or goal_rms_by_horizon != calibration[0:8]
             or any(not isinstance(value, (int, float)) or not np.isfinite(value) or value < 1e-4 for value in goal_rms_by_horizon)
         ):
             raise ValueError("recurrent predictive consequence contract differs")
         suffix = metadata.get("private_motor_suffix", {})
         if suffix != {
-            "format": "chreatures-private-motor-suffix-v1",
+            "format": "chreatures-private-motor-suffix-v2",
             "slots_per_resident": 32,
             "maximum_ticks": 8,
-            "context": "private achieved-goal key64 at the physical decision boundary",
+            "context": "private achieved-goal key64 at each physical decision boundary",
             "actions": "actual executed canonical action12 only",
             "outcomes": ["movement_response", "energy_cost", "fatigue_recovery"],
             "empirical_utility": "tanh(movement_response - energy_cost + fatigue_recovery)",
             "recall_score": "negative context-key RMS plus 0.25 times empirical utility",
             "empirical_tilt_limit": 0.10,
-            "support_semantics": "execution frequency; not calibrated confidence",
+            "continuation": "one reserved remaining-suffix proposal, rescored each sensory tick; freely interruptible",
+            "outcome_update": "per-phase mean of complete exact executions; interruptions do not alter value",
+            "private_cursor": "slot, generation, phase, last actual tick, pending selection, measured outcomes",
+            "support_semantics": "complete exact contiguous sequence executions, including initial capture; not calibrated confidence",
             "birth": "empty private library and fresh RNG",
             "imagination": "predictor forecasts are never admitted as experience",
         }:
@@ -833,6 +836,9 @@ class DevelopmentalResidentCohort:
             "candidate_suffix_slot": (self.batch_size, 8),
             "candidate_suffix_generation": (self.batch_size, 8),
             "candidate_suffix_length": (self.batch_size, 8),
+            "candidate_suffix_phase": (self.batch_size, 8),
+            "motor_suffix_completed_total": (self.batch_size,),
+            "motor_suffix_interrupted_total": (self.batch_size,),
             "candidate_suffix_support": (self.batch_size, 8),
             "candidate_suffix_empirical_score": (self.batch_size, 8),
             "candidate_suffix_recall_score": (self.batch_size, 8),
@@ -975,8 +981,8 @@ class DevelopmentalResidentCohort:
 
     def snapshot_value(self) -> dict[str, Any]:
         return {
-            "format": "chreatures-developmental-resident-population-snapshot-v7",
-            "version": 7,
+            "format": "chreatures-developmental-resident-population-snapshot-v8",
+            "version": 8,
             "model_identity": copy.deepcopy(self.model_identity),
             "batch_size": self.batch_size,
             "observation_contract": copy.deepcopy(self.observation_contract),
@@ -996,8 +1002,8 @@ class DevelopmentalResidentCohort:
         if (
             not isinstance(value, dict)
             or value.get("format")
-            != "chreatures-developmental-resident-population-snapshot-v7"
-            or value.get("version") != 7
+            != "chreatures-developmental-resident-population-snapshot-v8"
+            or value.get("version") != 8
         ):
             raise ValueError("unsupported developmental resident snapshot")
         instance = cls(

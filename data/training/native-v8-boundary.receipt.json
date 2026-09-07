@@ -1,0 +1,58 @@
+{
+  "artifact": "/tank/chreatures/scratch/cognitive-v8-integration/artifacts/developmental-resident-population-v8.npz",
+  "artifact_file_sha256": "c633b66057d31f2ddb0e0a3d345a74c746ab60ef087a98ca426d86cafd8787d6",
+  "artifact_identity": "ee1973ec7bad21c8a102088ac62b77bb3c176ac87a4fe2482542cb810235aaa8",
+  "candidate_phases": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "candidate_remaining_ticks": [
+    8,
+    7,
+    6,
+    5,
+    4,
+    3,
+    2,
+    1
+  ],
+  "completed_totals_after_fixture_receipt": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "consequence_laws_equal_to_v7": true,
+  "forecast_physiology_shape": [
+    8,
+    8,
+    12
+  ],
+  "format": "chreatures-native-motor-continuation-probe-v1",
+  "immutable_arrays_equal_to_v7": 77,
+  "native_format": "chreatures-developmental-resident-native-population-v8",
+  "pending_receipt_snapshot_exact": true,
+  "restored_next_decision_fields": 66,
+  "restored_pending_receipt_fields": 17,
+  "scope": "B8 actual imported weights and native selector; synthetic sensory/outcome receipts; analytical cursor phase sweep, not physical competence",
+  "selected_candidates": [
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5
+  ]
+}
