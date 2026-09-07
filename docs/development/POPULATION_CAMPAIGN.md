@@ -88,6 +88,15 @@ separate bank-free condition. Ingestion authenticates the evaluator's sibling
 `identity.json` and rejects a different bank, controller or profile; response
 models cannot silently change midway through a search campaign.
 
+Current coupled evaluation checkpoints use v2. They retain all twenty per-life
+controller measurements, the two shared population-model identities, actual
+previous actions, and the last physical outcomes. Shared identities are reported
+once at the result level, never indexed as resident arrays. A zero-step resume
+therefore retains the final audit instead of reporting initialized zero actions.
+`execution_attempt` times only its own invocation and names the number of new
+transitions; it must not be used as the cost of earlier resumed work. Frozen v1
+runs retain their original reader and execution identity.
+
 ## Ingestion
 
 ```bash

@@ -13,8 +13,9 @@ import subprocess
 import sys
 import time
 import traceback
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -34,7 +35,17 @@ from chreatures.organism_interface import (
     PHYSIOLOGY_NAMES,
     PREVIOUS_DIM,
 )
-from chreatures.population import CandidateGenome, canonical_bytes, content_sha256, response_bank_identity
+from chreatures.population import (
+    CandidateGenome,
+    canonical_bytes,
+    content_sha256,
+    response_bank_identity,
+)
+from chreatures.resident_contract import (
+    NATIVE_EXECUTION,
+    NATIVE_POPULATION_FORMAT,
+    NATIVE_POPULATION_VERSION,
+)
 from chreatures.sensorimotor_worker_native import DevelopmentalResidentCohort
 from chreatures.training_cohort import (
     OUTCOME_FIELDS,
@@ -42,15 +53,9 @@ from chreatures.training_cohort import (
     WorldTrainingPool,
     load_training_graph,
 )
-from chreatures.resident_contract import (
-    NATIVE_EXECUTION,
-    NATIVE_POPULATION_FORMAT,
-    NATIVE_POPULATION_VERSION,
-)
-
 
 FORMAT = "chreatures-population-episode-evaluation-v1"
-CHECKPOINT_FORMAT = "chreatures-population-coupled-checkpoint-v1"
+CHECKPOINT_FORMAT = "chreatures-population-coupled-checkpoint-v2"
 ASSIGNMENT_FORMAT = "chreatures-population-evaluation-assignments-v1"
 DT = 0.05
 ORGAN_FLOW_ORDER = ("release_mass", "secretion_mass", "allocation_mass")
@@ -70,7 +75,45 @@ CONTROLLER_OUTCOME_FIELDS = (
     "reward", "completed", "summed_return", "attributed", "learned",
     "completed_total", "learned_total", "frozen_total", "skipped_total",
     "cancelled_total",
+    "actual_attained", "observed_normalized_progress", "measurement_start_rms",
+    "measurement_min_rms", "measurement_latest_rms", "measurement_samples",
+    "measurement_window_ending_last_observed_tick",
+    "population_response_in_domain", "population_response_in_domain_total",
+    "population_response_out_of_domain_total",
 )
+CONTROLLER_GLOBAL_FIELDS = (
+    "population_response_identity", "population_feature_contract_identity",
+)
+
+
+def split_controller_outcomes(
+    outcomes: Mapping[str, Any], count: int,
+) -> tuple[dict[str, np.ndarray], dict[str, str]]:
+    """Project native per-life measurements separately from shared model IDs."""
+    unknown = set(outcomes) - set(CONTROLLER_OUTCOME_FIELDS) - set(CONTROLLER_GLOBAL_FIELDS)
+    if unknown:
+        raise ValueError(f"unknown controller outcome fields: {sorted(unknown)}")
+    required = set(CONTROLLER_OUTCOME_FIELDS[:-3])
+    if outcomes and not required.issubset(outcomes):
+        raise ValueError("controller outcome is missing required per-life measurements")
+    rows = {}
+    for name in CONTROLLER_OUTCOME_FIELDS:
+        value = np.asarray(outcomes.get(name, np.zeros(count, dtype=np.float64)))
+        if value.shape != (count,) or value.dtype.kind not in "biuf" or not np.isfinite(value).all():
+            raise ValueError(f"controller resident axis differs: {name}")
+        rows[name] = value
+    shared = {}
+    for name in CONTROLLER_GLOBAL_FIELDS:
+        if name in outcomes:
+            value = np.asarray(outcomes[name])
+            if value.shape != ():
+                raise ValueError(f"controller shared identity is not scalar: {name}")
+            shared[name] = _sha(value.item(), name)
+    if shared and set(shared) != set(CONTROLLER_GLOBAL_FIELDS):
+        raise ValueError("controller population identities must be supplied together")
+    if shared and not set(CONTROLLER_OUTCOME_FIELDS[-3:]).issubset(outcomes):
+        raise ValueError("controller population outcome is missing per-life domain measurements")
+    return rows, shared
 
 
 def canonical_sha256(value: Any) -> str:
@@ -594,7 +637,17 @@ def boundary_arrays(
     observation: np.ndarray, neural: np.ndarray, physiology: np.ndarray,
     previous: np.ndarray, reset: np.ndarray, completed_steps: int,
     controller_outcomes: Mapping[str, np.ndarray],
+    last_outcomes: np.ndarray | None = None,
 ) -> dict[str, np.ndarray]:
+    count = len(observation)
+    if completed_steps and last_outcomes is None:
+        raise ValueError("completed boundary requires actual last physical outcomes")
+    physical = np.asarray(
+        np.zeros((count, len(OUTCOME_FIELDS)), dtype=np.float32)
+        if last_outcomes is None else last_outcomes, dtype=np.float32,
+    )
+    if physical.shape != (count, len(OUTCOME_FIELDS)) or not np.isfinite(physical).all():
+        raise ValueError("last physical outcome boundary differs")
     result = {
         "observation": np.ascontiguousarray(observation, dtype=np.float32),
         "neural": np.ascontiguousarray(neural, dtype=np.float32),
@@ -603,17 +656,13 @@ def boundary_arrays(
         "reset": np.ascontiguousarray(reset, dtype=np.bool_),
         "completed_steps": np.asarray(completed_steps, dtype=np.uint64),
         "time_seconds": np.asarray(completed_steps * DT, dtype=np.float64),
+        "last_physical_outcomes": physical,
     }
-    count = len(observation)
-    for name in CONTROLLER_OUTCOME_FIELDS:
-        value = np.asarray(
-            controller_outcomes.get(name, np.zeros(count, dtype=np.float64))
-        )
-        if value.shape != (count,) or (
-            np.issubdtype(value.dtype, np.floating) and not np.isfinite(value).all()
-        ):
-            raise ValueError(f"controller boundary differs: {name}")
+    rows, shared = split_controller_outcomes(controller_outcomes, count)
+    for name, value in rows.items():
         result[f"controller_outcome.{name}"] = value.copy()
+    for name in CONTROLLER_GLOBAL_FIELDS:
+        result[f"controller_global.{name}"] = np.asarray(shared.get(name, ""), dtype="<U64")
     return result
 
 
@@ -650,7 +699,7 @@ def write_checkpoint(
         files["trajectories"] = trajectory_files
         receipt = {
             "format": CHECKPOINT_FORMAT,
-            "version": 1,
+            "version": 2,
             "evaluation_identity_sha256": identity_sha256,
             "completed_steps": completed_steps,
             "completed_resident_transitions": completed_steps * len(lives),
@@ -688,7 +737,7 @@ def verify_checkpoint(output: Path, identity_sha256: str) -> tuple[Path, dict[st
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     if (
         receipt.get("format") != CHECKPOINT_FORMAT
-        or receipt.get("version") != 1
+        or receipt.get("version") != 2
         or receipt.get("evaluation_identity_sha256") != identity_sha256
         or receipt.get("completed_steps") != latest.get("completed_steps")
     ):
@@ -712,18 +761,30 @@ def load_boundary(path: Path, count: int) -> dict[str, np.ndarray]:
         "reset": ((count,), np.bool_),
         "completed_steps": ((), np.uint64),
         "time_seconds": ((), np.float64),
+        "last_physical_outcomes": ((count, len(OUTCOME_FIELDS)), np.float32),
     }
     controller_names = {f"controller_outcome.{name}" for name in CONTROLLER_OUTCOME_FIELDS}
+    global_names = {f"controller_global.{name}" for name in CONTROLLER_GLOBAL_FIELDS}
     with np.load(path, allow_pickle=False) as archive:
-        if set(archive.files) != set(expected) | controller_names:
+        if set(archive.files) != set(expected) | controller_names | global_names:
             raise ValueError("checkpoint boundary fields differ")
         value = {name: np.asarray(archive[name]).copy() for name in archive.files}
     for name, (shape, dtype) in expected.items():
         if value[name].shape != shape or value[name].dtype != dtype:
             raise ValueError(f"checkpoint boundary differs: {name}")
     for name in controller_names:
-        if value[name].shape != (count,):
+        if value[name].shape != (count,) or value[name].dtype.kind not in "biuf":
             raise ValueError(f"checkpoint controller boundary differs: {name}")
+    populated = []
+    for name in global_names:
+        item = value[name]
+        if item.shape != () or item.dtype != np.dtype("<U64"):
+            raise ValueError(f"checkpoint shared controller identity differs: {name}")
+        if item.item():
+            _sha(item.item(), name)
+            populated.append(name)
+    if populated and len(populated) != len(global_names):
+        raise ValueError("checkpoint population identities are incomplete")
     if any(
         np.issubdtype(item.dtype, np.floating) and not np.isfinite(item).all()
         for item in value.values()
@@ -975,6 +1036,13 @@ def main() -> int:
                 name: boundary[f"controller_outcome.{name}"]
                 for name in CONTROLLER_OUTCOME_FIELDS
             }
+            last_controller_outcomes.update({
+                name: boundary[f"controller_global.{name}"]
+                for name in CONTROLLER_GLOBAL_FIELDS
+                if boundary[f"controller_global.{name}"].item()
+            })
+            last_actions = previous.copy()
+            last_outcomes = boundary["last_physical_outcomes"]
             trajectories = trajectory_objects(
                 world_sizes(world_snapshots), residents_per_world, args.spatial_bin_width
             )
@@ -1029,6 +1097,7 @@ def main() -> int:
         if controller.neural_contract != expected_contract:
             raise RuntimeError("resident artifact neural contract differs")
 
+        resumed_from_steps = completed_steps
         while completed_steps < args.steps:
             tick_values = np.full(count, completed_steps, dtype=np.uint64)
             time_values = np.full(count, completed_steps * DT, dtype=np.float64)
@@ -1049,6 +1118,7 @@ def main() -> int:
                 tick_values, before, physiology, delivered,
                 outcomes[:, effort_column], dt=DT,
             )
+            split_controller_outcomes(last_controller_outcomes, count)
             if not hasattr(pool, "organ_flows_array"):
                 raise RuntimeError("current world transport does not expose actual organ flows")
             organ_flows = np.ascontiguousarray(pool.organ_flows_array(), dtype=np.float32)
@@ -1094,6 +1164,7 @@ def main() -> int:
                     boundary_arrays(
                         observation, neural, physiology, previous, reset,
                         completed_steps, last_controller_outcomes,
+                        last_outcomes=outcomes,
                     ),
                     lives,
                 )
@@ -1102,6 +1173,9 @@ def main() -> int:
             raise RuntimeError("current world transport does not expose terminal outcomes")
         terminal = pool.terminal_outcomes()
         trajectory_summaries = [jsonable(value.summary()) for value in trajectories]
+        controller_rows, controller_metadata = split_controller_outcomes(
+            last_controller_outcomes, count
+        )
         rows = []
         for life in lives:
             world_index = int(life["world_slot"])
@@ -1130,7 +1204,7 @@ def main() -> int:
                 "terminal_outcome": terminal[world_index]["residents"][body_id],
                 "controller_outcome": {
                     name: jsonable(value[world_index * residents_per_world + resident_index])
-                    for name, value in last_controller_outcomes.items()
+                    for name, value in controller_rows.items()
                 },
             })
         result_value = {
@@ -1159,8 +1233,14 @@ def main() -> int:
             "final_checkpoint": latest_checkpoint,
             "brain": brain.metadata(),
             "controller": controller.model_identity,
+            "controller_outcome_metadata": controller_metadata,
             "transport_timing": pool.timing_snapshot(),
-            "elapsed_seconds": time.perf_counter() - started,
+            "execution_attempt": {
+                "resumed_from_steps": resumed_from_steps,
+                "completed_resident_transitions": (completed_steps - resumed_from_steps) * count,
+                "elapsed_seconds": time.perf_counter() - started,
+                "scope": "this invocation, including startup and checkpointing; excludes previous attempts",
+            },
             "last_step_audit": {
                 "executed_action_mean": last_actions.mean(axis=0).astype(float).tolist(),
                 "outcome_sum": last_outcomes.sum(axis=0).astype(float).tolist(),
