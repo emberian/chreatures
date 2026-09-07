@@ -1,0 +1,62 @@
+{
+  "content_sha256": "218f5f1fe3de170cfd521e9000b632fae155b0d0b7997dfaebe3a558e22499e0",
+  "diagnosis": "The active free packet escaped finite terrain and continued falling. Initial spawn positions are habitat-validated; active packet trajectories have no subsequent region-exit lifecycle before field-source construction.",
+  "failure": {
+    "coherent_checkpoint_source_position": [
+      -807.1245177715062,
+      916.5516131503582,
+      -995005.0396221342
+    ],
+    "commit_scope": "The outer tick did not complete after physical advancement. The paused in-memory state is not a coherent checkpoint.",
+    "error": "source 89 position is outside its allowed range",
+    "failed_source_position": [
+      -809.189033869065,
+      918.8779424826923,
+      -1000092.6556228054
+    ],
+    "failing_call": [
+      "Habitat3D.step",
+      "FieldEnvironment.advance",
+      "FieldEnvironment._normalize_sources",
+      "_vector"
+    ],
+    "field_coordinate_sanity_bound": [
+      -1000000,
+      1000000
+    ],
+    "habitat_bounds": [
+      [
+        0,
+        23.09923622515859
+      ],
+      [
+        0,
+        10.661260446488487
+      ],
+      [
+        0,
+        4.929786311190445
+      ]
+    ],
+    "owner": "chemical surface cue from active free material packet living-deposit-23",
+    "source_construction": [
+      "Biosphere.field_sources",
+      "MaterialObjectSystem.surface_cues",
+      "world.data.xpos"
+    ]
+  },
+  "format": "chreatures-reciprocal-long-continuation-stop-v1",
+  "last_coherent_checkpoint": {
+    "file_sha256": "80564aaa54204d73b65aa41bbcb6d1a0a5c8882849fd4ca50bd55fc89d451252",
+    "neural_snapshot_sha256": "7c557d51262ed845af31876515510329cc2828530d5f0a50bb3252ef01d2b93a",
+    "state_sha256": "38458821831bd5ec0e65d2235e18d0eae8f7af4192e577f801f2e12c24c3a90e",
+    "tick": 9148
+  },
+  "last_committed_outer_tick": 9170,
+  "preservation": "Paused failed state and coherent checkpoint retained. Field bounds were not widened and positions were not clamped.",
+  "publication_scope": "The 360-frame recording ends at tick4013, before this failure. Its bytes and prior restoration evidence remain unchanged.",
+  "scope": "longer execution after the completed public recording; separate from both completed population waves",
+  "source_revision": "3c9b0c1c8d93b99b9dca371a29b5e1471c46ab6d",
+  "status": "paused; no automatic retry or migration performed",
+  "unresolved": "The route by which the packet first crossed the physical boundary has not been reproduced. Region exit, material accounting and physical containment need an explicit coordinated policy."
+}
