@@ -2,6 +2,7 @@ import * as THREE from '../vendor/three/three.module.min.js';
 import {OrbitControls} from '../vendor/three/OrbitControls.js';
 
 const NEURONS = 165122;
+const RETINAL_SITES = 1771;
 const MUJOCO_SHAPES = new Set([2, 3, 4, 5, 6]);
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
@@ -57,9 +58,11 @@ function scaleMesh(mesh, item) {
 }
 
 export class LiveView {
-  constructor({worldCanvas, brainCanvas, onResident, onToy}) {
+  constructor({worldCanvas, brainCanvas, retinaCanvases, onResident, onToy}) {
     this.worldCanvas = worldCanvas;
     this.brainCanvas = brainCanvas;
+    if (!Array.isArray(retinaCanvases) || retinaCanvases.length !== 2) throw new Error('Retinal canvases are absent');
+    this.retinaCanvases = retinaCanvases;
     this.onResident = onResident;
     this.onToy = onToy;
     this.meshes = new Map();
@@ -113,7 +116,9 @@ export class LiveView {
     this.brainRates = null;
     this.brainBaseline = null;
     this.brainPoints = null;
-    this.neuralScale = .1;
+    this.neuralScale = .01;
+    this.retinalEyes = null;
+    this.retinalRGB = null;
 
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
@@ -201,6 +206,45 @@ export class LiveView {
     return rows.length;
   }
 
+  initializeRetina(sites, supported) {
+    if (!(sites instanceof Int16Array) || sites.length !== RETINAL_SITES * 3) throw new Error('Retinal q/r atlas extent differs');
+    if (!(supported instanceof Uint8Array) || supported.length !== RETINAL_SITES) throw new Error('Retinal support-mask extent differs');
+    if (supported.some(value => value !== 0 && value !== 1)) throw new Error('Retinal support mask is not binary');
+    const eyes = [[], []], seen = new Set();
+    for (let row = 0; row < RETINAL_SITES; row += 1) {
+      const side = sites[row * 3], q = sites[row * 3 + 1], r = sites[row * 3 + 2];
+      if ((side !== 1 && side !== 2) || !Number.isInteger(q) || !Number.isInteger(r)) throw new Error('Retinal site address differs');
+      const key = `${side}:${q}:${r}`;
+      if (seen.has(key)) throw new Error('Retinal q/r atlas contains a duplicate site');
+      seen.add(key);
+      eyes[side - 1].push({row, q, r, supported: Boolean(supported[row])});
+    }
+    if (eyes.some(eye => !eye.length)) throw new Error('A retinal side has no sites');
+    this.retinalEyes = eyes;
+    this.retinalRGB = null;
+    this.renderRetina();
+    return {sites: RETINAL_SITES, supported: supported.reduce((sum, value) => sum + value, 0)};
+  }
+
+  clearRetina() {
+    this.retinalRGB = null;
+    this.renderRetina();
+  }
+
+  updateRetina(rgb) {
+    if (!this.retinalEyes) throw new Error('Retinal atlas is not ready');
+    if (!(rgb instanceof Float32Array)) throw new Error('Retinal RGB state type differs');
+    finiteArray(rgb, RETINAL_SITES * 3, 'Retinal RGB state');
+    if (rgb.some(value => value < 0 || value > 1)) throw new Error('Retinal RGB state is outside [0, 1]');
+    this.retinalRGB = rgb;
+    this.renderRetina();
+  }
+
+  renderRetina() {
+    if (!this.retinalEyes) return;
+    this.retinalEyes.forEach((eye, index) => this.#drawRetina(this.retinaCanvases[index], eye));
+  }
+
   setNeuralScale(value) {
     if (!Number.isFinite(value) || value <= 0) throw new Error('Neural display scale must be positive');
     this.neuralScale = value;
@@ -246,6 +290,13 @@ export class LiveView {
       }
     }
     this.brainPoints.geometry.attributes.color.needsUpdate = true;
+    let squared = 0, peak = 0;
+    // Include every modeled row, including those without display coordinates.
+    for (let row = 0; row < rates.length; row += 1) {
+      const delta = rates[row] - this.brainBaseline[row];
+      squared += delta * delta; peak = Math.max(peak, Math.abs(delta));
+    }
+    return {rms: Math.sqrt(squared / rates.length), peak};
   }
 
   applyFrame(frame) {
@@ -316,6 +367,45 @@ export class LiveView {
     const position = new THREE.Vector3(this.lastFrame.bodyPositions[body], this.lastFrame.bodyPositions[body + 1], this.lastFrame.bodyPositions[body + 2]);
     const head = this.meshes.get(resident.head);
     return {position, head};
+  }
+
+  #drawRetina(canvas, eye) {
+    const width = Math.floor(canvas.clientWidth), height = Math.floor(canvas.clientHeight);
+    if (width < 1 || height < 1) return;
+    const ratio = Math.min(devicePixelRatio || 1, 2);
+    if (canvas.width !== Math.floor(width * ratio) || canvas.height !== Math.floor(height * ratio)) {
+      canvas.width = Math.floor(width * ratio); canvas.height = Math.floor(height * ratio);
+    }
+    const context = canvas.getContext('2d', {alpha: false});
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.fillStyle = '#07100e'; context.fillRect(0, 0, width, height);
+    const centers = eye.map(site => ({...site, x: site.q + site.r * .5, y: site.r * Math.sqrt(3) * .5}));
+    const xs = centers.map(site => site.x), ys = centers.map(site => site.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys), padding = 7;
+    const scale = Math.min((width - padding * 2) / Math.max(1, maxX - minX + 1), (height - padding * 2) / Math.max(1, maxY - minY + 1));
+    const radius = Math.max(.65, scale * .54);
+    for (const site of centers) {
+      const x = padding + (site.x - minX + .5) * scale;
+      const y = padding + (site.y - minY + .5) * scale;
+      context.beginPath();
+      for (let corner = 0; corner < 6; corner += 1) {
+        const angle = Math.PI / 3 * corner;
+        const px = x + Math.cos(angle) * radius, py = y + Math.sin(angle) * radius;
+        if (!corner) context.moveTo(px, py); else context.lineTo(px, py);
+      }
+      context.closePath();
+      if (site.supported) {
+        const offset = site.row * 3;
+        if (this.retinalRGB) {
+          const red = Math.round(this.retinalRGB[offset] * 255), green = Math.round(this.retinalRGB[offset + 1] * 255), blue = Math.round(this.retinalRGB[offset + 2] * 255);
+          context.fillStyle = `rgb(${red} ${green} ${blue})`;
+        } else context.fillStyle = '#172a24';
+        context.fill();
+      } else {
+        context.fillStyle = '#0a1512'; context.fill();
+        context.strokeStyle = '#5d746a'; context.lineWidth = .55; context.stroke();
+      }
+    }
   }
 
   #updateCamera() {

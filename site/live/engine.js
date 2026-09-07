@@ -23,12 +23,13 @@ export class LiveEngine {
     engine.identity = await digest(encoder.encode(JSON.stringify({manifests, runtimeFiles: runtime.files})));
     const runtimeBytes = async name => loadBlob(runtime.files[name], engine.baseURL);
     const [residentBinary, worldBinary, physicsBinary] = await Promise.all(['pkg/resident_runtime_bg.wasm', 'pkg/chreatures_browser_world_bg.wasm', 'vendor/mujoco/mujoco.wasm'].map(runtimeBytes));
-    const fixture = await loadJSON(new URL('fixtures/garden.json', engine.baseURL));
-    const xmlResponse = await fetch(new URL('fixtures/garden.xml', engine.baseURL));
-    if (!xmlResponse.ok) throw new Error('Physical world download failed');
+    const [fixtureBytes, xmlBytes] = await Promise.all(['fixtures/garden.json', 'fixtures/garden.xml'].map(runtimeBytes));
+    const fixture = JSON.parse(decoder.decode(fixtureBytes));
+    engine.retinalSites = Int16Array.from(fixture.anatomical_sites.flat());
+    engine.retinalSupported = Uint8Array.from(fixture.supported_sites, Number);
     engine.factoryOptions = {mujocoFactory: modules.mujocoFactory ?? mujocoFactory, coreModule: modules.worldModule ?? worldModule, coreWasm: modules.worldWasm ?? worldBinary};
     engine.physicsBinary = new Uint8Array(physicsBinary);
-    engine.world = await createBrowserWorld({...engine.factoryOptions, fixture, xml: await xmlResponse.text(), seed: 20260907, mujocoOptions: {wasmBinary: engine.physicsBinary}});
+    engine.world = await createBrowserWorld({...engine.factoryOptions, fixture, xml: decoder.decode(xmlBytes), seed: 20260907, mujocoOptions: {wasmBinary: engine.physicsBinary}});
     engine.batch = engine.world.residents;
     if (engine.batch !== resident.config.batch) throw new Error('Physical and cognitive cohort differ');
     await (modules.initResident ?? initResident)({module_or_path: residentBinary});
@@ -54,6 +55,7 @@ export class LiveEngine {
       validSoma: this.brainValid.reduce((sum, value) => sum + value, 0), residents: this.world.observe().residents,
       modelStatus: this.modelStatus, controllerStatus: this.controllerStatus,
       brainPositions: this.brainPositions, brainValid: this.brainValid, neuralBaseline: this.neuralBaseline,
+      retinalSites: this.retinalSites, retinalSupported: this.retinalSupported,
       identity: this.identity};
   }
   async advance(capture = false) {
@@ -78,6 +80,7 @@ export class LiveEngine {
       if (!receipt.every(Boolean)) throw new Error('Delivered motor receipt rejected');
       this.previous = command; this.tick++;
       return {...this.world.observe(), neuralRates: neural.selectedRates,
+        retinalRGB: capture ? optic.slice(this.selected * 5313, (this.selected + 1) * 5313) : undefined,
         selectedResidentId: this.world.observe().residents[this.selected].id,
         diagnostics: JSON.parse(diagnostics), tick: this.tick, wallMilliseconds: performance.now() - started};
     } catch (error) {this.failed = true; throw error;}

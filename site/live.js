@@ -38,6 +38,7 @@ function createView() {
   return new LiveView({
     worldCanvas: $('#world-canvas'),
     brainCanvas: $('#brain-canvas'),
+    retinaCanvases: [$('#retina-side-1'), $('#retina-side-2')],
     onResident: selectResident,
     onToy(id) {
       selectedToy = id;
@@ -110,6 +111,8 @@ function selectResident(id) {
   selectedName.textContent = id;
   view.selectResident(id);
   view.clearNeural();
+  view.clearRetina();
+  $('#neural-rms').textContent = '—'; $('#neural-peak').textContent = '—';
   for (const button of residentList.querySelectorAll('button')) button.setAttribute('aria-pressed', String(button.dataset.resident === id));
   if (worker) post('select', {residentId: id});
 }
@@ -137,6 +140,8 @@ function handleReady(message) {
   }
   const visible = view.initializeBrain(message.brainPositions, message.brainValid, message.neuralBaseline);
   if (message.neurons !== 165122 || message.validSoma !== visible || visible !== 140024) throw new Error('Worker MaleCNS extent differs from the pinned observer atlas');
+  const retina = view.initializeRetina(message.retinalSites, message.retinalSupported);
+  if (retina.sites !== 1771 || retina.supported !== 1486) throw new Error('Worker retinal atlas extent differs from the pinned observer atlas');
   $('#brain-count').textContent = `${visible.toLocaleString()} positioned / 165,122 rows`;
   $('#model-status').textContent = message.modelStatus || 'status absent';
   $('#controller-status').textContent = message.controllerStatus || 'status absent';
@@ -158,7 +163,14 @@ function updateFrame(message) {
   paused = Boolean(message.paused);
   pauseButton.textContent = paused ? 'Resume' : 'Pause';
   setNotice(paused ? 'paused' : 'running locally', paused ? 'paused' : 'ready');
-  if (message.neuralRates && message.selectedResidentId === selectedResident) view.updateNeural(message.neuralRates);
+  if (message.selectedResidentId === selectedResident) {
+    if (message.neuralRates) {
+      const activity = view.updateNeural(message.neuralRates);
+      $('#neural-rms').textContent = activity.rms.toExponential(2);
+      $('#neural-peak').textContent = activity.peak.toExponential(2);
+    }
+    if (message.retinalRGB) view.updateRetina(message.retinalRGB);
+  }
   const visitorIds = new Set();
   for (const item of message.geometry) {
     const match = /^entity:(visitor-[^:]+):/.exec(item.name);
@@ -281,11 +293,18 @@ for (const button of document.querySelectorAll('[data-camera]')) button.addEvent
   view.setCameraMode(button.dataset.camera);
   for (const item of document.querySelectorAll('[data-camera]')) item.setAttribute('aria-pressed', String(item === button));
 });
+for (const button of document.querySelectorAll('[data-neural-panel]')) button.addEventListener('click', () => {
+  const panel = button.dataset.neuralPanel;
+  for (const item of document.querySelectorAll('[data-neural-panel]')) item.setAttribute('aria-selected', String(item === button));
+  $('#brain-panel').hidden = panel !== 'brain';
+  $('#eyes-panel').hidden = panel !== 'eyes';
+  if (panel === 'eyes') requestAnimationFrame(() => view?.renderRetina());
+});
 
 $('#neural-scale').addEventListener('input', event => {
   if (!view || !ready) return;
-  const value = Number(event.target.value);
-  view.setNeuralScale(value); $('#scale-output').textContent = `±${value.toFixed(2)}`;
+  const value = 10 ** Number(event.target.value);
+  view.setNeuralScale(value); $('#scale-output').textContent = `±${value.toPrecision(2)}`;
 });
 pauseButton.addEventListener('click', () => post(paused ? 'resume' : 'pause'));
 saveButton.addEventListener('click', () => request('save'));

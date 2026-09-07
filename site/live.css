@@ -66,6 +66,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, .load-button:focus-w
 .brain-card .section-head h2 { font-size: 29px; }
 .section-head output { color: var(--muted); font: 10px var(--mono); }
 .brain-card { background: #edf0df; }
+.neural-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin-top: 14px; padding: 3px; border-radius: 7px; background: rgba(24, 51, 43, .09); }
+.neural-tabs button { padding: 7px; border-radius: 5px; background: transparent; color: var(--muted); font-size: 10px; }
+.neural-tabs button[aria-selected=true] { background: #17342c; color: #f2eee0; }
+[role=tabpanel][hidden] { display: none; }
 #brain-canvas { display: block; width: 100%; height: 300px; margin: 14px 0 9px; border-radius: 10px; background: #091713; }
 .brain-legend { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font: 8px var(--mono); text-transform: uppercase; }
 .brain-legend span { display: flex; align-items: center; gap: 5px; }
@@ -75,8 +79,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, .load-button:focus-w
 .scale-control { display: block; margin-top: 15px; }
 .scale-control > span { display: flex; justify-content: space-between; font-size: 11px; }
 .scale-control output { font-family: var(--mono); }
+.activity-numbers { display: flex; justify-content: space-between; gap: 12px; margin: 10px 0; font-size: 10px; color: var(--muted); }
+.activity-numbers output { display: block; margin-top: 3px; font-family: var(--mono); color: var(--ink); }
 .scale-control input { width: 100%; accent-color: var(--terra); }
 .rate-note, .control-card p { margin: 10px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.retina-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.retina-grid figure { min-width: 0; margin: 0; }
+.retina-grid figcaption { margin: 0 0 5px; color: var(--muted); font: 8px var(--mono); text-align: center; text-transform: uppercase; letter-spacing: .1em; }
+.retina-grid canvas { display: block; width: 100%; aspect-ratio: .78; border-radius: 8px; background: #07100e; }
+.retina-legend { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; color: var(--muted); font: 8px var(--mono); }
+.retina-legend span { display: flex; align-items: center; gap: 5px; }
+.retina-legend i { width: 8px; height: 8px; border-radius: 2px; background: linear-gradient(135deg, #c65d3f, #50bca7); }
+.retina-legend .unsupported { background: transparent; border: 1px solid #70847a; }
+.retina-count { margin: 12px 0 0; color: var(--ink); font: 10px var(--mono); text-align: center; }
 .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 14px; }
 .segmented button { padding: 9px 4px; border: 1px solid var(--line); border-radius: 6px; background: #f6f1e4; color: var(--ink); font-size: 10px; }
 .segmented button[aria-pressed=true] { border-color: var(--mint-dark); background: var(--mint-dark); color: white; }

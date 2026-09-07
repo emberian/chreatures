@@ -1113,3 +1113,25 @@ Frozen resident services and unrelated jobs remain untouched. The native core
 and Wasm were rebuilt for new research lives; historic artifacts are not loaded
 as V2 state. Root is publishing the source and immutable model assets together,
 then continuing physical skill collection and the next coupled development wave.
+
+### Live SIMD, retinal inspection and the first embodied learning result
+
+Published the live habitat and immutable V2 model assets. A second integrated
+pass adds actual bilateral retinal inspection, fixed logarithmic activity display
+limits, and a four-row SIMD tile for the Rust/Wasm private controller. The joined
+loop now measures 60.46 ms per physical tick on M2 Max with the same exact full-life
+continuation, including grown geometry. XML and fixture identities join the saved
+life’s executable identity. Browser UI performance remains unmeasured.
+
+The first actual CNS-only teacher corpus supplied two 96-tick three-body episodes.
+128 ROCm updates reduced held-out action loss 27.3% and memory retrieval loss 12.4%,
+but predictor, selector and value generalization regressed. A matched physical
+rollout changed commands and turning without establishing better stopping or
+contact. Its initial whole-CNS snapshot hash mismatch was metadata (sourceRevision);
+GPU bytes and canonical host state matched exactly, as recorded in the corrected
+receipt. The first mismatched receipt remains preserved privately.
+
+A wider physical encounter curriculum and balanced recurrent training proceed on
+the AMD nodes. This is additional current-architecture experience, not relabeling
+old V1 corpora or advancing frozen residents. The public controller remains the
+explicitly initialized artifact while this new experiment converges.

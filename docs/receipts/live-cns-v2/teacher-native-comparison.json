@@ -1,0 +1,13 @@
+{
+  "episode_sha256": "e6f95197de65026d7eee141e58ebb6d344e5c045c59ba93c9b9d0cad3fe64f28",
+  "errors": {
+    "current_key_max_abs": 1.9371509552001953e-07,
+    "local_proposal_max_abs": 4.470348358154297e-08,
+    "recurrent_state_max_abs": 2.2351741790771484e-08
+  },
+  "format": "chreatures-cns-resident-native-comparison-v1",
+  "passed": true,
+  "resident_file_sha256": "b54d31d0d1772c1c2e274138bda2ab63278cb3179fe4736b3f2709487be955b5",
+  "residents": 3,
+  "tolerance": 3e-05
+}

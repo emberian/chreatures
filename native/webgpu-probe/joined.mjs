@@ -36,13 +36,20 @@ try {
   engine = await LiveEngine.create({baseURL: `http://127.0.0.1:${server.address().port}/live/`, device,
     modules: {worldWasm: await readFile(resolve(directory, 'live/pkg/chreatures_browser_world_bg.wasm')),
       initResident: () => initResident({module_or_path: residentWasm})}});
+  const atlas = engine.describe();
+  assert.equal(atlas.retinalSites.length, 1771 * 3);
+  assert.equal(atlas.retinalSupported.reduce((sum, value) => sum + value, 0), 1486);
   const first = engine.observe(); const timings = [];
   for (let tick = 0; tick < 16; tick++) {
     if (tick === 4) engine.greet([0, 1, 2]);
     engine.screen(new Float32Array(12).fill(tick % 4 < 2 ? 1 : 0), 2, 2, null);
     const frame = await engine.advance(tick % 4 === 0); timings.push(frame.wallMilliseconds);
     assert(frame.positions.every(Number.isFinite));
-    if (frame.neuralRates) assert(frame.neuralRates.every(Number.isFinite));
+    if (frame.neuralRates) {
+      assert(frame.neuralRates.every(Number.isFinite));
+      assert.equal(frame.retinalRGB.length, 5313);
+      assert(frame.retinalRGB.every(value => Number.isFinite(value) && value >= 0 && value <= 1));
+    }
   }
   const checkpoint = await engine.save();
   const next = await engine.advance(true); const future = await engine.save();
@@ -68,6 +75,7 @@ try {
     meanCompleteTickMs: timings.reduce((a,b) => a+b, 0) / timings.length, maxCompleteTickMs: Math.max(...timings),
     maxRootTravelMeters: maxTravel, snapshotBytes: checkpoint.byteLength, snapshotSHA256: sha(checkpoint),
     physicalReplayExact: true, fullNeuralReplayExact: true, wholeLifeReplayExact: true,
+    retinalInputSites: 1771, supportedRetinalSites: 1486, capturedRetinalRGB: true,
     restoredGrownWorld: true, geometryCount: after.geometry.length, wallSeconds: (performance.now() - began) / 1000,
     modelStatus: engine.modelStatus, controllerStatus: engine.controllerStatus,
     scope: 'Actual Node Dawn Metal + same browser Wasm/WGSL; no browser UI performance or learned motor competence claim'};
