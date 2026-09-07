@@ -12,11 +12,13 @@ The **ecological specialization wave** adds connected finite material stores,
 physical outlets, inherited metabolic acclimation, and private recall of executed
 motor sequences. Construction can obstruct the material routes. Enzyme changes
 have inherited time constants, expression budgets and ATP costs; an offspring
-inherits response rules rather than an adult's current expression. Native v7
+inherits response rules rather than an adult's current expression. Native v8
 residents compare four local plans and up to four remembered action sequences
 through the recurrent predictor, then act for one physical tick and reconsider.
-The new long research runs are queued while development is quiescent at the
-user’s request; these mechanisms are not yet evidence of ecological competence. [Current wave](docs/development/ECOLOGICAL_SPECIALIZATION_WAVE.md) · [Resume handoff](docs/development/ECOLOGICAL_SPECIALIZATION_HANDOFF.md).
+Development has resumed: the joined physical ecology now runs, and the new
+resident can continue through remembered action sequences. Fresh population
+collection and fitting are being integrated. These mechanisms are not yet
+evidence of ecological competence. [Current wave](docs/development/ECOLOGICAL_SPECIALIZATION_WAVE.md) · [Resume handoff](docs/development/ECOLOGICAL_SPECIALIZATION_HANDOFF.md).
 
 The preceding reciprocal ecology wave completed **160 research lives** and
 327,680 physical transitions. Its recording remains the default observatory
@@ -51,7 +53,7 @@ A resident's current control loop combines:
 
 Eating is an explicit current action. Physical mouth contact, available material and digestive chemistry determine its consequences. Remembered goals are previously experienced states, not guarantees of present reachability. The first v4 cold inheritance conservatively initializes new action heads and extends the sensory interface; that initialization does not supply competence with the new organs. Useful navigation, durable learned habits and reciprocal interaction are still being developed.
 
-The inherited **Torch v5 policy** trains pathways from all twelve physiology channels into recurrent state and from the policy into the four new organ actions. Achieved-goal encoding stays fixed. Its completed hbox lineage reached 160 PPO updates and 655,360 resident transitions. The native-v7 export combines those weights with the fitted recurrent predictor and private acquired action sequences. The preceding update-20 recording remains available as evidence of that earlier deployment; initialized exploration and nonzero actuator weights alone do not establish competence. [Organ implementation](docs/development/POPULATION_V5_NATIVE.md) · [Current export identity](data/training/rich-recurrent-v3/fit-export-receipt.json).
+The inherited **Torch v5 policy** trains pathways from all twelve physiology channels into recurrent state and from the policy into the four new organ actions. Achieved-goal encoding stays fixed. Its completed hbox lineage reached 160 PPO updates and 655,360 resident transitions. The native-v8 export combines those weights with the fitted recurrent predictor and private acquired action sequences. The preceding update-20 recording remains available as evidence of that earlier deployment; initialized exploration and nonzero actuator weights alone do not establish competence. [Organ implementation](docs/development/POPULATION_V5_NATIVE.md) · [Current export identity](data/training/rich-recurrent-v3/fit-export-receipt.json).
 
 ## GAM × Universal Weave
 
@@ -156,7 +158,7 @@ uv run python native/cognitive-core/build_extension.py
 
 Acquire the [MaleCNS graph](docs/MALECNS.md), build the current [retinal-v2 port bundle](docs/NEURAL_PORTS.md), and start a dedicated [AMD neural service](docs/REMOTE_BRAIN.md) or [Apple Metal service](docs/METAL_BRAIN.md). Reserve 32 neural slots for an ecology world so its founders leave room for offspring. New worlds require the **same graph and port identities** as the resident artifact. Existing frozen lives keep their loaded engine and service.
 
-Current worlds require an ecological-v7 native controller, matching v3 candidate genomes and a birth manifest referencing their compiled neural phenotypes. The body interface remains v4. The **[previous v6 controller and fit receipts](https://github.com/emberian/chreatures/releases/tag/reciprocal-v6-research-20260906)** remain an archived release for that engine. Export the current v5 policy weights with a recurrent-v3 predictor using:
+Current worlds require an ecological-v8 native controller, matching v3 candidate genomes and a birth manifest referencing their compiled neural phenotypes. The body interface remains v4. The **[previous v6 controller and fit receipts](https://github.com/emberian/chreatures/releases/tag/reciprocal-v6-research-20260906)** remain an archived release for that engine. Export the current v5 policy weights with a recurrent-v3 predictor using:
 
 ```sh
 python scripts/export_developmental_resident.py --help
@@ -168,7 +170,7 @@ Follow the [population birth export guide](docs/development/POPULATION_BIRTH.md)
 uv run chreatures --port 8790 \
   --brain-url http://127.0.0.1:18790 \
   --body articulated --ecology diffusion --physics-backend vectorized \
-  --resident-artifact /path/to/developmental-resident-population-v7.npz \
+  --resident-artifact /path/to/developmental-resident-population-v8.npz \
   --population-birth /path/to/export/resident-birth.json \
   --habitat /path/to/export/habitat.json \
   --biosphere /path/to/export/biosphere.json \

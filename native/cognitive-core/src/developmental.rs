@@ -39,7 +39,7 @@ const PHYSIOLOGY: usize = 12;
 const RESERVOIR: usize = 128;
 const SIGNED: [usize; 4] = [0, 1, 2, 3];
 const POSITIVE: [usize; 8] = [4, 5, 6, 7, 8, 9, 10, 11];
-const FORMAT: &str = "chreatures-developmental-resident-native-population-v7";
+const FORMAT: &str = "chreatures-developmental-resident-native-population-v8";
 const GOAL_ATTAINMENT_RMS: f32 = 0.35;
 const SEQUENCE_CONSOLIDATION_BUDGET: usize = 4;
 const LOCAL_CANDIDATES: usize = 4;
@@ -152,6 +152,7 @@ pub(crate) struct DevelopmentalResidentCohort {
     candidate_suffix_slot: Vec<i32>,
     candidate_suffix_generation: Vec<u64>,
     candidate_suffix_length: Vec<u8>,
+    candidate_suffix_phase: Vec<u8>,
     candidate_suffix_support: Vec<u32>,
     candidate_suffix_empirical_score: Vec<f32>,
     candidate_suffix_recall_score: Vec<f32>,
@@ -422,6 +423,8 @@ impl DevelopmentalResidentCohort {
             .resize(new_batch * CANDIDATES, 0);
         self.candidate_suffix_length
             .resize(new_batch * CANDIDATES, 0);
+        self.candidate_suffix_phase
+            .resize(new_batch * CANDIDATES, 0);
         self.candidate_suffix_support
             .resize(new_batch * CANDIDATES, 0);
         resize_f32!(candidate_suffix_empirical_score, CANDIDATES);
@@ -586,6 +589,7 @@ impl DevelopmentalResidentCohort {
             self.candidate_suffix_slot[row * CANDIDATES..(row + 1) * CANDIDATES].fill(-1);
             self.candidate_suffix_generation[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0);
             self.candidate_suffix_length[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0);
+            self.candidate_suffix_phase[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0);
             self.candidate_suffix_support[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0);
             self.candidate_suffix_empirical_score[row * CANDIDATES..(row + 1) * CANDIDATES]
                 .fill(0.0);
@@ -1314,11 +1318,17 @@ impl DevelopmentalResidentCohort {
             .resize(rows * FORECAST_HORIZON * ACTIONS, 0.0);
         self.predictor_actions.fill(0.0);
         for row in 0..self.batch {
+            if reset[row] {
+                self.suffixes
+                    .reset_episode(row)
+                    .map_err(PyValueError::new_err)?;
+            }
             self.candidate_recalled[row * CANDIDATES..(row + 1) * CANDIDATES].fill(false);
             self.candidate_available[row * CANDIDATES..(row + 1) * CANDIDATES].fill(false);
             self.candidate_suffix_slot[row * CANDIDATES..(row + 1) * CANDIDATES].fill(-1);
             self.candidate_suffix_generation[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0);
             self.candidate_suffix_length[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0);
+            self.candidate_suffix_phase[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0);
             self.candidate_suffix_support[row * CANDIDATES..(row + 1) * CANDIDATES].fill(0);
             self.candidate_suffix_empirical_score[row * CANDIDATES..(row + 1) * CANDIDATES]
                 .fill(0.0);
@@ -1360,6 +1370,7 @@ impl DevelopmentalResidentCohort {
                     self.candidate_suffix_slot[row * CANDIDATES + k] = suffix.slot as i32;
                     self.candidate_suffix_generation[row * CANDIDATES + k] = suffix.generation;
                     self.candidate_suffix_length[row * CANDIDATES + k] = suffix.length as u8;
+                    self.candidate_suffix_phase[row * CANDIDATES + k] = suffix.phase as u8;
                     self.candidate_suffix_support[row * CANDIDATES + k] = suffix.support;
                     self.candidate_suffix_empirical_score[row * CANDIDATES + k] =
                         suffix.empirical_utility;
@@ -1421,14 +1432,23 @@ impl DevelopmentalResidentCohort {
         self.predictor_goal_windows
             .resize(forecast_rows * 1024, 0.0);
         for outrow in 0..forecast_rows {
-            let start = candidate_horizons[outrow / PREDICTOR_MEMBERS] - WINDOW;
-            // The goal window ends at the candidate's actually observed suffix
-            // length. Local proposals use the full H8 counterfactual hold.
+            let horizon = candidate_horizons[outrow / PREDICTOR_MEMBERS];
+            let resident = outrow / (PREDICTOR_MEMBERS * CANDIDATES);
+            // A remaining suffix can be H1..3: its achieved-history window
+            // includes the preceding actual codes, followed by predicted codes.
             for frame in 0..WINDOW {
-                let src = (outrow * FORECAST_HORIZON + start + frame) * 256;
+                let position = horizon + frame;
                 let dst = outrow * 1024 + frame * 256;
-                self.predictor_goal_windows[dst..dst + 256]
-                    .copy_from_slice(&self.predictor_absolute_code[src..src + 256]);
+                if position < WINDOW {
+                    let slot = (self.recent_code_cursor[resident] + position) % WINDOW;
+                    let src = (resident * WINDOW + slot) * 256;
+                    self.predictor_goal_windows[dst..dst + 256]
+                        .copy_from_slice(&self.recent_codes[src..src + 256]);
+                } else {
+                    let src = (outrow * FORECAST_HORIZON + position - WINDOW) * 256;
+                    self.predictor_goal_windows[dst..dst + 256]
+                        .copy_from_slice(&self.predictor_absolute_code[src..src + 256]);
+                }
             }
         }
         gemm_into(
@@ -1449,9 +1469,6 @@ impl DevelopmentalResidentCohort {
         let forecast_keys = &self.predictor_goal_keys;
         for row in 0..self.batch {
             if reset[row] {
-                self.suffixes
-                    .reset_episode(row)
-                    .map_err(PyValueError::new_err)?;
                 self.pending_suffix_slot[row] = -1;
                 self.pending_suffix_generation[row] = 0;
                 self.consequences
@@ -1723,6 +1740,11 @@ impl DevelopmentalResidentCohort {
             self.pending_suffix_slot[row] = self.candidate_suffix_slot[row * CANDIDATES + chosen];
             self.pending_suffix_generation[row] =
                 self.candidate_suffix_generation[row * CANDIDATES + chosen];
+            self.suffixes.select(
+                row,
+                self.pending_suffix_slot[row],
+                self.pending_suffix_generation[row],
+            );
             self.pending_action[row * PREVIOUS..row * PREVIOUS + ACTIONS]
                 .copy_from_slice(&actions[row * ACTIONS..(row + 1) * ACTIONS]);
             self.pending_physiology[row * PHYSIOLOGY..(row + 1) * PHYSIOLOGY]
@@ -2103,6 +2125,7 @@ impl DevelopmentalResidentCohort {
             candidate_suffix_slot: vec![-1; batch * CANDIDATES],
             candidate_suffix_generation: vec![0; batch * CANDIDATES],
             candidate_suffix_length: vec![0; batch * CANDIDATES],
+            candidate_suffix_phase: vec![0; batch * CANDIDATES],
             candidate_suffix_support: vec![0; batch * CANDIDATES],
             candidate_suffix_empirical_score: vec![0.0; batch * CANDIDATES],
             candidate_suffix_recall_score: vec![0.0; batch * CANDIDATES],
@@ -2339,6 +2362,34 @@ impl DevelopmentalResidentCohort {
             )
             .unwrap()
             .into_pyarray(py),
+        )?;
+        out.set_item(
+            "candidate_suffix_phase",
+            Array2::from_shape_vec(
+                (self.batch, CANDIDATES),
+                self.candidate_suffix_phase.clone(),
+            )
+            .unwrap()
+            .into_pyarray(py),
+        )?;
+        let execution_counts: Vec<_> = (0..self.batch)
+            .map(|row| self.suffixes.execution_counts(row))
+            .collect();
+        out.set_item(
+            "motor_suffix_completed_total",
+            execution_counts
+                .iter()
+                .map(|x| x.0)
+                .collect::<Vec<_>>()
+                .into_pyarray(py),
+        )?;
+        out.set_item(
+            "motor_suffix_interrupted_total",
+            execution_counts
+                .iter()
+                .map(|x| x.1)
+                .collect::<Vec<_>>()
+                .into_pyarray(py),
         )?;
         out.set_item(
             "candidate_suffix_support",
@@ -2645,7 +2696,7 @@ impl DevelopmentalResidentCohort {
     fn snapshot<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let out = PyDict::new(py);
         out.set_item("format", FORMAT)?;
-        out.set_item("version", 7)?;
+        out.set_item("version", 8)?;
         out.set_item("batch", self.batch)?;
         out.set_item("conditioned", self.conditioned)?;
         out.set_item("sample", self.sample)?;
@@ -2929,6 +2980,16 @@ impl DevelopmentalResidentCohort {
                 targets[row][1] as f32,
                 targets[row][2] as f32,
             ];
+            if action_discontinuity[row] {
+                self.suffixes.cancel_execution(row);
+            } else {
+                self.suffixes.note_executed(
+                    row,
+                    t[row],
+                    &x[row * ACTIONS..(row + 1) * ACTIONS],
+                    &outcome,
+                );
+            }
             self.suffixes
                 .record_executed(
                     row,
@@ -2938,13 +2999,6 @@ impl DevelopmentalResidentCohort {
                     &outcome,
                 )
                 .map_err(PyValueError::new_err)?;
-            if !action_discontinuity[row] && self.pending_suffix_slot[row] >= 0 {
-                self.suffixes.note_executed(
-                    row,
-                    self.pending_suffix_slot[row] as usize,
-                    self.pending_suffix_generation[row],
-                );
-            }
             self.pending_suffix_slot[row] = -1;
             self.pending_suffix_generation[row] = 0;
         }
@@ -3202,7 +3256,7 @@ impl DevelopmentalResidentCohort {
             })
         };
         if get("format")?.extract::<String>()? != FORMAT
-            || get("version")?.extract::<u8>()? != 7
+            || get("version")?.extract::<u8>()? != 8
             || get("batch")?.extract::<usize>()? != self.batch
             || get("conditioned")?.extract::<bool>()? != self.conditioned
             || get("sample")?.extract::<bool>()? != self.sample

@@ -113,3 +113,36 @@ candidates with recalled lengths 4, 5, 6, and 7. Snapshot restoration reproduced
 all 63 native result fields exactly on the next decision. This verifies the
 learning/proposal/scoring/restore path, not useful behavior or calibrated
 forecast confidence.
+
+
+## Resumed integration, 7 September
+
+The resumed wave advances the current native resident to v8. A remembered motor
+sequence now retains an execution cursor. Its remaining actions compete again
+at each sensory boundary, so a resident can continue through a sequence or
+interrupt it. Only a complete, exact, contiguous execution updates its measured
+outcome and completion support. Partial attempts do not become successful
+sequence evidence. For remaining horizons shorter than four ticks, the goal
+window combines the recent actual observations with the predicted suffix.
+
+The physical integration corrects two authored-geometry problems: outlets at
+platform centres overlapped blocks and colony structure, and route clearance
+segments crossed endpoint furniture rather than the exposed connecting ramp.
+Outlets now occupy a reserved platform quadrant and route samples span the
+between-platform carrier. Collision queries remain authoritative; future
+construction and movable objects can still obstruct them.
+
+Regional transfer proposals now supply packed native directional arrays to the
+existing MetabolicWeb transfer operation. Rollback retains exact native state
+bytes rather than serializing immutable chemistry and regulation every tick.
+Biosphere tick reports retain actual events and transition summaries; complete
+inventory, regulation and derived hatch-offer views are generated when requested
+by an observer. These changes remove duplicated host work; a whole-path runtime
+measurement, rather than a language label, determines their performance effect.
+
+The next corpus retains native composite decisions and actual physical actions.
+The inherited Torch-v5 PPO policy is only one component of that composite: its
+training path does not reproduce the native candidate-selection and suffix
+memory mechanisms. Predictor and GAM refits on actual native rollouts can learn
+those outcomes; they do not by themselves optimize the whole decision process.
+The data, fitting and deployment reports must preserve that distinction.
