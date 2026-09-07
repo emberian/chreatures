@@ -922,3 +922,37 @@ Observed warm transfers took 8.3–10.6 seconds per 63.44MB snapshot, compared w
 18.49-second compressed transfer matched the raw remote SHA and size. These are
 transfer samples, not a general disk-capacity guarantee. Both checked-in archive
 templates now request transport compression without changing artifact formats.
+
+
+## Ecological specialization wave — implemented, then quiesced
+
+Implementation `ad90191` couples native finite regional material routing,
+physical outlet and exit transactions, inherited ATP-costed enzyme acclimation,
+and private acquired motor sequences. The current generator and search now use
+regional-v4 and genome-v3; native controller v7 retains the same v5 Torch base.
+The collector streams fixed 512-tick shards with whole coupled checkpoints and
+an authenticated hbox-to-persvati relay. The v3 observer can expose regional
+inventories, actual flow and recalled action candidates; the public default
+remains the preceding actual recording.
+
+Native GAM fitted 160 previous life observations with grouped partitions. Only
+energy prediction narrowly beat its mean baseline on validation and final
+holdout; no interaction was promoted. A three-node native Universal Weave
+artifact links the campaigns and fit, including its negative results. New
+mechanisms are explicitly outside the fitted atlas's support.
+
+The joined physical assay constructed B8 successfully but used an earlier
+isolated gen8 native build and stopped during its exit setup: that build reported
+blocked routes and the specified finite outlet deposit did not activate a free
+packet. A separate current-build startup sampled route accessibility up to 0.8. Blocking all
+six outlets preserved inventory. The long continuation and restore check did
+not execute. The receipt and exact fixture/native inputs remain available;
+pinning the full assay to the current native build and inspecting its outlet
+transaction is the first integration work on resume.
+
+The user requested winding toward quiescence. No new full-neural world, long
+collection or AMD refit was started. The new M2 deployment remains inert and
+its unused archive timer was unloaded; previous lives and archive jobs remain
+untouched. The planned 655,360-transition corpus, current artifact identities,
+source checkpoint and launch prerequisites are in
+[the resume handoff](development/ECOLOGICAL_SPECIALIZATION_HANDOFF.md).

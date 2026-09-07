@@ -114,6 +114,32 @@ maximum per-world CPU time for observation and advance. Training receipts use
 this measurement together with neural and optimizer timings; it is a whole-path
 measurement rather than a GPU kernel throughput figure.
 
+### Rich corpus relay
+
+The current rich-v4 collector seals 512-tick packets and complete coupled
+checkpoints every 1,024 ticks. It atomically updates `progress.json` only after
+the referenced files are durable, then writes the completed `manifest.json`
+after the world pool closes. Relay a running hbox collection directly to
+persvati with:
+
+```sh
+python scripts/platform/relay_sensorimotor_corpus.py \
+  /tank/chreatures/runs/collections/COLLECTION \
+  --destination-host persvati \
+  --destination-root /home/ember/chreatures-data/sensorimotor-play/COLLECTION \
+  --receipt /tank/chreatures/runs/collections/COLLECTION.relay.json \
+  --watch
+```
+
+The relay accepts only monotonic prefix-extending progress receipts bound to
+one collection identity. It authenticates every declared file while streaming,
+uses a temporary destination name, fsyncs the destination file and directory,
+and publishes the destination manifest last. A repeated invocation with the
+same source and destination is idempotent; divergent destination bytes fail
+closed. The relay does not open tensors or choose training rows. The trainer's
+pinned split selects training and validation worlds, and final holdout worlds
+remain excluded from fitting and model selection.
+
 ## Population campaign jobs
 
 Population jobs use `scripts/platform/campaign_job.py`; the launcher supervises

@@ -15,8 +15,8 @@ have inherited time constants, expression budgets and ATP costs; an offspring
 inherits response rules rather than an adult's current expression. Native v7
 residents compare four local plans and up to four remembered action sequences
 through the recurrent predictor, then act for one physical tick and reconsider.
-The joined research run is being assembled; these new mechanisms are not yet
-evidence of ecological competence. [Current wave](docs/development/ECOLOGICAL_SPECIALIZATION_WAVE.md).
+The new long research runs are queued while development is quiescent at the
+user’s request; these mechanisms are not yet evidence of ecological competence. [Current wave](docs/development/ECOLOGICAL_SPECIALIZATION_WAVE.md) · [Resume handoff](docs/development/ECOLOGICAL_SPECIALIZATION_HANDOFF.md).
 
 The preceding reciprocal ecology wave completed **160 research lives** and
 327,680 physical transitions. Its recording remains the default observatory
