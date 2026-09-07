@@ -45,11 +45,13 @@ Private coefficients, update counts, residual summaries, RNG and pending transit
 state survive a whole-resident checkpoint.
 
 The rich Torch development policy is trained without this four-candidate
-refinement. Exporting it with the consequence bank creates a declared deployment
-variant, rather than preserving an identical policy. The joined native mechanism
-has executed on an authenticated synthetic integration fixture. A learned rich
-resident deployment and its physical outcomes remain a separate step; neither the
-fit nor that fixture establishes an improvement in behavior.
+refinement. The current native-v6 export embeds the rich-play consequence bank
+with the inherited controller weights, creating a declared deployment variant
+rather than an identical copy of the training policy. The earlier v3 export
+receipt already pinned the same rich bank SHA alongside the update-160 inherited
+controller, while describing that artifact as a future birth. Export and fit
+receipts establish identity and wiring; they do not establish that the new
+predictor/world launch has occurred or that behavior improved.
 
 `LawBank::fitted_features` is the single v1 extraction contract: physiology indices
 0/2/3/5, mean of the 384 permitted neural rates, candidate thrust/yaw/grip/oral,
@@ -62,25 +64,46 @@ interpolation. Clamping is only an arithmetic safeguard: the out-of-domain flag 
 prevents the selection adjustment. The whole-fit report measures exported-grid predictions against
 direct native GAM predictions.
 
-## Executed fit
+## Two runtime law layers
 
-`integrations/gam_mechanisms/fit_consequence_laws.py` consumes the actual 20 Hz
-sensorimotor transition packets produced in fresh chemical worlds. Its current
-source has 192,000 transitions from two episodes and 32 independently seeded
-physical worlds. Twenty-four complete worlds (144,000 rows) train the fits; eight
-complete worlds (48,000 rows) are held out. Prediction counts and independent world
-counts are reported separately.
+The embedded body consequence bank is
+`artifacts/rich_body_laws_v2/body_consequence_laws.json` (SHA-256
+`1abb586294db1cbc8db7ba20788eec01d54ef88cf9a642b7e15c4f909223d87b`).
+It uses the 12-feature `LawBank::fitted_features` contract and supplies movement,
+energy-cost, and fatigue-recovery estimates to the remembered-body-goal
+refinement and each resident's private residual learner.
+
+The population response bank is a separate optional layer. The current research
+candidate is
+`artifacts/population_complete_b2_history_v2/fit/population_response_bank.json`
+(SHA-256
+`4d535c586c899609a51c14792b6dda6a50c66dc84e2b763c1a99a74842947b92`).
+It uses physiology12, private 64-tick history summaries, and hypothetical
+action12 to predict energy-state delta, fatigue-state delta, and effort. Its
+bounded, centered score contribution is evaluated alongside the body-law score.
+It is loaded only when an explicit new-birth artifact is supplied; embedding the
+body bank does not implicitly enable this optional layer. Neither bank changes
+native body chemistry.
+
+## Current rich-body fit
+
+`integrations/gam_mechanisms/fit_consequence_laws.py` consumes actual 20 Hz
+sensorimotor transition packets. The rich-body bank uses 196,608 completed
+rich-play transitions across two episodes, four world slots, and six residents
+per world. Complete world slot 3 is held out in both episodes: 147,456 rows from
+six episode/world units train the fits and 49,152 rows from two complete units
+are held out. Prediction rows and independent episode/world units remain distinct.
 
 | One-step target | Held-out GAM RMSE | Training-mean baseline RMSE |
 | --- | ---: | ---: |
-| Change in encoded speed (`tanh(speed / 2)`) | 0.01849 | 0.02346 |
-| Energy cost | 0.0000191 | 0.0000634 |
-| Fatigue recovery | 0.0000698 | 0.000165 |
+| Change in encoded speed (`tanh(speed / 2)`) | 0.02452 | 0.02864 |
+| Energy cost | 0.00003138 | 0.00005350 |
+| Fatigue recovery | 0.0001349 | 0.0002552 |
 
-44,184 of 48,000 held-out rows (92.05%) lie inside all fitted feature domains.
+42,846 of 49,152 held-out rows (87.17%) lie inside all fitted feature domains.
 Within those rows, the largest sampled-grid errors relative to direct GAM
-predictions are 0.00002503, 0.0000006421 and 0.0000009613 respectively. The
-[fit report](../integrations/gam_mechanisms/artifacts/fit_report.json) records the
+predictions are `5.826e-5`, `1.173e-6`, and `2.114e-6`, respectively. The
+[fit report](../integrations/gam_mechanisms/artifacts/rich_body_laws_v2/fit_report.json) records the
 source, split, domains, bounds and exact artifact identities.
 
 The state/action features are body-local energy, fatigue, speed, circuit support,
@@ -90,13 +113,18 @@ The response laws predict one-tick movement response, energy cost, and fatigue
 recovery. The interaction coordinates let smooth terms express context-dependent
 effects without giving the controller identity or world geometry.
 
-This collection supplied the achieved histories used to bootstrap development. The
-subsequent online joined-development run retained per-update aggregates rather than
-per-transition rows, so it is not represented as this fit's source. The next rich
-joined run records pre-action recurrent state, goal distance and age, exact actions,
-one-step physical outcomes, and contiguous keys for masked 4/10/20-tick targets.
-Those rows will replace this bank through a one-way artifact promotion after
-complete-world and complete-episode evaluation.
+This completed rich-play collection is the authoritative source for the embedded
+bank. Later development and population telemetry support separate atlas and
+population-response fits; they do not silently replace this 12-feature body bank.
+
+## Retained historical base fit
+
+The earlier `artifacts/body_consequence_laws.json` bank (SHA-256
+`41e222efdbee7f9b018f10764cd51ca97298005ff132bcffa1f96eab0cddbba6`) is
+retained as historical evidence. It used 192,000 transitions, with 144,000
+training and 48,000 held-out rows, and reported movement, energy, and fatigue
+RMSEs of `0.01849`, `0.0000191`, and `0.0000698`. It is not the bank embedded in
+the current native-v6 export.
 
 ## Source and reproduction
 
@@ -107,17 +135,21 @@ We intentionally do not constrain observed energy or fatigue curves toward desir
 behavior: physical laws remain authoritative, and the fit must reveal what was
 experienced.
 
-Extract compact columns on the bulk node, then fit on the local pinned environment:
+Reproducing the rich-body bank requires its archived rich-play packets, including
+the separate oral-command column. The new twelve-action rich-v3 corpus has its
+own declared contract; it is not interchangeable with those fitting inputs.
+Extract compact columns on the bulk node, then fit into a fresh output directory:
 
 ```sh
-/tank/chreatures/envs/rocm-dev/bin/python fit_consequence_laws.py \
-  --episode episode-000.npz --episode episode-001.npz \
-  --compact experienced_transitions.npz
+python integrations/gam_mechanisms/prepare_rich_consequence_laws.py \
+  --collection /path/to/archived-rich-play \
+  --source-revision PINNED_COLLECTION_REVISION \
+  --output /path/to/experienced_transitions.npz
 integrations/.venv/bin/python integrations/gam_mechanisms/fit_consequence_laws.py \
-  --compact experienced_transitions.npz \
-  --output-dir integrations/gam_mechanisms/artifacts
+  --compact /path/to/experienced_transitions.npz \
+  --output-dir /path/to/fresh-rich-body-fit
 cargo run --manifest-path integrations/gam_mechanisms/Cargo.toml -- \
-  integrations/gam_mechanisms/artifacts/body_consequence_laws.json FEATURE...
+  /path/to/fresh-rich-body-fit/body_consequence_laws.json FEATURE...
 ```
 
 The compact transition matrix is bulk intermediate data and stays outside Git. The
