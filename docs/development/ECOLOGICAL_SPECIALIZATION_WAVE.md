@@ -50,7 +50,7 @@ recurrent predictor evaluates usable suffix candidates alongside current local
 control proposals. Deliver the first action and reconsider after sensation.
 Imagined rollouts never enter experienced memory. Preserve previous-action
 accounting, replacement generations, RNG, private learning and full restoration.
-The current native artifact advances to v7; no old execution fallback is added.
+The current native artifact is v8; no old execution fallback is added.
 
 ## GAM and environmental search
 
@@ -68,52 +68,33 @@ joined campaigns, publication and diary. Region lane owns native regional matter
 its thin host adapter and material exit transactions. Metabolism lane owns native
 regulation and metabolic binding. Environment/growth lane owns spatial region
 construction and growth/route coupling. Cognitive lane owns acquired suffixes and
-resident v7. GAM lane owns the executed transfer atlas. Compute owns fresh AMD
+resident v8. GAM lane owns the executed transfer atlas. Compute owns fresh AMD
 training and multi-world execution after integrated source is pinned. Native
 world-kernels lib.rs registration is coordinated by root. Viewer work follows
 actual recorded state. All work remains headless, with bulk data on hbox /tank.
 
-## Native v7 motor-suffix implementation
+## Current native motor-sequence mechanism
 
-The v7 resident keeps 32 private suffix slots per resident. Each slot stores a
-contiguous 2–8 tick sequence of actual executed 12-channel actions, the private
-64-value achieved-goal context at its start, and measured per-tick
-`movement_response`, `energy_cost`, and `fatigue_recovery`. Only suffixes of
-length 4–8 are recalled for control. Slot replacement is reservoir sampled;
-generation counters prevent an action selected from an overwritten slot from
-receiving attribution. Support is an execution count, not confidence.
+The v8 resident keeps 32 private slots of contiguous, actually executed action
+sequences and their starting sensory contexts. Each decision compares four
+local plans with up to four recalled sequences in one native recurrent predictor
+batch. A private cursor lets an active sequence offer its remaining actions at
+the next boundary. That proposal competes again after sensation; it can be
+interrupted without forcing the body through the rest of a script.
 
-Each decision evaluates eight alternatives in one contiguous native predictor
-batch: four current local proposals repeated through H8 and up to four recalled
-experienced suffixes. A recalled suffix is scored only over its stored horizon;
-native padding is compute storage and is not described as experience. Forecast
-validity and goal error use that same horizon. The bounded empirical contribution
-is at most 0.10 and is computed from
-`tanh(movement_response - energy_cost + fatigue_recovery)`. Context recall uses
-negative context RMS plus 0.25 times this empirical utility. Unavailable recalled
-slots are masked before selection. The first action is proposed and the host
-still supplies the actual executed action and physical consequence receipt.
+Only exact, contiguous delivery of a complete sequence updates its empirical
+outcome and completion support. An interruption, external override, missing tick
+or slot replacement cancels the attempt. Partial experience still enters the
+ordinary actual-action history. Support counts complete executions; it is not
+confidence or evidence of useful behavior. Current private snapshots include the
+cursor, pending attribution, attempt outcomes, RNG, replacement generations and
+all learned state. Cold births clear those states.
 
-The native snapshot is current-only format
-`chreatures-developmental-resident-native-population-v7`. It contains slot
-contents, capture history, replacement RNG, generations, execution counts, and
-pending attribution. Cold construction and hatching clear all of that private
-state. The immutable export declares these rules under `private_motor_suffix`;
-the Python boundary validates every result shape and restores only the v7
-snapshot format.
-
-A CPU export from the actual v5 representation and recurrent predictor produced
-`/tank/chreatures/scratch/cognitive-v7-integration/artifacts/developmental-resident-population-v7.npz`
-(file SHA-256 `6f6a07c9042786704e43ef7fe10fca39871e8a19d25c5a34695e3e398eecf3c5`,
-internal artifact identity
-`ec690f724c2f920140eee145365b87d07ed392bbe4cae97225db0f79519277c3`).
-A ten-boundary B1 integration using an authenticated population candidate filled
-eight private slots; its next decision exposed four local and four recalled
-candidates with recalled lengths 4, 5, 6, and 7. Snapshot restoration reproduced
-all 63 native result fields exactly on the next decision. This verifies the
-learning/proposal/scoring/restore path, not useful behavior or calibrated
-forecast confidence.
-
+The immutable Torch developmental base remains v5, and the recurrent consequence
+predictor remains v3/context1560/H8. Export and private execution are current-only
+v8. See [the complete implementation and executed boundary
+receipt](NATIVE_MOTOR_CONTINUATION.md). The older v7 implementation and its
+one-step attribution limitation remain in Git history and the earlier handoff.
 
 ## Resumed integration, 7 September
 

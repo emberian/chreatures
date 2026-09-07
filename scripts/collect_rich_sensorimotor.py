@@ -65,6 +65,7 @@ def source_identity() -> dict[str, Any]:
         Path("chreatures/training_cohort.py"),
         Path("chreatures/sensorimotor_worker_native.py"),
         Path("chreatures/training_environment.py"),
+        Path("chreatures/population_launch.py"),
         Path("research/sensorimotor_skills/trajectory-schema-rich-v4.json"),
     )
     revision = subprocess.run(
@@ -89,19 +90,6 @@ def source_identity() -> dict[str, Any]:
             str(path): {"bytes": (ROOT / path).stat().st_size, "sha256": sha256(ROOT / path)}
             for path in paths
         },
-    }
-
-
-def resident_model_identity(path: Path) -> dict[str, Any]:
-    with np.load(path, allow_pickle=False) as archive:
-        metadata = json.loads(str(archive["metadata"]))
-    return {
-        "path": str(path),
-        "file_sha256": sha256(path),
-        "artifact_sha256": metadata.get("artifact_sha256"),
-        "format": metadata.get("format"),
-        "version": metadata.get("version"),
-        "execution": metadata.get("execution"),
     }
 
 
@@ -132,20 +120,17 @@ def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--resident-artifact", type=Path, required=True)
-    parser.add_argument("--candidate-genomes", type=Path, required=True)
+    parser.add_argument("--profile", type=Path, required=True)
+    parser.add_argument("--founding-bank", type=Path, required=True)
     parser.add_argument("--neural-recipe", type=Path, required=True)
     parser.add_argument("--graph", type=Path, required=True)
     parser.add_argument("--port-bundle", type=Path, required=True)
-    parser.add_argument("--chemical-habitat", type=Path, required=True)
-    parser.add_argument("--chemical-biosphere", type=Path, required=True)
-    parser.add_argument("--nursery-family-config", type=Path, required=True)
-    parser.add_argument("--nursery-family-schedule", type=Path, required=True)
-    parser.add_argument("--worlds", type=int, default=4)
+    parser.add_argument("--worlds", type=int, default=10)
     parser.add_argument("--validation-worlds", type=int, default=1)
     parser.add_argument("--heldout-worlds", type=int, default=1)
     parser.add_argument("--episodes", type=int, default=2)
     parser.add_argument("--steps", type=int, default=4096)
-    parser.add_argument("--seed", type=int, default=20260916)
+    parser.add_argument("--seed", type=int, default=20260919)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--brain-backend", choices=("tiled", "triton"), default="tiled")
     parser.add_argument("--physical-backend", choices=("fast",), default="fast")
@@ -168,13 +153,10 @@ def validate(args: argparse.Namespace) -> None:
         raise SystemExit("output must be absent or empty")
     for path in (
         args.resident_artifact,
-        args.candidate_genomes,
+        args.profile,
+        args.founding_bank,
         args.neural_recipe,
         args.port_bundle,
-        args.chemical_habitat,
-        args.chemical_biosphere,
-        args.nursery_family_config,
-        args.nursery_family_schedule,
     ):
         if not path.is_file():
             raise SystemExit(f"required artifact does not exist: {path}")
@@ -216,18 +198,44 @@ def outcome_rows(outcomes, bodies) -> np.ndarray:
 def main() -> int:
     args = arguments()
     validate(args)
-    args.output.mkdir(parents=True, exist_ok=True)
     from chreatures.neural_ports import NeuralPortBundle
     from chreatures.training_environment import EmbodiedTrainingProfile, PROFILE_VERSION
-
-    profile = EmbodiedTrainingProfile.nursery_family(
-        args.chemical_habitat,
-        args.chemical_biosphere,
-        args.nursery_family_config,
-        args.nursery_family_schedule,
+    from chreatures.population_launch import (
+        file_sha256,
+        resident_artifact_identity,
+        validate_founding_bank,
     )
+
+    encoded_profile = json.loads(args.profile.read_text())
+    profile = EmbodiedTrainingProfile.from_value(
+        encoded_profile, locators=encoded_profile["locators"]
+    )
+    artifact_path = args.resident_artifact.resolve()
+    controller_identity, _metadata = resident_artifact_identity(artifact_path)
+    bank_value = json.loads(args.founding_bank.read_text())
+    candidates = validate_founding_bank(
+        bank_value,
+        profile=profile,
+        controller=controller_identity,
+        seed=args.seed,
+        worlds=args.worlds,
+        validation_worlds=args.validation_worlds,
+        heldout_worlds=args.heldout_worlds,
+        episodes=args.episodes,
+        steps=args.steps,
+    )
+    candidate_values = [candidate.to_value() for candidate in candidates]
+    bank_episodes = bank_value["episodes"]
+    frozen_source = source_identity()
     graph = load_training_graph(args.graph)
     ports = NeuralPortBundle.load(args.port_bundle, graph)
+    if (
+        str(graph.hash) != controller_identity["graph_sha256"]
+        or ports.spec_hash != controller_identity["port_spec_sha256"]
+        or file_sha256(args.port_bundle)
+        != controller_identity["port_bundle_sha256"]
+    ):
+        raise ValueError("controller neural substrate differs from collection inputs")
     transport = profile.component("family")["transport"]
     residents_per_world = transport["residents"]
     required = {
@@ -247,13 +255,9 @@ def main() -> int:
     ):
         raise SystemExit("regional profile transport differs from collector interfaces")
     count = args.worlds * residents_per_world
-    from chreatures.population import CandidateGenome
     from chreatures.neural_genotype import NeuralVariantRecipe, compile_population_phenotypes
-
-    candidate_values = json.loads(args.candidate_genomes.read_text())
-    if not isinstance(candidate_values, list) or len(candidate_values) != count:
-        raise ValueError("collection requires one inherited candidate genome per cohort row")
-    candidates = [CandidateGenome(value) for value in candidate_values]
+    if len(candidates) != count:
+        raise ValueError("founding bank differs from the current cohort size")
     phenotypes = compile_population_phenotypes(
         candidates, NeuralVariantRecipe.load(args.neural_recipe), graph, ports,
         sha256(args.port_bundle), sha256(args.resident_artifact),
@@ -269,12 +273,18 @@ def main() -> int:
         args.physical_backend,
         residents_per_world=residents_per_world,
     )
-    artifact_path = args.resident_artifact.resolve()
     identity = {
         "format": f"{FORMAT}-identity",
-        "source": source_identity(),
-        "resident_artifact": resident_model_identity(artifact_path),
-        "candidate_genomes_sha256": sha256(args.candidate_genomes),
+        "source": frozen_source,
+        "resident_artifact": {
+            "path": str(artifact_path),
+            **controller_identity,
+        },
+        "founding_bank": {
+            "path": str(args.founding_bank.resolve()),
+            "file_sha256": file_sha256(args.founding_bank),
+            "sha256": bank_value["sha256"],
+        },
         "candidate_order": [candidate.sha256 for candidate in candidates],
         "neural_phenotypes": [phenotype.sha256 for phenotype in phenotypes],
         "profile": profile.to_value(),
@@ -335,8 +345,11 @@ def main() -> int:
             bodies = pool.reset(
                 [
                     {
-                        "seed": args.seed + episode * 1009 + world,
+                        "seed": bank_episodes[episode]["worlds"][world]["seed"],
                         "held_out": world >= heldout_start,
+                        "environment": bank_episodes[episode]["worlds"][world][
+                            "environment"
+                        ],
                         "candidates": candidate_values[
                             world * residents_per_world:(world + 1) * residents_per_world
                         ],

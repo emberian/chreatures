@@ -18,7 +18,7 @@ through the recurrent predictor, then act for one physical tick and reconsider.
 Development has resumed: the joined physical ecology now runs, and the new
 resident can continue through remembered action sequences. Fresh population
 collection and fitting are being integrated. These mechanisms are not yet
-evidence of ecological competence. [Current wave](docs/development/ECOLOGICAL_SPECIALIZATION_WAVE.md) · [Resume handoff](docs/development/ECOLOGICAL_SPECIALIZATION_HANDOFF.md).
+evidence of ecological competence. [Current wave](docs/development/ECOLOGICAL_SPECIALIZATION_WAVE.md) · [Earlier shutdown record](docs/development/ECOLOGICAL_SPECIALIZATION_HANDOFF.md).
 
 The preceding reciprocal ecology wave completed **160 research lives** and
 327,680 physical transitions. Its recording remains the default observatory
@@ -108,9 +108,9 @@ neural snapshots after one step. [Recording, branch and restoration scope](data/
 
 The longer private continuation later paused at tick 9,170: a free material
 packet escaped the finite terrain and eventually exceeded the field coordinate
-sanity bound. Its coherent tick-9,148 checkpoint is retained. Region exit and
-material accounting remain a physical lifecycle gap; the recording and completed
-campaigns precede this failure. [Longer-run stop](data/development/reciprocal-v6-long-continuation-stop.receipt.json).
+sanity bound. Its coherent tick-9,148 checkpoint is retained. That engine lacks the new complete packet-exit transaction. The recording and
+completed campaigns precede the failure; the current physical join exercises
+finite outlet activation, exit transfer and retirement. [Longer-run stop](data/development/reciprocal-v6-long-continuation-stop.receipt.json).
 
 The new predictor corpus contains **393,216 actual transitions**, collected in
 six eight-resident worlds at **229.06 resident transitions/s**, including sealing
