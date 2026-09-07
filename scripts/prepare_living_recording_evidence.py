@@ -342,7 +342,12 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         state.get("id") != world_id
         or recording.get("event_stream", {}).get("world_id") != world_id
         or state.get("execution_migrations") != []
-        or state.get("engine_identity") != provenance.get("engine_identity")
+        # Public recordings omit the private per-source-file map. Authenticate
+        # their compact engine projection against the complete checkpoint owner.
+        or any(
+            state.get("engine_identity", {}).get(key) != value
+            for key, value in provenance.get("engine_identity", {}).items()
+        )
         or state.get("engine_identity", {}).get("sha256") != binding["engine_identity_sha256"]
         or state.get("resident_controller", {}).get("format")
         != "chreatures-developmental-resident-population-snapshot-v8"

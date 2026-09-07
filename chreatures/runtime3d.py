@@ -593,7 +593,10 @@ class Habitat3D:
                     "learned_total": int(result["motor_suffix_learned_total"][index]),
                     "completed_total": int(result["motor_suffix_completed_total"][index]),
                     "interrupted_total": int(result["motor_suffix_interrupted_total"][index]),
-                    "empirical_component_weights": result["motor_suffix_empirical_components"].astype(float).tolist(),
+                    "empirical_component_order": result["motor_suffix_empirical_components"].astype(str).tolist(),
+                    # Coefficients of the v8 artifact's validated empirical
+                    # utility: tanh(movement - energy cost + fatigue recovery).
+                    "empirical_component_weights": [1.0, -1.0, 1.0],
                     "empirical_tilt_limit": float(result["motor_suffix_empirical_tilt_limit"]),
                     "meaning": "private recall and interruptible continuation of executed sequences; support counts complete executions and does not certify success or reachability",
                 },
