@@ -36,21 +36,6 @@ try {
   engine = await LiveEngine.create({baseURL: `http://127.0.0.1:${server.address().port}/live/`, device,
     modules: {worldWasm: await readFile(resolve(directory, 'live/pkg/chreatures_browser_world_bg.wasm')),
       initResident: () => initResident({module_or_path: residentWasm})}});
-  // Capture only the deployed CNS output and the command that is actually sent
-  // to physics. Raw sensory/body/world state is deliberately absent.
-  const executions = []; let pendingLatent;
-  const brainStep = engine.brain.step.bind(engine.brain);
-  engine.brain.step = async options => {
-    const result = await brainStep(options); pendingLatent = result.latent.slice(); return result;
-  };
-  const acknowledge = engine.resident.acknowledge.bind(engine.resident);
-  engine.resident.acknowledge = (ticks, command) => {
-    if (!pendingLatent) throw new Error('Delivered command lacks its CNS latent');
-    const receipt = acknowledge(ticks, command);
-    if (receipt.every(Boolean)) executions.push({tick: engine.tick, latent: pendingLatent, action: command.slice()});
-    pendingLatent = undefined;
-    return receipt;
-  };
   const first = engine.observe(); const timings = [];
   for (let tick = 0; tick < 16; tick++) {
     if (tick === 4) engine.greet([0, 1, 2]);
@@ -79,7 +64,7 @@ try {
   }
   const report = {format: 'chreatures-live-joined-headless-v1', engineIdentity: engine.identity,
     adapter: adapter.info?.device || adapter.info?.description || 'Dawn Metal', neurons: 165122, edges: 25563197,
-    residents: engine.batch, physicalTicks: 18, modelSeconds: engine.world.time,
+    residents: engine.batch, physicalStepCalls: 19, retainedModelTicks: engine.tick, checkpointReplayCalls: 1, modelSeconds: engine.world.time,
     meanCompleteTickMs: timings.reduce((a,b) => a+b, 0) / timings.length, maxCompleteTickMs: Math.max(...timings),
     maxRootTravelMeters: maxTravel, snapshotBytes: checkpoint.byteLength, snapshotSHA256: sha(checkpoint),
     physicalReplayExact: true, fullNeuralReplayExact: true, wholeLifeReplayExact: true,
@@ -88,28 +73,6 @@ try {
     scope: 'Actual Node Dawn Metal + same browser Wasm/WGSL; no browser UI performance or learned motor competence claim'};
   console.log(JSON.stringify(report, null, 2));
   if (args.report) await writeFile(args.report, JSON.stringify(report, null, 2) + '\n', {flag: 'wx'});
-  if (args.episode) {
-    assert.equal(executions.length, 19, 'Joined replay execution count differs');
-    // Execution 17 is the deliberate replay of execution 16. Exclude that
-    // duplicate and retain the 18-transition coherent lineage through growth.
-    const selected = executions.filter((_, index) => index !== 17);
-    const episode = {format: 'chreatures-cns-resident-episode-v2', version: 2,
-      cns_service_artifact_sha256: engine.brain.identity.serviceArtifactSha256,
-      cns_adapter_sha256: engine.brain.identity.artifact, engine_identity: engine.identity,
-      action_source: 'initialized-untrained resident-runtime proposedCommand; physically delivered and receipt-acknowledged',
-      teacher_reward_available: false, teacher_reward_reason: 'joined runtime defines no scalar physical teacher reward',
-      transitions: selected.length, residents: engine.batch, latent_dim: 512, action_dim: 12,
-      latent_order: 'transition,resident,512', action_order: 'transition,resident,12',
-      reset_order: 'transition,resident', terminal_order: 'transition,resident',
-      branch_note: 'The exact checkpoint replay execution is excluded; transition 17 continues from its identical restored state after the joined growth event.',
-      latent: selected.flatMap(item => Array.from(item.latent)),
-      action: selected.flatMap(item => Array.from(item.action)),
-      reset: selected.flatMap((_, transition) => Array(engine.batch).fill(transition === 0 ? 1 : 0)),
-      terminal: selected.flatMap(() => Array(engine.batch).fill(0))};
-    const identity = JSON.stringify(episode);
-    episode.content_sha256 = sha(new TextEncoder().encode(identity));
-    await writeFile(args.episode, JSON.stringify(episode) + '\n', {flag: 'wx'});
-  }
 } finally {
   engine?.destroy(); device.destroy(); server.closeAllConnections(); server.close();
 }

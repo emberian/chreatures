@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "operation": "whole life load after authenticated Wasm boot",
+  "error": "MuJoCo Emscripten mutates its factory options; reusing that object aborted on noExitRuntime getter",
+  "repair": "retain immutable Wasm bytes and give each new MuJoCo instance a fresh options object"
+}

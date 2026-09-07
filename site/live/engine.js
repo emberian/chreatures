@@ -18,15 +18,20 @@ export class LiveEngine {
     const manifests = await Promise.all(['cns', 'resident', 'observer'].map(name => loadJSON(new URL(`${name}-manifest.json`, engine.modelURL))));
     const [cns, resident, observer] = manifests;
     if (resident.cnsServiceArtifactSha256 !== cns.serviceArtifactSha256 || observer.graph !== cns.identity.graph) throw new Error('Coupled model identities differ');
-    engine.identity = await digest(encoder.encode(JSON.stringify(manifests)));
+    const runtime = await loadJSON(new URL('runtime-manifest.json', engine.baseURL));
+    if (runtime.format !== 'chreatures-live-runtime-v1') throw new Error('Unknown live runtime identity');
+    engine.identity = await digest(encoder.encode(JSON.stringify({manifests, runtimeFiles: runtime.files})));
+    const runtimeBytes = async name => loadBlob(runtime.files[name], engine.baseURL);
+    const [residentBinary, worldBinary, physicsBinary] = await Promise.all(['pkg/resident_runtime_bg.wasm', 'pkg/chreatures_browser_world_bg.wasm', 'vendor/mujoco/mujoco.wasm'].map(runtimeBytes));
     const fixture = await loadJSON(new URL('fixtures/garden.json', engine.baseURL));
     const xmlResponse = await fetch(new URL('fixtures/garden.xml', engine.baseURL));
     if (!xmlResponse.ok) throw new Error('Physical world download failed');
-    engine.factoryOptions = {mujocoFactory: modules.mujocoFactory ?? mujocoFactory, coreModule: modules.worldModule ?? worldModule, coreWasm: modules.worldWasm};
-    engine.world = await createBrowserWorld({...engine.factoryOptions, fixture, xml: await xmlResponse.text(), seed: 20260907});
+    engine.factoryOptions = {mujocoFactory: modules.mujocoFactory ?? mujocoFactory, coreModule: modules.worldModule ?? worldModule, coreWasm: modules.worldWasm ?? worldBinary};
+    engine.physicsBinary = new Uint8Array(physicsBinary);
+    engine.world = await createBrowserWorld({...engine.factoryOptions, fixture, xml: await xmlResponse.text(), seed: 20260907, mujocoOptions: {wasmBinary: engine.physicsBinary}});
     engine.batch = engine.world.residents;
     if (engine.batch !== resident.config.batch) throw new Error('Physical and cognitive cohort differ');
-    await (modules.initResident ?? initResident)();
+    await (modules.initResident ?? initResident)({module_or_path: residentBinary});
     const Resident = modules.ResidentRuntime ?? ResidentRuntime;
     let loaded = 0;
     const add = bytes => {loaded += bytes; progress({stage: 'download', label: 'Loading your local nervous systems', loaded});};
@@ -134,7 +139,7 @@ export class LiveEngine {
     const resident = bytes.slice(12 + length + h.cnsBytes);
     if (await digest(cns) !== h.cnsSHA || await digest(resident) !== h.residentSHA) throw new Error('Life state checksum differs');
     // Construct the possibly grown world separately before any current state changes.
-    const world = await createBrowserWorld({...this.factoryOptions, fixture: h.world.fixture, xml: h.world.xml});
+    const world = await createBrowserWorld({...this.factoryOptions, fixture: h.world.fixture, xml: h.world.xml, mujocoOptions: {wasmBinary: this.physicsBinary}});
     try { world.restore(h.world); } catch (error) {world.dispose(); throw error;}
     const oldCns = await this.brain.snapshot(), oldResident = this.resident.saveBytes();
     try {await this.brain.restore(cns.buffer); this.resident.loadBytes(resident);}
