@@ -98,3 +98,14 @@ change in physical behavior, not demonstrated sensory-goal attainment. Privilege
 teacher geometry supplied targets only; the policy received CNS Z512 and its own
 delivered motor history. The short collection had no held-out contact labels,
 which motivates the subsequent expanded encounter curriculum.
+
+The selected CNS and retina now transfer to the observer on every physical tick.
+The final joined capture path averaged 63.57 ms on M2 Max and preserved exact
+continuation; see `joined-every-tick.receipt.json`. This denser observation changes
+no model equation. A separately retained paired SIMD profile measured a 1.84×
+resident speedup and 32.4% lower complete joined tick time (`simd4/`).
+
+A Pages build failed on an HTTPS connection reset while fetching the immutable
+release. Downloads now restart interrupted transfers with bounded backoff; each
+asset is committed only after length and SHA256 match. Hash mismatches still fail
+the build. No partial model is published.

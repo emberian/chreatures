@@ -43,7 +43,7 @@ try {
   for (let tick = 0; tick < 16; tick++) {
     if (tick === 4) engine.greet([0, 1, 2]);
     engine.screen(new Float32Array(12).fill(tick % 4 < 2 ? 1 : 0), 2, 2, null);
-    const frame = await engine.advance(tick % 4 === 0); timings.push(frame.wallMilliseconds);
+    const frame = await engine.advance(true); timings.push(frame.wallMilliseconds);
     assert(frame.positions.every(Number.isFinite));
     if (frame.neuralRates) {
       assert(frame.neuralRates.every(Number.isFinite));
@@ -75,7 +75,7 @@ try {
     meanCompleteTickMs: timings.reduce((a,b) => a+b, 0) / timings.length, maxCompleteTickMs: Math.max(...timings),
     maxRootTravelMeters: maxTravel, snapshotBytes: checkpoint.byteLength, snapshotSHA256: sha(checkpoint),
     physicalReplayExact: true, fullNeuralReplayExact: true, wholeLifeReplayExact: true,
-    retinalInputSites: 1771, supportedRetinalSites: 1486, capturedRetinalRGB: true,
+    neuralCapture: 'every physical tick', retinalInputSites: 1771, supportedRetinalSites: 1486, capturedRetinalRGB: true,
     restoredGrownWorld: true, geometryCount: after.geometry.length, wallSeconds: (performance.now() - began) / 1000,
     modelStatus: engine.modelStatus, controllerStatus: engine.controllerStatus,
     scope: 'Actual Node Dawn Metal + same browser Wasm/WGSL; no browser UI performance or learned motor competence claim'};

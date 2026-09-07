@@ -1,0 +1,34 @@
+{
+  "format": "chreatures-resident-simd4-performance-v1",
+  "scope": "Paired actual Node Dawn Metal + browser Rust/Wasm + WebGPU + MuJoCo runs; three residents",
+  "before": {
+    "sourceRevision": "7c4daa1",
+    "residentWasmSha256": "19c56c321a4c55fda60836b6a6c1b04de96f5f73535d6680274502630a2aa4e8",
+    "engineIdentity": "a5e02291407591dd5c314ca0383d9793fe3f22951e17bafab3a004bb6ca08ca0",
+    "residentMeanMs": 84.124268984375,
+    "profileCompleteMeanMs": 110.48627996875,
+    "joinedCompleteMeanMs": 93.36311975000004
+  },
+  "after": {
+    "residentWasmSha256": "c4e6cb3b8b503c7da615f0d09926624481d5b672dcb13d6989984fbc0b20be17",
+    "engineIdentity": "c4fbebf0765be20ad04a96de96f81e46d2d775abd3b92e29a32cf2e39fd1f03c",
+    "residentMeanMs": 45.63993940625003,
+    "profileCompleteMeanMs": 71.08274867187492,
+    "joinedCompleteMeanMs": 63.090322625,
+    "physicalReplayExact": true,
+    "fullNeuralReplayExact": true,
+    "wholeLifeReplayExact": true
+  },
+  "change": {
+    "residentSpeedup": 1.843216053281062,
+    "residentMeanReductionPercent": 45.74700029223783,
+    "profileCompleteReductionPercent": 35.66373246345156,
+    "joinedCompleteReductionPercent": 32.42479172296513
+  },
+  "receipts": {
+    "profile-before.receipt.json": "375027631b33adf06be5db4f9fad31ef4d462188d8eaefbd48284710bb70d0a4",
+    "profile-after.receipt.json": "80be06caa9e70692c4c813770d3e5f2668188a64d8ff4460557c4a3649fa5f84",
+    "joined-before.receipt.json": "f56d7c04d2d36f29dfa6525f3ce62ff30a6db5a7c3c32799e6365fce758c9850",
+    "joined-after.receipt.json": "d4d80d746e653a9a05832916dcab36e1c0ac132d1cd20e885fce999d25c139c2"
+  }
+}
