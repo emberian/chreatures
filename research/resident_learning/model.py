@@ -252,8 +252,12 @@ def training_loss(model: CnsResidentModel, batch: Mapping[str, torch.Tensor], di
             delivered[step : step + depth].permute(1, 0, 2)
             for step in range(depth_starts)
         ])
+        # Runtime prediction receives a goal retrieved from the resident's past
+        # achieved-key reservoir.  Use the current experienced key here; the
+        # future achieved key remains a valid hindsight target only for inverse
+        # action fitting above and must not shortcut its own latent forecast.
         depth_context = torch.cat([
-            torch.cat((latent[step], states[step], achieved_goal[step], previous[step]), -1)
+            torch.cat((latent[step], states[step], keys[step], previous[step]), -1)
             for step in range(depth_starts)
         ]).detach()
         depth_target = torch.cat([latent[step + depth] for step in range(depth_starts)]).detach()
