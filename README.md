@@ -88,6 +88,12 @@ copy of a coherent tick-118 checkpoint under the fixed engine. Two independent
 restores of its later tick-4095 checkpoint produced byte-identical world and
 neural snapshots after one step. [Recording, branch and restoration scope](data/development/reciprocal-v6-research-continuation.receipt.json).
 
+The longer private continuation later paused at tick 9,170: a free material
+packet escaped the finite terrain and eventually exceeded the field coordinate
+sanity bound. Its coherent tick-9,148 checkpoint is retained. Region exit and
+material accounting remain a physical lifecycle gap; the recording and completed
+campaigns precede this failure. [Longer-run stop](data/development/reciprocal-v6-long-continuation-stop.receipt.json).
+
 The new predictor corpus contains **393,216 actual transitions**, collected in
 six eight-resident worlds at **229.06 resident transitions/s**, including sealing
 and checkpoints. Its three-member recurrent fit took **399.79 seconds** on

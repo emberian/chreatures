@@ -57,6 +57,7 @@ def ssh_multiplex(host):
         os.chmod(directory, 0o700)
         control = str(Path(directory) / "control.sock")
         options = [
+            "-C",  # Compress transport; remote snapshots keep their exact raw bytes.
             "-o",
             f"ControlPath={control}",
             "-o",

@@ -185,6 +185,7 @@ def ssh(arguments: str, *, stdin=None) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(
         [
             "/usr/bin/ssh",
+            "-C",
             "-o",
             "BatchMode=yes",
             REMOTE_TARGET,
@@ -212,6 +213,7 @@ def publish_remote(path: Path, digest: str, size: int) -> str:
         subprocess.run(
             [
                 "/usr/bin/ssh",
+                "-C",  # Transport compression leaves archive hashes and format intact.
                 "-o",
                 "BatchMode=yes",
                 REMOTE_TARGET,
@@ -346,6 +348,7 @@ def fetch(name: str, expected_sha256: str | None) -> dict[str, object]:
         subprocess.run(
             [
                 "/usr/bin/ssh",
+                "-C",
                 "-o",
                 "BatchMode=yes",
                 REMOTE_TARGET,

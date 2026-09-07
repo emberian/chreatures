@@ -903,3 +903,22 @@ the cohort, so the difference in outcomes is not a matched measure of improvemen
 The [challenge receipt](../data/development/population-v6-challenge-wave.receipt.json)
 retains the actual per-life results, transfer assignments, costs and identities.
 No further campaign was launched during this publication pass.
+
+The longer M2 continuation subsequently paused at tick9,170. Chemical source89
+belonged to an active material packet that had escaped finite terrain and kept
+falling; its z coordinate crossed the field sanity bound of -1,000,000. The last
+coherent tick9,148 checkpoint already contained the escaped packet. The physical
+boundary crossing itself has not been reproduced. Both the failed in-memory
+state and coherent checkpoint remain intact; no retry, coordinate clamp or
+field-bound relaxation was applied. The public clip ends at tick4,013 and both
+population waves completed before this additional failure. Region-exit handling
+must couple physical lifecycle and conserved material accounting in further work.
+
+Snapshot archival for the new branch now uses SSH transport compression while
+retaining raw remote bytes, SHA/size verification, remote file/directory fsync,
+and the current-reference/newest-eight/age guards before local deletion.
+Observed warm transfers took 8.3–10.6 seconds per 63.44MB snapshot, compared with
+31.69 seconds per new snapshot during the preceding live run. A separate
+18.49-second compressed transfer matched the raw remote SHA and size. These are
+transfer samples, not a general disk-capacity guarantee. Both checked-in archive
+templates now request transport compression without changing artifact formats.
