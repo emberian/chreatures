@@ -1563,8 +1563,7 @@ class BrowserWorld {
       !Number.isFinite(food) ||
       food < 0 ||
       food > 1 ||
-      ![-1, 0, 1, 2].includes(odor) ||
-      this.#fixture.entities.length >= 96
+      ![-1, 0, 1, 2].includes(odor)
     )
       throw new Error("Invalid bounded material insertion");
     this.#busy = true;

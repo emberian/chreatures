@@ -31,6 +31,7 @@ let paused = false;
 let selectedResident = null;
 let neuralField = 'rate', loadedRateBaseline = null;
 let selectedToy = null;
+let placingToy = false, pendingToyRequest = null;
 let requestCounter = 0;
 const requestedStimulus = new URLSearchParams(location.search).get('stimulus');
 const initialStimulus = ['bad-apple', 'grating'].includes(requestedStimulus) ? requestedStimulus : 'blank';
@@ -129,7 +130,21 @@ function createView() {
       shoveToyButton.disabled = !ready;
       setNotice(`Selected physical object ${id}.`);
     },
+    onPlacement(position) {
+      if (!ready || !placingToy || pendingToyRequest) return;
+      setToyPlacement(false);
+      addToyButton.disabled = true;
+      pendingToyRequest = request('insert-toy', {position});
+      setNotice('Checking space for the toy…');
+    },
   });
+}
+
+function setToyPlacement(active) {
+  placingToy = Boolean(active);
+  view?.setToyPlacement(placingToy);
+  addToyButton.setAttribute('aria-pressed', String(placingToy));
+  addToyButton.textContent = placingToy ? 'Cancel toy placement' : 'Place a movable toy';
 }
 
 function setInteractive(enabled) {
@@ -299,10 +314,17 @@ function workerMessage(event) {
       setNotice('checkpoint loaded', message.paused ? 'paused' : 'ready');
     }
     else if (message.type === 'inserted') {
+      pendingToyRequest = null;
+      addToyButton.disabled = !ready;
       selectedToy = message.object?.id || null;
       shoveToyButton.disabled = !selectedToy;
       setNotice(selectedToy ? `placed ${selectedToy}` : 'physical object placed', paused ? 'paused' : 'ready');
     } else if (message.type === 'error') {
+      if (pendingToyRequest && message.requestId === pendingToyRequest) {
+        pendingToyRequest = null;
+        addToyButton.disabled = !ready;
+        if (message.recoverable && ready) setToyPlacement(true);
+      }
       if (message.recoverable && ready) recoverableError(message);
       else fatal(message.reason || message.message || 'The compute Worker stopped without a reason.');
     }
@@ -439,7 +461,17 @@ for (const button of document.querySelectorAll('[data-tone]')) button.addEventLi
   post('tone', {frequency: Number(button.dataset.tone), duration: .8, amplitude: .65});
   setNotice(`Sent ${button.dataset.tone} Hz into the garden`, 'ready');
 });
-addToyButton.addEventListener('click', () => request('insert-toy'));
+addToyButton.addEventListener('click', () => {
+  if (!ready || pendingToyRequest) return;
+  setToyPlacement(!placingToy);
+  setNotice(placingToy ? 'Click a surface to place the toy. Drag to orbit; Esc cancels.' : 'Toy placement cancelled.');
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && placingToy) {
+    setToyPlacement(false);
+    setNotice('Toy placement cancelled.');
+  }
+});
 shoveToyButton.addEventListener('click', () => {
   if (selectedToy) post('shove', {id: selectedToy, force: [0, 4, 1]});
 });
