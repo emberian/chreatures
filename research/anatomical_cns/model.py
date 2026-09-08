@@ -55,6 +55,46 @@ def fixed_sparse_mm(matrix, transpose, dense):
     return _FixedSparseMM.apply(matrix, transpose, dense)
 
 
+class _MaskedBodyProjection(torch.autograd.Function):
+    """Apply the fixed anatomical BODY807 support without a dense masked GEMM."""
+
+    @staticmethod
+    def forward(ctx, weight, standardized, crow, row, column):
+        supported_weight = weight[row, column]
+        supported_matrix = torch.sparse_csr_tensor(
+            crow,
+            column,
+            supported_weight,
+            size=(BODY_ROWS, BODY),
+            device=weight.device,
+        )
+        current = torch.sparse.mm(supported_matrix, standardized.T)
+        ctx.save_for_backward(supported_weight, standardized, row, column)
+        return current
+
+    @staticmethod
+    def backward(ctx, gradient):
+        supported_weight, standardized, row, column = ctx.saved_tensors
+        supported_gradient = gradient[row]
+
+        weight_gradient = gradient.new_zeros((BODY_ROWS, BODY))
+        weight_gradient[row, column] = (
+            supported_gradient * standardized[:, column].T
+        ).sum(dim=1)
+
+        standardized_gradient = standardized.new_zeros(standardized.shape)
+        standardized_gradient.index_add_(
+            1,
+            column,
+            supported_gradient.T * supported_weight[None],
+        )
+        return weight_gradient, standardized_gradient, None, None, None
+
+
+def masked_body_projection(weight, standardized, crow, row, column):
+    return _MaskedBodyProjection.apply(weight, standardized, crow, row, column)
+
+
 @dataclass(frozen=True)
 class CNSState:
     rates: torch.Tensor
@@ -193,6 +233,15 @@ class AnatomicalCNS(nn.Module):
             ("neuron_type", "atlas.neuron_type"),
         ):
             buf(name, arrays[key])
+        body_support_row, body_support_column = np.nonzero(arrays["atlas.body_mask"])
+        body_support_crow = np.zeros(BODY_ROWS + 1, dtype=np.int64)
+        np.cumsum(
+            np.bincount(body_support_row, minlength=BODY_ROWS),
+            out=body_support_crow[1:],
+        )
+        buf("body_support_crow", body_support_crow)
+        buf("body_support_row", body_support_row.astype(np.int64, copy=False))
+        buf("body_support_column", body_support_column.astype(np.int64, copy=False))
         buf("optic_supported", np.diff(np.asarray(arrays["atlas.receptor_ptr"])) > 0)
         mask = np.ones(N, np.float32)
         mask[
@@ -354,7 +403,13 @@ class AnatomicalCNS(nn.Module):
         )
         standardized = ((body - self.body_mean) / self.body_scale).clamp(-8, 8)
         bc = torch.sigmoid(
-            (self.body_weight * self.body_mask) @ standardized.T
+            masked_body_projection(
+                self.body_weight,
+                standardized,
+                self.body_support_crow,
+                self.body_support_row,
+                self.body_support_column,
+            )
             + self.body_bias[:, None]
         )
         cc = 0.15 * (

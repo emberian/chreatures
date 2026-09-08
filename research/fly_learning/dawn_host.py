@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 import json
 from pathlib import Path
 import subprocess
+import time
 from typing import Any, Mapping
 
 import numpy as np
@@ -15,10 +15,10 @@ from .curriculum import Plan, RESIDENTS
 from .data import BODY_AFFERENTS, LATENT, MOTOR, OPTIC_SITES, sha256_file
 from .native_host import (
     ActualOutcomeEvaluator,
-    FlyCurriculumTeacher,
     NodeActualFlyWorld,
     SampledAuthorSteps,
 )
+from .teacher import FlyCurriculumTeacher
 
 
 class DawnFullCNS:
@@ -64,6 +64,7 @@ class DawnFullCNS:
             "cns_source_revision": str(manifest["sourceRevision"]),
         }
         self._id = 0
+        self.last_timing: Mapping[str, float] = {}
 
     def _rpc(self, command: str, **payload: Any) -> Mapping[str, Any]:
         if self.process.poll() is not None:
@@ -108,22 +109,39 @@ class DawnFullCNS:
         delivered_context: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
         # One public .01 step contains the frozen two .005 neural substeps.
+        began = time.perf_counter()
+        optic_encoded = self._encode(
+            optic_rgb, (RESIDENTS, OPTIC_SITES, 3), "optic_rgb"
+        )
+        body_encoded = self._encode(
+            body_afferents, (RESIDENTS, BODY_AFFERENTS), "body_afferents"
+        )
+        context_encoded = self._encode(
+            delivered_context, (RESIDENTS, 12), "delivered_context"
+        )
+        encoded = time.perf_counter()
         response = self._rpc(
             "step",
-            optic_base64=self._encode(
-                optic_rgb, (RESIDENTS, OPTIC_SITES, 3), "optic_rgb"
-            ),
-            body_base64=self._encode(
-                body_afferents, (RESIDENTS, BODY_AFFERENTS), "body_afferents"
-            ),
-            context_base64=self._encode(
-                delivered_context, (RESIDENTS, 12), "delivered_context"
-            ),
+            optic_base64=optic_encoded,
+            body_base64=body_encoded,
+            context_base64=context_encoded,
         )
-        return (
-            self._decode(response["latent_base64"], (RESIDENTS, LATENT), "latent"),
+        returned = time.perf_counter()
+        result = (
+            self._decode(
+                response["latent_base64"], (RESIDENTS, LATENT), "latent"
+            ),
             self._decode(response["motor_base64"], (RESIDENTS, MOTOR), "motor"),
         )
+        decoded = time.perf_counter()
+        self.last_timing = {
+            "host_encode_seconds": encoded - began,
+            "rpc_seconds": returned - encoded,
+            "node_decode_seconds": float(response["node_decode_seconds"]),
+            "gpu_step_seconds": float(response["gpu_step_seconds"]),
+            "host_decode_seconds": decoded - returned,
+        }
+        return result
 
     def reset(self) -> None:
         self._rpc("reset")
@@ -174,6 +192,7 @@ def create_bundle(arguments: Any, plan: Plan) -> CollectionBundle:
         "scene_manifest_sha256": world.ready["fixture_sha256"],
         "scene_xml_sha256": world.ready["scene_xml_sha256"],
         "core_wasm_sha256": world.ready["core_wasm_sha256"],
+        "native_runtime_sha256": sha256_file(Path(arguments.runtime).resolve()),
         "author_trajectory_bank_sha256": sha256_file(Path(arguments.author_source).resolve()),
         "author_trajectory_manifest_sha256": sha256_file(
             Path(arguments.author_source).with_name("manifest.json")
