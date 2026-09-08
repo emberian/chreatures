@@ -1,0 +1,45 @@
+{
+  "format": "chreatures-cns-webgpu-v5-plasticity-dawn-probe-v1",
+  "status": "executed",
+  "manifestSha256": "61ba02739072cbe53382b85c76eca617960627a162d241fffa607d8e4a644742",
+  "serviceArtifactSha256": "7753f6dad93dc8b4e817bec902af9a11c84740e2828d12c9e5c43e6138efabd6",
+  "adapterIdentity": "a15207e48c1ed67944f4e1a1bf1eae1b7517227d4b0c13520cd48dfb2579b13c",
+  "plasticityIdentity": "1eb37790b406573b191e4493a5d1ddb0e5ece8bb5edd2a377f2921adab971b87",
+  "sourceRevision": "a9d653740e8cb6a8a631f5a3e3d4d589f2e806d1",
+  "adapter": "apple-m2-max",
+  "selectedEdges": 4184,
+  "target0DistinctSources": 2048,
+  "privateStateBytesPerFourLaneEngine": 133888,
+  "intervention": {
+    "scope": "research-only exact-cell state intervention; not a sensory-learning result",
+    "targetRow": 655,
+    "targetRateZeroDeviation": 0.2211754024028778,
+    "targetRateDepressedDeviation": 0.20686958730220795,
+    "targetRateDifference": -0.01430581510066986
+  },
+  "cueBeforeGateIntervention": {
+    "scope": "research-only exact KC/PPL state intervention; not a sensory-learning result",
+    "firstTickMaximumEligibility": 1,
+    "firstTickMinimumEfficacy": 0,
+    "secondTickMinimumEfficacy": -0.0024689442943781614
+  },
+  "checks": {
+    "zeroInitialPrivateState": true,
+    "nonzeroDeviationChangesMeasuredTargetRecurrence": true,
+    "oldEligibilityUsedBeforeCurrentCueEnrollment": true,
+    "inactiveLaneByteExact": true,
+    "exactSameRuntimeSnapshotContinuation": true,
+    "invalidPrivateStateRejectedBeforeMutation": true,
+    "resetClearsPrivateState": true
+  },
+  "sourceSha256": {
+    "cns-webgpu.js": "a0a52fcdfd07d0b0deeb37c6624e6f7eb30bbd70011cb877a2cb4dee1913300c",
+    "shaders/afferent.wgsl": "c2bb3a695d4a5db1a2c19b44aa896289ffd636528926605d7eda7f176aa1b4b1",
+    "shaders/dynamics.wgsl": "79139851beaa13c79b6c474a0de4cf06cc0abb623192d4dbdb9f16a44ec803f9",
+    "shaders/plasticity.wgsl": "6816401f8a6daa2d4c61a5d6acf892c30c7a1c43dda20b164fc5a077f8c75d8c",
+    "shaders/readout.wgsl": "7bca77f939086d210ee3e250c42c53dd8d274d322eb261020235ab9f059a5949",
+    "shaders/motor.wgsl": "d4dc62751da3628adb81aa8ef177aa2acd29182ddb4946d7b5242cd2f4ec23a1",
+    "shaders/observe.wgsl": "4541ad0f0291688d48d5b2dda11f8b2441fee88e79085215f1c2c7e3fff44651"
+  },
+  "probeSha256": "c32d120b0c6a387463e805a19e4647bc69b5344c3cfc06b4bb3d18dc2d23ae3e"
+}

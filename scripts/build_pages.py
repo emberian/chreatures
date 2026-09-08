@@ -381,7 +381,7 @@ def _copy_model(
     component_source_revision = cns.get("sourceRevision")
     training_status = cns.get("trainingStatus")
     if (
-        cns.get("format") != "chreatures-cns-webgpu-v4"
+        cns.get("format") != "chreatures-cns-webgpu-v5"
         or resident.get("format") != "chreatures-browser-resident-v1"
         or not isinstance(release_source_revision, str)
         or not isinstance(component_source_revision, str)
