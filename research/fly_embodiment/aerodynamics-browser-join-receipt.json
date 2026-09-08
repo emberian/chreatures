@@ -1,0 +1,20 @@
+{
+  "format": "chreatures-wing-aerodynamics-body-route-join-v1",
+  "status": "executed",
+  "raw_receipt_sha256": "e3c99df3ba9990618fcdafaf5d1d2a77b22894c316813cf72bac0d360ad725bd",
+  "scene": "71e2a0c59f7f6407d2c0c62627ba91005c25078022fbb7899d9afe4ada0da3fe",
+  "body_count": 2,
+  "construction_tick": 200,
+  "growth": 1,
+  "whole_world_replay": "exact",
+  "mean_advance_ms": 126.72544220297021,
+  "elapsed_ms": 26940,
+  "commands": "MOTOR92[0]=0.05, MOTOR92[92+42]=-0.04, all other channels zero; diagnostic, no CNS",
+  "scope": "Actual Euler step1/2 MuJoCo/Wasm body, native aerodynamic force application, sampled material routes, light-funded growth and visitor interactions. No flight, learned behavior or matched performance claim.",
+  "source_hashes": {
+    "native/browser-world/runtime.mjs": "ddfdc7581f9021958ad386de063b54d7036b2dbb1cf78892ed8cf03ae6672bf3",
+    "native/browser-world/src/fly_aerodynamics.rs": "ff144b9ed49a5794ee88e1e909efae8943a6b7d690c36f91b423c903bcabcf00",
+    "native/browser-world/pkg/chreatures_browser_world_bg.wasm": "526ef3bacb1077c3664ccf2531020948a59514a08ac2b1d468f366c4fde1a7b3",
+    "native/browser-world/fixtures/fly-ecology/world.json": "ab6b1dcdb7c0e97bc3c4ea10e78c6e62980d48dcf8216328a25a0f91b16906c9"
+  }
+}

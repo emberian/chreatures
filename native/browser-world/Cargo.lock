@@ -28,6 +28,7 @@ name = "chreatures-browser-world"
 version = "0.1.0"
 dependencies = [
  "chreatures-ecology-core",
+ "chreatures-fly-aerodynamics",
  "serde",
  "serde_json",
  "wasm-bindgen",
@@ -41,6 +42,10 @@ dependencies = [
  "serde_json",
  "sha2",
 ]
+
+[[package]]
+name = "chreatures-fly-aerodynamics"
+version = "0.1.0"
 
 [[package]]
 name = "cpufeatures"

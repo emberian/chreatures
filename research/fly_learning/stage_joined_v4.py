@@ -88,11 +88,16 @@ def main() -> None:
         raise ValueError("resident pack lacks the current private learning contract")
     if (
         release.get("format") != "chreatures-browser-release-v1"
-        or release.get("sourceRevision") != arguments.revision
         or release.get("serviceArtifactSha256") != cns["serviceArtifactSha256"]
         or release.get("residentArtifactSha256") != resident["artifactSha256"]
     ):
         raise ValueError("model release identities differ from the staged inputs")
+    # A fixed learned/initialized model can run in a newer physical engine.
+    # Preserve its own provenance instead of giving the new runtime its old
+    # revision or rewriting a hard-linked immutable model manifest.
+    model_revision = release.get("sourceRevision", "")
+    if len(model_revision) != 40 or any(c not in "0123456789abcdef" for c in model_revision):
+        raise ValueError("model release source revision differs")
     for name, identity in release.get("files", {}).items():
         path = live / "model" / name
         if path.stat().st_size != identity["bytes"] or sha256(path) != identity["sha256"]:
@@ -223,6 +228,7 @@ def main() -> None:
     receipt = {
         "format": "chreatures-v4-joined-stage-v1",
         "source_revision": arguments.revision,
+        "model_source_revision": model_revision,
         "batch": arguments.batch,
         "service_sha256": cns["serviceArtifactSha256"],
         "adapter_sha256": cns["identity"]["artifact"],

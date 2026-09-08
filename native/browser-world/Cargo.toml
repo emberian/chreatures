@@ -10,6 +10,7 @@ wasm-bindgen = "=0.2.127"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 chreatures-ecology-core = { path = "../ecology-core" }
+chreatures-fly-aerodynamics = { path = "../fly-aerodynamics" }
 [profile.release]
 opt-level = 3
 lto = true

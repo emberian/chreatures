@@ -103,7 +103,7 @@ export async function createBrowserWorld({
   await coreModule.default(coreWasm ? { module_or_path: coreWasm } : undefined);
   const mj = await mujocoFactory(mujocoOptions);
   const model = compileModel(mj, xml, fixture, assets);
-  return new BrowserWorld(mj, coreModule.WorldCore, coreModule.RouteGeometry, fixture, xml, assets, model, seed);
+  return new BrowserWorld(mj, coreModule.WorldCore, coreModule.RouteGeometry, coreModule.AeroWorld, fixture, xml, assets, model, seed);
 }
 class BrowserWorld {
   #mj;
@@ -152,7 +152,12 @@ class BrowserWorld {
   #routeInside;
   #routeEndpointsMm;
   #routeTrace = {rayQueries: 0, containmentQueries: 0};
-  constructor(mj, Core, RouteCore, fixture, xml, assets, model, seed) {
+  #aero;
+  #wingBodies;
+  #wingVelocities;
+  #wingWrenches;
+  #wingDiagnostics;
+  constructor(mj, Core, RouteCore, AeroCore, fixture, xml, assets, model, seed) {
     if (mj.mj_versionString() !== "3.12.0")
       throw new Error("MuJoCo engine pin differs");
     this.#mj = mj;
@@ -168,6 +173,12 @@ class BrowserWorld {
     mj.mj_resetDataKeyframe(this.#model, this.#data, neutralKey);
     this.#core = new Core(JSON.stringify(fixture), seed);
     this.#routeGeometry = new RouteCore(JSON.stringify(fixture));
+    this.#aero = new AeroCore(JSON.stringify(fixture));
+    this.#wingBodies = new Int32Array(this.#aero.wing_body_len());
+    this.#aero.copy_wing_bodies(this.#wingBodies);
+    this.#wingVelocities = new Float64Array((Math.max(...this.#wingBodies) + 1) * 6);
+    this.#wingWrenches = new Float64Array(this.#aero.wrench_len());
+    this.#wingDiagnostics = new Float64Array(this.#aero.diagnostic_len());
     this.#routePlan = JSON.parse(this.#routeGeometry.plan());
     this.#routeDistances = new Float64Array(this.#routePlan.rays.length);
     this.#routeInside = new Uint8Array(this.#routePlan.endpoints_m.length);
@@ -219,6 +230,8 @@ class BrowserWorld {
   }
   #validateCompiledFixture() {
     const m = this.#model, f = this.#fixture;
+    if (m.opt.integrator !== this.#mj.mjtIntegrator.mjINT_EULER.value)
+      throw new Error("The fly's split force/integration boundary requires the pinned Euler integrator");
     const counts = f.compiled_counts;
     if (f.format !== "chreatures-fly-ecology-compiled-v1" || m.opt.timestep !== PHYSICS_DT || f.physics_dt !== PHYSICS_DT || f.control_dt !== CONTROL_DT || !Array.isArray(f.bodies) || f.bodies.length < 1 || f.mesh_assets.length !== 39 || !counts ||
       [["nq", m.nq], ["nv", m.nv], ["nu", m.nu], ["nbody", m.nbody], ["njnt", m.njnt], ["ngeom", m.ngeom], ["nmesh", m.nmesh], ["nsite", m.nsite], ["nsensor", m.nsensor], ["nsensordata", m.nsensordata]].some(([name, value]) => counts[name] !== value) ||
@@ -603,7 +616,8 @@ class BrowserWorld {
       scratch.data.geom_xpos.set(point, scratch.endpointGeom * 3);
       for (let geom = 0; geom < m.ngeom; geom++) {
         if (!solid[geom]) continue;
-        if (m.geom_type[geom] !== mj.mjtGeom.mjGEOM_PLANE.value) {
+        if (m.geom_type[geom] !== mj.mjtGeom.mjGEOM_PLANE.value &&
+            m.geom_type[geom] !== mj.mjtGeom.mjGEOM_HFIELD.value) {
           const bound = m.geom_rbound[geom] + radiusMm;
           const offset = geom * 3;
           const squared = (point[0] - d.geom_xpos[offset]) ** 2 +
@@ -612,7 +626,7 @@ class BrowserWorld {
         }
         containmentQueries++;
         if (mj.mj_geomDistance(scratch.model, scratch.data, scratch.endpointGeom, geom,
-          1000, this.#buffers.geomDistance) < 0) {
+          1000, this.#buffers.geomDistance) <= 0) {
           this.#routeInside[endpoint] = 1;
           break;
         }
@@ -959,13 +973,17 @@ class BrowserWorld {
       }
       const samples = [];
       for (let step = 0; step < SUBSTEPS; step++) {
+        // Refresh current qpos/qvel-dependent kinematics before evaluating
+        // wing loads. A full mj_step leaves these arrays at its input pose.
+        this.#mj.mj_step1(m, d);
         d.qfrc_applied.fill(0);
         d.xfrc_applied.fill(0);
         for (const event of this.#visitorForces) {
           for (let k = 0; k < 3; k++)
             d.xfrc_applied[event.body * 6 + k] += event.force[k];
         }
-        this.#mj.mj_step(m, d);
+        this.#applyWingForces();
+        this.#mj.mj_step2(m, d);
         if ((step + 1) % (SUBSTEPS / CONTACT_SAMPLES) === 0) samples.push(this.#capturePhysics());
       }
       this.#mj.mj_forward(m, d);
@@ -995,6 +1013,7 @@ class BrowserWorld {
         throw error;
       }
       this.#visitorForces = [];
+      this.#aero.copy_diagnostics(this.#wingDiagnostics);
       this.#physicsSensed = true;
       return { time: this.time };
     } catch (error) {
@@ -1002,6 +1021,21 @@ class BrowserWorld {
       throw error;
     } finally {
       this.#busy = false;
+    }
+  }
+  #applyWingForces() {
+    const m = this.#model, d = this.#data, mj = this.#mj;
+    for (const body of this.#wingBodies) {
+      mj.mj_objectVelocity(m, d, mj.mjtObj.mjOBJ_XBODY.value, body, this.#buffers.velocity, 0);
+      this.#wingVelocities.set(this.#buffers.velocity.GetView(), body * 6);
+    }
+    // XBODY velocity is at the body origin. Rust shifts the summed blade
+    // moment to the actual xipos center of mass required by xfrc_applied.
+    this.#aero.evaluate_bulk(d.xpos, d.xipos, d.xmat, this.#wingVelocities);
+    this.#aero.copy_wrenches(this.#wingWrenches);
+    for (let wing = 0; wing < this.#wingBodies.length; wing++) {
+      const offset = this.#wingBodies[wing] * 6;
+      for (let k = 0; k < 6; k++) d.xfrc_applied[offset + k] += this.#wingWrenches[wing * 6 + k];
     }
   }
   /** Host video bytes are a physical emitting surface, never a CNS input array. */
@@ -1210,6 +1244,17 @@ class BrowserWorld {
         clearanceChecks: this.#clearanceChecks,
       },
       illumination: structuredClone(this.#lastIllumination),
+      aerodynamics: {
+        schema: this.#fixture.wing_aerodynamics.aerodynamic_schema_sha256,
+        wingBodies: Int32Array.from(this.#wingBodies),
+        lastSubstep: Float64Array.from(this.#wingDiagnostics),
+        stride: 15,
+        channels: ["force_model_x", "force_model_y", "force_model_z", "lift_model_x", "lift_model_y", "lift_model_z",
+          "drag_model_x", "drag_model_y", "drag_model_z", "root_torque_model_x", "root_torque_model_y", "root_torque_model_z",
+          "power_against_air_W", "maximum_Re", "active_strip_count"],
+        source: "actual-wing-kinematics-24-strip-translational-load",
+        sample: "last physics substep before integration; observer only",
+      },
       retinalTrace: structuredClone(this.#lastRetinalTrace),
       routeMeasurements: {
         open: Float32Array.from(this.#routeMeasurements.open),
@@ -1254,7 +1299,7 @@ class BrowserWorld {
       this.#mj.mjtState.mjSTATE_INTEGRATION.value,
     );
     return {
-      format: "chreatures-browser-fly-physical-snapshot-v4",
+      format: "chreatures-browser-fly-physical-snapshot-v5",
       engine: ENGINE,
       model: this.#fixture.source_mjcf_sha256,
       atlas: this.#fixture.atlas_sha256,
@@ -1283,6 +1328,7 @@ class BrowserWorld {
       },
       routeGeometry: this.#routeGeometry.snapshot(),
       routeTopologyRevision: this.#routeTopologyRevision,
+      wingDiagnostics: arr(this.#wingDiagnostics),
       fixture: structuredClone(this.#fixture),
       xml: this.#xml,
     };
@@ -1290,7 +1336,7 @@ class BrowserWorld {
   restore(snapshot) {
     this.#assertOpen();
     if (
-      snapshot?.format !== "chreatures-browser-fly-physical-snapshot-v4" ||
+      snapshot?.format !== "chreatures-browser-fly-physical-snapshot-v5" ||
       snapshot.engine !== ENGINE ||
       snapshot.model !== this.#fixture.source_mjcf_sha256 ||
       snapshot.atlas !== this.#fixture.atlas_sha256
@@ -1350,6 +1396,7 @@ class BrowserWorld {
     if (!Number.isSafeInteger(snapshot.routeTopologyRevision) || snapshot.routeTopologyRevision < 0 || snapshot.routeTopologyRevision > 0xffffffff)
       throw new Error("Saved route topology revision differs");
     const routeState = JSON.parse(snapshot.routeGeometry);
+    checkNumbers(snapshot.wingDiagnostics, this.#wingDiagnostics.length, "Saved wing diagnostics");
     this.#routeGeometry.validate_snapshot(snapshot.routeGeometry);
     if (routeState.plan_sha256 !== this.#routePlan.sha256 ||
       JSON.stringify(routeState.route_open_fraction) !== JSON.stringify(snapshot.routeMeasurements.open) ||
@@ -1378,6 +1425,7 @@ class BrowserWorld {
     try {
       this.#routeGeometry.restore(snapshot.routeGeometry);
       this.#routeTopologyRevision = snapshot.routeTopologyRevision;
+      this.#wingDiagnostics.set(snapshot.wingDiagnostics);
       this.#mj.mj_setState(
         this.#model,
         this.#data,
@@ -1618,6 +1666,7 @@ class BrowserWorld {
     for (const b of Object.values(this.#buffers)) b.delete();
     this.#core.free();
     this.#routeGeometry.free();
+    this.#aero.free();
     this.#data.delete();
     this.#model.delete();
   }
