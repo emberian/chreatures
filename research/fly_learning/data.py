@@ -238,7 +238,7 @@ def load_episode(path: Path, expected_sha256: str | None = None) -> Episode:
         "collector_sha256", "body_schema_sha256", "morphology_sha256",
         "motor_atlas_sha256", "cns_service_sha256", "cns_adapter_sha256", "motor_calibration_sha256",
         "retina_mapping_sha256", "scene_manifest_sha256", "world_instance_identity",
-        "scene_layout_identity",
+        "scene_layout_identity", "native_runtime_sha256",
         "initial_snapshot_sha256", "curriculum_plan_sha256",
     )
     if any(not HEX64.fullmatch(str(meta.get(name, ""))) for name in required_hashes):
@@ -325,7 +325,7 @@ def seal_corpus(source: Path, output: Path) -> dict[str, Any]:
             "source_revision", "collector_sha256", "body_schema_sha256", "morphology_sha256",
             "motor_atlas_sha256", "cns_service_sha256", "cns_adapter_sha256",
             "motor_calibration_sha256", "retina_mapping_sha256", "scene_manifest_sha256",
-            "scene_layout_identity",
+            "scene_layout_identity", "native_runtime_sha256",
             "body_afferent_dim", "motor_dim", "outcome_dim", "sensory_dim",
             "body_afferent_rows", "motor_rows", "cns_format",
             "physics_dt_s", "control_dt_s", "control_substeps", "cns_dt_s", "cns_substeps",
