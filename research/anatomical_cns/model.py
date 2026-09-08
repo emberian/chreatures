@@ -32,8 +32,8 @@ def _inv_softplus(x):
 
 def _csr(crow, col, val, device):
     return torch.sparse_csr_tensor(
-        torch.as_tensor(crow.astype(np.int64), device=device),
-        torch.as_tensor(col.astype(np.int64), device=device),
+        torch.as_tensor(crow.astype(np.int32), device=device),
+        torch.as_tensor(col.astype(np.int32), device=device),
         torch.as_tensor(val.astype(np.float32), device=device),
         size=(N, N),
         device=device,
@@ -198,13 +198,16 @@ class AnatomicalCNS(nn.Module):
             "optic_matrix",
             torch.sparse_csr_tensor(
                 torch.as_tensor(
-                    np.asarray(arrays["atlas.receptor_ptr"], dtype=np.int64)
+                    np.array(arrays["atlas.receptor_ptr"], dtype=np.int32, copy=True),
+                    device=device,
                 ),
                 torch.as_tensor(
-                    np.asarray(arrays["atlas.site_indices"], dtype=np.int64)
+                    np.array(arrays["atlas.site_indices"], dtype=np.int32, copy=True),
+                    device=device,
                 ),
                 torch.as_tensor(
-                    np.asarray(arrays["atlas.site_weight"], dtype=np.float32)
+                    np.array(arrays["atlas.site_weight"], dtype=np.float32, copy=True),
+                    device=device,
                 ),
                 size=(RECEPTORS, SITES),
                 device=device,

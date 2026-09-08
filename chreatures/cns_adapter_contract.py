@@ -288,3 +288,31 @@ def write_service_artifact(path, arrays, **kwargs):
         "file_sha256": h.hexdigest(),
         "metadata": meta,
     }
+
+
+def load_service_artifact(path):
+    """Memory-map and authenticate one current CHCNS3 artifact."""
+    path = Path(path)
+    with path.open("rb") as stream:
+        if stream.read(8) != MAGIC:
+            raise ValueError("requires a CHCNS3 service artifact")
+        metadata_bytes = stream.read(4)
+        if len(metadata_bytes) != 4:
+            raise ValueError("truncated CHCNS3 metadata length")
+        metadata_length = struct.unpack("<I", metadata_bytes)[0]
+        metadata = json.loads(stream.read(metadata_length))
+    if metadata.get("format") != FORMAT or metadata.get("dimensions") != DIMENSIONS:
+        raise ValueError("CHCNS3 metadata contract differs")
+    offset = 12 + metadata_length
+    arrays = {}
+    for name, dtype, shape in ARRAY_SPECS:
+        value = np.memmap(path, mode="r", offset=offset, dtype=dtype, shape=shape)
+        expected = metadata.get("array_sha256", {}).get(name)
+        if expected is None or hashlib.sha256(value).hexdigest() != expected:
+            raise ValueError(f"CHCNS3 tensor receipt differs: {name}")
+        arrays[name] = value
+        offset += value.nbytes
+    if path.stat().st_size != offset:
+        raise ValueError("CHCNS3 artifact has trailing or missing bytes")
+    validate_arrays(arrays)
+    return arrays, metadata
