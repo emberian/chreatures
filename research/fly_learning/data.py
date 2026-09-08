@@ -237,7 +237,8 @@ def load_episode(path: Path, expected_sha256: str | None = None) -> Episode:
     required_hashes = (
         "collector_sha256", "body_schema_sha256", "morphology_sha256",
         "motor_atlas_sha256", "cns_service_sha256", "cns_adapter_sha256", "motor_calibration_sha256",
-        "retina_mapping_sha256", "scene_manifest_sha256", "layout_identity",
+        "retina_mapping_sha256", "scene_manifest_sha256", "world_instance_identity",
+        "scene_layout_identity",
         "initial_snapshot_sha256", "curriculum_plan_sha256",
     )
     if any(not HEX64.fullmatch(str(meta.get(name, ""))) for name in required_hashes):
@@ -269,7 +270,7 @@ def load_corpus(root: Path) -> Corpus:
         if int(episode.metadata["world_index"]) != expected_index:
             raise FlyLearningContractError("episode world index differs from manifest")
         episodes.append(episode)
-    identity_keys = ("layout_identity", "initial_snapshot_sha256")
+    identity_keys = ("world_instance_identity", "initial_snapshot_sha256")
     for key in identity_keys:
         values = [episode.metadata[key] for episode in episodes]
         if len(set(values)) != len(values):
@@ -315,7 +316,8 @@ def seal_corpus(source: Path, output: Path) -> dict[str, Any]:
             rows.append({
                 "world_index": world_index, "file": name, "sha256": episode.sha256,
                 "split": split_for_world(world_index),
-                "layout_identity": episode.metadata["layout_identity"],
+                "world_instance_identity": episode.metadata["world_instance_identity"],
+                "scene_layout_identity": episode.metadata["scene_layout_identity"],
                 "initial_snapshot_sha256": episode.metadata["initial_snapshot_sha256"],
             })
             episodes.append(episode)
@@ -323,6 +325,7 @@ def seal_corpus(source: Path, output: Path) -> dict[str, Any]:
             "source_revision", "collector_sha256", "body_schema_sha256", "morphology_sha256",
             "motor_atlas_sha256", "cns_service_sha256", "cns_adapter_sha256",
             "motor_calibration_sha256", "retina_mapping_sha256", "scene_manifest_sha256",
+            "scene_layout_identity",
             "body_afferent_dim", "motor_dim", "outcome_dim", "sensory_dim",
             "body_afferent_rows", "motor_rows", "cns_format",
             "physics_dt_s", "control_dt_s", "control_substeps", "cns_dt_s", "cns_substeps",
