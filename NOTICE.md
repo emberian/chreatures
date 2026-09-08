@@ -40,3 +40,10 @@ runtime under [Apache-2.0](site/live/vendor/mujoco/LICENSE). Its version and fil
 hashes are recorded in [the physics asset manifest](site/live/physics-assets.json).
 The live physical screen uses the same attributed silent Bad Apple excerpt;
 placing it on an interactive surface does not relicense the animation.
+
+The anatomical body assets and author kinematics derive from NeuroMechFly /
+FlyGym v2.1.0, pinned at `ca65a510c2afe6ac61c51df4f274c8d190c2f95f`,
+copyright 2023–2026 The NeuroMechFly v2 Authors, under Apache-2.0. See
+[the body source notice](native/fly-body/THIRD_PARTY.md) for the retained license,
+source configuration and distinctions between morphology, authored joint axes,
+engineered actuation and the cross-specimen pairing with MaleCNS.

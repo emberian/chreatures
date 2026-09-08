@@ -1,5 +1,6 @@
 import { LiveEngine } from './engine.js';
 let engine, running = false, queue = Promise.resolve(), scheduled = false;
+let deliveredMeshRevision = null;
 const post = (type, detail = {}, transfer = []) => self.postMessage({type, ...detail}, transfer);
 function exclusive(operation, requestId) {
   queue = queue.then(operation).catch(error => {
@@ -9,8 +10,13 @@ function exclusive(operation, requestId) {
   });
 }
 function frame(value) {
+  // Anatomical triangles are immutable between geometry revisions. Copy once,
+  // then send only physical transforms; never detach the host's cached meshes.
+  const revision = value.meshRevision ?? value.engine;
+  if (deliveredMeshRevision === revision) delete value.meshes;
+  else deliveredMeshRevision = revision;
   const transferable = [];
-  for (const field of ['positions', 'rotations', 'colors', 'bodyPositions', 'food', 'neuralRates', 'neuralSignal', 'retinalRGB', 'motorActivation', 'deliveredContext']) {
+  for (const field of ['positions', 'rotations', 'colors', 'bodyPositions', 'bodyRotations', 'food', 'neuralRates', 'neuralSignal', 'retinalRGB', 'motorActivation', 'deliveredContext']) {
     if (value[field]?.buffer && !transferable.includes(value[field].buffer)) transferable.push(value[field].buffer);
   }
   post('frame', {...value, paused: !running}, transferable);

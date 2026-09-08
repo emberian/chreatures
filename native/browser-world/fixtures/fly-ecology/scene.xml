@@ -1,0 +1,1224 @@
+<mujoco model="chreatures_ecology_2x">
+  <compiler angle="radian" boundmass="1e-06" boundinertia="1e-12" />
+  <option timestep="0.0001" gravity="0 0 -9810" noslip_iterations="5">
+    <flag energy="enable" />
+  </option>
+  <size nkey="1" />
+  <visual>
+    <global offwidth="2048" offheight="2048" />
+    <headlight ambient="0.5 0.5 0.5" diffuse="0.6 0.6 0.6" specular="0.3 0.3 0.3" />
+    <map stiffness="1000000" stiffnessrot="5000000" force="1e-05" torque="0.0002" znear="0.0005" zfar="250" />
+  </visual>
+  <statistic extent="1" />
+  <default>
+    <default class="fly/main" />
+  </default>
+  <asset>
+    <texture type="skybox" colorspace="auto" name="skybox" builtin="gradient" rgb1="1 1 1" rgb2="1 1 1" width="10" height="60" />
+    <texture type="2d" colorspace="auto" name="checker" builtin="checker" rgb1="0.3 0.3 0.3" rgb2="0.4 0.4 0.4" width="300" height="300" />
+    <texture type="cube" colorspace="auto" name="fly/headthorax" builtin="flat" mark="random" rgb1="0.59 0.39 0.12" rgb2="0.59 0.39 0.12" markrgb="0.7 0.49 0.2" random="0.3" width="50" height="300" />
+    <texture type="cube" colorspace="auto" name="fly/antennaproboscis" builtin="flat" mark="random" rgb1="0.59 0.39 0.12" rgb2="0.59 0.39 0.12" random="0.1" width="50" height="300" />
+    <texture type="cube" colorspace="auto" name="fly/abdomen12345" builtin="gradient" mark="random" rgb1="0.59 0.39 0.12" rgb2="0.82 0.67 0.47" markrgb="0.7 0.49 0.2" random="0.3" width="50" height="300" />
+    <texture type="cube" colorspace="auto" name="fly/abdomen6" builtin="gradient" mark="random" rgb1="0.39 0.2 0" rgb2="0.82 0.67 0.47" markrgb="0.7 0.49 0.2" random="0.3" width="50" height="300" />
+    <texture type="cube" colorspace="auto" name="fly/coxa" builtin="flat" mark="random" rgb1="0.59 0.39 0.12" rgb2="0.59 0.39 0.12" random="0.05" width="50" height="300" />
+    <texture type="cube" colorspace="auto" name="fly/trochanterfemur" builtin="flat" mark="random" rgb1="0.63 0.43 0.16" rgb2="0.63 0.43 0.16" random="0.05" width="50" height="300" />
+    <texture type="cube" colorspace="auto" name="fly/tibia" builtin="flat" mark="random" rgb1="0.67 0.47 0.2" rgb2="0.67 0.47 0.2" random="0.05" width="50" height="300" />
+    <texture type="cube" colorspace="auto" name="fly/tarsus" builtin="flat" mark="random" rgb1="0.71 0.51 0.24" rgb2="0.71 0.51 0.24" random="0.05" width="50" height="300" />
+    <material name="grid" texture="checker" texrepeat="250 250" reflectance="0.2" />
+    <material name="fly/wing" specular="0.2" shininess="0.2" rgba="0.8 0.8 0.9 0.3" />
+    <material name="fly/eye" specular="0.2" shininess="0.2" rgba="0.67 0.21 0.12 1" />
+    <material name="fly/arista" specular="0.2" shininess="0.2" rgba="0.26 0.2 0.16 1" />
+    <material name="fly/haltere" specular="0.2" shininess="0.2" rgba="0.59 0.43 0.24 1" />
+    <material name="fly/headthorax" texture="fly/headthorax" specular="0.2" shininess="0.2" />
+    <material name="fly/antennaproboscis" texture="fly/antennaproboscis" specular="0.2" shininess="0.2" />
+    <material name="fly/abdomen12345" texture="fly/abdomen12345" specular="0.2" shininess="0.2" />
+    <material name="fly/abdomen6" texture="fly/abdomen6" specular="0.2" shininess="0.2" />
+    <material name="fly/coxa" texture="fly/coxa" specular="0.2" shininess="0.2" />
+    <material name="fly/trochanterfemur" texture="fly/trochanterfemur" specular="0.2" shininess="0.2" />
+    <material name="fly/tibia" texture="fly/tibia" specular="0.2" shininess="0.2" />
+    <material name="fly/tarsus" texture="fly/tarsus" specular="0.2" shininess="0.2" />
+    <mesh name="fly/c_thorax" content_type="model/stl" file="c_thorax.stl" scale="1000 1000 1000" />
+    <mesh name="fly/c_head" content_type="model/stl" file="c_head.stl" scale="1000 1000 1000" />
+    <mesh name="fly/c_rostrum" content_type="model/stl" file="c_rostrum.stl" scale="1000 1000 1000" />
+    <mesh name="fly/c_haustellum" content_type="model/stl" file="c_haustellum.stl" scale="1000 1000 1000" />
+    <mesh name="fly/c_abdomen12" content_type="model/stl" file="c_abdomen12.stl" scale="1000 1000 1000" />
+    <mesh name="fly/c_abdomen3" content_type="model/stl" file="c_abdomen3.stl" scale="1000 1000 1000" />
+    <mesh name="fly/c_abdomen4" content_type="model/stl" file="c_abdomen4.stl" scale="1000 1000 1000" />
+    <mesh name="fly/c_abdomen5" content_type="model/stl" file="c_abdomen5.stl" scale="1000 1000 1000" />
+    <mesh name="fly/c_abdomen6" content_type="model/stl" file="c_abdomen6.stl" scale="1000 1000 1000" />
+    <mesh name="fly/l_eye" content_type="model/stl" file="l_eye.stl" scale="1000 1000 1000" />
+    <mesh name="fly/r_eye" content_type="model/stl" file="l_eye.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/l_pedicel" content_type="model/stl" file="l_pedicel.stl" scale="1000 1000 1000" />
+    <mesh name="fly/l_funiculus" content_type="model/stl" file="l_funiculus.stl" scale="1000 1000 1000" />
+    <mesh name="fly/l_arista" content_type="model/stl" file="l_arista.stl" scale="1000 1000 1000" />
+    <mesh name="fly/r_pedicel" content_type="model/stl" file="l_pedicel.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/r_funiculus" content_type="model/stl" file="l_funiculus.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/r_arista" content_type="model/stl" file="l_arista.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/l_wing" content_type="model/stl" file="l_wing.stl" scale="1000 1000 1000" />
+    <mesh name="fly/r_wing" content_type="model/stl" file="l_wing.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/l_haltere" content_type="model/stl" file="l_haltere.stl" scale="1000 1000 1000" />
+    <mesh name="fly/r_haltere" content_type="model/stl" file="l_haltere.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/lf_coxa" content_type="model/stl" file="lf_coxa.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lf_trochanterfemur" content_type="model/stl" file="lf_trochanterfemur.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lf_tibia" content_type="model/stl" file="lf_tibia.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lf_tarsus1" content_type="model/stl" file="lf_tarsus1.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lf_tarsus2" content_type="model/stl" file="lf_tarsus2.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lf_tarsus3" content_type="model/stl" file="lf_tarsus3.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lf_tarsus4" content_type="model/stl" file="lf_tarsus4.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lf_tarsus5" content_type="model/stl" file="lf_tarsus5.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lm_coxa" content_type="model/stl" file="lm_coxa.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lm_trochanterfemur" content_type="model/stl" file="lm_trochanterfemur.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lm_tibia" content_type="model/stl" file="lm_tibia.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lm_tarsus1" content_type="model/stl" file="lm_tarsus1.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lm_tarsus2" content_type="model/stl" file="lm_tarsus2.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lm_tarsus3" content_type="model/stl" file="lm_tarsus3.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lm_tarsus4" content_type="model/stl" file="lm_tarsus4.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lm_tarsus5" content_type="model/stl" file="lm_tarsus5.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lh_coxa" content_type="model/stl" file="lh_coxa.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lh_trochanterfemur" content_type="model/stl" file="lh_trochanterfemur.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lh_tibia" content_type="model/stl" file="lh_tibia.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lh_tarsus1" content_type="model/stl" file="lh_tarsus1.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lh_tarsus2" content_type="model/stl" file="lh_tarsus2.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lh_tarsus3" content_type="model/stl" file="lh_tarsus3.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lh_tarsus4" content_type="model/stl" file="lh_tarsus4.stl" scale="1000 1000 1000" />
+    <mesh name="fly/lh_tarsus5" content_type="model/stl" file="lh_tarsus5.stl" scale="1000 1000 1000" />
+    <mesh name="fly/rf_coxa" content_type="model/stl" file="lf_coxa.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rf_trochanterfemur" content_type="model/stl" file="lf_trochanterfemur.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rf_tibia" content_type="model/stl" file="lf_tibia.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rf_tarsus1" content_type="model/stl" file="lf_tarsus1.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rf_tarsus2" content_type="model/stl" file="lf_tarsus2.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rf_tarsus3" content_type="model/stl" file="lf_tarsus3.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rf_tarsus4" content_type="model/stl" file="lf_tarsus4.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rf_tarsus5" content_type="model/stl" file="lf_tarsus5.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rm_coxa" content_type="model/stl" file="lm_coxa.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rm_trochanterfemur" content_type="model/stl" file="lm_trochanterfemur.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rm_tibia" content_type="model/stl" file="lm_tibia.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rm_tarsus1" content_type="model/stl" file="lm_tarsus1.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rm_tarsus2" content_type="model/stl" file="lm_tarsus2.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rm_tarsus3" content_type="model/stl" file="lm_tarsus3.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rm_tarsus4" content_type="model/stl" file="lm_tarsus4.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rm_tarsus5" content_type="model/stl" file="lm_tarsus5.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rh_coxa" content_type="model/stl" file="lh_coxa.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rh_trochanterfemur" content_type="model/stl" file="lh_trochanterfemur.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rh_tibia" content_type="model/stl" file="lh_tibia.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rh_tarsus1" content_type="model/stl" file="lh_tarsus1.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rh_tarsus2" content_type="model/stl" file="lh_tarsus2.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rh_tarsus3" content_type="model/stl" file="lh_tarsus3.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rh_tarsus4" content_type="model/stl" file="lh_tarsus4.stl" scale="1000 -1000 1000" />
+    <mesh name="fly/rh_tarsus5" content_type="model/stl" file="lh_tarsus5.stl" scale="1000 -1000 1000" />
+    <material name="ecology/soil" rgba="0.18 0.10 0.045 1" />
+    <material name="ecology/leaf" rgba="0.18 0.48 0.12 1" />
+    <material name="ecology/stem" rgba="0.28 0.22 0.08 1" />
+    <material name="ecology/bark" rgba="0.31 0.16 0.07 1" />
+    <material name="ecology/moist" rgba="0.07 0.25 0.31 0.72" />
+    <material name="ecology/grain" rgba="0.72 0.56 0.25 1" />
+  </asset>
+  <worldbody>
+    <body name="resident00/c_thorax" pos="5.5 0 2.1" quat="6.123234e-17 0 0 1">
+      <joint name="resident00/free" type="free" />
+      <geom name="resident00/c_thorax" type="mesh" contype="2" conaffinity="5" group="2" mass="0.000307" material="fly/headthorax" mesh="fly/c_thorax" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+      <camera name="resident00/trackingcam" pos="-0.5 -7.5 5" quat="0.894427 0.447214 0 0" mode="track" fovy="30" />
+      <body name="resident00/c_head" pos="0.0287 0 0.000698">
+        <joint name="resident00/c_thorax-c_head-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-c_head-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-c_head-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/c_head" type="mesh" contype="2" conaffinity="5" group="2" mass="9.46e-05" material="fly/headthorax" mesh="fly/c_head" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident00/c_thorax-c_head" pos="0 0 0" />
+        <body name="resident00/c_rostrum" pos="0.43 0 -0.274">
+          <joint name="resident00/c_head-c_rostrum-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_head-c_rostrum-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_head-c_rostrum-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/c_rostrum" type="mesh" contype="0" conaffinity="0" group="2" mass="1.82e-05" material="fly/antennaproboscis" mesh="fly/c_rostrum" />
+          <site name="resident00/c_head-c_rostrum" pos="0 0 0" />
+          <body name="resident00/c_haustellum" pos="-0.371 0 -0.0196">
+            <joint name="resident00/c_rostrum-c_haustellum-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident00/c_rostrum-c_haustellum-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident00/c_rostrum-c_haustellum-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident00/c_haustellum" type="mesh" contype="2" conaffinity="5" group="2" mass="8.09e-06" material="fly/antennaproboscis" mesh="fly/c_haustellum" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident00/c_rostrum-c_haustellum" pos="0 0 0" />
+          </body>
+        </body>
+        <body name="resident00/l_eye" pos="0.231 -9.31e-10 0.017">
+          <joint name="resident00/c_head-l_eye-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_head-l_eye-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_head-l_eye-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/l_eye" type="mesh" contype="0" conaffinity="0" group="2" mass="1.25e-05" material="fly/eye" mesh="fly/l_eye" />
+          <geom name="resident00/l_eye_cam_marker" size="0.06" pos="-0.03 0.38 0" contype="0" conaffinity="0" group="4" mass="0" rgba="0.07 0.45 0.35 1" />
+          <site name="resident00/c_head-l_eye" pos="0 0 0" />
+          <camera name="resident00/l_eye_cam_camera" pos="0 0 0" quat="0.687945 0.687398 -0.164579 -0.16471" fovy="157" />
+        </body>
+        <body name="resident00/r_eye" pos="0.231 9.31e-10 0.017">
+          <joint name="resident00/c_head-r_eye-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_head-r_eye-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_head-r_eye-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/r_eye" type="mesh" contype="0" conaffinity="0" group="2" mass="1.09e-05" material="fly/eye" mesh="fly/r_eye" />
+          <site name="resident00/c_head-r_eye" pos="0 0 0" />
+          <body name="resident00/r_eye_cam_body" pos="-0.03 -0.38 0">
+            <geom name="resident00/r_eye_cam_marker" size="0.06" contype="0" conaffinity="0" group="4" mass="0" rgba="0.07 0.45 0.35 1" />
+            <camera name="resident00/r_eye_cam_camera" pos="0 0 0" quat="-0.164031 -0.165258 0.687814 0.687529" fovy="157" />
+          </body>
+        </body>
+        <body name="resident00/l_pedicel" pos="0.429 0.086 0.083" quat="0.962305 0.261301 0.0729004 -0.0194001">
+          <joint name="resident00/c_head-l_pedicel-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_head-l_pedicel-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_head-l_pedicel-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/l_pedicel" type="mesh" contype="0" conaffinity="0" group="2" mass="8.66e-07" material="fly/antennaproboscis" mesh="fly/l_pedicel" />
+          <site name="resident00/c_head-l_pedicel" pos="0 0 0" />
+          <body name="resident00/l_funiculus" pos="0.051 -0.000563 -0.0441">
+            <joint name="resident00/l_pedicel-l_funiculus-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident00/l_pedicel-l_funiculus-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident00/l_pedicel-l_funiculus-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident00/l_funiculus" type="mesh" contype="0" conaffinity="0" group="2" mass="1.1e-06" material="fly/antennaproboscis" mesh="fly/l_funiculus" />
+            <site name="resident00/l_pedicel-l_funiculus" pos="0 0 0" />
+            <body name="resident00/l_arista" pos="0.0198 0.0539 -0.0683">
+              <joint name="resident00/l_funiculus-l_arista-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident00/l_funiculus-l_arista-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident00/l_funiculus-l_arista-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident00/l_arista" type="mesh" contype="0" conaffinity="0" group="2" mass="1.1e-07" material="fly/arista" mesh="fly/l_arista" />
+              <site name="resident00/l_funiculus-l_arista" pos="0 0 0" />
+            </body>
+          </body>
+        </body>
+        <body name="resident00/r_pedicel" pos="0.429 -0.086 0.083" quat="0.962305 -0.261301 0.0729004 0.0194001">
+          <joint name="resident00/c_head-r_pedicel-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_head-r_pedicel-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_head-r_pedicel-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/r_pedicel" type="mesh" contype="0" conaffinity="0" group="2" mass="8.62e-07" material="fly/antennaproboscis" mesh="fly/r_pedicel" />
+          <site name="resident00/c_head-r_pedicel" pos="0 0 0" />
+          <body name="resident00/r_funiculus" pos="0.051 0.000563 -0.0441">
+            <joint name="resident00/r_pedicel-r_funiculus-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident00/r_pedicel-r_funiculus-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident00/r_pedicel-r_funiculus-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident00/r_funiculus" type="mesh" contype="0" conaffinity="0" group="2" mass="1.1e-06" material="fly/antennaproboscis" mesh="fly/r_funiculus" />
+            <site name="resident00/r_pedicel-r_funiculus" pos="0 0 0" />
+            <body name="resident00/r_arista" pos="0.0198 -0.0539 -0.0683">
+              <joint name="resident00/r_funiculus-r_arista-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident00/r_funiculus-r_arista-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident00/r_funiculus-r_arista-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident00/r_arista" type="mesh" contype="0" conaffinity="0" group="2" mass="1.1e-07" material="fly/arista" mesh="fly/r_arista" />
+              <site name="resident00/r_funiculus-r_arista" pos="0 0 0" />
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident00/c_abdomen12" pos="-0.862 0 0" quat="0.991376 0 -0.13105 0">
+        <joint name="resident00/c_thorax-c_abdomen12-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-c_abdomen12-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-c_abdomen12-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/c_abdomen12" type="mesh" contype="2" conaffinity="5" mass="8.57e-05" material="fly/abdomen12345" mesh="fly/c_abdomen12" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident00/c_thorax-c_abdomen12" pos="0 0 0" />
+        <body name="resident00/c_abdomen3" pos="-0.326 0 0.04" quat="0.999075 0 -0.0430032 0">
+          <joint name="resident00/c_abdomen12-c_abdomen3-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_abdomen12-c_abdomen3-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/c_abdomen12-c_abdomen3-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/c_abdomen3" type="mesh" contype="2" conaffinity="5" mass="0.000107" material="fly/abdomen12345" mesh="fly/c_abdomen3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident00/c_abdomen12-c_abdomen3" pos="0 0 0" />
+          <body name="resident00/c_abdomen4" pos="-0.208 0 0.025" quat="0.999075 0 0.0430032 0">
+            <joint name="resident00/c_abdomen3-c_abdomen4-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident00/c_abdomen3-c_abdomen4-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident00/c_abdomen3-c_abdomen4-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident00/c_abdomen4" type="mesh" contype="2" conaffinity="5" mass="9.75e-05" material="fly/abdomen12345" mesh="fly/c_abdomen4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident00/c_abdomen3-c_abdomen4" pos="0 0 0" />
+            <body name="resident00/c_abdomen5" pos="-0.174 0 0.009" quat="0.99996 0 0.00899964 0">
+              <joint name="resident00/c_abdomen4-c_abdomen5-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident00/c_abdomen4-c_abdomen5-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident00/c_abdomen4-c_abdomen5-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident00/c_abdomen5" type="mesh" contype="2" conaffinity="5" mass="9.7e-05" material="fly/abdomen12345" mesh="fly/c_abdomen5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident00/c_abdomen4-c_abdomen5" pos="0 0 0" />
+              <body name="resident00/c_abdomen6" pos="-0.228 0 0.009" quat="0.99996 0 0.00899964 0">
+                <joint name="resident00/c_abdomen5-c_abdomen6-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+                <joint name="resident00/c_abdomen5-c_abdomen6-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+                <joint name="resident00/c_abdomen5-c_abdomen6-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident00/c_abdomen6" type="mesh" contype="2" conaffinity="5" mass="6.27e-05" material="fly/abdomen6" mesh="fly/c_abdomen6" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident00/c_abdomen5-c_abdomen6" pos="0 0 0" />
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident00/l_wing" pos="-0.674 0.395 0.081" quat="0.649074 0.0360041 -0.0650074 0.757087">
+        <joint name="resident00/c_thorax-l_wing-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-l_wing-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-l_wing-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/l_wing" type="mesh" contype="0" conaffinity="0" mass="2.5e-06" material="fly/wing" mesh="fly/l_wing" />
+        <site name="resident00/c_thorax-l_wing" pos="0 0 0" />
+      </body>
+      <body name="resident00/r_wing" pos="-0.674 -0.395 0.081" quat="0.649074 -0.0360041 -0.0650074 -0.757087">
+        <joint name="resident00/c_thorax-r_wing-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-r_wing-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-r_wing-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/r_wing" type="mesh" contype="0" conaffinity="0" mass="2.5e-06" material="fly/wing" mesh="fly/r_wing" />
+        <site name="resident00/c_thorax-r_wing" pos="0 0 0" />
+      </body>
+      <body name="resident00/l_haltere" pos="-0.806 0.214 -0.149" quat="0.945708 0.123962 0.038988 0.297908">
+        <joint name="resident00/c_thorax-l_haltere-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-l_haltere-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-l_haltere-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/l_haltere" type="mesh" contype="0" conaffinity="0" mass="1.42e-06" material="fly/haltere" mesh="fly/l_haltere" />
+        <site name="resident00/c_thorax-l_haltere" pos="0 0 0" />
+      </body>
+      <body name="resident00/r_haltere" pos="-0.806 -0.214 -0.149" quat="0.945708 -0.123962 0.038988 -0.297908">
+        <joint name="resident00/c_thorax-r_haltere-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-r_haltere-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-r_haltere-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/r_haltere" type="mesh" contype="0" conaffinity="0" mass="1.42e-06" material="fly/haltere" mesh="fly/r_haltere" />
+        <site name="resident00/c_thorax-r_haltere" pos="0 0 0" />
+      </body>
+      <body name="resident00/lf_coxa" pos="-0.161 0.172 -0.23">
+        <joint name="resident00/c_thorax-lf_coxa-yaw" pos="0 0 0" axis="1 0 0" springref="-0.296706" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-lf_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.331613" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-lf_coxa-roll" pos="0 0 0" axis="0 0 1" springref="0.575959" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/lf_coxa" type="mesh" contype="2" conaffinity="5" group="2" mass="4.52e-06" material="fly/coxa" mesh="fly/lf_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident00/c_thorax-lf_coxa" pos="0 0 0" />
+        <body name="resident00/lf_trochanterfemur" pos="-0.00181 -0.00172 -0.365">
+          <joint name="resident00/lf_coxa-lf_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-2.42601" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/lf_coxa-lf_trochanterfemur-roll" pos="0 0 0" axis="0 0 1" springref="-0.261799" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/lf_trochanterfemur" type="mesh" contype="2" conaffinity="5" mass="6.29e-06" material="fly/trochanterfemur" mesh="fly/lf_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident00/lf_coxa-lf_trochanterfemur" pos="0 0 0" />
+          <body name="resident00/lf_tibia" pos="-0.00465 -0.00149 -0.705">
+            <joint name="resident00/lf_trochanterfemur-lf_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.36136" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident00/lf_tibia" type="mesh" contype="2" conaffinity="5" mass="2.07e-06" material="fly/tibia" mesh="fly/lf_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident00/lf_trochanterfemur-lf_tibia" pos="0 0 0" />
+            <body name="resident00/lf_tarsus1" pos="-0.000144 -0.000952 -0.518">
+              <joint name="resident00/lf_tibia-lf_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.174533" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident00/lf_tarsus1" type="mesh" contype="2" conaffinity="5" mass="4.65e-07" material="fly/tarsus" mesh="fly/lf_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident00/lf_tibia-lf_tarsus1" pos="0 0 0" />
+              <body name="resident00/lf_tarsus2" pos="0.00182 -0.000977 -0.225">
+                <joint name="resident00/lf_tarsus1-lf_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident00/lf_tarsus2" type="mesh" contype="2" conaffinity="5" mass="2.09e-07" material="fly/tarsus" mesh="fly/lf_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident00/lf_tarsus1-lf_tarsus2" pos="0 0 0" />
+                <body name="resident00/lf_tarsus3" pos="0.00136 -0.000178 -0.154">
+                  <joint name="resident00/lf_tarsus2-lf_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident00/lf_tarsus3" type="mesh" contype="2" conaffinity="5" mass="1.19e-07" material="fly/tarsus" mesh="fly/lf_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident00/lf_tarsus2-lf_tarsus3" pos="0 0 0" />
+                  <body name="resident00/lf_tarsus4" pos="0.00169 0.000303 -0.0985">
+                    <joint name="resident00/lf_tarsus3-lf_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident00/lf_tarsus4" type="mesh" contype="2" conaffinity="5" mass="9.27e-08" material="fly/tarsus" mesh="fly/lf_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident00/lf_tarsus3-lf_tarsus4" pos="0 0 0" />
+                    <body name="resident00/lf_tarsus5" pos="0.00171 -0.000216 -0.087">
+                      <joint name="resident00/lf_tarsus4-lf_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident00/lf_tarsus5" type="mesh" contype="2" conaffinity="5" mass="1.15e-07" material="fly/tarsus" mesh="fly/lf_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident00/lf_tarsus4-lf_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident00/lm_coxa" pos="-0.557 0.125 -0.482">
+        <joint name="resident00/c_thorax-lm_coxa-yaw" pos="0 0 0" axis="1 0 0" springref="-0.174533" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-lm_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.139626" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-lm_coxa-roll" pos="0 0 0" axis="0 0 1" springref="1.51844" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/lm_coxa" type="mesh" contype="2" conaffinity="5" mass="2.6e-06" material="fly/coxa" mesh="fly/lm_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident00/c_thorax-lm_coxa" pos="0 0 0" />
+        <body name="resident00/lm_trochanterfemur" pos="-0.000216 0.000149 -0.181">
+          <joint name="resident00/lm_coxa-lm_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-2.42601" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/lm_coxa-lm_trochanterfemur-roll" pos="0 0 0" axis="0 0 1" springref="0.261799" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/lm_trochanterfemur" type="mesh" contype="2" conaffinity="5" mass="6.48e-06" material="fly/trochanterfemur" mesh="fly/lm_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident00/lm_coxa-lm_trochanterfemur" pos="0 0 0" />
+          <body name="resident00/lm_tibia" pos="-0.000971 5.52e-05 -0.784">
+            <joint name="resident00/lm_trochanterfemur-lm_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.79769" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident00/lm_tibia" type="mesh" contype="2" conaffinity="5" mass="2.86e-06" material="fly/tibia" mesh="fly/lm_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident00/lm_trochanterfemur-lm_tibia" pos="0 0 0" />
+            <body name="resident00/lm_tarsus1" pos="6.58e-05 -0.00037 -0.667">
+              <joint name="resident00/lm_tibia-lm_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.349066" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident00/lm_tarsus1" type="mesh" contype="2" conaffinity="5" mass="5.25e-07" material="fly/tarsus" mesh="fly/lm_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident00/lm_tibia-lm_tarsus1" pos="0 0 0" />
+              <body name="resident00/lm_tarsus2" pos="0.000512 -9.8e-05 -0.292">
+                <joint name="resident00/lm_tarsus1-lm_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident00/lm_tarsus2" type="mesh" contype="2" conaffinity="5" mass="2.35e-07" material="fly/tarsus" mesh="fly/lm_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident00/lm_tarsus1-lm_tarsus2" pos="0 0 0" />
+                <body name="resident00/lm_tarsus3" pos="-2.81e-05 -0.000153 -0.16">
+                  <joint name="resident00/lm_tarsus2-lm_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident00/lm_tarsus3" type="mesh" contype="2" conaffinity="5" mass="1.18e-07" material="fly/tarsus" mesh="fly/lm_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident00/lm_tarsus2-lm_tarsus3" pos="0 0 0" />
+                  <body name="resident00/lm_tarsus4" pos="-0.000126 -0.000191 -0.0911">
+                    <joint name="resident00/lm_tarsus3-lm_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident00/lm_tarsus4" type="mesh" contype="2" conaffinity="5" mass="6.84e-08" material="fly/tarsus" mesh="fly/lm_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident00/lm_tarsus3-lm_tarsus4" pos="0 0 0" />
+                    <body name="resident00/lm_tarsus5" pos="0.000902 9.86e-05 -0.0635">
+                      <joint name="resident00/lm_tarsus4-lm_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident00/lm_tarsus5" type="mesh" contype="2" conaffinity="5" mass="1.14e-07" material="fly/tarsus" mesh="fly/lm_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident00/lm_tarsus4-lm_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident00/lh_coxa" pos="-0.784 0.087 -0.497">
+        <joint name="resident00/c_thorax-lh_coxa-yaw" pos="0 0 0" axis="1 0 0" springref="0.0523599" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-lh_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.418879" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-lh_coxa-roll" pos="0 0 0" axis="0 0 1" springref="2.33874" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/lh_coxa" type="mesh" contype="2" conaffinity="5" mass="2.56e-06" material="fly/coxa" mesh="fly/lh_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident00/c_thorax-lh_coxa" pos="0 0 0" />
+        <body name="resident00/lh_trochanterfemur" pos="-0.000177 -0.000227 -0.199">
+          <joint name="resident00/lh_coxa-lh_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-1.93732" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/lh_coxa-lh_trochanterfemur-roll" pos="0 0 0" axis="0 0 1" springref="0.0698132" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/lh_trochanterfemur" type="mesh" contype="2" conaffinity="5" mass="8.75e-06" material="fly/trochanterfemur" mesh="fly/lh_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident00/lh_coxa-lh_trochanterfemur" pos="0 0 0" />
+          <body name="resident00/lh_tibia" pos="0.000108 0.000294 -0.836">
+            <joint name="resident00/lh_trochanterfemur-lh_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.76278" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident00/lh_tibia" type="mesh" contype="2" conaffinity="5" mass="3.37e-06" material="fly/tibia" mesh="fly/lh_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident00/lh_trochanterfemur-lh_tibia" pos="0 0 0" />
+            <body name="resident00/lh_tarsus1" pos="-8.94e-07 -0.000324 -0.684">
+              <joint name="resident00/lh_tibia-lh_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident00/lh_tarsus1" type="mesh" contype="2" conaffinity="5" mass="1.04e-06" material="fly/tarsus" mesh="fly/lh_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident00/lh_tibia-lh_tarsus1" pos="0 0 0" />
+              <body name="resident00/lh_tarsus2" pos="9.69e-05 0.00051 -0.353">
+                <joint name="resident00/lh_tarsus1-lh_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident00/lh_tarsus2" type="mesh" contype="2" conaffinity="5" mass="3.52e-07" material="fly/tarsus" mesh="fly/lh_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident00/lh_tarsus1-lh_tarsus2" pos="0 0 0" />
+                <body name="resident00/lh_tarsus3" pos="0.000123 -0.000255 -0.175">
+                  <joint name="resident00/lh_tarsus2-lh_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident00/lh_tarsus3" type="mesh" contype="2" conaffinity="5" mass="1.35e-07" material="fly/tarsus" mesh="fly/lh_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident00/lh_tarsus2-lh_tarsus3" pos="0 0 0" />
+                  <body name="resident00/lh_tarsus4" pos="-0.000256 0.000331 -0.0967">
+                    <joint name="resident00/lh_tarsus3-lh_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident00/lh_tarsus4" type="mesh" contype="2" conaffinity="5" mass="9.01e-08" material="fly/tarsus" mesh="fly/lh_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident00/lh_tarsus3-lh_tarsus4" pos="0 0 0" />
+                    <body name="resident00/lh_tarsus5" pos="0.000214 5.86e-05 -0.0733">
+                      <joint name="resident00/lh_tarsus4-lh_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident00/lh_tarsus5" type="mesh" contype="2" conaffinity="5" mass="1.25e-07" material="fly/tarsus" mesh="fly/lh_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident00/lh_tarsus4-lh_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident00/rf_coxa" pos="-0.161 -0.172 -0.23">
+        <joint name="resident00/c_thorax-rf_coxa-yaw" pos="0 0 0" axis="-1 0 0" springref="-0.296706" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-rf_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.331613" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-rf_coxa-roll" pos="0 0 0" axis="0 0 -1" springref="0.575959" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/rf_coxa" type="mesh" contype="2" conaffinity="5" group="2" mass="4.52e-06" material="fly/coxa" mesh="fly/rf_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident00/c_thorax-rf_coxa" pos="0 0 0" />
+        <body name="resident00/rf_trochanterfemur" pos="-0.00181 0.00172 -0.365">
+          <joint name="resident00/rf_coxa-rf_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-2.42601" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/rf_coxa-rf_trochanterfemur-roll" pos="0 0 0" axis="0 0 -1" springref="-0.261799" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/rf_trochanterfemur" type="mesh" contype="2" conaffinity="5" mass="6.29e-06" material="fly/trochanterfemur" mesh="fly/rf_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident00/rf_coxa-rf_trochanterfemur" pos="0 0 0" />
+          <body name="resident00/rf_tibia" pos="-0.00465 0.00149 -0.705">
+            <joint name="resident00/rf_trochanterfemur-rf_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.36136" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident00/rf_tibia" type="mesh" contype="2" conaffinity="5" mass="2.07e-06" material="fly/tibia" mesh="fly/rf_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident00/rf_trochanterfemur-rf_tibia" pos="0 0 0" />
+            <body name="resident00/rf_tarsus1" pos="-0.000144 0.000952 -0.518">
+              <joint name="resident00/rf_tibia-rf_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.174533" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident00/rf_tarsus1" type="mesh" contype="2" conaffinity="5" mass="4.65e-07" material="fly/tarsus" mesh="fly/rf_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident00/rf_tibia-rf_tarsus1" pos="0 0 0" />
+              <body name="resident00/rf_tarsus2" pos="0.00182 0.000977 -0.225">
+                <joint name="resident00/rf_tarsus1-rf_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident00/rf_tarsus2" type="mesh" contype="2" conaffinity="5" mass="2.09e-07" material="fly/tarsus" mesh="fly/rf_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident00/rf_tarsus1-rf_tarsus2" pos="0 0 0" />
+                <body name="resident00/rf_tarsus3" pos="0.00136 0.000178 -0.154">
+                  <joint name="resident00/rf_tarsus2-rf_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident00/rf_tarsus3" type="mesh" contype="2" conaffinity="5" mass="1.19e-07" material="fly/tarsus" mesh="fly/rf_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident00/rf_tarsus2-rf_tarsus3" pos="0 0 0" />
+                  <body name="resident00/rf_tarsus4" pos="0.00169 -0.000303 -0.0985">
+                    <joint name="resident00/rf_tarsus3-rf_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident00/rf_tarsus4" type="mesh" contype="2" conaffinity="5" mass="9.27e-08" material="fly/tarsus" mesh="fly/rf_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident00/rf_tarsus3-rf_tarsus4" pos="0 0 0" />
+                    <body name="resident00/rf_tarsus5" pos="0.00171 0.000216 -0.087">
+                      <joint name="resident00/rf_tarsus4-rf_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident00/rf_tarsus5" type="mesh" contype="2" conaffinity="5" mass="1.15e-07" material="fly/tarsus" mesh="fly/rf_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident00/rf_tarsus4-rf_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident00/rm_coxa" pos="-0.557 -0.125 -0.482">
+        <joint name="resident00/c_thorax-rm_coxa-yaw" pos="0 0 0" axis="-1 0 0" springref="-0.174533" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-rm_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.139626" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-rm_coxa-roll" pos="0 0 0" axis="0 0 -1" springref="1.51844" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/rm_coxa" type="mesh" contype="2" conaffinity="5" mass="2.6e-06" material="fly/coxa" mesh="fly/rm_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident00/c_thorax-rm_coxa" pos="0 0 0" />
+        <body name="resident00/rm_trochanterfemur" pos="-0.000216 -0.000149 -0.181">
+          <joint name="resident00/rm_coxa-rm_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-2.42601" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/rm_coxa-rm_trochanterfemur-roll" pos="0 0 0" axis="0 0 -1" springref="0.261799" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/rm_trochanterfemur" type="mesh" contype="2" conaffinity="5" mass="6.48e-06" material="fly/trochanterfemur" mesh="fly/rm_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident00/rm_coxa-rm_trochanterfemur" pos="0 0 0" />
+          <body name="resident00/rm_tibia" pos="-0.000971 -5.52e-05 -0.784">
+            <joint name="resident00/rm_trochanterfemur-rm_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.79769" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident00/rm_tibia" type="mesh" contype="2" conaffinity="5" mass="2.86e-06" material="fly/tibia" mesh="fly/rm_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident00/rm_trochanterfemur-rm_tibia" pos="0 0 0" />
+            <body name="resident00/rm_tarsus1" pos="6.58e-05 0.00037 -0.667">
+              <joint name="resident00/rm_tibia-rm_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.349066" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident00/rm_tarsus1" type="mesh" contype="2" conaffinity="5" mass="5.25e-07" material="fly/tarsus" mesh="fly/rm_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident00/rm_tibia-rm_tarsus1" pos="0 0 0" />
+              <body name="resident00/rm_tarsus2" pos="0.000512 9.8e-05 -0.292">
+                <joint name="resident00/rm_tarsus1-rm_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident00/rm_tarsus2" type="mesh" contype="2" conaffinity="5" mass="2.35e-07" material="fly/tarsus" mesh="fly/rm_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident00/rm_tarsus1-rm_tarsus2" pos="0 0 0" />
+                <body name="resident00/rm_tarsus3" pos="-2.81e-05 0.000153 -0.16">
+                  <joint name="resident00/rm_tarsus2-rm_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident00/rm_tarsus3" type="mesh" contype="2" conaffinity="5" mass="1.18e-07" material="fly/tarsus" mesh="fly/rm_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident00/rm_tarsus2-rm_tarsus3" pos="0 0 0" />
+                  <body name="resident00/rm_tarsus4" pos="-0.000126 0.000191 -0.0911">
+                    <joint name="resident00/rm_tarsus3-rm_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident00/rm_tarsus4" type="mesh" contype="2" conaffinity="5" mass="6.84e-08" material="fly/tarsus" mesh="fly/rm_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident00/rm_tarsus3-rm_tarsus4" pos="0 0 0" />
+                    <body name="resident00/rm_tarsus5" pos="0.000902 -9.86e-05 -0.0635">
+                      <joint name="resident00/rm_tarsus4-rm_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident00/rm_tarsus5" type="mesh" contype="2" conaffinity="5" mass="1.14e-07" material="fly/tarsus" mesh="fly/rm_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident00/rm_tarsus4-rm_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident00/rh_coxa" pos="-0.784 -0.087 -0.497">
+        <joint name="resident00/c_thorax-rh_coxa-yaw" pos="0 0 0" axis="-1 0 0" springref="0.0523599" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-rh_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.418879" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident00/c_thorax-rh_coxa-roll" pos="0 0 0" axis="0 0 -1" springref="2.33874" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident00/rh_coxa" type="mesh" contype="2" conaffinity="5" mass="2.56e-06" material="fly/coxa" mesh="fly/rh_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident00/c_thorax-rh_coxa" pos="0 0 0" />
+        <body name="resident00/rh_trochanterfemur" pos="-0.000177 0.000227 -0.199">
+          <joint name="resident00/rh_coxa-rh_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-1.93732" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident00/rh_coxa-rh_trochanterfemur-roll" pos="0 0 0" axis="0 0 -1" springref="0.0698132" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident00/rh_trochanterfemur" type="mesh" contype="2" conaffinity="5" mass="8.75e-06" material="fly/trochanterfemur" mesh="fly/rh_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident00/rh_coxa-rh_trochanterfemur" pos="0 0 0" />
+          <body name="resident00/rh_tibia" pos="0.000108 -0.000294 -0.836">
+            <joint name="resident00/rh_trochanterfemur-rh_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.76278" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident00/rh_tibia" type="mesh" contype="2" conaffinity="5" mass="3.37e-06" material="fly/tibia" mesh="fly/rh_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident00/rh_trochanterfemur-rh_tibia" pos="0 0 0" />
+            <body name="resident00/rh_tarsus1" pos="-8.94e-07 0.000324 -0.684">
+              <joint name="resident00/rh_tibia-rh_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident00/rh_tarsus1" type="mesh" contype="2" conaffinity="5" mass="1.04e-06" material="fly/tarsus" mesh="fly/rh_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident00/rh_tibia-rh_tarsus1" pos="0 0 0" />
+              <body name="resident00/rh_tarsus2" pos="9.69e-05 -0.00051 -0.353">
+                <joint name="resident00/rh_tarsus1-rh_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident00/rh_tarsus2" type="mesh" contype="2" conaffinity="5" mass="3.52e-07" material="fly/tarsus" mesh="fly/rh_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident00/rh_tarsus1-rh_tarsus2" pos="0 0 0" />
+                <body name="resident00/rh_tarsus3" pos="0.000123 0.000255 -0.175">
+                  <joint name="resident00/rh_tarsus2-rh_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident00/rh_tarsus3" type="mesh" contype="2" conaffinity="5" mass="1.35e-07" material="fly/tarsus" mesh="fly/rh_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident00/rh_tarsus2-rh_tarsus3" pos="0 0 0" />
+                  <body name="resident00/rh_tarsus4" pos="-0.000256 -0.000331 -0.0967">
+                    <joint name="resident00/rh_tarsus3-rh_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident00/rh_tarsus4" type="mesh" contype="2" conaffinity="5" mass="9.01e-08" material="fly/tarsus" mesh="fly/rh_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident00/rh_tarsus3-rh_tarsus4" pos="0 0 0" />
+                    <body name="resident00/rh_tarsus5" pos="0.000214 -5.86e-05 -0.0733">
+                      <joint name="resident00/rh_tarsus4-rh_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident00/rh_tarsus5" type="mesh" contype="2" conaffinity="5" mass="1.25e-07" material="fly/tarsus" mesh="fly/rh_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident00/rh_tarsus4-rh_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+    <site name="resident00/spawn" pos="5.5 0 0" />
+    <body name="resident01/c_thorax" pos="-5.5 6.7355574e-16 2.1" quat="-1 0 0 1.2246468e-16">
+      <joint name="resident01/free" type="free" />
+      <geom name="resident01/c_thorax" type="mesh" contype="4" conaffinity="3" group="2" mass="0.000307" material="fly/headthorax" mesh="fly/c_thorax" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+      <camera name="resident01/trackingcam" pos="-0.5 -7.5 5" quat="0.894427 0.447214 0 0" mode="track" fovy="30" />
+      <body name="resident01/c_head" pos="0.0287 0 0.000698">
+        <joint name="resident01/c_thorax-c_head-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-c_head-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-c_head-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/c_head" type="mesh" contype="4" conaffinity="3" group="2" mass="9.46e-05" material="fly/headthorax" mesh="fly/c_head" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident01/c_thorax-c_head" pos="0 0 0" />
+        <body name="resident01/c_rostrum" pos="0.43 0 -0.274">
+          <joint name="resident01/c_head-c_rostrum-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_head-c_rostrum-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_head-c_rostrum-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/c_rostrum" type="mesh" contype="0" conaffinity="0" group="2" mass="1.82e-05" material="fly/antennaproboscis" mesh="fly/c_rostrum" />
+          <site name="resident01/c_head-c_rostrum" pos="0 0 0" />
+          <body name="resident01/c_haustellum" pos="-0.371 0 -0.0196">
+            <joint name="resident01/c_rostrum-c_haustellum-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident01/c_rostrum-c_haustellum-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident01/c_rostrum-c_haustellum-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident01/c_haustellum" type="mesh" contype="4" conaffinity="3" group="2" mass="8.09e-06" material="fly/antennaproboscis" mesh="fly/c_haustellum" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident01/c_rostrum-c_haustellum" pos="0 0 0" />
+          </body>
+        </body>
+        <body name="resident01/l_eye" pos="0.231 -9.31e-10 0.017">
+          <joint name="resident01/c_head-l_eye-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_head-l_eye-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_head-l_eye-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/l_eye" type="mesh" contype="0" conaffinity="0" group="2" mass="1.25e-05" material="fly/eye" mesh="fly/l_eye" />
+          <geom name="resident01/l_eye_cam_marker" size="0.06" pos="-0.03 0.38 0" contype="0" conaffinity="0" group="4" mass="0" rgba="0.07 0.45 0.35 1" />
+          <site name="resident01/c_head-l_eye" pos="0 0 0" />
+          <camera name="resident01/l_eye_cam_camera" pos="0 0 0" quat="0.687945 0.687398 -0.164579 -0.16471" fovy="157" />
+        </body>
+        <body name="resident01/r_eye" pos="0.231 9.31e-10 0.017">
+          <joint name="resident01/c_head-r_eye-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_head-r_eye-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_head-r_eye-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/r_eye" type="mesh" contype="0" conaffinity="0" group="2" mass="1.09e-05" material="fly/eye" mesh="fly/r_eye" />
+          <site name="resident01/c_head-r_eye" pos="0 0 0" />
+          <body name="resident01/r_eye_cam_body" pos="-0.03 -0.38 0">
+            <geom name="resident01/r_eye_cam_marker" size="0.06" contype="0" conaffinity="0" group="4" mass="0" rgba="0.07 0.45 0.35 1" />
+            <camera name="resident01/r_eye_cam_camera" pos="0 0 0" quat="-0.164031 -0.165258 0.687814 0.687529" fovy="157" />
+          </body>
+        </body>
+        <body name="resident01/l_pedicel" pos="0.429 0.086 0.083" quat="0.962305 0.261301 0.0729004 -0.0194001">
+          <joint name="resident01/c_head-l_pedicel-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_head-l_pedicel-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_head-l_pedicel-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/l_pedicel" type="mesh" contype="0" conaffinity="0" group="2" mass="8.66e-07" material="fly/antennaproboscis" mesh="fly/l_pedicel" />
+          <site name="resident01/c_head-l_pedicel" pos="0 0 0" />
+          <body name="resident01/l_funiculus" pos="0.051 -0.000563 -0.0441">
+            <joint name="resident01/l_pedicel-l_funiculus-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident01/l_pedicel-l_funiculus-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident01/l_pedicel-l_funiculus-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident01/l_funiculus" type="mesh" contype="0" conaffinity="0" group="2" mass="1.1e-06" material="fly/antennaproboscis" mesh="fly/l_funiculus" />
+            <site name="resident01/l_pedicel-l_funiculus" pos="0 0 0" />
+            <body name="resident01/l_arista" pos="0.0198 0.0539 -0.0683">
+              <joint name="resident01/l_funiculus-l_arista-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident01/l_funiculus-l_arista-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident01/l_funiculus-l_arista-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident01/l_arista" type="mesh" contype="0" conaffinity="0" group="2" mass="1.1e-07" material="fly/arista" mesh="fly/l_arista" />
+              <site name="resident01/l_funiculus-l_arista" pos="0 0 0" />
+            </body>
+          </body>
+        </body>
+        <body name="resident01/r_pedicel" pos="0.429 -0.086 0.083" quat="0.962305 -0.261301 0.0729004 0.0194001">
+          <joint name="resident01/c_head-r_pedicel-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_head-r_pedicel-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_head-r_pedicel-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/r_pedicel" type="mesh" contype="0" conaffinity="0" group="2" mass="8.62e-07" material="fly/antennaproboscis" mesh="fly/r_pedicel" />
+          <site name="resident01/c_head-r_pedicel" pos="0 0 0" />
+          <body name="resident01/r_funiculus" pos="0.051 0.000563 -0.0441">
+            <joint name="resident01/r_pedicel-r_funiculus-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident01/r_pedicel-r_funiculus-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident01/r_pedicel-r_funiculus-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident01/r_funiculus" type="mesh" contype="0" conaffinity="0" group="2" mass="1.1e-06" material="fly/antennaproboscis" mesh="fly/r_funiculus" />
+            <site name="resident01/r_pedicel-r_funiculus" pos="0 0 0" />
+            <body name="resident01/r_arista" pos="0.0198 -0.0539 -0.0683">
+              <joint name="resident01/r_funiculus-r_arista-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident01/r_funiculus-r_arista-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident01/r_funiculus-r_arista-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident01/r_arista" type="mesh" contype="0" conaffinity="0" group="2" mass="1.1e-07" material="fly/arista" mesh="fly/r_arista" />
+              <site name="resident01/r_funiculus-r_arista" pos="0 0 0" />
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident01/c_abdomen12" pos="-0.862 0 0" quat="0.991376 0 -0.13105 0">
+        <joint name="resident01/c_thorax-c_abdomen12-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-c_abdomen12-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-c_abdomen12-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/c_abdomen12" type="mesh" contype="4" conaffinity="3" mass="8.57e-05" material="fly/abdomen12345" mesh="fly/c_abdomen12" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident01/c_thorax-c_abdomen12" pos="0 0 0" />
+        <body name="resident01/c_abdomen3" pos="-0.326 0 0.04" quat="0.999075 0 -0.0430032 0">
+          <joint name="resident01/c_abdomen12-c_abdomen3-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_abdomen12-c_abdomen3-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/c_abdomen12-c_abdomen3-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/c_abdomen3" type="mesh" contype="4" conaffinity="3" mass="0.000107" material="fly/abdomen12345" mesh="fly/c_abdomen3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident01/c_abdomen12-c_abdomen3" pos="0 0 0" />
+          <body name="resident01/c_abdomen4" pos="-0.208 0 0.025" quat="0.999075 0 0.0430032 0">
+            <joint name="resident01/c_abdomen3-c_abdomen4-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident01/c_abdomen3-c_abdomen4-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+            <joint name="resident01/c_abdomen3-c_abdomen4-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident01/c_abdomen4" type="mesh" contype="4" conaffinity="3" mass="9.75e-05" material="fly/abdomen12345" mesh="fly/c_abdomen4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident01/c_abdomen3-c_abdomen4" pos="0 0 0" />
+            <body name="resident01/c_abdomen5" pos="-0.174 0 0.009" quat="0.99996 0 0.00899964 0">
+              <joint name="resident01/c_abdomen4-c_abdomen5-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident01/c_abdomen4-c_abdomen5-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+              <joint name="resident01/c_abdomen4-c_abdomen5-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident01/c_abdomen5" type="mesh" contype="4" conaffinity="3" mass="9.7e-05" material="fly/abdomen12345" mesh="fly/c_abdomen5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident01/c_abdomen4-c_abdomen5" pos="0 0 0" />
+              <body name="resident01/c_abdomen6" pos="-0.228 0 0.009" quat="0.99996 0 0.00899964 0">
+                <joint name="resident01/c_abdomen5-c_abdomen6-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+                <joint name="resident01/c_abdomen5-c_abdomen6-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+                <joint name="resident01/c_abdomen5-c_abdomen6-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident01/c_abdomen6" type="mesh" contype="4" conaffinity="3" mass="6.27e-05" material="fly/abdomen6" mesh="fly/c_abdomen6" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident01/c_abdomen5-c_abdomen6" pos="0 0 0" />
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident01/l_wing" pos="-0.674 0.395 0.081" quat="0.649074 0.0360041 -0.0650074 0.757087">
+        <joint name="resident01/c_thorax-l_wing-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-l_wing-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-l_wing-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/l_wing" type="mesh" contype="0" conaffinity="0" mass="2.5e-06" material="fly/wing" mesh="fly/l_wing" />
+        <site name="resident01/c_thorax-l_wing" pos="0 0 0" />
+      </body>
+      <body name="resident01/r_wing" pos="-0.674 -0.395 0.081" quat="0.649074 -0.0360041 -0.0650074 -0.757087">
+        <joint name="resident01/c_thorax-r_wing-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-r_wing-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-r_wing-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/r_wing" type="mesh" contype="0" conaffinity="0" mass="2.5e-06" material="fly/wing" mesh="fly/r_wing" />
+        <site name="resident01/c_thorax-r_wing" pos="0 0 0" />
+      </body>
+      <body name="resident01/l_haltere" pos="-0.806 0.214 -0.149" quat="0.945708 0.123962 0.038988 0.297908">
+        <joint name="resident01/c_thorax-l_haltere-yaw" pos="0 0 0" axis="1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-l_haltere-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-l_haltere-roll" pos="0 0 0" axis="0 0 1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/l_haltere" type="mesh" contype="0" conaffinity="0" mass="1.42e-06" material="fly/haltere" mesh="fly/l_haltere" />
+        <site name="resident01/c_thorax-l_haltere" pos="0 0 0" />
+      </body>
+      <body name="resident01/r_haltere" pos="-0.806 -0.214 -0.149" quat="0.945708 -0.123962 0.038988 -0.297908">
+        <joint name="resident01/c_thorax-r_haltere-yaw" pos="0 0 0" axis="-1 0 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-r_haltere-pitch" pos="0 0 0" axis="0 1 0" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-r_haltere-roll" pos="0 0 0" axis="0 0 -1" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/r_haltere" type="mesh" contype="0" conaffinity="0" mass="1.42e-06" material="fly/haltere" mesh="fly/r_haltere" />
+        <site name="resident01/c_thorax-r_haltere" pos="0 0 0" />
+      </body>
+      <body name="resident01/lf_coxa" pos="-0.161 0.172 -0.23">
+        <joint name="resident01/c_thorax-lf_coxa-yaw" pos="0 0 0" axis="1 0 0" springref="-0.296706" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-lf_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.331613" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-lf_coxa-roll" pos="0 0 0" axis="0 0 1" springref="0.575959" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/lf_coxa" type="mesh" contype="4" conaffinity="3" group="2" mass="4.52e-06" material="fly/coxa" mesh="fly/lf_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident01/c_thorax-lf_coxa" pos="0 0 0" />
+        <body name="resident01/lf_trochanterfemur" pos="-0.00181 -0.00172 -0.365">
+          <joint name="resident01/lf_coxa-lf_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-2.42601" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/lf_coxa-lf_trochanterfemur-roll" pos="0 0 0" axis="0 0 1" springref="-0.261799" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/lf_trochanterfemur" type="mesh" contype="4" conaffinity="3" mass="6.29e-06" material="fly/trochanterfemur" mesh="fly/lf_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident01/lf_coxa-lf_trochanterfemur" pos="0 0 0" />
+          <body name="resident01/lf_tibia" pos="-0.00465 -0.00149 -0.705">
+            <joint name="resident01/lf_trochanterfemur-lf_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.36136" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident01/lf_tibia" type="mesh" contype="4" conaffinity="3" mass="2.07e-06" material="fly/tibia" mesh="fly/lf_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident01/lf_trochanterfemur-lf_tibia" pos="0 0 0" />
+            <body name="resident01/lf_tarsus1" pos="-0.000144 -0.000952 -0.518">
+              <joint name="resident01/lf_tibia-lf_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.174533" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident01/lf_tarsus1" type="mesh" contype="4" conaffinity="3" mass="4.65e-07" material="fly/tarsus" mesh="fly/lf_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident01/lf_tibia-lf_tarsus1" pos="0 0 0" />
+              <body name="resident01/lf_tarsus2" pos="0.00182 -0.000977 -0.225">
+                <joint name="resident01/lf_tarsus1-lf_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident01/lf_tarsus2" type="mesh" contype="4" conaffinity="3" mass="2.09e-07" material="fly/tarsus" mesh="fly/lf_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident01/lf_tarsus1-lf_tarsus2" pos="0 0 0" />
+                <body name="resident01/lf_tarsus3" pos="0.00136 -0.000178 -0.154">
+                  <joint name="resident01/lf_tarsus2-lf_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident01/lf_tarsus3" type="mesh" contype="4" conaffinity="3" mass="1.19e-07" material="fly/tarsus" mesh="fly/lf_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident01/lf_tarsus2-lf_tarsus3" pos="0 0 0" />
+                  <body name="resident01/lf_tarsus4" pos="0.00169 0.000303 -0.0985">
+                    <joint name="resident01/lf_tarsus3-lf_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident01/lf_tarsus4" type="mesh" contype="4" conaffinity="3" mass="9.27e-08" material="fly/tarsus" mesh="fly/lf_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident01/lf_tarsus3-lf_tarsus4" pos="0 0 0" />
+                    <body name="resident01/lf_tarsus5" pos="0.00171 -0.000216 -0.087">
+                      <joint name="resident01/lf_tarsus4-lf_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident01/lf_tarsus5" type="mesh" contype="4" conaffinity="3" mass="1.15e-07" material="fly/tarsus" mesh="fly/lf_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident01/lf_tarsus4-lf_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident01/lm_coxa" pos="-0.557 0.125 -0.482">
+        <joint name="resident01/c_thorax-lm_coxa-yaw" pos="0 0 0" axis="1 0 0" springref="-0.174533" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-lm_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.139626" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-lm_coxa-roll" pos="0 0 0" axis="0 0 1" springref="1.51844" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/lm_coxa" type="mesh" contype="4" conaffinity="3" mass="2.6e-06" material="fly/coxa" mesh="fly/lm_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident01/c_thorax-lm_coxa" pos="0 0 0" />
+        <body name="resident01/lm_trochanterfemur" pos="-0.000216 0.000149 -0.181">
+          <joint name="resident01/lm_coxa-lm_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-2.42601" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/lm_coxa-lm_trochanterfemur-roll" pos="0 0 0" axis="0 0 1" springref="0.261799" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/lm_trochanterfemur" type="mesh" contype="4" conaffinity="3" mass="6.48e-06" material="fly/trochanterfemur" mesh="fly/lm_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident01/lm_coxa-lm_trochanterfemur" pos="0 0 0" />
+          <body name="resident01/lm_tibia" pos="-0.000971 5.52e-05 -0.784">
+            <joint name="resident01/lm_trochanterfemur-lm_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.79769" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident01/lm_tibia" type="mesh" contype="4" conaffinity="3" mass="2.86e-06" material="fly/tibia" mesh="fly/lm_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident01/lm_trochanterfemur-lm_tibia" pos="0 0 0" />
+            <body name="resident01/lm_tarsus1" pos="6.58e-05 -0.00037 -0.667">
+              <joint name="resident01/lm_tibia-lm_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.349066" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident01/lm_tarsus1" type="mesh" contype="4" conaffinity="3" mass="5.25e-07" material="fly/tarsus" mesh="fly/lm_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident01/lm_tibia-lm_tarsus1" pos="0 0 0" />
+              <body name="resident01/lm_tarsus2" pos="0.000512 -9.8e-05 -0.292">
+                <joint name="resident01/lm_tarsus1-lm_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident01/lm_tarsus2" type="mesh" contype="4" conaffinity="3" mass="2.35e-07" material="fly/tarsus" mesh="fly/lm_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident01/lm_tarsus1-lm_tarsus2" pos="0 0 0" />
+                <body name="resident01/lm_tarsus3" pos="-2.81e-05 -0.000153 -0.16">
+                  <joint name="resident01/lm_tarsus2-lm_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident01/lm_tarsus3" type="mesh" contype="4" conaffinity="3" mass="1.18e-07" material="fly/tarsus" mesh="fly/lm_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident01/lm_tarsus2-lm_tarsus3" pos="0 0 0" />
+                  <body name="resident01/lm_tarsus4" pos="-0.000126 -0.000191 -0.0911">
+                    <joint name="resident01/lm_tarsus3-lm_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident01/lm_tarsus4" type="mesh" contype="4" conaffinity="3" mass="6.84e-08" material="fly/tarsus" mesh="fly/lm_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident01/lm_tarsus3-lm_tarsus4" pos="0 0 0" />
+                    <body name="resident01/lm_tarsus5" pos="0.000902 9.86e-05 -0.0635">
+                      <joint name="resident01/lm_tarsus4-lm_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident01/lm_tarsus5" type="mesh" contype="4" conaffinity="3" mass="1.14e-07" material="fly/tarsus" mesh="fly/lm_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident01/lm_tarsus4-lm_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident01/lh_coxa" pos="-0.784 0.087 -0.497">
+        <joint name="resident01/c_thorax-lh_coxa-yaw" pos="0 0 0" axis="1 0 0" springref="0.0523599" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-lh_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.418879" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-lh_coxa-roll" pos="0 0 0" axis="0 0 1" springref="2.33874" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/lh_coxa" type="mesh" contype="4" conaffinity="3" mass="2.56e-06" material="fly/coxa" mesh="fly/lh_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident01/c_thorax-lh_coxa" pos="0 0 0" />
+        <body name="resident01/lh_trochanterfemur" pos="-0.000177 -0.000227 -0.199">
+          <joint name="resident01/lh_coxa-lh_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-1.93732" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/lh_coxa-lh_trochanterfemur-roll" pos="0 0 0" axis="0 0 1" springref="0.0698132" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/lh_trochanterfemur" type="mesh" contype="4" conaffinity="3" mass="8.75e-06" material="fly/trochanterfemur" mesh="fly/lh_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident01/lh_coxa-lh_trochanterfemur" pos="0 0 0" />
+          <body name="resident01/lh_tibia" pos="0.000108 0.000294 -0.836">
+            <joint name="resident01/lh_trochanterfemur-lh_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.76278" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident01/lh_tibia" type="mesh" contype="4" conaffinity="3" mass="3.37e-06" material="fly/tibia" mesh="fly/lh_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident01/lh_trochanterfemur-lh_tibia" pos="0 0 0" />
+            <body name="resident01/lh_tarsus1" pos="-8.94e-07 -0.000324 -0.684">
+              <joint name="resident01/lh_tibia-lh_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident01/lh_tarsus1" type="mesh" contype="4" conaffinity="3" mass="1.04e-06" material="fly/tarsus" mesh="fly/lh_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident01/lh_tibia-lh_tarsus1" pos="0 0 0" />
+              <body name="resident01/lh_tarsus2" pos="9.69e-05 0.00051 -0.353">
+                <joint name="resident01/lh_tarsus1-lh_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident01/lh_tarsus2" type="mesh" contype="4" conaffinity="3" mass="3.52e-07" material="fly/tarsus" mesh="fly/lh_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident01/lh_tarsus1-lh_tarsus2" pos="0 0 0" />
+                <body name="resident01/lh_tarsus3" pos="0.000123 -0.000255 -0.175">
+                  <joint name="resident01/lh_tarsus2-lh_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident01/lh_tarsus3" type="mesh" contype="4" conaffinity="3" mass="1.35e-07" material="fly/tarsus" mesh="fly/lh_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident01/lh_tarsus2-lh_tarsus3" pos="0 0 0" />
+                  <body name="resident01/lh_tarsus4" pos="-0.000256 0.000331 -0.0967">
+                    <joint name="resident01/lh_tarsus3-lh_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident01/lh_tarsus4" type="mesh" contype="4" conaffinity="3" mass="9.01e-08" material="fly/tarsus" mesh="fly/lh_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident01/lh_tarsus3-lh_tarsus4" pos="0 0 0" />
+                    <body name="resident01/lh_tarsus5" pos="0.000214 5.86e-05 -0.0733">
+                      <joint name="resident01/lh_tarsus4-lh_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident01/lh_tarsus5" type="mesh" contype="4" conaffinity="3" mass="1.25e-07" material="fly/tarsus" mesh="fly/lh_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident01/lh_tarsus4-lh_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident01/rf_coxa" pos="-0.161 -0.172 -0.23">
+        <joint name="resident01/c_thorax-rf_coxa-yaw" pos="0 0 0" axis="-1 0 0" springref="-0.296706" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-rf_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.331613" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-rf_coxa-roll" pos="0 0 0" axis="0 0 -1" springref="0.575959" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/rf_coxa" type="mesh" contype="4" conaffinity="3" group="2" mass="4.52e-06" material="fly/coxa" mesh="fly/rf_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident01/c_thorax-rf_coxa" pos="0 0 0" />
+        <body name="resident01/rf_trochanterfemur" pos="-0.00181 0.00172 -0.365">
+          <joint name="resident01/rf_coxa-rf_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-2.42601" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/rf_coxa-rf_trochanterfemur-roll" pos="0 0 0" axis="0 0 -1" springref="-0.261799" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/rf_trochanterfemur" type="mesh" contype="4" conaffinity="3" mass="6.29e-06" material="fly/trochanterfemur" mesh="fly/rf_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident01/rf_coxa-rf_trochanterfemur" pos="0 0 0" />
+          <body name="resident01/rf_tibia" pos="-0.00465 0.00149 -0.705">
+            <joint name="resident01/rf_trochanterfemur-rf_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.36136" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident01/rf_tibia" type="mesh" contype="4" conaffinity="3" mass="2.07e-06" material="fly/tibia" mesh="fly/rf_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident01/rf_trochanterfemur-rf_tibia" pos="0 0 0" />
+            <body name="resident01/rf_tarsus1" pos="-0.000144 0.000952 -0.518">
+              <joint name="resident01/rf_tibia-rf_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.174533" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident01/rf_tarsus1" type="mesh" contype="4" conaffinity="3" mass="4.65e-07" material="fly/tarsus" mesh="fly/rf_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident01/rf_tibia-rf_tarsus1" pos="0 0 0" />
+              <body name="resident01/rf_tarsus2" pos="0.00182 0.000977 -0.225">
+                <joint name="resident01/rf_tarsus1-rf_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident01/rf_tarsus2" type="mesh" contype="4" conaffinity="3" mass="2.09e-07" material="fly/tarsus" mesh="fly/rf_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident01/rf_tarsus1-rf_tarsus2" pos="0 0 0" />
+                <body name="resident01/rf_tarsus3" pos="0.00136 0.000178 -0.154">
+                  <joint name="resident01/rf_tarsus2-rf_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident01/rf_tarsus3" type="mesh" contype="4" conaffinity="3" mass="1.19e-07" material="fly/tarsus" mesh="fly/rf_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident01/rf_tarsus2-rf_tarsus3" pos="0 0 0" />
+                  <body name="resident01/rf_tarsus4" pos="0.00169 -0.000303 -0.0985">
+                    <joint name="resident01/rf_tarsus3-rf_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident01/rf_tarsus4" type="mesh" contype="4" conaffinity="3" mass="9.27e-08" material="fly/tarsus" mesh="fly/rf_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident01/rf_tarsus3-rf_tarsus4" pos="0 0 0" />
+                    <body name="resident01/rf_tarsus5" pos="0.00171 0.000216 -0.087">
+                      <joint name="resident01/rf_tarsus4-rf_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident01/rf_tarsus5" type="mesh" contype="4" conaffinity="3" mass="1.15e-07" material="fly/tarsus" mesh="fly/rf_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident01/rf_tarsus4-rf_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident01/rm_coxa" pos="-0.557 -0.125 -0.482">
+        <joint name="resident01/c_thorax-rm_coxa-yaw" pos="0 0 0" axis="-1 0 0" springref="-0.174533" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-rm_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.139626" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-rm_coxa-roll" pos="0 0 0" axis="0 0 -1" springref="1.51844" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/rm_coxa" type="mesh" contype="4" conaffinity="3" mass="2.6e-06" material="fly/coxa" mesh="fly/rm_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident01/c_thorax-rm_coxa" pos="0 0 0" />
+        <body name="resident01/rm_trochanterfemur" pos="-0.000216 -0.000149 -0.181">
+          <joint name="resident01/rm_coxa-rm_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-2.42601" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/rm_coxa-rm_trochanterfemur-roll" pos="0 0 0" axis="0 0 -1" springref="0.261799" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/rm_trochanterfemur" type="mesh" contype="4" conaffinity="3" mass="6.48e-06" material="fly/trochanterfemur" mesh="fly/rm_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident01/rm_coxa-rm_trochanterfemur" pos="0 0 0" />
+          <body name="resident01/rm_tibia" pos="-0.000971 -5.52e-05 -0.784">
+            <joint name="resident01/rm_trochanterfemur-rm_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.79769" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident01/rm_tibia" type="mesh" contype="4" conaffinity="3" mass="2.86e-06" material="fly/tibia" mesh="fly/rm_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident01/rm_trochanterfemur-rm_tibia" pos="0 0 0" />
+            <body name="resident01/rm_tarsus1" pos="6.58e-05 0.00037 -0.667">
+              <joint name="resident01/rm_tibia-rm_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.349066" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident01/rm_tarsus1" type="mesh" contype="4" conaffinity="3" mass="5.25e-07" material="fly/tarsus" mesh="fly/rm_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident01/rm_tibia-rm_tarsus1" pos="0 0 0" />
+              <body name="resident01/rm_tarsus2" pos="0.000512 9.8e-05 -0.292">
+                <joint name="resident01/rm_tarsus1-rm_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident01/rm_tarsus2" type="mesh" contype="4" conaffinity="3" mass="2.35e-07" material="fly/tarsus" mesh="fly/rm_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident01/rm_tarsus1-rm_tarsus2" pos="0 0 0" />
+                <body name="resident01/rm_tarsus3" pos="-2.81e-05 0.000153 -0.16">
+                  <joint name="resident01/rm_tarsus2-rm_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident01/rm_tarsus3" type="mesh" contype="4" conaffinity="3" mass="1.18e-07" material="fly/tarsus" mesh="fly/rm_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident01/rm_tarsus2-rm_tarsus3" pos="0 0 0" />
+                  <body name="resident01/rm_tarsus4" pos="-0.000126 0.000191 -0.0911">
+                    <joint name="resident01/rm_tarsus3-rm_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident01/rm_tarsus4" type="mesh" contype="4" conaffinity="3" mass="6.84e-08" material="fly/tarsus" mesh="fly/rm_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident01/rm_tarsus3-rm_tarsus4" pos="0 0 0" />
+                    <body name="resident01/rm_tarsus5" pos="0.000902 -9.86e-05 -0.0635">
+                      <joint name="resident01/rm_tarsus4-rm_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident01/rm_tarsus5" type="mesh" contype="4" conaffinity="3" mass="1.14e-07" material="fly/tarsus" mesh="fly/rm_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident01/rm_tarsus4-rm_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="resident01/rh_coxa" pos="-0.784 -0.087 -0.497">
+        <joint name="resident01/c_thorax-rh_coxa-yaw" pos="0 0 0" axis="-1 0 0" springref="0.0523599" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-rh_coxa-pitch" pos="0 0 0" axis="0 1 0" springref="0.418879" stiffness="10" armature="1e-06" damping="0.5" />
+        <joint name="resident01/c_thorax-rh_coxa-roll" pos="0 0 0" axis="0 0 -1" springref="2.33874" stiffness="10" armature="1e-06" damping="0.5" />
+        <geom name="resident01/rh_coxa" type="mesh" contype="4" conaffinity="3" mass="2.56e-06" material="fly/coxa" mesh="fly/rh_coxa" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+        <site name="resident01/c_thorax-rh_coxa" pos="0 0 0" />
+        <body name="resident01/rh_trochanterfemur" pos="-0.000177 0.000227 -0.199">
+          <joint name="resident01/rh_coxa-rh_trochanterfemur-pitch" pos="0 0 0" axis="0 1 0" springref="-1.93732" stiffness="10" armature="1e-06" damping="0.5" />
+          <joint name="resident01/rh_coxa-rh_trochanterfemur-roll" pos="0 0 0" axis="0 0 -1" springref="0.0698132" stiffness="10" armature="1e-06" damping="0.5" />
+          <geom name="resident01/rh_trochanterfemur" type="mesh" contype="4" conaffinity="3" mass="8.75e-06" material="fly/trochanterfemur" mesh="fly/rh_trochanterfemur" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+          <site name="resident01/rh_coxa-rh_trochanterfemur" pos="0 0 0" />
+          <body name="resident01/rh_tibia" pos="0.000108 -0.000294 -0.836">
+            <joint name="resident01/rh_trochanterfemur-rh_tibia-pitch" pos="0 0 0" axis="0 1 0" springref="1.76278" stiffness="10" armature="1e-06" damping="0.5" />
+            <geom name="resident01/rh_tibia" type="mesh" contype="4" conaffinity="3" mass="3.37e-06" material="fly/tibia" mesh="fly/rh_tibia" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+            <site name="resident01/rh_trochanterfemur-rh_tibia" pos="0 0 0" />
+            <body name="resident01/rh_tarsus1" pos="-8.94e-07 0.000324 -0.684">
+              <joint name="resident01/rh_tibia-rh_tarsus1-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+              <geom name="resident01/rh_tarsus1" type="mesh" contype="4" conaffinity="3" mass="1.04e-06" material="fly/tarsus" mesh="fly/rh_tarsus1" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+              <site name="resident01/rh_tibia-rh_tarsus1" pos="0 0 0" />
+              <body name="resident01/rh_tarsus2" pos="9.69e-05 -0.00051 -0.353">
+                <joint name="resident01/rh_tarsus1-rh_tarsus2-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                <geom name="resident01/rh_tarsus2" type="mesh" contype="4" conaffinity="3" mass="3.52e-07" material="fly/tarsus" mesh="fly/rh_tarsus2" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                <site name="resident01/rh_tarsus1-rh_tarsus2" pos="0 0 0" />
+                <body name="resident01/rh_tarsus3" pos="0.000123 0.000255 -0.175">
+                  <joint name="resident01/rh_tarsus2-rh_tarsus3-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                  <geom name="resident01/rh_tarsus3" type="mesh" contype="4" conaffinity="3" mass="1.35e-07" material="fly/tarsus" mesh="fly/rh_tarsus3" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                  <site name="resident01/rh_tarsus2-rh_tarsus3" pos="0 0 0" />
+                  <body name="resident01/rh_tarsus4" pos="-0.000256 -0.000331 -0.0967">
+                    <joint name="resident01/rh_tarsus3-rh_tarsus4-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                    <geom name="resident01/rh_tarsus4" type="mesh" contype="4" conaffinity="3" mass="9.01e-08" material="fly/tarsus" mesh="fly/rh_tarsus4" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                    <site name="resident01/rh_tarsus3-rh_tarsus4" pos="0 0 0" />
+                    <body name="resident01/rh_tarsus5" pos="0.000214 -5.86e-05 -0.0733">
+                      <joint name="resident01/rh_tarsus4-rh_tarsus5-pitch" pos="0 0 0" axis="0 1 0" springref="-0.0872665" stiffness="10" armature="1e-06" damping="0.5" />
+                      <geom name="resident01/rh_tarsus5" type="mesh" contype="4" conaffinity="3" mass="1.25e-07" material="fly/tarsus" mesh="fly/rh_tarsus5" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" />
+                      <site name="resident01/rh_tarsus4-rh_tarsus5" pos="0 0 0" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+    <site name="resident01/spawn" pos="-5.5 6.7355574e-16 0" />
+    <body name="ecology/ground/body">
+      <geom name="ecology/ground" type="plane" size="25 20 1" material="ecology/soil" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/leaf-west/body">
+      <geom name="ecology/leaf-west" type="ellipsoid" pos="-8 -6 0.28" size="4.2 2.2 0.22" euler="0.03 -0.08 -0.25" material="ecology/leaf" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/leaf-east/body">
+      <geom name="ecology/leaf-east" type="ellipsoid" pos="8 5 0.38" size="4.8 2.0 0.24" euler="-0.04 0.12 0.35" material="ecology/leaf" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/stem-00/body">
+      <geom name="ecology/stem-00" type="capsule" fromto="-12 -4 0 -11.2 -3.4 2.8" size="0.46" material="ecology/stem" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/stem-01/body">
+      <geom name="ecology/stem-01" type="capsule" fromto="-11.2 -3.4 2.8 -9.8 -2 5.2" size="0.46" material="ecology/stem" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/stem-02/body">
+      <geom name="ecology/stem-02" type="capsule" fromto="-9.8 -2 5.2 -7.8 0 6.7" size="0.46" material="ecology/stem" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/curved-bark-00/body">
+      <geom name="ecology/curved-bark-00" type="box" pos="-4.6156927 4.7373599 1" size="1.35 0.75 0.22" euler="0 0 0.72" material="ecology/bark" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/curved-bark-01/body">
+      <geom name="ecology/curved-bark-01" type="box" pos="-3.23245423 3.79103554 1.1" size="1.35 0.75 0.22" euler="0 0 0.48" material="ecology/bark" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/curved-bark-02/body">
+      <geom name="ecology/curved-bark-02" type="box" pos="-1.66391838 3.20063418 1.2" size="1.35 0.75 0.22" euler="0 0 0.24" material="ecology/bark" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/curved-bark-03/body">
+      <geom name="ecology/curved-bark-03" type="box" pos="0 3 1.3" size="1.35 0.75 0.22" euler="0 0 -0" material="ecology/bark" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/curved-bark-04/body">
+      <geom name="ecology/curved-bark-04" type="box" pos="1.66391838 3.20063418 1.4" size="1.35 0.75 0.22" euler="0 0 -0.24" material="ecology/bark" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/curved-bark-05/body">
+      <geom name="ecology/curved-bark-05" type="box" pos="3.23245423 3.79103554 1.5" size="1.35 0.75 0.22" euler="0 0 -0.48" material="ecology/bark" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/curved-bark-06/body">
+      <geom name="ecology/curved-bark-06" type="box" pos="4.6156927 4.7373599 1.6" size="1.35 0.75 0.22" euler="0 0 -0.72" material="ecology/bark" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/ramp-west/body">
+      <geom name="ecology/ramp-west" type="box" pos="-4.5 3 0.78" size="3.0 1.35 0.16" euler="0 -0.25 0" material="ecology/bark" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/ramp-east/body">
+      <geom name="ecology/ramp-east" type="box" pos="4.8 -3.3 0.94" size="3.0 1.35 0.16" euler="0 0.31 0" material="ecology/bark" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/moist-patch-00/body">
+      <geom name="ecology/moist-patch-00" type="cylinder" pos="-2 -6 0.045" size="1.8 0.045" material="ecology/moist" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/moist-patch-01/body">
+      <geom name="ecology/moist-patch-01" type="cylinder" pos="6 0.5 0.045" size="1.8 0.045" material="ecology/moist" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/visual-screen/body">
+      <geom name="ecology/visual-screen" type="box" pos="18 0 4" size="0.02 8 4" material="ecology/leaf" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/grain-00" pos="2.2 0 0.42">
+      <freejoint name="ecology/grain-00/free" />
+      <geom name="ecology/grain-00/geom" type="ellipsoid" size="0.34 0.25 0.22" mass="0.000002" material="ecology/grain" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/grain-01" pos="-2.02776441 1.85759831 0.48">
+      <freejoint name="ecology/grain-01/free" />
+      <geom name="ecology/grain-01/geom" type="ellipsoid" size="0.34 0.25 0.22" mass="0.000002" material="ecology/grain" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/grain-02" pos="0.288504892 -3.28736443 0.42">
+      <freejoint name="ecology/grain-02/free" />
+      <geom name="ecology/grain-02/geom" type="ellipsoid" size="0.34 0.25 0.22" mass="0.000002" material="ecology/grain" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/grain-03" pos="1.33856549 1.74592165 0.48">
+      <freejoint name="ecology/grain-03/free" />
+      <geom name="ecology/grain-03/geom" type="ellipsoid" size="0.34 0.25 0.22" mass="0.000002" material="ecology/grain" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/grain-04" pos="-2.70796208 -0.479000364 0.42">
+      <freejoint name="ecology/grain-04/free" />
+      <geom name="ecology/grain-04/geom" type="ellipsoid" size="0.34 0.25 0.22" mass="0.000002" material="ecology/grain" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/grain-05" pos="2.78439247 -1.77120257 0.48">
+      <freejoint name="ecology/grain-05/free" />
+      <geom name="ecology/grain-05/geom" type="ellipsoid" size="0.34 0.25 0.22" mass="0.000002" material="ecology/grain" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/grain-06" pos="-0.571129471 2.12457316 0.42">
+      <freejoint name="ecology/grain-06/free" />
+      <geom name="ecology/grain-06/geom" type="ellipsoid" size="0.34 0.25 0.22" mass="0.000002" material="ecology/grain" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+    <body name="ecology/grain-07" pos="-1.26749432 -2.44048318 0.48">
+      <freejoint name="ecology/grain-07/free" />
+      <geom name="ecology/grain-07/geom" type="ellipsoid" size="0.34 0.25 0.22" mass="0.000002" material="ecology/grain" margin="0.001" solref="0.0002" solimp="0.98 0.99 1e-05 0.5 3" friction="1 1 0.02" contype="1" conaffinity="7" />
+    </body>
+  </worldbody>
+  <contact />
+  <actuator>
+    <general name="resident00/c_thorax-lf_coxa-yaw-position" joint="resident00/c_thorax-lf_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-lf_coxa-pitch-position" joint="resident00/c_thorax-lf_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-lf_coxa-roll-position" joint="resident00/c_thorax-lf_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lf_coxa-lf_trochanterfemur-pitch-position" joint="resident00/lf_coxa-lf_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lf_coxa-lf_trochanterfemur-roll-position" joint="resident00/lf_coxa-lf_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lf_trochanterfemur-lf_tibia-pitch-position" joint="resident00/lf_trochanterfemur-lf_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lf_tibia-lf_tarsus1-pitch-position" joint="resident00/lf_tibia-lf_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-lm_coxa-yaw-position" joint="resident00/c_thorax-lm_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-lm_coxa-pitch-position" joint="resident00/c_thorax-lm_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-lm_coxa-roll-position" joint="resident00/c_thorax-lm_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lm_coxa-lm_trochanterfemur-pitch-position" joint="resident00/lm_coxa-lm_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lm_coxa-lm_trochanterfemur-roll-position" joint="resident00/lm_coxa-lm_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lm_trochanterfemur-lm_tibia-pitch-position" joint="resident00/lm_trochanterfemur-lm_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lm_tibia-lm_tarsus1-pitch-position" joint="resident00/lm_tibia-lm_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-lh_coxa-yaw-position" joint="resident00/c_thorax-lh_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-lh_coxa-pitch-position" joint="resident00/c_thorax-lh_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-lh_coxa-roll-position" joint="resident00/c_thorax-lh_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lh_coxa-lh_trochanterfemur-pitch-position" joint="resident00/lh_coxa-lh_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lh_coxa-lh_trochanterfemur-roll-position" joint="resident00/lh_coxa-lh_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lh_trochanterfemur-lh_tibia-pitch-position" joint="resident00/lh_trochanterfemur-lh_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lh_tibia-lh_tarsus1-pitch-position" joint="resident00/lh_tibia-lh_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-rf_coxa-yaw-position" joint="resident00/c_thorax-rf_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-rf_coxa-pitch-position" joint="resident00/c_thorax-rf_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-rf_coxa-roll-position" joint="resident00/c_thorax-rf_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rf_coxa-rf_trochanterfemur-pitch-position" joint="resident00/rf_coxa-rf_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rf_coxa-rf_trochanterfemur-roll-position" joint="resident00/rf_coxa-rf_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rf_trochanterfemur-rf_tibia-pitch-position" joint="resident00/rf_trochanterfemur-rf_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rf_tibia-rf_tarsus1-pitch-position" joint="resident00/rf_tibia-rf_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-rm_coxa-yaw-position" joint="resident00/c_thorax-rm_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-rm_coxa-pitch-position" joint="resident00/c_thorax-rm_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-rm_coxa-roll-position" joint="resident00/c_thorax-rm_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rm_coxa-rm_trochanterfemur-pitch-position" joint="resident00/rm_coxa-rm_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rm_coxa-rm_trochanterfemur-roll-position" joint="resident00/rm_coxa-rm_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rm_trochanterfemur-rm_tibia-pitch-position" joint="resident00/rm_trochanterfemur-rm_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rm_tibia-rm_tarsus1-pitch-position" joint="resident00/rm_tibia-rm_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-rh_coxa-yaw-position" joint="resident00/c_thorax-rh_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-rh_coxa-pitch-position" joint="resident00/c_thorax-rh_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-rh_coxa-roll-position" joint="resident00/c_thorax-rh_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rh_coxa-rh_trochanterfemur-pitch-position" joint="resident00/rh_coxa-rh_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rh_coxa-rh_trochanterfemur-roll-position" joint="resident00/rh_coxa-rh_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rh_trochanterfemur-rh_tibia-pitch-position" joint="resident00/rh_trochanterfemur-rh_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/rh_tibia-rh_tarsus1-pitch-position" joint="resident00/rh_tibia-rh_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-c_head-yaw-position" joint="resident00/c_thorax-c_head-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-c_head-pitch-position" joint="resident00/c_thorax-c_head-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-c_head-roll-position" joint="resident00/c_thorax-c_head-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_head-l_pedicel-yaw-position" joint="resident00/c_head-l_pedicel-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_head-l_pedicel-pitch-position" joint="resident00/c_head-l_pedicel-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_head-l_pedicel-roll-position" joint="resident00/c_head-l_pedicel-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_head-r_pedicel-yaw-position" joint="resident00/c_head-r_pedicel-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_head-r_pedicel-pitch-position" joint="resident00/c_head-r_pedicel-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_head-r_pedicel-roll-position" joint="resident00/c_head-r_pedicel-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_head-c_rostrum-yaw-position" joint="resident00/c_head-c_rostrum-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_head-c_rostrum-pitch-position" joint="resident00/c_head-c_rostrum-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_head-c_rostrum-roll-position" joint="resident00/c_head-c_rostrum-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_rostrum-c_haustellum-yaw-position" joint="resident00/c_rostrum-c_haustellum-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_rostrum-c_haustellum-pitch-position" joint="resident00/c_rostrum-c_haustellum-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_rostrum-c_haustellum-roll-position" joint="resident00/c_rostrum-c_haustellum-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-c_abdomen12-yaw-position" joint="resident00/c_thorax-c_abdomen12-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-c_abdomen12-pitch-position" joint="resident00/c_thorax-c_abdomen12-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-c_abdomen12-roll-position" joint="resident00/c_thorax-c_abdomen12-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen12-c_abdomen3-yaw-position" joint="resident00/c_abdomen12-c_abdomen3-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen12-c_abdomen3-pitch-position" joint="resident00/c_abdomen12-c_abdomen3-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen12-c_abdomen3-roll-position" joint="resident00/c_abdomen12-c_abdomen3-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen3-c_abdomen4-yaw-position" joint="resident00/c_abdomen3-c_abdomen4-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen3-c_abdomen4-pitch-position" joint="resident00/c_abdomen3-c_abdomen4-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen3-c_abdomen4-roll-position" joint="resident00/c_abdomen3-c_abdomen4-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen4-c_abdomen5-yaw-position" joint="resident00/c_abdomen4-c_abdomen5-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen4-c_abdomen5-pitch-position" joint="resident00/c_abdomen4-c_abdomen5-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen4-c_abdomen5-roll-position" joint="resident00/c_abdomen4-c_abdomen5-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen5-c_abdomen6-yaw-position" joint="resident00/c_abdomen5-c_abdomen6-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen5-c_abdomen6-pitch-position" joint="resident00/c_abdomen5-c_abdomen6-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_abdomen5-c_abdomen6-roll-position" joint="resident00/c_abdomen5-c_abdomen6-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-l_wing-yaw-position" joint="resident00/c_thorax-l_wing-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-l_wing-pitch-position" joint="resident00/c_thorax-l_wing-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-l_wing-roll-position" joint="resident00/c_thorax-l_wing-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-r_wing-yaw-position" joint="resident00/c_thorax-r_wing-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-r_wing-pitch-position" joint="resident00/c_thorax-r_wing-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-r_wing-roll-position" joint="resident00/c_thorax-r_wing-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-l_haltere-yaw-position" joint="resident00/c_thorax-l_haltere-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-l_haltere-pitch-position" joint="resident00/c_thorax-l_haltere-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-l_haltere-roll-position" joint="resident00/c_thorax-l_haltere-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-r_haltere-yaw-position" joint="resident00/c_thorax-r_haltere-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-r_haltere-pitch-position" joint="resident00/c_thorax-r_haltere-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/c_thorax-r_haltere-roll-position" joint="resident00/c_thorax-r_haltere-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident00/lf_tarsus5-adhesion" body="resident00/lf_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+    <general name="resident00/lm_tarsus5-adhesion" body="resident00/lm_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+    <general name="resident00/lh_tarsus5-adhesion" body="resident00/lh_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+    <general name="resident00/rf_tarsus5-adhesion" body="resident00/rf_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+    <general name="resident00/rm_tarsus5-adhesion" body="resident00/rm_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+    <general name="resident00/rh_tarsus5-adhesion" body="resident00/rh_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+    <general name="resident01/c_thorax-lf_coxa-yaw-position" joint="resident01/c_thorax-lf_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-lf_coxa-pitch-position" joint="resident01/c_thorax-lf_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-lf_coxa-roll-position" joint="resident01/c_thorax-lf_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lf_coxa-lf_trochanterfemur-pitch-position" joint="resident01/lf_coxa-lf_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lf_coxa-lf_trochanterfemur-roll-position" joint="resident01/lf_coxa-lf_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lf_trochanterfemur-lf_tibia-pitch-position" joint="resident01/lf_trochanterfemur-lf_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lf_tibia-lf_tarsus1-pitch-position" joint="resident01/lf_tibia-lf_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-lm_coxa-yaw-position" joint="resident01/c_thorax-lm_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-lm_coxa-pitch-position" joint="resident01/c_thorax-lm_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-lm_coxa-roll-position" joint="resident01/c_thorax-lm_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lm_coxa-lm_trochanterfemur-pitch-position" joint="resident01/lm_coxa-lm_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lm_coxa-lm_trochanterfemur-roll-position" joint="resident01/lm_coxa-lm_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lm_trochanterfemur-lm_tibia-pitch-position" joint="resident01/lm_trochanterfemur-lm_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lm_tibia-lm_tarsus1-pitch-position" joint="resident01/lm_tibia-lm_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-lh_coxa-yaw-position" joint="resident01/c_thorax-lh_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-lh_coxa-pitch-position" joint="resident01/c_thorax-lh_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-lh_coxa-roll-position" joint="resident01/c_thorax-lh_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lh_coxa-lh_trochanterfemur-pitch-position" joint="resident01/lh_coxa-lh_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lh_coxa-lh_trochanterfemur-roll-position" joint="resident01/lh_coxa-lh_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lh_trochanterfemur-lh_tibia-pitch-position" joint="resident01/lh_trochanterfemur-lh_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lh_tibia-lh_tarsus1-pitch-position" joint="resident01/lh_tibia-lh_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-rf_coxa-yaw-position" joint="resident01/c_thorax-rf_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-rf_coxa-pitch-position" joint="resident01/c_thorax-rf_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-rf_coxa-roll-position" joint="resident01/c_thorax-rf_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rf_coxa-rf_trochanterfemur-pitch-position" joint="resident01/rf_coxa-rf_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rf_coxa-rf_trochanterfemur-roll-position" joint="resident01/rf_coxa-rf_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rf_trochanterfemur-rf_tibia-pitch-position" joint="resident01/rf_trochanterfemur-rf_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rf_tibia-rf_tarsus1-pitch-position" joint="resident01/rf_tibia-rf_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-rm_coxa-yaw-position" joint="resident01/c_thorax-rm_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-rm_coxa-pitch-position" joint="resident01/c_thorax-rm_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-rm_coxa-roll-position" joint="resident01/c_thorax-rm_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rm_coxa-rm_trochanterfemur-pitch-position" joint="resident01/rm_coxa-rm_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rm_coxa-rm_trochanterfemur-roll-position" joint="resident01/rm_coxa-rm_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rm_trochanterfemur-rm_tibia-pitch-position" joint="resident01/rm_trochanterfemur-rm_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rm_tibia-rm_tarsus1-pitch-position" joint="resident01/rm_tibia-rm_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-rh_coxa-yaw-position" joint="resident01/c_thorax-rh_coxa-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-rh_coxa-pitch-position" joint="resident01/c_thorax-rh_coxa-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-rh_coxa-roll-position" joint="resident01/c_thorax-rh_coxa-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rh_coxa-rh_trochanterfemur-pitch-position" joint="resident01/rh_coxa-rh_trochanterfemur-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rh_coxa-rh_trochanterfemur-roll-position" joint="resident01/rh_coxa-rh_trochanterfemur-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rh_trochanterfemur-rh_tibia-pitch-position" joint="resident01/rh_trochanterfemur-rh_tibia-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/rh_tibia-rh_tarsus1-pitch-position" joint="resident01/rh_tibia-rh_tarsus1-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-c_head-yaw-position" joint="resident01/c_thorax-c_head-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-c_head-pitch-position" joint="resident01/c_thorax-c_head-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-c_head-roll-position" joint="resident01/c_thorax-c_head-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_head-l_pedicel-yaw-position" joint="resident01/c_head-l_pedicel-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_head-l_pedicel-pitch-position" joint="resident01/c_head-l_pedicel-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_head-l_pedicel-roll-position" joint="resident01/c_head-l_pedicel-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_head-r_pedicel-yaw-position" joint="resident01/c_head-r_pedicel-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_head-r_pedicel-pitch-position" joint="resident01/c_head-r_pedicel-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_head-r_pedicel-roll-position" joint="resident01/c_head-r_pedicel-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_head-c_rostrum-yaw-position" joint="resident01/c_head-c_rostrum-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_head-c_rostrum-pitch-position" joint="resident01/c_head-c_rostrum-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_head-c_rostrum-roll-position" joint="resident01/c_head-c_rostrum-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_rostrum-c_haustellum-yaw-position" joint="resident01/c_rostrum-c_haustellum-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_rostrum-c_haustellum-pitch-position" joint="resident01/c_rostrum-c_haustellum-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_rostrum-c_haustellum-roll-position" joint="resident01/c_rostrum-c_haustellum-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-c_abdomen12-yaw-position" joint="resident01/c_thorax-c_abdomen12-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-c_abdomen12-pitch-position" joint="resident01/c_thorax-c_abdomen12-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-c_abdomen12-roll-position" joint="resident01/c_thorax-c_abdomen12-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen12-c_abdomen3-yaw-position" joint="resident01/c_abdomen12-c_abdomen3-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen12-c_abdomen3-pitch-position" joint="resident01/c_abdomen12-c_abdomen3-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen12-c_abdomen3-roll-position" joint="resident01/c_abdomen12-c_abdomen3-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen3-c_abdomen4-yaw-position" joint="resident01/c_abdomen3-c_abdomen4-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen3-c_abdomen4-pitch-position" joint="resident01/c_abdomen3-c_abdomen4-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen3-c_abdomen4-roll-position" joint="resident01/c_abdomen3-c_abdomen4-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen4-c_abdomen5-yaw-position" joint="resident01/c_abdomen4-c_abdomen5-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen4-c_abdomen5-pitch-position" joint="resident01/c_abdomen4-c_abdomen5-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen4-c_abdomen5-roll-position" joint="resident01/c_abdomen4-c_abdomen5-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen5-c_abdomen6-yaw-position" joint="resident01/c_abdomen5-c_abdomen6-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen5-c_abdomen6-pitch-position" joint="resident01/c_abdomen5-c_abdomen6-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_abdomen5-c_abdomen6-roll-position" joint="resident01/c_abdomen5-c_abdomen6-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-l_wing-yaw-position" joint="resident01/c_thorax-l_wing-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-l_wing-pitch-position" joint="resident01/c_thorax-l_wing-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-l_wing-roll-position" joint="resident01/c_thorax-l_wing-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-r_wing-yaw-position" joint="resident01/c_thorax-r_wing-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-r_wing-pitch-position" joint="resident01/c_thorax-r_wing-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-r_wing-roll-position" joint="resident01/c_thorax-r_wing-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-l_haltere-yaw-position" joint="resident01/c_thorax-l_haltere-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-l_haltere-pitch-position" joint="resident01/c_thorax-l_haltere-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-l_haltere-roll-position" joint="resident01/c_thorax-l_haltere-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-r_haltere-yaw-position" joint="resident01/c_thorax-r_haltere-yaw" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-r_haltere-pitch-position" joint="resident01/c_thorax-r_haltere-pitch" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/c_thorax-r_haltere-roll-position" joint="resident01/c_thorax-r_haltere-roll" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30" biastype="affine" gainprm="50" biasprm="0 -50" />
+    <general name="resident01/lf_tarsus5-adhesion" body="resident01/lf_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+    <general name="resident01/lm_tarsus5-adhesion" body="resident01/lm_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+    <general name="resident01/lh_tarsus5-adhesion" body="resident01/lh_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+    <general name="resident01/rf_tarsus5-adhesion" body="resident01/rf_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+    <general name="resident01/rm_tarsus5-adhesion" body="resident01/rm_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+    <general name="resident01/rh_tarsus5-adhesion" body="resident01/rh_tarsus5" ctrllimited="true" ctrlrange="0 1" />
+  </actuator>
+  <sensor>
+    <contact subtree1="resident00/lf_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident00/ground_contact_lf_leg" />
+    <contact subtree1="resident00/lm_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident00/ground_contact_lm_leg" />
+    <contact subtree1="resident00/lh_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident00/ground_contact_lh_leg" />
+    <contact subtree1="resident00/rf_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident00/ground_contact_rf_leg" />
+    <contact subtree1="resident00/rm_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident00/ground_contact_rm_leg" />
+    <contact subtree1="resident00/rh_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident00/ground_contact_rh_leg" />
+    <contact subtree1="resident01/lf_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident01/ground_contact_lf_leg" />
+    <contact subtree1="resident01/lm_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident01/ground_contact_lm_leg" />
+    <contact subtree1="resident01/lh_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident01/ground_contact_lh_leg" />
+    <contact subtree1="resident01/rf_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident01/ground_contact_rf_leg" />
+    <contact subtree1="resident01/rm_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident01/ground_contact_rm_leg" />
+    <contact subtree1="resident01/rh_coxa" data="found force torque pos normal tangent" reduce="netforce" name="resident01/ground_contact_rh_leg" />
+  </sensor>
+  <keyframe>
+    <key name="neutral" qpos="5.5 0 2.1 6.123234e-17 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.296706 0.331613 0.575959 -2.42601 -0.261799 1.36136 -0.174533 -0.0872665 -0.0872665 -0.0872665 -0.0872665 -0.174533 0.139626 1.51844 -2.42601 0.261799 1.79769 -0.349066 -0.0872665 -0.0872665 -0.0872665 -0.0872665 0.0523599 0.418879 2.33874 -1.93732 0.0698132 1.76278 -0.0872665 -0.0872665 -0.0872665 -0.0872665 -0.0872665 -0.296706 0.331613 0.575959 -2.42601 -0.261799 1.36136 -0.174533 -0.0872665 -0.0872665 -0.0872665 -0.0872665 -0.174533 0.139626 1.51844 -2.42601 0.261799 1.79769 -0.349066 -0.0872665 -0.0872665 -0.0872665 -0.0872665 0.0523599 0.418879 2.33874 -1.93732 0.0698132 1.76278 -0.0872665 -0.0872665 -0.0872665 -0.0872665 -0.0872665 -5.5 6.7355574e-16 2.1 -1 0 0 1.2246468e-16 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.296706 0.331613 0.575959 -2.42601 -0.261799 1.36136 -0.174533 -0.0872665 -0.0872665 -0.0872665 -0.0872665 -0.174533 0.139626 1.51844 -2.42601 0.261799 1.79769 -0.349066 -0.0872665 -0.0872665 -0.0872665 -0.0872665 0.0523599 0.418879 2.33874 -1.93732 0.0698132 1.76278 -0.0872665 -0.0872665 -0.0872665 -0.0872665 -0.0872665 -0.296706 0.331613 0.575959 -2.42601 -0.261799 1.36136 -0.174533 -0.0872665 -0.0872665 -0.0872665 -0.0872665 -0.174533 0.139626 1.51844 -2.42601 0.261799 1.79769 -0.349066 -0.0872665 -0.0872665 -0.0872665 -0.0872665 0.0523599 0.418879 2.33874 -1.93732 0.0698132 1.76278 -0.0872665 -0.0872665 -0.0872665 -0.0872665 -0.0872665 2.2 0 0.42 1 0 0 0 -2.02776441 1.85759831 0.48 1 0 0 0 0.288504892 -3.28736443 0.42 1 0 0 0 1.33856549 1.74592165 0.48 1 0 0 0 -2.70796208 -0.479000364 0.42 1 0 0 0 2.78439247 -1.77120257 0.48 1 0 0 0 -0.571129471 2.12457316 0.42 1 0 0 0 -1.26749432 -2.44048318 0.48 1 0 0 0" ctrl="-0.296706 0.331613 0.575959 -2.42601 -0.261799 1.36136 -0.174533 -0.174533 0.139626 1.51844 -2.42601 0.261799 1.79769 -0.349066 0.0523599 0.418879 2.33874 -1.93732 0.0698132 1.76278 -0.0872665 -0.296706 0.331613 0.575959 -2.42601 -0.261799 1.36136 -0.174533 -0.174533 0.139626 1.51844 -2.42601 0.261799 1.79769 -0.349066 0.0523599 0.418879 2.33874 -1.93732 0.0698132 1.76278 -0.0872665 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.296706 0.331613 0.575959 -2.42601 -0.261799 1.36136 -0.174533 -0.174533 0.139626 1.51844 -2.42601 0.261799 1.79769 -0.349066 0.0523599 0.418879 2.33874 -1.93732 0.0698132 1.76278 -0.0872665 -0.296706 0.331613 0.575959 -2.42601 -0.261799 1.36136 -0.174533 -0.174533 0.139626 1.51844 -2.42601 0.261799 1.79769 -0.349066 0.0523599 0.418879 2.33874 -1.93732 0.0698132 1.76278 -0.0872665 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0" />
+  </keyframe>
+</mujoco>

@@ -1,0 +1,161 @@
+{
+  "format": "chreatures.author-teacher-physical-feasibility.v1",
+  "status": "executed",
+  "engine": "mujoco-3.12.0-native",
+  "scene": "/Users/ember/dev/chreatures/native/fly-body/scenes/training-4/scene.xml",
+  "scene_sha256": "c880facc75d6a2ac3bcbfa18ae30320f5a6110a77176268157963ba3889fbb6a",
+  "teacher_bank_sha256": "97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+  "source_revision": "ca65a510c2afe6ac61c51df4f274c8d190c2f95f",
+  "body_schema_sha256": "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+  "residents": 4,
+  "modes": [
+    "forward",
+    "turn_left",
+    "stop",
+    "turn_right"
+  ],
+  "frequency_hz": 12.0,
+  "duration_s": 2.0,
+  "settle_s": 0.1,
+  "physics_dt_s": 0.0001,
+  "control_dt_s": 0.01,
+  "substeps_per_control": 100,
+  "control_ticks": 200,
+  "fixture_servo_kp": 50.0,
+  "adhesion_gain_in_memory": 40.0,
+  "nonwalking_servo_command": "all 42 remaining servos held at per-resident fixture neutral",
+  "trace": {
+    "file": "teacher-replay-trace.npz",
+    "sha256": "f3ad8f438687886f662e14f89d5458d48af466a7bc46f41f2a0549e0e1418d9a",
+    "applied_controls_shape": [
+      200,
+      4,
+      90
+    ],
+    "walking_targets_shape": [
+      200,
+      4,
+      42
+    ],
+    "raw_contact_shape": [
+      200,
+      4,
+      6,
+      16
+    ],
+    "joint_qpos_shape": [
+      201,
+      4,
+      126
+    ]
+  },
+  "outcomes": [
+    {
+      "resident": 0,
+      "mode": "forward",
+      "displacement_world_mm": [
+        -3.5366933979097404,
+        0.3132282896980936,
+        -0.6562595039720481
+      ],
+      "forward_displacement_mm": 3.580632854800066,
+      "lateral_displacement_mm": -0.2791115834994268,
+      "yaw_change_rad": -1.2153864409213024,
+      "root_height_range_mm": [
+        0.4489475038272494,
+        2.3758357746938175
+      ],
+      "leg_contact_found_fraction": [
+        0.075,
+        0.58,
+        0.11,
+        0.11,
+        0.27,
+        0.135
+      ],
+      "mean_contact_force_model_units": 5.9667398330144374
+    },
+    {
+      "resident": 1,
+      "mode": "turn_left",
+      "displacement_world_mm": [
+        -1.2454347632552596,
+        -0.9340802554773733,
+        0.9999668153844323
+      ],
+      "forward_displacement_mm": 0.8473778228972992,
+      "lateral_displacement_mm": -1.2454170119897405,
+      "yaw_change_rad": -0.4898211397090415,
+      "root_height_range_mm": [
+        1.165419061067001,
+        2.4690230980558145
+      ],
+      "leg_contact_found_fraction": [
+        0.13,
+        0.89,
+        0.17,
+        0.115,
+        0.755,
+        0.14
+      ],
+      "mean_contact_force_model_units": 13.137128893059582
+    },
+    {
+      "resident": 2,
+      "mode": "stop",
+      "displacement_world_mm": [
+        -0.00010375280242413965,
+        -4.100007910319919e-08,
+        -9.011877703035687e-05
+      ],
+      "forward_displacement_mm": -9.587267994880477e-05,
+      "lateral_displacement_mm": -4.24046224450605e-08,
+      "yaw_change_rad": -1.6887632353618452e-07,
+      "root_height_range_mm": [
+        1.1653349872227483,
+        1.1654251965970783
+      ],
+      "leg_contact_found_fraction": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean_contact_force_model_units": 41.77627510288943
+    },
+    {
+      "resident": 3,
+      "mode": "turn_right",
+      "displacement_world_mm": [
+        1.926962985339697,
+        0.7973912128193321,
+        -0.7614639896554258
+      ],
+      "forward_displacement_mm": 0.8476916291466315,
+      "lateral_displacement_mm": -1.9584779552808018,
+      "yaw_change_rad": -1.7482005376103265,
+      "root_height_range_mm": [
+        0.3667372797222645,
+        2.701291983772511
+      ],
+      "leg_contact_found_fraction": [
+        0.295,
+        0.145,
+        0.12,
+        0.175,
+        0.95,
+        0.15
+      ],
+      "mean_contact_force_model_units": 9.567475848426215
+    }
+  ],
+  "observed_checks": {
+    "forward_displacement_positive": true,
+    "stop_translation_mm": 0.00013742648822303587,
+    "asymmetric_turn_commands_produced_opposite_yaw_signs": false
+  },
+  "finite": true,
+  "interpretation": "Research-only author teacher replay. Displacement and contact show behavior of this engineered model/controller pairing; they do not establish faithful fly locomotion or learned CNS control."
+}

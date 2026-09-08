@@ -1,0 +1,270 @@
+{
+  "format": "chreatures.author-step-bank.v1",
+  "identity": "flygym-2.1.0-ca65a510-flybody-steps-v1",
+  "purpose": "offline physical teacher/reference only; never a production gait controller or evidence of CNS learning",
+  "source": {
+    "project": "FlyGym / NeuroMechFly v2",
+    "version": "2.1.0",
+    "git_revision": "ca65a510c2afe6ac61c51df4f274c8d190c2f95f",
+    "class": "flygym_demo.complex_terrain.preprogrammed.FlyBodyPreprogrammedSteps",
+    "license": "Apache-2.0",
+    "files_sha256": {
+      "preprogrammed.py": "ad945cee5af607e24f1a17ada0b8becd622c1fabebbb9f4f35e49dc7fd69e97f",
+      "common.py": "306b5a287de6aa26a3de110dbe16f706b9df8c592386b6fdc770d6724d38ffd8",
+      "single_steps_flybody.npz": "25c4d9ae6fa2adf7f4e30c696b8c07f8810721e352feb17e462b094defe2736b",
+      "single_steps_flybody.meta.json": "b22bba44c402a334dc23de491f613bdb58c0d4c3e262fc081b507b16909ee486",
+      "ball_flybody_clip.npz": "f04c7e019e1049eb7eeb808abda971555c4d44542d7a3038b207aa02c8517cb0",
+      "FlyGym-LICENSE": "02afa15750a169f0815ff1525dacf28d010f1dfd4cb119fc9e96bfca4f426eb4"
+    }
+  },
+  "body_schema_sha256": "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+  "bank": {
+    "file": "trajectory-bank.npz",
+    "sha256": "97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+    "sample_count": 2048,
+    "phase_cycles": {
+      "shape": [
+        2048
+      ],
+      "dtype": "float64",
+      "range": [
+        0.0,
+        1.0
+      ],
+      "endpoint": false
+    },
+    "joint_targets_rad": {
+      "shape": [
+        2048,
+        42
+      ],
+      "dtype": "float64"
+    },
+    "joint_targets_normalized": {
+      "shape": [
+        2048,
+        42
+      ],
+      "dtype": "float64",
+      "range_observed": [
+        -0.5238419041107197,
+        0.616696041118826
+      ],
+      "mapping": "(target-neutral)/(neutral-low) for target<neutral; (target-neutral)/(high-neutral) otherwise"
+    },
+    "adhesion": {
+      "shape": [
+        2048,
+        6
+      ],
+      "dtype": "uint8",
+      "values": [
+        0,
+        1
+      ]
+    },
+    "fixture_neutral_rad": {
+      "shape": [
+        42
+      ],
+      "dtype": "float64"
+    },
+    "teacher_neutral_rad": {
+      "shape": [
+        42
+      ],
+      "dtype": "float64",
+      "definition": "FlyBodyPreprogrammedSteps at phase pi and magnitude zero reference"
+    },
+    "interpolation": "periodic linear between adjacent samples",
+    "maximum_interpolation_error_rad_8192_probes": 3.610421343130943e-05,
+    "mean_interpolation_error_rad_8192_probes": 4.552803753888078e-07
+  },
+  "phase": {
+    "zero": "posterior extreme position and start of swing",
+    "author_nominal_cycle_s": 0.08333333333333333,
+    "author_nominal_frequency_hz": 12.0,
+    "swing_period_cycles": {
+      "lf": [
+        0.0,
+        0.4022
+      ],
+      "lm": [
+        0.0,
+        0.3065
+      ],
+      "lh": [
+        0.0,
+        0.4596
+      ],
+      "rf": [
+        0.0,
+        0.4022
+      ],
+      "rm": [
+        0.0,
+        0.3065
+      ],
+      "rh": [
+        0.0,
+        0.4596
+      ]
+    }
+  },
+  "orders": {
+    "legs": [
+      "lf",
+      "lm",
+      "lh",
+      "rf",
+      "rm",
+      "rh"
+    ],
+    "walking_joint_ids": [
+      "c_thorax-lf_coxa-yaw",
+      "c_thorax-lf_coxa-pitch",
+      "c_thorax-lf_coxa-roll",
+      "lf_coxa-lf_trochanterfemur-pitch",
+      "lf_coxa-lf_trochanterfemur-roll",
+      "lf_trochanterfemur-lf_tibia-pitch",
+      "lf_tibia-lf_tarsus1-pitch",
+      "c_thorax-lm_coxa-yaw",
+      "c_thorax-lm_coxa-pitch",
+      "c_thorax-lm_coxa-roll",
+      "lm_coxa-lm_trochanterfemur-pitch",
+      "lm_coxa-lm_trochanterfemur-roll",
+      "lm_trochanterfemur-lm_tibia-pitch",
+      "lm_tibia-lm_tarsus1-pitch",
+      "c_thorax-lh_coxa-yaw",
+      "c_thorax-lh_coxa-pitch",
+      "c_thorax-lh_coxa-roll",
+      "lh_coxa-lh_trochanterfemur-pitch",
+      "lh_coxa-lh_trochanterfemur-roll",
+      "lh_trochanterfemur-lh_tibia-pitch",
+      "lh_tibia-lh_tarsus1-pitch",
+      "c_thorax-rf_coxa-yaw",
+      "c_thorax-rf_coxa-pitch",
+      "c_thorax-rf_coxa-roll",
+      "rf_coxa-rf_trochanterfemur-pitch",
+      "rf_coxa-rf_trochanterfemur-roll",
+      "rf_trochanterfemur-rf_tibia-pitch",
+      "rf_tibia-rf_tarsus1-pitch",
+      "c_thorax-rm_coxa-yaw",
+      "c_thorax-rm_coxa-pitch",
+      "c_thorax-rm_coxa-roll",
+      "rm_coxa-rm_trochanterfemur-pitch",
+      "rm_coxa-rm_trochanterfemur-roll",
+      "rm_trochanterfemur-rm_tibia-pitch",
+      "rm_tibia-rm_tarsus1-pitch",
+      "c_thorax-rh_coxa-yaw",
+      "c_thorax-rh_coxa-pitch",
+      "c_thorax-rh_coxa-roll",
+      "rh_coxa-rh_trochanterfemur-pitch",
+      "rh_coxa-rh_trochanterfemur-roll",
+      "rh_trochanterfemur-rh_tibia-pitch",
+      "rh_tibia-rh_tarsus1-pitch"
+    ],
+    "walking_actuator_ids": [
+      "c_thorax-lf_coxa-yaw-position",
+      "c_thorax-lf_coxa-pitch-position",
+      "c_thorax-lf_coxa-roll-position",
+      "lf_coxa-lf_trochanterfemur-pitch-position",
+      "lf_coxa-lf_trochanterfemur-roll-position",
+      "lf_trochanterfemur-lf_tibia-pitch-position",
+      "lf_tibia-lf_tarsus1-pitch-position",
+      "c_thorax-lm_coxa-yaw-position",
+      "c_thorax-lm_coxa-pitch-position",
+      "c_thorax-lm_coxa-roll-position",
+      "lm_coxa-lm_trochanterfemur-pitch-position",
+      "lm_coxa-lm_trochanterfemur-roll-position",
+      "lm_trochanterfemur-lm_tibia-pitch-position",
+      "lm_tibia-lm_tarsus1-pitch-position",
+      "c_thorax-lh_coxa-yaw-position",
+      "c_thorax-lh_coxa-pitch-position",
+      "c_thorax-lh_coxa-roll-position",
+      "lh_coxa-lh_trochanterfemur-pitch-position",
+      "lh_coxa-lh_trochanterfemur-roll-position",
+      "lh_trochanterfemur-lh_tibia-pitch-position",
+      "lh_tibia-lh_tarsus1-pitch-position",
+      "c_thorax-rf_coxa-yaw-position",
+      "c_thorax-rf_coxa-pitch-position",
+      "c_thorax-rf_coxa-roll-position",
+      "rf_coxa-rf_trochanterfemur-pitch-position",
+      "rf_coxa-rf_trochanterfemur-roll-position",
+      "rf_trochanterfemur-rf_tibia-pitch-position",
+      "rf_tibia-rf_tarsus1-pitch-position",
+      "c_thorax-rm_coxa-yaw-position",
+      "c_thorax-rm_coxa-pitch-position",
+      "c_thorax-rm_coxa-roll-position",
+      "rm_coxa-rm_trochanterfemur-pitch-position",
+      "rm_coxa-rm_trochanterfemur-roll-position",
+      "rm_trochanterfemur-rm_tibia-pitch-position",
+      "rm_tibia-rm_tarsus1-pitch-position",
+      "c_thorax-rh_coxa-yaw-position",
+      "c_thorax-rh_coxa-pitch-position",
+      "c_thorax-rh_coxa-roll-position",
+      "rh_coxa-rh_trochanterfemur-pitch-position",
+      "rh_coxa-rh_trochanterfemur-roll-position",
+      "rh_trochanterfemur-rh_tibia-pitch-position",
+      "rh_tibia-rh_tarsus1-pitch-position"
+    ],
+    "per_leg_slices": {
+      "lf": [
+        0,
+        7
+      ],
+      "lm": [
+        7,
+        14
+      ],
+      "lh": [
+        14,
+        21
+      ],
+      "rf": [
+        21,
+        28
+      ],
+      "rm": [
+        28,
+        35
+      ],
+      "rh": [
+        35,
+        42
+      ]
+    },
+    "adhesion_actuator_ids": [
+      "lf_tarsus5-adhesion",
+      "lm_tarsus5-adhesion",
+      "lh_tarsus5-adhesion",
+      "rf_tarsus5-adhesion",
+      "rm_tarsus5-adhesion",
+      "rh_tarsus5-adhesion"
+    ]
+  },
+  "physical_mapping": {
+    "walking_servo_indices": [
+      0,
+      42
+    ],
+    "remaining_servo_indices": [
+      42,
+      84
+    ],
+    "remaining_servo_command": "fixture neutral",
+    "adhesion_indices": [
+      84,
+      90
+    ],
+    "control_rate_hz": 100,
+    "physics_timestep_s": 0.0001,
+    "substeps_per_control": 100
+  },
+  "limits": [
+    "The trajectories derive from a short NeuroMechFly v1 ball-walking clip and a hand-picked inverse-kinematic extraction, not measured motor-neuron or muscle activation.",
+    "FlyBodyPreprogrammedSteps was fitted for the author's FlyBody model. Replaying it on the imported NeuroMechFly body is an engineered cross-morphology transfer through shared anatomical joint IDs.",
+    "Left and right reuse the same F/M/H trajectory under FlyBody's symmetric joint-axis convention.",
+    "Successful replay is a physical teacher diagnostic and does not demonstrate autonomous CNS control or faithful live-fly locomotion."
+  ]
+}

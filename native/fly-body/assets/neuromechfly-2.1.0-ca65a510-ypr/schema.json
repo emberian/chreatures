@@ -1,0 +1,5750 @@
+{
+  "schema": "chreatures.neuromechfly-body.v1",
+  "identity": "neuromechfly-2.1.0-ca65a510-ypr",
+  "source": {
+    "project": "FlyGym / NeuroMechFly v2",
+    "repository": "https://github.com/NeLy-EPFL/flygym",
+    "version": "2.1.0",
+    "revision": "ca65a510c2afe6ac61c51df4f274c8d190c2f95f",
+    "license": "Apache-2.0",
+    "morphology_basis": "micro-CT scan of one adult female Drosophila melanogaster; author-adjusted segments include antennae",
+    "mesh_variant": "simplified_max2000faces with author left-to-right mirroring"
+  },
+  "fixture": {
+    "axis_order": "yaw_pitch_roll",
+    "length_unit": "millimeter",
+    "time_unit": "second",
+    "angle_unit": "radian",
+    "mesh_source_length_unit": "meter",
+    "mesh_scale_to_model": 1000,
+    "gravity_mm_s2": [
+      0.0,
+      0.0,
+      -9810.0
+    ],
+    "physics_timestep_s": 0.0001,
+    "proposed_cns_control_period_s": 0.01,
+    "spawn_position_mm": [
+      0.0,
+      0.0,
+      0.8
+    ],
+    "spawn_quaternion_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "neutral_keyframe": 0,
+    "total_mass_model_units": 0.0010253099999999993,
+    "source_rigging_mass_sum_model_units": 0.0009997844,
+    "mass_unit_status": "FlyGym source does not explicitly name the mass base unit; the numerical total is consistent with 0.9997844 mg only if interpreted as grams"
+  },
+  "compiled_counts": {
+    "nq": 133,
+    "nv": 132,
+    "nu": 90,
+    "nbody": 71,
+    "njnt": 127,
+    "ngeom": 72,
+    "nsite": 69,
+    "nsensor": 6,
+    "nsensordata": 96,
+    "nkey": 1
+  },
+  "body_segments": [
+    {
+      "index": 0,
+      "id": "c_thorax",
+      "compiled_name": "fly/c_thorax",
+      "compiled_body_id": 1
+    },
+    {
+      "index": 1,
+      "id": "c_head",
+      "compiled_name": "fly/c_head",
+      "compiled_body_id": 2
+    },
+    {
+      "index": 2,
+      "id": "c_rostrum",
+      "compiled_name": "fly/c_rostrum",
+      "compiled_body_id": 3
+    },
+    {
+      "index": 3,
+      "id": "c_haustellum",
+      "compiled_name": "fly/c_haustellum",
+      "compiled_body_id": 4
+    },
+    {
+      "index": 4,
+      "id": "l_eye",
+      "compiled_name": "fly/l_eye",
+      "compiled_body_id": 5
+    },
+    {
+      "index": 5,
+      "id": "r_eye",
+      "compiled_name": "fly/r_eye",
+      "compiled_body_id": 6
+    },
+    {
+      "index": 6,
+      "id": "l_pedicel",
+      "compiled_name": "fly/l_pedicel",
+      "compiled_body_id": 8
+    },
+    {
+      "index": 7,
+      "id": "l_funiculus",
+      "compiled_name": "fly/l_funiculus",
+      "compiled_body_id": 9
+    },
+    {
+      "index": 8,
+      "id": "l_arista",
+      "compiled_name": "fly/l_arista",
+      "compiled_body_id": 10
+    },
+    {
+      "index": 9,
+      "id": "r_pedicel",
+      "compiled_name": "fly/r_pedicel",
+      "compiled_body_id": 11
+    },
+    {
+      "index": 10,
+      "id": "r_funiculus",
+      "compiled_name": "fly/r_funiculus",
+      "compiled_body_id": 12
+    },
+    {
+      "index": 11,
+      "id": "r_arista",
+      "compiled_name": "fly/r_arista",
+      "compiled_body_id": 13
+    },
+    {
+      "index": 12,
+      "id": "c_abdomen12",
+      "compiled_name": "fly/c_abdomen12",
+      "compiled_body_id": 14
+    },
+    {
+      "index": 13,
+      "id": "c_abdomen3",
+      "compiled_name": "fly/c_abdomen3",
+      "compiled_body_id": 15
+    },
+    {
+      "index": 14,
+      "id": "c_abdomen4",
+      "compiled_name": "fly/c_abdomen4",
+      "compiled_body_id": 16
+    },
+    {
+      "index": 15,
+      "id": "c_abdomen5",
+      "compiled_name": "fly/c_abdomen5",
+      "compiled_body_id": 17
+    },
+    {
+      "index": 16,
+      "id": "c_abdomen6",
+      "compiled_name": "fly/c_abdomen6",
+      "compiled_body_id": 18
+    },
+    {
+      "index": 17,
+      "id": "l_wing",
+      "compiled_name": "fly/l_wing",
+      "compiled_body_id": 19
+    },
+    {
+      "index": 18,
+      "id": "r_wing",
+      "compiled_name": "fly/r_wing",
+      "compiled_body_id": 20
+    },
+    {
+      "index": 19,
+      "id": "l_haltere",
+      "compiled_name": "fly/l_haltere",
+      "compiled_body_id": 21
+    },
+    {
+      "index": 20,
+      "id": "r_haltere",
+      "compiled_name": "fly/r_haltere",
+      "compiled_body_id": 22
+    },
+    {
+      "index": 21,
+      "id": "lf_coxa",
+      "compiled_name": "fly/lf_coxa",
+      "compiled_body_id": 23
+    },
+    {
+      "index": 22,
+      "id": "lf_trochanterfemur",
+      "compiled_name": "fly/lf_trochanterfemur",
+      "compiled_body_id": 24
+    },
+    {
+      "index": 23,
+      "id": "lf_tibia",
+      "compiled_name": "fly/lf_tibia",
+      "compiled_body_id": 25
+    },
+    {
+      "index": 24,
+      "id": "lf_tarsus1",
+      "compiled_name": "fly/lf_tarsus1",
+      "compiled_body_id": 26
+    },
+    {
+      "index": 25,
+      "id": "lf_tarsus2",
+      "compiled_name": "fly/lf_tarsus2",
+      "compiled_body_id": 27
+    },
+    {
+      "index": 26,
+      "id": "lf_tarsus3",
+      "compiled_name": "fly/lf_tarsus3",
+      "compiled_body_id": 28
+    },
+    {
+      "index": 27,
+      "id": "lf_tarsus4",
+      "compiled_name": "fly/lf_tarsus4",
+      "compiled_body_id": 29
+    },
+    {
+      "index": 28,
+      "id": "lf_tarsus5",
+      "compiled_name": "fly/lf_tarsus5",
+      "compiled_body_id": 30
+    },
+    {
+      "index": 29,
+      "id": "lm_coxa",
+      "compiled_name": "fly/lm_coxa",
+      "compiled_body_id": 31
+    },
+    {
+      "index": 30,
+      "id": "lm_trochanterfemur",
+      "compiled_name": "fly/lm_trochanterfemur",
+      "compiled_body_id": 32
+    },
+    {
+      "index": 31,
+      "id": "lm_tibia",
+      "compiled_name": "fly/lm_tibia",
+      "compiled_body_id": 33
+    },
+    {
+      "index": 32,
+      "id": "lm_tarsus1",
+      "compiled_name": "fly/lm_tarsus1",
+      "compiled_body_id": 34
+    },
+    {
+      "index": 33,
+      "id": "lm_tarsus2",
+      "compiled_name": "fly/lm_tarsus2",
+      "compiled_body_id": 35
+    },
+    {
+      "index": 34,
+      "id": "lm_tarsus3",
+      "compiled_name": "fly/lm_tarsus3",
+      "compiled_body_id": 36
+    },
+    {
+      "index": 35,
+      "id": "lm_tarsus4",
+      "compiled_name": "fly/lm_tarsus4",
+      "compiled_body_id": 37
+    },
+    {
+      "index": 36,
+      "id": "lm_tarsus5",
+      "compiled_name": "fly/lm_tarsus5",
+      "compiled_body_id": 38
+    },
+    {
+      "index": 37,
+      "id": "lh_coxa",
+      "compiled_name": "fly/lh_coxa",
+      "compiled_body_id": 39
+    },
+    {
+      "index": 38,
+      "id": "lh_trochanterfemur",
+      "compiled_name": "fly/lh_trochanterfemur",
+      "compiled_body_id": 40
+    },
+    {
+      "index": 39,
+      "id": "lh_tibia",
+      "compiled_name": "fly/lh_tibia",
+      "compiled_body_id": 41
+    },
+    {
+      "index": 40,
+      "id": "lh_tarsus1",
+      "compiled_name": "fly/lh_tarsus1",
+      "compiled_body_id": 42
+    },
+    {
+      "index": 41,
+      "id": "lh_tarsus2",
+      "compiled_name": "fly/lh_tarsus2",
+      "compiled_body_id": 43
+    },
+    {
+      "index": 42,
+      "id": "lh_tarsus3",
+      "compiled_name": "fly/lh_tarsus3",
+      "compiled_body_id": 44
+    },
+    {
+      "index": 43,
+      "id": "lh_tarsus4",
+      "compiled_name": "fly/lh_tarsus4",
+      "compiled_body_id": 45
+    },
+    {
+      "index": 44,
+      "id": "lh_tarsus5",
+      "compiled_name": "fly/lh_tarsus5",
+      "compiled_body_id": 46
+    },
+    {
+      "index": 45,
+      "id": "rf_coxa",
+      "compiled_name": "fly/rf_coxa",
+      "compiled_body_id": 47
+    },
+    {
+      "index": 46,
+      "id": "rf_trochanterfemur",
+      "compiled_name": "fly/rf_trochanterfemur",
+      "compiled_body_id": 48
+    },
+    {
+      "index": 47,
+      "id": "rf_tibia",
+      "compiled_name": "fly/rf_tibia",
+      "compiled_body_id": 49
+    },
+    {
+      "index": 48,
+      "id": "rf_tarsus1",
+      "compiled_name": "fly/rf_tarsus1",
+      "compiled_body_id": 50
+    },
+    {
+      "index": 49,
+      "id": "rf_tarsus2",
+      "compiled_name": "fly/rf_tarsus2",
+      "compiled_body_id": 51
+    },
+    {
+      "index": 50,
+      "id": "rf_tarsus3",
+      "compiled_name": "fly/rf_tarsus3",
+      "compiled_body_id": 52
+    },
+    {
+      "index": 51,
+      "id": "rf_tarsus4",
+      "compiled_name": "fly/rf_tarsus4",
+      "compiled_body_id": 53
+    },
+    {
+      "index": 52,
+      "id": "rf_tarsus5",
+      "compiled_name": "fly/rf_tarsus5",
+      "compiled_body_id": 54
+    },
+    {
+      "index": 53,
+      "id": "rm_coxa",
+      "compiled_name": "fly/rm_coxa",
+      "compiled_body_id": 55
+    },
+    {
+      "index": 54,
+      "id": "rm_trochanterfemur",
+      "compiled_name": "fly/rm_trochanterfemur",
+      "compiled_body_id": 56
+    },
+    {
+      "index": 55,
+      "id": "rm_tibia",
+      "compiled_name": "fly/rm_tibia",
+      "compiled_body_id": 57
+    },
+    {
+      "index": 56,
+      "id": "rm_tarsus1",
+      "compiled_name": "fly/rm_tarsus1",
+      "compiled_body_id": 58
+    },
+    {
+      "index": 57,
+      "id": "rm_tarsus2",
+      "compiled_name": "fly/rm_tarsus2",
+      "compiled_body_id": 59
+    },
+    {
+      "index": 58,
+      "id": "rm_tarsus3",
+      "compiled_name": "fly/rm_tarsus3",
+      "compiled_body_id": 60
+    },
+    {
+      "index": 59,
+      "id": "rm_tarsus4",
+      "compiled_name": "fly/rm_tarsus4",
+      "compiled_body_id": 61
+    },
+    {
+      "index": 60,
+      "id": "rm_tarsus5",
+      "compiled_name": "fly/rm_tarsus5",
+      "compiled_body_id": 62
+    },
+    {
+      "index": 61,
+      "id": "rh_coxa",
+      "compiled_name": "fly/rh_coxa",
+      "compiled_body_id": 63
+    },
+    {
+      "index": 62,
+      "id": "rh_trochanterfemur",
+      "compiled_name": "fly/rh_trochanterfemur",
+      "compiled_body_id": 64
+    },
+    {
+      "index": 63,
+      "id": "rh_tibia",
+      "compiled_name": "fly/rh_tibia",
+      "compiled_body_id": 65
+    },
+    {
+      "index": 64,
+      "id": "rh_tarsus1",
+      "compiled_name": "fly/rh_tarsus1",
+      "compiled_body_id": 66
+    },
+    {
+      "index": 65,
+      "id": "rh_tarsus2",
+      "compiled_name": "fly/rh_tarsus2",
+      "compiled_body_id": 67
+    },
+    {
+      "index": 66,
+      "id": "rh_tarsus3",
+      "compiled_name": "fly/rh_tarsus3",
+      "compiled_body_id": 68
+    },
+    {
+      "index": 67,
+      "id": "rh_tarsus4",
+      "compiled_name": "fly/rh_tarsus4",
+      "compiled_body_id": 69
+    },
+    {
+      "index": 68,
+      "id": "rh_tarsus5",
+      "compiled_name": "fly/rh_tarsus5",
+      "compiled_body_id": 70
+    }
+  ],
+  "joint_dofs": [
+    {
+      "index": 0,
+      "id": "c_thorax-c_head-yaw",
+      "compiled_name": "fly/c_thorax-c_head-yaw",
+      "parent": "c_thorax",
+      "child": "c_head",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 7,
+      "dof_address": 6,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "head"
+    },
+    {
+      "index": 1,
+      "id": "c_thorax-c_head-pitch",
+      "compiled_name": "fly/c_thorax-c_head-pitch",
+      "parent": "c_thorax",
+      "child": "c_head",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 8,
+      "dof_address": 7,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "head"
+    },
+    {
+      "index": 2,
+      "id": "c_thorax-c_head-roll",
+      "compiled_name": "fly/c_thorax-c_head-roll",
+      "parent": "c_thorax",
+      "child": "c_head",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 9,
+      "dof_address": 8,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "head"
+    },
+    {
+      "index": 3,
+      "id": "c_head-c_rostrum-yaw",
+      "compiled_name": "fly/c_head-c_rostrum-yaw",
+      "parent": "c_head",
+      "child": "c_rostrum",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 10,
+      "dof_address": 9,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "proboscis"
+    },
+    {
+      "index": 4,
+      "id": "c_head-c_rostrum-pitch",
+      "compiled_name": "fly/c_head-c_rostrum-pitch",
+      "parent": "c_head",
+      "child": "c_rostrum",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 11,
+      "dof_address": 10,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "proboscis"
+    },
+    {
+      "index": 5,
+      "id": "c_head-c_rostrum-roll",
+      "compiled_name": "fly/c_head-c_rostrum-roll",
+      "parent": "c_head",
+      "child": "c_rostrum",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 12,
+      "dof_address": 11,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "proboscis"
+    },
+    {
+      "index": 6,
+      "id": "c_rostrum-c_haustellum-yaw",
+      "compiled_name": "fly/c_rostrum-c_haustellum-yaw",
+      "parent": "c_rostrum",
+      "child": "c_haustellum",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 13,
+      "dof_address": 12,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "proboscis"
+    },
+    {
+      "index": 7,
+      "id": "c_rostrum-c_haustellum-pitch",
+      "compiled_name": "fly/c_rostrum-c_haustellum-pitch",
+      "parent": "c_rostrum",
+      "child": "c_haustellum",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 14,
+      "dof_address": 13,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "proboscis"
+    },
+    {
+      "index": 8,
+      "id": "c_rostrum-c_haustellum-roll",
+      "compiled_name": "fly/c_rostrum-c_haustellum-roll",
+      "parent": "c_rostrum",
+      "child": "c_haustellum",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 15,
+      "dof_address": 14,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "proboscis"
+    },
+    {
+      "index": 9,
+      "id": "c_head-l_eye-yaw",
+      "compiled_name": "fly/c_head-l_eye-yaw",
+      "parent": "c_head",
+      "child": "l_eye",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 16,
+      "dof_address": 15,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 10,
+      "id": "c_head-l_eye-pitch",
+      "compiled_name": "fly/c_head-l_eye-pitch",
+      "parent": "c_head",
+      "child": "l_eye",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 17,
+      "dof_address": 16,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 11,
+      "id": "c_head-l_eye-roll",
+      "compiled_name": "fly/c_head-l_eye-roll",
+      "parent": "c_head",
+      "child": "l_eye",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 18,
+      "dof_address": 17,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 12,
+      "id": "c_head-r_eye-yaw",
+      "compiled_name": "fly/c_head-r_eye-yaw",
+      "parent": "c_head",
+      "child": "r_eye",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 19,
+      "dof_address": 18,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 13,
+      "id": "c_head-r_eye-pitch",
+      "compiled_name": "fly/c_head-r_eye-pitch",
+      "parent": "c_head",
+      "child": "r_eye",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 20,
+      "dof_address": 19,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 14,
+      "id": "c_head-r_eye-roll",
+      "compiled_name": "fly/c_head-r_eye-roll",
+      "parent": "c_head",
+      "child": "r_eye",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 21,
+      "dof_address": 20,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 15,
+      "id": "c_head-l_pedicel-yaw",
+      "compiled_name": "fly/c_head-l_pedicel-yaw",
+      "parent": "c_head",
+      "child": "l_pedicel",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 22,
+      "dof_address": 21,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "pedicels"
+    },
+    {
+      "index": 16,
+      "id": "c_head-l_pedicel-pitch",
+      "compiled_name": "fly/c_head-l_pedicel-pitch",
+      "parent": "c_head",
+      "child": "l_pedicel",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 23,
+      "dof_address": 22,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "pedicels"
+    },
+    {
+      "index": 17,
+      "id": "c_head-l_pedicel-roll",
+      "compiled_name": "fly/c_head-l_pedicel-roll",
+      "parent": "c_head",
+      "child": "l_pedicel",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 24,
+      "dof_address": 23,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "pedicels"
+    },
+    {
+      "index": 18,
+      "id": "l_pedicel-l_funiculus-yaw",
+      "compiled_name": "fly/l_pedicel-l_funiculus-yaw",
+      "parent": "l_pedicel",
+      "child": "l_funiculus",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 25,
+      "dof_address": 24,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 19,
+      "id": "l_pedicel-l_funiculus-pitch",
+      "compiled_name": "fly/l_pedicel-l_funiculus-pitch",
+      "parent": "l_pedicel",
+      "child": "l_funiculus",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 26,
+      "dof_address": 25,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 20,
+      "id": "l_pedicel-l_funiculus-roll",
+      "compiled_name": "fly/l_pedicel-l_funiculus-roll",
+      "parent": "l_pedicel",
+      "child": "l_funiculus",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 27,
+      "dof_address": 26,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 21,
+      "id": "l_funiculus-l_arista-yaw",
+      "compiled_name": "fly/l_funiculus-l_arista-yaw",
+      "parent": "l_funiculus",
+      "child": "l_arista",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 28,
+      "dof_address": 27,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 22,
+      "id": "l_funiculus-l_arista-pitch",
+      "compiled_name": "fly/l_funiculus-l_arista-pitch",
+      "parent": "l_funiculus",
+      "child": "l_arista",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 29,
+      "dof_address": 28,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 23,
+      "id": "l_funiculus-l_arista-roll",
+      "compiled_name": "fly/l_funiculus-l_arista-roll",
+      "parent": "l_funiculus",
+      "child": "l_arista",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 30,
+      "dof_address": 29,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 24,
+      "id": "c_head-r_pedicel-yaw",
+      "compiled_name": "fly/c_head-r_pedicel-yaw",
+      "parent": "c_head",
+      "child": "r_pedicel",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 31,
+      "dof_address": 30,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "pedicels"
+    },
+    {
+      "index": 25,
+      "id": "c_head-r_pedicel-pitch",
+      "compiled_name": "fly/c_head-r_pedicel-pitch",
+      "parent": "c_head",
+      "child": "r_pedicel",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 32,
+      "dof_address": 31,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "pedicels"
+    },
+    {
+      "index": 26,
+      "id": "c_head-r_pedicel-roll",
+      "compiled_name": "fly/c_head-r_pedicel-roll",
+      "parent": "c_head",
+      "child": "r_pedicel",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 33,
+      "dof_address": 32,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "pedicels"
+    },
+    {
+      "index": 27,
+      "id": "r_pedicel-r_funiculus-yaw",
+      "compiled_name": "fly/r_pedicel-r_funiculus-yaw",
+      "parent": "r_pedicel",
+      "child": "r_funiculus",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 34,
+      "dof_address": 33,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 28,
+      "id": "r_pedicel-r_funiculus-pitch",
+      "compiled_name": "fly/r_pedicel-r_funiculus-pitch",
+      "parent": "r_pedicel",
+      "child": "r_funiculus",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 35,
+      "dof_address": 34,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 29,
+      "id": "r_pedicel-r_funiculus-roll",
+      "compiled_name": "fly/r_pedicel-r_funiculus-roll",
+      "parent": "r_pedicel",
+      "child": "r_funiculus",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 36,
+      "dof_address": 35,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 30,
+      "id": "r_funiculus-r_arista-yaw",
+      "compiled_name": "fly/r_funiculus-r_arista-yaw",
+      "parent": "r_funiculus",
+      "child": "r_arista",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 37,
+      "dof_address": 36,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 31,
+      "id": "r_funiculus-r_arista-pitch",
+      "compiled_name": "fly/r_funiculus-r_arista-pitch",
+      "parent": "r_funiculus",
+      "child": "r_arista",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 38,
+      "dof_address": 37,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 32,
+      "id": "r_funiculus-r_arista-roll",
+      "compiled_name": "fly/r_funiculus-r_arista-roll",
+      "parent": "r_funiculus",
+      "child": "r_arista",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 39,
+      "dof_address": 38,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 33,
+      "id": "c_thorax-c_abdomen12-yaw",
+      "compiled_name": "fly/c_thorax-c_abdomen12-yaw",
+      "parent": "c_thorax",
+      "child": "c_abdomen12",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 40,
+      "dof_address": 39,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 34,
+      "id": "c_thorax-c_abdomen12-pitch",
+      "compiled_name": "fly/c_thorax-c_abdomen12-pitch",
+      "parent": "c_thorax",
+      "child": "c_abdomen12",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 41,
+      "dof_address": 40,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 35,
+      "id": "c_thorax-c_abdomen12-roll",
+      "compiled_name": "fly/c_thorax-c_abdomen12-roll",
+      "parent": "c_thorax",
+      "child": "c_abdomen12",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 42,
+      "dof_address": 41,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 36,
+      "id": "c_abdomen12-c_abdomen3-yaw",
+      "compiled_name": "fly/c_abdomen12-c_abdomen3-yaw",
+      "parent": "c_abdomen12",
+      "child": "c_abdomen3",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 43,
+      "dof_address": 42,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 37,
+      "id": "c_abdomen12-c_abdomen3-pitch",
+      "compiled_name": "fly/c_abdomen12-c_abdomen3-pitch",
+      "parent": "c_abdomen12",
+      "child": "c_abdomen3",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 44,
+      "dof_address": 43,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 38,
+      "id": "c_abdomen12-c_abdomen3-roll",
+      "compiled_name": "fly/c_abdomen12-c_abdomen3-roll",
+      "parent": "c_abdomen12",
+      "child": "c_abdomen3",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 45,
+      "dof_address": 44,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 39,
+      "id": "c_abdomen3-c_abdomen4-yaw",
+      "compiled_name": "fly/c_abdomen3-c_abdomen4-yaw",
+      "parent": "c_abdomen3",
+      "child": "c_abdomen4",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 46,
+      "dof_address": 45,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 40,
+      "id": "c_abdomen3-c_abdomen4-pitch",
+      "compiled_name": "fly/c_abdomen3-c_abdomen4-pitch",
+      "parent": "c_abdomen3",
+      "child": "c_abdomen4",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 47,
+      "dof_address": 46,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 41,
+      "id": "c_abdomen3-c_abdomen4-roll",
+      "compiled_name": "fly/c_abdomen3-c_abdomen4-roll",
+      "parent": "c_abdomen3",
+      "child": "c_abdomen4",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 48,
+      "dof_address": 47,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 42,
+      "id": "c_abdomen4-c_abdomen5-yaw",
+      "compiled_name": "fly/c_abdomen4-c_abdomen5-yaw",
+      "parent": "c_abdomen4",
+      "child": "c_abdomen5",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 49,
+      "dof_address": 48,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 43,
+      "id": "c_abdomen4-c_abdomen5-pitch",
+      "compiled_name": "fly/c_abdomen4-c_abdomen5-pitch",
+      "parent": "c_abdomen4",
+      "child": "c_abdomen5",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 50,
+      "dof_address": 49,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 44,
+      "id": "c_abdomen4-c_abdomen5-roll",
+      "compiled_name": "fly/c_abdomen4-c_abdomen5-roll",
+      "parent": "c_abdomen4",
+      "child": "c_abdomen5",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 51,
+      "dof_address": 50,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 45,
+      "id": "c_abdomen5-c_abdomen6-yaw",
+      "compiled_name": "fly/c_abdomen5-c_abdomen6-yaw",
+      "parent": "c_abdomen5",
+      "child": "c_abdomen6",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 52,
+      "dof_address": 51,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 46,
+      "id": "c_abdomen5-c_abdomen6-pitch",
+      "compiled_name": "fly/c_abdomen5-c_abdomen6-pitch",
+      "parent": "c_abdomen5",
+      "child": "c_abdomen6",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 53,
+      "dof_address": 52,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 47,
+      "id": "c_abdomen5-c_abdomen6-roll",
+      "compiled_name": "fly/c_abdomen5-c_abdomen6-roll",
+      "parent": "c_abdomen5",
+      "child": "c_abdomen6",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 54,
+      "dof_address": 53,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "abdomen"
+    },
+    {
+      "index": 48,
+      "id": "c_thorax-l_wing-yaw",
+      "compiled_name": "fly/c_thorax-l_wing-yaw",
+      "parent": "c_thorax",
+      "child": "l_wing",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 55,
+      "dof_address": 54,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "wings"
+    },
+    {
+      "index": 49,
+      "id": "c_thorax-l_wing-pitch",
+      "compiled_name": "fly/c_thorax-l_wing-pitch",
+      "parent": "c_thorax",
+      "child": "l_wing",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 56,
+      "dof_address": 55,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "wings"
+    },
+    {
+      "index": 50,
+      "id": "c_thorax-l_wing-roll",
+      "compiled_name": "fly/c_thorax-l_wing-roll",
+      "parent": "c_thorax",
+      "child": "l_wing",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 57,
+      "dof_address": 56,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "wings"
+    },
+    {
+      "index": 51,
+      "id": "c_thorax-r_wing-yaw",
+      "compiled_name": "fly/c_thorax-r_wing-yaw",
+      "parent": "c_thorax",
+      "child": "r_wing",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 58,
+      "dof_address": 57,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "wings"
+    },
+    {
+      "index": 52,
+      "id": "c_thorax-r_wing-pitch",
+      "compiled_name": "fly/c_thorax-r_wing-pitch",
+      "parent": "c_thorax",
+      "child": "r_wing",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 59,
+      "dof_address": 58,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "wings"
+    },
+    {
+      "index": 53,
+      "id": "c_thorax-r_wing-roll",
+      "compiled_name": "fly/c_thorax-r_wing-roll",
+      "parent": "c_thorax",
+      "child": "r_wing",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 60,
+      "dof_address": 59,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "wings"
+    },
+    {
+      "index": 54,
+      "id": "c_thorax-l_haltere-yaw",
+      "compiled_name": "fly/c_thorax-l_haltere-yaw",
+      "parent": "c_thorax",
+      "child": "l_haltere",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 61,
+      "dof_address": 60,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "halteres"
+    },
+    {
+      "index": 55,
+      "id": "c_thorax-l_haltere-pitch",
+      "compiled_name": "fly/c_thorax-l_haltere-pitch",
+      "parent": "c_thorax",
+      "child": "l_haltere",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 62,
+      "dof_address": 61,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "halteres"
+    },
+    {
+      "index": 56,
+      "id": "c_thorax-l_haltere-roll",
+      "compiled_name": "fly/c_thorax-l_haltere-roll",
+      "parent": "c_thorax",
+      "child": "l_haltere",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 63,
+      "dof_address": 62,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "halteres"
+    },
+    {
+      "index": 57,
+      "id": "c_thorax-r_haltere-yaw",
+      "compiled_name": "fly/c_thorax-r_haltere-yaw",
+      "parent": "c_thorax",
+      "child": "r_haltere",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 64,
+      "dof_address": 63,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "halteres"
+    },
+    {
+      "index": 58,
+      "id": "c_thorax-r_haltere-pitch",
+      "compiled_name": "fly/c_thorax-r_haltere-pitch",
+      "parent": "c_thorax",
+      "child": "r_haltere",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 65,
+      "dof_address": 64,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "halteres"
+    },
+    {
+      "index": 59,
+      "id": "c_thorax-r_haltere-roll",
+      "compiled_name": "fly/c_thorax-r_haltere-roll",
+      "parent": "c_thorax",
+      "child": "r_haltere",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 66,
+      "dof_address": 65,
+      "neutral_rad": 0.0,
+      "spring_reference_rad": 0.0,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "halteres"
+    },
+    {
+      "index": 60,
+      "id": "c_thorax-lf_coxa-yaw",
+      "compiled_name": "fly/c_thorax-lf_coxa-yaw",
+      "parent": "c_thorax",
+      "child": "lf_coxa",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 67,
+      "dof_address": 66,
+      "neutral_rad": -0.296706,
+      "spring_reference_rad": -0.296706,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 61,
+      "id": "c_thorax-lf_coxa-pitch",
+      "compiled_name": "fly/c_thorax-lf_coxa-pitch",
+      "parent": "c_thorax",
+      "child": "lf_coxa",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 68,
+      "dof_address": 67,
+      "neutral_rad": 0.331613,
+      "spring_reference_rad": 0.331613,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 62,
+      "id": "c_thorax-lf_coxa-roll",
+      "compiled_name": "fly/c_thorax-lf_coxa-roll",
+      "parent": "c_thorax",
+      "child": "lf_coxa",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 69,
+      "dof_address": 68,
+      "neutral_rad": 0.575959,
+      "spring_reference_rad": 0.575959,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 63,
+      "id": "lf_coxa-lf_trochanterfemur-pitch",
+      "compiled_name": "fly/lf_coxa-lf_trochanterfemur-pitch",
+      "parent": "lf_coxa",
+      "child": "lf_trochanterfemur",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 70,
+      "dof_address": 69,
+      "neutral_rad": -2.42601,
+      "spring_reference_rad": -2.42601,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 64,
+      "id": "lf_coxa-lf_trochanterfemur-roll",
+      "compiled_name": "fly/lf_coxa-lf_trochanterfemur-roll",
+      "parent": "lf_coxa",
+      "child": "lf_trochanterfemur",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 71,
+      "dof_address": 70,
+      "neutral_rad": -0.261799,
+      "spring_reference_rad": -0.261799,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 65,
+      "id": "lf_trochanterfemur-lf_tibia-pitch",
+      "compiled_name": "fly/lf_trochanterfemur-lf_tibia-pitch",
+      "parent": "lf_trochanterfemur",
+      "child": "lf_tibia",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 72,
+      "dof_address": 71,
+      "neutral_rad": 1.36136,
+      "spring_reference_rad": 1.36136,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 66,
+      "id": "lf_tibia-lf_tarsus1-pitch",
+      "compiled_name": "fly/lf_tibia-lf_tarsus1-pitch",
+      "parent": "lf_tibia",
+      "child": "lf_tarsus1",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 73,
+      "dof_address": 72,
+      "neutral_rad": -0.174533,
+      "spring_reference_rad": -0.174533,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 67,
+      "id": "lf_tarsus1-lf_tarsus2-pitch",
+      "compiled_name": "fly/lf_tarsus1-lf_tarsus2-pitch",
+      "parent": "lf_tarsus1",
+      "child": "lf_tarsus2",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 74,
+      "dof_address": 73,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 68,
+      "id": "lf_tarsus2-lf_tarsus3-pitch",
+      "compiled_name": "fly/lf_tarsus2-lf_tarsus3-pitch",
+      "parent": "lf_tarsus2",
+      "child": "lf_tarsus3",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 75,
+      "dof_address": 74,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 69,
+      "id": "lf_tarsus3-lf_tarsus4-pitch",
+      "compiled_name": "fly/lf_tarsus3-lf_tarsus4-pitch",
+      "parent": "lf_tarsus3",
+      "child": "lf_tarsus4",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 76,
+      "dof_address": 75,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 70,
+      "id": "lf_tarsus4-lf_tarsus5-pitch",
+      "compiled_name": "fly/lf_tarsus4-lf_tarsus5-pitch",
+      "parent": "lf_tarsus4",
+      "child": "lf_tarsus5",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 77,
+      "dof_address": 76,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 71,
+      "id": "c_thorax-lm_coxa-yaw",
+      "compiled_name": "fly/c_thorax-lm_coxa-yaw",
+      "parent": "c_thorax",
+      "child": "lm_coxa",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 78,
+      "dof_address": 77,
+      "neutral_rad": -0.174533,
+      "spring_reference_rad": -0.174533,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 72,
+      "id": "c_thorax-lm_coxa-pitch",
+      "compiled_name": "fly/c_thorax-lm_coxa-pitch",
+      "parent": "c_thorax",
+      "child": "lm_coxa",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 79,
+      "dof_address": 78,
+      "neutral_rad": 0.139626,
+      "spring_reference_rad": 0.139626,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 73,
+      "id": "c_thorax-lm_coxa-roll",
+      "compiled_name": "fly/c_thorax-lm_coxa-roll",
+      "parent": "c_thorax",
+      "child": "lm_coxa",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 80,
+      "dof_address": 79,
+      "neutral_rad": 1.51844,
+      "spring_reference_rad": 1.51844,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 74,
+      "id": "lm_coxa-lm_trochanterfemur-pitch",
+      "compiled_name": "fly/lm_coxa-lm_trochanterfemur-pitch",
+      "parent": "lm_coxa",
+      "child": "lm_trochanterfemur",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 81,
+      "dof_address": 80,
+      "neutral_rad": -2.42601,
+      "spring_reference_rad": -2.42601,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 75,
+      "id": "lm_coxa-lm_trochanterfemur-roll",
+      "compiled_name": "fly/lm_coxa-lm_trochanterfemur-roll",
+      "parent": "lm_coxa",
+      "child": "lm_trochanterfemur",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 82,
+      "dof_address": 81,
+      "neutral_rad": 0.261799,
+      "spring_reference_rad": 0.261799,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 76,
+      "id": "lm_trochanterfemur-lm_tibia-pitch",
+      "compiled_name": "fly/lm_trochanterfemur-lm_tibia-pitch",
+      "parent": "lm_trochanterfemur",
+      "child": "lm_tibia",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 83,
+      "dof_address": 82,
+      "neutral_rad": 1.79769,
+      "spring_reference_rad": 1.79769,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 77,
+      "id": "lm_tibia-lm_tarsus1-pitch",
+      "compiled_name": "fly/lm_tibia-lm_tarsus1-pitch",
+      "parent": "lm_tibia",
+      "child": "lm_tarsus1",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 84,
+      "dof_address": 83,
+      "neutral_rad": -0.349066,
+      "spring_reference_rad": -0.349066,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 78,
+      "id": "lm_tarsus1-lm_tarsus2-pitch",
+      "compiled_name": "fly/lm_tarsus1-lm_tarsus2-pitch",
+      "parent": "lm_tarsus1",
+      "child": "lm_tarsus2",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 85,
+      "dof_address": 84,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 79,
+      "id": "lm_tarsus2-lm_tarsus3-pitch",
+      "compiled_name": "fly/lm_tarsus2-lm_tarsus3-pitch",
+      "parent": "lm_tarsus2",
+      "child": "lm_tarsus3",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 86,
+      "dof_address": 85,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 80,
+      "id": "lm_tarsus3-lm_tarsus4-pitch",
+      "compiled_name": "fly/lm_tarsus3-lm_tarsus4-pitch",
+      "parent": "lm_tarsus3",
+      "child": "lm_tarsus4",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 87,
+      "dof_address": 86,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 81,
+      "id": "lm_tarsus4-lm_tarsus5-pitch",
+      "compiled_name": "fly/lm_tarsus4-lm_tarsus5-pitch",
+      "parent": "lm_tarsus4",
+      "child": "lm_tarsus5",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 88,
+      "dof_address": 87,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 82,
+      "id": "c_thorax-lh_coxa-yaw",
+      "compiled_name": "fly/c_thorax-lh_coxa-yaw",
+      "parent": "c_thorax",
+      "child": "lh_coxa",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 89,
+      "dof_address": 88,
+      "neutral_rad": 0.0523599,
+      "spring_reference_rad": 0.0523599,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 83,
+      "id": "c_thorax-lh_coxa-pitch",
+      "compiled_name": "fly/c_thorax-lh_coxa-pitch",
+      "parent": "c_thorax",
+      "child": "lh_coxa",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 90,
+      "dof_address": 89,
+      "neutral_rad": 0.418879,
+      "spring_reference_rad": 0.418879,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 84,
+      "id": "c_thorax-lh_coxa-roll",
+      "compiled_name": "fly/c_thorax-lh_coxa-roll",
+      "parent": "c_thorax",
+      "child": "lh_coxa",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 91,
+      "dof_address": 90,
+      "neutral_rad": 2.33874,
+      "spring_reference_rad": 2.33874,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 85,
+      "id": "lh_coxa-lh_trochanterfemur-pitch",
+      "compiled_name": "fly/lh_coxa-lh_trochanterfemur-pitch",
+      "parent": "lh_coxa",
+      "child": "lh_trochanterfemur",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 92,
+      "dof_address": 91,
+      "neutral_rad": -1.93732,
+      "spring_reference_rad": -1.93732,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 86,
+      "id": "lh_coxa-lh_trochanterfemur-roll",
+      "compiled_name": "fly/lh_coxa-lh_trochanterfemur-roll",
+      "parent": "lh_coxa",
+      "child": "lh_trochanterfemur",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "qpos_address": 93,
+      "dof_address": 92,
+      "neutral_rad": 0.0698132,
+      "spring_reference_rad": 0.0698132,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 87,
+      "id": "lh_trochanterfemur-lh_tibia-pitch",
+      "compiled_name": "fly/lh_trochanterfemur-lh_tibia-pitch",
+      "parent": "lh_trochanterfemur",
+      "child": "lh_tibia",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 94,
+      "dof_address": 93,
+      "neutral_rad": 1.76278,
+      "spring_reference_rad": 1.76278,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 88,
+      "id": "lh_tibia-lh_tarsus1-pitch",
+      "compiled_name": "fly/lh_tibia-lh_tarsus1-pitch",
+      "parent": "lh_tibia",
+      "child": "lh_tarsus1",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 95,
+      "dof_address": 94,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 89,
+      "id": "lh_tarsus1-lh_tarsus2-pitch",
+      "compiled_name": "fly/lh_tarsus1-lh_tarsus2-pitch",
+      "parent": "lh_tarsus1",
+      "child": "lh_tarsus2",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 96,
+      "dof_address": 95,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 90,
+      "id": "lh_tarsus2-lh_tarsus3-pitch",
+      "compiled_name": "fly/lh_tarsus2-lh_tarsus3-pitch",
+      "parent": "lh_tarsus2",
+      "child": "lh_tarsus3",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 97,
+      "dof_address": 96,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 91,
+      "id": "lh_tarsus3-lh_tarsus4-pitch",
+      "compiled_name": "fly/lh_tarsus3-lh_tarsus4-pitch",
+      "parent": "lh_tarsus3",
+      "child": "lh_tarsus4",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 98,
+      "dof_address": 97,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 92,
+      "id": "lh_tarsus4-lh_tarsus5-pitch",
+      "compiled_name": "fly/lh_tarsus4-lh_tarsus5-pitch",
+      "parent": "lh_tarsus4",
+      "child": "lh_tarsus5",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 99,
+      "dof_address": 98,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 93,
+      "id": "c_thorax-rf_coxa-yaw",
+      "compiled_name": "fly/c_thorax-rf_coxa-yaw",
+      "parent": "c_thorax",
+      "child": "rf_coxa",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 100,
+      "dof_address": 99,
+      "neutral_rad": -0.296706,
+      "spring_reference_rad": -0.296706,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 94,
+      "id": "c_thorax-rf_coxa-pitch",
+      "compiled_name": "fly/c_thorax-rf_coxa-pitch",
+      "parent": "c_thorax",
+      "child": "rf_coxa",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 101,
+      "dof_address": 100,
+      "neutral_rad": 0.331613,
+      "spring_reference_rad": 0.331613,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 95,
+      "id": "c_thorax-rf_coxa-roll",
+      "compiled_name": "fly/c_thorax-rf_coxa-roll",
+      "parent": "c_thorax",
+      "child": "rf_coxa",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 102,
+      "dof_address": 101,
+      "neutral_rad": 0.575959,
+      "spring_reference_rad": 0.575959,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 96,
+      "id": "rf_coxa-rf_trochanterfemur-pitch",
+      "compiled_name": "fly/rf_coxa-rf_trochanterfemur-pitch",
+      "parent": "rf_coxa",
+      "child": "rf_trochanterfemur",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 103,
+      "dof_address": 102,
+      "neutral_rad": -2.42601,
+      "spring_reference_rad": -2.42601,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 97,
+      "id": "rf_coxa-rf_trochanterfemur-roll",
+      "compiled_name": "fly/rf_coxa-rf_trochanterfemur-roll",
+      "parent": "rf_coxa",
+      "child": "rf_trochanterfemur",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 104,
+      "dof_address": 103,
+      "neutral_rad": -0.261799,
+      "spring_reference_rad": -0.261799,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 98,
+      "id": "rf_trochanterfemur-rf_tibia-pitch",
+      "compiled_name": "fly/rf_trochanterfemur-rf_tibia-pitch",
+      "parent": "rf_trochanterfemur",
+      "child": "rf_tibia",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 105,
+      "dof_address": 104,
+      "neutral_rad": 1.36136,
+      "spring_reference_rad": 1.36136,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 99,
+      "id": "rf_tibia-rf_tarsus1-pitch",
+      "compiled_name": "fly/rf_tibia-rf_tarsus1-pitch",
+      "parent": "rf_tibia",
+      "child": "rf_tarsus1",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 106,
+      "dof_address": 105,
+      "neutral_rad": -0.174533,
+      "spring_reference_rad": -0.174533,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 100,
+      "id": "rf_tarsus1-rf_tarsus2-pitch",
+      "compiled_name": "fly/rf_tarsus1-rf_tarsus2-pitch",
+      "parent": "rf_tarsus1",
+      "child": "rf_tarsus2",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 107,
+      "dof_address": 106,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 101,
+      "id": "rf_tarsus2-rf_tarsus3-pitch",
+      "compiled_name": "fly/rf_tarsus2-rf_tarsus3-pitch",
+      "parent": "rf_tarsus2",
+      "child": "rf_tarsus3",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 108,
+      "dof_address": 107,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 102,
+      "id": "rf_tarsus3-rf_tarsus4-pitch",
+      "compiled_name": "fly/rf_tarsus3-rf_tarsus4-pitch",
+      "parent": "rf_tarsus3",
+      "child": "rf_tarsus4",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 109,
+      "dof_address": 108,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 103,
+      "id": "rf_tarsus4-rf_tarsus5-pitch",
+      "compiled_name": "fly/rf_tarsus4-rf_tarsus5-pitch",
+      "parent": "rf_tarsus4",
+      "child": "rf_tarsus5",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 110,
+      "dof_address": 109,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 104,
+      "id": "c_thorax-rm_coxa-yaw",
+      "compiled_name": "fly/c_thorax-rm_coxa-yaw",
+      "parent": "c_thorax",
+      "child": "rm_coxa",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 111,
+      "dof_address": 110,
+      "neutral_rad": -0.174533,
+      "spring_reference_rad": -0.174533,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 105,
+      "id": "c_thorax-rm_coxa-pitch",
+      "compiled_name": "fly/c_thorax-rm_coxa-pitch",
+      "parent": "c_thorax",
+      "child": "rm_coxa",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 112,
+      "dof_address": 111,
+      "neutral_rad": 0.139626,
+      "spring_reference_rad": 0.139626,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 106,
+      "id": "c_thorax-rm_coxa-roll",
+      "compiled_name": "fly/c_thorax-rm_coxa-roll",
+      "parent": "c_thorax",
+      "child": "rm_coxa",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 113,
+      "dof_address": 112,
+      "neutral_rad": 1.51844,
+      "spring_reference_rad": 1.51844,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 107,
+      "id": "rm_coxa-rm_trochanterfemur-pitch",
+      "compiled_name": "fly/rm_coxa-rm_trochanterfemur-pitch",
+      "parent": "rm_coxa",
+      "child": "rm_trochanterfemur",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 114,
+      "dof_address": 113,
+      "neutral_rad": -2.42601,
+      "spring_reference_rad": -2.42601,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 108,
+      "id": "rm_coxa-rm_trochanterfemur-roll",
+      "compiled_name": "fly/rm_coxa-rm_trochanterfemur-roll",
+      "parent": "rm_coxa",
+      "child": "rm_trochanterfemur",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 115,
+      "dof_address": 114,
+      "neutral_rad": 0.261799,
+      "spring_reference_rad": 0.261799,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 109,
+      "id": "rm_trochanterfemur-rm_tibia-pitch",
+      "compiled_name": "fly/rm_trochanterfemur-rm_tibia-pitch",
+      "parent": "rm_trochanterfemur",
+      "child": "rm_tibia",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 116,
+      "dof_address": 115,
+      "neutral_rad": 1.79769,
+      "spring_reference_rad": 1.79769,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 110,
+      "id": "rm_tibia-rm_tarsus1-pitch",
+      "compiled_name": "fly/rm_tibia-rm_tarsus1-pitch",
+      "parent": "rm_tibia",
+      "child": "rm_tarsus1",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 117,
+      "dof_address": 116,
+      "neutral_rad": -0.349066,
+      "spring_reference_rad": -0.349066,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 111,
+      "id": "rm_tarsus1-rm_tarsus2-pitch",
+      "compiled_name": "fly/rm_tarsus1-rm_tarsus2-pitch",
+      "parent": "rm_tarsus1",
+      "child": "rm_tarsus2",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 118,
+      "dof_address": 117,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 112,
+      "id": "rm_tarsus2-rm_tarsus3-pitch",
+      "compiled_name": "fly/rm_tarsus2-rm_tarsus3-pitch",
+      "parent": "rm_tarsus2",
+      "child": "rm_tarsus3",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 119,
+      "dof_address": 118,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 113,
+      "id": "rm_tarsus3-rm_tarsus4-pitch",
+      "compiled_name": "fly/rm_tarsus3-rm_tarsus4-pitch",
+      "parent": "rm_tarsus3",
+      "child": "rm_tarsus4",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 120,
+      "dof_address": 119,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 114,
+      "id": "rm_tarsus4-rm_tarsus5-pitch",
+      "compiled_name": "fly/rm_tarsus4-rm_tarsus5-pitch",
+      "parent": "rm_tarsus4",
+      "child": "rm_tarsus5",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 121,
+      "dof_address": 120,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 115,
+      "id": "c_thorax-rh_coxa-yaw",
+      "compiled_name": "fly/c_thorax-rh_coxa-yaw",
+      "parent": "c_thorax",
+      "child": "rh_coxa",
+      "axis_semantic": "yaw",
+      "axis_model": [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "qpos_address": 122,
+      "dof_address": 121,
+      "neutral_rad": 0.0523599,
+      "spring_reference_rad": 0.0523599,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 116,
+      "id": "c_thorax-rh_coxa-pitch",
+      "compiled_name": "fly/c_thorax-rh_coxa-pitch",
+      "parent": "c_thorax",
+      "child": "rh_coxa",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 123,
+      "dof_address": 122,
+      "neutral_rad": 0.418879,
+      "spring_reference_rad": 0.418879,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 117,
+      "id": "c_thorax-rh_coxa-roll",
+      "compiled_name": "fly/c_thorax-rh_coxa-roll",
+      "parent": "c_thorax",
+      "child": "rh_coxa",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 124,
+      "dof_address": 123,
+      "neutral_rad": 2.33874,
+      "spring_reference_rad": 2.33874,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 118,
+      "id": "rh_coxa-rh_trochanterfemur-pitch",
+      "compiled_name": "fly/rh_coxa-rh_trochanterfemur-pitch",
+      "parent": "rh_coxa",
+      "child": "rh_trochanterfemur",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 125,
+      "dof_address": 124,
+      "neutral_rad": -1.93732,
+      "spring_reference_rad": -1.93732,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 119,
+      "id": "rh_coxa-rh_trochanterfemur-roll",
+      "compiled_name": "fly/rh_coxa-rh_trochanterfemur-roll",
+      "parent": "rh_coxa",
+      "child": "rh_trochanterfemur",
+      "axis_semantic": "roll",
+      "axis_model": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "qpos_address": 126,
+      "dof_address": 125,
+      "neutral_rad": 0.0698132,
+      "spring_reference_rad": 0.0698132,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 120,
+      "id": "rh_trochanterfemur-rh_tibia-pitch",
+      "compiled_name": "fly/rh_trochanterfemur-rh_tibia-pitch",
+      "parent": "rh_trochanterfemur",
+      "child": "rh_tibia",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 127,
+      "dof_address": 126,
+      "neutral_rad": 1.76278,
+      "spring_reference_rad": 1.76278,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 121,
+      "id": "rh_tibia-rh_tarsus1-pitch",
+      "compiled_name": "fly/rh_tibia-rh_tarsus1-pitch",
+      "parent": "rh_tibia",
+      "child": "rh_tarsus1",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 128,
+      "dof_address": 127,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": true,
+      "control_group": "walking"
+    },
+    {
+      "index": 122,
+      "id": "rh_tarsus1-rh_tarsus2-pitch",
+      "compiled_name": "fly/rh_tarsus1-rh_tarsus2-pitch",
+      "parent": "rh_tarsus1",
+      "child": "rh_tarsus2",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 129,
+      "dof_address": 128,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 123,
+      "id": "rh_tarsus2-rh_tarsus3-pitch",
+      "compiled_name": "fly/rh_tarsus2-rh_tarsus3-pitch",
+      "parent": "rh_tarsus2",
+      "child": "rh_tarsus3",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 130,
+      "dof_address": 129,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 124,
+      "id": "rh_tarsus3-rh_tarsus4-pitch",
+      "compiled_name": "fly/rh_tarsus3-rh_tarsus4-pitch",
+      "parent": "rh_tarsus3",
+      "child": "rh_tarsus4",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 131,
+      "dof_address": 130,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    },
+    {
+      "index": 125,
+      "id": "rh_tarsus4-rh_tarsus5-pitch",
+      "compiled_name": "fly/rh_tarsus4-rh_tarsus5-pitch",
+      "parent": "rh_tarsus4",
+      "child": "rh_tarsus5",
+      "axis_semantic": "pitch",
+      "axis_model": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "qpos_address": 132,
+      "dof_address": 131,
+      "neutral_rad": -0.0872665,
+      "spring_reference_rad": -0.0872665,
+      "limited": false,
+      "range_rad": [
+        0.0,
+        0.0
+      ],
+      "stiffness": 10.0,
+      "damping": 0.5,
+      "armature": 1e-06,
+      "actuated": false,
+      "control_group": null
+    }
+  ],
+  "actuators": [
+    {
+      "index": 0,
+      "id": "c_thorax-lf_coxa-yaw-position",
+      "compiled_name": "fly/c_thorax-lf_coxa-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-lf_coxa-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.296706,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 1,
+      "id": "c_thorax-lf_coxa-pitch-position",
+      "compiled_name": "fly/c_thorax-lf_coxa-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-lf_coxa-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.331613,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 2,
+      "id": "c_thorax-lf_coxa-roll-position",
+      "compiled_name": "fly/c_thorax-lf_coxa-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-lf_coxa-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.575959,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 3,
+      "id": "lf_coxa-lf_trochanterfemur-pitch-position",
+      "compiled_name": "fly/lf_coxa-lf_trochanterfemur-pitch-position",
+      "kind": "position_target",
+      "target": "lf_coxa-lf_trochanterfemur-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -2.42601,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 4,
+      "id": "lf_coxa-lf_trochanterfemur-roll-position",
+      "compiled_name": "fly/lf_coxa-lf_trochanterfemur-roll-position",
+      "kind": "position_target",
+      "target": "lf_coxa-lf_trochanterfemur-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.261799,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 5,
+      "id": "lf_trochanterfemur-lf_tibia-pitch-position",
+      "compiled_name": "fly/lf_trochanterfemur-lf_tibia-pitch-position",
+      "kind": "position_target",
+      "target": "lf_trochanterfemur-lf_tibia-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 1.36136,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 6,
+      "id": "lf_tibia-lf_tarsus1-pitch-position",
+      "compiled_name": "fly/lf_tibia-lf_tarsus1-pitch-position",
+      "kind": "position_target",
+      "target": "lf_tibia-lf_tarsus1-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.174533,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 7,
+      "id": "c_thorax-lm_coxa-yaw-position",
+      "compiled_name": "fly/c_thorax-lm_coxa-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-lm_coxa-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.174533,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 8,
+      "id": "c_thorax-lm_coxa-pitch-position",
+      "compiled_name": "fly/c_thorax-lm_coxa-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-lm_coxa-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.139626,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 9,
+      "id": "c_thorax-lm_coxa-roll-position",
+      "compiled_name": "fly/c_thorax-lm_coxa-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-lm_coxa-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 1.51844,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 10,
+      "id": "lm_coxa-lm_trochanterfemur-pitch-position",
+      "compiled_name": "fly/lm_coxa-lm_trochanterfemur-pitch-position",
+      "kind": "position_target",
+      "target": "lm_coxa-lm_trochanterfemur-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -2.42601,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 11,
+      "id": "lm_coxa-lm_trochanterfemur-roll-position",
+      "compiled_name": "fly/lm_coxa-lm_trochanterfemur-roll-position",
+      "kind": "position_target",
+      "target": "lm_coxa-lm_trochanterfemur-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.261799,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 12,
+      "id": "lm_trochanterfemur-lm_tibia-pitch-position",
+      "compiled_name": "fly/lm_trochanterfemur-lm_tibia-pitch-position",
+      "kind": "position_target",
+      "target": "lm_trochanterfemur-lm_tibia-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 1.79769,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 13,
+      "id": "lm_tibia-lm_tarsus1-pitch-position",
+      "compiled_name": "fly/lm_tibia-lm_tarsus1-pitch-position",
+      "kind": "position_target",
+      "target": "lm_tibia-lm_tarsus1-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.349066,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 14,
+      "id": "c_thorax-lh_coxa-yaw-position",
+      "compiled_name": "fly/c_thorax-lh_coxa-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-lh_coxa-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0523599,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 15,
+      "id": "c_thorax-lh_coxa-pitch-position",
+      "compiled_name": "fly/c_thorax-lh_coxa-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-lh_coxa-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.418879,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 16,
+      "id": "c_thorax-lh_coxa-roll-position",
+      "compiled_name": "fly/c_thorax-lh_coxa-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-lh_coxa-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 2.33874,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 17,
+      "id": "lh_coxa-lh_trochanterfemur-pitch-position",
+      "compiled_name": "fly/lh_coxa-lh_trochanterfemur-pitch-position",
+      "kind": "position_target",
+      "target": "lh_coxa-lh_trochanterfemur-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -1.93732,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 18,
+      "id": "lh_coxa-lh_trochanterfemur-roll-position",
+      "compiled_name": "fly/lh_coxa-lh_trochanterfemur-roll-position",
+      "kind": "position_target",
+      "target": "lh_coxa-lh_trochanterfemur-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0698132,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 19,
+      "id": "lh_trochanterfemur-lh_tibia-pitch-position",
+      "compiled_name": "fly/lh_trochanterfemur-lh_tibia-pitch-position",
+      "kind": "position_target",
+      "target": "lh_trochanterfemur-lh_tibia-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 1.76278,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 20,
+      "id": "lh_tibia-lh_tarsus1-pitch-position",
+      "compiled_name": "fly/lh_tibia-lh_tarsus1-pitch-position",
+      "kind": "position_target",
+      "target": "lh_tibia-lh_tarsus1-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.0872665,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 21,
+      "id": "c_thorax-rf_coxa-yaw-position",
+      "compiled_name": "fly/c_thorax-rf_coxa-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-rf_coxa-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.296706,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 22,
+      "id": "c_thorax-rf_coxa-pitch-position",
+      "compiled_name": "fly/c_thorax-rf_coxa-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-rf_coxa-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.331613,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 23,
+      "id": "c_thorax-rf_coxa-roll-position",
+      "compiled_name": "fly/c_thorax-rf_coxa-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-rf_coxa-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.575959,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 24,
+      "id": "rf_coxa-rf_trochanterfemur-pitch-position",
+      "compiled_name": "fly/rf_coxa-rf_trochanterfemur-pitch-position",
+      "kind": "position_target",
+      "target": "rf_coxa-rf_trochanterfemur-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -2.42601,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 25,
+      "id": "rf_coxa-rf_trochanterfemur-roll-position",
+      "compiled_name": "fly/rf_coxa-rf_trochanterfemur-roll-position",
+      "kind": "position_target",
+      "target": "rf_coxa-rf_trochanterfemur-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.261799,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 26,
+      "id": "rf_trochanterfemur-rf_tibia-pitch-position",
+      "compiled_name": "fly/rf_trochanterfemur-rf_tibia-pitch-position",
+      "kind": "position_target",
+      "target": "rf_trochanterfemur-rf_tibia-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 1.36136,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 27,
+      "id": "rf_tibia-rf_tarsus1-pitch-position",
+      "compiled_name": "fly/rf_tibia-rf_tarsus1-pitch-position",
+      "kind": "position_target",
+      "target": "rf_tibia-rf_tarsus1-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.174533,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 28,
+      "id": "c_thorax-rm_coxa-yaw-position",
+      "compiled_name": "fly/c_thorax-rm_coxa-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-rm_coxa-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.174533,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 29,
+      "id": "c_thorax-rm_coxa-pitch-position",
+      "compiled_name": "fly/c_thorax-rm_coxa-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-rm_coxa-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.139626,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 30,
+      "id": "c_thorax-rm_coxa-roll-position",
+      "compiled_name": "fly/c_thorax-rm_coxa-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-rm_coxa-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 1.51844,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 31,
+      "id": "rm_coxa-rm_trochanterfemur-pitch-position",
+      "compiled_name": "fly/rm_coxa-rm_trochanterfemur-pitch-position",
+      "kind": "position_target",
+      "target": "rm_coxa-rm_trochanterfemur-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -2.42601,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 32,
+      "id": "rm_coxa-rm_trochanterfemur-roll-position",
+      "compiled_name": "fly/rm_coxa-rm_trochanterfemur-roll-position",
+      "kind": "position_target",
+      "target": "rm_coxa-rm_trochanterfemur-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.261799,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 33,
+      "id": "rm_trochanterfemur-rm_tibia-pitch-position",
+      "compiled_name": "fly/rm_trochanterfemur-rm_tibia-pitch-position",
+      "kind": "position_target",
+      "target": "rm_trochanterfemur-rm_tibia-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 1.79769,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 34,
+      "id": "rm_tibia-rm_tarsus1-pitch-position",
+      "compiled_name": "fly/rm_tibia-rm_tarsus1-pitch-position",
+      "kind": "position_target",
+      "target": "rm_tibia-rm_tarsus1-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.349066,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 35,
+      "id": "c_thorax-rh_coxa-yaw-position",
+      "compiled_name": "fly/c_thorax-rh_coxa-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-rh_coxa-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0523599,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 36,
+      "id": "c_thorax-rh_coxa-pitch-position",
+      "compiled_name": "fly/c_thorax-rh_coxa-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-rh_coxa-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.418879,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 37,
+      "id": "c_thorax-rh_coxa-roll-position",
+      "compiled_name": "fly/c_thorax-rh_coxa-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-rh_coxa-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 2.33874,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 38,
+      "id": "rh_coxa-rh_trochanterfemur-pitch-position",
+      "compiled_name": "fly/rh_coxa-rh_trochanterfemur-pitch-position",
+      "kind": "position_target",
+      "target": "rh_coxa-rh_trochanterfemur-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -1.93732,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 39,
+      "id": "rh_coxa-rh_trochanterfemur-roll-position",
+      "compiled_name": "fly/rh_coxa-rh_trochanterfemur-roll-position",
+      "kind": "position_target",
+      "target": "rh_coxa-rh_trochanterfemur-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0698132,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 40,
+      "id": "rh_trochanterfemur-rh_tibia-pitch-position",
+      "compiled_name": "fly/rh_trochanterfemur-rh_tibia-pitch-position",
+      "kind": "position_target",
+      "target": "rh_trochanterfemur-rh_tibia-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 1.76278,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 41,
+      "id": "rh_tibia-rh_tarsus1-pitch-position",
+      "compiled_name": "fly/rh_tibia-rh_tarsus1-pitch-position",
+      "kind": "position_target",
+      "target": "rh_tibia-rh_tarsus1-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": -0.0872665,
+      "evidence_grade": "engineered",
+      "control_group": "walking"
+    },
+    {
+      "index": 42,
+      "id": "c_thorax-c_head-yaw-position",
+      "compiled_name": "fly/c_thorax-c_head-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-c_head-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "head"
+    },
+    {
+      "index": 43,
+      "id": "c_thorax-c_head-pitch-position",
+      "compiled_name": "fly/c_thorax-c_head-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-c_head-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "head"
+    },
+    {
+      "index": 44,
+      "id": "c_thorax-c_head-roll-position",
+      "compiled_name": "fly/c_thorax-c_head-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-c_head-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "head"
+    },
+    {
+      "index": 45,
+      "id": "c_head-l_pedicel-yaw-position",
+      "compiled_name": "fly/c_head-l_pedicel-yaw-position",
+      "kind": "position_target",
+      "target": "c_head-l_pedicel-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "pedicels"
+    },
+    {
+      "index": 46,
+      "id": "c_head-l_pedicel-pitch-position",
+      "compiled_name": "fly/c_head-l_pedicel-pitch-position",
+      "kind": "position_target",
+      "target": "c_head-l_pedicel-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "pedicels"
+    },
+    {
+      "index": 47,
+      "id": "c_head-l_pedicel-roll-position",
+      "compiled_name": "fly/c_head-l_pedicel-roll-position",
+      "kind": "position_target",
+      "target": "c_head-l_pedicel-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "pedicels"
+    },
+    {
+      "index": 48,
+      "id": "c_head-r_pedicel-yaw-position",
+      "compiled_name": "fly/c_head-r_pedicel-yaw-position",
+      "kind": "position_target",
+      "target": "c_head-r_pedicel-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "pedicels"
+    },
+    {
+      "index": 49,
+      "id": "c_head-r_pedicel-pitch-position",
+      "compiled_name": "fly/c_head-r_pedicel-pitch-position",
+      "kind": "position_target",
+      "target": "c_head-r_pedicel-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "pedicels"
+    },
+    {
+      "index": 50,
+      "id": "c_head-r_pedicel-roll-position",
+      "compiled_name": "fly/c_head-r_pedicel-roll-position",
+      "kind": "position_target",
+      "target": "c_head-r_pedicel-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "pedicels"
+    },
+    {
+      "index": 51,
+      "id": "c_head-c_rostrum-yaw-position",
+      "compiled_name": "fly/c_head-c_rostrum-yaw-position",
+      "kind": "position_target",
+      "target": "c_head-c_rostrum-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "proboscis"
+    },
+    {
+      "index": 52,
+      "id": "c_head-c_rostrum-pitch-position",
+      "compiled_name": "fly/c_head-c_rostrum-pitch-position",
+      "kind": "position_target",
+      "target": "c_head-c_rostrum-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "proboscis"
+    },
+    {
+      "index": 53,
+      "id": "c_head-c_rostrum-roll-position",
+      "compiled_name": "fly/c_head-c_rostrum-roll-position",
+      "kind": "position_target",
+      "target": "c_head-c_rostrum-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "proboscis"
+    },
+    {
+      "index": 54,
+      "id": "c_rostrum-c_haustellum-yaw-position",
+      "compiled_name": "fly/c_rostrum-c_haustellum-yaw-position",
+      "kind": "position_target",
+      "target": "c_rostrum-c_haustellum-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "proboscis"
+    },
+    {
+      "index": 55,
+      "id": "c_rostrum-c_haustellum-pitch-position",
+      "compiled_name": "fly/c_rostrum-c_haustellum-pitch-position",
+      "kind": "position_target",
+      "target": "c_rostrum-c_haustellum-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "proboscis"
+    },
+    {
+      "index": 56,
+      "id": "c_rostrum-c_haustellum-roll-position",
+      "compiled_name": "fly/c_rostrum-c_haustellum-roll-position",
+      "kind": "position_target",
+      "target": "c_rostrum-c_haustellum-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "proboscis"
+    },
+    {
+      "index": 57,
+      "id": "c_thorax-c_abdomen12-yaw-position",
+      "compiled_name": "fly/c_thorax-c_abdomen12-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-c_abdomen12-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 58,
+      "id": "c_thorax-c_abdomen12-pitch-position",
+      "compiled_name": "fly/c_thorax-c_abdomen12-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-c_abdomen12-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 59,
+      "id": "c_thorax-c_abdomen12-roll-position",
+      "compiled_name": "fly/c_thorax-c_abdomen12-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-c_abdomen12-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 60,
+      "id": "c_abdomen12-c_abdomen3-yaw-position",
+      "compiled_name": "fly/c_abdomen12-c_abdomen3-yaw-position",
+      "kind": "position_target",
+      "target": "c_abdomen12-c_abdomen3-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 61,
+      "id": "c_abdomen12-c_abdomen3-pitch-position",
+      "compiled_name": "fly/c_abdomen12-c_abdomen3-pitch-position",
+      "kind": "position_target",
+      "target": "c_abdomen12-c_abdomen3-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 62,
+      "id": "c_abdomen12-c_abdomen3-roll-position",
+      "compiled_name": "fly/c_abdomen12-c_abdomen3-roll-position",
+      "kind": "position_target",
+      "target": "c_abdomen12-c_abdomen3-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 63,
+      "id": "c_abdomen3-c_abdomen4-yaw-position",
+      "compiled_name": "fly/c_abdomen3-c_abdomen4-yaw-position",
+      "kind": "position_target",
+      "target": "c_abdomen3-c_abdomen4-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 64,
+      "id": "c_abdomen3-c_abdomen4-pitch-position",
+      "compiled_name": "fly/c_abdomen3-c_abdomen4-pitch-position",
+      "kind": "position_target",
+      "target": "c_abdomen3-c_abdomen4-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 65,
+      "id": "c_abdomen3-c_abdomen4-roll-position",
+      "compiled_name": "fly/c_abdomen3-c_abdomen4-roll-position",
+      "kind": "position_target",
+      "target": "c_abdomen3-c_abdomen4-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 66,
+      "id": "c_abdomen4-c_abdomen5-yaw-position",
+      "compiled_name": "fly/c_abdomen4-c_abdomen5-yaw-position",
+      "kind": "position_target",
+      "target": "c_abdomen4-c_abdomen5-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 67,
+      "id": "c_abdomen4-c_abdomen5-pitch-position",
+      "compiled_name": "fly/c_abdomen4-c_abdomen5-pitch-position",
+      "kind": "position_target",
+      "target": "c_abdomen4-c_abdomen5-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 68,
+      "id": "c_abdomen4-c_abdomen5-roll-position",
+      "compiled_name": "fly/c_abdomen4-c_abdomen5-roll-position",
+      "kind": "position_target",
+      "target": "c_abdomen4-c_abdomen5-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 69,
+      "id": "c_abdomen5-c_abdomen6-yaw-position",
+      "compiled_name": "fly/c_abdomen5-c_abdomen6-yaw-position",
+      "kind": "position_target",
+      "target": "c_abdomen5-c_abdomen6-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 70,
+      "id": "c_abdomen5-c_abdomen6-pitch-position",
+      "compiled_name": "fly/c_abdomen5-c_abdomen6-pitch-position",
+      "kind": "position_target",
+      "target": "c_abdomen5-c_abdomen6-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 71,
+      "id": "c_abdomen5-c_abdomen6-roll-position",
+      "compiled_name": "fly/c_abdomen5-c_abdomen6-roll-position",
+      "kind": "position_target",
+      "target": "c_abdomen5-c_abdomen6-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "abdomen"
+    },
+    {
+      "index": 72,
+      "id": "c_thorax-l_wing-yaw-position",
+      "compiled_name": "fly/c_thorax-l_wing-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-l_wing-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "wings"
+    },
+    {
+      "index": 73,
+      "id": "c_thorax-l_wing-pitch-position",
+      "compiled_name": "fly/c_thorax-l_wing-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-l_wing-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "wings"
+    },
+    {
+      "index": 74,
+      "id": "c_thorax-l_wing-roll-position",
+      "compiled_name": "fly/c_thorax-l_wing-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-l_wing-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "wings"
+    },
+    {
+      "index": 75,
+      "id": "c_thorax-r_wing-yaw-position",
+      "compiled_name": "fly/c_thorax-r_wing-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-r_wing-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "wings"
+    },
+    {
+      "index": 76,
+      "id": "c_thorax-r_wing-pitch-position",
+      "compiled_name": "fly/c_thorax-r_wing-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-r_wing-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "wings"
+    },
+    {
+      "index": 77,
+      "id": "c_thorax-r_wing-roll-position",
+      "compiled_name": "fly/c_thorax-r_wing-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-r_wing-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "wings"
+    },
+    {
+      "index": 78,
+      "id": "c_thorax-l_haltere-yaw-position",
+      "compiled_name": "fly/c_thorax-l_haltere-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-l_haltere-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "halteres"
+    },
+    {
+      "index": 79,
+      "id": "c_thorax-l_haltere-pitch-position",
+      "compiled_name": "fly/c_thorax-l_haltere-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-l_haltere-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "halteres"
+    },
+    {
+      "index": 80,
+      "id": "c_thorax-l_haltere-roll-position",
+      "compiled_name": "fly/c_thorax-l_haltere-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-l_haltere-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "halteres"
+    },
+    {
+      "index": 81,
+      "id": "c_thorax-r_haltere-yaw-position",
+      "compiled_name": "fly/c_thorax-r_haltere-yaw-position",
+      "kind": "position_target",
+      "target": "c_thorax-r_haltere-yaw",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "halteres"
+    },
+    {
+      "index": 82,
+      "id": "c_thorax-r_haltere-pitch-position",
+      "compiled_name": "fly/c_thorax-r_haltere-pitch-position",
+      "kind": "position_target",
+      "target": "c_thorax-r_haltere-pitch",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "halteres"
+    },
+    {
+      "index": 83,
+      "id": "c_thorax-r_haltere-roll-position",
+      "compiled_name": "fly/c_thorax-r_haltere-roll-position",
+      "kind": "position_target",
+      "target": "c_thorax-r_haltere-roll",
+      "control_range": [
+        -3.14,
+        3.14
+      ],
+      "force_range": [
+        -30.0,
+        30.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "halteres"
+    },
+    {
+      "index": 84,
+      "id": "lf_tarsus5-adhesion",
+      "compiled_name": "fly/lf_tarsus5-adhesion",
+      "kind": "adhesion",
+      "target": "lf_tarsus5",
+      "control_range": [
+        0.0,
+        1.0
+      ],
+      "force_range": [
+        0.0,
+        0.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "adhesion"
+    },
+    {
+      "index": 85,
+      "id": "lm_tarsus5-adhesion",
+      "compiled_name": "fly/lm_tarsus5-adhesion",
+      "kind": "adhesion",
+      "target": "lm_tarsus5",
+      "control_range": [
+        0.0,
+        1.0
+      ],
+      "force_range": [
+        0.0,
+        0.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "adhesion"
+    },
+    {
+      "index": 86,
+      "id": "lh_tarsus5-adhesion",
+      "compiled_name": "fly/lh_tarsus5-adhesion",
+      "kind": "adhesion",
+      "target": "lh_tarsus5",
+      "control_range": [
+        0.0,
+        1.0
+      ],
+      "force_range": [
+        0.0,
+        0.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "adhesion"
+    },
+    {
+      "index": 87,
+      "id": "rf_tarsus5-adhesion",
+      "compiled_name": "fly/rf_tarsus5-adhesion",
+      "kind": "adhesion",
+      "target": "rf_tarsus5",
+      "control_range": [
+        0.0,
+        1.0
+      ],
+      "force_range": [
+        0.0,
+        0.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "adhesion"
+    },
+    {
+      "index": 88,
+      "id": "rm_tarsus5-adhesion",
+      "compiled_name": "fly/rm_tarsus5-adhesion",
+      "kind": "adhesion",
+      "target": "rm_tarsus5",
+      "control_range": [
+        0.0,
+        1.0
+      ],
+      "force_range": [
+        0.0,
+        0.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "adhesion"
+    },
+    {
+      "index": 89,
+      "id": "rh_tarsus5-adhesion",
+      "compiled_name": "fly/rh_tarsus5-adhesion",
+      "kind": "adhesion",
+      "target": "rh_tarsus5",
+      "control_range": [
+        0.0,
+        1.0
+      ],
+      "force_range": [
+        0.0,
+        0.0
+      ],
+      "neutral_control": 0.0,
+      "evidence_grade": "engineered",
+      "control_group": "adhesion"
+    }
+  ],
+  "contact_sensors": [
+    {
+      "index": 0,
+      "id": "ground_contact_lf_leg",
+      "compiled_name": "ground_contact_lf_leg",
+      "data_address": 0,
+      "dimension": 16,
+      "data_type": 0,
+      "evidence_grade": "measured_simulated_contact"
+    },
+    {
+      "index": 1,
+      "id": "ground_contact_lm_leg",
+      "compiled_name": "ground_contact_lm_leg",
+      "data_address": 16,
+      "dimension": 16,
+      "data_type": 0,
+      "evidence_grade": "measured_simulated_contact"
+    },
+    {
+      "index": 2,
+      "id": "ground_contact_lh_leg",
+      "compiled_name": "ground_contact_lh_leg",
+      "data_address": 32,
+      "dimension": 16,
+      "data_type": 0,
+      "evidence_grade": "measured_simulated_contact"
+    },
+    {
+      "index": 3,
+      "id": "ground_contact_rf_leg",
+      "compiled_name": "ground_contact_rf_leg",
+      "data_address": 48,
+      "dimension": 16,
+      "data_type": 0,
+      "evidence_grade": "measured_simulated_contact"
+    },
+    {
+      "index": 4,
+      "id": "ground_contact_rm_leg",
+      "compiled_name": "ground_contact_rm_leg",
+      "data_address": 64,
+      "dimension": 16,
+      "data_type": 0,
+      "evidence_grade": "measured_simulated_contact"
+    },
+    {
+      "index": 5,
+      "id": "ground_contact_rh_leg",
+      "compiled_name": "ground_contact_rh_leg",
+      "data_address": 80,
+      "dimension": 16,
+      "data_type": 0,
+      "evidence_grade": "measured_simulated_contact"
+    }
+  ],
+  "sensory_anchors": [
+    {
+      "id": "left_eye",
+      "body": "l_eye",
+      "camera": "l_eye_cam_camera",
+      "ommatidia": 721
+    },
+    {
+      "id": "right_eye",
+      "body": "r_eye",
+      "camera": "r_eye_cam_camera",
+      "ommatidia": 721
+    },
+    {
+      "id": "left_antenna",
+      "bodies": [
+        "l_pedicel",
+        "l_funiculus",
+        "l_arista"
+      ]
+    },
+    {
+      "id": "right_antenna",
+      "bodies": [
+        "r_pedicel",
+        "r_funiculus",
+        "r_arista"
+      ]
+    },
+    {
+      "id": "mouth",
+      "bodies": [
+        "c_rostrum",
+        "c_haustellum"
+      ]
+    }
+  ],
+  "interfaces": {
+    "cns_eligible_body_measurements": {
+      "joint_position_rad": {
+        "shape": [
+          126
+        ],
+        "dtype": "float64",
+        "order": "joint_dofs"
+      },
+      "joint_velocity_rad_s": {
+        "shape": [
+          126
+        ],
+        "dtype": "float64",
+        "order": "joint_dofs"
+      },
+      "ground_contact_raw": {
+        "shape": [
+          6,
+          16
+        ],
+        "dtype": "float64",
+        "order": [
+          "lf",
+          "lm",
+          "lh",
+          "rf",
+          "rm",
+          "rh"
+        ],
+        "channels": [
+          "found",
+          "force_contact_frame_xyz",
+          "torque_contact_frame_xyz",
+          "position_world_xyz",
+          "normal_world_xyz",
+          "tangent_world_xyz"
+        ],
+        "reduction": "MuJoCo netforce over each complete leg subtree against the ground plane"
+      }
+    },
+    "observer_only_kinematics": {
+      "body_position_mm": {
+        "shape": [
+          69,
+          3
+        ],
+        "dtype": "float64",
+        "order": "body_segments"
+      },
+      "body_quaternion_wxyz": {
+        "shape": [
+          69,
+          4
+        ],
+        "dtype": "float64",
+        "order": "body_segments"
+      },
+      "policy_access": "forbidden; labels, rewards, diagnostics and rendering only"
+    },
+    "physical_action": {
+      "position_target_rad": {
+        "shape": [
+          84
+        ],
+        "dtype": "float64",
+        "range": [
+          -3.14,
+          3.14
+        ],
+        "order": "actuators[0:84]",
+        "groups": {
+          "walking": 42,
+          "head": 3,
+          "pedicels": 6,
+          "proboscis": 6,
+          "abdomen": 15,
+          "wings": 6,
+          "halteres": 6
+        }
+      },
+      "adhesion": {
+        "shape": [
+          6
+        ],
+        "dtype": "float64",
+        "range": [
+          0.0,
+          1.0
+        ],
+        "order": [
+          "lf",
+          "lm",
+          "lh",
+          "rf",
+          "rm",
+          "rh"
+        ]
+      }
+    },
+    "training_transport": "cast physical state and actions to float32; world/body truth may be targets and diagnostics but only CNS-derived state enters policy/memory"
+  },
+  "model_limits": [
+    "The body geometry is grounded in one adult female micro-CT scan, while the current CNS substrate is male; this is an inter-animal and sex transfer.",
+    "All 126 joints are author-model anatomical axes but have no supplied anatomical limits; range [0,0] with limited=false means unlimited.",
+    "The active84 selection is a Chreatures engineering choice over author anatomical axes: walking42, head3, pedicels6, proboscis6, abdomen15, wings6 and halteres6. Its servos, gains, force bounds and six adhesion actuators are not identified muscles or measured neuromuscular junctions.",
+    "Eyes6, funiculus/arista12 and distal tarsus24 remain passive, for 42 passive joint axes total.",
+    "Eye cameras support the author 721-ommatidium reduction; the body contains no author olfactory, auditory, humidity, taste or physiological sensor implementation.",
+    "Fly geoms use explicit contact pairs; arbitrary objects and social body contact require deliberate pair generation when composing a world."
+  ],
+  "files": {
+    "author-source/FlyGym-LICENSE": "02afa15750a169f0815ff1525dacf28d010f1dfd4cb119fc9e96bfca4f426eb4",
+    "author-source/compound_eye.npz": "51afb29664ac1f4ef05535f417ae37ed8a625911c99995720ca382799eef36b3",
+    "author-source/meshes/simplified_max2000faces/simplification_metadata.csv": "c3b77709577fe547b13ee4e39d1e71040edcd94743e78660b5f605d758a8745f",
+    "author-source/mujoco_globals.yaml": "e5b70e5bd5199ab2a9a68eb119ce9ef3f0b1dfa1890e13f1adb6d6cc20579988",
+    "author-source/pose/neutral/yaw_pitch_roll.yaml": "b4ada107c43a1588e5f361dace0bac5ea1ce7df181201e62a02cc6ec99dc48a9",
+    "author-source/rigging.yaml": "4e51d5ed3f151aefc125c91ff9298921b3b79a9d64e03e6fe88f1ce9945dbe3d",
+    "author-source/vision.yaml": "aeaf9c67603e85ac81d251a01e7a20821687c1a62be0626af49ef09919e10545",
+    "author-source/visuals.yaml": "1b959ada4d8016d4c7f6bde4b118733b48e72d749acc74b8753b547c86b6546a",
+    "model/c_abdomen12.stl": "656b60100c06b0a8eb2dfbd201b12cac5eb31ffec6bf9c6c4ff3f97d14376371",
+    "model/c_abdomen3.stl": "264af5ede95bfcb11720219b31c76141a0921394f7c46e7fb7fb6b7066880f3b",
+    "model/c_abdomen4.stl": "662bbc3af32a987511af04e437d02c40e99840960809f5020abe9ec91b226ca4",
+    "model/c_abdomen5.stl": "87d1de98ad39ba52c096e0fd3b4860ae3a0aadeb4be46cac824e9b2501be6c48",
+    "model/c_abdomen6.stl": "748dda76a46554fd1743113eaafdf0dc2d10546095f5420406745e0eb47f87fb",
+    "model/c_haustellum.stl": "babceb7a6adf0c88e8de6ce9810c32b397d3d1cdd073c0b1bea1df9d8c6ac4e9",
+    "model/c_head.stl": "39c51acbdf5957af95e294fa485cd7602103ca83bf451e95e29d251bd43765b6",
+    "model/c_rostrum.stl": "4ed0fa33c5867013482011e2ff656b71189f2b29dfb0bda2b0797961d95d12e4",
+    "model/c_thorax.stl": "b7fac1a3bcbad2100d063bae2ae6e81217e808f3c32564763ee7e43ec3904969",
+    "model/l_arista.stl": "6201af1cbe213ee6e259a6d89df65080f9cb9d806e6526cbcc7c5f1ae793f97c",
+    "model/l_eye.stl": "08ce40c3264c9ab87703b6c013eae39d1bc48fa3e4cf02aec06d529c94e70daf",
+    "model/l_funiculus.stl": "d2a6d35751922fb8b1ce07b269bc432f33d7f8f6d243b2dd1801e021b91d8156",
+    "model/l_haltere.stl": "13d77fcca66fca90db5cf00b33a7369ae80366fe39974df3667e709882e64ed6",
+    "model/l_pedicel.stl": "6de0f06e57c78f8738f67c0c52b85e74cb105789497a4183944e90211d3a4bf4",
+    "model/l_wing.stl": "142f77f15008fd75e1490b546bb859cf98c056121f1abd65acea2052c4e7764c",
+    "model/lf_coxa.stl": "bff053bfee772796dae2b396aa0e3be12919b7fb1ee33b5fde369bec00944b64",
+    "model/lf_tarsus1.stl": "29085dda732699c4a3110458303adf2eec667f7db6e42166d408c260ae6acf5e",
+    "model/lf_tarsus2.stl": "996735c15a7e8e0c022babf5500224fa6e23de0e277305279d4b6787d56335d8",
+    "model/lf_tarsus3.stl": "166044083a5a4a0e8b7db91cdd71ef0ea0e3feb18f1630955156de14931d9495",
+    "model/lf_tarsus4.stl": "c90d8c6ebd0e2384a45524944e4fb2e02ba413be26ee04bc5030b2afb5876943",
+    "model/lf_tarsus5.stl": "93b048052461fa756a767608418ec90e537435a1ff282f2a393faa45ba60ae73",
+    "model/lf_tibia.stl": "8138fe5f1fc52588dca6677bb338d39451813ac96159f78d6cf677eba73f3862",
+    "model/lf_trochanterfemur.stl": "50e4e7baf2852a369f0dda2a2c9708a68c45893b3019a79dd74799e8e2ea64c9",
+    "model/lh_coxa.stl": "ad3a10789b8bd5e0f3db2667a1fe373ffdb83cfc876b34d60508e9e34a51366d",
+    "model/lh_tarsus1.stl": "61af16259215525e092d61426b874c7855485a9c7cfa91eecfc2fe99281a2dc6",
+    "model/lh_tarsus2.stl": "da796bc3ad5d355b9e941aeeb6ad96c7fb00dee7421995605dcc81cd6fd7af12",
+    "model/lh_tarsus3.stl": "08280c942abf91279e86414d064f39cae2b46ba9f62845252a9763d0839fabe5",
+    "model/lh_tarsus4.stl": "623f9059236af1327770f6f8e5e4fb8dc87930c49f5559c36d3d4245f51f7678",
+    "model/lh_tarsus5.stl": "1b86c811928d0a6e04c693b9a213f06c0f7a037584252fc8f35d408be1bf87e8",
+    "model/lh_tibia.stl": "2853873ade9abeb35da5f1a6c822d223bbe19a50d8ed77921bb77743b4782a60",
+    "model/lh_trochanterfemur.stl": "8e6b7ee8c4f6c388b64250086acc952c10abd469ac7bf0fb7015c2837e53d423",
+    "model/lm_coxa.stl": "01a6f4f4147b7cd308f0a1db79786694632c9fe5a3425b5e3454a7fa7624897b",
+    "model/lm_tarsus1.stl": "b7f50bfe1e75dfa65110a4f80e0216858a7a75712115b04605f344c8e837b1ae",
+    "model/lm_tarsus2.stl": "2dbb000ae11ef58de0023ccbdbfc8f1c5ff7b7517824a58d3e204f3ee00770c4",
+    "model/lm_tarsus3.stl": "8f1814f0054382e037279f04d0bb998e36ccaabd57ec418d35dd6f7e47bd51bb",
+    "model/lm_tarsus4.stl": "3f2881bd6f1fdb445bf01c00cac53c9a1b30388cd3fdc1b327704c60f138bf03",
+    "model/lm_tarsus5.stl": "3e9a76e4c0c4e829705271846f93a3aa056a0e87bc99996519722eeb841c1b70",
+    "model/lm_tibia.stl": "dc1ad6da6db91ba703150e6150f59a498f9dbd311b1ec0678da3f896c421dab5",
+    "model/lm_trochanterfemur.stl": "9619105028e5006d891b12dfced77aafa3c41a599edbf49d14691907ce2eb502",
+    "model/model.xml": "67aeb93868ac0cbf27c6f2645148a04f3cc77f0b0105bd9fa4ea15fc8755aa06"
+  }
+}

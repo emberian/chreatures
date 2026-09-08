@@ -1,38 +1,110 @@
-"""One-way export of the current articulated MJCF and measured optic membership.
-No residents are restored/advanced; fixture is a newly authored browser epoch.
-Run from repository root: .venv/bin/python native/browser-world/export_fixture.py
+"""Author a finite material ecology around an already compiled actual fly scene.
+
+Offline composition only. All recurring chemistry, sensation and body control
+are native. This does not load or migrate any historical resident.
 """
-import hashlib, json, math, sys
+from __future__ import annotations
+import argparse
+import copy
+import hashlib
+import json
+import math
 from pathlib import Path
-import numpy as np
-import mujoco
-ROOT=Path(__file__).resolve().parents[2]
-sys.path.insert(0,str(ROOT))
-from chreatures.articulated import ArticulatedWorld
-from chreatures.physical_batch import OPTIC_ATLAS_SHA256, OPTIC_SITE_SIDE_HEX, OPTIC_SUPPORTED_SITE_MASK
-out=Path(__file__).parent/'fixtures'
-spec=json.loads((ROOT/'data/habitats/hollow-garden.json').read_text())
-spec['entities'].append({'id':'physical-screen','mobility':'static','material':'cream','physical_material':'rock','position':[2.0,2.15,0.55],'shapes':[{'type':'box','size':[0.012,0.72,0.5]}],'components':[]})
-spec['bodies'][0]['heading']=0.0
-w=ArticulatedWorld(spec=spec)
-xml=w._xml
-(out/'garden.xml').write_text(xml)
-def name(kind,i): return mujoco.mj_id2name(w.model,kind,i)
-bodies=[]
-for b in w.bodies:
-    a=w._resident_articulation[b.id]
-    joints=[w._leg_joints[b.id][l['name']][k] for l in a['legs']['layout'] for k in ('hip','knee')]
-    old=a['controller']
-    controller={'max_joint_torque':old['max_joint_torque'],'hip_passive_damping':old['hip_kd'],'knee_passive_damping':old['knee_kd'],'posture_kp':old['posture_kp'],'posture_kd':old['posture_kd'],'max_posture_torque':old['max_posture_torque']}
-    bodies.append({'id':b.id,'root':w._body_mj[b.id], 'head':mujoco.mj_name2id(w.model,mujoco.mjtObj.mjOBJ_GEOM,f'resident:{b.id}:geom:head'), 'qpos':[int(w.model.jnt_qposadr[j]) for j in joints], 'dofs':[int(w.model.jnt_dofadr[j]) for j in joints], 'controller':controller,'physiology':[b.energy,b.gut,b.fatigue,0,0,1,1,0,0,0,0,0], 'eyes':[[a['trunk']['head_size'][0]+.004,s*a['trunk']['head_size'][1]*.72,0] for s in (1,-1)]})
-geoms=[]
-for i in range(w.model.ngeom):
-    mat=int(w.model.geom_matid[i]); rgba=w.model.mat_rgba[mat] if mat>=0 else w.model.geom_rgba[i]
-    geoms.append({'id':i,'name':name(mujoco.mjtObj.mjOBJ_GEOM,i),'type':int(w.model.geom_type[i]),'size':w.model.geom_size[i].tolist(),'rgba':rgba.tolist(),'body':int(w.model.geom_bodyid[i])})
-entities=[]
-for e in w._entities:
-    cs=e.get('components',[]); food=next((c for c in cs if c['type']=='food'),{}); scent=next((c for c in cs if c['type']=='scent'),{})
-    entities.append({'id':e['id'],'body':w._entity_mj[e['id']],'free':e['mobility']=='free','food':food.get('amount',0),'nutrition':food.get('nutrition',1),'odor':scent.get('odor',-1),'strength':scent.get('strength',0),'growth':.002 if food else 0,'geoms':[g['id'] for g in geoms if g['body']==w._entity_mj[e['id']]]})
-manifest={'format':'chreatures-browser-world-v2','engine':'mujoco-3.12.0-wasm-browser-epoch-2','source_mjcf_sha256':hashlib.sha256(xml.encode()).hexdigest(),'atlas_sha256':OPTIC_ATLAS_SHA256,'anatomical_sites':OPTIC_SITE_SIDE_HEX.tolist(),'supported_sites':OPTIC_SUPPORTED_SITE_MASK.tolist(),'optics':'Engineered affine hex optics; measured atlas membership, not measured viewing directions.','bodies':bodies,'geoms':geoms,'entities':entities,'screen_geom':mujoco.mj_name2id(w.model,mujoco.mjtObj.mjOBJ_GEOM,'entity:physical-screen:geom:0'),'dt':.05,'physics_dt':float(w.model.opt.timestep),'world_size':spec['size'],'body_notice':'Engineered twelve-hinge hexapod with 24 synthetic antagonist actuators; neither body nor actuator map claims fly muscle or NMJ anatomy.','data_notice':'Derived anatomical site membership from data/ports/optic-anatomy-audit-v1.npz; preserve repository NOTICE.md and original source notices.'}
-(out/'garden.json').write_text(json.dumps(manifest,separators=(',',':'))+'\n')
-print(json.dumps({'bodies':len(bodies),'geoms':len(geoms),'sites':len(manifest['anatomical_sites']),'xml_sha256':manifest['source_mjcf_sha256']}))
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def assemble(physics: dict, recipe: dict, seed: int) -> dict:
+    fixture = copy.deepcopy(physics)
+    chemistry = copy.deepcopy(recipe["ecology"])
+    chemistry["seed"] = seed
+    chemistry["coordinate_contract"]["world_min_m"] = [-0.025, -0.020, -0.002]
+    chemistry["coordinate_contract"]["world_max_m"] = [0.025, 0.020, 0.014]
+    source_colony = copy.deepcopy(chemistry["organisms"][0])
+    source_fly = copy.deepcopy(chemistry["organisms"][1])
+    regions = []
+    dims = (5, 4, 3)
+    spacing = (0.010, 0.010, 0.004)
+    volume = math.prod(spacing)
+    for z in range(dims[2]):
+        for y in range(dims[1]):
+            for x in range(dims[0]):
+                variation = 0.5 + 0.5 * math.sin(seed * 0.013 + x * 1.7 + y * 2.3)
+                initial = [2.0 if z == 0 else 0.1, 0.1 * variation if z == 0 else 0.0,
+                           0.03 if z == 0 else 0.0, 0.1 if z == 0 else 0.0,
+                           6.0, 0.3, 0.0, 0.003 * variation]
+                regions.append(dict(id=f"region-{x}-{y}-{z}", center_m=[-0.020+x*spacing[0], -0.015+y*spacing[1], z*spacing[2]+0.001],
+                                    volume_m3=volume, capacity=[20.0]*8, initial=initial))
+    chemistry["regions"] = regions
+    routes = []
+    def region_id(x, y, z): return f"region-{x}-{y}-{z}"
+    for z in range(dims[2]):
+        for y in range(dims[1]):
+            for x in range(dims[0]):
+                here = (x,y,z)
+                for axis in range(3):
+                    there = list(here); there[axis] += 1
+                    if there[axis] >= dims[axis]: continue
+                    routes.append(dict(id=f"route-{x}-{y}-{z}-{axis}",a=region_id(*here),b=region_id(*there),
+                                       length_m=spacing[axis],cross_section_m2=volume/spacing[axis],
+                                       hydraulic_capacity_m3_s=volume*0.05,base_open_fraction=1.0))
+    chemistry["routes"] = routes
+    chemistry["organisms"] = []
+    for index, body in enumerate(fixture["bodies"]):
+        fly = copy.deepcopy(source_fly)
+        fly.update(id=body["ecology_id"],physics_binding=body["id"],anchored_region=None,
+                   internal_volume_m3=1e-9,capacity=[2.0,2.0,1.0,0.5,1.0,2.0,1.0,0.5],
+                   initial=[1.7,1.4,0.6,0.3,0.7,0.05,0.95,0.0],atp=1.7,atp_capacity=2.0)
+        genotype = fly["genotype"]
+        genotype.update(lineage_id=f"fly-founder-{index}",enzyme_baseline=[0.65,0.2,0.015,0.0,0.025,0.02],
+                        enzyme_substrate_response=[0.15,0.12,0.02,0.0,0.01,0.01],enzyme_atp_response=[-0.1,0.08,0,0,0,0],
+                        enzyme_total_budget=2.0,membrane_permeability=[0.05,0,0,0,0.8,0.8,0,0.3],
+                        development=None,reproduction=None,maintenance_atp_s=0.002)
+        chemistry["organisms"].append(fly)
+    entities = {e["id"]: e for e in fixture["entities"]}
+    for index, (entity_id, at) in enumerate([("leaf-west",[-0.008,-0.006,0.0003]),("leaf-east",[0.008,0.005,0.0004])]):
+        colony = copy.deepcopy(source_colony)
+        region = min(regions,key=lambda r:sum((r["center_m"][k]-at[k])**2 for k in range(3)))
+        colony.update(id=f"colony-{index}",physics_binding=entity_id,anchored_region=region["id"],
+                      initial=[1.5,1.2,0.8,0.6,0.8,0.6,1.6,0.05],atp=0.8)
+        colony["genotype"]["lineage_id"] = f"colony-founder-{index}"
+        colony["genotype"]["development"].update(interval_s=2.0,maximum_structures=24,decay_time_constant_s=40.0)
+        colony["genotype"]["reproduction"].update(interval_s=16.0,maximum_descendants=4)
+        chemistry["organisms"].append(colony)
+    packets = []
+    bindings = []
+    for entity_id, entity in entities.items():
+        if entity_id.startswith("moist-patch") or entity_id.startswith("grain"):
+            wet = entity_id.startswith("moist")
+            quantity = [1.6,0.8,0.35,0.05,0.02,0,0.05,0.05] if wet else [0.2,0.5,0.3,0.02,0.01,0,0.3,0.02]
+            packets.append(dict(id=entity_id,physics_binding=entity_id,volume_m3=1e-11 if wet else 8e-11,
+                                capacity=[3.0]*8,initial=quantity))
+            bindings.append(dict(body=entity["body"],geoms=entity["geoms"],store={"kind":"packet","id":entity_id},exposed=True))
+        elif entity_id in {"leaf-west","leaf-east"}:
+            index = 0 if entity_id == "leaf-west" else 1
+            bindings.append(dict(body=entity["body"],geoms=entity["geoms"],store={"kind":"organism","id":f"colony-{index}"},exposed=True))
+    chemistry["packets"] = packets
+    fixture.update(ecology=chemistry,material_bindings=bindings,interoception=recipe["fly_interoception"],
+                   airflow_mm_s=[0.8,0.2,0.0],volatile_fraction=[0.01,0,0,0,1,1,0,1],
+                   ray_distance_mm=120.0,atp_per_model_work=0.001,world_size=[50,40,16],
+                   physiology_notice="Engineered finite eight-pool physiology with five conserved material axes; model mass/work units are not asserted to be SI mass/joules.",
+                   ecology_recipe_sha256=hashlib.sha256(json.dumps(recipe,sort_keys=True,separators=(',',':')).encode()).hexdigest())
+    return fixture
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--physics",type=Path,default=Path(__file__).parent/"fixtures/fly-ecology/physics.json")
+    parser.add_argument("--recipe",type=Path,default=ROOT/"native/ecology-core/fixtures/finite-garden-v1.json")
+    parser.add_argument("--output",type=Path)
+    parser.add_argument("--seed",type=int,default=20260908)
+    args = parser.parse_args()
+    output = args.output or args.physics.with_name("world.json")
+    fixture = assemble(json.loads(args.physics.read_text()),json.loads(args.recipe.read_text()),args.seed)
+    output.parent.mkdir(parents=True,exist_ok=True)
+    output.write_text(json.dumps(fixture,separators=(',',':'))+'\n')
+    print(json.dumps(dict(path=str(output),residents=len(fixture["bodies"]),regions=len(fixture["ecology"]["regions"]),
+                          routes=len(fixture["ecology"]["routes"]),sha256=hashlib.sha256(output.read_bytes()).hexdigest())))
+
+
+if __name__ == "__main__": main()

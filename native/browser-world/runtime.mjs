@@ -1,60 +1,78 @@
 /** Thin host boundary over MuJoCo Wasm and Rust/Wasm. No browser/DOM dependency.
- * Policy clients receive only sample(): optic B*5313 and body B*110.
+ * Policy clients receive only sample(): optic B*5313 and body B*807.
  * observe()/snapshot() belong exclusively to the observer/checkpoint owner.
  */
 export const ACTION_NAMES = Object.freeze([
-  ...["lf", "lm", "lh", "rf", "rm", "rh"].flatMap((leg) =>
-    ["hip", "knee"].flatMap((joint) => [
-      `${leg}_${joint}_positive`,
-      `${leg}_${joint}_negative`,
-    ]),
-  ),
-  "gaze_pitch",
-  "posture",
-  "grip",
-  "signal_low",
-  "signal_mid",
-  "signal_high",
-  "eat",
-  "release",
-  "secrete",
-  "allocate",
+  ...Array.from({ length: 84 }, (_, i) => `signed_servo_${String(i).padStart(2, "0")}`),
+  ...["lf", "lm", "lh", "rf", "rm", "rh"].map((leg) => `adhesion_${leg}`),
+  "pharyngeal_pump",
+  "salivary_drive",
 ]);
-export const ENGINE = "mujoco-3.12.0-wasm-browser-epoch-2";
+export const ENGINE = "mujoco-3.12.0-neuromechfly-cns-v4";
 const SITES = 1771,
-  RAY_STRIDE = 3 + SITES * 3;
+  RAY_STRIDE = 3 + SITES * 3,
+  CNS_MOTOR = 92,
+  PHYSICAL_CONTROL = 90,
+  BODY_CHANNELS = 807,
+  SEGMENTS = 69,
+  JOINTS = 126,
+  PHYSICS_DT = 0.0001,
+  CONTROL_DT = 0.01,
+  SUBSTEPS = 100,
+  CONTACT_SAMPLES = 10,
+  CONTACT_STRIDE = 20;
 const arr = (v) => Array.from(v);
 function checkNumbers(v, length, name) {
   if (!v || v.length !== length || !Array.from(v).every(Number.isFinite))
     throw new Error(`${name} requires ${length} finite scalars`);
 }
+async function sha256(bytes) {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+function assetBytes(assets, path) {
+  const value = assets instanceof Map ? assets.get(path) : assets?.[path];
+  if (value instanceof Uint8Array) return value;
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  throw new Error(`Missing binary MuJoCo VFS asset: ${path}`);
+}
+function compileModel(mj, xml, fixture, assets) {
+  const vfs = new mj.MjVFS();
+  try {
+    for (const asset of fixture.mesh_assets) vfs.addBuffer(asset.path, assetBytes(assets, asset.path));
+    return mj.MjModel.from_xml_string(xml, vfs);
+  } finally {
+    vfs.delete();
+  }
+}
+function xmlAttribute(value) {
+  return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+}
 export async function createBrowserWorld({
   fixture,
   xml,
+  assets,
   seed = 7,
   mujocoFactory,
   coreModule,
   coreWasm,
   mujocoOptions = {},
 } = {}) {
-  if (!fixture || typeof xml !== "string" || fixture.engine !== ENGINE)
-    throw new Error("Current browser fixture/XML required");
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(xml),
-  );
-  if (
-    Array.from(new Uint8Array(digest), (b) =>
-      b.toString(16).padStart(2, "0"),
-    ).join("") !== fixture.source_mjcf_sha256
-  )
+  if (!fixture || typeof xml !== "string" || fixture.engine !== ENGINE || !Array.isArray(fixture.mesh_assets))
+    throw new Error("Current compiled fly fixture/XML/VFS assets required");
+  if (await sha256(new TextEncoder().encode(xml)) !== fixture.source_mjcf_sha256)
     throw new Error("MJCF fixture digest differs");
+  for (const asset of fixture.mesh_assets)
+    if (!asset?.path || await sha256(assetBytes(assets, asset.path)) !== asset.sha256)
+      throw new Error(`MuJoCo VFS asset receipt differs: ${asset?.path}`);
   if (!mujocoFactory) mujocoFactory = (await import("@mujoco/mujoco")).default;
   if (!coreModule)
     coreModule = await import("./pkg/chreatures_browser_world.js");
   await coreModule.default(coreWasm ? { module_or_path: coreWasm } : undefined);
   const mj = await mujocoFactory(mujocoOptions);
-  return new BrowserWorld(mj, coreModule.WorldCore, fixture, xml, seed);
+  const model = compileModel(mj, xml, fixture, assets);
+  return new BrowserWorld(mj, coreModule.WorldCore, fixture, xml, assets, model, seed);
 }
 class BrowserWorld {
   #mj;
@@ -64,35 +82,94 @@ class BrowserWorld {
   #core;
   #fixture;
   #xml;
+  #assets;
   #buffers;
   #frame;
   #width = 2;
   #height = 2;
   #paused = false;
   #closed = false;
+  #busy = false;
   #visitorCounter = 0;
   #visitorForces = [];
-  constructor(mj, Core, fixture, xml, seed) {
+  #physicsSensed = false;
+  #baseActuatorForceRange;
+  #baseActuatorGainPrm;
+  #meshes;
+  #researchBodyMap;
+  constructor(mj, Core, fixture, xml, assets, model, seed) {
     if (mj.mj_versionString() !== "3.12.0")
       throw new Error("MuJoCo engine pin differs");
     this.#mj = mj;
     this.#Core = Core;
     this.#fixture = structuredClone(fixture);
     this.#xml = xml;
-    this.#model = mj.MjModel.from_xml_string(xml);
+    this.#assets = assets;
+    this.#model = model;
     this.#data = new mj.MjData(this.#model);
+    const neutralKey = fixture.neutral_keyframe?.key_id;
+    if (neutralKey !== 0 || this.#model.nkey < 1)
+      throw new Error("Compiled fly neutral keyframe differs");
+    mj.mj_resetDataKeyframe(this.#model, this.#data, neutralKey);
     this.#core = new Core(JSON.stringify(fixture), seed);
     mj.mj_forward(this.#model, this.#data);
+    this.#validateCompiledFixture();
+    this.#baseActuatorForceRange = Float64Array.from(this.#model.actuator_forcerange);
+    this.#baseActuatorGainPrm = Float64Array.from(this.#model.actuator_gainprm);
+    this.#meshes = this.#compileMeshObserver();
+    this.#researchBodyMap = Object.freeze({
+      bodies: structuredClone(this.#fixture.bodies),
+      residents: structuredClone(this.#fixture.residents),
+    });
     this.#frame = new Float32Array(12);
     this.#buffers = {
       velocity: new mj.DoubleBuffer(6),
       hits: new mj.IntBuffer(SITES),
       distances: new mj.DoubleBuffer(SITES),
       normals: new mj.DoubleBuffer(SITES * 3),
+      contactForce: new mj.DoubleBuffer(6),
       state: new mj.DoubleBuffer(
         mj.mj_stateSize(this.#model, mj.mjtState.mjSTATE_INTEGRATION.value),
       ),
     };
+  }
+  #validateCompiledFixture() {
+    const m = this.#model, f = this.#fixture;
+    const counts = f.compiled_counts;
+    if (f.format !== "chreatures-fly-ecology-compiled-v1" || m.opt.timestep !== PHYSICS_DT || f.physics_dt !== PHYSICS_DT || f.control_dt !== CONTROL_DT || !Array.isArray(f.bodies) || f.bodies.length < 1 || f.mesh_assets.length !== 39 || !counts ||
+      [["nq", m.nq], ["nv", m.nv], ["nu", m.nu], ["nbody", m.nbody], ["njnt", m.njnt], ["ngeom", m.ngeom], ["nmesh", m.nmesh], ["nsite", m.nsite], ["nsensor", m.nsensor], ["nsensordata", m.nsensordata]].some(([name, value]) => counts[name] !== value) ||
+      !Array.isArray(f.geoms) || f.geoms.length !== m.ngeom || f.geoms.some((g, i) => g.id !== i || g.body !== m.geom_bodyid[i]))
+      throw new Error("Compiled fly timing or resident fixture differs");
+    const assignedActuators = [];
+    for (const b of f.bodies) {
+      for (const [name, length, bound] of [
+        ["segments", SEGMENTS, m.nbody], ["qpos", JOINTS, m.nq],
+        ["dofs", JOINTS, m.nv], ["actuators", PHYSICAL_CONTROL, m.nu],
+      ]) if (!Array.isArray(b[name]) || b[name].length !== length || b[name].some((x) => !Number.isInteger(x) || x < 0 || x >= bound))
+        throw new Error(`Compiled resident ${name} differs`);
+      if (!Number.isInteger(b.root) || !Number.isInteger(b.head))
+        throw new Error("Compiled fly root/head IDs differ");
+      assignedActuators.push(...b.actuators);
+    }
+    if (new Set(assignedActuators).size !== assignedActuators.length)
+      throw new Error("Compiled fly actuator IDs overlap residents");
+  }
+  #compileMeshObserver(m = this.#model) {
+    return Object.freeze(Array.from({ length: m.nmesh }, (_, id) => {
+      const va = m.mesh_vertadr[id], vn = m.mesh_vertnum[id];
+      const na = m.mesh_normaladr[id], nn = m.mesh_normalnum[id];
+      const fa = m.mesh_faceadr[id], fn = m.mesh_facenum[id];
+      const mesh = {
+        id,
+        positions: Float32Array.from(m.mesh_vert.subarray(va * 3, (va + vn) * 3)),
+        faces: Uint32Array.from(m.mesh_face.subarray(fa * 3, (fa + fn) * 3)),
+      };
+      // Compiled normals can have their own index stream. Expose them only
+      // when they line up with vertices; otherwise the view derives normals.
+      if (nn === vn)
+        mesh.normals = Float32Array.from(m.mesh_normal.subarray(na * 3, (na + nn) * 3));
+      return Object.freeze(mesh);
+    }));
   }
   get residents() {
     return this.#fixture.bodies.length;
@@ -108,34 +185,250 @@ class BrowserWorld {
   }
   #assertOpen() {
     if (this.#closed) throw new Error("World disposed");
+    if (this.#busy) throw new Error("World mutation already pending");
   }
-  #velocities(local = false) {
-    const out = new Float64Array(this.residents * 6);
-    for (let row = 0; row < this.residents; row++) {
+  #velocities() {
+    const out = new Float64Array(this.#model.nbody * 6);
+    for (let body = 0; body < this.#model.nbody; body++) {
       this.#mj.mj_objectVelocity(
         this.#model,
         this.#data,
-        this.#mj.mjtObj.mjOBJ_BODY.value,
-        this.#fixture.bodies[row].root,
+        this.#mj.mjtObj.mjOBJ_XBODY.value,
+        body,
         this.#buffers.velocity,
-        Number(local),
+        0,
       );
-      out.set(this.#buffers.velocity.GetView(), row * 6);
+      out.set(this.#buffers.velocity.GetView(), body * 6);
     }
     return out;
   }
-  advance(actions, dt = 0.05) {
+  #jointLoads() {
+    const d = this.#data, out = new Float64Array(this.#model.nv);
+    for (let i = 0; i < out.length; i++)
+      out[i] = d.qfrc_actuator[i] + d.qfrc_constraint[i] + d.qfrc_applied[i];
+    return out;
+  }
+  #applyActuatorCapacity() {
+    const m = this.#model, capacity = this.#core.actuator_capacity();
+    checkNumbers(capacity, this.residents * PHYSICAL_CONTROL, "Physical actuator capacity");
+    for (let row = 0; row < this.residents; row++) {
+      const ids = this.#fixture.bodies[row].actuators;
+      for (let k = 0; k < PHYSICAL_CONTROL; k++) {
+        const value = capacity[row * PHYSICAL_CONTROL + k];
+        if (value < 0 || value > 1) throw new Error("Physical actuator capacity outside [0,1]");
+        const id = ids[k];
+        if (k < 84) {
+          m.actuator_forcerange[id * 2] = this.#baseActuatorForceRange[id * 2] * value;
+          m.actuator_forcerange[id * 2 + 1] = this.#baseActuatorForceRange[id * 2 + 1] * value;
+        } else {
+          const width = m.actuator_gainprm.length / m.nu;
+          for (let j = 0; j < width; j++)
+            m.actuator_gainprm[id * width + j] = this.#baseActuatorGainPrm[id * width + j] * value;
+        }
+      }
+    }
+    return Float64Array.from(capacity);
+  }
+  #contactRecords() {
+    const values = [], contacts = this.#data.contact;
+    try {
+      for (let i = 0; i < contacts.size(); i++) {
+        const c = contacts.get(i);
+        try {
+          this.#mj.mj_contactForce(this.#model, this.#data, i, this.#buffers.contactForce);
+          values.push(c.geom1, c.geom2, ...c.pos, ...c.frame, ...this.#buffers.contactForce.GetView());
+        } finally { c?.delete(); }
+      }
+    } finally { contacts.delete(); }
+    if (values.length % CONTACT_STRIDE) throw new Error("MuJoCo contact packet stride differs");
+    return values;
+  }
+  #sampledPhysics(samples) {
+    const nbody = this.#model.nbody;
+    const positions = new Float64Array(samples.length * nbody * 3);
+    const rotations = new Float64Array(samples.length * nbody * 9);
+    const velocities = new Float64Array(samples.length * nbody * 6);
+    const contacts = [], offsets = new Uint32Array(samples.length + 1);
+    for (let i = 0; i < samples.length; i++) {
+      const sample = samples[i];
+      positions.set(sample.positions, i * nbody * 3);
+      rotations.set(sample.rotations, i * nbody * 9);
+      velocities.set(sample.velocities, i * nbody * 6);
+      contacts.push(...sample.contacts);
+      offsets[i + 1] = contacts.length / CONTACT_STRIDE;
+    }
+    return { positions, rotations, velocities, contacts: Float64Array.from(contacts), offsets };
+  }
+  #capturePhysics() {
+    return {
+      positions: Float64Array.from(this.#data.xpos),
+      rotations: Float64Array.from(this.#data.xmat),
+      velocities: this.#velocities(),
+      contacts: this.#contactRecords(),
+    };
+  }
+  #irradiance() {
+    const out = new Float64Array(this.residents), m = this.#model, d = this.#data;
+    for (let row = 0; row < this.residents; row++) {
+      const head = this.#fixture.bodies[row].head;
+      const obstruction = this.#mj.mj_ray(
+        m, d, arr(d.xpos.subarray(head * 3, head * 3 + 3)), [0, 0, 1],
+        [1, 1, 1, 1, 1, 1], true, this.#fixture.bodies[row].root,
+        this.#buffers.hits, this.#buffers.normals,
+      );
+      out[row] = obstruction < 0 ? 1.0 : 0.0;
+    }
+    return out;
+  }
+  async #appendConstructions(items) {
+    if (!items.length) return null;
+    for (const item of items) {
+      if (item.kind === "offspring_body")
+        throw new Error("Offspring creation requires an authored complete fly template");
+      if (item.kind !== "constructed_geometry" || item.host_template_id !== "fiber-capsule")
+        throw new Error(`Unsupported physical construction template: ${item.host_template_id}`);
+      checkNumbers(item.position_m, 3, "Construction position");
+      checkNumbers(item.orientation_xyzw, 4, "Construction orientation");
+      if (![item.nominal_radius_m, item.nominal_length_m].every((v) => Number.isFinite(v) && v > 0 && v <= 1))
+        throw new Error("Invalid bounded construction dimensions");
+    }
+    const revision = this.#fixture.source_mjcf_sha256, time = this.time;
+    const fragments = items.map((item) => {
+      const id = xmlAttribute(item.physics_binding), p = item.position_m.map((v) => v * 1000);
+      const [x, y, z, w] = item.orientation_xyzw;
+      const size = [item.nominal_radius_m * 1000, item.nominal_length_m * 500];
+      return `<body name="ecology:${id}" pos="${p.join(" ")}" quat="${[w, x, y, z].join(" ")}"><geom name="ecology:${id}:geom" type="capsule" size="${size.join(" ")}" rgba="0.42 0.31 0.16 1" friction="0.9 0.02 0.004"/></body>`;
+    });
+    const xml = this.#xml.replace("</worldbody>", fragments.join("") + "</worldbody>");
+    const fixture = structuredClone(this.#fixture);
+    fixture.source_mjcf_sha256 = await sha256(new TextEncoder().encode(xml));
+    if (revision !== this.#fixture.source_mjcf_sha256 || time !== this.time)
+      throw new Error("Construction transaction stale after world advanced");
+    const old = { model: this.#model, data: this.#data, fixture: this.#fixture, xml: this.#xml, state: this.#buffers.state, meshes: this.#meshes };
+    let model, data, stateBuffer, meshes;
+    try {
+      model = compileModel(this.#mj, xml, fixture, this.#assets);
+      data = new this.#mj.MjData(model);
+      if (model.nq !== old.model.nq || model.nv !== old.model.nv || model.nbody !== old.model.nbody + items.length || model.ngeom !== old.model.ngeom + items.length)
+        throw new Error("Construction append changed prior compiled addresses");
+      for (const field of ["qpos", "qvel", "act", "qacc_warmstart", "ctrl", "qfrc_applied", "xfrc_applied", "mocap_pos", "mocap_quat", "userdata"])
+        if (old.data[field]?.length) data[field].set(old.data[field]);
+      data.time = old.data.time;
+      for (const [name, width] of [["geom_size", 3], ["geom_pos", 3], ["geom_quat", 4], ["geom_rgba", 4], ["geom_friction", 3]])
+        model[name].set(old.model[name].subarray(0, old.model.ngeom * width));
+      model.geom_contype.set(old.model.geom_contype.subarray(0, old.model.ngeom));
+      model.geom_conaffinity.set(old.model.geom_conaffinity.subarray(0, old.model.ngeom));
+      model.actuator_forcerange.set(old.model.actuator_forcerange);
+      model.actuator_gainprm.set(old.model.actuator_gainprm);
+      this.#mj.mj_forward(model, data);
+      for (const item of items) {
+        const name = `ecology:${item.physics_binding}`;
+        const body = this.#mj.mj_name2id(model, this.#mj.mjtObj.mjOBJ_BODY.value, name);
+        const geom = this.#mj.mj_name2id(model, this.#mj.mjtObj.mjOBJ_GEOM.value, `${name}:geom`);
+        if (body < old.model.nbody || geom < old.model.ngeom) throw new Error("Construction compiled address is not append-only");
+        fixture.geoms.push({ id: geom, body, size: arr(model.geom_size.subarray(geom * 3, geom * 3 + 3)) });
+        fixture.entities.push({ id: item.physics_binding, physics_binding: item.physics_binding, body, free: false, geoms: [geom] });
+        fixture.material_bindings.push({ body, geoms: [geom], store: item.material_store, exposed: true });
+      }
+      const contacts = data.contact;
+      try {
+        for (let i = 0; i < contacts.size(); i++) {
+          const c = contacts.get(i);
+          try {
+            if ((c.geom1 >= old.model.ngeom || c.geom2 >= old.model.ngeom) && c.dist < -0.003)
+              throw new Error("Constructed geometry penetrates existing physical geometry");
+          } finally { c?.delete(); }
+        }
+      } finally { contacts.delete(); }
+      fixture.compiled_counts = {
+        nq: model.nq, nv: model.nv, nu: model.nu, nbody: model.nbody, njnt: model.njnt,
+        ngeom: model.ngeom, nmesh: model.nmesh, nsite: model.nsite, nsensor: model.nsensor, nsensordata: model.nsensordata,
+      };
+      meshes = this.#compileMeshObserver(model);
+      if (typeof this.#core.rebind_physics !== "function") throw new Error("Native core lacks transactional physical rebind");
+      this.#core.rebind_physics(JSON.stringify(fixture));
+      stateBuffer = new this.#mj.DoubleBuffer(this.#mj.mj_stateSize(model, this.#mj.mjtState.mjSTATE_INTEGRATION.value));
+      this.#model = model; this.#data = data; this.#fixture = fixture; this.#xml = xml;
+      this.#buffers.state = stateBuffer; this.#meshes = meshes;
+      return {
+        commit: () => { old.state.delete(); old.data.delete(); old.model.delete(); },
+        rollback: () => {
+          this.#buffers.state.delete(); this.#data.delete(); this.#model.delete();
+          this.#model = old.model; this.#data = old.data; this.#fixture = old.fixture;
+          this.#xml = old.xml; this.#buffers.state = old.state; this.#meshes = old.meshes;
+        },
+      };
+    } catch (error) {
+      stateBuffer?.delete(); data?.delete(); model?.delete(); throw error;
+    }
+  }
+  async #applyEcologyProposal(proposal) {
+    const topology = await this.#appendConstructions(proposal.physical_creations ?? []);
+    const m = this.#model;
+    const removals = (proposal.physical_removals ?? []).flatMap((item) => {
+      const binding = (this.#fixture.entities ?? []).find((v) => v.id === item.physics_binding || v.physics_binding === item.physics_binding);
+      if (!binding?.geoms?.length) throw new Error(`Unknown physical removal binding: ${item.physics_binding}`);
+      return binding.geoms.map((geom) => ({ ...item, geom, remove: true }));
+    });
+    const changes = [...removals, ...(proposal.geom_updates ?? [])];
+    const saved = new Map();
+    try {
+      for (const change of changes) {
+        const geom = change.geom ?? change.reserved_geom;
+        if (!Number.isInteger(geom) || geom < 0 || geom >= m.ngeom)
+          throw new Error("Ecology proposal references an invalid compiled geom");
+        if (!saved.has(geom)) saved.set(geom, {
+          size: arr(m.geom_size.subarray(geom * 3, geom * 3 + 3)),
+          pos: arr(m.geom_pos.subarray(geom * 3, geom * 3 + 3)),
+          rgba: arr(m.geom_rgba.subarray(geom * 4, geom * 4 + 4)),
+          contype: m.geom_contype[geom], conaffinity: m.geom_conaffinity[geom],
+        });
+        if (change.remove) {
+          m.geom_contype[geom] = 0; m.geom_conaffinity[geom] = 0; m.geom_rgba[geom * 4 + 3] = 0;
+          continue;
+        }
+        if (change.size) { checkNumbers(change.size, 3, "Proposed geom size"); m.geom_size.set(change.size, geom * 3); }
+        if (change.position) { checkNumbers(change.position, 3, "Proposed geom position"); m.geom_pos.set(change.position, geom * 3); }
+        if (change.rgba) { checkNumbers(change.rgba, 4, "Proposed geom color"); m.geom_rgba.set(change.rgba, geom * 4); }
+        if (change.contype !== undefined) m.geom_contype[geom] = change.contype;
+        if (change.conaffinity !== undefined) m.geom_conaffinity[geom] = change.conaffinity;
+      }
+      this.#mj.mj_forward(m, this.#data);
+      return {
+        applied_geoms: [...saved.keys()],
+        commit: () => topology?.commit(),
+        rollback: () => {
+          for (const [geom, old] of saved) {
+            m.geom_size.set(old.size, geom * 3); m.geom_pos.set(old.pos, geom * 3);
+            m.geom_rgba.set(old.rgba, geom * 4); m.geom_contype[geom] = old.contype;
+            m.geom_conaffinity[geom] = old.conaffinity;
+          }
+          this.#mj.mj_forward(m, this.#data); topology?.rollback();
+        },
+      };
+    } catch (error) {
+      for (const [geom, old] of saved) {
+        m.geom_size.set(old.size, geom * 3); m.geom_pos.set(old.pos, geom * 3);
+        m.geom_rgba.set(old.rgba, geom * 4); m.geom_contype[geom] = old.contype;
+        m.geom_conaffinity[geom] = old.conaffinity;
+      }
+      this.#mj.mj_forward(m, this.#data);
+      topology?.rollback();
+      throw error;
+    }
+  }
+  async advance(actions, dt = CONTROL_DT) {
     this.#assertOpen();
     if (this.#paused)
       throw new Error(
         "World paused after incomplete physical mutation; restore coherent checkpoint",
       );
-    checkNumbers(actions, this.residents * 34, "CNS motor command");
+    checkNumbers(actions, this.residents * CNS_MOTOR, "CNS motor command");
     for (let row = 0; row < this.residents; row++) {
-      const offset = row * 34;
-      for (let k = 0; k < 34; k++) {
+      const offset = row * CNS_MOTOR;
+      for (let k = 0; k < CNS_MOTOR; k++) {
         const value = actions[offset + k];
-        if (k === 24 || k === 25) {
+        if (k < 84) {
           if (value < -1 || value > 1)
             throw new Error("Signed CNS motor command outside [-1,1]");
         } else if (value < 0 || value > 1) {
@@ -143,47 +436,31 @@ class BrowserWorld {
         }
       }
     }
-    if (dt !== 0.05)
-      throw new Error("Browser control tick is fixed at 0.05 seconds");
+    if (dt !== CONTROL_DT)
+      throw new Error("Fly control tick is fixed at 0.01 seconds");
+    this.#busy = true;
     const commands = Float64Array.from(actions);
     const m = this.#model,
       d = this.#data;
     try {
-      const steps = Math.round(dt / this.#fixture.physics_dt);
-      for (let step = 0; step < steps; step++) {
+      const controls = this.#core.actuation(commands);
+      checkNumbers(controls, this.residents * PHYSICAL_CONTROL, "Physical fly control");
+      this.#applyActuatorCapacity();
+      d.ctrl.fill(0);
+      for (let row = 0; row < this.residents; row++) {
+        const body = this.#fixture.bodies[row];
+        for (let k = 0; k < PHYSICAL_CONTROL; k++) d.ctrl[body.actuators[k]] = controls[row * PHYSICAL_CONTROL + k];
+      }
+      const samples = [];
+      for (let step = 0; step < SUBSTEPS; step++) {
         d.qfrc_applied.fill(0);
         d.xfrc_applied.fill(0);
-        const forces = this.#core.actuation(
-          commands,
-          d.qpos,
-          d.qvel,
-          d.xpos,
-          d.xmat,
-          this.#velocities(),
-          d.time,
-          this.#fixture.physics_dt,
-        );
-        for (let row = 0; row < this.residents; row++) {
-          const b = this.#fixture.bodies[row],
-            offset = row * 19;
-          for (let j = 0; j < 12; j++)
-            d.qfrc_applied[b.dofs[j]] = forces[offset + j];
-          for (let k = 0; k < 3; k++)
-            d.xfrc_applied[b.root * 6 + 3 + k] = forces[offset + 12 + k];
-          const entity = forces[offset + 15];
-          if (entity >= 0) {
-            const body = this.#fixture.entities[entity].body;
-            for (let k = 0; k < 3; k++) {
-              d.xfrc_applied[body * 6 + k] += forces[offset + 16 + k];
-              d.xfrc_applied[b.root * 6 + k] -= forces[offset + 16 + k];
-            }
-          }
-        }
         for (const event of this.#visitorForces) {
           for (let k = 0; k < 3; k++)
             d.xfrc_applied[event.body * 6 + k] += event.force[k];
         }
         this.#mj.mj_step(m, d);
+        if ((step + 1) % (SUBSTEPS / CONTACT_SAMPLES) === 0) samples.push(this.#capturePhysics());
       }
       this.#mj.mj_forward(m, d);
       if (
@@ -191,25 +468,34 @@ class BrowserWorld {
         Math.abs(d.time - this.#core.time() - dt) > 1e-8
       )
         throw new Error("Physical clock/finite-state violation");
-      this.#core.advance(commands, d.xpos, dt);
-      this.#visitorForces = [];
-      // The Rust ecology owns resource quantity; MuJoCo owns resulting collision geometry.
-      const food = this.#core.food(),
-        scales = this.#core.growth_scales();
-      for (let i = 0; i < food.length; i++) {
-        const e = this.#fixture.entities[i];
-        if (e.food > 0) {
-          const scale = scales[i];
-          for (const g of e.geoms)
-            for (let k = 0; k < 3; k++)
-              m.geom_size[g * 3 + k] = this.#fixture.geoms[g].size[k] * scale;
-        }
+      const packet = this.#sampledPhysics(samples);
+      const proposalText = this.#core.prepare_advance(
+        commands, d.qpos, d.qvel, this.#jointLoads(), packet.positions, packet.rotations,
+        packet.velocities, packet.contacts, packet.offsets, this.#irradiance(), dt,
+      );
+      const proposal = JSON.parse(proposalText);
+      let applied;
+      try {
+        applied = await this.#applyEcologyProposal(proposal);
+        this.#core.commit_advance(JSON.stringify({
+          token: proposal.token,
+          created: (proposal.physical_creations ?? []).map((item) => item.proposal_id),
+          removed: (proposal.physical_removals ?? []).map((item) => item.proposal_id),
+        }));
+        applied.commit();
+      } catch (error) {
+        applied?.rollback();
+        this.#core.abort_advance(String(proposal.token));
+        throw error;
       }
-      this.#mj.mj_forward(m, d);
+      this.#visitorForces = [];
+      this.#physicsSensed = true;
       return { time: this.time };
     } catch (error) {
       this.#paused = true;
       throw error;
+    } finally {
+      this.#busy = false;
     }
   }
   /** Host video bytes are a physical emitting surface, never a CNS input array. */
@@ -230,43 +516,6 @@ class BrowserWorld {
     this.#frame = Float32Array.from(rgb);
     this.#width = width;
     this.#height = height;
-  }
-  #contacts() {
-    const aggregate = new Float64Array(this.residents * 25);
-    const feet = new Float64Array(this.residents * 6);
-    const legIndex = new Map(
-      ["lf", "lm", "lh", "rf", "rm", "rh"].map((leg, i) => [leg, i]),
-    );
-    const contacts = this.#data.contact;
-    try {
-      for (let i = 0; i < contacts.size(); i++) {
-        const c = contacts.get(i);
-        try {
-          for (let row = 0; row < this.residents; row++) {
-            const root = this.#fixture.bodies[row].root;
-            const a = this.#model.body_rootid[this.#model.geom_bodyid[c.geom1]],
-              b = this.#model.body_rootid[this.#model.geom_bodyid[c.geom2]];
-            if (a !== root && b !== root) continue;
-            const count = aggregate[row * 25];
-            if (count >= 8) continue;
-            aggregate[row * 25]++;
-            for (let k = 0; k < 3; k++)
-              aggregate[row * 25 + 1 + count * 3 + k] =
-                c.frame[k] * (a === root ? -1 : 1);
-            for (const geom of [c.geom1, c.geom2]) {
-              const name = this.#fixture.geoms[geom]?.name ?? "";
-              const match = name.match(/^resident:[^:]+:geom:(lf|lm|lh|rf|rm|rh):tarsus$/);
-              if (match) feet[row * 6 + legIndex.get(match[1])] = 1;
-            }
-          }
-        } finally {
-          c?.delete();
-        }
-      }
-    } finally {
-      contacts.delete();
-    }
-    return { aggregate, feet };
   }
   #colors() {
     const m = this.#model;
@@ -293,8 +542,8 @@ class BrowserWorld {
       const b = this.#fixture.bodies[row];
       const rays = this.#core.rays(
         row,
-        d.geom_xpos.subarray(b.head * 3, b.head * 3 + 3),
-        d.geom_xmat.subarray(b.head * 9, b.head * 9 + 9),
+        d.xpos,
+        d.xmat,
       );
       const hits = new Int32Array(SITES * 2);
       const distances = new Float64Array(SITES * 2);
@@ -334,39 +583,16 @@ class BrowserWorld {
         row * SITES * 3,
       );
     }
-    const shade = new Float64Array(this.residents);
-    for (let row = 0; row < this.residents; row++) {
-      const b = this.#fixture.bodies[row];
-      shade[row] = this.#mj.mj_ray(
-        m,
-        d,
-        arr(d.geom_xpos.subarray(b.head * 3, b.head * 3 + 3)),
-        [0, 0, 1],
-        [1, 1, 1, 1, 1, 1],
-        true,
-        b.root,
-        this.#buffers.hits,
-        this.#buffers.normals,
+    if (!this.#physicsSensed) {
+      const packet = this.#sampledPhysics([this.#capturePhysics()]);
+      this.#core.sense_physics(
+        d.qpos, d.qvel, this.#jointLoads(), packet.positions, packet.rotations,
+        packet.velocities, packet.contacts, packet.offsets, this.#irradiance(),
       );
+      this.#physicsSensed = true;
     }
-    const contactState = this.#contacts();
-    const jointLoads = new Float64Array(this.residents * 12);
-    for (let row = 0; row < this.residents; row++)
-      for (let j = 0; j < 12; j++)
-        jointLoads[row * 12 + j] =
-          d.qfrc_applied[this.#fixture.bodies[row].dofs[j]] +
-          d.qfrc_constraint[this.#fixture.bodies[row].dofs[j]];
-    const body = this.#core.afferents(
-      d.xpos,
-      d.xmat,
-      this.#velocities(true),
-      contactState.aggregate,
-      shade,
-      d.qpos,
-      d.qvel,
-      jointLoads,
-      contactState.feet,
-    );
+    const body = this.#core.afferents();
+    checkNumbers(body, this.residents * BODY_CHANNELS, "CNS BODY807 sample");
     return { optic, body };
   }
   /** Observer-only geometry: never pass this object to neural adapters or policy. */
@@ -374,6 +600,16 @@ class BrowserWorld {
     this.#assertOpen();
     const m = this.#model,
       d = this.#data;
+    const residentForBody = new Map();
+    for (const b of this.#fixture.bodies)
+      for (const body of b.segments) residentForBody.set(body, b.id);
+    const nameForGeom = (id) => {
+      if (typeof this.#mj.mj_id2name === "function") {
+        const name = this.#mj.mj_id2name(m, this.#mj.mjtObj.mjOBJ_GEOM.value, id);
+        if (name) return name;
+      }
+      return this.#fixture.geom_map?.[id]?.name ?? `geom-${id}`;
+    };
     return {
       engine: ENGINE,
       time: this.time,
@@ -382,21 +618,67 @@ class BrowserWorld {
         id: b.id,
         root: b.root,
         head: b.head,
+        segmentBodyIds: Uint32Array.from(b.segments),
       })),
       screenGeom: this.#fixture.screen_geom,
       geometry: this.#fixture.geoms.map((g) => ({
         ...g,
+        name: nameForGeom(g.id),
+        type: m.geom_type[g.id],
+        resident_id: residentForBody.get(g.body) ?? null,
         size: arr(m.geom_size.subarray(g.id * 3, g.id * 3 + 3)),
+        mesh_id: m.geom_type[g.id] === this.#mj.mjtGeom.mjGEOM_MESH.value ? m.geom_dataid[g.id] : -1,
+        position: Float32Array.from(d.geom_xpos.subarray(g.id * 3, g.id * 3 + 3)),
+        rotation: Float32Array.from(d.geom_xmat.subarray(g.id * 9, g.id * 9 + 9)),
       })),
+      meshes: this.#meshes,
+      worldSizeMm: structuredClone(this.#fixture.world_size),
       positions: Float32Array.from(d.geom_xpos),
       rotations: Float32Array.from(d.geom_xmat),
       bodyPositions: Float32Array.from(d.xpos),
+      bodyRotations: Float32Array.from(d.xmat),
+      bodyVelocities: Float32Array.from(this.#velocities()),
       colors: Float32Array.from(this.#colors()),
+      physicalControl: Float32Array.from(d.ctrl),
+      actuatorForceRange: Float32Array.from(m.actuator_forcerange),
+      actuatorGainParameters: Float32Array.from(m.actuator_gainprm),
       food: Float32Array.from(this.#core.food()),
+      ecology: JSON.parse(this.#core.ecology_observe()),
+      actuators: JSON.parse(this.#core.actuator_state()),
+    };
+  }
+  /** Raw observer/teacher targets. This object must never enter resident cognition. */
+  researchObserve() {
+    this.#assertOpen();
+    const d = this.#data;
+    const bodyAfferents = this.#core.afferents();
+    checkNumbers(bodyAfferents, this.residents * BODY_CHANNELS, "CNS BODY807 research trace");
+    return {
+      qpos: Float64Array.from(d.qpos),
+      qvel: Float64Array.from(d.qvel),
+      bodyPositions: Float64Array.from(d.xpos),
+      bodyQuaternions: Float64Array.from(d.xquat),
+      bodyRotations: Float64Array.from(d.xmat),
+      sensordata: Float64Array.from(d.sensordata),
+      ctrl: Float64Array.from(d.ctrl),
+      bodyAfferents: Float32Array.from(bodyAfferents),
+      bodyMap: this.#researchBodyMap,
+      ecology: JSON.parse(this.#core.ecology_observe()),
+      actuatorState: JSON.parse(this.#core.actuator_state()),
     };
   }
   setMemoryCheckpoint(opaqueCnsMemory) {
     this.#core.set_memory(String(opaqueCnsMemory));
+  }
+  setRouteMeasurements(openFraction, advectionM3S) {
+    this.#assertOpen();
+    checkNumbers(openFraction, this.#fixture.ecology.routes.length, "Route openness");
+    checkNumbers(advectionM3S, openFraction.length, "Route advection");
+    this.#core.set_route_measurements(Float64Array.from(openFraction), Float64Array.from(advectionM3S));
+  }
+  setEcologySites({ construction_sites = [], birth_sites = [], photon_exposures = [] } = {}) {
+    this.#assertOpen();
+    this.#core.set_ecology_sites(JSON.stringify({ construction_sites, birth_sites, photon_exposures }));
   }
   snapshot() {
     this.#assertOpen();
@@ -408,19 +690,26 @@ class BrowserWorld {
       this.#mj.mjtState.mjSTATE_INTEGRATION.value,
     );
     return {
-      format: "chreatures-browser-physical-snapshot-v2",
+      format: "chreatures-browser-fly-physical-snapshot-v3",
       engine: ENGINE,
       model: this.#fixture.source_mjcf_sha256,
       atlas: this.#fixture.atlas_sha256,
       physical: arr(this.#buffers.state.GetView()),
       core: this.#core.snapshot(),
       geomSize: arr(this.#model.geom_size),
+      geomPos: arr(this.#model.geom_pos),
       geomRGBA: arr(this.#model.geom_rgba),
+      geomContype: arr(this.#model.geom_contype),
+      geomConaffinity: arr(this.#model.geom_conaffinity),
+      ctrl: arr(this.#data.ctrl),
+      actuatorForceRange: arr(this.#model.actuator_forcerange),
+      actuatorGainParameters: arr(this.#model.actuator_gainprm),
       frame: arr(this.#frame),
       width: this.#width,
       height: this.#height,
       visitorCounter: this.#visitorCounter,
       visitorForces: structuredClone(this.#visitorForces),
+      physicsSensed: this.#physicsSensed,
       fixture: structuredClone(this.#fixture),
       xml: this.#xml,
     };
@@ -428,7 +717,7 @@ class BrowserWorld {
   restore(snapshot) {
     this.#assertOpen();
     if (
-      snapshot?.format !== "chreatures-browser-physical-snapshot-v2" ||
+      snapshot?.format !== "chreatures-browser-fly-physical-snapshot-v3" ||
       snapshot.engine !== ENGINE ||
       snapshot.model !== this.#fixture.source_mjcf_sha256 ||
       snapshot.atlas !== this.#fixture.atlas_sha256
@@ -445,10 +734,20 @@ class BrowserWorld {
       "Geometry sizes",
     );
     checkNumbers(
+      snapshot.geomPos,
+      this.#model.geom_pos.length,
+      "Geometry positions",
+    );
+    checkNumbers(
       snapshot.geomRGBA,
       this.#model.geom_rgba.length,
       "Geometry colors",
     );
+    checkNumbers(snapshot.geomContype, this.#model.geom_contype.length, "Geometry contact types");
+    checkNumbers(snapshot.geomConaffinity, this.#model.geom_conaffinity.length, "Geometry contact affinities");
+    checkNumbers(snapshot.ctrl, this.#data.ctrl.length, "Physical controls");
+    checkNumbers(snapshot.actuatorForceRange, this.#model.actuator_forcerange.length, "Actuator force ranges");
+    checkNumbers(snapshot.actuatorGainParameters, this.#model.actuator_gainprm.length, "Actuator gain parameters");
     checkNumbers(
       snapshot.frame,
       snapshot.width * snapshot.height * 3,
@@ -473,7 +772,7 @@ class BrowserWorld {
         throw new Error("Invalid saved visitor force");
     }
     const core = JSON.parse(snapshot.core);
-    if (Math.abs(core.time - snapshot.physical[0]) > 1e-8)
+    if (Math.abs(core.state?.time - snapshot.physical[0]) > 1e-8)
       throw new Error("Saved physical and ecological clocks differ");
     this.#core.restore(snapshot.core);
     try {
@@ -484,11 +783,18 @@ class BrowserWorld {
         this.#mj.mjtState.mjSTATE_INTEGRATION.value,
       );
       this.#model.geom_size.set(snapshot.geomSize);
+      this.#model.geom_pos.set(snapshot.geomPos);
       this.#model.geom_rgba.set(snapshot.geomRGBA);
+      this.#model.geom_contype.set(snapshot.geomContype);
+      this.#model.geom_conaffinity.set(snapshot.geomConaffinity);
+      this.#data.ctrl.set(snapshot.ctrl);
+      this.#model.actuator_forcerange.set(snapshot.actuatorForceRange);
+      this.#model.actuator_gainprm.set(snapshot.actuatorGainParameters);
       this.setScreenFrame(snapshot.frame, snapshot.width, snapshot.height);
       this.#visitorCounter = snapshot.visitorCounter ?? 0;
       this.#visitorForces = structuredClone(snapshot.visitorForces ?? []);
       this.#mj.mj_forward(this.#model, this.#data);
+      this.#physicsSensed = Boolean(snapshot.physicsSensed);
       this.#paused = false;
     } catch (e) {
       this.#paused = true;
@@ -523,24 +829,26 @@ class BrowserWorld {
       this.#fixture.entities.length >= 96
     )
       throw new Error("Invalid bounded material insertion");
-    const revision = this.#fixture.source_mjcf_sha256,
-      time = this.time;
-    const id = `visitor-${this.#visitorCounter + 1}`;
-    const fragment = `<body name="entity:${id}" pos="${position.join(" ")}"><freejoint name="entity:${id}:free"/><geom name="entity:${id}:geom:0" type="${shape}" size="${size.join(" ")}" rgba="${rgba.join(" ")}" density="35" friction="0.9 0.02 0.004"/></body>`;
-    const xml = this.#xml.replace("</worldbody>", fragment + "</worldbody>");
-    const digest = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(xml),
-    );
-    if (revision !== this.#fixture.source_mjcf_sha256 || time !== this.time)
-      throw new Error("Topology transaction stale after world advanced");
-    const fixture = structuredClone(this.#fixture);
-    fixture.source_mjcf_sha256 = Array.from(new Uint8Array(digest), (b) =>
-      b.toString(16).padStart(2, "0"),
-    ).join("");
-    let model, data, core, stateBuffer;
+    this.#busy = true;
     try {
-      model = this.#mj.MjModel.from_xml_string(xml);
+      const revision = this.#fixture.source_mjcf_sha256,
+        time = this.time;
+      const id = `visitor-${this.#visitorCounter + 1}`;
+      const fragment = `<body name="entity:${id}" pos="${position.join(" ")}"><freejoint name="entity:${id}:free"/><geom name="entity:${id}:geom:0" type="${shape}" size="${size.join(" ")}" rgba="${rgba.join(" ")}" density="35" friction="0.9 0.02 0.004"/></body>`;
+      const xml = this.#xml.replace("</worldbody>", fragment + "</worldbody>");
+      const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(xml),
+      );
+      if (revision !== this.#fixture.source_mjcf_sha256 || time !== this.time)
+        throw new Error("Topology transaction stale after world advanced");
+      const fixture = structuredClone(this.#fixture);
+      fixture.source_mjcf_sha256 = Array.from(new Uint8Array(digest), (b) =>
+        b.toString(16).padStart(2, "0"),
+      ).join("");
+      let model, data, core, stateBuffer, meshes;
+      try {
+      model = compileModel(this.#mj, xml, fixture, this.#assets);
       data = new this.#mj.MjData(model);
       const body = this.#mj.mj_name2id(
         model,
@@ -584,8 +892,12 @@ class BrowserWorld {
         }
       }
       data.time = this.#data.time;
-      model.geom_size.set(this.#model.geom_size);
-      model.geom_rgba.set(this.#model.geom_rgba);
+      for (const [name, width] of [["geom_size", 3], ["geom_pos", 3], ["geom_quat", 4], ["geom_rgba", 4], ["geom_friction", 3]])
+        model[name].set(this.#model[name].subarray(0, this.#model.ngeom * width));
+      model.geom_contype.set(this.#model.geom_contype.subarray(0, this.#model.ngeom));
+      model.geom_conaffinity.set(this.#model.geom_conaffinity.subarray(0, this.#model.ngeom));
+      model.actuator_forcerange.set(this.#model.actuator_forcerange);
+      model.actuator_gainprm.set(this.#model.actuator_gainprm);
       this.#mj.mj_forward(model, data);
       const contacts = data.contact;
       try {
@@ -622,9 +934,17 @@ class BrowserWorld {
         growth: food > 0 ? 0.002 : 0,
         geoms: [geom],
       });
+      fixture.compiled_counts = {
+        nq: model.nq, nv: model.nv, nu: model.nu, nbody: model.nbody,
+        njnt: model.njnt, ngeom: model.ngeom, nmesh: model.nmesh,
+        nsite: model.nsite, nsensor: model.nsensor, nsensordata: model.nsensordata,
+      };
+      meshes = this.#compileMeshObserver(model);
       core = new this.#Core(JSON.stringify(this.#fixture), 1);
       core.restore(this.#core.snapshot());
-      core.append_entity_config(JSON.stringify(fixture));
+      if (typeof core.rebind_physics !== "function")
+        throw new Error("Native core lacks transactional physical rebind");
+      core.rebind_physics(JSON.stringify(fixture));
       stateBuffer = new this.#mj.DoubleBuffer(
         this.#mj.mj_stateSize(
           model,
@@ -641,14 +961,19 @@ class BrowserWorld {
       this.#buffers.state = stateBuffer;
       this.#fixture = fixture;
       this.#xml = xml;
+      this.#meshes = meshes;
+      this.#physicsSensed = false;
       this.#visitorCounter++;
       return { id, body, geom, model: fixture.source_mjcf_sha256 };
-    } catch (error) {
-      stateBuffer?.delete();
-      core?.free();
-      data?.delete();
-      model?.delete();
-      throw error;
+      } catch (error) {
+        stateBuffer?.delete();
+        core?.free();
+        data?.delete();
+        model?.delete();
+        throw error;
+      }
+    } finally {
+      this.#busy = false;
     }
   }
   visitorSound(position, frequencyHz, envelope = 1, duration = 0.15) {
@@ -674,6 +999,7 @@ class BrowserWorld {
   }
   dispose() {
     if (this.#closed) return;
+    if (this.#busy) throw new Error("Cannot dispose while a world mutation is pending");
     this.#closed = true;
     for (const b of Object.values(this.#buffers)) b.delete();
     this.#core.free();

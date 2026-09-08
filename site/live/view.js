@@ -3,7 +3,7 @@ import {OrbitControls} from '../vendor/three/OrbitControls.js';
 
 const NEURONS = 165122;
 const RETINAL_SITES = 1771;
-const MUJOCO_SHAPES = new Set([2, 3, 4, 5, 6]);
+const MUJOCO_SHAPES = new Set([0, 2, 3, 4, 5, 6, 7]);
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
 function finiteArray(value, length, label) {
@@ -14,22 +14,36 @@ function finiteArray(value, length, label) {
 }
 
 function materialFor(item, rgba) {
-  const resident = item.name.startsWith('resident:');
+  const resident = Boolean(item.resident_id) || /^resident(?:\d+\/|:)/.test(item.name);
   const color = new THREE.Color(rgba[0], rgba[1], rgba[2]);
   return new THREE.MeshPhysicalMaterial({
     color,
-    roughness: resident ? .28 : .72,
-    metalness: resident ? .58 : .04,
-    emissive: resident ? color.clone().multiplyScalar(.12) : new THREE.Color(0x000000),
-    emissiveIntensity: resident ? .55 : 0,
+    roughness: resident ? .46 : .82,
+    metalness: .02,
+    emissive: resident ? color.clone().multiplyScalar(.025) : new THREE.Color(0x000000),
+    emissiveIntensity: resident ? .35 : 0,
     transparent: rgba[3] < .999,
     opacity: rgba[3],
     depthWrite: rgba[3] >= .999,
+    side: item.type === 0 || /wing/.test(item.name) ? THREE.DoubleSide : THREE.FrontSide,
   });
 }
 
-function geometryFor(item) {
+function geometryFor(item, meshes) {
   const {type, size} = item;
+  if (type === 0) return new THREE.PlaneGeometry(2, 2);
+  if (type === 7) {
+    const source = meshes?.[item.mesh_id];
+    if (!source || !(source.positions instanceof Float32Array) || !(source.faces instanceof Uint32Array) || source.positions.length % 3 || source.faces.length % 3) throw new Error(`Compiled anatomical mesh ${item.mesh_id} is absent`);
+    finiteArray(source.positions, source.positions.length, 'Compiled anatomical vertices');
+    if (source.faces.some(index => index >= source.positions.length / 3)) throw new Error('Anatomical triangle index is outside its mesh');
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(source.positions, 3));
+    geometry.setIndex(new THREE.BufferAttribute(source.faces, 1));
+    geometry.computeVertexNormals();
+    geometry.computeBoundingSphere();
+    return geometry;
+  }
   if (type === 2) return new THREE.SphereGeometry(1, 20, 13);
   if (type === 3) {
     const geometry = new THREE.CapsuleGeometry(size[0], size[1] * 2, 6, 12);
@@ -51,7 +65,9 @@ function scaleMesh(mesh, item) {
   if (!Array.isArray(size) || size.length !== 3 || size.some(value => !Number.isFinite(value) || value < 0)) {
     throw new Error(`Geometry ${item.id} has invalid size`);
   }
-  if (item.type === 2) mesh.scale.setScalar(size[0]);
+  if (item.type === 0) mesh.scale.set(size[0] || 25, size[1] || 20, 1);
+  else if (item.type === 7) mesh.scale.setScalar(1);
+  else if (item.type === 2) mesh.scale.setScalar(size[0]);
   else if (item.type === 3) mesh.scale.setScalar(1);
   else if (item.type === 4 || item.type === 6) mesh.scale.set(size[0], size[1], size[2]);
   else if (item.type === 5) mesh.scale.set(size[0], size[0], size[1]);
@@ -76,19 +92,19 @@ export class LiveView {
 
     this.worldScene = new THREE.Scene();
     this.worldScene.background = new THREE.Color(0xf3eee0);
-    this.worldScene.fog = new THREE.FogExp2(0xe8f0df, .018);
-    this.worldCamera = new THREE.PerspectiveCamera(42, 1, .015, 120);
-    this.worldCamera.position.set(7.6, -8.8, 5.6);
+    this.worldScene.fog = new THREE.FogExp2(0xe8f0df, .008);
+    this.worldCamera = new THREE.PerspectiveCamera(42, 1, .015, 300);
+    this.worldCamera.position.set(18, -25, 18);
     this.worldCamera.up.set(0, 0, 1);
     this.worldRenderer = new THREE.WebGLRenderer({canvas: worldCanvas, antialias: true, alpha: false});
     this.worldRenderer.outputColorSpace = THREE.SRGBColorSpace;
     this.worldRenderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.worldRenderer.toneMappingExposure = 1.12;
     this.worldControls = new OrbitControls(this.worldCamera, worldCanvas);
-    this.worldControls.target.set(2.5, 2.5, .45);
+    this.worldControls.target.set(0, 0, 1);
     this.worldControls.enableDamping = true;
-    this.worldControls.minDistance = .18;
-    this.worldControls.maxDistance = 42;
+    this.worldControls.minDistance = .4;
+    this.worldControls.maxDistance = 160;
     this.worldControls.maxPolarAngle = Math.PI * .495;
     const sky = new THREE.HemisphereLight(0xfff6dc, 0x6e9f86, 2.15);
     sky.position.set(0, 0, 1);
@@ -148,7 +164,7 @@ export class LiveView {
     this.selectedResident = id;
     for (const mesh of this.meshes.values()) {
       if (!mesh.userData.residentId) continue;
-      mesh.material.emissiveIntensity = mesh.userData.residentId === id ? 1.35 : .55;
+      mesh.material.emissiveIntensity = mesh.userData.residentId === id ? 1.2 : .35;
     }
   }
 
@@ -305,6 +321,7 @@ export class LiveView {
   }
 
   applyFrame(frame) {
+    if (frame.meshes) this.anatomicalMeshes = frame.meshes;
     const geometry = frame.geometry;
     if (!Array.isArray(geometry) || !Array.isArray(frame.residents)) throw new Error('Observer frame metadata differs');
     geometry.forEach((item, index) => {
@@ -322,8 +339,8 @@ export class LiveView {
     if (this.residents.some(item => item.root * 3 + 2 >= frame.bodyPositions.length)) throw new Error('Resident root-body address differs');
     this.screenGeom = Number(frame.screenGeom);
     const signature = geometry.map(item => `${item.id}:${item.type}:${item.name}:${item.size.join(',')}`).join('|');
-    if (signature !== this.geometrySignature) this.#rebuildGeometry(geometry, frame.colors, signature);
-    if (this.residents.some(item => !this.meshes.has(item.head))) throw new Error('Resident head-geometry address differs');
+    if (signature !== this.geometrySignature) this.#rebuildGeometry(geometry, frame.colors, signature, this.anatomicalMeshes);
+    if (this.residents.some(item => item.head * 3 + 2 >= frame.bodyPositions.length)) throw new Error('Resident head-body address differs');
     const matrix = new THREE.Matrix4();
     for (const item of geometry) {
       const mesh = this.meshes.get(item.id);
@@ -336,6 +353,7 @@ export class LiveView {
       const rgba = [frame.colors[c], frame.colors[c + 1], frame.colors[c + 2], frame.colors[c + 3]];
       mesh.material.color.setRGB(rgba[0], rgba[1], rgba[2]);
       mesh.material.opacity = rgba[3];
+      mesh.visible = rgba[3] > 0;
     }
     if (this.selectedResident && this.residents.some(item => item.id === this.selectedResident)) this.selectResident(this.selectedResident);
     else if (this.residents.length) this.selectResident(this.residents[0].id);
@@ -344,7 +362,7 @@ export class LiveView {
 
   stop() { this.running = false; }
 
-  #rebuildGeometry(items, colors, signature) {
+  #rebuildGeometry(items, colors, signature, anatomicalMeshes) {
     for (const mesh of this.meshes.values()) {
       this.worldScene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose();
     }
@@ -354,10 +372,10 @@ export class LiveView {
       if (!Array.isArray(item.size) || item.size.length !== 3 || item.size.some(value => !Number.isFinite(value) || value < 0)) throw new Error(`Geometry ${item.id} has invalid size`);
       const c = item.id * 4;
       const rgba = [colors[c], colors[c + 1], colors[c + 2], colors[c + 3]];
-      const mesh = new THREE.Mesh(geometryFor(item), materialFor(item, rgba));
-      const resident = /^resident:([^:]+):/.exec(item.name);
+      const mesh = new THREE.Mesh(geometryFor(item, anatomicalMeshes), materialFor(item, rgba));
+      const resident = /^resident:([^:]+):/.exec(item.name) || /^(resident\d+)\//.exec(item.name);
       const visitor = /^entity:(visitor-[^:]+):/.exec(item.name);
-      mesh.userData = {residentId: resident?.[1] ?? null, toyId: visitor?.[1] ?? null, body: item.body};
+      mesh.userData = {residentId: item.resident_id ?? resident?.[1] ?? null, toyId: visitor?.[1] ?? null, body: item.body};
       scaleMesh(mesh, item);
       this.meshes.set(item.id, mesh); this.worldScene.add(mesh);
     }
@@ -370,7 +388,14 @@ export class LiveView {
     if (!resident) return null;
     const body = resident.root * 3;
     const position = new THREE.Vector3(this.lastFrame.bodyPositions[body], this.lastFrame.bodyPositions[body + 1], this.lastFrame.bodyPositions[body + 2]);
-    const head = this.meshes.get(resident.head);
+    const h = resident.head * 3;
+    const head = {position: new THREE.Vector3(this.lastFrame.bodyPositions[h], this.lastFrame.bodyPositions[h + 1], this.lastFrame.bodyPositions[h + 2]), quaternion: new THREE.Quaternion()};
+    const rotations = this.lastFrame.bodyRotations;
+    if (rotations) {
+      const k = resident.head * 9;
+      const matrix = new THREE.Matrix4().set(rotations[k], rotations[k+1], rotations[k+2], 0, rotations[k+3], rotations[k+4], rotations[k+5], 0, rotations[k+6], rotations[k+7], rotations[k+8], 0, 0, 0, 0, 1);
+      head.quaternion.setFromRotationMatrix(matrix);
+    }
     return {position, head};
   }
 
@@ -423,7 +448,7 @@ export class LiveView {
     if (!pose.head) return;
     const forward = new THREE.Vector3(1, 0, 0).applyQuaternion(pose.head.quaternion);
     const up = new THREE.Vector3(0, 0, 1).applyQuaternion(pose.head.quaternion);
-    this.worldCamera.position.copy(pose.head.position).addScaledVector(forward, .045).addScaledVector(up, .018);
+    this.worldCamera.position.copy(pose.head.position).addScaledVector(forward, .35).addScaledVector(up, .18);
     this.worldCamera.up.copy(up);
     this.worldCamera.lookAt(pose.head.position.clone().addScaledVector(forward, 1));
   }
