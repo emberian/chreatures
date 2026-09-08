@@ -12,13 +12,17 @@ from typing import Any, Final
 
 import numpy as np
 
-from .curriculum import CONTEXT, CONTROL_SOURCES, PHASES, RESIDENTS, TICKS, split_for_world
+from .curriculum import (
+    CONTEXT, CONTROL_INDEX, CONTROL_SOURCES, PHASE_INDEX, PHASES,
+    RESIDENTS, TICKS, split_for_world,
+)
 
 
 FORMAT: Final = "chreatures-actual-fly-cns-development-corpus-v1"
 EPISODE_FORMAT: Final = "chreatures-actual-fly-cns-development-episode-v1"
 NURSERY_FORMAT: Final = "chreatures-embodied-nursery-corpus-v1"
 RECOVERY_FORMAT: Final = "chreatures-fly-on-policy-recovery-corpus-v1"
+SUPPORT_ACQUISITION_FORMAT: Final = "chreatures-fly-support-acquisition-corpus-v1"
 OPTIC_SITES: Final = 1771
 LATENT: Final = 512
 BODY_AFFERENTS: Final = 807
@@ -501,6 +505,9 @@ def load_recovery_corpus(path: Path) -> Corpus:
             int(row.get("world_index", -1)) != index
             or row.get("split") != split_for_world(index)
             or not HEX64.fullmatch(str(row.get("sha256", "")))
+            or not all(HEX64.fullmatch(str(row.get(key, ""))) for key in (
+                "scene_layout_identity", "initial_snapshot_sha256"
+            ))
         ):
             raise FlyLearningContractError("recovery manifest order or identity differs")
         episode = load_episode(path.parent / str(row["file"]), str(row["sha256"]))
@@ -531,6 +538,136 @@ def load_recovery_corpus(path: Path) -> Corpus:
     ):
         if len({episode.metadata[key] for episode in episodes}) != 1:
             raise FlyLearningContractError(f"recovery mixes {key}")
+    return Corpus(
+        path.parent, manifest, tuple(episodes[:8]),
+        tuple(episodes[8:10]), tuple(episodes[10:]),
+    )
+
+
+def load_support_acquisition_corpus(path: Path) -> Corpus:
+    """Load fresh-life support, short-probe, and acquisition chronologies."""
+    path = path.resolve()
+    if path.is_dir():
+        path = path / "support-acquisition-corpus.json"
+    manifest = json.loads(path.read_text())
+    if (
+        manifest.get("format") != SUPPORT_ACQUISITION_FORMAT
+        or manifest.get("completed") is not True
+        or int(manifest.get("worlds", -1)) != 12
+        or int(manifest.get("ticks", -1)) != TICKS
+        or int(manifest.get("residents", -1)) != RESIDENTS
+        or int(manifest.get("cold_support_ticks", -1)) != 40
+        or int(manifest.get("probe_ticks", -1)) != 8
+        or manifest.get("reset_between_interventions") is not False
+        or manifest.get("observer_teacher_only") is not True
+    ):
+        raise FlyLearningContractError("sealed support-acquisition corpus required")
+    rows = manifest.get("episodes")
+    if not isinstance(rows, list) or len(rows) != 12:
+        raise FlyLearningContractError("support-acquisition corpus must contain twelve whole worlds")
+    episodes = []
+    for index, row in enumerate(rows):
+        if (
+            int(row.get("world_index", -1)) != index
+            or row.get("split") != split_for_world(index)
+            or not HEX64.fullmatch(str(row.get("sha256", "")))
+            or not all(HEX64.fullmatch(str(row.get(key, ""))) for key in (
+                "scene_layout_identity", "initial_snapshot_sha256", "collection_life_identity"
+            ))
+        ):
+            raise FlyLearningContractError("support-acquisition manifest order or identity differs")
+        episode = load_episode(path.parent / str(row["file"]), str(row["sha256"]))
+        meta, curriculum = episode.metadata, episode.metadata.get("curriculum", {})
+        if (
+            meta.get("support_acquisition_format") != SUPPORT_ACQUISITION_FORMAT
+            or meta.get("execution_backend") != "native-fly-world"
+            or meta.get("raw_geometry_controller_access") is not False
+            or int(meta.get("world_index", -1)) != index
+            or row.get("scene_layout_identity") != meta["scene_layout_identity"]
+            or row.get("initial_snapshot_sha256") != meta["initial_snapshot_sha256"]
+            or row.get("collection_life_identity") != meta["collection_life_identity"]
+            or curriculum.get("support_acquisition_format") != SUPPORT_ACQUISITION_FORMAT
+            or int(curriculum.get("cold_support_ticks", -1)) != 40
+            or int(curriculum.get("probe_ticks", -1)) != 8
+            or int(curriculum.get("correction_ticks", -1)) != 16
+            or int(curriculum.get("acquisition_ticks", -1)) != 16
+            or int(curriculum.get("cycles", -1)) != 24
+            or curriculum.get("reset_between_interventions") is not False
+            or curriculum.get("observer_teacher_only") is not True
+            or float(curriculum.get("teacher_servo_slew_rad_per_tick", -1)) != 0.04
+            or float(curriculum.get("teacher_author_hz", -1)) != 1.5
+            or float(curriculum.get("teacher_author_magnitude", -1)) != 0.25
+        ):
+            raise FlyLearningContractError("support-acquisition episode contract differs")
+        bouts = curriculum.get("bouts")
+        if not isinstance(bouts, list) or len(bouts) != RESIDENTS:
+            raise FlyLearningContractError("support-acquisition bout rows differ")
+        expected_schedule = [(0, 40, "cold-support")]
+        for cycle in range(24):
+            start = 40 + 40 * cycle
+            expected_schedule.extend((
+                (start, start + 8, "short-probe"),
+                (start + 8, start + 24, "neutral-correction"),
+                (start + 24, start + 40, "contact-acquisition"),
+            ))
+        expected_schedule.append((1000, TICKS, "tail-support"))
+        for resident, resident_bouts in enumerate(bouts):
+            if (
+                not isinstance(resident_bouts, list)
+                or [
+                    (int(bout.get("start", -1)), int(bout.get("stop", -1)),
+                     bout.get("intended_outcome"))
+                    for bout in resident_bouts
+                ] != expected_schedule
+            ):
+                raise FlyLearningContractError("support-acquisition role schedule differs")
+            cursor = 0
+            for bout in resident_bouts:
+                start, stop = int(bout.get("start", -1)), int(bout.get("stop", -1))
+                source, phase = bout.get("control_source"), bout.get("phase")
+                if (
+                    start != cursor or stop <= start
+                    or source not in CONTROL_INDEX or phase not in PHASE_INDEX
+                ):
+                    raise FlyLearningContractError("support-acquisition bouts are not gapless")
+                region = np.s_[start:stop, resident]
+                expected_motor = (
+                    episode.teacher_motor[region]
+                    if source == "offline-author-teacher" else episode.cns_motor[region]
+                )
+                if (
+                    not np.array_equal(episode.delivered_motor[region], expected_motor)
+                    or not np.all(episode.control_source[region] == CONTROL_INDEX[source])
+                    or not np.all(episode.curriculum_phase[region] == PHASE_INDEX[phase])
+                ):
+                    raise FlyLearningContractError("support-acquisition delivered chronology differs")
+                cursor = stop
+            if cursor != TICKS:
+                raise FlyLearningContractError("support-acquisition bouts do not cover the episode")
+        if (
+            np.any(episode.delivered_context[:40])
+            or np.any(episode.delivered_motor[:40, :, :84])
+        ):
+            raise FlyLearningContractError("support-acquisition cold support differs")
+        teacher_rows = (
+            episode.control_source[1:] == CONTROL_INDEX["offline-author-teacher"]
+        )
+        physical_slew = np.abs(np.diff(episode.applied_body_control[:, :, :84], axis=0))
+        if np.any(physical_slew[teacher_rows] > 0.04001):
+            raise FlyLearningContractError("support-acquisition teacher slew differs")
+        episodes.append(episode)
+    for key in (
+        "scene_layout_identity", "initial_snapshot_sha256",
+        "world_instance_identity", "collection_life_identity",
+    ):
+        if len({episode.metadata[key] for episode in episodes}) != 12:
+            raise FlyLearningContractError(f"support-acquisition {key} values overlap")
+    for key in (
+        "native_host_binary_sha256", "native_host_source_manifest_sha256",
+        "mujoco_library_sha256", "support_acquisition_source_sha256",
+    ):
+        if len({episode.metadata[key] for episode in episodes}) != 1:
+            raise FlyLearningContractError(f"support-acquisition mixes {key}")
     return Corpus(
         path.parent, manifest, tuple(episodes[:8]),
         tuple(episodes[8:10]), tuple(episodes[10:]),

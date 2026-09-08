@@ -7,7 +7,7 @@ from typing import Iterator
 import numpy as np
 
 from .curriculum import CONTROL_SOURCES, PHASES
-from .data import Corpus, Episode
+from .data import Corpus, Episode, RECOVERY_FORMAT, SUPPORT_ACQUISITION_FORMAT
 
 
 @dataclass(frozen=True)
@@ -125,12 +125,17 @@ class ResetPrefixSampler:
         self.episodes = episodes
         self.burn_in, self.optimize = 0, optimize
         self.rng = np.random.default_rng(seed)
+        support_indices = [
+            index for index, episode in enumerate(episodes)
+            if episode.metadata.get("support_acquisition_format")
+            == SUPPORT_ACQUISITION_FORMAT
+        ]
         recovery_indices = [
             index for index, episode in enumerate(episodes)
             if episode.metadata.get("recovery_format")
-            == "chreatures-fly-on-policy-recovery-corpus-v1"
+            == RECOVERY_FORMAT
         ]
-        episode_indices = recovery_indices or list(range(len(episodes)))
+        episode_indices = support_indices or recovery_indices or list(range(len(episodes)))
         rows: list[Window] = []
         for episode_index in episode_indices:
             episode = episodes[episode_index]
@@ -150,13 +155,15 @@ class ResetPrefixSampler:
         if not rows:
             raise ValueError("corpus contains no complete cold-reset prefixes")
         self.rows = tuple(rows)
-        self.recovery_only = bool(recovery_indices)
+        self.support_only = bool(support_indices)
+        self.recovery_only = bool(recovery_indices) and not self.support_only
 
     def coverage(self) -> dict:
         return {
             "burn_in": 0,
             "optimize": self.optimize,
             "cold_reset_prefixes": len(self.rows),
+            "support_acquisition_corpus_only": self.support_only,
             "recovery_corpus_only": self.recovery_only,
         }
 

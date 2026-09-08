@@ -261,3 +261,13 @@ python -m research.fly_learning.train extract-heads \
   --result PARENT/result.json \
   --output PARENT/physical-prediction-heads.pt
 ```
+
+The subsequent support-acquisition corpus uses fresh lives with 40 delivered
+neutral-support ticks, then repeated eight-tick raw CNS probes followed by
+low-slew teacher correction and contact-gated acquisition references. Add it
+with `--support-corpus SUPPORT/support-acquisition-corpus.json`. When present,
+the reset-prefix sampler draws its cold prefixes from this corpus first;
+recovery failures and all older worlds remain in ordinary balanced windows.
+The loader independently verifies the gapless schedule, selected delivered
+controller, exact cold-neutral servos, physical-radian slew bound, native
+deployment identities, and eight/two/two whole-world split.
