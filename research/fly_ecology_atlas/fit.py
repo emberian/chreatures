@@ -8,7 +8,7 @@ ROOT=Path(__file__).resolve().parents[2];sys.path.insert(0,str(ROOT))
 from research.dynamics_v2.gam_fit import _require_native_gamfit,_capture_native_stderr
 from research.fly_ecology_atlas.prepare import FEATURES,RANGES,FORMAT,sha,write
 TARGETS=('height_mm','canopy_span_mm','route_permeability','branch_count','blocked_rate')
-FORMULAS={'joint':'response ~ te('+','.join(FEATURES)+',k=12)',
+FORMULAS={'joint':'response ~ duchon('+','.join(FEATURES)+',centers=12)',
           'additive':'response ~ '+'+'.join(f's({k},k=3)' for k in FEATURES)}
 def scores(pred,truth):
     error=np.asarray(pred,np.float64)-truth
@@ -51,8 +51,11 @@ def metrics(record,plan):
                 maintenance_atp=float(ecology['accounting']['maintenance_atp_spent']),regulation_atp=float(ecology['accounting']['regulation_atp_spent']),
                 maximum_elemental_residual=float(ecology['accounting']['maximum_absolute_residual']))
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--plan',type=Path,required=True);p.add_argument('--results',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--plan',type=Path,required=True);p.add_argument('--results',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--analysis-recipe',type=Path);a=p.parse_args()
     plan=json.loads(a.plan.read_text());plan_hash=sha(a.plan);records=[];failures=[]
+    if a.analysis_recipe:
+        recipe=json.loads(a.analysis_recipe.read_text())
+        if recipe['plan_sha256']!=plan_hash or recipe['formulas']!=FORMULAS or recipe['analysis_source_sha256']!=sha(__file__):raise ValueError('Analysis recipe binding differs')
     for setting in plan['settings']:
         for layout in plan['layouts'][:3]:
             path=a.results/(setting['setting_id']+'--'+layout['layout_id']+'.json')
@@ -129,10 +132,10 @@ def main():
                 used.append(index);proposal=dict(setting_id='confirmation-'+label,split='confirmation',genes=points[index],intent=label,predicted={k:float(v[index]) for k,v in predictions.items()},selection='diversity objective on training-only native GAM; no physical success inferred')
                 write(a.output/(proposal['setting_id']+'.json'),proposal);proposals.append(proposal)
     report=dict(format=FORMAT,status='actual-native-gam-fit-confirmation-pending' if proposals else 'actual-fit-no-viable-diversity-proposal',plan_sha256=plan_hash,
-        source_sha256=sha(__file__),native_build=gam.build_info(),native_version=gam.__version__,diagnostics=diagnostics,records=records,failed_runs=failures,
+        source_sha256=sha(__file__),analysis_recipe_sha256=sha(a.analysis_recipe) if a.analysis_recipe else None,formulas=FORMULAS,planned_source_sha256=plan['source_sha256'],native_build=gam.build_info(),native_version=gam.__version__,diagnostics=diagnostics,records=records,failed_runs=failures,
         selected_models=selected_models,confirmation_proposals=proposals,native_messages=warnings,
         claim_limit='Actual MuJoCo colony-development sensitivity with neutral diagnostic flies; no CNS computation or motor-learning competence claim. Unsuccessful physical runs and rejected fits retained.')
     write(a.output/'report.json',report)
-    write(a.output/'receipt.json',dict(format=FORMAT,status=report['status'],plan_sha256=plan_hash,raw_report_sha256=sha(a.output/'report.json'),native_version=gam.__version__,native_engine=gam.build_info()['engine_crate'],diagnostics=diagnostics,completed_runs=len(records),failed_runs=[dict(setting=r['setting']['setting_id'],layout=r['layout'],error=r['error']) for r in failures],confirmation_proposals=proposals,claim_limit=report['claim_limit']))
+    write(a.output/'receipt.json',dict(format=FORMAT,status=report['status'],plan_sha256=plan_hash,raw_report_sha256=sha(a.output/'report.json'),analysis_recipe_sha256=report['analysis_recipe_sha256'],analysis_source_sha256=sha(__file__),native_version=gam.__version__,native_engine=gam.build_info()['engine_crate'],diagnostics=diagnostics,completed_runs=len(records),failed_runs=[dict(setting=r['setting']['setting_id'],layout=r['layout'],error=r['error']) for r in failures],confirmation_proposals=proposals,claim_limit=report['claim_limit']))
     print(json.dumps({'report':str(a.output/'report.json'),'sha256':sha(a.output/'report.json'),'proposals':len(proposals)}))
 if __name__=='__main__':main()
