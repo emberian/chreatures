@@ -1571,3 +1571,19 @@ interleaves neutral support, unmodified child probes and limited author-step
 acquisition. The initial support periods remain upright, while the child still
 falls during probes. Failed recovery is retained as failure data. These jobs
 run concurrently on the AMD nodes, with no replacement of established lives.
+
+The antenna-enabled habitat then passed the same complete 128-tick CNS/body/
+private-resident run, exact restoration and inserted-object continuation. The
+current fixture has 383 original geoms and 384 after insertion. This joins
+the new physical contact surfaces to the running organism, beyond the isolated
+contact diagnostic; the untrained controller remains effectively near neutral.
+The receipt is `research/fly_embodiment/antenna-habitat-joined-receipt.json`,
+a transcription of the actual tool-returned result: an unrecognized --output
+argument prevented direct --report writing, while the physical snapshot and
+whole-life checkpoint were written and their hashes checked.
+
+Pages now selects its body, native/Wasm runtime and model from a single
+authenticated release archive. Obsolete generated generic-garden fixtures and
+checked-in binary/runtime copies are removed from the source tree. Fresh builds
+materialize the selected current artifacts; older engines remain in Git and
+immutable releases.
