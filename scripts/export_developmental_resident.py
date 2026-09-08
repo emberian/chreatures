@@ -36,6 +36,7 @@ from chreatures.resident_contract import (
     NATIVE_POPULATION_VERSION,
 )
 from chreatures.sequence_control import (
+    CNS_DEPENDENCY_KEYS,
     CORE_ORDER,
     controller_interface,
     EMBEDDED_ORDER,
@@ -97,9 +98,12 @@ def read_cns_service_identity(path: Path) -> dict[str, Any]:
         raise ValueError("CNS service artifact byte length differs")
     metadata = json.loads(encoded)
     required = {
-        "format", "graph_sha256", "atlas_sha256", "anatomy_sha256", "readout_mask_sha256",
-        "dimensions", "parameter_order", "training_status", "provenance",
-        "array_sha256", "adapter_sha256",
+        "format", "graph_sha256", "atlas_sha256", "anatomy_sha256",
+        "morphology_sha256", "sensory_schema_sha256", "actuator_schema_sha256",
+        "motor_calibration_sha256", "graph_source_weight_sha256",
+        "graph_quantization", "readout_mask_sha256", "dimensions",
+        "parameter_order", "training_status", "provenance", "array_sha256",
+        "adapter_sha256",
     }
     if not isinstance(metadata, dict) or set(metadata) != required:
         raise ValueError("CNS service metadata fields differ")
@@ -174,7 +178,13 @@ def main() -> int:
     core, predictor, heads = initialize_controller_arrays(args.seed)
     core_hash = packed_sha256(core, CORE_ORDER)
     predictor_hash = packed_sha256(predictor, PREDICTOR_ORDER)
-    cns_identity = service["identity"]
+    # The V4 service identity also carries embodiment source fields.  The
+    # resident/control ABI deliberately stores the exact dependency subset
+    # accepted by sequence_control; service_artifact_sha256 and adapter_sha256
+    # transitively bind the full V4 metadata, including those source fields.
+    cns_identity = {
+        name: service["identity"][name] for name in CNS_DEPENDENCY_KEYS
+    }
     control_dependencies = {
         **cns_identity,
         "controller_input": CONTROLLER_FORMAT,
@@ -233,6 +243,10 @@ def main() -> int:
             "competence_claim": None,
             "context_policy_version": "signed-context12-v1",
             "private_learning_version": "context-consequence-v1",
+            "native_runtime_format": "chreatures-cns-context-resident-native-v12",
+            "context_suffix_memory_format": "chreatures-private-cns-context-suffix-v2",
+            "tick_seconds": 0.01,
+            "goal_horizon_seconds": 0.4,
             "source_policy": None,
             "seed": args.seed,
             "algorithm": (

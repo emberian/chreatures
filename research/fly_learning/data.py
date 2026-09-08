@@ -278,6 +278,9 @@ def load_corpus(root: Path) -> Corpus:
         values = [episode.metadata[key] for episode in episodes]
         if len(set(values)) != len(values):
             raise FlyLearningContractError(f"whole-world {key} values overlap")
+    _validate_core_lineage(
+        root, manifest, [episode.metadata["core_wasm_sha256"] for episode in episodes]
+    )
     return Corpus(root, manifest, tuple(episodes[:8]), tuple(episodes[8:10]), tuple(episodes[10:]))
 
 
@@ -290,6 +293,40 @@ def _atomic_json(path: Path, value: Any) -> None:
         stream.flush()
         os.fsync(stream.fileno())
     os.replace(temporary, path)
+
+
+def _validate_core_lineage(
+    root: Path, manifest: dict[str, Any], core_hashes: list[str]
+) -> dict[str, Any] | None:
+    """Require a portable, byte-authenticated receipt for a bounded core repair."""
+    unique = list(dict.fromkeys(core_hashes))
+    amendment = manifest.get("source_amendment")
+    if len(unique) == 1:
+        if amendment is not None:
+            raise FlyLearningContractError("single-core corpus must not claim a source amendment")
+        return None
+    if len(unique) != 2 or not isinstance(amendment, dict):
+        raise FlyLearningContractError("mixed core Wasm lineage lacks an exact bounded amendment")
+    if amendment.get("file") != "source-amendment.json" or not HEX64.fullmatch(
+        str(amendment.get("sha256", ""))
+    ):
+        raise FlyLearningContractError("source amendment file identity differs")
+    path = root / "source-amendment.json"
+    if sha256_file(path) != amendment["sha256"]:
+        raise FlyLearningContractError("source amendment checksum differs")
+    value = json.loads(path.read_text())
+    if value != amendment.get("value"):
+        raise FlyLearningContractError("source amendment embedded value differs")
+    first_after = int(value.get("first_after_world_index", -1))
+    if (
+        value.get("format") != "chreatures-fly-corpus-source-amendment-v1"
+        or value.get("compatible_semantic_contract") is not True
+        or value.get("before_core_wasm_sha256") != unique[0]
+        or value.get("after_core_wasm_sha256") != unique[1]
+        or core_hashes != [unique[0]] * first_after + [unique[1]] * (len(core_hashes) - first_after)
+    ):
+        raise FlyLearningContractError("source amendment does not exactly cover core transition")
+    return amendment
 
 
 def seal_corpus(source: Path, output: Path) -> dict[str, Any]:
@@ -344,20 +381,23 @@ def seal_corpus(source: Path, output: Path) -> dict[str, Any]:
         amendment = None
         if len(unique_cores) > 1:
             amendment_path = source / "source-amendment.json"
-            amendment = json.loads(amendment_path.read_text())
+            amendment_value = json.loads(amendment_path.read_text())
             if (
-                amendment.get("format") != "chreatures-fly-corpus-source-amendment-v1"
-                or amendment.get("compatible_semantic_contract") is not True
-                or amendment.get("before_core_wasm_sha256") != unique_cores[0]
-                or amendment.get("after_core_wasm_sha256") != unique_cores[1]
-                or amendment.get("first_after_world_index") != core_hashes.index(unique_cores[1])
+                amendment_value.get("format") != "chreatures-fly-corpus-source-amendment-v1"
+                or amendment_value.get("compatible_semantic_contract") is not True
+                or amendment_value.get("before_core_wasm_sha256") != unique_cores[0]
+                or amendment_value.get("after_core_wasm_sha256") != unique_cores[1]
+                or amendment_value.get("first_after_world_index") != core_hashes.index(unique_cores[1])
                 or len(unique_cores) != 2
             ):
                 raise FlyLearningContractError("mixed core Wasm lineage lacks exact bounded amendment")
+            amendment_copy = staged / "source-amendment.json"
+            shutil.copy2(amendment_path, amendment_copy)
+            amendment_sha = sha256_file(amendment_copy)
             amendment = {
-                "path": str(amendment_path.resolve()),
-                "sha256": sha256_file(amendment_path),
-                "value": amendment,
+                "file": amendment_copy.name,
+                "sha256": amendment_sha,
+                "value": amendment_value,
             }
         manifest = {
             "format": FORMAT, "completed": True, "worlds": 12, "ticks": TICKS,

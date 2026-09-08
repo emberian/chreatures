@@ -100,18 +100,26 @@ try {
     const request = JSON.parse(line);
     try {
       if (request.command === 'step') {
+        const decodeBegan = performance.now();
+        const optic = decodeF32(request.optic_base64, 4 * 5313, 'optic');
+        const body = decodeF32(request.body_base64, 4 * 807, 'body');
+        const context = decodeF32(request.context_base64, 4 * 12, 'context');
+        const began = performance.now();
         const output = await brain.step({
           dt: 0.01,
           activeMask: 0b1111,
-          opticRGB: decodeF32(request.optic_base64, 4 * 5313, 'optic'),
-          body: decodeF32(request.body_base64, 4 * 807, 'body'),
-          context: decodeF32(request.context_base64, 4 * 12, 'context'),
+          opticRGB: optic,
+          body,
+          context,
         });
+        const gpuStepMilliseconds = performance.now() - began;
         response({
           id: request.id,
           ok: true,
           latent_base64: encodeF32(output.latent),
           motor_base64: encodeF32(output.motor),
+          node_decode_seconds: (began - decodeBegan) / 1000,
+          gpu_step_seconds: gpuStepMilliseconds / 1000,
         });
       } else if (request.command === 'reset') {
         await brain.reset([0, 1, 2, 3], ['fly-0', 'fly-1', 'fly-2', 'fly-3']);
@@ -135,4 +143,6 @@ try {
 } finally {
   brain.destroy();
   device.destroy();
+  await new Promise(resolveWrite => process.stdout.write('', resolveWrite));
+  process.exit(0);
 }
