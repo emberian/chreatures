@@ -82,6 +82,33 @@ def _summarize(trace):
     return rows
 
 
+def _sealed_prior(directory, identity):
+    """Authenticate completed conditions; never recover an unsealed life."""
+    results = []
+    for arm, service_sha in SERVICE_HASHES.items():
+        for index in (10, 11):
+            path = directory / f"world{index:02d}-{arm}" / "receipt.json"
+            if not path.exists():
+                continue
+            row = json.loads(path.read_text())
+            for key in ("format", "ticks", "control_dt_s", "context", "seed", "native_deployment_sha256", "layouts_manifest_sha256"):
+                if row.get(key) != identity[key]:
+                    raise ValueError(f"prior sealed assessment changed {key}")
+            if (not row.get("completed") or row.get("arm") != arm or row.get("world_index") != index
+                    or row.get("service_sha256") != service_sha):
+                raise ValueError("prior assessment condition differs")
+            trace_name = row["trace"]["file"]
+            if Path(trace_name).name != trace_name or sha256_file(path.parent / trace_name) != row["trace"]["sha256"]:
+                raise ValueError("prior assessment trace bytes differ")
+            if sha256_file(path.parent / "initial-world.bin") != row["initial_snapshot_sha256"]:
+                raise ValueError("prior saved wholeworld bytes differ")
+            if (row["trace"]["shapes"].get("motor") != [TICKS, 4, 92]
+                    or row["trace"]["shapes"].get("root_position") != [TICKS + 1, 4, 3]):
+                raise ValueError("prior assessment trace is incomplete")
+            results.append({"receipt": str(path.resolve()), "sha256": sha256_file(path), **row})
+    return results
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     for name in ("scenes", "native-binary", "native-manifest", "initialized-service", "parent-service", "recovery-service", "output"):
@@ -89,6 +116,8 @@ def main():
     p.add_argument("--source-revision", required=True)
     p.add_argument("--seed", type=int, default=20260908)
     p.add_argument("--device", default="cuda")
+    p.add_argument("--sealed-prior", type=Path,
+                   help="Authenticate completed conditions from a failed earlier run; fresh lives for missing conditions only")
     args = p.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     began = time.monotonic()
@@ -105,7 +134,26 @@ def main():
     starts = {}; results = []; model = None; world = None
     phase = "model-load"; arm = None; index = None; completed_ticks = 0; trace = None
     try:
+        if args.sealed_prior is not None:
+            results = _sealed_prior(args.sealed_prior, identity)
+            for row in results:
+                previous = starts.setdefault(row["world_index"], row["initial_snapshot_sha256"])
+                if previous != row["initial_snapshot_sha256"]:
+                    raise ValueError("prior arms have different wholeworld starts")
+            _write_receipt(args.output / "sealed-prior-amendment.json", {
+                "format": "chreatures-native-assessment-writer-amendment-v1",
+                "reason": "Prior root filesystem filled while writing an unsealed trace; preserve completed conditions and collect only missing conditions in new physical lives.",
+                "source_revision": args.source_revision,
+                "prior_directory": str(args.sealed_prior.resolve()),
+                "authenticated_conditions": [{"arm": r["arm"], "world_index": r["world_index"],
+                                               "receipt": r["receipt"], "sha256": r["sha256"]} for r in results],
+                "unsealed_prior_worlds_reused": False,
+            })
         for arm, expected_sha in SERVICE_HASHES.items():
+            missing_worlds = [index for index in (10, 11)
+                              if not any(r["arm"] == arm and r["world_index"] == index for r in results)]
+            if not missing_worlds:
+                continue
             service = getattr(args, arm + "_service")
             if sha256_file(service) != expected_sha:
                 raise ValueError("assessment service checksum differs")
@@ -115,7 +163,7 @@ def main():
             if model.metadata["cns_service_sha256"] != expected_sha:
                 raise ValueError("service changed during model loading")
             load_seconds = time.monotonic() - load_start
-            for index in (10, 11):
+            for index in missing_worlds:
                 completed_ticks = 0; trace = None; phase = "world-start"
                 directory = args.output / f"world{index:02d}-{arm}"
                 directory.mkdir()

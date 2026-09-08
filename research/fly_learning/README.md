@@ -271,3 +271,12 @@ recovery failures and all older worlds remain in ordinary balanced windows.
 The loader independently verifies the gapless schedule, selected delivered
 controller, exact cold-neutral servos, physical-radian slew bound, native
 deployment identities, and eight/two/two whole-world split.
+
+A later, separately sealed supported-continuation corpus can be added with
+`--supported-continuation-corpus SUPPORT/supported-continuation-corpus.json`.
+It supplies long, phase-continuous author walking, turning, stopping, and
+antenna references before rare eight-tick raw-CNS probes. The opt-in loader
+requires twelve distinct fresh lives and layouts, the exact zero-context and
+no-reset chronology, the declared physical slew limits, and the same whole
+world eight/two/two split. Failed transitions remain training evidence; the
+teacher observations and support gates remain targets and sampler labels only.
