@@ -307,6 +307,40 @@ fn generate(
             ground[x][y] = region;
         }
     }
+    let wall_thickness = 0.25;
+    for (id, position, size) in [
+        (
+            "boundary-west",
+            [-width * 0.5 - wall_thickness, 0.0, height * 0.5],
+            [wall_thickness, depth * 0.5 + wall_thickness, height * 0.5],
+        ),
+        (
+            "boundary-east",
+            [width * 0.5 + wall_thickness, 0.0, height * 0.5],
+            [wall_thickness, depth * 0.5 + wall_thickness, height * 0.5],
+        ),
+        (
+            "boundary-south",
+            [0.0, -depth * 0.5 - wall_thickness, height * 0.5],
+            [width * 0.5, wall_thickness, height * 0.5],
+        ),
+        (
+            "boundary-north",
+            [0.0, depth * 0.5 + wall_thickness, height * 0.5],
+            [width * 0.5, wall_thickness, height * 0.5],
+        ),
+    ] {
+        b.static_geom(
+            id.into(),
+            "world-boundary",
+            "box",
+            "bark",
+            Some(position),
+            size.to_vec(),
+            None,
+            None,
+        );
+    }
     for x in 0..nx {
         for y in 0..ny {
             if x + 1 < nx {
@@ -603,9 +637,11 @@ fn generate(
     for i in 0..20 {
         let angle = i as f64 * 2.399963229728653 + b.rng.signed(0.12);
         let radius = 5.0 + (i % 5) as f64 * 2.2;
-        let pos = [radius * angle.cos(), radius * angle.sin(), 0.42];
+        let size = [0.34, 0.25, 0.22];
+        let preferred = [radius * angle.cos(), radius * angle.sin(), 0.42];
+        let pos = clear_ground_packet_position(&b, preferred, size)?;
         let id = format!("grain-{i:02}");
-        b.dynamic_geom(id.clone(), "grain", "grain", pos, [0.34, 0.25, 0.22], 2e-6);
+        b.dynamic_geom(id.clone(), "grain", "grain", pos, size, 2e-6);
         b.packets.push(Packet {
             id: format!("packet-{id}"),
             geometry_id: id,
@@ -663,6 +699,89 @@ fn generate(
         validation:Validation{geometry_count:b.geometries.len(),dynamic_geometry_count:dynamic_count,material_region_count:b.regions.len(),route_count:b.routes.len(),connected_material_graph:true,spawn_clearance_mm:SPAWN_CLEARANCE_MM,estimated_total_geoms_with_flies:estimated},
         geometries:b.geometries,regions:b.regions,routes:b.routes,packets:b.packets,colony_sites:b.colonies,spawns,
         information_boundary:"Habitat geometry, region IDs, route graph, stores, seed and spawn coordinates are physics/ecology configuration and observer provenance; none are controller inputs." })
+}
+
+fn clear_ground_packet_position(
+    builder: &Builder,
+    preferred: [f64; 3],
+    size: [f64; 3],
+) -> Result<[f64; 3], String> {
+    const GAP_MM: f64 = 0.04;
+    const GOLDEN_ANGLE: f64 = 2.399_963_229_728_653;
+    for attempt in 0..512 {
+        let radius = if attempt == 0 {
+            0.0
+        } else {
+            0.55 * (attempt as f64).sqrt()
+        };
+        let angle = attempt as f64 * GOLDEN_ANGLE;
+        let point = [
+            (preferred[0] + radius * angle.cos()).clamp(
+                -builder.width * 0.5 + size[0],
+                builder.width * 0.5 - size[0],
+            ),
+            (preferred[1] + radius * angle.sin()).clamp(
+                -builder.depth * 0.5 + size[1],
+                builder.depth * 0.5 - size[1],
+            ),
+            preferred[2],
+        ];
+        if builder
+            .geometries
+            .iter()
+            .all(|geometry| ground_packet_clears_geometry(point, size, geometry, GAP_MM))
+        {
+            return Ok(point);
+        }
+    }
+    Err("could not place a collision-free movable grain".into())
+}
+
+fn ground_packet_clears_geometry(
+    point: [f64; 3],
+    packet_size: [f64; 3],
+    geometry: &Geometry,
+    gap: f64,
+) -> bool {
+    let packet_radius = packet_size.iter().map(|v| v * v).sum::<f64>().sqrt();
+    if let Some(segment) = geometry.fromto_mm {
+        return point_segment_distance(point, segment) > geometry.size_mm[0] + packet_radius + gap;
+    }
+    let Some(center) = geometry.position_mm else {
+        return true;
+    };
+    let rotated = geometry.euler_rad.is_some()
+        || geometry
+            .quaternion_wxyz
+            .is_some_and(|q| q != [1.0, 0.0, 0.0, 0.0]);
+    if rotated {
+        let geometry_radius = geometry
+            .size_mm
+            .iter()
+            .map(|extent| extent * extent)
+            .sum::<f64>()
+            .sqrt();
+        let distance = (0..3)
+            .map(|axis| (point[axis] - center[axis]).powi(2))
+            .sum::<f64>()
+            .sqrt();
+        return distance > geometry_radius + packet_radius + gap;
+    }
+    let geometry_extent = match geometry.shape.as_str() {
+        "cylinder" => [
+            geometry.size_mm[0],
+            geometry.size_mm[0],
+            geometry.size_mm[1],
+        ],
+        _ => [
+            geometry.size_mm[0],
+            *geometry.size_mm.get(1).unwrap_or(&geometry.size_mm[0]),
+            *geometry.size_mm.get(2).unwrap_or(&geometry.size_mm[0]),
+        ],
+    };
+    !(0..3).all(|axis| {
+        (point[axis] - center[axis]).abs() <= geometry_extent[axis] + packet_size[axis] + gap
+    })
 }
 
 fn point_segment_distance(point: [f64; 3], segment: [f64; 6]) -> f64 {
