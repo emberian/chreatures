@@ -173,3 +173,41 @@ few hundred full-graph updates. Receipts report output saturation and held-out
 motor variation by skill. Fixed collection bout order confounds tone with body
 state and time, so those offline differences are not evidence of a learned tone
 mapping; the headless assay uses a separate counterbalanced intervention.
+
+If the fitted motor output remains nearly constant, diagnose the route before
+changing the ABI. `diagnose-motor` replays whole held-out worlds and separates
+the temporal spread of the 815 motor-neuron rates from tonic decoder drive,
+bias, and activity-dependent preactivation. `calibrate-motor` is a bounded
+same-contract follow-up: it fits the existing structurally masked positive
+34×815 decoder on standardized actual motor-neuron rates from training worlds,
+then folds feature centering and scaling algebraically into the existing
+positive weights and bias. The replay and candidate service use graph weights
+rounded through IEEE binary16 exactly as the WebGPU deployment pack does; this
+prevents calibration from amplifying a precision difference it never saw. Rate
+standard deviations have declared floors and caps, and coefficients on the
+standardized features are bounded. Folded effective weights may therefore be
+large when measured neural variation is small; their realized range is reported
+and is accepted only after fresh GPU parity. The report includes exact float32 centered-versus-folded
+cancellation error and held-out worlds before writing a new research candidate.
+
+```sh
+python -m research.anatomical_cns.train diagnose-motor \
+  --corpus /path/to/physical-corpus \
+  --service /path/to/initialized.bin --service /path/to/bootstrap.bin \
+  --output /new/path/motor-activity.json --device cuda
+
+python -m research.anatomical_cns.train calibrate-motor \
+  --corpus /path/to/physical-corpus --service /path/to/bootstrap.bin \
+  --output-service /new/path/bootstrap-calibrated.bin \
+  --output-report /new/path/bootstrap-calibrated.json --device cuda
+```
+
+Calibration reads only CNS motor-neuron rates and teacher MOTOR34 targets. It
+does not receive BODY110, retina, root pose, skill names or world geometry as a
+decoder input. Offline improvement still does not establish physical competence.
+The calibrated artifact additionally requires fresh Torch/WebGPU MOTOR34 parity;
+small-weight parity from the initialized service does not cover this candidate.
+If folding fails its float32 numerical gate, the trainer writes a structured
+rejection and a compressed research-only centered state containing the fitted
+coefficients, intercept, rate mean and rate scale before it raises. It never
+writes a runtime service for that rejected fit.

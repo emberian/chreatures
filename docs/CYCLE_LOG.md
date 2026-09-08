@@ -1209,3 +1209,69 @@ from consequences under the resident's own goals, body-information calibration
 through the CNS, and richer native ecology joined to the current live world.
 All assigned compute campaigns completed; their artifacts and failed outcomes
 are retained. Frozen lives and unrelated node jobs remain untouched.
+
+## September 7–8: anatomical CNS V3, memory feedback and muscle recruitment
+
+This wave replaced the current motor bypass with an anatomical feedback loop.
+The full 165,122-neuron graph now advances seven private state fields: graded
+activity, adaptation, local support, effective release availability and three
+slower transmitter-family traces. Dopamine, octopamine and serotonin annotations
+select measured pathways; inferred receptor gains and kinetics remain explicit.
+The unknown-transmitter edges remain unresolved. Body tuning is restricted by
+sensory annotations, and the 34 physical outputs are decoded only from 815
+annotated motor neurons. The private Rust organ sends twelve signed context
+currents through 1,314 descending cells and remembers delivered context sequences.
+It no longer commands the physical actuators directly.
+
+The new synthetic Rust body has twelve hip/knee hinges with antagonist
+activation, effective force-length/velocity dependence and actuator fatigue.
+No gait oscillator supplies the movement. Proprioception, contact and sixteen
+frequency bands enter a 110-channel body interface. Four physical tone controls,
+paired muscle meters and seven CNS inspection fields join the existing retinal
+facets and Bad Apple screen in the live tab. The observer reads actual private
+GPU state; it never manufactures activity to make the display more animated.
+
+Eight independent MuJoCo worlds supplied 12,288 physical resident transitions.
+The 512-update full-graph Torch/ROCm bootstrap took 92.3 seconds on hbox and
+reduced held-out motor imitation error by about 30%. The subsequent matched
+physical assay reduced joint-target error about 20%, while increasing effort and
+reducing stopping. Counterbalanced tone responses remained nearly constant.
+Motor-neuron activity is present but heavily attenuated at the decoder.
+
+A persvati calibration replayed the actual quantized graph and completed 2,048
+updates of a positive, anatomically masked motor decoder. Its large fitted gains
+could not be folded safely into the current float32 weight/bias representation:
+centered versus folded output differed by 0.0215124, exceeding the declared
+0.001 bound. No candidate service was exported or deployed. The rejected run and
+its source/log identities are retained. A reference-rate representation is the
+specific next numerical repair; it would require a new current artifact contract.
+
+Native GAM completed 25 parameter settings, a zero-edge replay and a replay of
+its independently selected interior prediction. The joint temporal-response fit
+beat additive and mean baselines under whole-setting holdout. Motor performance
+was effectively constant and was rejected by native GAM. The confirmation missed
+its prediction-error criterion; the held-out gain was negligible. No physiology
+settings were promoted from this campaign. hbox sustained 93–99% GPU utilization
+during the sweep, then returned to its protected service baseline.
+
+Torch, Metal and Dawn/WebGPU execution were compared at their explicit artifact
+boundaries. A Node/Dawn lifetime fault and an optical-weight decoding bug were
+fixed; intermediate debug runs with disabled dispatches were excluded. The final
+bootstrap-bound, three-body joined scenario ran 67 physical calls, exercised all
+seven observer fields against the exact private state, restored complete neural,
+physical and cognitive continuation byte-for-byte, and restored an inserted
+113th geometry. Its mean complete tick was 82.77 ms on M2 Max. This is a headless
+execution measurement, not a browser UI or exclusive throughput benchmark.
+
+The public V3 artifact starts fresh research lives with the fitted shared CNS
+bootstrap and an initialized private context organ. Existing frozen lives retain
+their original engine and state. The earlier V2 screen-response numbers remain
+historical evidence, and this wave does not claim tone recognition, learned
+poses, successful regulation or lifetime anatomical synaptic plasticity.
+
+The selected trained service also passed its own fresh Torch/Dawn comparison:
+maximum absolute motor difference 5.58e-7, rate difference 1.03e-5 and latent
+difference 1.75e-5. Initialized-model parity was not reused as trained evidence.
+Native Universal Weave imported, serialized and reloaded the combined record:
+39 nodes, 81 edges and 26 evidence joins. Its public projection preserves the
+rejected calibration, unsuccessful GAM prediction and exact model parents.

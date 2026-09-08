@@ -50,6 +50,7 @@ function stageOf(record) {
 
 function statusOf(record) {
   const fields = object(record.source.fields, 'record fields');
+  if (fields.reported_result?.within_loo_rmse === false) return {label: 'prediction missed', kind: 'mixed'};
   if (record.record_type.includes('failure')) return {label: 'recorded failure', kind: 'failed'};
   if (record.record_type === 'comparison_identity_diagnostic') return {label: 'refined diagnostic', kind: 'mixed'};
   if (fields.outcome === 'mixed') return {label: 'mixed result', kind: 'mixed'};
@@ -211,7 +212,8 @@ async function start() {
     buildList(); ui.filter.addEventListener('input', applyFilter);
     ui.loading.hidden = true; ui.shell.hidden = false; ui.footer.hidden = false;
     const requested = location.hash ? decodeURIComponent(location.hash.slice(1)) : '';
-    choose(bySource.has(requested) ? requested : records[0].source_id);
+    const currentContract = records.find(record => record.record_type === 'anatomical_cns_contract');
+    choose(bySource.has(requested) ? requested : (currentContract ?? records[0]).source_id);
     verifyArtifact();
   } catch (error) { fail(`The published evidence failed its reader boundary: ${error.message}`); }
 }

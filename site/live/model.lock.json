@@ -1,17 +1,33 @@
 {
-  "baseURL": "https://github.com/emberian/chreatures/releases/download/live-cns-v2-research-20260907/",
+  "baseURL": "https://github.com/emberian/chreatures/releases/download/live-cns-v3-research-20260908/",
   "files": {
     "afferent-mask.bin.gz": {
-      "bytes": 13265,
-      "sha256": "72643bc5bd5282d7153ad6b6210bb4ed6b305f720dc1fec356fa780e997521a8"
+      "bytes": 15050,
+      "sha256": "09327fb7cbae5c9a8c267d5e65487cdefa3bc3219b4b943f79c853b09c8032c6"
     },
     "afferent-neutral_drive.bin.gz": {
-      "bytes": 51436,
-      "sha256": "e339b7574c3c402a921a6b74d364cc5a160e891ba9d83afcd965cbe75aa97fb1"
+      "bytes": 48329,
+      "sha256": "1525662e747c675cc6467ef02189cd49f16cbefe3bcf225b842bf990c9a47ae7"
+    },
+    "atlas-body_mask.bin.gz": {
+      "bytes": 33318,
+      "sha256": "92b75224b925f9d2fe6e88036848e62f4f84de7f42cbb5306b13b6f0399815a1"
     },
     "atlas-body_rows.bin.gz": {
       "bytes": 16557,
       "sha256": "a727db68fde2f5504dc350d87d1066594365b70d6445473a5696a6c7cdd67c81"
+    },
+    "atlas-context_rows.bin.gz": {
+      "bytes": 2370,
+      "sha256": "b269cbac1f86fed31f3efe98fa78a0a36a5f144fd2ab3a3c4857e0ee5b607c12"
+    },
+    "atlas-motor_mask.bin.gz": {
+      "bytes": 1416,
+      "sha256": "e83f8d74284c245145a6b47c3164e63b27731263952ba21e2c66a683a2a4d11b"
+    },
+    "atlas-motor_rows.bin.gz": {
+      "bytes": 1490,
+      "sha256": "dcb7ca39c4ab238c9a6ff2cf803bb6039a2b33f1f375b612e2d7d30aaf67417a"
     },
     "atlas-neuron_type.bin.gz": {
       "bytes": 266258,
@@ -37,33 +53,33 @@
       "bytes": 4016,
       "sha256": "6dcd09cd21c49ad516bd5b3f3e433483f969aa87dd5b7c01e42a193e22d1f6ed"
     },
-    "body-input-bias.bin.gz": {
-      "bytes": 535,
-      "sha256": "80230310b57b835ecab86e61e50dd43fcf6569dad6b31c55a97dd94155e06ea2"
-    },
-    "body-input-weight.bin.gz": {
-      "bytes": 20389,
-      "sha256": "08c7e465c8df8744ca50e26701e49c98f87a20c23358c84211a0d4a546a07fa0"
+    "body-bias.bin.gz": {
+      "bytes": 29099,
+      "sha256": "287672920370790be3ff7591459ebe63ca91074f2e03b14111484567f2ae2898"
     },
     "body-mean.bin.gz": {
-      "bytes": 24,
-      "sha256": "1d05bb1ba208ad223f3a5c81458f710c7cca86631f5790d8bd435a1610dc2784"
-    },
-    "body-output-bias.bin.gz": {
-      "bytes": 29389,
-      "sha256": "91703de82e116e3e6256aa14c1cf312eab6b203c5e52d42fb6090f275b373d4a"
-    },
-    "body-output-weight.bin.gz": {
-      "bytes": 5272538,
-      "sha256": "03688f0a33847b5b619a1b05dba1ae81ef1c9ba0ff84d507f11caba5a45e2172"
+      "bytes": 450,
+      "sha256": "e0c26108ce80755a6d722430bf69a8b61a9d9764be3cd5ec3d84b91b95b4ecb2"
     },
     "body-scale.bin.gz": {
-      "bytes": 27,
-      "sha256": "a56016f2667a869a91e7e9df4566ec212218c628aa8ed37885c38efa49a3373d"
+      "bytes": 336,
+      "sha256": "dc8f3f0f00b89882aadeccc3b0877d26f28111a6bfd4f9812e73a176dbafa75c"
+    },
+    "body-weight.bin.gz": {
+      "bytes": 4585544,
+      "sha256": "e066e5b3acba2e4f66f4865a34178d875f5da20431e8fa257bdf59b717eab1f2"
     },
     "cns-manifest.json": {
-      "bytes": 10384,
-      "sha256": "0682aaa1c1122cd8cfe848a0e0cf002bc141507f038f14df6de273996b3dedee"
+      "bytes": 14267,
+      "sha256": "3c83ec615ff38a6e05b31cfc03e6fd4e3d518ce1613b9c763208dbeb38949503"
+    },
+    "context-bias.bin.gz": {
+      "bytes": 40,
+      "sha256": "f980be2bb79ae7b5d83b600faba55570601c1fc9b4c00f8f2a11f4793f71c776"
+    },
+    "context-weight.bin.gz": {
+      "bytes": 58508,
+      "sha256": "7046fbd32c72813f670c351382437e5795b3a86e6f0058cb8fcd12695632db09"
     },
     "dynamics-adaptation_gain_raw.bin.gz": {
       "bytes": 88,
@@ -77,13 +93,37 @@
       "bytes": 87,
       "sha256": "61594ca81f0aa2654418b3555adf189701d70eeb7f1f90ad3bb8f0971983931a"
     },
+    "dynamics-mod_adaptation_raw.bin.gz": {
+      "bytes": 13752,
+      "sha256": "086a094c281cc7e704d5c6f435ed0d5b3e1b0cef9dd9d0e4d513ceaabc7ee3a2"
+    },
+    "dynamics-mod_gain_raw.bin.gz": {
+      "bytes": 36578,
+      "sha256": "1090e090121655087aa0c6199673edb305279841cf1aef225641927f29fa2a13"
+    },
+    "dynamics-modulation_tau_raw.bin.gz": {
+      "bytes": 32,
+      "sha256": "980b94a9d959819e28f33ed95a03acbb14ccd1cde0db589df64c70f7a430ba89"
+    },
     "dynamics-recurrent_gain_raw.bin.gz": {
-      "bytes": 40679,
-      "sha256": "adf774b311b755c95aed6c793f9e7733de5592378abf68471666149ec439dd71"
+      "bytes": 40711,
+      "sha256": "3bd75a4628b1c2f79024543c553b9a0413551e2e91fdf2f8b0f72ce2c9037e93"
+    },
+    "dynamics-release_tau_raw.bin.gz": {
+      "bytes": 5634,
+      "sha256": "0c565f3396699a98bfd0e1c74533e542867bd39ffeb6aa2b52ac71b6108488ca"
+    },
+    "dynamics-release_use_raw.bin.gz": {
+      "bytes": 6831,
+      "sha256": "91cb4a8644d179f0affb8dbfcc7ee5fa73ac7e27c4dd6787e62fb2e77d595ce1"
     },
     "dynamics-tau_raw.bin.gz": {
       "bytes": 39267,
       "sha256": "99a39382cc2ba4c32de11839a746fcdc3fdbb03e1edba995d43e8316d9c53f09"
+    },
+    "graph-channel.bin.gz": {
+      "bytes": 8453,
+      "sha256": "6c9a5c5568c3c22c883c1969a6b0c8ad255b227edf19bfbb62e47ce16e2cefed"
     },
     "graph-col.bin.gz": {
       "bytes": 61047972,
@@ -94,8 +134,16 @@
       "sha256": "9fb9c6546267c4d6b7f46815c9716bd998ef387397c7004ab30896409f63333c"
     },
     "graph-weight.bin.gz": {
-      "bytes": 26991627,
-      "sha256": "9b7941307b5ffc380addd59ad07454a80f09815e9346a5636b1de42a97381a20"
+      "bytes": 27629004,
+      "sha256": "c6be07a2c1a8077f6db2f5f1fa2976621dc96ca34b877b3824e4713170626aef"
+    },
+    "motor-bias.bin.gz": {
+      "bytes": 159,
+      "sha256": "6dd1b84abaa76439e4fef0785ceab86d0b09c9b26a01c563f1caac99fa722013"
+    },
+    "motor-weight_raw.bin.gz": {
+      "bytes": 5278,
+      "sha256": "77f36d19c422373abf0b6b9bbc270a3e476963898f55524eb994dfa434e94432"
     },
     "observer-manifest.json": {
       "bytes": 850,
@@ -134,23 +182,23 @@
       "sha256": "8307786d02e98f32dcc4e2b05fd96d681297ab957ead9efaf2addbd30380094d"
     },
     "resident-core.bin.gz": {
-      "bytes": 2988138,
-      "sha256": "332ba4276e91b9a8112aa8a06b34bd00fa1131e607cd289f3a14a9fc2031cf7e"
+      "bytes": 2987814,
+      "sha256": "90333fd5dabae84789d21e30c49baf64449ca29769a62522aa809b5273fd5ba8"
     },
     "resident-manifest.json": {
-      "bytes": 1652,
-      "sha256": "f7edf770bba4db91bba7aa088638a7be481f6181e5d75c53280b5f1e8c6da655"
+      "bytes": 1699,
+      "sha256": "036cefb7e58d8349f55364ac9ec768e8c531447704f90ef303c1c109c616110c"
     },
     "resident-predictor.bin.gz": {
-      "bytes": 4848916,
-      "sha256": "c11bd165f6ce01ebac6637768f260fc5e78569c6d764a7ef5233ccc377b1da43"
+      "bytes": 4848837,
+      "sha256": "9e7251e7249a1f3faf9fafdf1fcdaf08c540d0a63d6b949af43dfbd4f131188f"
     },
     "resident-sequence.bin.gz": {
-      "bytes": 1627648,
-      "sha256": "ed9a6b0febbc04614a36c8924f512fd1e752b251e25e48711a6078a372a3bc53"
+      "bytes": 1627875,
+      "sha256": "c0c85b47ba504e1427ad387d159b3df6abbdb1ae2a111ecf77ce4c6d0758375b"
     }
   },
   "format": "chreatures-pages-model-lock-v1",
-  "serviceArtifactSha256": "ca66b6e5c07a09d55fc7e29552f504bd86b3807a6298425b9b933edf2cde9378",
-  "sourceRevision": "3a6d7a710fa0500ca48653203a2811bb813a2b7b"
+  "serviceArtifactSha256": "6e1acf46d18f5db0ff6e0096ed7439ebaf5df722ce34c1f0c56276ba271fccc3",
+  "sourceRevision": "80775b3b55dabee4362cb44154fb61d72bd534e0"
 }

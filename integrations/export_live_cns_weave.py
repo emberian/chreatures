@@ -22,7 +22,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 WEAVE = ROOT / "integrations" / "weave"
 DEFAULT_PAPERBIN = Path.home() / "paperbin" / "chreatures" / "integration"
-DEFAULT_OUTPUT = ROOT / "integrations" / "artifacts" / "live-cns-wave-v2"
+DEFAULT_OUTPUT = ROOT / "integrations" / "artifacts" / "live-cns-wave-v3"
 DEFAULT_PUBLIC = ROOT / "site" / "assets" / "live-cns-evidence.json"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -203,6 +203,371 @@ def aggregate_map_outcomes(reports: list[dict[str, Any]], label: str) -> dict[st
         "mean_world_total_net_target_food_stock_loss": mean([sum(arm["physical"]["netTargetFoodStockLoss"]) for arm in arms]),
         "mean_world_batch_squared_effort": mean([arm["action"]["meanSquaredEffort"] for arm in arms]),
     }
+
+
+def gam_public_projection(report: dict[str, Any], report_sha256: str) -> dict[str, Any]:
+    """Keep measured fits and failures; full response grids stay in the raw receipt."""
+    projected = {key: report[key] for key in (
+        "format", "status", "provenance", "gamfit_version", "gamfit_source_commit",
+        "formula", "additive_formula", "analysis_source_sha256", "records_sha256",
+        "native_messages", "confirmation", "claim_limit",
+    )}
+    projected["raw_report_sha256"] = report_sha256
+    projected["projection_scope"] = "Native execution, fit scores, rejection details, heldout scalar outcomes and proposal retained; full response grids and per-channel arrays remain in the raw receipt."
+    projected["native_build"] = {key: report["native_build"][key] for key in (
+        "available", "abi3", "crate", "engine_crate", "module", "python_module", "version",
+    )}
+    diagnostic_keys = {"status", "training", "joint_leave_setting_out", "additive_leave_setting_out",
+                       "mean_baseline_leave_setting_out", "sensitivity_scope", "native_error", "action",
+                       "observed_min", "observed_max", "observed_sample_sd", "value"}
+    projected["diagnostics"] = {
+        target: {key: value for key, value in result.items() if key in diagnostic_keys}
+        for target, result in report["diagnostics"].items()
+    }
+    projected["observed_heldout"] = [{
+        "setting": row["setting"],
+        "metrics": {key: value for key, value in row["metrics"].items() if isinstance(value, (int, float))},
+        "temporal_balanced_persistence_ratio": row["metrics"]["temporal"]["balanced_persistence_ratio"],
+    } for row in report["observed_heldout"]]
+    return projected
+
+
+def anatomical_v3_records(args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Add sealed V3 evidence; missing future receipts never become results.
+
+    Episode/service identities declared by remote receipts are kept as fields,
+    not falsely labeled locally verified blobs. Only the three named source
+    receipts may fall back to paperbin; debug/browser attempts are never scanned.
+    """
+    directory = args.paperbin / "anatomical-cns-v3"
+    receipts = args.v3_receipts
+    records: list[dict[str, Any]] = []
+    summary: dict[str, Any] = {"architecture": "anatomical-cns-v3", "status": "implementation contract",
+                              "browser_join": "pending sealed receipt", "gam": "pending sealed receipt",
+                              "physical_assay": "pending sealed receipt", "motor_decoder_calibration": "pending sealed receipt"}
+    contract_path = ROOT / "docs/development/ANATOMICAL_CNS_V3.md"
+    if not contract_path.is_file():
+        return records, {"status": "V3 contract unavailable"}
+    contract_blob = blob(contract_path, "v3_implementation_contract", "text/markdown")
+    contract_id = "v3-anatomical-contract:" + contract_blob["sha256"]
+    records.append(node(contract_id, 20, "anatomical_cns_contract",
+        "V3 requires anatomy-masked sensory inputs and descending context currents before full CNS recurrence; physical motors decode only annotated motor-cell state.",
+        blobs=[contract_blob], fields={"architecture": "anatomical-cns-v3", "status": "implemented contract; empirical results separate",
+            "sensory_inputs": 5423, "body_inputs": 110, "context_inputs": 12, "motor_outputs": 34,
+            "latent_outputs": 512, "private_neural_fields": ["rate", "adaptation", "support", "release", "DA", "OA", "HT"],
+            "claims_not_established": ["biological parameter recovery", "learned pose control"]}))
+
+    def source(name: str) -> Path | None:
+        aliases = {"corpus.json": "physical-corpus.json", "training-result.json": "physical-bootstrap-training.json",
+                   "metal-v3-parity-report.json": "metal-parity.json"}
+        for path in (receipts / aliases[name], receipts / name, directory / name):
+            if path.is_file():
+                return path
+        return None
+
+    corpus_path, fit_path, parity_path = map(source, ("corpus.json", "training-result.json", "metal-v3-parity-report.json"))
+    corpus_id, fit_id, parity_id = None, None, None
+    known_services: dict[str, str] = {}
+    known_adapters: dict[str, str] = {}
+    known_metadata: dict[str, dict[str, Any]] = {}
+    calibrated_services: set[str] = set()
+    parity_by_service: dict[str, list[str]] = {}
+    corpus_sha = None
+    if corpus_path:
+        corpus = read_json(corpus_path)
+        require(corpus.get("format") == "chreatures-anatomical-cns-physical-corpus-v1" and corpus.get("completed") is True, "V3 corpus is incomplete")
+        episodes = corpus.get("episodes", [])
+        require(len(episodes) == 8 and sum(e["split"] == "train" for e in episodes) == 6
+                and sum(e["split"] == "heldout-worlds" for e in episodes) == 2, "V3 world split differs")
+        require(len({e["world_seed"] for e in episodes}) == 8, "V3 corpus repeats world identities")
+        require(corpus.get("raw_world_geometry_retained") is False
+                and corpus.get("model_inputs") == ["optic_rgb", "body", "delivered_context"], "V3 corpus input boundary differs")
+        corpus_sha = sha256(corpus_path)
+        corpus_id = "v3-physical-corpus:" + corpus_sha
+        for episode in episodes:
+            require_hash(episode["sha256"], "V3 declared episode")
+        records.append(node(corpus_id, 21, "anatomical_physical_corpus",
+            "Eight actual physical worlds supplied six training worlds and two held-out worlds; teacher motors, pose and skill IDs remain supervision targets.",
+            parents={contract_id: "sensory_and_motor_contract"}, blobs=[blob(corpus_path, "v3_corpus_manifest", "application/json")],
+            fields={"architecture": "anatomical-cns-v3", "status": "completed collection reported by sealed manifest",
+                "episodes": episodes, "episode_byte_verification": "identities declared by manifest; bulk remote episode bytes not re-read here",
+                "model_inputs": corpus["model_inputs"], "target_only": corpus["target_only"], "split_policy": corpus["split_policy"]}))
+        summary["corpus_worlds"] = 8
+    if fit_path:
+        fit = read_json(fit_path)
+        require(fit.get("format") == "chreatures-anatomical-cns-physical-bootstrap-v1" and fit.get("completed") is True, "V3 fit is incomplete")
+        require(fit.get("recipe", {}).get("updates") == 512, "V3 fit update count differs")
+        fit_blobs = [blob(fit_path, "v3_physical_training_result", "application/json")]
+        if "source_result_sha256" in fit:
+            original_path = directory / "training-result.json"
+            fit_blobs.append(blob(original_path, "v3_source_training_result", "application/json", fit["source_result_sha256"]))
+            original = read_json(original_path)
+            require(all(original.get(key) == value for key, value in fit.items() if key != "source_result_sha256"), "V3 compact training projection differs from original result")
+        require(corpus_id is not None and fit["identity"]["corpus_manifest_sha256"] == corpus_sha, "V3 fit does not bind the collected corpus")
+        artifact, meta = fit["artifact"], fit["artifact"]["metadata"]
+        require(meta.get("format") == "chreatures-cns-service-v3" and meta.get("training_status") == "trained", "V3 fitted artifact metadata differs")
+        require(meta["provenance"]["corpus_manifest_sha256"] == corpus_sha, "V3 fitted artifact corpus differs")
+        service_sha = require_hash(artifact["file_sha256"], "V3 fitted service")
+        parent_sha = require_hash(fit["identity"]["parent_service_sha256"], "V3 initialized service")
+        initialized_id = "v3-initialized-service:" + parent_sha
+        initial_path = directory / "initialized-cns-v3-r2.bin"
+        initial_blobs = [blob(initial_path, "v3_initialized_service", "application/octet-stream", parent_sha)] if initial_path.is_file() else []
+        records.append(node(initialized_id, 21, "anatomical_cns_initialization",
+            "A new V3 artifact initializes anatomy-masked body, descending context and motor interfaces; it is not a relabeled old physical-command policy.",
+            parents={contract_id: "anatomical_dynamics_contract"}, blobs=initial_blobs,
+            fields={"architecture": "anatomical-cns-v3", "training_status": "initialized-untrained",
+                "service_artifact_sha256": parent_sha, "adapter_sha256": fit["identity"]["parent_adapter_sha256"],
+                "artifact_byte_verification": "verified locally" if initial_blobs else "declared by fit receipt"}))
+        known_services[parent_sha] = initialized_id
+        known_adapters[parent_sha] = require_hash(fit["identity"]["parent_adapter_sha256"], "V3 parent adapter")
+        fit_id = "v3-physical-fit:" + sha256(fit_path)
+        before, after = fit["heldout_before"]["overall"], fit["heldout_after"]["overall"]
+        reduction = 1 - after["motor"] / before["motor"]
+        response = {k: v for k, v in fit["heldout_after"]["responsiveness"].items() if k != "motor_mean_by_skill"}
+        records.append(node(fit_id, 22, "anatomical_physical_fit",
+            "512 optimizer updates reduced held-out motor error by about 30%, but motor outputs remained nearly constant across skills; this did not establish learned pose control.",
+            parents={initialized_id: "initialized_anatomical_dynamics", corpus_id: "actual_physical_training_corpus"},
+            blobs=fit_blobs,
+            fields={"architecture": "anatomical-cns-v3", "status": "executed offline fit; competence not established",
+                "updates": 512, "elapsed_seconds": fit["elapsed_seconds"], "recipe": fit["recipe"],
+                "heldout_before": before, "heldout_after": after, "motor_error_fraction_reduction": reduction,
+                "responsiveness": response, "trained_parameters": fit["identity"]["trainable_parameters"],
+                "service_artifact_sha256": service_sha, "adapter_sha256": meta["adapter_sha256"],
+                "anatomy_sha256": meta["anatomy_sha256"], "graph_sha256": meta["graph_sha256"],
+                "artifact_byte_verification": "identity declared by locally verified training receipt; remote artifact not re-read here",
+                "final_checkpoint": fit.get("final_checkpoint"), "training_boundary": meta["provenance"],
+                "claims_not_established": ["learned pose hold", "tone-conditioned skills", "autonomous physical competence"]}))
+        known_services[service_sha] = fit_id
+        known_adapters[service_sha] = require_hash(meta["adapter_sha256"], "V3 fitted adapter")
+        known_metadata[service_sha] = meta
+        summary.update(status="executed physical bootstrap; competence not established", updates=512,
+                       motor_error_fraction_reduction=reduction, service_artifact_sha256=service_sha)
+    rejection_path = receipts / "motor-decoder-calibration-rejected.json"
+    if rejection_path.is_file():
+        rejected = read_json(rejection_path)
+        require(rejected.get("format") == "chreatures-anatomical-cns-motor-decoder-calibration-rejection-v1"
+                and rejected.get("completed") is True and rejected.get("candidate_accepted") is False
+                and rejected.get("artifact_written") is False, "calibration rejection receipt status differs")
+        rejected_parent = require_hash(rejected.get("parent_service_sha256"), "rejected calibration parent")
+        require(rejected_parent in known_services and known_services[rejected_parent] == fit_id
+                and rejected.get("parent_adapter_sha256") == known_adapters[rejected_parent],
+                "rejected calibration is not bound to the original physical bootstrap")
+        require(rejected.get("corpus_manifest_sha256") == corpus_sha, "rejected calibration corpus differs")
+        for source_name in ("data_sha256", "model_sha256", "trainer_sha256"):
+            require_hash(rejected.get("source", {}).get(source_name), "rejected calibration " + source_name)
+        for evidence_name in ("log_sha256", "recipe_sha256", "source_manifest_sha256", "status_sha256"):
+            require_hash(rejected.get("run_evidence", {}).get(evidence_name), "rejected calibration " + evidence_name)
+        require(rejected.get("optimizer_updates_completed") == 2048
+                and rejected["folded_function_cancellation_max_abs"] > rejected["folded_function_cancellation_limit"] > 0,
+                "rejected calibration does not record the completed optimization and failed numerical gate")
+        rejection_id = "v3-motor-decoder-calibration-rejected:" + sha256(rejection_path)
+        records.append(node(rejection_id, 23, "anatomical_motor_decoder_calibration_rejected",
+            "The 2048-update calibration exceeded its float32 folding error limit and wrote no child service; no parity or physical result is claimed for the rejected candidate.",
+            parents={known_services[rejected_parent]: "original_physical_bootstrap_parent", corpus_id: "actual_training_world_corpus", contract_id: "unchanged_motor_decoder_abi"},
+            blobs=[blob(rejection_path, "v3_motor_decoder_calibration_rejection", "application/json")],
+            fields={"architecture": "anatomical-cns-v3", "status": "executed optimization rejected; no artifact",
+                    "reported_result": rejected, "source_verification": "hashes declared by sealed run receipt; remote logs/source not re-read here",
+                    "candidate_artifact": None, "candidate_parity": None, "candidate_physical_assay": None}))
+        summary["motor_decoder_calibration"] = {"node_id": rejection_id, "status": "rejected; no child service written",
+                                                 "parent_service_sha256": rejected_parent}
+
+    calibration_path = receipts / "motor-decoder-calibration.json"
+    if calibration_path.is_file():
+        calibration = read_json(calibration_path)
+        require(calibration.get("format") == "chreatures-anatomical-cns-motor-decoder-calibration-v1"
+                and calibration.get("completed") is True, "V3 motor calibration is incomplete")
+        parent_service = require_hash(calibration.get("parent_service_sha256"), "calibration parent service")
+        require(parent_service in known_metadata and calibration.get("parent_adapter_sha256") == known_adapters[parent_service],
+                "calibration parent differs from the registered physical bootstrap artifact")
+        candidate = calibration["candidate"]
+        child_meta = candidate["metadata"]
+        child_service = require_hash(candidate.get("file_sha256"), "calibration child service")
+        child_adapter = require_hash(child_meta.get("adapter_sha256"), "calibration child adapter")
+        require(child_service not in known_services and child_adapter != known_adapters[parent_service], "calibration must publish a distinct child artifact")
+        require(child_meta.get("format") == "chreatures-cns-service-v3" and child_meta.get("training_status") == "trained",
+                "calibration child service format/status differs")
+        child_provenance = child_meta["provenance"]
+        require(child_provenance.get("parent_service_sha256") == parent_service
+                and child_provenance.get("parent_adapter_sha256") == known_adapters[parent_service]
+                and child_provenance.get("corpus_manifest_sha256") == corpus_sha,
+                "calibration child provenance differs from its parent/corpus")
+        parent_meta = known_metadata[parent_service]
+        for field in ("graph_sha256", "atlas_sha256", "anatomy_sha256", "dimensions", "readout_mask_sha256"):
+            require(child_meta.get(field) == parent_meta.get(field), f"calibration changes anatomical interface {field}")
+        child_hashes, parent_hashes = child_meta["array_sha256"], parent_meta["array_sha256"]
+        require(set(child_hashes) == set(parent_hashes), "calibration changes the artifact tensor set")
+        changed = [name for name in child_hashes if child_hashes[name] != parent_hashes[name]]
+        require(set(changed) <= {"motor.weight_raw", "motor.bias", "graph.weight"}, "calibration changes tensors outside the decoder/quantized graph boundary")
+        deployment_graph = require_hash(calibration.get("deployment_graph_weight_sha256"), "calibration deployed graph")
+        require(deployment_graph == child_provenance.get("deployment_graph_weight_sha256")
+                and deployment_graph == child_hashes["graph.weight"], "calibration graph rounding identity differs")
+        require(0 <= calibration["folded_function_cancellation_max_abs"] <= 1e-3,
+                "calibration exceeded its float32 folding gate")
+        calibration_id = "v3-motor-decoder-calibration:" + sha256(calibration_path)
+        calibration_blobs = [blob(calibration_path, "v3_motor_decoder_calibration", "application/json")]
+        child_path = Path(candidate["path"])
+        if child_path.is_file():
+            calibration_blobs.append(blob(child_path, "v3_calibrated_service", "application/octet-stream", child_service))
+        records.append(node(calibration_id, 23, "anatomical_motor_decoder_calibration",
+            "A separate child calibrates the positive motor-neuron decoder on measured activity with deployment graph quantization; offline calibration is not a physical competence result.",
+            parents={known_services[parent_service]: "original_physical_bootstrap_parent", corpus_id: "training_world_corpus", contract_id: "unchanged_anatomical_interface"},
+            blobs=calibration_blobs, fields={"architecture": "anatomical-cns-v3", "status": "executed calibration; fresh deployment results separate",
+                "parent_service_sha256": parent_service, "service_artifact_sha256": child_service, "adapter_sha256": child_adapter,
+                "changed_array_names": changed, "deployment_graph_weight_sha256": deployment_graph,
+                "artifact_byte_verification": "verified locally" if len(calibration_blobs) > 1 else "identity declared by sealed calibration receipt",
+                "reported_result": {key: value for key, value in calibration.items() if key != "candidate"},
+                "candidate_provenance": child_provenance, "claims_not_established": ["learned pose control", "autonomous goals", "physical competence"]}))
+        known_services[child_service], known_adapters[child_service] = calibration_id, child_adapter
+        known_metadata[child_service] = child_meta
+        calibrated_services.add(child_service)
+        summary["motor_decoder_calibration"] = {"node_id": calibration_id, "service_artifact_sha256": child_service,
+                                                 "status": "sealed child; not the original trained parent"}
+
+    if parity_path:
+        parity = read_json(parity_path)
+        bound = require_hash(parity.get("artifact_sha256", parity.get("service_sha256")), "Metal parity artifact")
+        require(bound in known_services, "V3 Metal parity has no known artifact parent")
+        require(parity.get("snapshot_restore_byte_exact") is True and parity.get("ticks", 0) > 0, "V3 Metal replay is incomplete")
+        parity_tolerance = parity.get("tolerance", 1e-5)
+        require(0 <= parity["overall_max_abs"] <= parity_tolerance, "V3 Metal parity exceeds its evidence tolerance")
+        parity_id = "v3-metal-parity:" + sha256(parity_path)
+        records.append(node(parity_id, 22, "anatomical_native_metal_parity",
+            "Native Metal executed the V3 recurrence against its Torch fixture, including all seven private fields and byte-exact snapshot restoration; this is numerical evidence, not a physical skill assay.",
+            parents={known_services[bound]: "exact_tested_artifact", contract_id: "recurrence_equations"},
+            blobs=[blob(parity_path, "v3_metal_parity_report", "application/json")],
+            fields={"architecture": "anatomical-cns-v3", **{k: v for k, v in parity.items() if k != "commands"},
+                    "comparison_tolerance": parity_tolerance, "scope": "native numerical parity, not trained-artifact behavioral validation"}))
+        parity_by_service.setdefault(bound, []).append(parity_id)
+        summary["native_metal_parity"] = "passed on initialized artifact"
+
+    for filename in ("webgpu-parity.json", "webgpu-parity-trained.json", "webgpu-parity-calibrated.json", "metal-parity-calibrated.json"):
+        path = receipts / filename
+        if not path.is_file():
+            continue
+        probe = read_json(path)
+        webgpu = filename.startswith("webgpu")
+        if webgpu:
+            require(probe.get("format") == "chreatures-cns-webgpu-v3-dawn-probe-v1", "V3 WebGPU parity format differs")
+            tested = require_hash(probe.get("serviceArtifactSha256"), "WebGPU tested service")
+            require(probe.get("manifestArtifact") == known_adapters.get(tested), "WebGPU parity adapter differs")
+            require(probe.get("byteExactRestore") == {"latent": True, "motor": True, "snapshot": True}, "WebGPU private restore differs")
+            limits = probe["limits"]
+            for key, threshold in (("rateMaxAbsByTick", "state"), ("latentMaxAbsByTick", "latent"), ("motorMaxAbsByTick", "motor")):
+                errors = probe[key]
+                require(len(errors) == probe["ticks"] and all(0 <= e <= limits[threshold] for e in errors), f"WebGPU parity failed {key}")
+            require(0 <= probe["neutralRateMaxAbs"] <= limits["neutralRate"]
+                    and all(0 <= error <= limits["state"] for error in probe["finalMaxAbs"].values()), "WebGPU state parity differs")
+        else:
+            tested = require_hash(probe.get("service_sha256"), "Metal tested service")
+            require(probe.get("passed") is True and probe.get("snapshot_restore_byte_exact") is True
+                    and 0 <= probe["overall_max_abs"] <= probe["tolerance"], "calibrated Metal parity failed")
+            require(probe["ready"]["cns_adapter"]["adapter_sha256"] == known_adapters.get(tested), "Metal parity adapter differs")
+        require(tested in known_services, "parity has no registered exact artifact parent")
+        if "calibrated" in filename:
+            require(tested in calibrated_services, "calibrated parity is bound to a different lineage")
+        elif filename == "webgpu-parity-trained.json":
+            require(known_services[tested] == fit_id, "trained parity must bind the original physical bootstrap artifact")
+        probe_id = "v3-" + filename.removesuffix(".json") + ":" + sha256(path)
+        records.append(node(probe_id, 24 if "calibrated" in filename else 22, "anatomical_deployment_parity",
+            "A fresh deployment fixture checks the exact bound artifact; results do not transfer automatically to its parent or child services.",
+            parents={known_services[tested]: "exact_tested_artifact", contract_id: "recurrence_and_decoder_contract"},
+            blobs=[blob(path, "v3_" + filename.removesuffix(".json"), "application/json")],
+            fields={"architecture": "anatomical-cns-v3", "reported_result": probe, "scope": "numerical deployment parity, not physical skill"}))
+        parity_by_service.setdefault(tested, []).append(probe_id)
+        summary[filename.removesuffix(".json").replace("-", "_")] = {"node_id": probe_id, "service_artifact_sha256": tested}
+
+    # Read only named sealed receipts, never scan debug attempts. Identity fields
+    # come from the executed report itself, not a blanket "clean source" assertion.
+    gam_id, gam_receipt_sha = None, None
+    later = (("browser-joined", 23), ("browser-joined-initialized", 23),
+             ("browser-joined-trained", 23), ("browser-joined-calibrated", 25),
+             ("gam", 24), ("gam-confirmation", 25), ("physical-assay", 26), ("physical-assay-calibrated", 27))
+    for kind, stage in later:
+        path = receipts / (kind + ".json")
+        if not path.is_file():
+            continue
+        report = read_json(path)
+        browser_join = kind.startswith("browser-joined")
+        if browser_join:
+            service = require_hash(report.get("serviceArtifactSha256"), "V3 joined service")
+            require(require_hash(report.get("adapterSha256"), "V3 joined adapter") == known_adapters.get(service), "V3 joined adapter/service identities differ")
+            require_hash(report.get("engineIdentity"), "V3 joined engine")
+        elif kind in {"gam", "gam-confirmation"}:
+            service = require_hash(report.get("provenance", {}).get("service", {}).get("service_artifact_sha256"), "V3 GAM service")
+            require(report.get("provenance", {}).get("corpus_sha256") == corpus_sha, "V3 GAM corpus differs")
+        else:
+            require(report.get("format") == "chreatures-anatomical-cns-physical-bootstrap-assay-v1"
+                    and report.get("completed") is True, "V3 physical assay is incomplete")
+            require_hash(report.get("source_sha256"), "V3 physical assay source")
+            initialized, trained = report["initialized"], report["trained"]
+            for arm_name, arm in (("initialized", initialized), ("trained", trained)):
+                require(arm.get("format") == "chreatures-anatomical-cns-physical-bootstrap-arm-v1"
+                        and arm.get("arm") == arm_name and arm.get("completed") is True,
+                        f"V3 physical assay {arm_name} arm is incomplete")
+                arm_service = require_hash(arm["model"]["service_artifact_sha256"], f"V3 {arm_name} assay service")
+                require(arm_service in known_services
+                        and arm["model"].get("adapter_sha256") == known_adapters[arm_service],
+                        f"V3 physical assay {arm_name} artifact differs")
+                require(arm["model"].get("training_status") == ("initialized-untrained" if arm_name == "initialized" else "trained"),
+                        f"V3 physical assay {arm_name} training status differs")
+            initial_world = require_hash(initialized.get("initial_world_sha256"), "V3 assay initial world")
+            require(trained.get("initial_world_sha256") == initial_world
+                    and report.get("matched", {}).get("initial_world_sha256") == initial_world,
+                    "V3 physical assay initial worlds differ")
+            require(initialized["world_source"]["model"] == trained["world_source"]["model"]
+                    and initialized["world_source"]["runtime_sha256"] == trained["world_source"]["runtime_sha256"],
+                    "V3 physical assay runtime/model differs between arms")
+            require(report.get("teacher_or_observer_fields_used_by_policy") is False,
+                    "V3 physical assay policy boundary differs")
+            service = trained["model"]["service_artifact_sha256"]
+        require(service in known_services, f"V3 {kind} has no known artifact parent")
+        if kind.endswith("calibrated"):
+            require(service in calibrated_services, f"V3 {kind} does not bind a calibrated child")
+        elif kind in {"browser-joined-trained", "physical-assay"}:
+            require(known_services[service] == fit_id, f"V3 {kind} must bind the original physical-bootstrap fit")
+        elif kind == "browser-joined-initialized":
+            require(known_services[service] == initialized_id, "initialized browser join must bind initialized service")
+        parents = {known_services[service]: "exact_tested_artifact", contract_id: "anatomical_dynamics_contract"}
+        if kind.startswith("physical-assay"):
+            parents[known_services[service]] = "calibrated_child_arm" if kind.endswith("calibrated") else "trained_physical_bootstrap_arm"
+            parents[known_services[initialized["model"]["service_artifact_sha256"]]] = "initialized_anatomical_arm"
+        if corpus_id:
+            parents[corpus_id] = "physical_corpus_context"
+        if browser_join:
+            require(report.get("format") == "chreatures-anatomical-cns-v3-joined-headless-v1"
+                    and report.get("wholeLifeReplayExact") is True, "V3 joined browser replay is incomplete")
+            for exact_parity in parity_by_service.get(service, []):
+                parents[exact_parity] = "same_artifact_deployment_parity"
+            text = "The full V3 Wasm body, WebGPU CNS and private context resident executed together with whole-life replay; this confirms integration, not learned motor competence."
+        elif kind == "gam-confirmation":
+            require(report.get("format") == "chreatures-anatomical-cns-gam-dynamics-v1"
+                    and report.get("status") == "actual-fullgraph-confirmed", "V3 GAM confirmation is incomplete")
+            require(gam_id is not None and report.get("gam_report_sha256") == gam_receipt_sha,
+                    "V3 GAM confirmation does not bind its native fit")
+            for field in ("proposal_sha256", "replay_sha256", "zero_edge_replay_sha256", "center_replay_sha256"):
+                require_hash(report.get(field), "V3 GAM confirmation " + field)
+            require(type(report.get("within_loo_rmse")) is bool, "V3 GAM confirmation lacks its accuracy outcome")
+            parents[gam_id] = "native_gam_prediction_and_selection"
+            text = "The selected GAM parameter setting was replayed through the actual full graph, alongside matched center and zero-edge controls; executed confirmation does not imply accurate prediction or closed-loop competence."
+        elif kind == "gam":
+            require(report.get("format") == "chreatures-anatomical-cns-gam-dynamics-v1", "V3 GAM format differs")
+            require(report.get("status") in {"native-fit-complete-confirmation-pending", "constant-no-confirmation-proposed"}, "V3 GAM execution status differs")
+            text = "Native GAM analyzed the frozen V3 circuit's measured parameter response; confirmation remains pending unless a separate actual replay receipt establishes it."
+        else:
+            text = "A matched V3 physical assay compares explicitly bound initialized and trained artifacts from the same initial world; offline fit gains are not substituted for physical outcomes."
+        current_id = "v3-" + kind + ":" + sha256(path)
+        if kind == "gam":
+            gam_id, gam_receipt_sha = current_id, sha256(path)
+        public_report = gam_public_projection(report, sha256(path)) if kind == "gam" else report
+        records.append(node(current_id, stage, "anatomical_" + kind.replace("-", "_"), text,
+            parents=parents, blobs=[blob(path, "v3_" + kind + "_receipt", "application/json")],
+            fields={"architecture": "anatomical-cns-v3", "reported_result": public_report,
+                    "scope": "sealed execution receipt; no inferred competence or promotion"}))
+        summary[kind.replace("-", "_")] = {"node_id": current_id, "status": report.get("status", "executed and sealed")}
+        if browser_join:
+            summary["browser_join"] = "sealed individual artifact runs available"
+    summary["record_count"] = len(records)
+    return records, summary
 
 
 def build(args: argparse.Namespace) -> dict[str, Any]:
@@ -662,12 +1027,18 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         node(rollout_id, 10, "matched_physical_rollout", "The refined matched-state receipt confirmed the numeric CNS and host state, then fresh-life rollouts executed both initialized and trained controllers; action diversity increased while physical outcomes differed by resident and did not establish competence.", parents={browser_id: "initialized_controller_arm", trained_browser_id: "trained_controller_arm", controller_id: "training_result", unmatched_rollout_id: "refined_identity_comparison"}, blobs=[blob(rollout_path, "matched_physical_rollout_receipt", "application/json")], fields={"initial_world_and_cns_state_matched": rollout["initialWorldAndCnsStateMatched"], "initial_cns_comparison": rollout["initialCnsComparison"], "world_seed_matched": rollout["worldSeedMatched"], "action_and_suffix_seeds_matched": rollout["actionAndSuffixSeedsMatched"], "teacher_geometry_used_by_policy": rollout["teacherGeometryUsedByPolicy"], "arms": [metric_triplet(by_label[name]) for name in ("parent", "trained")], "outcome": "mixed", "interpretation": rollout["interpretation"]}),
     ]
 
+    # Preserve the V2 records as history, never silently reinterpret their lives.
+    for record in records:
+        record["fields"].update(architecture="historical-cns-v2", historical=True)
+    v3_records, v3_summary = anatomical_v3_records(args)
+    records.extend(v3_records)
     request = {
-        "archive_id": "live-cns-wave-v2-20260907",
-        "description": "Actual live-CNS research chain: dynamics, temporal fit, browser export, paired physical-screen response, teacher curricula, and matched physical rollouts.",
+        "archive_id": "live-cns-wave-v3-20260907",
+        "description": "Executed anatomical CNS V3 research with separately labeled historical V2 evidence; incomplete assays remain pending.",
         "evidence": records,
     }
     for record in records:
+        require(len(canonical(record["fields"])) <= 40000, f"public reader field bound exceeded at {record['id']}")
         require(set(record["parent_ids"]) == set(record["fields"]["parent_roles"]), f"parent-role mismatch at {record['id']}")
     request_bytes = canonical(request)
     json.loads(request_bytes)
@@ -699,6 +1070,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     portable["artifact_sha256"] = sha256(weave_path)
     portable["public_summary"] = {
         "status": "executed research chain with mixed outcomes",
+        "anatomical_v3": v3_summary,
+        "historical_v2": True,
         "fullgraph_settings": 27,
         "neurons": 165122,
         "edges": 25563197,
@@ -726,6 +1099,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "claims_not_established": ["biological parameter recovery", "general optic/body prediction improvement beyond the procedural fit split", "simultaneous cross-stream response", "stimulus understanding", "goal conditioning", "general embodied competence"],
     }
     encoded = json.dumps(portable, indent=2, sort_keys=True, allow_nan=False).encode() + b"\n"
+    require(len(encoded) <= 1024 * 1024 and weave_path.stat().st_size <= 1024 * 1024,
+            "public reader 1 MiB portable/native artifact bound exceeded")
     public.write_bytes(encoded)
     shutil.copyfile(weave_path, public_weave)
     public_screen.write_bytes(public_screen_bytes)
@@ -733,7 +1108,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     require(sha256(public_screen) == public_screen_blob["sha256"], "public screen response receipt changed during write")
     require(sha256(public_screen_trace) == screen_trace_blob["sha256"], "public screen response trace changed during copy")
     receipt = {
-        "format": "chreatures-live-cns-weave-export-v1",
+        "format": "chreatures-live-cns-weave-export-v2",
+        "anatomical_v3": v3_summary,
         "request_sha256": sha256(request_path),
         "weave_sha256": sha256(weave_path),
         "portable_sha256": sha256(public),
@@ -747,7 +1123,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "public_screen_response_sha256": public_screen_blob["sha256"],
         "public_screen_trace_sha256": screen_trace_blob["sha256"],
         "original_screen_response_receipt_sha256": screen_receipt_blob["sha256"],
-        "source_directories": [path.name for path in (crossed, temporal, browser, teacher, screen, curriculum)],
+        "source_directories": [path.name for path in (crossed, temporal, browser, teacher, screen, curriculum)] + (["anatomical-cns-v3"] if v3_records else []),
     }
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     return receipt
@@ -758,6 +1134,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--paperbin", type=Path, default=DEFAULT_PAPERBIN)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--public", type=Path, default=DEFAULT_PUBLIC)
+    parser.add_argument("--v3-receipts", type=Path, default=ROOT / "docs/receipts/anatomical-cns-v3")
     parser.add_argument("--replace", action="store_true", help="explicitly replace this exact evidence projection")
     return parser.parse_args()
 

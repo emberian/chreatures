@@ -1,0 +1,28 @@
+{
+  "artifact_written": false,
+  "candidate_accepted": false,
+  "completed": true,
+  "corpus_manifest_sha256": "e020317ae5f94d22c39af191d45b1934419d927d5e9d54492ed72a460d5f7367",
+  "folded_function_cancellation_limit": 0.001,
+  "folded_function_cancellation_max_abs": 0.0215124,
+  "format": "chreatures-anatomical-cns-motor-decoder-calibration-rejection-v1",
+  "interpretation": "The CNS contained measurable motor-neuron variation, but the fitted high-gain positive decoder could not be represented safely by the unchanged float32 weight-plus-bias ABI. No parity or physical assay is valid for this rejected candidate.",
+  "optimizer_updates_completed": 2048,
+  "parent_adapter_sha256": "53765d4afb16ee084d9d0866066ac1ddc4f879a54af0d4693d97230509688996",
+  "parent_service_sha256": "6e1acf46d18f5db0ff6e0096ed7439ebaf5df722ce34c1f0c56276ba271fccc3",
+  "reason": "float32 centered-to-folded MOTOR34 max absolute error exceeded the declared numerical gate",
+  "run_evidence": {
+    "log_sha256": "36ed92fdab813708379a16b2e2ad228b33e3dbcd2800150ef72eaf1897e82619",
+    "recipe_sha256": "785847859ecf865b028141de4b6a58b7bd143e1bfa1a17ac7a4b3634c32096c0",
+    "remote_run": "/home/ember/chreatures-runs/anatomical-v3/motor-calibration/calibration-06a0470b-run03",
+    "source_manifest_sha256": "88f368385d0d164661db47384c521b0cc10112ed6f6c05df665bf25dc0275a32",
+    "status_sha256": "0e2b73b217c6c97f401a5f12dbc168bf6c559c8f4c9766adfe5e36fcc8d9142b"
+  },
+  "run_finished_utc": "2026-09-08T03:16:53Z",
+  "run_started_utc": "2026-09-08T03:13:17Z",
+  "source": {
+    "data_sha256": "c7dfd36643047bd3074f9f5e85084058ed4d43fb73d7a118738da082bde91b29",
+    "model_sha256": "55fbdafd8fecf0ef5072cb29729d8e7278ab8241e84939a9c9d6f2e4291b76d5",
+    "trainer_sha256": "06a0470ba19bfce5fc477968b42867d2c09712373b7bf1510136f7f3695ffd11"
+  }
+}

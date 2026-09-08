@@ -1,0 +1,78 @@
+{
+  "anatomical_v3": {
+    "architecture": "anatomical-cns-v3",
+    "browser_join": "sealed individual artifact runs available",
+    "browser_joined_initialized": {
+      "node_id": "v3-browser-joined-initialized:1f619b976c1a9fadc96514750e52dda6c2087aa4eab7380be565ffa15fd5c987",
+      "status": "executed and sealed"
+    },
+    "browser_joined_trained": {
+      "node_id": "v3-browser-joined-trained:7dd24608801071becac53d3037ceefea695d4242f8a6d25a45500bad003530f3",
+      "status": "executed and sealed"
+    },
+    "corpus_worlds": 8,
+    "gam": {
+      "node_id": "v3-gam:52617c92993c4f21036b7dbd09a8703a99744c3444e81a30e8ba6261dae81d52",
+      "status": "native-fit-complete-confirmation-pending"
+    },
+    "gam_confirmation": {
+      "node_id": "v3-gam-confirmation:0035432b7d9d936eacc14f903872b7c5f7b292b4557b65c0ec51f3239fcda9c3",
+      "status": "actual-fullgraph-confirmed"
+    },
+    "motor_decoder_calibration": {
+      "node_id": "v3-motor-decoder-calibration-rejected:c5fb49ef869d8ecd2ad68ed9ea377a397ec6d3ef04f852d8a944bca542a9e5a1",
+      "parent_service_sha256": "6e1acf46d18f5db0ff6e0096ed7439ebaf5df722ce34c1f0c56276ba271fccc3",
+      "status": "rejected; no child service written"
+    },
+    "motor_error_fraction_reduction": 0.30019390999059503,
+    "native_metal_parity": "passed on initialized artifact",
+    "physical_assay": {
+      "node_id": "v3-physical-assay:98bdea02fea2960f629fe4b7382d0f3a4d63d76d35ba44e1851b57ac10952177",
+      "status": "executed and sealed"
+    },
+    "record_count": 13,
+    "service_artifact_sha256": "6e1acf46d18f5db0ff6e0096ed7439ebaf5df722ce34c1f0c56276ba271fccc3",
+    "status": "executed physical bootstrap; competence not established",
+    "updates": 512,
+    "webgpu_parity": {
+      "node_id": "v3-webgpu-parity:7202cf233a66c6f3d59e87b6b423fbc191fb663d6ab135876a6435fc035e18ad",
+      "service_artifact_sha256": "f5ce3919868af04a9bd95d2acb3865bf4537405d899d24c253ec628177ae0a6c"
+    },
+    "webgpu_parity_trained": {
+      "node_id": "v3-webgpu-parity-trained:ba63c818c3db387b3b7f154905eb8428619f1eff6bc6bbf4535327be2b477c7c",
+      "service_artifact_sha256": "6e1acf46d18f5db0ff6e0096ed7439ebaf5df722ce34c1f0c56276ba271fccc3"
+    }
+  },
+  "edge_count": 81,
+  "format": "chreatures-live-cns-weave-export-v2",
+  "multi_parent_nodes": 26,
+  "node_count": 39,
+  "original_screen_response_receipt_sha256": "d94c7a8b48a55ca0b3396234f65d246350214c47e4f8a1cfe39b2fe75643cd62",
+  "portable_sha256": "136009427cf0db3ea1633766f186c2ef9df7948705a9f4b4c8d1f51f1aa3d424",
+  "public_files": [
+    "live-cns-evidence.json",
+    "live-cns-evidence.weave.json",
+    "live-cns-screen-response.json",
+    "live-cns-screen-response.traces.json.gz"
+  ],
+  "public_screen_response_sha256": "6aeee4dad30ca2c26612379ae9cca178bd7d1129c77fa05210a9971decaa494c",
+  "public_screen_trace_sha256": "c1018f24e20c0044374f8437db6b66148d62232f1a76540acf48a2137a2a9942",
+  "reload_equal": true,
+  "request_sha256": "f07bd62d339e777e5b2924689272e9159c7c0d0cadc11869b2bc6c3957413183",
+  "source_directories": [
+    "dynamics-v2-crossed-20260907",
+    "dynamics-v2-temporal-fit-20260907",
+    "browser-v2-temporal-pack-20260907",
+    "browser-v2-teacher-skills-20260907",
+    "screen-response-v2-20260907",
+    "browser-v2-teacher-curriculum-512x8-20260907",
+    "anatomical-cns-v3"
+  ],
+  "universal_weave": {
+    "name": "universal-weave",
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+    "version": "0.5.0"
+  },
+  "validated_after_reload": true,
+  "weave_sha256": "61b7a0c5ca5153d204200a0318589b9716eed5863f00830ddd7e7b3e221a8c53"
+}
