@@ -1,0 +1,716 @@
+{
+  "format": "chreatures.neuromechfly-wing-planform.v1",
+  "source": {
+    "project": "FlyGym / NeuroMechFly",
+    "version": "2.1.0",
+    "revision": "ca65a510c2afe6ac61c51df4f274c8d190c2f95f",
+    "asset": "model/l_wing.stl",
+    "asset_sha256": "142f77f15008fd75e1490b546bb859cf98c056121f1abd65acea2052c4e7764c",
+    "license": "Apache-2.0",
+    "mesh_length_unit": "meter",
+    "mjcf_mesh_scale": 1000.0
+  },
+  "derivation": {
+    "method": "PCA_PLANE_CONVEX_HULL_EQUAL_SPAN_STRIPS",
+    "strip_count": 24,
+    "vertex_count_unique": 899,
+    "triangle_count": 1999,
+    "pca_eigenvalues_mm2": [
+      0.0032284740255445303,
+      0.061669692882679296,
+      0.5554782243818042
+    ],
+    "caveat": "Convex projection fills concavities and ignores thickness/corrugation."
+  },
+  "left": {
+    "semantic_id": "l_wing",
+    "handed_frame": "chord_cross_span_equals_normal",
+    "chord_axis_local": [
+      0.9558242119823783,
+      -0.03826730645150316,
+      -0.2914372814950281
+    ],
+    "span_axis_local": [
+      0.026710526396683722,
+      0.9986949124163311,
+      -0.04353182391479504
+    ],
+    "normal_axis_local": [
+      0.2927227759636712,
+      0.033824328089163934,
+      0.955598917570253
+    ],
+    "span_interval_mm": [
+      -0.103384838897288,
+      2.300807340299024
+    ],
+    "span_extent_mm": 2.404192179196312,
+    "planform_area_mm2": 1.8936348363713165,
+    "mean_chord_mm": 0.7876387140583463,
+    "elements": [
+      {
+        "index": 0,
+        "span_interval_mm": [
+          -0.103384838897288,
+          -0.0032101647641083336
+        ],
+        "center_local_mm": [
+          -0.005084921797598393,
+          -0.038947277325807904,
+          0.10706695058187166
+        ],
+        "area_mm2": 0.016617263704637973,
+        "chord_mm": 0.2437818969969888
+      },
+      {
+        "index": 1,
+        "span_interval_mm": [
+          -0.0032101647641083336,
+          0.09696450936907133
+        ],
+        "center_local_mm": [
+          -0.04350835802697893,
+          0.056638387000436496,
+          0.1154536219112127
+        ],
+        "area_mm2": 0.03090866714250042,
+        "chord_mm": 0.37273649706235257
+      },
+      {
+        "index": 2,
+        "span_interval_mm": [
+          0.09696450936907133,
+          0.19713918350225101
+        ],
+        "center_local_mm": [
+          -0.08283727252391959,
+          0.1572713777956186,
+          0.12393900796684953
+        ],
+        "area_mm2": 0.043626661539304584,
+        "chord_mm": 0.49827530141485643
+      },
+      {
+        "index": 3,
+        "span_interval_mm": [
+          0.19713918350225101,
+          0.29731385763543067
+        ],
+        "center_local_mm": [
+          -0.12300462003209621,
+          0.25849225912304347,
+          0.13266041714067803
+        ],
+        "area_mm2": 0.05620247035638565,
+        "chord_mm": 0.6238141057673602
+      },
+      {
+        "index": 4,
+        "span_interval_mm": [
+          0.29731385763543067,
+          0.3974885317686103
+        ],
+        "center_local_mm": [
+          -0.16317864458915438,
+          0.3599033115638962,
+          0.14137714036753912
+        ],
+        "area_mm2": 0.06876453316558005,
+        "chord_mm": 0.7486870917498958
+      },
+      {
+        "index": 5,
+        "span_interval_mm": [
+          0.3974885317686103,
+          0.49766320590179003
+        ],
+        "center_local_mm": [
+          -0.19809095324407267,
+          0.46090644847977386,
+          0.14849651287686452
+        ],
+        "area_mm2": 0.08026905726138794,
+        "chord_mm": 0.8447434829411218
+      },
+      {
+        "index": 6,
+        "span_interval_mm": [
+          0.49766320590179003,
+          0.5978378800349696
+        ],
+        "center_local_mm": [
+          -0.21504861350334742,
+          0.5613479716995174,
+          0.1501358265271634
+        ],
+        "area_mm2": 0.08797410223020968,
+        "chord_mm": 0.907059393782431
+      },
+      {
+        "index": 7,
+        "span_interval_mm": [
+          0.5978378800349696,
+          0.6980125541681493
+        ],
+        "center_local_mm": [
+          -0.22037416961407333,
+          0.6615398796827827,
+          0.1482207841745869
+        ],
+        "area_mm2": 0.09321127149439473,
+        "chord_mm": 0.9523977437970674
+      },
+      {
+        "index": 8,
+        "span_interval_mm": [
+          0.6980125541681493,
+          0.798187228301329
+        ],
+        "center_local_mm": [
+          -0.22012855382032434,
+          0.7615890476711566,
+          0.14460421119976527
+        ],
+        "area_mm2": 0.09727392383981132,
+        "chord_mm": 0.989688410842938
+      },
+      {
+        "index": 9,
+        "span_interval_mm": [
+          0.798187228301329,
+          0.8983619024345086
+        ],
+        "center_local_mm": [
+          -0.21640907976910606,
+          0.8614828563797021,
+          0.1399290115453004
+        ],
+        "area_mm2": 0.10060721541479889,
+        "chord_mm": 1.0165201928130752
+      },
+      {
+        "index": 10,
+        "span_interval_mm": [
+          0.8983619024345086,
+          0.9985365765676883
+        ],
+        "center_local_mm": [
+          -0.20776572941704158,
+          0.9612323843520704,
+          0.133750617910687
+        ],
+        "area_mm2": 0.10290647520006468,
+        "chord_mm": 1.037276989445582
+      },
+      {
+        "index": 11,
+        "span_interval_mm": [
+          0.9985365765676883,
+          1.098711250700868
+        ],
+        "center_local_mm": [
+          -0.1956858858757088,
+          1.0608527399763876,
+          0.12652411649816925
+        ],
+        "area_mm2": 0.10447161086443335,
+        "chord_mm": 1.0527355671744734
+      },
+      {
+        "index": 12,
+        "span_interval_mm": [
+          1.098711250700868,
+          1.1988859248340478
+        ],
+        "center_local_mm": [
+          -0.18141703370213852,
+          1.1603283828988342,
+          0.1186321916932234
+        ],
+        "area_mm2": 0.10503688284854062,
+        "chord_mm": 1.0617551322601868
+      },
+      {
+        "index": 13,
+        "span_interval_mm": [
+          1.1988859248340478,
+          1.2990605989672273
+        ],
+        "center_local_mm": [
+          -0.16405132424239188,
+          1.2596866168483556,
+          0.1097957813249756
+        ],
+        "area_mm2": 0.10467014298020771,
+        "chord_mm": 1.062439029163919
+      },
+      {
+        "index": 14,
+        "span_interval_mm": [
+          1.2990605989672273,
+          1.399235273100407
+        ],
+        "center_local_mm": [
+          -0.14290431939784173,
+          1.3589413433953503,
+          0.09980473359459993
+        ],
+        "area_mm2": 0.1032793361162605,
+        "chord_mm": 1.0478283720966655
+      },
+      {
+        "index": 15,
+        "span_interval_mm": [
+          1.399235273100407,
+          1.4994099472335867
+        ],
+        "center_local_mm": [
+          -0.1246821296300397,
+          1.458320587823236,
+          0.09070521916247881
+        ],
+        "area_mm2": 0.10121814848958932,
+        "chord_mm": 1.0253317425696307
+      },
+      {
+        "index": 16,
+        "span_interval_mm": [
+          1.4994099472335867,
+          1.5995846213667664
+        ],
+        "center_local_mm": [
+          -0.1080748334821784,
+          1.5577824030622816,
+          0.0820974625509951
+        ],
+        "area_mm2": 0.09881787057278546,
+        "chord_mm": 1.0006953766395117
+      },
+      {
+        "index": 17,
+        "span_interval_mm": [
+          1.5995846213667664,
+          1.699759295499946
+        ],
+        "center_local_mm": [
+          -0.09093388488931266,
+          1.6571800063765338,
+          0.07332850828947457
+        ],
+        "area_mm2": 0.09600307524282148,
+        "chord_mm": 0.9742155095563998
+      },
+      {
+        "index": 18,
+        "span_interval_mm": [
+          1.699759295499946,
+          1.7999339696331256
+        ],
+        "center_local_mm": [
+          -0.0718427794627077,
+          1.7564175614971973,
+          0.06396783946138215
+        ],
+        "area_mm2": 0.09236597404145208,
+        "chord_mm": 0.9425260632556487
+      },
+      {
+        "index": 19,
+        "span_interval_mm": [
+          1.7999339696331256,
+          1.9001086437663053
+        ],
+        "center_local_mm": [
+          -0.05207399872992262,
+          1.8556108250367322,
+          0.05440115024101474
+        ],
+        "area_mm2": 0.08686397421103687,
+        "chord_mm": 0.8968136185410294
+      },
+      {
+        "index": 20,
+        "span_interval_mm": [
+          1.9001086437663053,
+          2.000283317899485
+        ],
+        "center_local_mm": [
+          -0.03386276696920036,
+          1.954538058541788,
+          0.045320991862636474
+        ],
+        "area_mm2": 0.0789283293027443,
+        "chord_mm": 0.8357074633274515
+      },
+      {
+        "index": 21,
+        "span_interval_mm": [
+          2.000283317899485,
+          2.1004579920326645
+        ],
+        "center_local_mm": [
+          -0.019320962238782064,
+          2.0533622433793677,
+          0.0373685141446597
+        ],
+        "area_mm2": 0.06699601482535633,
+        "chord_mm": 0.7355107091943821
+      },
+      {
+        "index": 22,
+        "span_interval_mm": [
+          2.1004579920326645,
+          2.200632666165844
+        ],
+        "center_local_mm": [
+          -0.01162165881429052,
+          2.1521391304362227,
+          0.03151373218125317
+        ],
+        "area_mm2": 0.05067336300199732,
+        "chord_mm": 0.5912527916698631
+      },
+      {
+        "index": 23,
+        "span_interval_mm": [
+          2.200632666165844,
+          2.300807340299024
+        ],
+        "center_local_mm": [
+          0.0007044046477371786,
+          2.2419866218214053,
+          0.0245577275043002
+        ],
+        "area_mm2": 0.025948472525015143,
+        "chord_mm": 0.4142796241612681
+      }
+    ]
+  },
+  "right": {
+    "semantic_id": "r_wing",
+    "derivation": "author Y reflection; normal uses axial-vector reflection",
+    "handed_frame": "chord_cross_span_equals_normal"
+  },
+  "imported_body_audit": {
+    "body_schema_sha256": "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+    "model_xml_sha256": "67aeb93868ac0cbf27c6f2645148a04f3cc77f0b0105bd9fa4ea15fc8755aa06",
+    "total_mass_model_units": 0.0010253099999999993,
+    "mass_unit_status": "FlyGym source does not explicitly name the mass base unit; the numerical total is consistent with 0.9997844 mg only if interpreted as grams",
+    "model_units": {
+      "length": "millimeter",
+      "time": "second",
+      "angle": "radian"
+    },
+    "wing_bodies": {
+      "l_wing": {
+        "body_pos_parent_frame_mm": [
+          -0.674,
+          0.395,
+          0.081
+        ],
+        "body_quaternion_wxyz": [
+          0.649074,
+          0.0360041,
+          -0.0650074,
+          0.757087
+        ],
+        "mass_model_units": 2.5e-06,
+        "base_compiled_body_id": 19,
+        "joints_yaw_pitch_roll": [
+          {
+            "index": 48,
+            "id": "c_thorax-l_wing-yaw",
+            "compiled_name": "fly/c_thorax-l_wing-yaw",
+            "parent": "c_thorax",
+            "child": "l_wing",
+            "axis_semantic": "yaw",
+            "axis_model": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "qpos_address": 55,
+            "dof_address": 54,
+            "neutral_rad": 0.0,
+            "spring_reference_rad": 0.0,
+            "limited": false,
+            "range_rad": [
+              0.0,
+              0.0
+            ],
+            "stiffness": 10.0,
+            "damping": 0.5,
+            "armature": 1e-06,
+            "actuated": true,
+            "control_group": "wings"
+          },
+          {
+            "index": 49,
+            "id": "c_thorax-l_wing-pitch",
+            "compiled_name": "fly/c_thorax-l_wing-pitch",
+            "parent": "c_thorax",
+            "child": "l_wing",
+            "axis_semantic": "pitch",
+            "axis_model": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "qpos_address": 56,
+            "dof_address": 55,
+            "neutral_rad": 0.0,
+            "spring_reference_rad": 0.0,
+            "limited": false,
+            "range_rad": [
+              0.0,
+              0.0
+            ],
+            "stiffness": 10.0,
+            "damping": 0.5,
+            "armature": 1e-06,
+            "actuated": true,
+            "control_group": "wings"
+          },
+          {
+            "index": 50,
+            "id": "c_thorax-l_wing-roll",
+            "compiled_name": "fly/c_thorax-l_wing-roll",
+            "parent": "c_thorax",
+            "child": "l_wing",
+            "axis_semantic": "roll",
+            "axis_model": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "qpos_address": 57,
+            "dof_address": 56,
+            "neutral_rad": 0.0,
+            "spring_reference_rad": 0.0,
+            "limited": false,
+            "range_rad": [
+              0.0,
+              0.0
+            ],
+            "stiffness": 10.0,
+            "damping": 0.5,
+            "armature": 1e-06,
+            "actuated": true,
+            "control_group": "wings"
+          }
+        ],
+        "position_servos_yaw_pitch_roll": [
+          {
+            "index": 72,
+            "id": "c_thorax-l_wing-yaw-position",
+            "compiled_name": "fly/c_thorax-l_wing-yaw-position",
+            "kind": "position_target",
+            "target": "c_thorax-l_wing-yaw",
+            "control_range": [
+              -3.14,
+              3.14
+            ],
+            "force_range": [
+              -30.0,
+              30.0
+            ],
+            "neutral_control": 0.0,
+            "evidence_grade": "engineered",
+            "control_group": "wings"
+          },
+          {
+            "index": 73,
+            "id": "c_thorax-l_wing-pitch-position",
+            "compiled_name": "fly/c_thorax-l_wing-pitch-position",
+            "kind": "position_target",
+            "target": "c_thorax-l_wing-pitch",
+            "control_range": [
+              -3.14,
+              3.14
+            ],
+            "force_range": [
+              -30.0,
+              30.0
+            ],
+            "neutral_control": 0.0,
+            "evidence_grade": "engineered",
+            "control_group": "wings"
+          },
+          {
+            "index": 74,
+            "id": "c_thorax-l_wing-roll-position",
+            "compiled_name": "fly/c_thorax-l_wing-roll-position",
+            "kind": "position_target",
+            "target": "c_thorax-l_wing-roll",
+            "control_range": [
+              -3.14,
+              3.14
+            ],
+            "force_range": [
+              -30.0,
+              30.0
+            ],
+            "neutral_control": 0.0,
+            "evidence_grade": "engineered",
+            "control_group": "wings"
+          }
+        ]
+      },
+      "r_wing": {
+        "body_pos_parent_frame_mm": [
+          -0.674,
+          -0.395,
+          0.081
+        ],
+        "body_quaternion_wxyz": [
+          0.649074,
+          -0.0360041,
+          -0.0650074,
+          -0.757087
+        ],
+        "mass_model_units": 2.5e-06,
+        "base_compiled_body_id": 20,
+        "joints_yaw_pitch_roll": [
+          {
+            "index": 51,
+            "id": "c_thorax-r_wing-yaw",
+            "compiled_name": "fly/c_thorax-r_wing-yaw",
+            "parent": "c_thorax",
+            "child": "r_wing",
+            "axis_semantic": "yaw",
+            "axis_model": [
+              -1.0,
+              0.0,
+              0.0
+            ],
+            "qpos_address": 58,
+            "dof_address": 57,
+            "neutral_rad": 0.0,
+            "spring_reference_rad": 0.0,
+            "limited": false,
+            "range_rad": [
+              0.0,
+              0.0
+            ],
+            "stiffness": 10.0,
+            "damping": 0.5,
+            "armature": 1e-06,
+            "actuated": true,
+            "control_group": "wings"
+          },
+          {
+            "index": 52,
+            "id": "c_thorax-r_wing-pitch",
+            "compiled_name": "fly/c_thorax-r_wing-pitch",
+            "parent": "c_thorax",
+            "child": "r_wing",
+            "axis_semantic": "pitch",
+            "axis_model": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "qpos_address": 59,
+            "dof_address": 58,
+            "neutral_rad": 0.0,
+            "spring_reference_rad": 0.0,
+            "limited": false,
+            "range_rad": [
+              0.0,
+              0.0
+            ],
+            "stiffness": 10.0,
+            "damping": 0.5,
+            "armature": 1e-06,
+            "actuated": true,
+            "control_group": "wings"
+          },
+          {
+            "index": 53,
+            "id": "c_thorax-r_wing-roll",
+            "compiled_name": "fly/c_thorax-r_wing-roll",
+            "parent": "c_thorax",
+            "child": "r_wing",
+            "axis_semantic": "roll",
+            "axis_model": [
+              0.0,
+              0.0,
+              -1.0
+            ],
+            "qpos_address": 60,
+            "dof_address": 59,
+            "neutral_rad": 0.0,
+            "spring_reference_rad": 0.0,
+            "limited": false,
+            "range_rad": [
+              0.0,
+              0.0
+            ],
+            "stiffness": 10.0,
+            "damping": 0.5,
+            "armature": 1e-06,
+            "actuated": true,
+            "control_group": "wings"
+          }
+        ],
+        "position_servos_yaw_pitch_roll": [
+          {
+            "index": 75,
+            "id": "c_thorax-r_wing-yaw-position",
+            "compiled_name": "fly/c_thorax-r_wing-yaw-position",
+            "kind": "position_target",
+            "target": "c_thorax-r_wing-yaw",
+            "control_range": [
+              -3.14,
+              3.14
+            ],
+            "force_range": [
+              -30.0,
+              30.0
+            ],
+            "neutral_control": 0.0,
+            "evidence_grade": "engineered",
+            "control_group": "wings"
+          },
+          {
+            "index": 76,
+            "id": "c_thorax-r_wing-pitch-position",
+            "compiled_name": "fly/c_thorax-r_wing-pitch-position",
+            "kind": "position_target",
+            "target": "c_thorax-r_wing-pitch",
+            "control_range": [
+              -3.14,
+              3.14
+            ],
+            "force_range": [
+              -30.0,
+              30.0
+            ],
+            "neutral_control": 0.0,
+            "evidence_grade": "engineered",
+            "control_group": "wings"
+          },
+          {
+            "index": 77,
+            "id": "c_thorax-r_wing-roll-position",
+            "compiled_name": "fly/c_thorax-r_wing-roll-position",
+            "kind": "position_target",
+            "target": "c_thorax-r_wing-roll",
+            "control_range": [
+              -3.14,
+              3.14
+            ],
+            "force_range": [
+              -30.0,
+              30.0
+            ],
+            "neutral_control": 0.0,
+            "evidence_grade": "engineered",
+            "control_group": "wings"
+          }
+        ]
+      }
+    }
+  },
+  "derivation_sha256": "f98f204b928ac86efab5113ef8be32281705cb1954315c769e8d1ca67feba303"
+}

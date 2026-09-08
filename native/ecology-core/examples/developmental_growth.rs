@@ -147,15 +147,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(world.snapshot_json()?, pending);
     world.abort_step(&prepared.token)?;
     assert_eq!(world.snapshot_json()?, outstanding);
-    // Actual host rejection advances ordinary ecology, but cannot consume the
-    // proposal's RNG or install an apical node/material allocation.
+    // A committed rejection records an attempted developmental choice. It
+    // advances private RNG, but cannot install an apical node/material allocation.
     let rejected = world.prepare_step(&input(&world, Some(&proposal), false))?;
     assert!(rejected.physical_creations.is_empty());
     world.commit_step(&CommitReceipt::accept_all(&rejected))?;
-    assert_eq!(
-        world.state().organisms[0].development_state,
-        original_private
-    );
+    let rejected_private = &world.state().organisms[0].development_state;
+    assert_ne!(rejected_private.rng, original_private.rng);
+    assert_eq!(rejected_private.attempt_index, original_private.attempt_index + 1);
+    assert_eq!(rejected_private.apical_binding, original_private.apical_binding);
+    assert_eq!(rejected_private.lateral_cursor, original_private.lateral_cursor);
     assert!(world.state().structures.is_empty());
     // Restore the exact pre-rejection world and execute its accepted topology.
     world = restored;
@@ -280,7 +281,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .sum::<f64>()
     };
     assert!((flux(&a) - flux(&b)).abs() > 1e-12);
-    // A due but unfunded proposal cannot advance development/RNG.
+    // A due but unfunded proposal records the attempted draw, while installing
+    // neither a body nor a structural pointer and spending no construction cost.
     config.organisms[0]
         .genotype
         .development
@@ -303,7 +305,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .any(|e| e.reason == "development-resource-or-atp-shortfall"));
     hungry.commit_step(&CommitReceipt::accept_all(&d))?;
-    assert_eq!(old, hungry.state().organisms[0].development_state);
+    let unfunded = &hungry.state().organisms[0].development_state;
+    assert_ne!(old.rng, unfunded.rng);
+    assert_eq!(unfunded.attempt_index, old.attempt_index + 1);
+    assert_eq!(unfunded.apical_binding, old.apical_binding);
+    assert_eq!(unfunded.lateral_cursor, old.lateral_cursor);
     println!(
         "{}",
         serde_json::to_string_pretty(
@@ -313,7 +319,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "geometry_changed_route_clearance":route_changed,"open_route_flux":flux(&a),"blocked_route_flux":flux(&b),
         "maximum_elemental_residual":world.state().accounting.maximum_absolute_residual,
         "pending_proposal_restore_exact":true,"pending_transaction_restore_exact":true,"abort_restores_exact":true,
-        "rejected_geometry_rng_unchanged":true,"unfunded_rng_unchanged":true,"light_and_contact_change_growth":true})
+        "committed_rejection_records_attempt":true,"unfunded_attempt_allocates_no_structure":true,"light_and_contact_change_growth":true})
         )?
     );
     Ok(())

@@ -1418,3 +1418,42 @@ The confirmations produced 7, 7 and 5 branches. Constant route permeability was
 not fitted. The compact receipt is `research/fly_ecology_atlas/receipt.json`,
 SHA `1b351c12a1811de8740f2905a3032f6ede7538cd45ae601dad0c8fb58de068db`.
 No ecological genotype was promoted from these results.
+
+## September 8 daytime continuation — physical lineages and material passages
+
+The user extended autonomous collaboration to 10 PM EDT. The first full-CNS
+and private-context fit completed 512 updates in each stage. Its first held-out
+physical comparison is adverse: the learned child travels much farther but
+falls almost immediately, with greater resource cost and no oral transfer.
+The learned private context does not rescue this first condition. Offline loss
+improvement is recorded separately from physical competence. A continuation
+now trains against the completed twelve-layout sensory nursery while retaining
+the parent's body normalization and centered motor decoder reference/scale.
+
+Ecological development now produces actual offspring bodies. A 32-second
+MuJoCo world built five branches and one new anchored colony, then replayed
+the entire descendant world exactly. The reproduction spends the parent's
+finite stores and inherits the colony's developmental specification. It does
+not reproduce a fly. Failed placements advance developmental choice history
+only when the world step commits; aborted physical transactions still retain
+neither RNG changes nor expenditure. This removes a frozen repeated-choice
+failure without manufacturing successful placement. The raw lineage receipt
+is `4a24083c9a5b84aa1f453ad90f84fe5f6adf84591c13e6afb67179f51ed82138`.
+
+The next joined batch connects material transport to physical obstacles.
+One shared Rust planner samples 32 equal-area aperture cells in both directions,
+with actual MuJoCo endpoint containment and collision-solid ray queries. The
+133 routes are measured at startup, every 0.1 seconds, and after topology changes;
+their fractions enter the existing conservative transport kernel. No airflow is
+invented. The actual B2 join measured fractions from 0.03125 to 1, constructed
+a branch at tick 200, received the screen through the retina, and replayed a
+world containing a newly inserted object, force and sound exactly. This is a
+finite straight-path aperture approximation, not a resolved diffusion field.
+The earlier GAM campaign had unsampled all-open route inputs and supplies no
+physical route-clearance evidence; its separate scope amendment preserves that
+distinction. The lineage run predates this route sampler and is not relabeled.
+
+The compact combined record is
+`research/fly_embodiment/ecology-route-lineage-receipt.json`. The new physical
+checkpoint format includes the route plan identity, cached measurements and
+topology revision. Superseded running worlds retain their frozen implementation.

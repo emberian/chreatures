@@ -9,7 +9,10 @@
 
 mod growth;
 mod model;
+mod transport_geometry;
 mod world;
 
 pub use model::*;
+pub use transport_geometry::*;
+pub use growth::surface_probe_directions;
 pub use world::{EcologyBatch, EcologyWorld};

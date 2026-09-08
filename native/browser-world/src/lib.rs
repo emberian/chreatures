@@ -4,10 +4,14 @@ mod fly_optics;
 mod fly_acoustics;
 mod fly_senses;
 mod fly_types;
+mod route_geometry;
 use chreatures_ecology_core as eco;
 use fly_types::*;
 use serde::{Deserialize, Serialize};
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
+pub use fly_types::Config as FlyWorldConfig;
+pub use route_geometry::RouteGeometry;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 struct HostEcology {
@@ -33,7 +37,7 @@ struct Pending {
     acoustics: fly_acoustics::FlyAcoustics,
 }
 
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub struct WorldCore {
     config: Config,
     state: Saved,
@@ -42,8 +46,8 @@ pub struct WorldCore {
     pending: Option<Pending>,
     acoustics: fly_acoustics::FlyAcoustics,
 }
-fn err(s: impl AsRef<str>) -> JsValue {
-    JsValue::from_str(s.as_ref())
+fn err(s: impl AsRef<str>) -> String {
+    s.as_ref().to_owned()
 }
 fn hash(s: &str) -> bool {
     s.len() == 64
@@ -80,10 +84,10 @@ fn mix_wing_afferents(out: &mut [f32], frame: &fly_acoustics::AcousticFrame) -> 
     Ok(())
 }
 
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl WorldCore {
-    #[wasm_bindgen(constructor)]
-    pub fn new(config: &str, seed: u32) -> Result<WorldCore, JsValue> {
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(constructor))]
+    pub fn new(config: &str, seed: u32) -> Result<WorldCore, String> {
         let c: Config =
             serde_json::from_str(config).map_err(|e| err(format!("fly fixture: {e}")))?;
         if c.engine != ENGINE
@@ -191,7 +195,7 @@ impl WorldCore {
     pub fn time(&self) -> f64 {
         self.state.time
     }
-    pub fn set_memory(&mut self, memory: String) -> Result<(), JsValue> {
+    pub fn set_memory(&mut self, memory: String) -> Result<(), String> {
         if self.pending.is_some() {
             return Err(err("ecological mutation pending"));
         }
@@ -200,7 +204,7 @@ impl WorldCore {
     }
     /// Append physical geometry only after the host has compiled and validated
     /// its candidate. Existing body/joint/actuator addresses cannot change.
-    pub fn rebind_physics(&mut self, config: &str) -> Result<(), JsValue> {
+    pub fn rebind_physics(&mut self, config: &str) -> Result<(), String> {
         let next: Config = serde_json::from_str(config).map_err(|e| err(e.to_string()))?;
         let stable = |c: &Config| {
             let mut v = serde_json::to_value(c).unwrap();
@@ -220,7 +224,8 @@ impl WorldCore {
         for binding in &next.material_bindings[self.config.material_bindings.len()..] {
             let present = match &binding.store {
                 eco::StoreId::Region(id)=>self.config.ecology.regions.iter().any(|s|&s.id==id),
-                eco::StoreId::Organism(id)=>self.ecology.state().organisms.iter().any(|s|&s.id==id),
+                eco::StoreId::Organism(id)=>self.ecology.state().organisms.iter().any(|s|&s.id==id)
+                    ||self.ecology.pending_delta().is_some_and(|d|d.physical_creations.iter().any(|p|p.material_store==binding.store)),
                 eco::StoreId::Packet(id)=>self.ecology.state().packets.iter().any(|s|&s.id==id),
                 eco::StoreId::Structure(id)=>self.ecology.state().structures.iter().any(|s|&s.id==id)
                     ||self.ecology.pending_delta().is_some_and(|d|d.physical_creations.iter().any(|p|p.material_store==binding.store)),
@@ -239,6 +244,10 @@ impl WorldCore {
     /// Observer-only finite material and physiology, never a resident input.
     pub fn ecology_observe(&self) -> String {
         serde_json::to_string(self.ecology.state()).unwrap()
+    }
+    /// Physics query geometry for anchored development, never fly sensation.
+    pub fn growth_probe_directions(&self) -> String {
+        serde_json::to_string(&eco::surface_probe_directions()).unwrap()
     }
     pub fn actuator_state(&self) -> String {
         serde_json::to_string(&self.state.residents).unwrap()
@@ -271,7 +280,7 @@ impl WorldCore {
     }
     /// Pure learned-output-to-effective-servo conversion. No posture correction,
     /// gait, destination, abstract thrust or oral decision is supplied here.
-    pub fn actuation(&self, commands: &[f64]) -> Result<Vec<f64>, JsValue> {
+    pub fn actuation(&self, commands: &[f64]) -> Result<Vec<f64>, String> {
         if !commands_valid(commands, self.config.bodies.len()) {
             return Err(err("invalid CNS MOTOR92"));
         }
@@ -290,7 +299,7 @@ impl WorldCore {
     }
     /// Effective force capacity belongs to body physiology. The host multiplies
     /// each original actuator force bound, preserving the desired servo target.
-    pub fn actuator_capacity(&self) -> Result<Vec<f64>, JsValue> {
+    pub fn actuator_capacity(&self) -> Result<Vec<f64>, String> {
         let mut out = Vec::with_capacity(self.config.bodies.len() * PHYSICAL_CONTROLS);
         for (row, b) in self.config.bodies.iter().enumerate() {
             let internal = self
@@ -306,7 +315,7 @@ impl WorldCore {
         }
         Ok(out)
     }
-    pub fn set_route_measurements(&mut self, open: &[f64], flows: &[f64]) -> Result<(), JsValue> {
+    pub fn set_route_measurements(&mut self, open: &[f64], flows: &[f64]) -> Result<(), String> {
         if self.pending.is_some()
             || open.len() != self.config.ecology.routes.len()
             || flows.len() != open.len()
@@ -322,7 +331,7 @@ impl WorldCore {
     }
     /// Host-only geometry candidates and measured light. They are not goals or
     /// observations passed to any cognitive controller.
-    pub fn set_ecology_sites(&mut self, sites: &str) -> Result<(), JsValue> {
+    pub fn set_ecology_sites(&mut self, sites: &str) -> Result<(), String> {
         if self.pending.is_some() {
             return Err(err("ecological mutation pending"));
         }
@@ -348,14 +357,14 @@ impl WorldCore {
     }
     /// Local developmental dynamics propose physical growth. Only the host can
     /// measure geometry and accept a collision-free subset; no CNS input uses it.
-    pub fn propose_growth(&mut self, input: &str) -> Result<String, JsValue> {
+    pub fn propose_growth(&mut self, input: &str) -> Result<String, String> {
         if self.pending.is_some() { return Err(err("ecological mutation pending")); }
         let input: eco::GrowthInput = serde_json::from_str(input).map_err(|e| err(e.to_string()))?;
         if input.dt_s != DT { return Err(err("growth and physical tick differ")); }
         let proposal = self.ecology.propose_growth(&input).map_err(|e| err(e.to_string()))?;
         serde_json::to_string(&proposal).map_err(|e| err(e.to_string()))
     }
-    pub fn discard_growth(&mut self, token: &str) -> Result<(), JsValue> {
+    pub fn discard_growth(&mut self, token: &str) -> Result<(), String> {
         if self.pending.is_some() { return Err(err("ecological mutation pending")); }
         self.ecology.discard_growth(token).map_err(|e| err(e.to_string()))?;
         if self.host.growth_token.as_deref() == Some(token) {
@@ -377,7 +386,7 @@ impl WorldCore {
         contacts: &[f64],
         offsets: &[u32],
         irradiance: &[f64],
-    ) -> Result<(), JsValue> {
+    ) -> Result<(), String> {
         if self.pending.is_some() {
             return Err(err("ecological mutation pending"));
         }
@@ -413,7 +422,7 @@ impl WorldCore {
         offsets: &[u32],
         irradiance: &[f64],
         dt: f64,
-    ) -> Result<String, JsValue> {
+    ) -> Result<String, String> {
         if self.pending.is_some() || dt != DT || !commands_valid(commands, self.config.bodies.len())
         {
             return Err(err("invalid or overlapping fly tick"));
@@ -593,7 +602,7 @@ impl WorldCore {
         });
         serde_json::to_string(&delta).map_err(|e| err(e.to_string()))
     }
-    pub fn commit_advance(&mut self, receipt: &str) -> Result<(), JsValue> {
+    pub fn commit_advance(&mut self, receipt: &str) -> Result<(), String> {
         let r: eco::CommitReceipt =
             serde_json::from_str(receipt).map_err(|e| err(e.to_string()))?;
         let pending = self
@@ -611,7 +620,7 @@ impl WorldCore {
         self.acoustics = committed.acoustics;
         Ok(())
     }
-    pub fn abort_advance(&mut self, token: &str) -> Result<(), JsValue> {
+    pub fn abort_advance(&mut self, token: &str) -> Result<(), String> {
         let p = self
             .pending
             .as_ref()
@@ -631,7 +640,7 @@ impl WorldCore {
         frequency_hz: f64,
         envelope: f64,
         duration: f64,
-    ) -> Result<(), JsValue> {
+    ) -> Result<(), String> {
         if self.pending.is_some()
             || position.len() != 3
             || !finite(position)
@@ -659,7 +668,7 @@ impl WorldCore {
         row: usize,
         positions: &[f64],
         rotations: &[f64],
-    ) -> Result<Vec<f64>, JsValue> {
+    ) -> Result<Vec<f64>, String> {
         fly_optics::rays(&self.config, row, positions, rotations).map_err(err)
     }
     #[allow(clippy::too_many_arguments)]
@@ -676,7 +685,7 @@ impl WorldCore {
         frame: &[f32],
         width: usize,
         height: usize,
-    ) -> Result<Vec<f32>, JsValue> {
+    ) -> Result<Vec<f32>, String> {
         fly_optics::retina(
             &self.config,
             row,
@@ -693,7 +702,7 @@ impl WorldCore {
         )
         .map_err(err)
     }
-    pub fn snapshot(&self) -> Result<String, JsValue> {
+    pub fn snapshot(&self) -> Result<String, String> {
         if self.pending.is_some() {
             return Err(err(
                 "cannot snapshot an uncommitted physical/ecological mutation",
@@ -711,7 +720,7 @@ impl WorldCore {
         };
         serde_json::to_string(&value).map_err(|e| err(e.to_string()))
     }
-    pub fn restore(&mut self, snapshot: &str) -> Result<(), JsValue> {
+    pub fn restore(&mut self, snapshot: &str) -> Result<(), String> {
         let e: Envelope = serde_json::from_str(snapshot).map_err(|e| err(e.to_string()))?;
         if e.format != "chreatures-fly-world-state-v4"
             || e.state.format != "chreatures-fly-core-state-v4"

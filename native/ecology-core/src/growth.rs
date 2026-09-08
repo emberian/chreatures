@@ -1,11 +1,29 @@
 //! Local inherited colony development. All geometry here is host truth, never
 //! an observation for fly cognition. Final collision acceptance belongs to the
-//! physical host; material and RNG advance together only on committed creation.
+//! physical host. A committed world step retains an attempted developmental
+//! choice, even when placement failed. Aborted steps retain neither RNG changes
+//! nor material transfers; material is spent only on realized construction.
 use crate::model::*;
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 
 const EPS: f64 = 1e-12;
+
+/// Host collision-query directions for local colony development. The finite
+/// spherical sampling is shared by native and Wasm hosts; it is not a fly
+/// receptor layout or an organism observation. Keep individual surface hits:
+/// two points on one large support are different attachment opportunities.
+pub fn surface_probe_directions() -> Vec<[f64; 3]> {
+    let mut rays = vec![[0., 0., 1.], [0., 0., -1.]];
+    let angle = std::f64::consts::PI * (3. - 5_f64.sqrt());
+    for i in 0..96 {
+        let z = 1. - 2. * (i as f64 + 0.5) / 96.;
+        let radius = (1. - z * z).sqrt();
+        let phi = i as f64 * angle;
+        rays.push([radius * phi.cos(), radius * phi.sin(), z]);
+    }
+    rays
+}
 
 pub(crate) fn seed_state(rng: u64) -> DevelopmentState {
     DevelopmentState {
@@ -251,11 +269,10 @@ pub(crate) fn build(
                 }
             }
         }
-        if out
-            .clearance_queries
-            .iter()
-            .any(|q| q.organism_id == organism.id)
-        {
+        // Placement failure is a completed attempt, not an instruction to
+        // repeat the identical draw forever. This successor is installed into
+        // a pending world state below, so a physical abort still rolls it back.
+        if rng != organism.development_state.rng {
             transitions.push(GrowthTransition {
                 organism_id: organism.id.clone(),
                 next_rng: rng,
@@ -336,9 +353,6 @@ pub(crate) fn install(
                     .then_some((q, binding))
             })
             .collect::<Vec<_>>();
-        if successful.is_empty() {
-            continue;
-        }
         let private = &mut state
             .organisms
             .iter_mut()

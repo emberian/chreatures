@@ -558,7 +558,8 @@ pub(crate) struct WorldEnvelope {
     pub growth: Option<PendingGrowth>,
 }
 
-/// Private developmental state, advanced only by a committed funded creation.
+/// Private developmental state. Attempts advance on committed world steps;
+/// apical/lateral structural pointers advance only for funded creations.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct DevelopmentState {
