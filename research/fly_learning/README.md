@@ -14,12 +14,15 @@ B4 scene layout with counterbalanced histories; it does not claim twelve distinc
 geometries. Separate composed pose/object layouts are reserved for the final
 matched physical assay and a later expanded corpus.
 Within worlds, resident-specific counterbalancing interleaves safe babbling,
-posture and support transfer, self-righting, forward motion, turns, stopping,
-terrain transitions, slips and contact recovery, antenna contact, mouth reach
-and withdrawal, chemical-gradient forage and intake, pump/salivary consequences,
-light/acoustic orientation, conspecific antenna contact, movable material, and
-unconstrained consequence collection. Both viable and
-deliberately difficult attempts remain in the corpus.
+author walking references, posture and support transfer, self-righting, forward
+motion, turns, stopping, mouth reach and withdrawal, pump/salivary consequences,
+and unconstrained consequence collection. Both viable and deliberately difficult
+attempts remain in the corpus. The first corpus retains broader phase labels as
+sampler strata, but its frozen host does not schedule a screen, point tones, or
+physical terrain changes. Those labels are therefore not evidence for light,
+acoustic, or terrain competence. The expanded nursery corpus uses actual screen
+and point-tone schedules and separately hashed pose/object layouts before those
+behaviors are eligible for a learning claim.
 
 Author motor references are offline diagnostic targets. Closed-loop bouts deliver
 zero, smooth OU, pulse and reversal context vectors through the annotated
