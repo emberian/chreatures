@@ -17,7 +17,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, value, inde
   return pairs;
 }, []));
 if (!args.model || !args.fixture) {
-  console.error('usage: node probe-cns-webgpu.mjs --model PACK_DIRECTORY --fixture torch-v3-fixture.npz [--report receipt.json]');
+  console.error('usage: node probe-cns-webgpu.mjs --model PACK_DIRECTORY --fixture torch-v4-fixture.npz [--report receipt.json]');
   process.exit(2);
 }
 
@@ -63,10 +63,17 @@ function parseNpy(bytes) {
   const descr = /['"]descr['"]:\s*['"]([^'"]+)/.exec(header)?.[1];
   const shapeText = /['"]shape['"]:\s*\(([^)]*)\)/.exec(header)?.[1];
   const fortran = /['"]fortran_order['"]:\s*(True|False)/.exec(header)?.[1];
-  if (descr !== '<f4' || fortran !== 'False' || shapeText === undefined) throw new Error(`unsupported NPY layout: ${header}`);
+  if ((descr !== '<f4' && !/^<U[0-9]+$/.test(descr)) || fortran !== 'False' || shapeText === undefined) throw new Error(`unsupported NPY layout: ${header}`);
   const shape = shapeText.split(',').map(value => value.trim()).filter(Boolean).map(Number);
   const count = shape.reduce((total, value) => total * value, 1);
   const payload = bytes.subarray(headerStart + headerLength);
+  if (descr.startsWith('<U')) {
+    const width = Number(descr.slice(2));
+    if (count !== 1 || payload.byteLength !== width * 4) throw new Error('Expected scalar Unicode metadata');
+    let value = '';
+    for (let offset=0;offset<payload.byteLength;offset+=4) { const code=payload.readUInt32LE(offset); if(code) value += String.fromCodePoint(code); }
+    return {shape,value};
+  }
   if (payload.byteLength !== count * 4) throw new Error('NPY payload length differs');
   return { shape, values: new Float32Array(toArrayBuffer(payload)) };
 }
@@ -74,19 +81,21 @@ function parseNpy(bytes) {
 function maximumError(actual, expected, expectedIndex = index => index) {
   let maximum = 0;
   for (let index = 0; index < actual.length; index++) {
-    maximum = Math.max(maximum, Math.abs(actual[index] - expected[expectedIndex(index)]));
+    const value=actual[index], reference=expected[expectedIndex(index)];
+    if (!Number.isFinite(value) || !Number.isFinite(reference)) throw new Error('Nonfinite parity value');
+    maximum = Math.max(maximum, Math.abs(value - reference));
   }
   return maximum;
 }
 
 function splitSensory(values, tick, batch) {
-  const stride = 5423;
+  const stride = 6120;
   const optic = new Float32Array(batch * 5313);
-  const body = new Float32Array(batch * 110);
+  const body = new Float32Array(batch * 807);
   for (let resident = 0; resident < batch; resident++) {
     const start = (tick * batch + resident) * stride;
     optic.set(values.subarray(start, start + 5313), resident * 5313);
-    body.set(values.subarray(start + 5313, start + stride), resident * 110);
+    body.set(values.subarray(start + 5313, start + stride), resident * 807);
   }
   return { optic, body };
 }
@@ -98,7 +107,24 @@ function snapshotState(snapshot) {
 }
 
 const modelDirectory = resolve(args.model);
-const manifest = JSON.parse(await readFile(resolve(modelDirectory, 'cns-manifest.json'), 'utf8'));
+const manifestBytes = await readFile(resolve(modelDirectory, 'cns-manifest.json'));
+const manifest = JSON.parse(manifestBytes);
+const fixtureBytes = await readFile(resolve(args.fixture));
+const npz = unzipEntries(fixtureBytes);
+const fixtureMetadata = JSON.parse(parseNpy(npz.get('metadata_json.npy')).value);
+if (fixtureMetadata.format !== 'chreatures-cns-v4-parity-v1' || fixtureMetadata.service_file_sha256 !== manifest.serviceArtifactSha256 || fixtureMetadata.adapter_sha256 !== manifest.identity.artifact || fixtureMetadata.dt !== .01 || fixtureMetadata.substeps !== 2 || fixtureMetadata.substep_dt !== .005 || fixtureMetadata.ticks !== 3 || fixtureMetadata.batch !== 1) throw new Error('V4 fixture identity or clock differs');
+const fixture = Object.fromEntries([...npz].filter(([name])=>name!=='metadata_json.npy').map(([name, bytes]) => [name.replace(/\.npy$/, ''), parseNpy(bytes)]));
+const stateKeys=['rates','adaptation','support','release','mod_da','mod_oa','mod_ht'];
+for(const key of stateKeys) if(fixture['initial.'+key]?.shape.join(',') !== '165122,1' || fixture['state.'+key]?.shape.join(',') !== '3,165122,1') throw new Error('V4 private state shape differs: '+key);
+function stateErrors(snapshot,tick){
+ const state=snapshotState(snapshot);
+ return Object.fromEntries(stateKeys.map((key,field)=>{
+  const expected=fixture[(tick===null?'initial.':'state.')+key].values;
+  let maximum=0;
+  for(let neuron=0;neuron<165122;neuron++){const actual=state[neuron*28+field*4],reference=expected[(tick??0)*165122+neuron];if(!Number.isFinite(actual)||!Number.isFinite(reference))throw Error('Nonfinite state '+key);maximum=Math.max(maximum,Math.abs(actual-reference));}
+  return[key,maximum];
+ }));
+}
 const assets = new Map();
 for (const [name, entry] of Object.entries(manifest.buffers)) {
   const transport = await readFile(resolve(modelDirectory, entry.url));
@@ -136,60 +162,60 @@ assets.clear();
 const neutralOptic = new Float32Array(5313).fill(0.5);
 const neutralBody = bodyMean.slice();
 const neutralContext = new Float32Array(12);
-const neutral = await engine.step({ dt: 0.05, activeMask: 1, opticRGB: neutralOptic, body: neutralBody, context:neutralContext, selectedResident: 0 });
+const neutral = await engine.step({ dt: 0.01, activeMask: 1, opticRGB: neutralOptic, body: neutralBody, context:neutralContext, selectedResident: 0 });
 console.error('probe: neutral tick complete');
 const neutralRateError = maximumError(neutral.selectedRates, engine.baselineRates);
 await engine.reset([0], ['fixture-0']);
 
-const npz = unzipEntries(await readFile(resolve(args.fixture)));
-const fixture = Object.fromEntries([...npz].filter(([name])=>name!=='metadata_json.npy').map(([name, bytes]) => [name.replace(/\.npy$/, ''), parseNpy(bytes)]));
-if (fixture.sensory.shape.join(',') !== '3,1,5423' || fixture.context.shape.join(',') !== '3,1,12' ||
+const initialStateErrors = stateErrors(await engine.snapshot(),null);
+if (fixture.sensory.shape.join(',') !== '3,1,6120' || fixture.context.shape.join(',') !== '3,1,12' ||
     fixture['state.rates'].shape.join(',') !== '3,165122,1' || fixture.latent.shape.join(',') !== '3,1,512' ||
-    fixture.motor.shape.join(',') !== '3,1,34') throw new Error('unexpected canonical V3 fixture dimensions');
+    fixture.motor.shape.join(',') !== '3,1,92') throw new Error('unexpected canonical V4 fixture dimensions');
 const tickRateErrors = [], tickLatentErrors = [];
-const tickMotorErrors=[];
+const tickMotorErrors=[], tickStateErrors=[];
 let beforeLast, firstLast, firstMotor, firstFinal;
 for (let tick = 0; tick < 3; tick++) {
   if (tick === 2) { beforeLast = await engine.snapshot(); console.error('probe: pre-final snapshot complete'); }
   const input = splitSensory(fixture.sensory.values, tick, 1);
   const context=fixture.context.values.slice(tick*12,(tick+1)*12);
-  const output = await engine.step({ dt: 0.05, activeMask: 1, opticRGB: input.optic, body: input.body, context, selectedResident:0 });
+  const output = await engine.step({ dt: 0.01, activeMask: 1, opticRGB: input.optic, body: input.body, context, selectedResident:0 });
   console.error(`probe: fixture tick ${tick} complete`);
   for(let neuron=0;neuron<output.selectedRates.length;neuron++) if(!Number.isFinite(output.selectedRates[neuron])) throw new Error(`nonfinite GPU rate at tick ${tick}, neuron ${neuron}`);
   tickLatentErrors.push(maximumError(output.latent, fixture.latent.values,
     index => tick * 512 + index));
   tickRateErrors.push(maximumError(output.selectedRates, fixture['state.rates'].values, neuron => tick * 165122 + neuron));
-  tickMotorErrors.push(maximumError(output.motor,fixture.motor.values,index=>tick*34+index));
+  tickMotorErrors.push(maximumError(output.motor,fixture.motor.values,index=>tick*92+index));
+  tickStateErrors.push(stateErrors(await engine.snapshot(),tick));
   if (tick === 2) { firstLast = output.latent.slice(); firstMotor=output.motor.slice(); firstFinal = await engine.snapshot(); console.error('probe: final snapshot complete'); }
 }
 
-const finalState = snapshotState(firstFinal);
-const finalTick = 2;
-const stateKeys=['rates','adaptation','support','release','mod_da','mod_oa','mod_ht'];
-const finalStateErrors=Object.fromEntries(stateKeys.map(k=>[k,0]));
-for (let neuron = 0; neuron < 165122; neuron++) {
-  const expected = finalTick * 165122 + neuron;
-  const state = neuron * 28;
-  for(let field=0;field<stateKeys.length;field++){const key=stateKeys[field];finalStateErrors[key]=Math.max(finalStateErrors[key],Math.abs(finalState[state+field*4]-fixture['state.'+key].values[expected]));}
-}
+const finalStateErrors=tickStateErrors.at(-1);
 console.error('probe: seven-state comparison complete');
 
 await engine.restore(beforeLast);
 console.error('probe: restore complete');
 const lastInput = splitSensory(fixture.sensory.values, 2, 1);
 const lastContext=fixture.context.values.slice(2*12,3*12);
-const secondLast = await engine.step({ dt: 0.05, activeMask: 1, opticRGB: lastInput.optic, body: lastInput.body, context:lastContext });
+const secondLast = await engine.step({ dt: 0.01, activeMask: 1, opticRGB: lastInput.optic, body: lastInput.body, context:lastContext });
 const secondFinal = await engine.snapshot();
 const restoreLatentExact = maximumError(firstLast, secondLast.latent) === 0;
 const restoreMotorExact = maximumError(firstMotor, secondLast.motor) === 0;
 const restoreStateExact = Buffer.from(firstFinal).equals(Buffer.from(secondFinal));
 
 const report = {
-  format: 'chreatures-cns-webgpu-v3-dawn-probe-v1',
+  format: 'chreatures-cns-webgpu-v4-dawn-probe-v1',
   manifestArtifact: manifest.identity.artifact,
   graph: manifest.identity.graph,
   serviceArtifactSha256: manifest.serviceArtifactSha256,
-  fixtureSha256: sha256(await readFile(resolve(args.fixture))),
+  fixtureSha256: sha256(fixtureBytes),
+  fixtureMetadata,
+  manifestSha256: sha256(manifestBytes),
+  identity: manifest.identity,
+  graphQuantization: manifest.graphQuantization,
+  readoutProjectionDtype: manifest.buffers['readout.projection.weight'].dtype,
+  sourceRevision: manifest.sourceRevision,
+  sourceSha256: Object.fromEntries(await Promise.all(['cns-webgpu.js','assets.js',...Object.keys(shaderSources).map(name=>'shaders/'+name)].map(async name=>[name,sha256(await readFile(resolve(liveSource,name)))]))),
+  probeSha256:sha256(await readFile(new URL(import.meta.url))),
   adapter: { name: adapter.info?.device || adapter.info?.description || 'Dawn Metal adapter' },
   capacity: 1,
   ticks: 3,
@@ -197,11 +223,13 @@ const report = {
   rateMaxAbsByTick: tickRateErrors,
   latentMaxAbsByTick: tickLatentErrors,
   motorMaxAbsByTick: tickMotorErrors,
+  initialMaxAbs:initialStateErrors,
+  stateMaxAbsByTick:tickStateErrors,
   finalMaxAbs: finalStateErrors,
   byteExactRestore: { latent: restoreLatentExact, motor:restoreMotorExact, snapshot: restoreStateExact },
-  limits: { neutralRate: 2e-6, state: 2e-4, latent: 2e-4, motor: 2e-4 },
-  limitBasis: 'Approximately four times the observed binary16-versus-float32 numerical error; regression bound only, not a biological tolerance.',
-  note: 'Browser graph and projection use authenticated IEEE binary16 packing; the Torch fixture used source float32 weights.',
+  limits: { neutralRate: 2e-6, state: 2e-5, latent: 2e-5, motor: 2e-5 },
+  limitBasis: 'Predeclared absolute cross-backend regression gate 2e-5; same canonical graph bits and float32 learned tensors. No biological tolerance or competence claim.',
+  note: 'Full V4 graph decoded from identical canonical binary16 bits; readout float32; explicit centered/scaled signed MN decoder; seven private states compared every tick.',
   nodeDawnLifetime: {
     requirement: 'The object returned by create() remains strongly referenced for the full GPU lifetime.',
     upstream: 'https://github.com/dawn-gpu/node-webgpu#lifetime',
@@ -209,13 +237,12 @@ const report = {
     diagnosis: 'Without the strong reference, lldb stopped in dawn::native::InstanceBase::ProcessEvents at std::mutex::lock after successful ticks.',
   },
 };
+report.passed = neutralRateError < 2e-6 &&
+  Math.max(...Object.values(initialStateErrors), ...tickStateErrors.flatMap(x=>Object.values(x))) < 2e-5 &&
+  Math.max(...tickLatentErrors) < 2e-5 && Math.max(...tickMotorErrors) < 2e-5 &&
+  restoreLatentExact && restoreMotorExact && restoreStateExact;
 console.log(JSON.stringify(report, null, 2));
 if (args.report) await writeFile(resolve(args.report), `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
 engine.destroy();
 device.destroy();
-
-// These are quantized-production versus float32-reference limits, not a claim of bit parity.
-if (!(neutralRateError < 2e-6 && Math.max(...Object.values(finalStateErrors)) < 2e-4 &&
-      Math.max(...tickLatentErrors) < 2e-4 && Math.max(...tickMotorErrors)<2e-4 && restoreLatentExact && restoreMotorExact && restoreStateExact)) {
-  process.exitCode = 1;
-}
+if (!report.passed) process.exitCode = 1;

@@ -1,0 +1,181 @@
+{
+  "schema": "chreatures.fly-body-neural-atlas.v1",
+  "artifact": "fly-body-neural-atlas-v1.npz",
+  "artifact_sha256": "066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+  "inputs": {
+    "neurons_npz": {
+      "name": "neurons.npz",
+      "sha256": "0e6706229b93cbdcab48905504bd3b8f6075534488c65ad2c8f844668036ea9a"
+    },
+    "body_schema": {
+      "name": "schema.json",
+      "sha256": "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+    },
+    "body807_channel_schema": {
+      "name": "body807-channel-schema.json",
+      "sha256": "97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786"
+    }
+  },
+  "counts": {
+    "motor_rows": 815,
+    "motor_rows_with_m92_support": 802,
+    "unsupported_motor_rows": 13,
+    "motor_outputs": 92,
+    "mjcf_actuators": 90,
+    "fine_cohorts": 156,
+    "fine_cohort_motor_rows": 400,
+    "nonvisual_afferent_rows": 11798,
+    "nonvisual_afferent_rows_with_body807_support": 10609,
+    "unsupported_nonvisual_afferent_rows": 1189,
+    "afferent_ports": 60,
+    "body_joint_dofs": 126,
+    "body_channels": 807,
+    "body_channels_with_afferent_support": 740,
+    "unsupported_body_channels": 67
+  },
+  "arrays": {
+    "atlas.motor_rows": "uint32[815], global canonical MaleCNS row indices",
+    "atlas.motor_mask": "float32[92,815], 1 permits a learned weight; 0 structurally forbids it",
+    "atlas.motor_cohort_index": "uint32[815], optional fine-cohort index; 4294967295 means unresolved",
+    "atlas.fine_cohort_mask": "uint8[156,815], diagnostic author target cohorts; not a runtime bottleneck",
+    "atlas.afferent_rows": "uint32[11798], nonvisual peripheral and ascending sensory canonical rows",
+    "atlas.afferent_port_mask": "uint8[60,11798], author annotation support for named ports",
+    "atlas.joint_position_afferent_mask": "uint8[126,11798], inferred anatomical support; zero means unsupported",
+    "atlas.joint_velocity_afferent_mask": "uint8[126,11798], inferred anatomical support; zero means unsupported",
+    "atlas.joint_load_afferent_mask": "uint8[126,11798], inferred anatomical support; zero means unsupported",
+    "atlas.body_rows": "uint32[11798], identical to afferent_rows and in canonical MaleCNS order",
+    "atlas.body_mask": "float32[11798,807], 1 permits physical BODY807 channel injection to an afferent row"
+  },
+  "array_sha256": {
+    "atlas.body_rows": "0a5e8fba6f4c9c1efb04e4f21a193bf0c11416b85ea6ec8cb13c73220ad75cf7",
+    "atlas.body_mask": "7a1701e6047d10f408e3dd98dacbe099d9e841b3f1791267609d17f109222a0e",
+    "atlas.motor_rows": "4bbb02660dd7f14e890b0be1f7279f7b6c99e78836033685f53b5822984c6bb2",
+    "atlas.motor_mask": "42e498471ab6ed3f2eed44faaae1ad5485063a9b9590b98363b521faf8cc9273",
+    "atlas.motor_cohort_index": "6506e321745096e652d9e630bdcdbaf064a16250f5df767d187fcc9ce1da7dba",
+    "atlas.fine_cohort_mask": "4838e3a86a1827626370d16ce4e905d2ade6a838271dabec85a2ae45519f6c30",
+    "atlas.actuator_ids": "805d4d73f0699002abea89fe7fde6b116b08bb1015f2c9cc0a5ca7369c681381",
+    "atlas.body_names": "239eafe1a04b104a8ee48ed7b48659101026f20ad3050a073f860edab004d0d0"
+  },
+  "decoder_contract": {
+    "input": "actual post-recurrence MaleCNS motor state, ordered by motor_rows",
+    "reference_rate": "separate float32[815] calibration tensor measured from an actual CNS calibration corpus; absent from this anatomical artifact",
+    "normalization": "center and reference-scale each motor row before decoding",
+    "weights": "learned signed weights multiplied by motor_mask at every forward pass",
+    "output": "bounded M92: body M90 in exact actuator order, then pharyngeal pump and salivary drive",
+    "ranges": "position rows 0:84 use body-schema bounds and signed centered outputs; adhesion and physiology rows 84:92 are [0,1]",
+    "activation_dynamics": "owned by the runtime ABI; this atlas does not fabricate muscle activation time constants",
+    "muscle_warning": "MOTOR92 is a servo/physiology target interface, not muscle recruitment; mask signs and servo directions are not anatomical claims"
+  },
+  "unsupported_motor": [
+    {
+      "motor_index": 3,
+      "canonical_row": 354,
+      "id": "10383",
+      "subclass": "rm",
+      "type": "PS349",
+      "reason": "rm eye motor with passive eye axes"
+    },
+    {
+      "motor_index": 17,
+      "canonical_row": 1174,
+      "id": "11265",
+      "subclass": "rm",
+      "type": "PS349",
+      "reason": "rm eye motor with passive eye axes"
+    },
+    {
+      "motor_index": 29,
+      "canonical_row": 1942,
+      "id": "12076",
+      "subclass": "rm",
+      "type": "GNG647",
+      "reason": "rm eye motor with passive eye axes"
+    },
+    {
+      "motor_index": 31,
+      "canonical_row": 1987,
+      "id": "12126",
+      "subclass": "rm",
+      "type": "GNG647",
+      "reason": "rm eye motor with passive eye axes"
+    },
+    {
+      "motor_index": 33,
+      "canonical_row": 2031,
+      "id": "12173",
+      "subclass": "rm",
+      "type": "GNG314",
+      "reason": "rm eye motor with passive eye axes"
+    },
+    {
+      "motor_index": 36,
+      "canonical_row": 2461,
+      "id": "12631",
+      "subclass": "rm",
+      "type": "GNG314",
+      "reason": "rm eye motor with passive eye axes"
+    },
+    {
+      "motor_index": 42,
+      "canonical_row": 3353,
+      "id": "13592",
+      "subclass": "rm",
+      "type": "GNG647",
+      "reason": "rm eye motor with passive eye axes"
+    },
+    {
+      "motor_index": 471,
+      "canonical_row": 151904,
+      "id": "811395",
+      "subclass": "xm",
+      "type": "MNxm02",
+      "reason": "xm target identity unsupported"
+    },
+    {
+      "motor_index": 472,
+      "canonical_row": 151908,
+      "id": "811400",
+      "subclass": "xm",
+      "type": "MNxm02",
+      "reason": "xm target identity unsupported"
+    },
+    {
+      "motor_index": 485,
+      "canonical_row": 153000,
+      "id": "812752",
+      "subclass": "xm",
+      "type": "MNxm03",
+      "reason": "xm target identity unsupported"
+    },
+    {
+      "motor_index": 489,
+      "canonical_row": 153181,
+      "id": "812988",
+      "subclass": "xm",
+      "type": "MNxm03",
+      "reason": "xm target identity unsupported"
+    },
+    {
+      "motor_index": 526,
+      "canonical_row": 156112,
+      "id": "817026",
+      "subclass": "xm",
+      "type": "MNxm01",
+      "reason": "xm target identity unsupported"
+    },
+    {
+      "motor_index": 544,
+      "canonical_row": 156747,
+      "id": "818098",
+      "subclass": "xm",
+      "type": "MNxm01",
+      "reason": "xm target identity unsupported"
+    }
+  ],
+  "evidence_terms": {
+    "measured": "author dataset identifies the peripheral modality/site within MaleCNS",
+    "inter_animal_inferred": "author annotation or Chreatures transfer joins different animals, datasets, or body axes",
+    "engineered": "simulation control/sensor mechanism with no claimed biological identity",
+    "unsupported": "no defensible mapping is available; represented by a zero mask"
+  }
+}

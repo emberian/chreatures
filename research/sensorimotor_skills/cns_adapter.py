@@ -1,4 +1,4 @@
-"""Current CNS model entrypoint; implementation moved to Anatomical CNS V3."""
+"""Current CNS model entrypoint; implementation is embodiment-driven CNS V4."""
 from research.anatomical_cns.model import (
     AnatomicalCNS,
     CNSState,

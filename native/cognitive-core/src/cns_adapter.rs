@@ -1,20 +1,27 @@
-//! Canonical CPU reference for Anatomical CNS V3.
+//! Canonical native CPU implementation of the immutable MaleCNS V4 service.
 use crate::{gemm_into, linear, Linear};
+
+const FORMAT: &str = "chreatures-cns-service-v4";
+const GRAPH_STORAGE: &str = "ieee-754-binary16-bits-little-endian";
+const GRAPH_ROUNDING: &str = "round-to-nearest-ties-to-even";
+const GRAPH_COMPUTE: &str = "decode-once-to-float32";
 const N: usize = 165122;
+const E: usize = 25563197;
 const SITES: usize = 1771;
 const RECEPTORS: usize = 4107;
 const TYPES: usize = 10;
 const NT: usize = 11752;
 const SE: usize = 4669;
-const BODY: usize = 110;
-const BR: usize = 11233;
+const BODY_ROWS: usize = 11798;
+const BODY: usize = 807;
 const CTX: usize = 12;
 const CR: usize = 1314;
-const MOTOR: usize = 34;
+const MOTOR: usize = 92;
 const MR: usize = 815;
 const INPUT: usize = SITES * 3 + BODY;
 const LATENT: usize = 512;
 const RANK: usize = 64;
+#[inline]
 fn sig(x: f32) -> f32 {
     if x >= 0.0 {
         1.0 / (1.0 + (-x).exp())
@@ -23,22 +30,59 @@ fn sig(x: f32) -> f32 {
         z / (1.0 + z)
     }
 }
+#[inline]
 fn sp(x: f32) -> f32 {
     x.max(0.0) + (-x.abs()).exp().ln_1p()
 }
+#[inline]
+fn half(v: u16) -> f32 {
+    let s = (v as u32 & 0x8000) << 16;
+    let e = (v >> 10) & 31;
+    let f = v & 1023;
+    let b = match e {
+        0 if f == 0 => s,
+        0 => {
+            let mut q = f as u32;
+            let mut x = 113;
+            while q & 0x400 == 0 {
+                q <<= 1;
+                x -= 1
+            }
+            s | (x << 23) | ((q & 1023) << 13)
+        }
+        31 => s | 0x7f800000 | ((f as u32) << 13),
+        _ => s | ((e as u32 + 112) << 23) | ((f as u32) << 13),
+    };
+    f32::from_bits(b)
+}
 fn take(p: &[f32], c: &mut usize, n: usize) -> Result<Vec<f32>, String> {
-    let e = c.checked_add(n).ok_or("overflow")?;
-    let v = p.get(*c..e).ok_or("truncated V3 parameters")?.to_vec();
+    let e = c.checked_add(n).ok_or("V4 parameter overflow")?;
+    let v = p.get(*c..e).ok_or("truncated V4 parameters")?.to_vec();
     *c = e;
     Ok(v)
 }
-fn ids(a: &[u32], n: usize, b: usize) -> Result<Vec<usize>, String> {
+fn ids(a: &[u32], n: usize, b: usize, name: &str) -> Result<Vec<usize>, String> {
     if a.len() != n || a.iter().any(|&x| x as usize >= b) {
-        Err("V3 index shape/range differs".into())
+        Err(format!("invalid V4 {name}"))
     } else {
         Ok(a.iter().map(|&x| x as usize).collect())
     }
 }
+fn sorted(a: &[usize]) -> bool {
+    a.windows(2).all(|w| w[0] < w[1])
+}
+fn sha(v: &str, name: &str) -> Result<String, String> {
+    if v.len() != 64
+        || !v
+            .bytes()
+            .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
+    {
+        Err(format!("V4 {name} must be lowercase SHA-256"))
+    } else {
+        Ok(v.into())
+    }
+}
+
 #[derive(Clone)]
 pub struct CnsState {
     pub rate: Vec<f32>,
@@ -49,24 +93,27 @@ pub struct CnsState {
 }
 #[cfg_attr(feature = "python", pyo3::pyclass)]
 pub struct CnsAdapter {
+    identities: [String; 8],
+    crow: Vec<usize>,
+    col: Vec<usize>,
+    weight: Vec<f32>,
+    channel: Vec<u32>,
     rr: Vec<usize>,
     rt: Vec<usize>,
     ptr: Vec<usize>,
     si: Vec<usize>,
     sw: Vec<f32>,
     br: Vec<usize>,
-    bm: Vec<f32>,
+    bw: Vec<f32>,
+    bb: Vec<f32>,
     cr: Vec<usize>,
     mr: Vec<usize>,
-    mm: Vec<f32>,
     nt: Vec<usize>,
     spectral: Vec<f32>,
     og: Vec<f32>,
     ob: Vec<f32>,
     mean: Vec<f32>,
-    scale: Vec<f32>,
-    bw: Vec<f32>,
-    bb: Vec<f32>,
+    inv_scale: Vec<f32>,
     dyns: [Vec<f32>; 7],
     mg: Vec<f32>,
     ma: Vec<f32>,
@@ -76,14 +123,25 @@ pub struct CnsAdapter {
     cb: Vec<f32>,
     proj: Linear,
     out: Linear,
+    motor_reference: Vec<f32>,
+    motor_inv_scale: Vec<f32>,
     mw: Vec<f32>,
     mb: Vec<f32>,
 }
 impl CnsAdapter {
     #[allow(clippy::too_many_arguments)]
     pub fn from_packed(
+        format: &str,
+        graph_storage: &str,
+        graph_rounding: &str,
+        graph_compute: &str,
+        identity_values: [&str; 8],
         p: &[f32],
         neutral: &[f32],
+        crow: &[u32],
+        col: &[u32],
+        weight_bits: &[u16],
+        channel: &[u32],
         rr: &[u32],
         rt: &[u32],
         ptr: &[u32],
@@ -96,6 +154,28 @@ impl CnsAdapter {
         mm: &[f32],
         nt: &[u32],
     ) -> Result<Self, String> {
+        if format != FORMAT
+            || graph_storage != GRAPH_STORAGE
+            || graph_rounding != GRAPH_ROUNDING
+            || graph_compute != GRAPH_COMPUTE
+        {
+            return Err("requires exact CHCNS4 format and graph quantization".into());
+        }
+        let names = [
+            "graph_sha256",
+            "atlas_sha256",
+            "anatomy_sha256",
+            "morphology_sha256",
+            "sensory_schema_sha256",
+            "actuator_schema_sha256",
+            "motor_calibration_sha256",
+            "graph_source_weight_sha256",
+        ];
+        let mut iv = Vec::new();
+        for (v, n) in identity_values.into_iter().zip(names) {
+            iv.push(sha(v, n)?)
+        }
+        let identities = iv.try_into().unwrap();
         if p.iter()
             .chain(neutral)
             .chain(sw)
@@ -103,39 +183,75 @@ impl CnsAdapter {
             .chain(mm)
             .any(|x| !x.is_finite())
         {
-            return Err("nonfinite V3 tensor".into());
+            return Err("nonfinite V4 tensor".into());
         }
-        let rr = ids(rr, RECEPTORS, N)?;
-        let rt = ids(rt, RECEPTORS, TYPES)?;
-        let ptr = ids(ptr, RECEPTORS + 1, SE + 1)?;
-        let si = ids(si, SE, SITES)?;
-        let br = ids(br, BR, N)?;
-        let cr = ids(cr, CR, N)?;
-        let mr = ids(mr, MR, N)?;
-        let nt = ids(nt, N, NT)?;
+        let crow = ids(crow, N + 1, E + 1, "graph.crow")?;
+        let col = ids(col, E, N, "graph.col")?;
+        if weight_bits.len() != E
+            || channel.len() != N
+            || channel.iter().any(|&x| x > 4)
+            || crow[0] != 0
+            || crow[N] != E
+            || crow.windows(2).any(|w| w[0] > w[1])
+        {
+            return Err("invalid V4 graph".into());
+        }
+        let weight: Vec<_> = weight_bits.iter().map(|&v| half(v)).collect();
+        if weight.iter().any(|x| !x.is_finite())
+            || weight
+                .iter()
+                .zip(&col)
+                .any(|(&w, &s)| channel[s] == 0 && w != 0.0)
+        {
+            return Err("invalid canonical V4 graph weights".into());
+        }
+        let rr = ids(rr, RECEPTORS, N, "receptor rows")?;
+        let rt = ids(rt, RECEPTORS, TYPES, "receptor types")?;
+        let ptr = ids(ptr, RECEPTORS + 1, SE + 1, "receptor ptr")?;
+        let si = ids(si, SE, SITES, "site indices")?;
+        let br = ids(br, BODY_ROWS, N, "body rows")?;
+        let cr = ids(cr, CR, N, "context rows")?;
+        let mr = ids(mr, MR, N, "motor rows")?;
+        let nt = ids(nt, N, NT, "neuron types")?;
         if sw.len() != SE
-            || bm.len() != BR * BODY
+            || sw.iter().any(|&x| x <= 0.0)
+            || bm.len() != BODY_ROWS * BODY
             || mm.len() != MOTOR * MR
             || bm.iter().chain(mm).any(|&x| x != 0.0 && x != 1.0)
             || ptr[0] != 0
             || ptr[RECEPTORS] != SE
+            || ptr.windows(2).any(|w| w[0] > w[1])
+            || !sorted(&rr)
+            || !sorted(&br)
+            || !sorted(&cr)
+            || !sorted(&mr)
         {
-            return Err("invalid V3 topology/mask".into());
+            return Err("invalid V4 atlas/mask".into());
         }
-        let mut inj = vec![false; N];
-        for &i in rr.iter().chain(&br).chain(&cr) {
-            if inj[i] {
-                return Err("injected rows overlap".into());
+        for j in 0..RECEPTORS {
+            if ptr[j] < ptr[j + 1]
+                && (sw[ptr[j]..ptr[j + 1]].iter().sum::<f32>() - 1.0).abs() > 2e-6
+            {
+                return Err("V4 receptor mixture must sum to one".into());
             }
-            inj[i] = true
+        }
+        let mut injected = vec![false; N];
+        for &i in rr.iter().chain(&br).chain(&cr) {
+            if injected[i] {
+                return Err("V4 injected rows overlap".into());
+            }
+            injected[i] = true
+        }
+        if mr.iter().any(|&i| injected[i]) {
+            return Err("V4 motor rows overlap injected rows".into());
         }
         let mut c = 0;
         let mut spectral = take(p, &mut c, TYPES * 3)?;
         for r in spectral.chunks_exact_mut(3) {
             let m = r.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            let s: f32 = r.iter().map(|x| (*x - m).exp()).sum();
+            let z: f32 = r.iter().map(|x| (*x - m).exp()).sum();
             for x in r {
-                *x = (*x - m).exp() / s
+                *x = (*x - m).exp() / z
             }
         }
         let og = take(p, &mut c, TYPES)?.into_iter().map(sp).collect();
@@ -143,10 +259,12 @@ impl CnsAdapter {
         let mean = take(p, &mut c, BODY)?;
         let scale = take(p, &mut c, BODY)?;
         if scale.iter().any(|&x| x <= 0.0) {
-            return Err("body.scale must be positive".into());
+            return Err("V4 body scale must be positive".into());
         }
-        let bw = take(p, &mut c, BR * BODY)?;
-        let bb = take(p, &mut c, BR)?;
+        let inv_scale = scale.into_iter().map(|x| 1.0 / x).collect();
+        let raw = take(p, &mut c, BODY_ROWS * BODY)?;
+        let bw = raw.into_iter().zip(bm).map(|(w, &m)| w * m).collect();
+        let bb = take(p, &mut c, BODY_ROWS)?;
         let cw = take(p, &mut c, CR * CTX)?;
         let cb = take(p, &mut c, CR)?;
         let mut dyns: [Vec<f32>; 7] = std::array::from_fn(|_| vec![]);
@@ -161,7 +279,7 @@ impl CnsAdapter {
                     4 => 0.25 + 4.75 * sig(x),
                     5 => 0.05 + 1.95 * sig(x),
                     6 => 0.01 + 0.49 * sig(x),
-                    _ => 0.0,
+                    _ => unreachable!(),
                 })
                 .collect()
         }
@@ -175,18 +293,46 @@ impl CnsAdapter {
         ];
         let pw = take(p, &mut c, RANK * N)?;
         let out = linear(p, &mut c, LATENT, RANK)?;
-        let mw = take(p, &mut c, MOTOR * MR)?.into_iter().map(sp).collect();
+        let motor_reference = take(p, &mut c, MR)?;
+        if motor_reference.iter().any(|&x| !(0.0..=1.0).contains(&x)) {
+            return Err("V4 motor reference outside [0,1]".into());
+        }
+        let ms = take(p, &mut c, MR)?;
+        if ms.iter().any(|&x| x <= 0.0) {
+            return Err("V4 motor scale must be positive".into());
+        }
+        let motor_inv_scale = ms.into_iter().map(|x| 1.0 / x).collect();
+        let raw = take(p, &mut c, MOTOR * MR)?;
+        let mw = raw.into_iter().zip(mm).map(|(w, &m)| w * m).collect();
         let mb = take(p, &mut c, MOTOR)?;
         if c != p.len() {
-            return Err("trailing V3 parameters".into());
+            return Err("trailing V4 parameters".into());
         }
         if neutral.len() != N
             || neutral
                 .iter()
                 .enumerate()
-                .any(|(i, &x)| !(0.0..=1.0).contains(&x) || (!inj[i] && x != 0.0))
+                .any(|(i, &x)| !(0.0..=1.0).contains(&x) || (!injected[i] && x != 0.0))
         {
-            return Err("invalid neutral drive".into());
+            return Err("invalid V4 neutral drive".into());
+        }
+        for j in 0..RECEPTORS {
+            let expected = if ptr[j] < ptr[j + 1] {
+                sig(ob[rt[j]])
+            } else {
+                0.0
+            };
+            if (neutral[rr[j]] - expected).abs() > 2e-7 {
+                return Err("V4 optic neutral drive differs".into());
+            }
+        }
+        for (j, &row) in br.iter().enumerate() {
+            if (neutral[row] - sig(bb[j])).abs() > 2e-7 {
+                return Err("V4 body neutral drive differs".into());
+            }
+        }
+        if cr.iter().any(|&row| neutral[row] != 0.0) {
+            return Err("V4 context neutral drive must be zero".into());
         }
         let mut proj = Linear {
             out: RANK,
@@ -200,24 +346,27 @@ impl CnsAdapter {
             }
         }
         Ok(Self {
+            identities,
+            crow,
+            col,
+            weight,
+            channel: channel.to_vec(),
             rr,
             rt,
             ptr,
             si,
             sw: sw.to_vec(),
             br,
-            bm: bm.to_vec(),
+            bw,
+            bb,
             cr,
             mr,
-            mm: mm.to_vec(),
             nt,
             spectral,
             og,
             ob,
             mean,
-            scale,
-            bw,
-            bb,
+            inv_scale,
             dyns,
             mg,
             ma,
@@ -227,6 +376,8 @@ impl CnsAdapter {
             cb,
             proj,
             out,
+            motor_reference,
+            motor_inv_scale,
             mw,
             mb,
         })
@@ -234,9 +385,12 @@ impl CnsAdapter {
     fn ex(&self, k: usize) -> Vec<f32> {
         self.nt.iter().map(|&t| self.dyns[k][t]).collect()
     }
+    pub fn identities(&self) -> &[String; 8] {
+        &self.identities
+    }
     pub fn initial_state(&self, b: usize) -> Result<CnsState, String> {
         if !(1..=32).contains(&b) {
-            return Err("batch outside 1.0.32".into());
+            return Err("batch outside 1..32".into());
         }
         let r0 = self.ex(0);
         Ok(CnsState {
@@ -252,11 +406,14 @@ impl CnsAdapter {
             || s.len() != b * INPUT
             || ctx.len() != b * CTX
             || s.iter().chain(ctx).any(|x| !x.is_finite())
+            || s.chunks_exact(INPUT)
+                .any(|x| x[..SITES * 3].iter().any(|&v| !(0.0..=1.0).contains(&v)))
             || ctx.iter().any(|x| !(-1.0..=1.0).contains(x))
         {
-            return Err("invalid V3 sensory/context".into());
+            return Err("invalid V4 sensory/context".into());
         }
         let mut d = vec![0.0; b * N];
+        let mut z = vec![0.0; BODY];
         for q in 0..b {
             for j in 0..RECEPTORS {
                 let mut mix = 0.0;
@@ -272,13 +429,15 @@ impl CnsAdapter {
                         sig(self.ob[self.rt[j]] + self.og[self.rt[j]] * (2.0 * mix - 1.0))
                 }
             }
+            for i in 0..BODY {
+                z[i] = ((s[q * INPUT + SITES * 3 + i] - self.mean[i]) * self.inv_scale[i])
+                    .clamp(-8.0, 8.0)
+            }
             for (j, &row) in self.br.iter().enumerate() {
+                let w = &self.bw[j * BODY..(j + 1) * BODY];
                 let mut u = self.bb[j];
                 for i in 0..BODY {
-                    u += self.bw[j * BODY + i]
-                        * self.bm[j * BODY + i]
-                        * ((s[q * INPUT + SITES * 3 + i] - self.mean[i]) / self.scale[i])
-                            .clamp(-8.0, 8.0)
+                    u += w[i] * z[i]
                 }
                 d[q * N + row] = sig(u)
             }
@@ -293,8 +452,8 @@ impl CnsAdapter {
         Ok(d)
     }
     pub fn outputs_flat(&self, r: &[f32], b: usize) -> Result<(Vec<f32>, Vec<f32>), String> {
-        if r.len() != b * N {
-            return Err("invalid rate shape".into());
+        if r.len() != b * N || r.iter().any(|x| !x.is_finite()) {
+            return Err("invalid V4 rate shape".into());
         }
         let r0 = self.ex(0);
         let mut x = r.to_vec();
@@ -312,32 +471,26 @@ impl CnsAdapter {
         for q in 0..b {
             for o in 0..MOTOR {
                 let mut u = self.mb[o];
+                let w = &self.mw[o * MR..(o + 1) * MR];
                 for j in 0..MR {
-                    u += self.mw[o * MR + j] * self.mm[o * MR + j] * r[q * N + self.mr[j]]
+                    u += w[j]
+                        * (r[q * N + self.mr[j]] - self.motor_reference[j])
+                        * self.motor_inv_scale[j]
                 }
-                let v = sig(u);
-                m[q * MOTOR + o] = if o == 24 || o == 25 { 2.0 * v - 1.0 } else { v }
+                m[q * MOTOR + o] = if o < 84 { u.tanh() } else { sig(u) }
             }
         }
         Ok((m, lat))
     }
-    #[allow(clippy::too_many_arguments)]
     pub fn step_flat(
         &self,
-        crow: &[u32],
-        col: &[u32],
-        w: &[f32],
-        ch: &[u32],
         drive: &[f32],
         st: &CnsState,
         dt: f32,
         b: usize,
     ) -> Result<CnsState, String> {
         let l = b * N;
-        if crow.len() != N + 1
-            || col.len() != w.len()
-            || ch.len() != N
-            || drive.len() != l
+        if drive.len() != l
             || st.rate.len() != l
             || st.adaptation.len() != l
             || st.support.len() != l
@@ -346,7 +499,7 @@ impl CnsAdapter {
             || dt <= 0.0
             || dt > 0.2
         {
-            return Err("invalid V3 graph/state".into());
+            return Err("invalid V4 state/dt".into());
         }
         let r0 = self.ex(0);
         let g = self.ex(1);
@@ -359,36 +512,36 @@ impl CnsAdapter {
         let mut m = st.modulation.clone();
         let mut nr = vec![0.0; l];
         let mut nm = vec![0.0; l * 3];
+        let delta = dt * 0.5;
         for _ in 0..2 {
             for q in 0..b {
                 for row in 0..N {
                     let ix = q * N + row;
                     let mut fast = 0.0;
                     let mut mi = [0.0; 3];
-                    for e in crow[row] as usize..crow[row + 1] as usize {
-                        let src = col[e] as usize;
+                    for e in self.crow[row]..self.crow[row + 1] {
+                        let src = self.col[e];
                         let x = r[q * N + src] - r0[src];
-                        match ch[src] {
-                            1 => fast += w[e] * x * st.release[q * N + src],
-                            2..=4 => mi[(ch[src] - 2) as usize] += w[e] * x,
+                        match self.channel[src] {
+                            1 => fast += self.weight[e] * x * st.release[q * N + src],
+                            2..=4 => mi[(self.channel[src] - 2) as usize] += self.weight[e] * x,
                             _ => {}
                         }
                     }
                     let h = r0[row].min(1.0 - r0[row]);
                     let ty = self.nt[row];
-                    let (mut mg, mut ma): (f32, f32) = (0.0, 0.0);
+                    let (mut mg, mut ma) = (0.0, 0.0);
                     for z in 0..3 {
                         let v = m[ix * 3 + z]
-                            + (1.0 - (-dt / (2.0 * self.mt[z])).exp()) * (mi[z] - m[ix * 3 + z]);
+                            + (1.0 - (-delta / self.mt[z]).exp()) * (mi[z] - m[ix * 3 + z]);
                         nm[ix * 3 + z] = v;
                         mg += 0.5 * self.mg[ty * 3 + z].tanh() * v / h;
                         ma += 0.5 * self.ma[ty * 3 + z].tanh() * v / h
                     }
-                    let u = drive[ix] - self.neutral[ix % N]
-                        + g[row] * (0.5 * mg.tanh()).exp() * fast
+                    let u = drive[ix] - self.neutral[row] + g[row] * (0.5 * mg.tanh()).exp() * fast
                         - k[row] * (1.0 + 0.5 * ma.tanh()) * st.adaptation[ix];
                     let target = r0[row] + st.support[ix] * h * (u / h).tanh();
-                    nr[ix] = r[ix] + (1.0 - (-dt / (2.0 * tau[row])).exp()) * (target - r[ix])
+                    nr[ix] = r[ix] + (1.0 - (-delta / tau[row]).exp()) * (target - r[ix])
                 }
             }
             std::mem::swap(&mut r, &mut nr);
@@ -423,3 +576,19 @@ impl CnsAdapter {
 }
 #[cfg(feature = "python")]
 mod python;
+
+#[cfg(test)]
+mod tests {
+    use super::half;
+
+    #[test]
+    fn canonical_binary16_decodes_exact_special_and_normal_values() {
+        assert_eq!(half(0x0000).to_bits(), 0.0f32.to_bits());
+        assert_eq!(half(0x8000).to_bits(), (-0.0f32).to_bits());
+        assert_eq!(half(0x3c00), 1.0);
+        assert_eq!(half(0xc000), -2.0);
+        assert_eq!(half(0x0001), 2f32.powi(-24));
+        assert!(half(0x7c00).is_infinite());
+        assert!(half(0x7e00).is_nan());
+    }
+}

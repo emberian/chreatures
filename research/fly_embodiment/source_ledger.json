@@ -1,0 +1,105 @@
+{
+  "schema": "chreatures.fly-embodiment-source-ledger.v1",
+  "generated_for": "fly-body-neural-atlas-v1",
+  "sources": [
+    {
+      "id": "malecns-v1-neuron-metadata",
+      "title": "A connectome of the male Drosophila central nervous system",
+      "kind": "author data and primary paper",
+      "url": "https://male-cns.janelia.org/download/",
+      "paper_doi": "10.1038/s41586-026-10735-w",
+      "author_repository": "https://github.com/flyconnectome/2025malecns",
+      "repository_revision": "67767d2233657983993ff6c2be48e836a935863c",
+      "local_derived_neurons_sha256": "0e6706229b93cbdcab48905504bd3b8f6075534488c65ad2c8f844668036ea9a",
+      "canonical_graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+      "anatomical_cns_v3_r2_npz_sha256": "33b51f574db7e14cefbb8dd3247b39e3d17c1169e4d2504ad40cd5b3d95fe386",
+      "graph_weight_f32_array_sha256": "0a2971ac78f456a271c31327292ee545b32047e91c11698e4890bb586c9384cf",
+      "graph_channel_u32_array_sha256": "b2a82fc61a4fe078f37d273be11e3e7d611cb24f4a2b8662532d28ddf849d32f",
+      "claims_used": [
+        "Canonical identities and row order for 815 motor neurons.",
+        "Motor body-family labels ad, am, fl, hl, hm, ml, nm, pm, rm, wm and xm.",
+        "Peripheral sensory class, subclass, entry nerve and side annotations.",
+        "The paper reports 805 motor neurons assigned to broad body categories and distinguishes neck, retina, antenna, proboscis, ingestion and digestion families."
+      ],
+      "implementation_effect": "Defines all motor and nonvisual afferent rows. Broad family labels permit body-part masks but do not establish muscle-to-servo direction."
+    },
+    {
+      "id": "manc-motor-atlas",
+      "title": "Organization of circuits linking descending input to motor output in the Drosophila Male Adult Nerve Cord connectome",
+      "kind": "primary paper and author supplement",
+      "url": "https://elifesciences.org/articles/96084",
+      "paper_doi": "10.7554/eLife.96084.3",
+      "supplement_url": "https://cdn.elifesciences.org/articles/96084/elife-96084-supp3-v1.csv",
+      "supplement_sha256": "c46e3cec1a5114b8d981d5f0383012c8e7fcdebd6c4e3eaffe4ac3ba1def2e94",
+      "claims_used": [
+        "Supplement 3 publishes MN body IDs, types, systematic types, exit nerves, targets, match certainty and literature/line evidence.",
+        "T1 leg identities were matched to FANC and light microscopy; 198 T1 identities were transferred to T2/T3 by serial homology.",
+        "Wing anatomy includes steering, DLM/DVM power, pleurosternal, tergopleural and TTM families; haltere anatomy includes one power and seven steering muscles.",
+        "Many abdominal and neck targets remain unresolved."
+      ],
+      "implementation_effect": "Supports 156 side-resolved diagnostic cohorts covering 400 MaleCNS rows. These labels remain inter-animal inferred and never become arbitrary joint directions."
+    },
+    {
+      "id": "fanc-connectome",
+      "title": "A complete connectome of the Drosophila ventral nerve cord",
+      "kind": "primary paper author repository",
+      "url": "https://github.com/EllenLesser/Azevedo_Lesser_Phelps_Mark_2023",
+      "paper_doi": "10.1038/s41586-024-07389-x",
+      "repository_revision": "ff363505fd1236e63ee77966239e99280fe1ba12",
+      "claims_used": [
+        "FANC is the female VNC reference used by MANC authors for cross-animal motor-neuron matching."
+      ],
+      "implementation_effect": "Makes the fine target layer an inter-animal inference rather than a direct MaleCNS measurement."
+    },
+    {
+      "id": "manc-fanc-comparative",
+      "title": "Neuronal wiring diagram of an adult brain-neck-body connection",
+      "kind": "primary paper author repository",
+      "url": "https://github.com/schlegelp/2023neckconnective",
+      "repository_revision": "94637d7d82920234ef0bfdbf383c000e74a8b45a",
+      "supplemental_file13_sha256": "2d6598b55e690dbe5433f18311b8c74b1707d4044b22670fc41ce2fd87c3f9a7",
+      "claims_used": [
+        "MANC/FANC homolog tables are cross-animal identity evidence, not measured neuromuscular mechanics."
+      ],
+      "implementation_effect": "Prevents homolog labels from being promoted to measured muscle-to-axis mappings."
+    },
+    {
+      "id": "feco-proprioception",
+      "title": "Connectome-constrained networks predict neural activity across the fly leg proprioceptive system",
+      "kind": "primary author implementation",
+      "url": "https://github.com/sagrawal/Lee_2024",
+      "repository_revision": "4328b1d5549749f1014c4d73cccc0c5241d98ae4",
+      "readme_sha256": "712061f484713ed692df1ea4a4a8941e52e24b99a6b7fc3238198791560db7e8",
+      "claims_used": [
+        "Femoral chordotonal claw neurons encode joint position, hook neurons encode movement direction, and club neurons respond to vibration."
+      ],
+      "implementation_effect": "Keeps joint position and velocity ports modality-aware. Individual FANC neuron identities are not copied onto MaleCNS rows."
+    },
+    {
+      "id": "flygym-neuromechfly-v2",
+      "title": "FlyGym and NeuroMechFly v2",
+      "kind": "author body implementation",
+      "url": "https://github.com/NeLy-EPFL/flygym",
+      "version": "2.1.0",
+      "repository_revision": "ca65a510c2afe6ac61c51df4f274c8d190c2f95f",
+      "license": "Apache-2.0",
+      "claims_used": [
+        "Micro-CT-derived articulated fly morphology with 69 author body segments and 126 biological joint axes in yaw-pitch-roll order.",
+        "Author low-level active walking subset contains 42 leg axes; the model supplies position servos and synthetic adhesion rather than anatomical muscles."
+      ],
+      "implementation_effect": "Defines exact joint and M90 actuator identity/order. The selected nonleg servos, gains and adhesion controls remain engineered."
+    },
+    {
+      "id": "flymimic-left-front-leg",
+      "title": "FlyMimic",
+      "kind": "author implementation",
+      "url": "https://github.com/gizemozd/FlyMimic",
+      "repository_revision": "9ea1131626cd76f7203b74076ef8f0e9cab30bef",
+      "model_xml_sha256": "d67ff06d0c684599f00d5f33f8f8ac8ced01ab994c41341b551f8148b6d8aa0b",
+      "claims_used": [
+        "The released muscle/tendon model provides anatomical actuators for the left front leg only; examples drive other legs with direct torques."
+      ],
+      "implementation_effect": "Useful anatomical evidence for a future front-leg muscle layer, but insufficient to invent a whole-body MaleCNS muscle atlas."
+    }
+  ]
+}

@@ -1,11 +1,11 @@
-// AGPL-3.0-or-later -- V3 adapters; raw values terminate in drive.
+// AGPL-3.0-or-later -- V4 adapters; raw values terminate in drive.
 const CAP: u32 = 4u;
 const OS: u32 = 1771u;
 const OV: u32 = 5313u;
 const RT: u32 = 10u;
 const R: u32 = 4107u;
-const BC: u32 = 110u;
-const BT: u32 = 11233u;
+const BC: u32 = 807u;
+const BT: u32 = 11798u;
 const CC: u32 = 12u;
 const CT: u32 = 1314u;
 

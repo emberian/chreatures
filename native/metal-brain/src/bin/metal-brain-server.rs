@@ -21,29 +21,29 @@ use std::{
 };
 
 const SHADER: &str = include_str!("../brain.metal");
-const ARTIFACT_MAGIC: &[u8; 8] = b"CHCNS3\0\0";
-const SNAPSHOT_MAGIC: &[u8; 9] = b"CNSSTATE3";
-const FORMAT: &str = "chreatures-cns-service-v3";
-const SNAPSHOT_FORMAT: &str = "chreatures-cns-state-v3";
+const ARTIFACT_MAGIC: &[u8; 8] = b"CHCNS4\0\0";
+const SNAPSHOT_MAGIC: &[u8; 9] = b"CNSSTATE4";
+const FORMAT: &str = "chreatures-cns-service-v4";
+const SNAPSHOT_FORMAT: &str = "chreatures-cns-state-v4";
 const N: usize = 165_122;
 const E: usize = 25_563_197;
 const SITES: usize = 1_771;
 const RECEPTORS: usize = 4_107;
 const RECEPTOR_TYPES: usize = 10;
 const SITE_EDGES: usize = 4_669;
-const BODY_TARGETS: usize = 11_233;
+const BODY_TARGETS: usize = 11_798;
 const NEURON_TYPES: usize = 11_752;
-const BODY_INPUTS: usize = 110;
+const BODY_INPUTS: usize = 807;
 const CONTEXT_INPUTS: usize = 12;
 const CONTEXT_TARGETS: usize = 1_314;
-const MOTOR_OUTPUTS: usize = 34;
+const MOTOR_OUTPUTS: usize = 92;
 const MOTOR_TARGETS: usize = 815;
-const INPUTS: usize = 5_423;
+const INPUTS: usize = 6_120;
 const LATENT: usize = 512;
 const READOUT_RANK: usize = 64;
 const MAX_CAPACITY: usize = 32;
 const MODULATOR_FAMILIES: usize = 3;
-const PARAMETER_ORDER: [&str; 24] = [
+const PARAMETER_ORDER: [&str; 26] = [
     "optic.spectral_logits",
     "optic.gain_raw",
     "optic.bias",
@@ -66,13 +66,15 @@ const PARAMETER_ORDER: [&str; 24] = [
     "readout.projection.weight",
     "readout.output.weight",
     "readout.output.bias",
-    "motor.weight_raw",
-    "motor.bias",
+    "motor.reference_rate",
+    "motor.rate_scale",
+    "motor.weight",
+    "motor.intercept",
 ];
-const ARRAY_NAMES: [&str; 40] = [
+const ARRAY_NAMES: [&str; 42] = [
     "graph.crow",
     "graph.col",
-    "graph.weight",
+    "graph.weight_bits",
     "graph.channel",
     "atlas.receptor_rows",
     "atlas.receptor_type",
@@ -108,8 +110,10 @@ const ARRAY_NAMES: [&str; 40] = [
     "readout.projection.weight",
     "readout.output.weight",
     "readout.output.bias",
-    "motor.weight_raw",
-    "motor.bias",
+    "motor.reference_rate",
+    "motor.rate_scale",
+    "motor.weight",
+    "motor.intercept",
 ];
 
 #[repr(C)]
@@ -171,6 +175,12 @@ struct ArtifactMetadata {
     graph_sha256: String,
     atlas_sha256: String,
     anatomy_sha256: String,
+    morphology_sha256: String,
+    sensory_schema_sha256: String,
+    actuator_schema_sha256: String,
+    motor_calibration_sha256: String,
+    graph_source_weight_sha256: String,
+    graph_quantization: Value,
     readout_mask_sha256: String,
     adapter_sha256: String,
     dimensions: Dimensions,
@@ -202,10 +212,24 @@ impl ArtifactMetadata {
             &self.graph_sha256,
             &self.atlas_sha256,
             &self.anatomy_sha256,
+            &self.morphology_sha256,
+            &self.sensory_schema_sha256,
+            &self.actuator_schema_sha256,
+            &self.motor_calibration_sha256,
+            &self.graph_source_weight_sha256,
             &self.readout_mask_sha256,
             &self.adapter_sha256,
         ] {
             require_hash(hash)?;
+        }
+        if self.graph_quantization
+            != json!({
+                "storage": "ieee-754-binary16-bits-little-endian",
+                "rounding": "round-to-nearest-ties-to-even",
+                "compute": "decode-once-to-float32",
+            })
+        {
+            return Err("artifact graph_quantization differs from the V4 contract".into());
         }
         let expected: BTreeSet<_> = ARRAY_NAMES.iter().map(|x| x.to_string()).collect();
         if self.array_sha256.keys().cloned().collect::<BTreeSet<_>>() != expected {
@@ -223,6 +247,12 @@ impl ArtifactMetadata {
             "graph_sha256",
             "atlas_sha256",
             "anatomy_sha256",
+            "morphology_sha256",
+            "sensory_schema_sha256",
+            "actuator_schema_sha256",
+            "motor_calibration_sha256",
+            "graph_source_weight_sha256",
+            "graph_quantization",
             "readout_mask_sha256",
             "dimensions",
             "parameter_order",
@@ -363,6 +393,23 @@ fn softplus(x: f32) -> f32 {
     }
 }
 
+fn f16_bits_to_f32(bits: u16) -> f32 {
+    let sign = ((bits as u32) & 0x8000) << 16;
+    let exponent = ((bits as u32) >> 10) & 0x1f;
+    let fraction = (bits as u32) & 0x03ff;
+    let decoded = match exponent {
+        0 if fraction == 0 => sign,
+        0 => {
+            let shift = fraction.leading_zeros() - 21;
+            let normalized = fraction << shift;
+            sign | ((127 - 15 - shift + 1) << 23) | ((normalized & 0x03ff) << 13)
+        }
+        31 => sign | 0x7f80_0000 | (fraction << 13),
+        _ => sign | ((exponent + 127 - 15) << 23) | (fraction << 13),
+    };
+    f32::from_bits(decoded)
+}
+
 fn all_finite(name: &str, values: &[f32]) -> Result<(), String> {
     if values.iter().all(|x| x.is_finite()) {
         Ok(())
@@ -432,6 +479,12 @@ struct SnapshotHeader {
     graph_sha256: String,
     atlas_sha256: String,
     anatomy_sha256: String,
+    morphology_sha256: String,
+    sensory_schema_sha256: String,
+    actuator_schema_sha256: String,
+    motor_calibration_sha256: String,
+    graph_source_weight_sha256: String,
+    graph_quantization: Value,
     readout_mask_sha256: String,
     adapter_sha256: String,
     metadata: String,
@@ -500,7 +553,9 @@ struct Engine {
     readout_output_weight: Buffer,
     readout_output_bias: Buffer,
     motor_weight: Buffer,
-    motor_bias: Buffer,
+    motor_reference_rate: Buffer,
+    motor_rate_scale: Buffer,
+    motor_intercept: Buffer,
     sensory: Buffer,
     context: Buffer,
     rate: [Buffer; 2],
@@ -540,7 +595,7 @@ impl Engine {
         let mut magic = [0u8; 8];
         reader.read_exact(&mut magic)?;
         if &magic != ARTIFACT_MAGIC {
-            return Err("artifact header differs; only CHCNS3 is accepted".into());
+            return Err("artifact header differs; only CHCNS4 is accepted".into());
         }
         let mut length = [0u8; 4];
         reader.read_exact(&mut length)?;
@@ -558,7 +613,11 @@ impl Engine {
 
         let graph_crow = reader.array::<u32>(&metadata, "graph.crow", N + 1)?;
         let graph_col = reader.array::<u32>(&metadata, "graph.col", E)?;
-        let graph_weight = reader.array::<f32>(&metadata, "graph.weight", E)?;
+        let graph_weight_bits = reader.array::<u16>(&metadata, "graph.weight_bits", E)?;
+        let graph_weight: Vec<f32> = graph_weight_bits
+            .iter()
+            .map(|&bits| f16_bits_to_f32(bits))
+            .collect();
         let graph_channel = reader.array::<u32>(&metadata, "graph.channel", N)?;
         let receptor_rows = reader.array::<u32>(&metadata, "atlas.receptor_rows", RECEPTORS)?;
         let receptor_type = reader.array::<u32>(&metadata, "atlas.receptor_type", RECEPTORS)?;
@@ -613,9 +672,12 @@ impl Engine {
         let readout_output =
             reader.array::<f32>(&metadata, "readout.output.weight", LATENT * READOUT_RANK)?;
         let readout_output_bias = reader.array::<f32>(&metadata, "readout.output.bias", LATENT)?;
+        let motor_reference_rate =
+            reader.array::<f32>(&metadata, "motor.reference_rate", MOTOR_TARGETS)?;
+        let motor_rate_scale = reader.array::<f32>(&metadata, "motor.rate_scale", MOTOR_TARGETS)?;
         let motor_weight =
-            reader.array::<f32>(&metadata, "motor.weight_raw", MOTOR_OUTPUTS * MOTOR_TARGETS)?;
-        let motor_bias = reader.array::<f32>(&metadata, "motor.bias", MOTOR_OUTPUTS)?;
+            reader.array::<f32>(&metadata, "motor.weight", MOTOR_OUTPUTS * MOTOR_TARGETS)?;
+        let motor_intercept = reader.array::<f32>(&metadata, "motor.intercept", MOTOR_OUTPUTS)?;
         let artifact_sha256 = reader.finish()?;
 
         if graph_crow.first() != Some(&0)
@@ -623,6 +685,12 @@ impl Engine {
             || graph_crow.windows(2).any(|x| x[0] > x[1])
         {
             return Err("invalid graph.crow".into());
+        }
+        if graph_weight_bits
+            .iter()
+            .any(|&bits| bits & 0x7c00 == 0x7c00)
+        {
+            return Err("graph.weight_bits must decode to finite IEEE binary16".into());
         }
         if receptor_ptr.first() != Some(&0)
             || receptor_ptr.last() != Some(&(SITE_EDGES as u32))
@@ -649,11 +717,31 @@ impl Engine {
                 return Err(format!("out-of-range CNS index: {name}"));
             }
         }
+        if graph_col
+            .iter()
+            .zip(&graph_weight_bits)
+            .any(|(&source, &bits)| graph_channel[source as usize] == 0 && bits & 0x7fff != 0)
+        {
+            return Err("unknown-transmitter graph edges must remain zero".into());
+        }
         let mut injected = BTreeSet::new();
+        for (name, rows) in [
+            ("atlas.receptor_rows", receptor_rows.as_slice()),
+            ("atlas.body_rows", body_rows.as_slice()),
+            ("atlas.context_rows", context_rows.as_slice()),
+            ("atlas.motor_rows", motor_rows.as_slice()),
+        ] {
+            if rows.windows(2).any(|x| x[0] >= x[1]) {
+                return Err(format!("{name} must be sorted and unique"));
+            }
+        }
         for &row in receptor_rows.iter().chain(&body_rows).chain(&context_rows) {
             if !injected.insert(row) {
                 return Err("injected rows overlap".into());
             }
+        }
+        if motor_rows.iter().any(|row| injected.contains(row)) {
+            return Err("motor rows overlap injected rows".into());
         }
         if site_weight.iter().any(|x| !x.is_finite() || *x <= 0.0) {
             return Err("atlas.site_weight must be finite and positive".into());
@@ -668,7 +756,6 @@ impl Engine {
             }
         }
         for (name, values) in [
-            ("graph.weight", graph_weight.as_slice()),
             ("optic.spectral_logits", spectral_logits.as_slice()),
             ("optic.gain_raw", gain_raw.as_slice()),
             ("optic.bias", optic_bias.as_slice()),
@@ -715,13 +802,18 @@ impl Engine {
             ("readout.projection.weight", readout_projection.as_slice()),
             ("readout.output.weight", readout_output.as_slice()),
             ("readout.output.bias", readout_output_bias.as_slice()),
-            ("motor.weight_raw", motor_weight.as_slice()),
-            ("motor.bias", motor_bias.as_slice()),
+            ("motor.reference_rate", motor_reference_rate.as_slice()),
+            ("motor.rate_scale", motor_rate_scale.as_slice()),
+            ("motor.weight", motor_weight.as_slice()),
+            ("motor.intercept", motor_intercept.as_slice()),
         ] {
             all_finite(name, values)?;
         }
         if body_scale.iter().any(|x| *x <= 0.0) {
             return Err("body.scale must be positive".into());
+        }
+        if motor_rate_scale.iter().any(|x| *x <= 0.0) {
+            return Err("motor.rate_scale must be positive".into());
         }
         if body_mask
             .iter()
@@ -738,15 +830,22 @@ impl Engine {
         if sha256_hex(&readout_mask) != metadata.readout_mask_sha256 {
             return Err("readout_mask_sha256 differs from the enforced afferent mask".into());
         }
-        if neutral_drive.iter().enumerate().any(|(row, &value)| {
-            !(0.0..=1.0).contains(&value) || (readout_mask[row] != 0 && value != 0.0)
-        }) {
-            return Err("afferent.neutral_drive violates the afferent-only [0,1] contract".into());
+        let mut expected_neutral = vec![0.0f32; N];
+        for receptor in 0..RECEPTORS {
+            if receptor_ptr[receptor] != receptor_ptr[receptor + 1] {
+                expected_neutral[receptor_rows[receptor] as usize] =
+                    sigmoid(optic_bias[receptor_type[receptor] as usize]);
+            }
         }
-        if receptor_ptr.windows(2).enumerate().any(|(receptor, span)| {
-            span[0] == span[1] && neutral_drive[receptor_rows[receptor] as usize] != 0.0
-        }) {
-            return Err("unsupported receptors must have zero neutral drive".into());
+        for (afferent, &row) in body_rows.iter().enumerate() {
+            expected_neutral[row as usize] = sigmoid(body_bias[afferent]);
+        }
+        if neutral_drive
+            .iter()
+            .zip(&expected_neutral)
+            .any(|(&actual, &expected)| !actual.is_finite() || (actual - expected).abs() > 2e-7)
+        {
+            return Err("afferent.neutral_drive differs from the V4 afferent baseline".into());
         }
         for projection_row in 0..READOUT_RANK {
             let base = projection_row * N;
@@ -861,7 +960,9 @@ impl Engine {
         let readout_output_weight_buffer = buf(&device, &readout_output);
         let readout_output_bias_buffer = buf(&device, &readout_output_bias);
         let motor_weight_buffer = buf(&device, &motor_weight);
-        let motor_bias_buffer = buf(&device, &motor_bias);
+        let motor_reference_rate_buffer = buf(&device, &motor_reference_rate);
+        let motor_rate_scale_buffer = buf(&device, &motor_rate_scale);
+        let motor_intercept_buffer = buf(&device, &motor_intercept);
         let sensory = zeros(&device, INPUTS * tiles);
         let context = zeros(&device, CONTEXT_INPUTS * tiles);
         let rate = [buf(&device, &initial_rate), buf(&device, &initial_rate)];
@@ -909,7 +1010,9 @@ impl Engine {
             readout_output_weight: readout_output_weight_buffer,
             readout_output_bias: readout_output_bias_buffer,
             motor_weight: motor_weight_buffer,
-            motor_bias: motor_bias_buffer,
+            motor_reference_rate: motor_reference_rate_buffer,
+            motor_rate_scale: motor_rate_scale_buffer,
+            motor_intercept: motor_intercept_buffer,
             sensory,
             context,
             rate,
@@ -927,11 +1030,11 @@ impl Engine {
             poisoned: None,
             k_clear: pipeline("clear_drive")?,
             k_optic: pipeline("project_optic")?,
-            k_body_scatter: pipeline("v3_project_body_masked")?,
-            k_context_scatter: pipeline("v3_project_context_zero_neutral")?,
-            k_rec: pipeline("v3_csr_dynamics")?,
-            k_finalize: pipeline("v3_finalize_private_state")?,
-            k_motor: pipeline("v3_motor34_masked_softplus")?,
+            k_body_scatter: pipeline("v4_project_body_masked")?,
+            k_context_scatter: pipeline("v4_project_context_zero_neutral")?,
+            k_rec: pipeline("v4_csr_dynamics_f16")?,
+            k_finalize: pipeline("v4_finalize_private_state")?,
+            k_motor: pipeline("v4_motor92_centered")?,
             k_gather: pipeline("gather_rates")?,
             k_projection: pipeline("dense_projection")?,
             k_readout_output: pipeline("dense_readout_output")?,
@@ -1006,8 +1109,8 @@ impl Engine {
                 "CNS state is poisoned after a failed GPU tick ({reason}); restore a full coherent snapshot or cold-reset all slots"
             ));
         }
-        if !dt.is_finite() || dt <= 0.0 || dt > 0.2 {
-            return Err("dt must be finite and in (0,0.2]".into());
+        if !dt.is_finite() || (dt - 0.01).abs() > 1e-12 {
+            return Err("CNS V4 requires the fixed 0.01-second control interval".into());
         }
         if mask & !self.valid_mask() != 0 {
             return Err("active_mask exceeds configured capacity".into());
@@ -1018,6 +1121,12 @@ impl Engine {
                 self.capacity
             ));
         }
+        if sensory[..SITES * 3 * self.capacity]
+            .iter()
+            .any(|&x| !(0.0..=1.0).contains(&x))
+        {
+            return Err("optic RGB must be in [0,1]".into());
+        }
         if context.len() != CONTEXT_INPUTS * self.capacity
             || context.iter().any(|x| !x.is_finite() || x.abs() > 1.0)
         {
@@ -1025,6 +1134,9 @@ impl Engine {
                 "context must be finite, signed [-1,1], channel-major [{CONTEXT_INPUTS},{}]",
                 self.capacity
             ));
+        }
+        if context.iter().any(|&x| !(-1.0..=1.0).contains(&x)) {
+            return Err("context must be in [-1,1]".into());
         }
         if selected_indices.len() > 8192 || selected_indices.iter().any(|&x| x as usize >= N) {
             return Err("selected_neuron_indices are invalid".into());
@@ -1242,9 +1354,11 @@ impl Engine {
             &[
                 &self.rate[0],
                 &self.motor_rows,
+                &self.motor_reference_rate,
+                &self.motor_rate_scale,
                 &self.motor_weight,
                 &self.motor_mask,
-                &self.motor_bias,
+                &self.motor_intercept,
                 &self.motor,
             ],
             &p1,
@@ -1392,6 +1506,12 @@ impl Engine {
             "graph_sha256": self.metadata.graph_sha256,
             "atlas_sha256": self.metadata.atlas_sha256,
             "anatomy_sha256": self.metadata.anatomy_sha256,
+            "morphology_sha256": self.metadata.morphology_sha256,
+            "sensory_schema_sha256": self.metadata.sensory_schema_sha256,
+            "actuator_schema_sha256": self.metadata.actuator_schema_sha256,
+            "motor_calibration_sha256": self.metadata.motor_calibration_sha256,
+            "graph_source_weight_sha256": self.metadata.graph_source_weight_sha256,
+            "graph_quantization": self.metadata.graph_quantization,
             "readout_mask_sha256": self.metadata.readout_mask_sha256,
             "adapter_sha256": self.metadata.adapter_sha256,
             "service_artifact_sha256": self.artifact_sha256,
@@ -1410,13 +1530,14 @@ impl Engine {
             "readouts": LATENT,
             "context_inputs": CONTEXT_INPUTS,
             "motor_outputs": MOTOR_OUTPUTS,
-            "kernel": if self.simd_rows { "simd" } else { "row" },
+            "kernel": "v4-row-f32-decoded",
+            "requested_kernel": if self.simd_rows { "simd" } else { "row" },
             "capacity": self.capacity,
             "storage_tiles": self.tiles,
-            "dynamics": "typed-release-modulation-v3",
+            "dynamics": "typed-release-modulation-v4-two-0.005s-substeps",
             "readout_rank": READOUT_RANK,
             "snapshot_format": SNAPSHOT_FORMAT,
-            "sensory_order": "channel-major optic_site_rgb_then_body110",
+            "sensory_order": "channel-major optic_site_rgb_then_body807",
             "training_status": self.metadata.training_status,
             "provenance": self.metadata.provenance,
             "cns_adapter": self.identity(),
@@ -1433,6 +1554,12 @@ impl Engine {
             graph_sha256: self.metadata.graph_sha256.clone(),
             atlas_sha256: self.metadata.atlas_sha256.clone(),
             anatomy_sha256: self.metadata.anatomy_sha256.clone(),
+            morphology_sha256: self.metadata.morphology_sha256.clone(),
+            sensory_schema_sha256: self.metadata.sensory_schema_sha256.clone(),
+            actuator_schema_sha256: self.metadata.actuator_schema_sha256.clone(),
+            motor_calibration_sha256: self.metadata.motor_calibration_sha256.clone(),
+            graph_source_weight_sha256: self.metadata.graph_source_weight_sha256.clone(),
+            graph_quantization: self.metadata.graph_quantization.clone(),
             readout_mask_sha256: self.metadata.readout_mask_sha256.clone(),
             adapter_sha256: self.metadata.adapter_sha256.clone(),
             metadata,
@@ -1448,6 +1575,12 @@ impl Engine {
             || header.graph_sha256 != self.metadata.graph_sha256
             || header.atlas_sha256 != self.metadata.atlas_sha256
             || header.anatomy_sha256 != self.metadata.anatomy_sha256
+            || header.morphology_sha256 != self.metadata.morphology_sha256
+            || header.sensory_schema_sha256 != self.metadata.sensory_schema_sha256
+            || header.actuator_schema_sha256 != self.metadata.actuator_schema_sha256
+            || header.motor_calibration_sha256 != self.metadata.motor_calibration_sha256
+            || header.graph_source_weight_sha256 != self.metadata.graph_source_weight_sha256
+            || header.graph_quantization != self.metadata.graph_quantization
             || header.readout_mask_sha256 != self.metadata.readout_mask_sha256
             || header.adapter_sha256 != self.metadata.adapter_sha256
         {
@@ -1516,7 +1649,7 @@ impl Engine {
         file.read_exact(&mut magic)
             .map_err(|e| format!("read snapshot header: {e}"))?;
         if &magic != SNAPSHOT_MAGIC {
-            return Err("snapshot header differs; only CNSSTATE3 is accepted".into());
+            return Err("snapshot header differs; only CNSSTATE4 is accepted".into());
         }
         let mut length = [0u8; 8];
         file.read_exact(&mut length)

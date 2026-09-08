@@ -9,7 +9,8 @@ pub(crate) const CONTEXT: usize = 128;
 pub(crate) const OUTCOMES: usize = 1;
 pub(crate) const MAX_HORIZON: usize = 8;
 pub(crate) const SLOTS: usize = 32;
-const FORMAT: &str = "chreatures-private-cns-context-suffix-v1";
+const FORMAT: &str = "chreatures-private-cns-context-suffix-v2";
+const CONSEQUENCE_CONFIDENCE: f32 = 0.5;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum CancellationReason {
@@ -29,6 +30,9 @@ pub(crate) struct ActiveSuffix {
     pub support: u32,
     pub recall_score: f32,
     pub empirical_utility: f32,
+    pub consequence_uncertainty: f32,
+    pub consequence_count: u32,
+    pub endpoint_context: [f32; CONTEXT],
     pub actions: [f32; MAX_HORIZON * ACTIONS],
 }
 
@@ -40,6 +44,9 @@ pub(crate) struct RecalledSuffix {
     pub phase: usize,
     pub recall_score: f32,
     pub empirical_utility: f32,
+    pub consequence_uncertainty: f32,
+    pub consequence_count: u32,
+    pub endpoint_context: [f32; CONTEXT],
     pub support: u32,
     pub actions: [f32; MAX_HORIZON * ACTIONS],
 }
@@ -55,6 +62,9 @@ pub(crate) struct ContextSuffixMemory {
     context: Vec<f32>,
     actions: Vec<f32>,
     outcomes: Vec<f32>,
+    outcome_m2: Vec<f32>,
+    outcome_count: Vec<u32>,
+    endpoint_context: Vec<f32>,
     recorded_tick: Vec<u64>,
     support: Vec<u32>,
     proposals: Vec<u32>,
@@ -62,6 +72,7 @@ pub(crate) struct ContextSuffixMemory {
     capture_context: Vec<f32>,
     capture_actions: Vec<f32>,
     capture_outcomes: Vec<f32>,
+    capture_next_context: Vec<f32>,
     capture_ticks: Vec<u64>,
     capture_cursor: Vec<usize>,
     capture_count: Vec<usize>,
@@ -78,7 +89,10 @@ pub(crate) struct ContextSuffixMemory {
     active_support: Vec<u32>,
     active_recall_score: Vec<f32>,
     active_empirical_utility: Vec<f32>,
+    active_consequence_uncertainty: Vec<f32>,
+    active_consequence_count: Vec<u32>,
     active_actions: Vec<f32>,
+    active_endpoint_context: Vec<f32>,
     completed_total: Vec<u64>,
     interrupted_total: Vec<u64>,
     policy_cancelled_total: Vec<u64>,
@@ -123,6 +137,9 @@ impl ContextSuffixMemory {
             context: vec![0.0; batch * SLOTS * MAX_HORIZON * CONTEXT],
             actions: vec![0.0; batch * SLOTS * MAX_HORIZON * ACTIONS],
             outcomes: vec![0.0; batch * SLOTS * MAX_HORIZON * OUTCOMES],
+            outcome_m2: vec![0.0; batch * SLOTS * MAX_HORIZON * OUTCOMES],
+            outcome_count: vec![0; batch * SLOTS * MAX_HORIZON * OUTCOMES],
+            endpoint_context: vec![0.0; batch * SLOTS * CONTEXT],
             recorded_tick: vec![0; batch * SLOTS],
             support: vec![0; batch * SLOTS],
             proposals: vec![0; batch * SLOTS],
@@ -130,6 +147,7 @@ impl ContextSuffixMemory {
             capture_context: vec![0.0; batch * MAX_HORIZON * CONTEXT],
             capture_actions: vec![0.0; batch * MAX_HORIZON * ACTIONS],
             capture_outcomes: vec![0.0; batch * MAX_HORIZON * OUTCOMES],
+            capture_next_context: vec![0.0; batch * MAX_HORIZON * CONTEXT],
             capture_ticks: vec![0; batch * MAX_HORIZON],
             capture_cursor: vec![0; batch],
             capture_count: vec![0; batch],
@@ -146,7 +164,10 @@ impl ContextSuffixMemory {
             active_support: vec![0; batch],
             active_recall_score: vec![0.0; batch],
             active_empirical_utility: vec![0.0; batch],
+            active_consequence_uncertainty: vec![0.0; batch],
+            active_consequence_count: vec![0; batch],
             active_actions: vec![0.0; batch * MAX_HORIZON * ACTIONS],
+            active_endpoint_context: vec![0.0; batch * CONTEXT],
             completed_total: vec![0; batch],
             interrupted_total: vec![0; batch],
             policy_cancelled_total: vec![0; batch],
@@ -174,6 +195,9 @@ impl ContextSuffixMemory {
         grow!(context, SLOTS * MAX_HORIZON * CONTEXT, 0.0);
         grow!(actions, SLOTS * MAX_HORIZON * ACTIONS, 0.0);
         grow!(outcomes, SLOTS * MAX_HORIZON * OUTCOMES, 0.0);
+        grow!(outcome_m2, SLOTS * MAX_HORIZON * OUTCOMES, 0.0);
+        grow!(outcome_count, SLOTS * MAX_HORIZON * OUTCOMES, 0);
+        grow!(endpoint_context, SLOTS * CONTEXT, 0.0);
         grow!(recorded_tick, SLOTS, 0);
         grow!(support, SLOTS, 0);
         grow!(proposals, SLOTS, 0);
@@ -181,6 +205,7 @@ impl ContextSuffixMemory {
         grow!(capture_context, MAX_HORIZON * CONTEXT, 0.0);
         grow!(capture_actions, MAX_HORIZON * ACTIONS, 0.0);
         grow!(capture_outcomes, MAX_HORIZON * OUTCOMES, 0.0);
+        grow!(capture_next_context, MAX_HORIZON * CONTEXT, 0.0);
         grow!(capture_ticks, MAX_HORIZON, 0);
         self.capture_cursor.resize(new_batch, 0);
         self.capture_count.resize(new_batch, 0);
@@ -198,8 +223,12 @@ impl ContextSuffixMemory {
         self.active_support.resize(new_batch, 0);
         self.active_recall_score.resize(new_batch, 0.0);
         self.active_empirical_utility.resize(new_batch, 0.0);
+        self.active_consequence_uncertainty.resize(new_batch, 0.0);
+        self.active_consequence_count.resize(new_batch, 0);
         self.active_actions
             .resize(new_batch * MAX_HORIZON * ACTIONS, 0.0);
+        self.active_endpoint_context
+            .resize(new_batch * CONTEXT, 0.0);
         self.completed_total.resize(new_batch, 0);
         self.interrupted_total.resize(new_batch, 0);
         self.policy_cancelled_total.resize(new_batch, 0);
@@ -237,11 +266,20 @@ impl ContextSuffixMemory {
         self.outcomes
             [row * SLOTS * MAX_HORIZON * OUTCOMES..(row + 1) * SLOTS * MAX_HORIZON * OUTCOMES]
             .fill(0.0);
+        self.outcome_m2
+            [row * SLOTS * MAX_HORIZON * OUTCOMES..(row + 1) * SLOTS * MAX_HORIZON * OUTCOMES]
+            .fill(0.0);
+        self.outcome_count
+            [row * SLOTS * MAX_HORIZON * OUTCOMES..(row + 1) * SLOTS * MAX_HORIZON * OUTCOMES]
+            .fill(0);
+        self.endpoint_context[row * SLOTS * CONTEXT..(row + 1) * SLOTS * CONTEXT].fill(0.0);
         self.capture_context[row * MAX_HORIZON * CONTEXT..(row + 1) * MAX_HORIZON * CONTEXT]
             .fill(0.0);
         self.capture_actions[row * MAX_HORIZON * ACTIONS..(row + 1) * MAX_HORIZON * ACTIONS]
             .fill(0.0);
         self.capture_outcomes[row * MAX_HORIZON * OUTCOMES..(row + 1) * MAX_HORIZON * OUTCOMES]
+            .fill(0.0);
+        self.capture_next_context[row * MAX_HORIZON * CONTEXT..(row + 1) * MAX_HORIZON * CONTEXT]
             .fill(0.0);
         self.capture_ticks[row * MAX_HORIZON..(row + 1) * MAX_HORIZON].fill(0);
         self.capture_cursor[row] = 0;
@@ -272,6 +310,8 @@ impl ContextSuffixMemory {
             .fill(0.0);
         self.capture_outcomes[row * MAX_HORIZON * OUTCOMES..(row + 1) * MAX_HORIZON * OUTCOMES]
             .fill(0.0);
+        self.capture_next_context[row * MAX_HORIZON * CONTEXT..(row + 1) * MAX_HORIZON * CONTEXT]
+            .fill(0.0);
         self.capture_ticks[row * MAX_HORIZON..(row + 1) * MAX_HORIZON].fill(0);
         self.capture_cursor[row] = 0;
         self.capture_count[row] = 0;
@@ -285,13 +325,19 @@ impl ContextSuffixMemory {
         tick: u64,
         context: &[f32],
         action: &[f32],
+        achieved_context: &[f32],
         outcome: &[f32],
     ) -> Result<(), String> {
         if row >= self.batch
             || context.len() != CONTEXT
             || !context_current_is_canonical(action)
+            || achieved_context.len() != CONTEXT
             || outcome.len() != OUTCOMES
-            || context.iter().chain(outcome).any(|x| !x.is_finite())
+            || context
+                .iter()
+                .chain(achieved_context)
+                .chain(outcome)
+                .any(|x| !x.is_finite())
         {
             return Err("context suffix delivery differs".into());
         }
@@ -315,6 +361,9 @@ impl ContextSuffixMemory {
         self.capture_outcomes
             [(row * MAX_HORIZON + cursor) * OUTCOMES..(row * MAX_HORIZON + cursor + 1) * OUTCOMES]
             .copy_from_slice(outcome);
+        self.capture_next_context
+            [(row * MAX_HORIZON + cursor) * CONTEXT..(row * MAX_HORIZON + cursor + 1) * CONTEXT]
+            .copy_from_slice(achieved_context);
         self.capture_ticks[row * MAX_HORIZON + cursor] = tick;
         self.capture_cursor[row] = (cursor + 1) % MAX_HORIZON;
         self.capture_count[row] = (self.capture_count[row] + 1).min(MAX_HORIZON);
@@ -347,6 +396,10 @@ impl ContextSuffixMemory {
         self.actions[index * MAX_HORIZON * ACTIONS..(index + 1) * MAX_HORIZON * ACTIONS].fill(0.0);
         self.outcomes[index * MAX_HORIZON * OUTCOMES..(index + 1) * MAX_HORIZON * OUTCOMES]
             .fill(0.0);
+        self.outcome_m2[index * MAX_HORIZON * OUTCOMES..(index + 1) * MAX_HORIZON * OUTCOMES]
+            .fill(0.0);
+        self.outcome_count[index * MAX_HORIZON * OUTCOMES..(index + 1) * MAX_HORIZON * OUTCOMES]
+            .fill(0);
         for step in 0..length {
             let source = row * MAX_HORIZON + (first + step) % MAX_HORIZON;
             let destination = index * MAX_HORIZON + step;
@@ -357,28 +410,51 @@ impl ContextSuffixMemory {
             self.outcomes[destination * OUTCOMES..(destination + 1) * OUTCOMES].copy_from_slice(
                 &self.capture_outcomes[source * OUTCOMES..(source + 1) * OUTCOMES],
             );
+            self.outcome_count[destination * OUTCOMES..(destination + 1) * OUTCOMES].fill(1);
         }
+        let endpoint_source = row * MAX_HORIZON + (first + length - 1) % MAX_HORIZON;
+        self.endpoint_context[index * CONTEXT..(index + 1) * CONTEXT].copy_from_slice(
+            &self.capture_next_context[endpoint_source * CONTEXT..(endpoint_source + 1) * CONTEXT],
+        );
         self.recorded_tick[index] = tick;
         self.learned_total[row] = self.learned_total[row].saturating_add(1);
         Ok(())
     }
 
-    fn empirical_utility(&self, index: usize, phase: usize) -> f32 {
-        let mut utility = 0.0;
+    fn empirical_utility(&self, index: usize, phase: usize) -> (f32, f32, u32) {
+        let mut mean = 0.0;
+        let mut variance = 0.0;
+        let mut count = u32::MAX;
         for step in phase..self.length[index] as usize {
             let start = (index * MAX_HORIZON + step) * OUTCOMES;
-            utility += self.outcomes[start];
+            let n = self.outcome_count[start];
+            mean += self.outcomes[start];
+            count = count.min(n);
+            if n > 1 {
+                variance += self.outcome_m2[start] / (n - 1) as f32;
+            }
         }
-        utility.tanh()
+        let count = if count == u32::MAX { 0 } else { count };
+        let uncertainty = if count > 0 {
+            (variance.max(0.0) / count as f32).sqrt()
+        } else {
+            1.0
+        };
+        (
+            (mean - CONSEQUENCE_CONFIDENCE * uncertainty).tanh(),
+            uncertainty,
+            count,
+        )
     }
 
     pub(crate) fn recall(
         &mut self,
         row: usize,
         context: &[f32],
+        goal: &[f32],
         count: usize,
     ) -> Vec<RecalledSuffix> {
-        if row >= self.batch || context.len() != CONTEXT || count == 0 {
+        if row >= self.batch || context.len() != CONTEXT || goal.len() != CONTEXT || count == 0 {
             return vec![];
         }
         let mut ranked = Vec::with_capacity(SLOTS);
@@ -396,7 +472,18 @@ impl ContextSuffixMemory {
                 .sum::<f32>()
                 / CONTEXT as f32)
                 .sqrt();
-            let score = -distance + 0.25 * self.empirical_utility(index, phase);
+            let endpoint = &self.endpoint_context[index * CONTEXT..(index + 1) * CONTEXT];
+            let start_alignment = self.context[start..start + CONTEXT]
+                .iter()
+                .zip(goal)
+                .map(|(a, b)| a * b)
+                .sum::<f32>();
+            let endpoint_alignment = endpoint.iter().zip(goal).map(|(a, b)| a * b).sum::<f32>();
+            let achieved_progress = endpoint_alignment - start_alignment;
+            let (utility, uncertainty, evidence) = self.empirical_utility(index, phase);
+            let reliability = (evidence as f32).ln_1p() / 4.0;
+            let score = -distance + 0.45 * achieved_progress + 0.25 * utility - 0.1 * uncertainty
+                + 0.05 * reliability;
             ranked.push((score, self.recorded_tick[index], slot, phase));
         }
         ranked.sort_by(|a, b| {
@@ -415,18 +502,67 @@ impl ContextSuffixMemory {
                 let start = (index * MAX_HORIZON + phase) * ACTIONS;
                 actions[..length * ACTIONS]
                     .copy_from_slice(&self.actions[start..start + length * ACTIONS]);
+                let (empirical_utility, consequence_uncertainty, consequence_count) =
+                    self.empirical_utility(index, phase);
+                let mut endpoint_context = [0.0; CONTEXT];
+                endpoint_context.copy_from_slice(
+                    &self.endpoint_context[index * CONTEXT..(index + 1) * CONTEXT],
+                );
                 RecalledSuffix {
                     slot,
                     generation: self.generation[index],
                     length,
                     phase,
                     recall_score: score,
-                    empirical_utility: self.empirical_utility(index, phase),
+                    empirical_utility,
+                    consequence_uncertainty,
+                    consequence_count,
+                    endpoint_context,
                     support: self.support[index],
                     actions,
                 }
             })
             .collect()
+    }
+
+    /// Return the achieved endpoint of the most reliable locally reachable
+    /// context sequence. This remains an actually experienced private key.
+    pub(crate) fn reachable_goal(&self, row: usize, context: &[f32]) -> Option<Vec<f32>> {
+        if row >= self.batch || context.len() != CONTEXT {
+            return None;
+        }
+        let mut best: Option<(f32, usize)> = None;
+        for slot in 0..SLOTS {
+            let index = row * SLOTS + slot;
+            if !self.valid[index] || self.length[index] < 4 {
+                continue;
+            }
+            let start = index * MAX_HORIZON * CONTEXT;
+            let distance = (self.context[start..start + CONTEXT]
+                .iter()
+                .zip(context)
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<f32>()
+                / CONTEXT as f32)
+                .sqrt();
+            let endpoint = &self.endpoint_context[index * CONTEXT..(index + 1) * CONTEXT];
+            let novelty = (endpoint
+                .iter()
+                .zip(context)
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<f32>()
+                / CONTEXT as f32)
+                .sqrt();
+            let (utility, uncertainty, evidence) = self.empirical_utility(index, 0);
+            let score = -distance + 0.35 * novelty.min(0.5) + 0.25 * utility - 0.1 * uncertainty
+                + 0.05 * (evidence as f32).ln_1p();
+            if best.is_none_or(|(prior, _)| score > prior) {
+                best = Some((score, index));
+            }
+        }
+        best.map(|(_, index)| {
+            self.endpoint_context[index * CONTEXT..(index + 1) * CONTEXT].to_vec()
+        })
     }
 
     pub(crate) fn cancel_execution(&mut self, row: usize, reason: CancellationReason) {
@@ -468,8 +604,11 @@ impl ContextSuffixMemory {
         self.active_support[row] = 0;
         self.active_recall_score[row] = 0.0;
         self.active_empirical_utility[row] = 0.0;
+        self.active_consequence_uncertainty[row] = 0.0;
+        self.active_consequence_count[row] = 0;
         self.active_actions[row * MAX_HORIZON * ACTIONS..(row + 1) * MAX_HORIZON * ACTIONS]
             .fill(0.0);
+        self.active_endpoint_context[row * CONTEXT..(row + 1) * CONTEXT].fill(0.0);
         self.active_outcomes[row * MAX_HORIZON * OUTCOMES..(row + 1) * MAX_HORIZON * OUTCOMES]
             .fill(0.0);
     }
@@ -493,9 +632,13 @@ impl ContextSuffixMemory {
         self.active_support[row] = suffix.support;
         self.active_recall_score[row] = suffix.recall_score;
         self.active_empirical_utility[row] = suffix.empirical_utility;
+        self.active_consequence_uncertainty[row] = suffix.consequence_uncertainty;
+        self.active_consequence_count[row] = suffix.consequence_count;
         let dst = row * MAX_HORIZON * ACTIONS;
         self.active_actions[dst..dst + suffix.length * ACTIONS]
             .copy_from_slice(&suffix.actions[..suffix.length * ACTIONS]);
+        self.active_endpoint_context[row * CONTEXT..(row + 1) * CONTEXT]
+            .copy_from_slice(&suffix.endpoint_context);
         self.active_pending[row] = true;
         Ok(())
     }
@@ -508,6 +651,9 @@ impl ContextSuffixMemory {
             return None;
         }
         let mut actions = [0.0; MAX_HORIZON * ACTIONS];
+        let mut endpoint_context = [0.0; CONTEXT];
+        endpoint_context
+            .copy_from_slice(&self.active_endpoint_context[row * CONTEXT..(row + 1) * CONTEXT]);
         let remaining = self.active_length[row] as usize - self.active_phase[row];
         let src = (row * MAX_HORIZON + self.active_phase[row]) * ACTIONS;
         actions[..remaining * ACTIONS]
@@ -520,6 +666,9 @@ impl ContextSuffixMemory {
             support: self.active_support[row],
             recall_score: self.active_recall_score[row],
             empirical_utility: self.active_empirical_utility[row],
+            consequence_uncertainty: self.active_consequence_uncertainty[row],
+            consequence_count: self.active_consequence_count[row],
+            endpoint_context,
             actions,
         })
     }
@@ -553,6 +702,24 @@ impl ContextSuffixMemory {
         }
         let received = (row * MAX_HORIZON + phase) * OUTCOMES;
         self.active_outcomes[received..received + OUTCOMES].copy_from_slice(outcome);
+        let source_index = usize::try_from(active.source_slot)
+            .ok()
+            .map(|slot| row * SLOTS + slot)
+            .filter(|index| {
+                self.valid[*index] && self.generation[*index] == active.source_generation
+            });
+        if let Some(index) = source_index {
+            for component in 0..OUTCOMES {
+                let destination = (index * MAX_HORIZON + phase) * OUTCOMES + component;
+                let prior_count = self.outcome_count[destination];
+                let count = prior_count.saturating_add(1);
+                let delta = outcome[component] - self.outcomes[destination];
+                self.outcomes[destination] += delta / count as f32;
+                let delta_after = outcome[component] - self.outcomes[destination];
+                self.outcome_m2[destination] += delta * delta_after;
+                self.outcome_count[destination] = count;
+            }
+        }
         self.active_pending[row] = false;
         self.active_last_tick[row] = Some(tick);
         self.active_phase[row] += 1;
@@ -566,15 +733,6 @@ impl ContextSuffixMemory {
                 self.valid[*index] && self.generation[*index] == active.source_generation
             }) {
                 let support = self.support[index].saturating_add(1);
-                for step in 0..active.length {
-                    for component in 0..OUTCOMES {
-                        let destination = (index * MAX_HORIZON + step) * OUTCOMES + component;
-                        let actual =
-                            self.active_outcomes[(row * MAX_HORIZON + step) * OUTCOMES + component];
-                        self.outcomes[destination] +=
-                            (actual - self.outcomes[destination]) / support as f32;
-                    }
-                }
                 self.support[index] = support;
                 self.executions[index] = self.executions[index].saturating_add(1);
             } else {
@@ -620,6 +778,17 @@ impl ContextSuffixMemory {
         )
     }
 
+    pub(crate) fn consequence_evidence(&self, row: usize) -> u64 {
+        if row >= self.batch {
+            return 0;
+        }
+        self.outcome_count
+            [row * SLOTS * MAX_HORIZON * OUTCOMES..(row + 1) * SLOTS * MAX_HORIZON * OUTCOMES]
+            .iter()
+            .map(|count| u64::from(*count))
+            .sum()
+    }
+
     pub(crate) fn snapshot_json(&self) -> Result<String, String> {
         serde_json::to_string(self).map_err(|e| e.to_string())
     }
@@ -636,6 +805,9 @@ impl ContextSuffixMemory {
             || result.context.len() != expected.context.len()
             || result.actions.len() != expected.actions.len()
             || result.outcomes.len() != expected.outcomes.len()
+            || result.outcome_m2.len() != expected.outcome_m2.len()
+            || result.outcome_count.len() != expected.outcome_count.len()
+            || result.endpoint_context.len() != expected.endpoint_context.len()
             || result.recorded_tick.len() != expected.recorded_tick.len()
             || result.support.len() != expected.support.len()
             || result.proposals.len() != expected.proposals.len()
@@ -643,6 +815,7 @@ impl ContextSuffixMemory {
             || result.capture_context.len() != expected.capture_context.len()
             || result.capture_actions.len() != expected.capture_actions.len()
             || result.capture_outcomes.len() != expected.capture_outcomes.len()
+            || result.capture_next_context.len() != expected.capture_next_context.len()
             || result.capture_ticks.len() != expected.capture_ticks.len()
             || result.capture_cursor.len() != batch
             || result.capture_count.len() != batch
@@ -659,7 +832,10 @@ impl ContextSuffixMemory {
             || result.active_support.len() != batch
             || result.active_recall_score.len() != batch
             || result.active_empirical_utility.len() != batch
+            || result.active_consequence_uncertainty.len() != batch
+            || result.active_consequence_count.len() != batch
             || result.active_actions.len() != batch * MAX_HORIZON * ACTIONS
+            || result.active_endpoint_context.len() != batch * CONTEXT
             || result.completed_total.len() != batch
             || result.interrupted_total.len() != batch
             || result.policy_cancelled_total.len() != batch
@@ -682,14 +858,19 @@ impl ContextSuffixMemory {
                 .iter()
                 .chain(&result.actions)
                 .chain(&result.outcomes)
+                .chain(&result.outcome_m2)
+                .chain(&result.endpoint_context)
                 .chain(&result.capture_context)
                 .chain(&result.capture_actions)
                 .chain(&result.capture_outcomes)
+                .chain(&result.capture_next_context)
                 .chain(&result.active_outcomes)
                 .chain(&result.active_actions)
+                .chain(&result.active_endpoint_context)
                 .chain(&result.active_recall_score)
                 .chain(&result.active_empirical_utility)
                 .any(|x| !x.is_finite())
+            || result.outcome_m2.iter().any(|x| *x < 0.0)
             || result
                 .actions
                 .chunks_exact(ACTIONS)
@@ -737,17 +918,20 @@ mod tests {
             action[0] = tick as f32 * 0.1;
             action[7] = -(tick as f32) * 0.1;
             memory
-                .record_executed(0, tick, &context, &action, &[0.2])
+                .record_executed(0, tick, &context, &action, &context, &[0.2])
                 .unwrap();
         }
         let query = [0.01; CONTEXT];
-        let recalled = memory.recall(0, &query, 4);
+        let recalled = memory.recall(0, &query, &query, 4);
         assert!(!recalled.is_empty());
         assert!((4..=8).contains(&recalled[0].length));
         assert!(recalled[0].empirical_utility > 0.0);
+        assert!(recalled[0].endpoint_context[0] > 0.0);
+        let reachable = memory.reachable_goal(0, &query).unwrap();
+        assert_eq!(reachable, recalled[0].endpoint_context);
         let snapshot = memory.snapshot_json().unwrap();
         let mut restored = ContextSuffixMemory::restore_json(&snapshot, 1).unwrap();
-        let replay = restored.recall(0, &query, 4);
+        let replay = restored.recall(0, &query, &query, 4);
         assert_eq!(recalled[0].slot, replay[0].slot);
         assert_eq!(recalled[0].generation, replay[0].generation);
         assert_eq!(recalled[0].actions, replay[0].actions);
@@ -759,16 +943,15 @@ mod tests {
         for tick in 1..=8 {
             let action = [tick as f32 / 10.0; ACTIONS];
             memory
-                .record_executed(0, tick, &context, &action, &[0.2])
+                .record_executed(0, tick, &context, &action, &context, &[0.2])
                 .unwrap();
         }
         let initial = memory
-            .recall(0, &context, 4)
+            .recall(0, &context, &context, 4)
             .into_iter()
             .find(|s| s.length == 8)
             .unwrap();
         let index = initial.slot;
-        let old_outcomes = memory.outcomes.clone();
         memory.start(0, &initial).unwrap();
         // Save with an action proposed but not yet physically acknowledged.
         let mut restored =
@@ -786,16 +969,13 @@ mod tests {
                 let action = [(phase + 1) as f32 / 10.0; ACTIONS];
                 state.note_executed(0, 9 + phase as u64, &action, &[0.4]);
                 state
-                    .record_executed(0, 9 + phase as u64, &context, &action, &[0.4])
+                    .record_executed(0, 9 + phase as u64, &context, &action, &context, &[0.4])
                     .unwrap();
                 if phase < 7 {
                     assert_eq!(state.support[index], 1);
-                    assert_eq!(
-                        &state.outcomes
-                            [index * MAX_HORIZON * OUTCOMES..(index + 1) * MAX_HORIZON * OUTCOMES],
-                        &old_outcomes
-                            [index * MAX_HORIZON * OUTCOMES..(index + 1) * MAX_HORIZON * OUTCOMES]
-                    );
+                    let start = index * MAX_HORIZON * OUTCOMES;
+                    assert!((state.outcomes[start + phase] - 0.3).abs() < 1e-6);
+                    assert_eq!(state.outcome_count[start + phase], 2);
                 }
             }
             assert_eq!(
@@ -810,22 +990,25 @@ mod tests {
         assert_eq!(memory.execution_counts(0), (1, 0));
         assert_eq!(memory.support[index], 2);
         assert!((memory.outcomes[index * MAX_HORIZON * OUTCOMES] - 0.3).abs() < 1e-6);
-        let complete_outcomes = memory.outcomes.clone();
         memory.start(0, &initial).unwrap();
         memory.note_executed(0, 17, &[0.1; ACTIONS], &[9.0]);
         memory.cancel_execution(0, CancellationReason::Policy);
         assert_eq!(memory.execution_counts(0), (1, 1));
         assert_eq!(memory.support[index], 2);
-        assert_eq!(memory.outcomes, complete_outcomes);
+        let first = index * MAX_HORIZON * OUTCOMES;
+        assert!((memory.outcomes[first] - 3.2).abs() < 1e-6);
+        assert_eq!(memory.outcome_count[first], 3);
         memory.start(0, &initial).unwrap();
         memory.note_executed(0, 18, &[0.9; ACTIONS], &[9.0]); // Host override.
         assert_eq!(memory.execution_counts(0), (1, 2));
+        assert!((memory.outcomes[first] - 3.2).abs() < 1e-6);
         memory.start(0, &initial).unwrap();
         memory.note_executed(0, 19, &[0.1; ACTIONS], &[9.0]);
         memory.continue_execution(0).unwrap();
         memory.note_executed(0, 21, &[0.2; ACTIONS], &[9.0]); // Missing tick.
         assert_eq!(memory.execution_counts(0), (1, 3));
-        assert_eq!(memory.outcomes, complete_outcomes);
+        assert!((memory.outcomes[first] - 4.65).abs() < 1e-6);
+        assert_eq!(memory.outcome_count[first], 4);
         assert_eq!(memory.cancellation_counts(0)[0..3], [1, 1, 1]);
         memory.start(0, &initial).unwrap();
         memory.generation[index] += 1; // Reservoir replacement cannot erase the private copy.

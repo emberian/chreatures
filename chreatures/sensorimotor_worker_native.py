@@ -39,7 +39,9 @@ from .sequence_control import (
 )
 
 DEVELOPMENTAL_FORMAT = NATIVE_POPULATION_FORMAT
-NATIVE_RESULT_FORMAT = "chreatures-cns-context-resident-native-v11"
+NATIVE_RESULT_FORMAT = "chreatures-cns-context-resident-native-v12"
+PRIVATE_LEARNING_VERSION = "context-consequence-v1"
+CONTROL_TICK_SECONDS = 0.01
 
 
 def _extension():
@@ -158,6 +160,7 @@ def _load_resident(
     if (
         initialization.get("training_status") not in {"initialized-untrained", "trained"}
         or initialization.get("context_policy_version") != CONTEXT_POLICY_VERSION
+        or initialization.get("private_learning_version") != PRIVATE_LEARNING_VERSION
         or initialization.get("source_policy") is not None
         or initialization.get("competence_claim") is not None
         or service_provenance.get("training_status") not in {
@@ -245,6 +248,9 @@ class DevelopmentalResidentCohort:
             "source_revision": metadata["source_revision"],
             "controller_input": metadata["controller_input"],
             "training_status": metadata["initialization"]["training_status"],
+            "context_policy_version": CONTEXT_POLICY_VERSION,
+            "private_learning_version": PRIVATE_LEARNING_VERSION,
+            "tick_seconds": CONTROL_TICK_SECONDS,
             "cns_service": copy.deepcopy(metadata["cns_service"]),
             "controller_components": {
                 "core_packed_sha256": metadata["controller_components"]["core_packed_sha256"],
@@ -260,7 +266,9 @@ class DevelopmentalResidentCohort:
             action_mode,
             action_seed,
             suffix_seed,
+            CONTROL_TICK_SECONDS,
             CONTEXT_POLICY_VERSION,
+            PRIVATE_LEARNING_VERSION,
             _packed(arrays, CORE_ORDER),
             metadata["controller_components"]["core_packed_sha256"],
             _packed(arrays, PREDICTOR_ORDER),
@@ -507,8 +515,8 @@ class DevelopmentalResidentCohort:
             "active_source_generation": ((self.batch_size,), np.uint64),
             "active_phase": ((self.batch_size,), np.uint8),
             "active_remaining": ((self.batch_size,), np.uint8),
-            "motor_suffix_cancellation_totals": ((self.batch_size, 5), np.uint64),
-            "motor_suffix_cancellation_reason": ((self.batch_size,), np.str_),
+            "context_suffix_cancellation_totals": ((self.batch_size, 5), np.uint64),
+            "context_suffix_cancellation_reason": ((self.batch_size,), np.str_),
             "context_pending": ((self.batch_size,), np.bool_),
             "goal_origin_slot": ((self.batch_size,), np.int32),
             "goal_origin_generation": ((self.batch_size,), np.uint64),
@@ -559,8 +567,8 @@ class DevelopmentalResidentCohort:
             "context_exact": ((self.batch_size,), np.bool_),
             "context_pending": ((self.batch_size,), np.bool_),
             "cns_outcome_pending": ((self.batch_size,), np.bool_),
-            "motor_suffix_cancellation_totals": ((self.batch_size, 5), np.uint64),
-            "motor_suffix_cancellation_reason": ((self.batch_size,), np.str_),
+            "context_suffix_cancellation_totals": ((self.batch_size, 5), np.uint64),
+            "context_suffix_cancellation_reason": ((self.batch_size,), np.str_),
         }
         if not isinstance(raw, Mapping) or set(raw) != set(expected) | scalar_names:
             raise RuntimeError("native context acknowledgement fields differ")

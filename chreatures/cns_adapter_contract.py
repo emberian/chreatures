@@ -1,12 +1,12 @@
-"""Authoritative immutable MaleCNS V3 service artifact contract."""
+"""Authoritative immutable embodiment-driven MaleCNS V4 service contract."""
 from __future__ import annotations
 import hashlib, json, os, struct
 from pathlib import Path
 import numpy as np
 
-FORMAT = "chreatures-cns-service-v3"
+FORMAT = "chreatures-cns-service-v4"
 CONTROLLER_FORMAT = "chreatures-cns-context-controller-v1"
-MAGIC = b"CHCNS3\0\0"
+MAGIC = b"CHCNS4\0\0"
 DIMENSIONS = dict(
     neurons=165122,
     edges=25563197,
@@ -14,12 +14,12 @@ DIMENSIONS = dict(
     receptors=4107,
     receptor_types=10,
     site_edges=4669,
-    body_targets=11233,
+    body_targets=11798,
     neuron_types=11752,
-    body_inputs=110,
+    body_inputs=807,
     context_inputs=12,
     context_targets=1314,
-    motor_outputs=34,
+    motor_outputs=92,
     motor_targets=815,
     latent=512,
     readout_rank=64,
@@ -28,26 +28,26 @@ DIMENSIONS = dict(
 ARRAY_SPECS = (
     ("graph.crow", "<u4", (165123,)),
     ("graph.col", "<u4", (25563197,)),
-    ("graph.weight", "<f4", (25563197,)),
+    ("graph.weight_bits", "<u2", (25563197,)),
     ("graph.channel", "<u4", (165122,)),
     ("atlas.receptor_rows", "<u4", (4107,)),
     ("atlas.receptor_type", "<u4", (4107,)),
     ("atlas.receptor_ptr", "<u4", (4108,)),
     ("atlas.site_indices", "<u4", (4669,)),
     ("atlas.site_weight", "<f4", (4669,)),
-    ("atlas.body_rows", "<u4", (11233,)),
-    ("atlas.body_mask", "<f4", (11233, 110)),
+    ("atlas.body_rows", "<u4", (11798,)),
+    ("atlas.body_mask", "<f4", (11798, 807)),
     ("atlas.context_rows", "<u4", (1314,)),
     ("atlas.motor_rows", "<u4", (815,)),
-    ("atlas.motor_mask", "<f4", (34, 815)),
+    ("atlas.motor_mask", "<f4", (92, 815)),
     ("atlas.neuron_type", "<u4", (165122,)),
     ("optic.spectral_logits", "<f4", (10, 3)),
     ("optic.gain_raw", "<f4", (10,)),
     ("optic.bias", "<f4", (10,)),
-    ("body.mean", "<f4", (110,)),
-    ("body.scale", "<f4", (110,)),
-    ("body.weight", "<f4", (11233, 110)),
-    ("body.bias", "<f4", (11233,)),
+    ("body.mean", "<f4", (807,)),
+    ("body.scale", "<f4", (807,)),
+    ("body.weight", "<f4", (11798, 807)),
+    ("body.bias", "<f4", (11798,)),
     ("context.weight", "<f4", (1314, 12)),
     ("context.bias", "<f4", (1314,)),
     ("dynamics.baseline_raw", "<f4", (11752,)),
@@ -64,8 +64,10 @@ ARRAY_SPECS = (
     ("readout.projection.weight", "<f4", (64, 165122)),
     ("readout.output.weight", "<f4", (512, 64)),
     ("readout.output.bias", "<f4", (512,)),
-    ("motor.weight_raw", "<f4", (34, 815)),
-    ("motor.bias", "<f4", (34,)),
+    ("motor.reference_rate", "<f4", (815,)),
+    ("motor.rate_scale", "<f4", (815,)),
+    ("motor.weight", "<f4", (92, 815)),
+    ("motor.intercept", "<f4", (92,)),
 )
 STATIC_NAMES = {n for n, _, _ in ARRAY_SPECS[:15]}
 PARAMETER_ORDER = tuple(
@@ -74,10 +76,15 @@ PARAMETER_ORDER = tuple(
 PARAMETER_COUNT = sum(
     int(np.prod(s)) for n, _, s in ARRAY_SPECS if n in PARAMETER_ORDER
 )
-SENSORY_DIM = 5423
+SENSORY_DIM = 6120
 LATENT_DIM = 512
-MOTOR_DIM = 34
+MOTOR_DIM = 92
 CONTEXT_DIM = 12
+GRAPH_QUANTIZATION = {
+    "storage": "ieee-754-binary16-bits-little-endian",
+    "rounding": "round-to-nearest-ties-to-even",
+    "compute": "decode-once-to-float32",
+}
 
 
 def canonical(v):
@@ -103,6 +110,12 @@ def adapter_identity_payload(m):
             "graph_sha256",
             "atlas_sha256",
             "anatomy_sha256",
+            "morphology_sha256",
+            "sensory_schema_sha256",
+            "actuator_schema_sha256",
+            "motor_calibration_sha256",
+            "graph_source_weight_sha256",
+            "graph_quantization",
             "readout_mask_sha256",
             "dimensions",
             "parameter_order",
@@ -115,10 +128,17 @@ def service_identity(m, file_hash):
     _hash(file_hash)
     if m.get("format") != FORMAT or m.get("dimensions") != DIMENSIONS:
         raise ValueError("CNS service metadata differs")
+    if m.get("graph_quantization") != GRAPH_QUANTIZATION:
+        raise ValueError("CNS graph quantization differs")
     for k in (
         "graph_sha256",
         "atlas_sha256",
         "anatomy_sha256",
+        "morphology_sha256",
+        "sensory_schema_sha256",
+        "actuator_schema_sha256",
+        "motor_calibration_sha256",
+        "graph_source_weight_sha256",
         "readout_mask_sha256",
         "adapter_sha256",
     ):
@@ -128,6 +148,12 @@ def service_identity(m, file_hash):
         graph_sha256=m["graph_sha256"],
         atlas_sha256=m["atlas_sha256"],
         anatomy_sha256=m["anatomy_sha256"],
+        morphology_sha256=m["morphology_sha256"],
+        sensory_schema_sha256=m["sensory_schema_sha256"],
+        actuator_schema_sha256=m["actuator_schema_sha256"],
+        motor_calibration_sha256=m["motor_calibration_sha256"],
+        graph_source_weight_sha256=m["graph_source_weight_sha256"],
+        graph_quantization=m["graph_quantization"],
         readout_mask_sha256=m["readout_mask_sha256"],
         adapter_sha256=m["adapter_sha256"],
         service_artifact_sha256=file_hash,
@@ -150,7 +176,7 @@ def neutral_afferent_drive(a):
 
 def validate_arrays(a):
     if set(a) != {x[0] for x in ARRAY_SPECS}:
-        raise ValueError("CNS service arrays differ from V3 contract")
+        raise ValueError("CNS service arrays differ from V4 contract")
     for n, d, s in ARRAY_SPECS:
         x = a[n]
         if not isinstance(x, np.ndarray) or x.shape != s or x.dtype != np.dtype(d):
@@ -165,6 +191,12 @@ def validate_arrays(a):
         raise ValueError("invalid graph CSR")
     if np.any(a["graph.col"] >= 165122) or np.any(a["graph.channel"] > 4):
         raise ValueError("invalid graph index/channel")
+    decoded_weight = a["graph.weight_bits"].view("<f2").astype("<f4")
+    if not np.isfinite(decoded_weight).all():
+        raise ValueError("quantized graph weights must decode to finite float32")
+    source_channel = a["graph.channel"][a["graph.col"]]
+    if np.any(decoded_weight[source_channel == 0] != 0):
+        raise ValueError("unknown-transmitter graph edges must remain zero")
     ptr = a["atlas.receptor_ptr"]
     if ptr[0] != 0 or ptr[-1] != 4669 or np.any(np.diff(ptr.astype(np.int64)) < 0):
         raise ValueError("invalid receptor CSR")
@@ -210,6 +242,10 @@ def validate_arrays(a):
         raise ValueError("structural masks must be binary")
     if np.any(a["body.scale"] <= 0):
         raise ValueError("body scale must be positive")
+    if np.any(a["motor.rate_scale"] <= 0):
+        raise ValueError("motor rate scale must be positive")
+    if np.any((a["motor.reference_rate"] < 0) | (a["motor.reference_rate"] > 1)):
+        raise ValueError("motor reference rates must be in [0,1]")
     mask = np.ones(165122, np.uint8)
     mask[
         np.concatenate(
@@ -229,10 +265,24 @@ def metadata_for(
     graph_sha256,
     atlas_sha256,
     anatomy_sha256,
+    morphology_sha256,
+    sensory_schema_sha256,
+    actuator_schema_sha256,
+    motor_calibration_sha256,
+    graph_source_weight_sha256,
     training_status,
     provenance=None,
 ):
-    for v in (graph_sha256, atlas_sha256, anatomy_sha256):
+    for v in (
+        graph_sha256,
+        atlas_sha256,
+        anatomy_sha256,
+        morphology_sha256,
+        sensory_schema_sha256,
+        actuator_schema_sha256,
+        motor_calibration_sha256,
+        graph_source_weight_sha256,
+    ):
         _hash(v)
     if training_status not in {"initialized-untrained", "trained"}:
         raise ValueError("invalid training status")
@@ -242,6 +292,12 @@ def metadata_for(
         graph_sha256=graph_sha256,
         atlas_sha256=atlas_sha256,
         anatomy_sha256=anatomy_sha256,
+        morphology_sha256=morphology_sha256,
+        sensory_schema_sha256=sensory_schema_sha256,
+        actuator_schema_sha256=actuator_schema_sha256,
+        motor_calibration_sha256=motor_calibration_sha256,
+        graph_source_weight_sha256=graph_source_weight_sha256,
+        graph_quantization=GRAPH_QUANTIZATION,
         readout_mask_sha256=hashlib.sha256(mask.tobytes()).hexdigest(),
         dimensions=DIMENSIONS,
         parameter_order=list(PARAMETER_ORDER),
@@ -295,24 +351,39 @@ def load_service_artifact(path):
     path = Path(path)
     with path.open("rb") as stream:
         if stream.read(8) != MAGIC:
-            raise ValueError("requires a CHCNS3 service artifact")
+            raise ValueError("requires a CHCNS4 service artifact")
         metadata_bytes = stream.read(4)
         if len(metadata_bytes) != 4:
-            raise ValueError("truncated CHCNS3 metadata length")
+            raise ValueError("truncated CHCNS4 metadata length")
         metadata_length = struct.unpack("<I", metadata_bytes)[0]
         metadata = json.loads(stream.read(metadata_length))
     if metadata.get("format") != FORMAT or metadata.get("dimensions") != DIMENSIONS:
-        raise ValueError("CHCNS3 metadata contract differs")
+        raise ValueError("CHCNS4 metadata contract differs")
+    if metadata.get("graph_quantization") != GRAPH_QUANTIZATION:
+        raise ValueError("CHCNS4 graph quantization differs")
+    for name in (
+        "graph_sha256",
+        "atlas_sha256",
+        "anatomy_sha256",
+        "morphology_sha256",
+        "sensory_schema_sha256",
+        "actuator_schema_sha256",
+        "motor_calibration_sha256",
+        "graph_source_weight_sha256",
+        "readout_mask_sha256",
+        "adapter_sha256",
+    ):
+        _hash(metadata.get(name))
     offset = 12 + metadata_length
     arrays = {}
     for name, dtype, shape in ARRAY_SPECS:
         value = np.memmap(path, mode="r", offset=offset, dtype=dtype, shape=shape)
         expected = metadata.get("array_sha256", {}).get(name)
         if expected is None or hashlib.sha256(value).hexdigest() != expected:
-            raise ValueError(f"CHCNS3 tensor receipt differs: {name}")
+            raise ValueError(f"CHCNS4 tensor receipt differs: {name}")
         arrays[name] = value
         offset += value.nbytes
     if path.stat().st_size != offset:
-        raise ValueError("CHCNS3 artifact has trailing or missing bytes")
+        raise ValueError("CHCNS4 artifact has trailing or missing bytes")
     validate_arrays(arrays)
     return arrays, metadata

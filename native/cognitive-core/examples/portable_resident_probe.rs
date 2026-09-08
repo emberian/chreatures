@@ -48,7 +48,9 @@ fn main() {
         727,
     );
     let config = json!({"batch":2,"action_mode":"sample","action_seed":314,"suffix_seed":271,
+        "tick_seconds":0.01,
         "context_policy_version":"signed-context12-v1",
+        "private_learning_version":"context-consequence-v1",
         "core_sha256":"a".repeat(64),"predictor_sha256":"b".repeat(64),
         "sequence_control_version":1,"sequence_control_sha256":"c".repeat(64),"research_training":false});
     fs::write(out.join("config.json"), config.to_string()).unwrap();
@@ -61,7 +63,9 @@ fn main() {
             "sample",
             314,
             271,
+            0.01,
             "signed-context12-v1",
+            "context-consequence-v1",
             &core,
             "a".repeat(64),
             &predictor,

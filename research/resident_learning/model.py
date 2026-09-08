@@ -130,11 +130,17 @@ class CnsResidentModel(nn.Module):
         self,
         latent: torch.Tensor,
         state: torch.Tensor,
+        current_key: torch.Tensor,
         goal: torch.Tensor,
         previous: torch.Tensor,
         local: torch.Tensor,
         demonstrated_suffix: torch.Tensor,
         suffix_length: torch.Tensor,
+        demonstrated_endpoint: torch.Tensor,
+        consequence_count: torch.Tensor,
+        consequence_utility: torch.Tensor,
+        consequence_uncertainty: torch.Tensor,
+        tick_seconds: float = 0.01,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Build exact native head shapes with one experienced suffix candidate."""
         n = latent.shape[0]
@@ -146,8 +152,8 @@ class CnsResidentModel(nn.Module):
             _, forecast_goal = self.predict(context, sequence)
             mean = F.normalize(forecast_goal.mean(1), dim=-1, eps=1e-8)
             proposal[:, k, :96] = sequence.reshape(n, 96)
-            proposal[:, k, 96] = 1.0 / 8.0
-            proposal[:, k, 98] = 1.0 / 8.0
+            proposal[:, k, 96] = min(1.0, tick_seconds / 0.4)
+            proposal[:, k, 98] = min(1.0, tick_seconds / 0.4)
             proposal[:, k, 103] = 1.0
             proposal[:, k, 104] = (mean * goal).sum(-1)
             proposal[:, k, 105] = ((forecast_goal - mean[:, None]) ** 2).mean((1, 2)).sqrt()
@@ -163,18 +169,20 @@ class CnsResidentModel(nn.Module):
         else:
             packed_suffix = demonstrated_suffix
         proposal[:, LOCAL, :96] = packed_suffix.reshape(n, 96)
-        proposal[:, LOCAL, 96] = suffix_length.float() / 8.0
-        proposal[:, LOCAL, 98] = suffix_length.float() / 8.0
+        duration = (suffix_length.float() * tick_seconds / 0.4).clamp_max(1.0)
+        proposal[:, LOCAL, 96] = duration
+        proposal[:, LOCAL, 98] = duration
         proposal[:, LOCAL, 99] = 1.0
-        proposal[:, LOCAL, 100] = math.log(2.0)
+        proposal[:, LOCAL, 100] = consequence_count.float().log1p()
         # Physical return is a target for selector/value optimization, never a
         # controller feature. Rust will populate this position only from the
         # resident's own CNS-goal progress after executing a remembered suffix.
-        proposal[:, LOCAL, 102] = 0.0
+        proposal[:, LOCAL, 102] = consequence_utility
         proposal[:, LOCAL, 103] = 1.0
-        proposal[:, LOCAL, 104] = (mean * goal).sum(-1)
-        proposal[:, LOCAL, 105] = ((suffix_goal - mean[:, None]) ** 2).mean((1, 2)).sqrt()
-        proposal[:, LOCAL, 106:] = mean
+        proposal[:, LOCAL, 104] = ((demonstrated_endpoint - current_key) * goal).sum(-1)
+        predictor_uncertainty = ((suffix_goal - mean[:, None]) ** 2).mean((1, 2)).sqrt()
+        proposal[:, LOCAL, 105] = torch.hypot(predictor_uncertainty, consequence_uncertainty)
+        proposal[:, LOCAL, 106:] = demonstrated_endpoint
         mask[:, LOCAL] = suffix_length > 1
         active = proposal[:, LOCAL].clone()
         active_mask = suffix_length > 1
@@ -280,11 +288,13 @@ def training_loss(model: CnsResidentModel, batch: Mapping[str, torch.Tensor], di
     start_local = local[:starts].reshape(starts * b, LOCAL, ACTIONS)
     start_latent = latent[:starts].reshape(starts * b, Z)
     start_state = states[:starts].reshape(starts * b, HIDDEN)
+    start_key = keys[:starts].reshape(starts * b, GOAL)
     start_goal = achieved_goal[:starts].reshape(starts * b, GOAL)
     start_previous = previous[:starts].reshape(starts * b, ACTIONS)
     control_state, proposals, proposal_mask, active, active_mask = model.control_features(
-        start_latent, start_state, start_goal, start_previous, start_local,
-        suffix, length,
+        start_latent, start_state, start_key, start_goal, start_previous, start_local,
+        suffix, length, positive, torch.ones_like(length), utility.detach().tanh(),
+        torch.zeros_like(utility),
     )
     outputs = model.sequence_control(
         control_state.detach(), proposals.detach(), active.detach(), proposal_mask, active_mask
@@ -304,8 +314,10 @@ def training_loss(model: CnsResidentModel, batch: Mapping[str, torch.Tensor], di
     # hazard decision instead of the old self-comparison, which was always zero.
     rolled_suffix = torch.roll(suffix, shifts=max(1, b), dims=0)
     _, rolled_proposals, rolled_mask, rolled_active, rolled_active_mask = model.control_features(
-        start_latent, start_state, start_goal, start_previous, start_local,
-        rolled_suffix, length,
+        start_latent, start_state, start_key, start_goal, start_previous, start_local,
+        rolled_suffix, length, torch.roll(positive, shifts=max(1, b), dims=0),
+        torch.ones_like(length), torch.roll(utility.detach().tanh(), shifts=max(1, b), dims=0),
+        torch.zeros_like(utility),
     )
     rolled_outputs = model.sequence_control(
         control_state.detach(), rolled_proposals.detach(), rolled_active.detach(),
