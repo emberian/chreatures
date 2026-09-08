@@ -465,6 +465,8 @@ enum Request {
         sensory: Vec<f32>,
         context: Vec<f32>,
         #[serde(default)]
+        research_current: Option<Vec<f32>>,
+        #[serde(default)]
         selected_neuron_indices: Vec<u32>,
     },
     Reset {
@@ -1246,6 +1248,7 @@ impl Engine {
         mask: u32,
         sensory: &[f32],
         context: &[f32],
+        research_current: Option<&[f32]>,
         selected_indices: &[u32],
     ) -> Result<
         (
@@ -1293,6 +1296,19 @@ impl Engine {
         if context.iter().any(|&x| !(-1.0..=1.0).contains(&x)) {
             return Err("context must be in [-1,1]".into());
         }
+        if let Some(current) = research_current {
+            if std::env::var_os("CHREATURES_CNS_RESEARCH_INTERVENTION").as_deref()
+                != Some(std::ffi::OsStr::new("1"))
+            {
+                return Err("research_current is disabled in the resident service".into());
+            }
+            if current.len() != N * self.capacity || current.iter().any(|x| !x.is_finite()) {
+                return Err(format!(
+                    "research_current must be finite channel-major [{N},{}]",
+                    self.capacity
+                ));
+            }
+        }
         if selected_indices.len() > 8192 || selected_indices.iter().any(|&x| x as usize >= N) {
             return Err("selected_neuron_indices are invalid".into());
         }
@@ -1314,6 +1330,22 @@ impl Engine {
                 self.sensory.contents() as *mut [f32; 4],
                 packed.len(),
             );
+        }
+        if let Some(current) = research_current {
+            let mut packed_drive = vec![[0f32; 4]; N * self.tiles];
+            for row in 0..N {
+                for resident in 0..self.capacity {
+                    packed_drive[row * self.tiles + resident / 4][resident % 4] =
+                        current[row * self.capacity + resident];
+                }
+            }
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    packed_drive.as_ptr(),
+                    self.drive.contents() as *mut [f32; 4],
+                    packed_drive.len(),
+                );
+            }
         }
         let mut packed_context = vec![[0f32; 4]; CONTEXT_INPUTS * self.tiles];
         for row in 0..CONTEXT_INPUTS {
@@ -1337,75 +1369,76 @@ impl Engine {
         let p0 = buf(&self.device, &[self.params(gpu_dt, mask, false)]);
         let p1 = buf(&self.device, &[self.params(gpu_dt, mask, true)]);
         let cb_afferents = self.queue.new_command_buffer();
-
-        self.encode_compute(
-            cb_afferents,
-            &self.k_clear,
-            &[&self.drive],
-            &p0,
-            N * self.tiles,
-        );
-        {
-            let enc = cb_afferents.new_compute_command_encoder();
-            bind(
-                enc,
-                &self.k_optic,
-                &[
-                    &self.receptor[0],
-                    &self.receptor[1],
-                    &self.receptor[2],
-                    &self.receptor[3],
-                    &self.receptor[4],
-                    &self.sensory,
-                    &self.optic_spectral,
-                    &self.optic_gain,
-                ],
+        if research_current.is_none() {
+            self.encode_compute(
+                cb_afferents,
+                &self.k_clear,
+                &[&self.drive],
+                &p0,
+                N * self.tiles,
             );
-            enc.set_buffer(8, Some(&p0), 0);
-            enc.set_buffer(9, Some(&self.optic_bias), 0);
-            enc.set_buffer(10, Some(&self.drive), 0);
-            enc.set_buffer(11, Some(&self.neutral_drive), 0);
-            Self::grid(enc, &self.k_optic, RECEPTORS * self.tiles);
-            enc.end_encoding();
-        }
-        {
-            let enc = cb_afferents.new_compute_command_encoder();
-            bind(
-                enc,
-                &self.k_body_scatter,
+            {
+                let enc = cb_afferents.new_compute_command_encoder();
+                bind(
+                    enc,
+                    &self.k_optic,
+                    &[
+                        &self.receptor[0],
+                        &self.receptor[1],
+                        &self.receptor[2],
+                        &self.receptor[3],
+                        &self.receptor[4],
+                        &self.sensory,
+                        &self.optic_spectral,
+                        &self.optic_gain,
+                    ],
+                );
+                enc.set_buffer(8, Some(&p0), 0);
+                enc.set_buffer(9, Some(&self.optic_bias), 0);
+                enc.set_buffer(10, Some(&self.drive), 0);
+                enc.set_buffer(11, Some(&self.neutral_drive), 0);
+                Self::grid(enc, &self.k_optic, RECEPTORS * self.tiles);
+                enc.end_encoding();
+            }
+            {
+                let enc = cb_afferents.new_compute_command_encoder();
+                bind(
+                    enc,
+                    &self.k_body_scatter,
+                    &[
+                        &self.sensory,
+                        &self.body_mean,
+                        &self.body_scale,
+                        &self.body_weight,
+                        &self.body_mask,
+                        &self.body_bias,
+                        &self.body_rows,
+                        &self.drive,
+                    ],
+                );
+                enc.set_buffer(
+                    0,
+                    Some(&self.sensory),
+                    (SITES * 3 * self.tiles * size_of::<[f32; 4]>()) as u64,
+                );
+                enc.set_buffer(8, Some(&p0), 0);
+                Self::grid(enc, &self.k_body_scatter, BODY_TARGETS * self.tiles);
+                enc.end_encoding();
+            }
+            self.encode_compute(
+                cb_afferents,
+                &self.k_context_scatter,
                 &[
-                    &self.sensory,
-                    &self.body_mean,
-                    &self.body_scale,
-                    &self.body_weight,
-                    &self.body_mask,
-                    &self.body_bias,
-                    &self.body_rows,
+                    &self.context,
+                    &self.context_weight,
+                    &self.context_bias,
+                    &self.context_rows,
                     &self.drive,
                 ],
+                &p0,
+                CONTEXT_TARGETS * self.tiles,
             );
-            enc.set_buffer(
-                0,
-                Some(&self.sensory),
-                (SITES * 3 * self.tiles * size_of::<[f32; 4]>()) as u64,
-            );
-            enc.set_buffer(8, Some(&p0), 0);
-            Self::grid(enc, &self.k_body_scatter, BODY_TARGETS * self.tiles);
-            enc.end_encoding();
         }
-        self.encode_compute(
-            cb_afferents,
-            &self.k_context_scatter,
-            &[
-                &self.context,
-                &self.context_weight,
-                &self.context_bias,
-                &self.context_rows,
-                &self.drive,
-            ],
-            &p0,
-            CONTEXT_TARGETS * self.tiles,
-        );
         let cb_recurrence = self.queue.new_command_buffer();
         for (params, input, output, modulation_in, modulation_out) in [
             (
@@ -1724,7 +1757,7 @@ impl Engine {
             "readouts": LATENT,
             "context_inputs": CONTEXT_INPUTS,
             "motor_outputs": MOTOR_OUTPUTS,
-            "kernel": "v4-row-f32-decoded",
+            "kernel": "v5-row-f32-decoded-private-plasticity",
             "requested_kernel": if self.simd_rows { "simd" } else { "row" },
             "capacity": self.capacity,
             "storage_tiles": self.tiles,
@@ -1733,6 +1766,7 @@ impl Engine {
             "snapshot_format": SNAPSHOT_FORMAT,
             "sensory_order": "channel-major optic_site_rgb_then_body807",
             "training_status": self.metadata.training_status,
+            "research_intervention_enabled": std::env::var_os("CHREATURES_CNS_RESEARCH_INTERVENTION").as_deref() == Some(std::ffi::OsStr::new("1")),
             "provenance": self.metadata.provenance,
             "cns_adapter": self.identity(),
         })
@@ -2143,12 +2177,14 @@ fn main() {
                     active_mask,
                     sensory,
                     context,
+                    research_current,
                     selected_neuron_indices,
                 }) => match engine.step(
                     dt,
                     active_mask,
                     &sensory,
                     &context,
+                    research_current.as_deref(),
                     &selected_neuron_indices,
                 ) {
                     Ok((latent, motor, selected, physiology, times, gpu_ms, phase_ms)) => {
