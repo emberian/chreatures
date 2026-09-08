@@ -154,9 +154,25 @@ const device = await adapter.requestDevice({
   },
 });
 const { MaleCNSWebGPU } = await import(pathToFileURL(resolve(liveSource, 'cns-webgpu.js')));
-const engine = await MaleCNSWebGPU.load({ device, manifest, capacity: 1, assetBuffers: assets, shaderSources });
+const performanceMode = args.performance === 'b2';
+const engine = await MaleCNSWebGPU.load({ device, manifest, capacity: performanceMode ? 2 : 1, assetBuffers: assets, shaderSources });
 console.error('probe: engine loaded');
 assets.clear();
+
+if(performanceMode){
+  const optic=new Float32Array(2*5313).fill(.5),body=new Float32Array(2*807),context=new Float32Array(24);
+  body.set(bodyMean);body.set(bodyMean,807);
+  const run=async capture=>{const began=performance.now();await engine.step({dt:.01,activeMask:3,opticRGB:optic,body,context,...(capture?{selectedResident:0,selectedField:'rate'}:{})});return performance.now()-began;};
+  for(let i=0;i<5;i++)await run(false);
+  const summarize=values=>{const sorted=values.toSorted((a,b)=>a-b),sum=values.reduce((a,b)=>a+b,0);return{ticks:values.length,meanMs:sum/values.length,p50Ms:sorted[Math.floor(values.length*.5)],p95Ms:sorted[Math.floor(values.length*.95)],minMs:sorted[0],maxMs:sorted.at(-1)};};
+  const noCapture=[],capture=[];
+  for(let i=0;i<30;i++)noCapture.push(await run(false));
+  for(let i=0;i<5;i++)await run(true);
+  for(let i=0;i<30;i++)capture.push(await run(true));
+  const report={format:'chreatures-cns-webgpu-v4-performance-v1',sourceRevision:manifest.sourceRevision,serviceArtifactSha256:manifest.serviceArtifactSha256,manifestArtifact:manifest.identity.artifact,adapter:adapter.info?.device||'apple-metal',capacity:2,controlDt:.01,warmupTicks:10,noCapture:summarize(noCapture),capture:summarize(capture),scope:'Complete MaleCNSWebGPU.step wall time including input writes, full graph, latent/motor readback and optional selected-neuron observer readback.'};
+  console.log(JSON.stringify(report,null,2));if(args.report)await writeFile(resolve(args.report),JSON.stringify(report,null,2)+'\n',{flag:'wx'});
+  engine.destroy();device.destroy();delete globalThis.__chreaturesDawnInstance;process.exit(0);
+}
 
 // The sealed neutral drive must cancel the adapter at the defined operating input.
 const neutralOptic = new Float32Array(5313).fill(0.5);

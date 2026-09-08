@@ -1,0 +1,137 @@
+{
+  "format": "chreatures-cns-webgpu-v4-dawn-probe-v1",
+  "manifestArtifact": "dd62a37681c6f49159f5efc54f5a090cd43a874f9b4a2db1c1d372fff9d02f0d",
+  "graph": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "serviceArtifactSha256": "8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+  "fixtureSha256": "7e0fe0e52ae70eaf2b378edd66ad625615e872cc9fce827c9eee5a6fdcd87189",
+  "fixtureMetadata": {
+    "adapter_sha256": "dd62a37681c6f49159f5efc54f5a090cd43a874f9b4a2db1c1d372fff9d02f0d",
+    "batch": 1,
+    "dt": 0.01,
+    "format": "chreatures-cns-v4-parity-v1",
+    "seed": 20260908,
+    "service_file_sha256": "8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+    "service_training_status": "initialized-untrained",
+    "substep_dt": 0.005,
+    "substeps": 2,
+    "ticks": 3
+  },
+  "manifestSha256": "7ab32e37ce9da0b6ba6de8f03d0bf31947e952905edd5abb76a7cab03ff2a472",
+  "identity": {
+    "actuatorSchema": "00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+    "anatomy": "066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+    "artifact": "dd62a37681c6f49159f5efc54f5a090cd43a874f9b4a2db1c1d372fff9d02f0d",
+    "atlas": "6a59c4282ffc912e1c0304498686819cdcc16c059f453fd5bc19c55938218482",
+    "graph": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "graphSourceWeight": "0a2971ac78f456a271c31327292ee545b32047e91c11698e4890bb586c9384cf",
+    "mask": "af47eb844ce9d42f79775e43ddf273b134d1244c4e5337c603f1c5fa8dc569cb",
+    "morphology": "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+    "motorCalibration": "e8ddec7f27ec7cabc767eea802a8c8b3122fa70b4fcdf68f791fe13d8645871d",
+    "sensorySchema": "97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786"
+  },
+  "graphQuantization": {
+    "compute": "decode-once-to-float32",
+    "rounding": "round-to-nearest-ties-to-even",
+    "storage": "ieee-754-binary16-bits-little-endian"
+  },
+  "readoutProjectionDtype": "f32",
+  "sourceRevision": "7a975af023cc4cdb316c9a771c8713f1109f5d3c",
+  "sourceSha256": {
+    "cns-webgpu.js": "adb1ffeb97b115ab7ff75981f7bc6e9232d5572d33bf9114670dc0c2471a0737",
+    "assets.js": "14b4625937246e3b6848d9155cfe16c4ca0e99810efb0a53b1eade208193b8b2",
+    "shaders/afferent.wgsl": "32c79bac8dc3437c6258565d5afccd5890706191d47c1bfdd8e8618c4d5845b5",
+    "shaders/dynamics.wgsl": "5ee156ac4fcb018c89889e5dd549a9e0ac1830a1f0bbf248bd3c9dffac8014cf",
+    "shaders/readout.wgsl": "7bca77f939086d210ee3e250c42c53dd8d274d322eb261020235ab9f059a5949",
+    "shaders/motor.wgsl": "d4dc62751da3628adb81aa8ef177aa2acd29182ddb4946d7b5242cd2f4ec23a1",
+    "shaders/observe.wgsl": "006959ac44adf35ded6d14311f0629a7054d47da0366a191b0c738c46c34da3b"
+  },
+  "probeSha256": "8a3a5b4dd05bf1cd4390aef6bdb9d9c4f60f4b67bc004a9486ff21944b26e187",
+  "adapter": {
+    "name": "apple-m2-max"
+  },
+  "capacity": 1,
+  "ticks": 3,
+  "neutralRateMaxAbs": 1.4901161193847656e-8,
+  "rateMaxAbsByTick": [
+    2.9802322387695312e-8,
+    5.960464477539063e-8,
+    7.450580596923828e-8
+  ],
+  "latentMaxAbsByTick": [
+    0.000007197260856628418,
+    0.000007383525371551514,
+    0.000007677823305130005
+  ],
+  "motorMaxAbsByTick": [
+    6.441999289563682e-8,
+    5.8778141465154476e-8,
+    7.267834689628216e-8
+  ],
+  "initialMaxAbs": {
+    "rates": 0,
+    "adaptation": 0,
+    "support": 0,
+    "release": 0,
+    "mod_da": 0,
+    "mod_oa": 0,
+    "mod_ht": 0
+  },
+  "stateMaxAbsByTick": [
+    {
+      "rates": 2.9802322387695312e-8,
+      "adaptation": 1.2223608791828156e-9,
+      "support": 0,
+      "release": 5.960464477539063e-8,
+      "mod_da": 2.952588451510252e-10,
+      "mod_oa": 1.5450041246367618e-10,
+      "mod_ht": 9.697487257653847e-11
+    },
+    {
+      "rates": 5.960464477539063e-8,
+      "adaptation": 2.939486876130104e-9,
+      "support": 5.960464477539063e-8,
+      "release": 5.960464477539063e-8,
+      "mod_da": 7.327431439385634e-10,
+      "mod_oa": 3.2855496101547033e-10,
+      "mod_ht": 2.4783730623312294e-10
+    },
+    {
+      "rates": 7.450580596923828e-8,
+      "adaptation": 5.0640664994716644e-9,
+      "support": 5.960464477539063e-8,
+      "release": 5.960464477539063e-8,
+      "mod_da": 1.0133641703546914e-9,
+      "mod_oa": 4.861249180976301e-10,
+      "mod_ht": 4.0245140553452075e-10
+    }
+  ],
+  "finalMaxAbs": {
+    "rates": 7.450580596923828e-8,
+    "adaptation": 5.0640664994716644e-9,
+    "support": 5.960464477539063e-8,
+    "release": 5.960464477539063e-8,
+    "mod_da": 1.0133641703546914e-9,
+    "mod_oa": 4.861249180976301e-10,
+    "mod_ht": 4.0245140553452075e-10
+  },
+  "byteExactRestore": {
+    "latent": true,
+    "motor": true,
+    "snapshot": true
+  },
+  "limits": {
+    "neutralRate": 0.000002,
+    "state": 0.00002,
+    "latent": 0.00002,
+    "motor": 0.00002
+  },
+  "limitBasis": "Predeclared absolute cross-backend regression gate 2e-5; same canonical graph bits and float32 learned tensors. No biological tolerance or competence claim.",
+  "note": "Full V4 graph decoded from identical canonical binary16 bits; readout float32; explicit centered/scaled signed MN decoder; seven private states compared every tick.",
+  "nodeDawnLifetime": {
+    "requirement": "The object returned by create() remains strongly referenced for the full GPU lifetime.",
+    "upstream": "https://github.com/dawn-gpu/node-webgpu#lifetime",
+    "issue": "https://issues.chromium.org/issues/387965810",
+    "diagnosis": "Without the strong reference, lldb stopped in dawn::native::InstanceBase::ProcessEvents at std::mutex::lock after successful ticks."
+  },
+  "passed": true
+}

@@ -1,0 +1,27 @@
+{
+  "format": "chreatures-cns-webgpu-v4-performance-v1",
+  "sourceRevision": "7a975af023cc4cdb316c9a771c8713f1109f5d3c",
+  "serviceArtifactSha256": "8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+  "manifestArtifact": "dd62a37681c6f49159f5efc54f5a090cd43a874f9b4a2db1c1d372fff9d02f0d",
+  "adapter": "apple-m2-max",
+  "capacity": 2,
+  "controlDt": 0.01,
+  "warmupTicks": 10,
+  "noCapture": {
+    "ticks": 30,
+    "meanMs": 21.17339026666667,
+    "p50Ms": 21.108999999999924,
+    "p95Ms": 22.462874999999713,
+    "minMs": 20.105583999999908,
+    "maxMs": 26.087332999999944
+  },
+  "capture": {
+    "ticks": 30,
+    "meanMs": 21.380908299999994,
+    "p50Ms": 21.34416599999986,
+    "p95Ms": 22.42233299999998,
+    "minMs": 20.605208000000403,
+    "maxMs": 22.622415999999703
+  },
+  "scope": "Complete MaleCNSWebGPU.step wall time including input writes, full graph, latent/motor readback and optional selected-neuron observer readback."
+}

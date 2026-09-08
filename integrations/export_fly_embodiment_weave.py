@@ -55,36 +55,9 @@ def evidence_counts(channels: list[dict[str, Any]]) -> dict[str, int]:
             ("measured", "inter_animal_inferred", "engineered", "unsupported")}
 
 
-def completed(value: dict[str, Any]) -> bool:
-    return value.get("completed") is True or value.get("passed") is True or value.get("status") in {
-        "completed", "executed", "passed", "trained",
-    }
-
-
-def optional_result(
-    path: Path | None,
-    *,
-    role: str,
-    record_type: str,
-    stage: int,
-    text: str,
-    parents: dict[str, str],
-) -> dict[str, Any] | None:
-    if path is None:
-        return None
-    value = read_json(path)
-    require(completed(value), f"{role} does not declare a completed execution")
-    source = blob(path, role, "application/json")
-    return node(
-        f"{record_type}:{source['sha256']}", stage, record_type, text,
-        parents=parents, blobs=[source],
-        fields={
-            "status": "executed receipt",
-            "format": value.get("format"),
-            "receipt_summary": value,
-            "causal_role": role,
-        },
-    )
+def mean(values: list[float]) -> float:
+    require(bool(values), "cannot summarize an empty executed result")
+    return sum(values) / len(values)
 
 
 def build(args: argparse.Namespace) -> dict[str, Any]:
@@ -367,57 +340,216 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
                      "limitations": host["limitations"]}),
     ])
 
-    collection_parents = {teacher_replay_id: "offline_teacher_targets", corrected_id: "current_full_cns", host_id: "actual_body_and_ecology_host"}
-    corpus_record = optional_result(args.corpus_receipt, role="sealed_corpus_receipt", record_type="completed_fly_corpus",
-                                    stage=7, text="The full actual-body CNS collection corpus completed and was sealed.", parents=collection_parents)
-    if corpus_record is None:
-        corpus_id = "proposed-fly-corpus:pending"
-        records.append(node(corpus_id, 7, "proposed_collection_result",
-                            "The 12-world B4 full-CNS corpus is still collecting; no completed corpus result is represented here.",
-                            parents=collection_parents,
-                            fields={"status": "proposed; receipt absent", "causal_role": "future training corpus",
-                                    "expected_worlds": 12, "model_ingress": ["optic_rgb", "BODY807", "delivered_context12"],
-                                    "teacher_scope": "loss-only", "completion_claim": False}))
-    else:
-        records.append(corpus_record); corpus_id = corpus_record["id"]
+    collection_parents = {teacher_replay_id: "offline_teacher_targets", corrected_id: "full_cns_parent",
+                          host_id: "actual_body_and_ecology_host"}
+    corpus = read_json(args.corpus_receipt)
+    corpus_blob = blob(args.corpus_receipt, "sealed_bootstrap_corpus_manifest", "application/json")
+    require(corpus.get("format") == "chreatures-actual-fly-cns-development-corpus-v1"
+            and corpus.get("completed") is True and corpus.get("worlds") == 12
+            and corpus.get("residents") == 4, "bootstrap corpus receipt differs")
+    corpus_id = f"completed-fly-bootstrap-corpus:{corpus_blob['sha256']}"
+    records.append(node(corpus_id, 7, "completed_fly_bootstrap_corpus",
+                        "Twelve B4 actual-body/full-CNS worlds were sealed as the physical bootstrap training corpus.",
+                        parents=collection_parents, blobs=[corpus_blob],
+                        fields={"status": "completed sealed corpus", "causal_role": "training data for the first V4 child",
+                                "worlds": corpus["worlds"], "residents": corpus["residents"], "ticks": corpus["ticks"],
+                                "splits": corpus["split"], "artifact_sha256": corpus_blob["sha256"],
+                                "model_ingress": ["optic_rgb5313", "BODY807", "delivered_context12"],
+                                "teacher_scope": "offline loss/evaluation target only"}))
 
-    trained_record = optional_result(args.training_receipt, role="trained_resident_receipt", record_type="completed_resident_training",
-                                     stage=8, text="A fresh resident and CNS service completed training on the sealed actual-body corpus.",
-                                     parents={corpus_id: "sealed_training_data"})
-    if trained_record is None:
-        trained_id = "proposed-resident-training:pending"
-        records.append(node(trained_id, 8, "proposed_training_result",
-                            "Resident/CNS training has no completed receipt yet; initialized artifacts are not presented as trained.",
-                            parents={corpus_id: "future_training_data"},
-                            fields={"status": "proposed; receipt absent", "causal_role": "future learned CNS-to-context and motor adaptation", "training_status": "absent", "completion_claim": False}))
-    else:
-        records.append(trained_record); trained_id = trained_record["id"]
+    training = read_json(args.training_receipt)
+    training_blob = blob(args.training_receipt, "first_v4_child_training_result", "application/json")
+    require(training.get("format") == "chreatures-actual-fly-cns-development-fit-v1"
+            and training.get("completed") is True
+            and training.get("identity", {}).get("corpus_manifest_sha256") == corpus_blob["sha256"],
+            "first child training receipt differs")
+    require(training["identity"]["parent_service_sha256"] == corrected_service_blob["sha256"],
+            "first child CNS parent differs")
+    trained_id = f"completed-first-v4-child:{training_blob['sha256']}"
+    records.append(node(trained_id, 8, "completed_first_v4_child_training",
+                        "The first CNS and private-context child completed an offline physical bootstrap fit; physical competence remained unclaimed pending assay.",
+                        parents={corpus_id: "sealed_training_data", corrected_id: "initialized_cns_parent"}, blobs=[training_blob],
+                        fields={"status": "completed offline training", "causal_role": "produces the candidate CNS and private resident",
+                                "claim": training["claim"], "source_revision": training["identity"]["source_revision"],
+                                "trained_service": {key: training["cns"]["service"][key] for key in ("file_sha256", "bytes")},
+                                "trained_adapter_sha256": training["cns"]["service"]["metadata"]["adapter_sha256"],
+                                "resident_artifact_sha256": training["resident"]["artifacts"]["resident"]["artifact_sha256"],
+                                "heldout_offline": training["cns"]["heldout_offline"],
+                                "evaluation_arms": training["evaluation_arms"], "competence_claim": None}))
 
-    gam_record = optional_result(args.gam_receipt, role="gam_mechanism_receipt", record_type="completed_gam_analysis",
-                                 stage=9, text="Native GAM analysis completed on the joined fly-body outcomes.",
-                                 parents={corpus_id: "observed_outcomes", trained_id: "candidate_controller"})
-    if gam_record is None:
-        gam_id = "proposed-gam-analysis:pending"
-        records.append(node(gam_id, 9, "proposed_gam_result", "No completed V4 GAM receipt exists yet.",
-                            parents={corpus_id: "future_observed_outcomes", trained_id: "future_controller"},
-                            fields={"status": "proposed; receipt absent", "causal_role": "future mechanism analysis", "completion_claim": False}))
-    else:
-        records.append(gam_record); gam_id = gam_record["id"]
+    nursery = read_json(args.nursery_receipt)
+    nursery_blob = blob(args.nursery_receipt, "embodied_nursery_corpus_manifest", "application/json")
+    require(nursery.get("format") == "chreatures-embodied-nursery-corpus-v1"
+            and nursery.get("completed") is True and nursery.get("worlds") == 12
+            and nursery.get("residents") == 4 and len(nursery.get("episodes", [])) >= 12,
+            "embodied nursery receipt differs")
+    nursery_id = f"completed-embodied-nursery:{nursery_blob['sha256']}"
+    records.append(node(nursery_id, 8, "completed_embodied_nursery",
+                        "A distinct twelve-world B4 nursery recorded counterbalanced physical layouts and stimulus schedules for subsequent learning.",
+                        parents={corrected_id: "full_cns_collection_parent", host_id: "physical_ecology_host",
+                                 atlas_id: "body_cns_interface"}, blobs=[nursery_blob],
+                        fields={"status": "completed sealed corpus", "causal_role": "distinct continuation corpus; not a parent of the first child",
+                                "worlds": nursery["worlds"], "residents": nursery["residents"], "ticks": nursery["ticks"],
+                                "episodes": [{key: item[key] for key in ("world_index", "split", "sha256", "stimulus_schedule_sha256")}
+                                             for item in nursery["episodes"]],
+                                "numerical_trajectory_hash": nursery["numerical_trajectory_hash"],
+                                "tone_capability_mapping_hz": nursery["tone_capability_mapping_hz"]}))
 
-    joined_record = optional_result(args.joined_receipt, role="trained_joined_assay_receipt", record_type="completed_trained_joined_assay",
-                                    stage=10, text="The trained resident completed a joined full-CNS physical/ecology assay.",
-                                    parents={trained_id: "trained_controller", host_id: "physical_ecology", gam_id: "mechanism_analysis"})
-    if joined_record is None:
-        records.append(node("proposed-trained-joined-assay:pending", 10, "proposed_joined_result",
-                            "No trained joined CNS/body/ecology assay receipt exists yet.",
-                            parents={trained_id: "future_trained_controller", host_id: "validated_physical_ecology", gam_id: "future_analysis"},
-                            fields={"status": "proposed; receipt absent", "causal_role": "future behavioral evidence", "completion_claim": False}))
-    else:
-        records.append(joined_record)
+    gam = read_json(args.gam_receipt)
+    gam_amendment = read_json(args.gam_scope_amendment)
+    gam_blob = blob(args.gam_receipt, "ecological_gam_receipt", "application/json")
+    gam_amendment_blob = blob(args.gam_scope_amendment, "ecological_gam_scope_amendment", "application/json")
+    require(gam.get("format") == "chreatures-fly-ecology-development-study-receipt-v1"
+            and gam.get("status") == "actual-physical-campaign-and-native-gam-executed"
+            and gam_amendment.get("format") == "chreatures-fly-ecology-atlas-scope-amendment-v1"
+            and gam_amendment.get("receipt_sha256") == gam_blob["sha256"], "ecological GAM evidence differs")
+    gam_id = f"completed-ecological-gam:{gam_blob['sha256']}"
+    records.extend([
+        node(gam_id, 8, "completed_ecological_gam_study",
+             "A native GAM study fitted finite colony-growth outcomes under diagnostic neutral motor input; confirmation failed its intended ranking.",
+             parents={ecology_id: "native_growth_mechanism", host_id: "physical_growth_host"}, blobs=[gam_blob],
+             fields={"status": gam["status"], "causal_role": "plant/ecology mechanism study independent of CNS training",
+                     "worlds_completed": gam["worlds_completed"], "failed_worlds": gam["failed_worlds"],
+                     "physical_confirmations": gam["physical_confirmations"], "selected_models": gam["selected_models"],
+                     "diagnostic_motor": gam["diagnostic_motor"], "claim_limit": gam["claim_limit"],
+                     "competence_claim": None}),
+        node(f"ecological-gam-scope-amendment:{gam_amendment_blob['sha256']}", 9,
+             "ecological_gam_scope_amendment",
+             "The preserved GAM campaign used supplied default route transport values, not measured physical aperture.",
+             parents={gam_id: "amends_interpretation_only"}, blobs=[gam_amendment_blob],
+             fields={"status": gam_amendment["status"], "causal_role": "corrects scope without rewriting raw receipts",
+                     "finding": gam_amendment["finding"], "affected_fields": gam_amendment["affected_fields"],
+                     "correct_interpretation": gam_amendment["correct_interpretation"],
+                     "unaffected_evidence": gam_amendment["unaffected_evidence"]}),
+    ])
+
+    lineage = read_json(args.lineage_receipt)
+    lineage_blob = blob(args.lineage_receipt, "physical_colony_lineage_receipt", "application/json")
+    require(lineage.get("format") == "chreatures-physical-colony-lineage-v1"
+            and lineage.get("completed_ticks") == lineage.get("requested_ticks")
+            and lineage.get("failure") is None and lineage.get("whole_world_replay_exact") is True
+            and len(lineage.get("births", [])) >= 1, "physical lineage receipt differs")
+    lineage_id = f"executed-physical-lineage:{lineage_blob['sha256']}"
+    records.append(node(lineage_id, 9, "executed_physical_colony_lineage",
+                        "The native physical ecology produced and replayed a finite first-generation colony birth over 32 seconds.",
+                        parents={ecology_id: "lineage_and_material_authority", host_id: "physical_geometry_and_light"}, blobs=[lineage_blob],
+                        fields={"status": "executed exact-replay receipt", "causal_role": "ecological lineage evidence independent of CNS fit",
+                                "ticks": lineage["completed_ticks"], "birth_count": len(lineage["births"]),
+                                "first_birth_tick": lineage["births"][0]["observed_tick"],
+                                "whole_world_replay_exact": True, "fly_control": lineage["fly_control"],
+                                "maximum_elemental_residual": lineage["final_accounting"]["maximum_absolute_residual"]}))
+
+    route = read_json(args.route_receipt)
+    route_blob = blob(args.route_receipt, "joined_physical_route_lineage_receipt", "application/json")
+    require(route.get("format") == "chreatures-physical-lineage-route-integration-v1"
+            and route.get("lineage", {}).get("source_receipt_sha256") == lineage_blob["sha256"]
+            and route.get("joined_routes", {}).get("exit_code") == 0
+            and route.get("joined_routes", {}).get("whole_world_replay_exact") is True,
+            "joined physical route/lineage receipt differs")
+    route_id = f"executed-joined-physical-routes:{route_blob['sha256']}"
+    records.append(node(route_id, 9, "executed_joined_physical_routes",
+                        "Actual MuJoCo geometry drove route measurement, conservative transport, light and growth in one exactly replayed joined run.",
+                        parents={lineage_id: "lineage_source", ecology_id: "transport_and_growth_authority",
+                                 body_id: "actual_mujoco_geometry"}, blobs=[route_blob],
+                        fields={"status": "executed joined physical receipt",
+                                "causal_role": "actual physical route evidence; not retroactive GAM evidence",
+                                "joined_routes": route["joined_routes"], "source_hashes": route["source_hashes"]}))
+
+    aero = read_json(args.aerodynamics_receipt)
+    aero_blob = blob(args.aerodynamics_receipt, "joined_wing_aerodynamics_receipt", "application/json")
+    require(aero.get("format") == "chreatures-wing-aerodynamics-body-route-join-v1"
+            and aero.get("status") == "executed" and aero.get("whole_world_replay") == "exact",
+            "joined wing aerodynamics receipt differs")
+    records.append(node(f"executed-wing-aerodynamics-join:{aero_blob['sha256']}", 10,
+                        "executed_wing_aerodynamics_join",
+                        "The native host joined articulated bodies, applied wing aerodynamics, sampled material routes and light-funded growth with exact replay.",
+                        parents={route_id: "physical_route_predecessor", body_id: "articulated_body"}, blobs=[aero_blob],
+                        fields={"status": aero["status"], "causal_role": "diagnostic native mechanics join independent of learned CNS behavior",
+                                "body_count": aero["body_count"], "construction_tick": aero["construction_tick"],
+                                "growth": aero["growth"], "whole_world_replay": aero["whole_world_replay"],
+                                "commands": aero["commands"], "scope": aero["scope"],
+                                "source_hashes": aero["source_hashes"]}))
+
+    assessment = read_json(args.assessment_receipt)
+    assessment_blob = blob(args.assessment_receipt, "six_condition_physical_assessment", "application/json")
+    require(assessment.get("format") == "chreatures-fly-cns-v4-physical-assessment-v1"
+            and assessment.get("ticks") == 1024 and len(assessment.get("conditions", [])) == 6,
+            "six-condition assessment receipt differs")
+    by_arm: dict[str, list[dict[str, Any]]] = {}
+    for item in assessment["conditions"]:
+        condition_path = args.assessment_receipt.parent / item["file"]
+        require(sha256(condition_path) == require_hash(item["sha256"], "assessment condition"),
+                "assessment condition hash differs")
+        condition = read_json(condition_path)
+        require(condition.get("format") == "chreatures-fly-cns-v4-physical-assessment-condition-v1"
+                and condition.get("initial_world_sha256") == item["initial_world_sha256"],
+                "assessment condition identity differs")
+        by_arm.setdefault(item["arm"], []).append(condition)
+    require(set(by_arm) == {"initialized-cns_initialized-private", "trained-cns_zero-context",
+                            "trained-cns_learned-private"} and all(len(items) == 2 for items in by_arm.values()),
+            "assessment arms differ")
+    arm_summary = {}
+    for arm, conditions in by_arm.items():
+        residents = [resident for condition in conditions for resident in condition["residents"]]
+        arm_summary[arm] = {
+            "mean_root_path_mm": mean([item["root_path_mm"] for item in residents]),
+            "mean_upright_duration_s": mean([item["upright_duration_s"] for item in residents]),
+            "mean_mechanical_work_model_units": mean([item["mechanical_work_model_units"] for item in residents]),
+            "mean_resource_change_model_units": mean([item["resource_change_model_units"] for item in residents]),
+            "mean_measured_oral_transfer_model_units": mean([item["measured_oral_transfer_model_units"] for item in residents]),
+        }
+    assay_id = f"executed-first-child-physical-assessment:{assessment_blob['sha256']}"
+    records.append(node(assay_id, 10, "executed_first_child_physical_assessment",
+                        "Two heldout B4 worlds showed increased motion but immediate falling and high work/resource cost in both trained arms.",
+                        parents={trained_id: "candidate_controller", nursery_id: "heldout_layouts_and_stimuli",
+                                 host_id: "frozen_physical_ecology"}, blobs=[assessment_blob],
+                        fields={"status": "executed adverse result", "causal_role": "physical assessment of first trained child",
+                                "worlds": 2, "residents_per_world": 4, "ticks": assessment["ticks"],
+                                "identical_physical_starts_by_layout": assessment["identical_physical_starts_by_layout"],
+                                "stimulus_schedule_sha256": assessment["stimulus_schedule_sha256"],
+                                "arm_summary": arm_summary,
+                                "interpretation": "Training increased actuation and path length but caused rapid loss of upright posture and much greater resource/work cost; learned private context did not rescue it.",
+                                "competence_promoted": False}))
+
+    trained_parity = read_json(args.trained_child_parity_receipt)
+    trained_parity_blob = blob(args.trained_child_parity_receipt,
+                               "trained_child_torch_dawn_parity", "application/json")
+    require(trained_parity.get("format") == "chreatures-cns-v4-trained-child-cold-tick-parity-v1"
+            and trained_parity.get("status") == "passed"
+            and trained_parity.get("service_sha256") == training["cns"]["service"]["file_sha256"]
+            and trained_parity.get("input", {}).get("episode_sha256")
+            == nursery["episodes"][10]["sha256"], "trained-child parity receipt differs")
+    records.append(node(f"trained-child-torch-dawn-parity:{trained_parity_blob['sha256']}", 11,
+                        "trained_child_torch_dawn_parity",
+                        "The exact trained child reproduced its tick-zero motor-neuron state and large servo offset across Torch/ROCm and Dawn/Metal.",
+                        parents={trained_id: "exact_trained_service", assay_id: "explains_adverse_tick_zero_offset"},
+                        blobs=[trained_parity_blob],
+                        fields={"status": "executed numerical parity",
+                                "causal_role": "rules out a Dawn-only deployment error for the adverse initial actuation",
+                                "input": trained_parity["input"], "comparison": trained_parity["comparison"],
+                                "resident0": trained_parity["resident0"],
+                                "interpretation": trained_parity["interpretation"],
+                                "competence_claim": None}))
+
+    observer_receipt = read_json(args.observer_receipt)
+    observer_blob = blob(args.observer_receipt, "assessment_observer_receipt", "application/json")
+    observer_image_blob = blob(args.observer_image, "assessment_observer_image", "image/png",
+                               observer_receipt["output_sha256"])
+    require(observer_receipt.get("format") == "chreatures-fly-cns-v4-assessment-observer-v1"
+            and observer_receipt.get("scope", "").endswith("not measured firing."),
+            "assessment observer receipt differs")
+    records.append(node(f"assessment-observer:{observer_image_blob['sha256']}", 11,
+                        "assessment_observer_render",
+                        "An observer rendering joins executed articulated poses to all valid CNS soma rate-state deltas at 0.11 seconds.",
+                        parents={assay_id: "rendered_executed_conditions"}, blobs=[observer_blob, observer_image_blob],
+                        fields={"status": "rendered observer artifact", "causal_role": "public visual link to adverse assay",
+                                "public_asset": args.public_observer_image.name, "tick": observer_receipt["tick"],
+                                "model_time_s": observer_receipt["model_time_s"], "neural_field": observer_receipt["neural_field"],
+                                "display_clip": observer_receipt["display_clip"], "measured_firing_claim": False}))
 
     request = {
         "archive_id": "fly-embodiment-wave-v4-20260908",
-        "description": "A fly in a growing world: actual body morphology, cross-animal anatomical masks, full MaleCNS numerical evidence, offline teacher feasibility and native physical ecology. Pending learning remains proposed.",
+        "description": "A fly in a growing world: actual body morphology, full MaleCNS execution, completed corpora and first-child training, adverse physical assessment, and independent native ecology studies.",
         "evidence": records,
     }
     for record in records:
@@ -430,7 +562,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     request_path = output / "fly-embodiment-evidence.request.json"
     weave_path = output / "fly-embodiment-evidence.weave.json"
     receipt_path = output / "fly-embodiment-evidence.receipt.json"
-    targets = [request_path, weave_path, receipt_path, public, native_public]
+    targets = [request_path, weave_path, receipt_path, public, native_public,
+               args.public_observer_image, args.public_observer_receipt]
     if not args.replace:
         require(not any(path.exists() for path in targets), "refusing to replace an existing fly embodiment projection")
     output.mkdir(parents=True, exist_ok=True)
@@ -457,6 +590,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "executed_receipt_nodes": sum(record["record_type"].startswith("executed_") for record in records),
         "proposed_nodes": sum(record["record_type"].startswith("proposed_") for record in records),
         "training_status": "completed receipt imported" if args.training_receipt else "pending",
+        "physical_assessment": "executed adverse result; increased actuation with falling and resource/work regression",
+        "assessment_observer": args.public_observer_image.name,
         "original_corrected_identity_separation": True,
         "native_layout": "Universal Weave stable node IDs and topological order",
     }
@@ -465,6 +600,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "fly embodiment public Weave exceeds 1 MiB")
     public.write_bytes(encoded)
     shutil.copyfile(weave_path, native_public)
+    shutil.copyfile(args.observer_image, args.public_observer_image)
+    shutil.copyfile(args.observer_receipt, args.public_observer_receipt)
     receipt = {
         "format": "chreatures-fly-embodiment-weave-export-v1",
         "exporter_sha256": sha256(Path(__file__).resolve()),
@@ -473,8 +610,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "node_count": portable["node_count"], "edge_count": portable["edge_count"],
         "multi_parent_nodes": portable["multi_parent_nodes"], "reload_equal": True,
         "validated_after_reload": True, "universal_weave": portable["library"],
-        "pending": {"corpus": corpus_record is None, "training": trained_record is None,
-                    "gam": gam_record is None, "joined_assay": joined_record is None},
+        "pending": {"corpus": False, "training": False, "nursery": False,
+                    "gam": False, "physical_assessment": False},
     }
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     return receipt
@@ -490,10 +627,32 @@ def parse_args() -> argparse.Namespace:
                         default=Path.home() / "paperbin/chreatures/fly-learning-v4/initialized-resident-v4/receipt.json")
     parser.add_argument("--host-growth-receipt", type=Path,
                         default=Path.home() / "paperbin/chreatures/integration/fly-ecology-v4-host/host-joined-receipt.json")
-    parser.add_argument("--corpus-receipt", type=Path)
-    parser.add_argument("--training-receipt", type=Path)
-    parser.add_argument("--gam-receipt", type=Path)
-    parser.add_argument("--joined-receipt", type=Path)
+    parser.add_argument("--corpus-receipt", type=Path,
+                        default=DEFAULT_PAPERBIN / "physical-bootstrap-be71393-r2-sealed/corpus/corpus.json")
+    parser.add_argument("--training-receipt", type=Path,
+                        default=DEFAULT_PAPERBIN / "physical-bootstrap-be71393-r2-sealed/result.json")
+    parser.add_argument("--nursery-receipt", type=Path,
+                        default=Path.home() / "paperbin/chreatures/research/embodied-nursery-20260908/episodes/nursery-corpus.json")
+    parser.add_argument("--gam-receipt", type=Path, default=ROOT / "research/fly_ecology_atlas/receipt.json")
+    parser.add_argument("--gam-scope-amendment", type=Path,
+                        default=ROOT / "research/fly_ecology_atlas/scope-amendment.json")
+    parser.add_argument("--lineage-receipt", type=Path, default=DEFAULT_PAPERBIN / "colony-lineage-v5.json")
+    parser.add_argument("--route-receipt", type=Path,
+                        default=ROOT / "research/fly_embodiment/ecology-route-lineage-receipt.json")
+    parser.add_argument("--aerodynamics-receipt", type=Path,
+                        default=ROOT / "research/fly_embodiment/aerodynamics-browser-join-receipt.json")
+    parser.add_argument("--assessment-receipt", type=Path,
+                        default=DEFAULT_PAPERBIN / "assessment/results-be71393-r2/assessment-receipt.json")
+    parser.add_argument("--trained-child-parity-receipt", type=Path,
+                        default=DEFAULT_PAPERBIN / "assessment/trained-child-cold-tick0-torch-dawn-parity.json")
+    parser.add_argument("--observer-image", type=Path,
+                        default=DEFAULT_PAPERBIN / "assessment/observer-render/fly-cns-v4-instability.png")
+    parser.add_argument("--observer-receipt", type=Path,
+                        default=DEFAULT_PAPERBIN / "assessment/observer-render/fly-cns-v4-instability.receipt.json")
+    parser.add_argument("--public-observer-image", type=Path,
+                        default=ROOT / "site/assets/fly-cns-v4-instability.png")
+    parser.add_argument("--public-observer-receipt", type=Path,
+                        default=ROOT / "site/assets/fly-cns-v4-instability.receipt.json")
     parser.add_argument("--replace", action="store_true")
     return parser.parse_args()
 
