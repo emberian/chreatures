@@ -254,8 +254,11 @@ class NodeActualFlyWorld:
     def initial_snapshot_sha256(self) -> str:
         return str(self.ready["initial_snapshot_sha256"])
 
-    def layout_identity(self) -> str:
+    def world_instance_identity(self) -> str:
         return self._layout
+
+    def scene_layout_identity(self) -> str:
+        return str(self.ready["fixture_sha256"])
 
     def close(self) -> None:
         if self.process.poll() is None:

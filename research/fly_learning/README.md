@@ -8,8 +8,11 @@ in every episode and fitted service.
 
 The collection target is twelve independent physical worlds, each 1,024 control
 ticks by four articulated residents. Worlds 0–7 train, 8–9 select checkpoints, and 10–11 are
-untouched held-out worlds. Every world uses a fresh process and exact initial
-snapshot. Terrain, starting pose and object layout identities are disjoint.
+untouched held-out world instances. Every world uses a fresh process, seeded
+native state and exact initial snapshot. The first corpus uses one authenticated
+B4 scene layout with counterbalanced histories; it does not claim twelve distinct
+geometries. Separate composed pose/object layouts are reserved for the final
+matched physical assay and a later expanded corpus.
 Within worlds, resident-specific counterbalancing interleaves safe babbling,
 posture and support transfer, self-righting, forward motion, turns, stopping,
 terrain transitions, slips and contact recovery, antenna contact, mouth reach
