@@ -1,0 +1,24 @@
+{
+  "body_renders": {
+    "initialized-cns_initialized-private-tick10-body.jpg": "2253729f8c5bd375cec0bab18d942e814f9ce26d1ca4ecd5f0214da8aee65a18",
+    "trained-cns_learned-private-tick10-body.jpg": "903ee381a82e0bca8265b33baeaa5feb51e3c4738003caf89df7e82e735213a6",
+    "trained-cns_zero-context-tick10-body.jpg": "445aec8eec6f55123cb7258064b567598b0fb01691b2f61a2e7df0d3ab03836d"
+  },
+  "condition_receipts": {
+    "heldout-10--initialized-cns_initialized-private.json": "35abf142dfa2479d2d769651a779caa24947a0fd6a6af77eec6143a4a0e6c34e",
+    "heldout-10--trained-cns_learned-private.json": "149ddc794ac70ebd9da87442d0c1727b3c4690a5d9dafc5be64d3e9956675c03",
+    "heldout-10--trained-cns_zero-context.json": "fbd39f09067a2829533f291dcf9fb380be5f903bcdcf086fd40bb43e2b9f5dd9"
+  },
+  "display_clip": {
+    "limit": 0.020045168697834015,
+    "method": "pooled valid-soma absolute 99.5 percentile"
+  },
+  "format": "chreatures-fly-cns-v4-assessment-observer-v1",
+  "model_time_s": 0.11,
+  "neural_field": "rate state minus immutable artifact baseline",
+  "output_sha256": "163c19852f02bade7e2974aa073768fddd93c0bfc5fe0fbc4d2cb55cad236e2b",
+  "renderer_sha256": "46b3d78cb57d42fd1855bec2085ba658bd4ab3598fddf34e75dce62b5e275661",
+  "resident": 0,
+  "scope": "Observer rendering of executed Dawn/MuJoCo states; model rate state is dimensionless and is not measured firing.",
+  "tick": 10
+}

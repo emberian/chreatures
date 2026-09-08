@@ -521,32 +521,11 @@ class NurseryNodeActualFlyWorld(NodeActualFlyWorld):
             "--runtime", str(self.runtime), "--core-wasm", str(self.core_wasm),
             "--seed", str(plan.world_seed),
         ]
-        self.process = subprocess.Popen(
-            command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=None, text=True, bufsize=1,
-        )
-        if self.process.stdin is None or self.process.stdout is None:
-            raise RuntimeError("failed to create nursery world pipes")
-        line = self.process.stdout.readline()
-        if not line:
-            raise RuntimeError(f"nursery world exited during startup ({self.process.poll()})")
-        self.ready = json.loads(line)
-        if (
-            not self.ready.get("ok")
-            or self.ready.get("event") != "ready"
-            or self.ready.get("stimulus_bridge") != "physical-screen-visitor-sound-v1"
-        ):
+        self._start(command, plan)
+        if self.ready.get("stimulus_bridge") != "physical-screen-visitor-sound-v1":
+            self.close()
             raise RuntimeError(f"nursery world startup failed: {self.ready}")
-        if int(self.ready["residents"]) != RESIDENTS:
-            raise RuntimeError("nursery collector requires four actual residents")
-        self._id = 0
-        self._last = None
-        self._layout = _hash_json({
-            "fixture_sha256": self.ready["fixture_sha256"],
-            "initial_snapshot_sha256": self.ready["initial_snapshot_sha256"],
-            "world_seed": plan.world_seed,
-            "variation_seed": plan.variation_seed,
-        })
+
 
 
 class StimulatedWorld:

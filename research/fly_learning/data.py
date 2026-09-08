@@ -18,6 +18,7 @@ from .curriculum import CONTEXT, CONTROL_SOURCES, PHASES, RESIDENTS, TICKS, spli
 FORMAT: Final = "chreatures-actual-fly-cns-development-corpus-v1"
 EPISODE_FORMAT: Final = "chreatures-actual-fly-cns-development-episode-v1"
 NURSERY_FORMAT: Final = "chreatures-embodied-nursery-corpus-v1"
+RECOVERY_FORMAT: Final = "chreatures-fly-on-policy-recovery-corpus-v1"
 OPTIC_SITES: Final = 1771
 LATENT: Final = 512
 BODY_AFFERENTS: Final = 807
@@ -266,11 +267,19 @@ def load_episode(path: Path, expected_sha256: str | None = None) -> Episode:
         "motor_atlas_sha256", "cns_service_sha256", "cns_adapter_sha256", "motor_calibration_sha256",
         "retina_mapping_sha256", "scene_manifest_sha256", "world_instance_identity",
         "scene_layout_identity", "native_runtime_sha256",
-        "core_wasm_sha256",
         "initial_snapshot_sha256", "curriculum_plan_sha256",
     )
     if any(not HEX64.fullmatch(str(meta.get(name, ""))) for name in required_hashes):
         raise FlyLearningContractError("episode lacks a required 64-hex identity")
+    if meta.get("execution_backend") == "native-fly-world":
+        native_hashes = (
+            "native_host_binary_sha256", "native_host_source_manifest_sha256",
+            "mujoco_library_sha256",
+        )
+        if any(not HEX64.fullmatch(str(meta.get(name, ""))) for name in native_hashes):
+            raise FlyLearningContractError("native episode lacks authenticated deployment identities")
+    elif not HEX64.fullmatch(str(meta.get("core_wasm_sha256", ""))):
+        raise FlyLearningContractError("Wasm episode lacks its core identity")
     if int(meta.get("world_seed", -1)) < 0 or int(meta.get("variation_seed", -1)) < 0:
         raise FlyLearningContractError("episode lacks deterministic world seeds")
     index = int(meta["world_index"])
@@ -469,14 +478,74 @@ def load_nursery_corpus(path: Path) -> Corpus:
     )
 
 
-def combine_corpora(primary: Corpus, nursery: Corpus) -> Corpus:
-    """Combine identical CNS contracts while retaining whole-world splits."""
-    episodes = (
-        *primary.train, *primary.validation, *primary.heldout,
-        *nursery.train, *nursery.validation, *nursery.heldout,
+def load_recovery_corpus(path: Path) -> Corpus:
+    """Load native on-policy probe/correction/release chronologies."""
+    path = path.resolve()
+    if path.is_dir():
+        path = path / "recovery-corpus.json"
+    manifest = json.loads(path.read_text())
+    if (
+        manifest.get("format") != RECOVERY_FORMAT
+        or manifest.get("completed") is not True
+        or int(manifest.get("worlds", -1)) != 12
+        or int(manifest.get("ticks", -1)) != TICKS
+        or int(manifest.get("residents", -1)) != RESIDENTS
+    ):
+        raise FlyLearningContractError("sealed native recovery corpus required")
+    rows = manifest.get("episodes")
+    if not isinstance(rows, list) or len(rows) != 12:
+        raise FlyLearningContractError("recovery corpus must contain twelve whole worlds")
+    episodes = []
+    for index, row in enumerate(rows):
+        if (
+            int(row.get("world_index", -1)) != index
+            or row.get("split") != split_for_world(index)
+            or not HEX64.fullmatch(str(row.get("sha256", "")))
+        ):
+            raise FlyLearningContractError("recovery manifest order or identity differs")
+        episode = load_episode(path.parent / str(row["file"]), str(row["sha256"]))
+        if (
+            episode.metadata.get("recovery_format") != RECOVERY_FORMAT
+            or episode.metadata.get("execution_backend") != "native-fly-world"
+            or episode.metadata.get("raw_geometry_controller_access") is not False
+            or int(episode.metadata.get("world_index", -1)) != index
+            or row.get("scene_layout_identity") != episode.metadata["scene_layout_identity"]
+            or row.get("initial_snapshot_sha256") != episode.metadata["initial_snapshot_sha256"]
+        ):
+            raise FlyLearningContractError("native recovery episode contract differs")
+        curriculum = episode.metadata.get("curriculum", {})
+        if (
+            curriculum.get("recovery_format") != RECOVERY_FORMAT
+            or curriculum.get("same_state_teacher_takeover") is not True
+            or curriculum.get("reset_between_probe_correction_release") is not False
+            or curriculum.get("observer_teacher_only") is not True
+        ):
+            raise FlyLearningContractError("recovery intervention chronology differs")
+        episodes.append(episode)
+    for key in ("scene_layout_identity", "initial_snapshot_sha256", "world_instance_identity"):
+        if len({episode.metadata[key] for episode in episodes}) != 12:
+            raise FlyLearningContractError(f"recovery {key} values overlap")
+    for key in (
+        "native_host_binary_sha256", "native_host_source_manifest_sha256",
+        "mujoco_library_sha256", "recovery_source_sha256",
+    ):
+        if len({episode.metadata[key] for episode in episodes}) != 1:
+            raise FlyLearningContractError(f"recovery mixes {key}")
+    return Corpus(
+        path.parent, manifest, tuple(episodes[:8]),
+        tuple(episodes[8:10]), tuple(episodes[10:]),
+    )
+
+
+def combine_corpora(primary: Corpus, *additional: Corpus) -> Corpus:
+    """Combine compatible physical contracts while retaining whole-world splits."""
+    corpora = (primary, *additional)
+    episodes = tuple(
+        episode
+        for corpus in corpora
+        for episode in (*corpus.train, *corpus.validation, *corpus.heldout)
     )
     contract_keys = (
-        "cns_service_sha256", "cns_adapter_sha256", "motor_calibration_sha256",
         "morphology_sha256", "motor_atlas_sha256",
         "retina_mapping_sha256", "body_afferent_dim", "motor_dim", "outcome_dim",
         "sensory_dim", "body_afferent_rows", "motor_rows", "control_dt_s",
@@ -485,26 +554,25 @@ def combine_corpora(primary: Corpus, nursery: Corpus) -> Corpus:
         expected = episodes[0].metadata[name]
         if any(episode.metadata[name] != expected for episode in episodes[1:]):
             raise FlyLearningContractError(f"bootstrap/nursery {name} differs")
-    if (
-        primary.manifest.get("anatomical_body_schema_sha256") != ANATOMICAL_BODY_SCHEMA_SHA256
-        or primary.manifest.get("cns_body807_schema_sha256") != CNS_BODY807_SCHEMA_SHA256
-        or any(
-            episode.metadata["body_schema_sha256"] != ANATOMICAL_BODY_SCHEMA_SHA256
-            or episode.metadata["cns_body807_schema_sha256"] != CNS_BODY807_SCHEMA_SHA256
-            for episode in (*nursery.train, *nursery.validation, *nursery.heldout)
-        )
-    ):
-        raise FlyLearningContractError("bootstrap/nursery body schema semantics differ")
+    if primary.manifest.get("anatomical_body_schema_sha256") != ANATOMICAL_BODY_SCHEMA_SHA256:
+        raise FlyLearningContractError("primary corpus anatomical body schema differs")
+    for corpus in additional:
+        for episode in (*corpus.train, *corpus.validation, *corpus.heldout):
+            if (
+                episode.metadata["body_schema_sha256"] != ANATOMICAL_BODY_SCHEMA_SHA256
+                or episode.metadata["cns_body807_schema_sha256"] != CNS_BODY807_SCHEMA_SHA256
+            ):
+                raise FlyLearningContractError("combined corpus body schema semantics differ")
     return Corpus(
         primary.root,
         {
             "format": "chreatures-actual-fly-cns-combined-training-view-v1",
             "completed": True,
-            "sources": [primary.manifest["format"], nursery.manifest["format"]],
+            "sources": [corpus.manifest["format"] for corpus in corpora],
         },
-        primary.train + nursery.train,
-        primary.validation + nursery.validation,
-        primary.heldout + nursery.heldout,
+        tuple(episode for corpus in corpora for episode in corpus.train),
+        tuple(episode for corpus in corpora for episode in corpus.validation),
+        tuple(episode for corpus in corpora for episode in corpus.heldout),
     )
 
 

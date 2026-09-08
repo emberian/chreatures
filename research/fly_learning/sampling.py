@@ -45,8 +45,8 @@ class BalancedWindowSampler:
         self, corpus: Corpus, *, burn_in: int = 40, optimize: int = 64,
         seed: int = 20260908, split: str = "train",
     ) -> None:
-        if burn_in < 1 or optimize < 1:
-            raise ValueError("recurrent windows require positive burn-in and optimization lengths")
+        if burn_in < 0 or optimize < 1:
+            raise ValueError("recurrent windows require nonnegative burn-in and positive optimization lengths")
         if split == "train":
             episodes = corpus.train
         elif split == "validation-worlds":
@@ -105,6 +105,99 @@ class BalancedWindowSampler:
     def batches(self, batch_size: int) -> Iterator[tuple[Window, ...]]:
         while True:
             yield self.sample(batch_size)
+
+
+class ResetPrefixSampler:
+    """Whole causal prefixes beginning at the actual cold CNS/world reset."""
+
+    def __init__(
+        self, corpus: Corpus, *, optimize: int = 40,
+        seed: int = 20260908, split: str = "train",
+    ) -> None:
+        if optimize < 1:
+            raise ValueError("reset prefix requires a positive optimization length")
+        if split == "train":
+            episodes = corpus.train
+        elif split == "validation-worlds":
+            episodes = corpus.validation
+        else:
+            raise ValueError("heldout worlds cannot construct an optimization sampler")
+        self.episodes = episodes
+        self.burn_in, self.optimize = 0, optimize
+        self.rng = np.random.default_rng(seed)
+        recovery_indices = [
+            index for index, episode in enumerate(episodes)
+            if episode.metadata.get("recovery_format")
+            == "chreatures-fly-on-policy-recovery-corpus-v1"
+        ]
+        episode_indices = recovery_indices or list(range(len(episodes)))
+        rows: list[Window] = []
+        for episode_index in episode_indices:
+            episode = episodes[episode_index]
+            ticks, residents = episode.active.shape
+            if optimize > ticks:
+                continue
+            for resident in range(residents):
+                if not episode.reset[0, resident] or not episode.active[:optimize, resident].all():
+                    continue
+                scored = optimize // 2
+                rows.append(Window(
+                    episode_index, resident, 0, 0, optimize,
+                    int(episode.curriculum_phase[scored, resident]),
+                    int(episode.control_source[scored, resident]),
+                    _outcome_class(episode, scored, resident),
+                ))
+        if not rows:
+            raise ValueError("corpus contains no complete cold-reset prefixes")
+        self.rows = tuple(rows)
+        self.recovery_only = bool(recovery_indices)
+
+    def coverage(self) -> dict:
+        return {
+            "burn_in": 0,
+            "optimize": self.optimize,
+            "cold_reset_prefixes": len(self.rows),
+            "recovery_corpus_only": self.recovery_only,
+        }
+
+    def sample(self, count: int) -> tuple[Window, ...]:
+        if count < 1:
+            raise ValueError("sample count must be positive")
+        return tuple(
+            self.rows[int(self.rng.integers(len(self.rows)))] for _ in range(count)
+        )
+
+
+class MixedCausalSampler:
+    """Mix cold-start batches with ordinary history-conditioned batches."""
+
+    def __init__(
+        self, corpus: Corpus, *, burn_in: int, optimize: int,
+        reset_optimize: int, reset_fraction: float,
+        seed: int, split: str,
+    ) -> None:
+        if not 0 <= reset_fraction <= 1:
+            raise ValueError("reset prefix fraction must lie in [0,1]")
+        self.ordinary = BalancedWindowSampler(
+            corpus, burn_in=burn_in, optimize=optimize, seed=seed, split=split,
+        )
+        self.reset = ResetPrefixSampler(
+            corpus, optimize=reset_optimize, seed=seed + 104729, split=split,
+        )
+        self.episodes = self.ordinary.episodes
+        self.reset_fraction = reset_fraction
+        self.rng = np.random.default_rng(seed + 130363)
+
+    def coverage(self) -> dict:
+        return {
+            "reset_prefix_fraction": self.reset_fraction,
+            "ordinary": self.ordinary.coverage(),
+            "reset": self.reset.coverage(),
+        }
+
+    def sample(self, count: int) -> tuple[Window, ...]:
+        sampler = self.reset if self.rng.random() < self.reset_fraction else self.ordinary
+        return sampler.sample(count)
 
 
 def slice_window(episode: Episode, window: Window) -> dict[str, np.ndarray]:
