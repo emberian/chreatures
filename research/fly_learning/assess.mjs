@@ -23,9 +23,11 @@ for (let index = 0; index < argv.length; index += 2) {
 }
 for (const required of ['site-10', 'site-11', 'initialized-model', 'trained-model', 'learned-model', 'output'])
   if (!args[required]) throw new Error(`missing --${required}`);
-const ticks = Number(args.ticks ?? 1024);
-if (!Number.isSafeInteger(ticks) || ticks < 800 || ticks > 1024)
-  throw new Error('--ticks must describe a fixed 8–10.24 second window');
+const diagnostic = args.diagnostic === 'true';
+const observerCapture = diagnostic && args.observer === 'true';
+const ticks = Number(args.ticks ?? (diagnostic ? 25 : 1024));
+if (!Number.isSafeInteger(ticks) || (diagnostic ? ticks !== 25 : ticks < 800 || ticks > 1024))
+  throw new Error('--ticks must be 25 for diagnosis or a fixed 8–10.24 second assessment window');
 
 const output = resolve(args.output);
 await mkdir(output, {recursive: true});
@@ -139,7 +141,6 @@ async function assessCondition(layout, arm) {
     const organisms = new Map(firstRaw.ecology.organisms.map(item => [item.id, item]));
     const accumulators = bodies.map((body, row) => {
       const root = body.root * 3;
-      const joints = body.qpos.slice(0, 126);
       const semantic = firstRaw.bodyMap.residents[row].actuators90.map(item => item.semantic_id);
       const antenna = semantic.flatMap((name, i) => /pedicel/.test(name) ? [body.qpos[i]] : []);
       const proboscis = semantic.flatMap((name, i) => /(rostrum|haustellum)/.test(name) ? [body.qpos[i]] : []);
@@ -151,9 +152,11 @@ async function assessCondition(layout, arm) {
         motorLow: Array(92).fill(Infinity), motorHigh: Array(92).fill(-Infinity), motorAbs: Array(92).fill(0),
         lastAntenna: antenna.map(address => firstRaw.qpos[address]), lastProboscis: proboscis.map(address => firstRaw.qpos[address]),
         antennaAddresses: antenna, proboscisAddresses: proboscis, antennaPath: 0, proboscisPath: 0,
-        windows: Object.fromEntries(Object.keys(declaredWindows).map(name => [name, {ticks: 0, path: 0}])), tones: []};
+        windows: Object.fromEntries(Object.keys(declaredWindows).map(name => [name, {ticks: 0, path: 0}])),
+        tones: [], trace: []};
     });
     const began = performance.now();
+    const observerFrames = [];
     for (let tick = 0; tick < ticks; tick++) {
       const event = schedule.find(item => item.tick === tick);
       if (event) {
@@ -168,7 +171,8 @@ async function assessCondition(layout, arm) {
         const {optic, body: bodyInput} = engine.world.sample();
         const context = new Float32Array(4 * 12);
         const neural = await engine.brain.step({dt: .01, activeMask: 0b1111,
-          opticRGB: optic, body: bodyInput, context});
+          opticRGB: optic, body: bodyInput, context,
+          ...(observerCapture ? {selectedResident: 0, selectedField: 'rate'} : {})});
         if (neural.motor.length !== 4 * 92 || !neural.motor.every(Number.isFinite))
           throw new Error('zero-context CNS motor output differs');
         await engine.world.advance(neural.motor, .01);
@@ -179,8 +183,16 @@ async function assessCondition(layout, arm) {
         // the private resident in the zero-context arm.
         engine.pendingTick = engine.tick;
         engine.tick++;
+        if (observerCapture && [0, 10, 24].includes(tick)) observerFrames.push({
+          tick, world_snapshot: engine.world.snapshot(),
+          rate_state_f32_base64: Buffer.from(neural.selectedSignal.buffer, neural.selectedSignal.byteOffset, neural.selectedSignal.byteLength).toString('base64'),
+        });
       } else {
-        await engine.advance(false);
+        const frame = await engine.advance(observerCapture);
+        if (observerCapture && [0, 10, 24].includes(tick)) observerFrames.push({
+          tick, world_snapshot: engine.world.snapshot(),
+          rate_state_f32_base64: Buffer.from(frame.neuralSignal.buffer, frame.neuralSignal.byteOffset, frame.neuralSignal.byteLength).toString('base64'),
+        });
       }
       const raw = engine.world.researchObserve();
       const byId = new Map(raw.ecology.organisms.map(item => [item.id, item]));
@@ -216,6 +228,22 @@ async function assessCondition(layout, arm) {
           acc.motorHigh[channel] = Math.max(acc.motorHigh[channel], motor[channel]);
           acc.motorAbs[channel] += Math.abs(motor[channel]);
         }
+        if (diagnostic) acc.trace.push({
+          tick,
+          motor92: Array.from(motor),
+          applied_ctrl90: body.actuators.map(address => raw.ctrl[address]),
+          q126_rad: body.qpos.map(address => raw.qpos[address]),
+          qdot126_rad_s: body.dofs.map(address => raw.qvel[address]),
+          root_position_mm: position,
+          upright_r22: raw.bodyRotations[body.root * 9 + 8],
+          foot_contact: Array.from({length: 6}, (_, foot) => {
+            const address = row * 807 + 459 + foot * 6;
+            const vector = Array.from(raw.bodyAfferents.slice(address, address + 3));
+            return {force_model_units: vector, active: Math.hypot(...vector) > 1e-12};
+          }),
+          adhesion_command6: Array.from(motor.slice(84, 90)),
+          delivered_context12: Array.from(engine.deliveredContext.slice(row * 12, (row + 1) * 12)),
+        });
         for (const [key, addresses, lastKey, pathKey] of [
           ['antenna', acc.antennaAddresses, 'lastAntenna', 'antennaPath'],
           ['proboscis', acc.proboscisAddresses, 'lastProboscis', 'proboscisPath'],
@@ -248,8 +276,21 @@ async function assessCondition(layout, arm) {
       model_release_sha256: await hashFile(resolve(arm.model, 'release.json')),
       initial_world_sha256: initialWorldSha256, final_life_sha256: sha256(checkpoint), final_life_bytes: checkpoint.byteLength,
       stimulus_schedule: schedule.filter(item => item.tick < ticks), declared_windows: declaredWindows,
+      ...(observerCapture ? {observer_capture: {
+        resident: 0, field: 'rate', units: 'dimensionless model rate state; baseline-subtracted only in the rendered diagnostic',
+        soma_positions_f32_base64: Buffer.from(engine.brainPositions.buffer, engine.brainPositions.byteOffset, engine.brainPositions.byteLength).toString('base64'),
+        soma_valid_u8_base64: Buffer.from(engine.brainValid).toString('base64'),
+        baseline_rate_f32_base64: Buffer.from(engine.neuralBaseline.buffer, engine.neuralBaseline.byteOffset, engine.neuralBaseline.byteLength).toString('base64'),
+        frames: observerFrames,
+      }} : {}),
       residents: accumulators.map(item => {
         const summary = summarizeResident(item, ticks);
+        if (diagnostic) {
+          summary.first_25_tick_trace = item.trace;
+          const body = firstRaw.bodyMap.bodies.find(candidate => candidate.id === item.id);
+          summary.engineered_neutral_servo_targets84_rad = body.neutral.slice(0, 84);
+          summary.engineered_servo_control_ranges84_rad = body.control_ranges.slice(0, 84);
+        }
         for (const response of summary.tone_responses) {
           delete response._antennaStart;
           delete response._proboscisStart;
@@ -267,7 +308,8 @@ async function assessCondition(layout, arm) {
 }
 
 try {
-  const layouts = [10, 11].map(number => ({name: `heldout-${number}`, site: resolve(args[`site-${number}`]), initialWorldSha256: null}));
+  const layoutNumbers = diagnostic ? [10] : [10, 11];
+  const layouts = layoutNumbers.map(number => ({name: `heldout-${number}`, site: resolve(args[`site-${number}`]), initialWorldSha256: null}));
   const arms = [
     {name: 'initialized-cns_initialized-private', model: resolve(args['initialized-model']), zeroContext: false},
     {name: 'trained-cns_zero-context', model: resolve(args['trained-model']), zeroContext: true},
@@ -295,7 +337,7 @@ try {
     conditions.push({file: filename, sha256: await hashFile(resolve(output, filename)),
       layout: layout.name, arm: arm.name, initial_world_sha256: report.initial_world_sha256});
   }
-  const receipt = {format: 'chreatures-fly-cns-v4-physical-assessment-v1', ticks, conditions,
+  const receipt = {format: diagnostic ? 'chreatures-fly-cns-v4-instability-diagnosis-v1' : 'chreatures-fly-cns-v4-physical-assessment-v1', ticks, conditions,
     identical_physical_starts_by_layout: Object.fromEntries(layouts.map(item => [item.name, item.initialWorldSha256])),
     stimulus_schedule_sha256: sha256(Buffer.from(JSON.stringify(schedule.filter(item => item.tick < ticks)))),
     adapter: adapter.info?.device || adapter.info?.description || 'Dawn Metal'};

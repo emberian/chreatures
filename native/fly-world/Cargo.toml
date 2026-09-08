@@ -1,0 +1,30 @@
+[package]
+name = "chreatures-fly-world"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Native MuJoCo host for the current Chreatures fly world"
+
+[lib]
+name = "chreatures_fly_world"
+path = "src/lib.rs"
+
+[[bin]]
+name = "chreatures-fly-world"
+path = "src/main.rs"
+
+[dependencies]
+chreatures-browser-world = { path = "../browser-world" }
+chreatures-ecology-core = { path = "../ecology-core" }
+chreatures-fly-aerodynamics = { path = "../fly-aerodynamics" }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+sha2 = "0.10.9"
+
+[build-dependencies]
+cc = "1.4.5"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

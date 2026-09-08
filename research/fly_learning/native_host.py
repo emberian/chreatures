@@ -9,8 +9,12 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
 from pathlib import Path
+import select
 import subprocess
+import sys
+import time
 from typing import Any, Mapping
 
 import numpy as np
@@ -107,20 +111,35 @@ class NodeActualFlyWorld:
             "--runtime", str(self.runtime), "--core-wasm", str(self.core_wasm),
             "--seed", str(plan.world_seed),
         ]
+        self._start(command, plan)
+
+    def _start(self, command: list[str], plan: Plan) -> None:
+        self._read_buffer = b""
+        self._rpc_failed = False
+        self.transport_statistics: dict[str, dict[str, float | int]] = {}
         self.process = subprocess.Popen(
             command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=None, text=True, bufsize=1,
         )
         if self.process.stdin is None or self.process.stdout is None:
             raise RuntimeError("failed to create native world pipes")
-        line = self.process.stdout.readline()
-        if not line:
-            raise RuntimeError(f"native world exited during startup ({self.process.poll()})")
-        self.ready = json.loads(line)
-        if not self.ready.get("ok") or self.ready.get("event") != "ready":
-            raise RuntimeError(f"native world startup failed: {self.ready}")
-        if int(self.ready["residents"]) != RESIDENTS:
-            raise RuntimeError("collector requires four actual residents")
+        try:
+            line = self._readline()
+            if not line:
+                raise RuntimeError(f"native world exited during startup ({self.process.poll()})")
+            self.ready = json.loads(line)
+            if not self.ready.get("ok") or self.ready.get("event") != "ready":
+                raise RuntimeError(f"native world startup failed: {self.ready}")
+            if int(self.ready["residents"]) != RESIDENTS:
+                raise RuntimeError("collector requires four actual residents")
+        except BaseException:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait()
+            raise
         self._id = 0
         self._last: WorldSample | None = None
         self._layout = _hash_json({
@@ -130,21 +149,49 @@ class NodeActualFlyWorld:
             "variation_seed": plan.variation_seed,
         })
 
+    def _readline(self) -> str:
+        """Bound even a partial native response; never retry an unknown mutation."""
+        assert self.process.stdout is not None
+        deadline = time.monotonic() + 120.0
+        while b"\n" not in self._read_buffer:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not select.select([self.process.stdout], [], [], remaining)[0]:
+                raise TimeoutError("native world response exceeded 120 seconds")
+            chunk = os.read(self.process.stdout.fileno(), 65536)
+            if not chunk:
+                if self._read_buffer:
+                    raise RuntimeError("native world emitted a truncated response")
+                return ""
+            self._read_buffer += chunk
+        line, self._read_buffer = self._read_buffer.split(b"\n", 1)
+        return line.decode("utf-8")
+
     def _rpc(self, command: str, **payload: Any) -> Mapping[str, Any]:
+        if self._rpc_failed:
+            raise RuntimeError("native world transport failed; mutations cannot be retried")
         if self.process.poll() is not None:
             raise RuntimeError(f"native world process exited ({self.process.returncode})")
         self._id += 1
         request = {"id": self._id, "command": command, **payload}
         assert self.process.stdin is not None and self.process.stdout is not None
-        self.process.stdin.write(json.dumps(request, separators=(",", ":")) + "\n")
-        self.process.stdin.flush()
-        line = self.process.stdout.readline()
-        if not line:
-            raise RuntimeError(f"native world pipe closed ({self.process.poll()})")
-        response = json.loads(line)
-        if response.get("id") != self._id or not response.get("ok"):
-            raise RuntimeError(f"native world request failed: {response}")
-        return response
+        began = time.monotonic()
+        try:
+            self.process.stdin.write(json.dumps(request, separators=(",", ":")) + "\n")
+            self.process.stdin.flush()
+            line = self._readline()
+            if not line:
+                raise RuntimeError(f"native world pipe closed ({self.process.poll()})")
+            response = json.loads(line)
+            if response.get("id") != self._id or not response.get("ok"):
+                raise RuntimeError(f"native world request failed: {response}")
+            return response
+        except BaseException:
+            self._rpc_failed = True
+            raise
+        finally:
+            statistic = self.transport_statistics.setdefault(command, {"calls": 0, "seconds": 0.0})
+            statistic["calls"] += 1
+            statistic["seconds"] += time.monotonic() - began
 
     @staticmethod
     def _world_site(
@@ -261,9 +308,16 @@ class NodeActualFlyWorld:
     def close(self) -> None:
         if self.process.poll() is None:
             try:
-                self._rpc("close")
+                if not self._rpc_failed:
+                    self._rpc("close")
             finally:
-                self.process.wait(timeout=30)
+                if self._rpc_failed:
+                    self.process.terminate()
+                try:
+                    self.process.wait(timeout=30)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait()
 
 
 class TorchFullCNS:
@@ -308,6 +362,95 @@ class TorchFullCNS:
 
     def close(self) -> None:
         self.state = None
+
+
+class NativeActualFlyWorld(NodeActualFlyWorld):
+    """The same research pipe contract served directly by native MuJoCo/Rust."""
+
+    def __init__(self, arguments: Any, plan: Plan) -> None:
+        self.scene = Path(arguments.scene).resolve()
+        self.binary = Path(arguments.native_binary).resolve()
+        self.binary_sha256 = sha256_file(self.binary)
+        manifest_path = Path(arguments.native_manifest).resolve()
+        manifest = json.loads(manifest_path.read_text())
+        if manifest.get("format") != "chreatures-native-fly-world-deployment-v1":
+            raise ValueError("native world deployment manifest format differs")
+        self.deployment_identity = {"execution_backend": "native-fly-world"}
+        for locator, identity in (
+            ("binary", "native_host_binary_sha256"),
+            ("source_manifest", "native_host_source_manifest_sha256"),
+            ("mujoco_library", "mujoco_library_sha256"),
+        ):
+            path = (manifest_path.parent / manifest[locator]).resolve()
+            if sha256_file(path) != manifest.get(identity):
+                raise ValueError(f"native deployment content differs: {locator}")
+            self.deployment_identity[identity] = manifest[identity]
+            if locator == "binary" and path != self.binary:
+                raise ValueError("native command differs from authenticated binary")
+            if locator == "mujoco_library":
+                self.mujoco_library = path
+        self._start([
+            str(self.binary), "--scene", str(self.scene), "--seed", str(plan.world_seed)
+        ], plan)
+        try:
+            if self.ready.get("native_host") != "chreatures-native-fly-world-v1":
+                raise ValueError("requires the current native fly-world host")
+            if sys.platform == "linux":
+                loaded = {
+                    line.split(maxsplit=5)[5].strip()
+                    for line in Path(f"/proc/{self.process.pid}/maps").read_text().splitlines()
+                    if len(line.split(maxsplit=5)) == 6 and "libmujoco.so" in line
+                }
+                if loaded != {str(self.mujoco_library)}:
+                    raise ValueError("actual loaded MuJoCo differs from deployment manifest")
+        except BaseException:
+            self.close()
+            raise
+
+
+class BatchedTorchFullCNS(TorchFullCNS):
+    """One immutable model and one private state column per world/resident.
+
+    This is a research collection boundary. Whole cohorts begin together; no
+    column is recycled, reordered, or reset during an episode.
+    """
+
+    def __init__(self, service: Path, device: str, worlds: int) -> None:
+        if worlds not in (2, 4):
+            raise ValueError("CNS cohorts require exactly two or four B4 worlds")
+        super().__init__(service, device)
+        self.worlds = worlds
+        self.forward_calls = 0
+
+    def step(self, *args, **kwargs):
+        raise RuntimeError("batched CNS requires step_worlds with every cohort member")
+
+    def close(self) -> None:
+        # End the whole cohort. Immutable model weights remain reusable for the
+        # next independent set of episodes; no individual row is ever recycled.
+        super().close()
+        self.forward_calls = 0
+
+    def step_worlds(self, optic, body, context):
+        packed = []
+        for values, shape in (
+            (optic, (RESIDENTS, OPTIC_SITES, 3)),
+            (body, (RESIDENTS, BODY_AFFERENTS)),
+            (context, (RESIDENTS, 12)),
+        ):
+            if len(values) != self.worlds:
+                raise ValueError("CNS cohort width differs")
+            if any(np.asarray(value).shape != shape or np.asarray(value).dtype != np.float32
+                   for value in values):
+                raise ValueError(f"CNS cohort requires float32 world tensors {shape}")
+            packed.append(np.ascontiguousarray(np.concatenate(values, axis=0)))
+        latent, motor = super().step(*packed)
+        self.forward_calls += 1
+        return [
+            (latent[i * RESIDENTS:(i + 1) * RESIDENTS].copy(),
+             motor[i * RESIDENTS:(i + 1) * RESIDENTS].copy())
+            for i in range(self.worlds)
+        ]
 
 
 def _organism_reserve(ecology: Mapping[str, Any], organism_id: str) -> float:

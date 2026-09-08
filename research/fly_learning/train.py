@@ -43,15 +43,17 @@ from .data import (
     combine_corpora,
     load_corpus,
     load_nursery_corpus,
+    load_recovery_corpus,
     seal_corpus,
     sha256_file,
 )
 from .resident_objective import training_loss as resident_training_loss
-from .sampling import BalancedWindowSampler, Window, slice_window
+from .sampling import BalancedWindowSampler, MixedCausalSampler, Window, slice_window
 
 
 TRAINING_FORMAT = "chreatures-actual-fly-cns-development-fit-v1"
 CHECKPOINT_FORMAT = "chreatures-actual-fly-cns-development-optimizer-v1"
+PREDICTION_HEAD_FORMAT = "chreatures-actual-fly-physical-prediction-heads-v1"
 
 
 def atomic_json(path: Path, value: Any) -> None:
@@ -76,6 +78,63 @@ def append_jsonl(path: Path, value: Any) -> None:
         stream.write(json.dumps(value, sort_keys=True, allow_nan=False) + "\n")
         stream.flush()
         os.fsync(stream.fileno())
+
+
+def extract_prediction_heads(
+    checkpoint_path: Path, result_path: Path, output: Path,
+) -> dict[str, Any]:
+    """Extract the trained action-conditioned surrogate with exact child binding."""
+    checkpoint_path, result_path, output = (
+        checkpoint_path.expanduser().resolve(), result_path.expanduser().resolve(),
+        output.expanduser().resolve(),
+    )
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    result = json.loads(result_path.read_text())
+    if (
+        checkpoint.get("format") != CHECKPOINT_FORMAT
+        or checkpoint.get("stage") != "cns"
+        or int(checkpoint.get("update", -1)) != int(checkpoint.get("recipe", {}).get("cns_updates", -2))
+        or result.get("completed") is not True
+        or int(result.get("cns", {}).get("updates", -1)) != int(checkpoint["update"])
+        or not isinstance(checkpoint.get("heads"), dict)
+    ):
+        raise RuntimeError("prediction heads require a completed final CNS checkpoint/result")
+    service = result["cns"]["service"]
+    service_path = result_path.parent / Path(str(service["path"])).name
+    if sha256_file(service_path) != service["file_sha256"]:
+        raise RuntimeError("result child service identity differs")
+    payload = {
+        "format": PREDICTION_HEAD_FORMAT,
+        "child_service_sha256": service["file_sha256"],
+        "child_adapter_sha256": service["metadata"]["adapter_sha256"],
+        "source_checkpoint_sha256": sha256_file(checkpoint_path),
+        "source_result_sha256": sha256_file(result_path),
+        "source_revision": checkpoint["identity"]["source_revision"],
+        "state": checkpoint["heads"],
+    }
+    output.parent.mkdir(parents=True, exist_ok=True)
+    atomic_torch(output, payload)
+    return {
+        key: value for key, value in payload.items() if key != "state"
+    } | {"path": str(output), "file_sha256": sha256_file(output)}
+
+
+def load_prediction_heads(
+    path: Path, child_service_sha256: str, device: torch.device,
+) -> tuple[PhysicalPredictionHeads, dict[str, Any]]:
+    path = path.expanduser().resolve()
+    payload = torch.load(path, map_location=device, weights_only=False)
+    if (
+        payload.get("format") != PREDICTION_HEAD_FORMAT
+        or payload.get("child_service_sha256") != child_service_sha256
+        or not isinstance(payload.get("state"), dict)
+    ):
+        raise RuntimeError("physical prediction heads are not bound to the train-start CNS")
+    model = PhysicalPredictionHeads().to(device)
+    model.load_state_dict(payload["state"], strict=True)
+    identity = {key: value for key, value in payload.items() if key != "state"}
+    identity["file_sha256"] = sha256_file(path)
+    return model, identity
 
 
 def _cpu_tree(value: Any) -> Any:
@@ -308,6 +367,12 @@ class Recipe:
     max_grad_norm: float
     checkpoint_every: int
     gradient_checkpoint_steps: bool
+    reset_prefix_fraction: float
+    reset_sequence: int
+    viability_weighted_motor: bool
+    motor_slew_weight: float
+    counterfactual_stability_weight: float
+    motor_decoder_norm_weight: float
 
 
 def configure_cns(model: AnatomicalCNS) -> dict[str, list[nn.Parameter]]:
@@ -339,47 +404,116 @@ def configure_cns(model: AnatomicalCNS) -> dict[str, list[nn.Parameter]]:
 
 def _stack_windows(
     episodes: tuple[Episode, ...], windows: tuple[Window, ...], device: torch.device
-) -> dict[str, torch.Tensor]:
+) -> dict[str, torch.Tensor | int | bool]:
+    burn_ins = {window.burn_in for window in windows}
+    if len(burn_ins) != 1:
+        raise ValueError("a recurrent batch must use one causal burn-in length")
     rows = [slice_window(episodes[window.episode_index], window) for window in windows]
-    result: dict[str, torch.Tensor] = {}
+    result: dict[str, torch.Tensor | int | bool] = {
+        "burn_in": windows[0].burn_in,
+        "reset_prefix": all(window.start == 0 and window.burn_in == 0 for window in windows),
+    }
     for key in (
         "optic_rgb", "body_afferents", "delivered_context", "delivered_motor", "teacher_motor",
-        "teacher_valid", "target_outcome", "target_reward",
+        "teacher_valid", "target_outcome", "target_reward", "target_success", "target_failure",
     ):
         result[key] = _tensor(np.stack([row[key] for row in rows], axis=1), device)
     return result
 
 
-def _motor_loss(predicted: torch.Tensor, target: torch.Tensor, valid: torch.Tensor) -> torch.Tensor:
+def _motor_loss(
+    predicted: torch.Tensor, target: torch.Tensor, valid: torch.Tensor,
+    transition_weight: torch.Tensor | None = None,
+) -> torch.Tensor:
     weights = target.new_ones(MOTOR)
     weights[84:90] = 1.5
     weights[90:] = 3.0
     per = (F.smooth_l1_loss(predicted, target, beta=0.05, reduction="none") * weights).mean(-1)
     valid_f = valid.to(per.dtype)
+    if transition_weight is not None:
+        valid_f = valid_f * transition_weight
     return (per * valid_f).sum() / valid_f.sum().clamp_min(1)
+
+
+def _motor_slew_loss(
+    predicted: torch.Tensor,
+    target: torch.Tensor,
+    valid: torch.Tensor,
+    transition_weight: torch.Tensor | None = None,
+) -> torch.Tensor:
+    if predicted.shape[0] < 2:
+        return predicted.new_zeros(())
+    weights = target.new_ones(MOTOR)
+    weights[84:90] = 1.5
+    weights[90:] = 3.0
+    per = (
+        F.smooth_l1_loss(
+            predicted[1:] - predicted[:-1], target[1:] - target[:-1],
+            beta=0.025, reduction="none",
+        ) * weights
+    ).mean(-1)
+    # A slew target is defined only when both adjacent teacher commands are
+    # valid. In particular, the deliberately uncurated free-consequence bout
+    # must not turn its placeholder zero command into a training target.
+    pair_valid = (valid[1:] & valid[:-1]).to(per.dtype)
+    if transition_weight is not None:
+        pair_valid = pair_valid * torch.minimum(
+            transition_weight[1:], transition_weight[:-1]
+        )
+    return (per * pair_valid).sum() / pair_valid.sum().clamp_min(1)
+
+
+def _frozen_outcome_prediction(
+    heads: PhysicalPredictionHeads,
+    latent: torch.Tensor,
+    motor: torch.Tensor,
+    context: torch.Tensor,
+) -> torch.Tensor:
+    """Differentiate through action, while holding the learned surrogate fixed."""
+    value = torch.cat((latent, motor, context), -1)
+    first, _, second, _ = heads.shared
+    value = F.silu(F.linear(value, first.weight.detach(), first.bias.detach()))
+    value = F.silu(F.linear(value, second.weight.detach(), second.bias.detach()))
+    return F.linear(value, heads.outcome.weight.detach(), heads.outcome.bias.detach())
+
+
+def _decoder_only_motor(model: AnatomicalCNS, state: CNSState) -> torch.Tensor:
+    """Decode detached MN activity so an auxiliary cannot reshape CNS state."""
+    rates = state.rates[model.motor_rows.long()].detach()
+    centered = (
+        rates - model.motor_reference_rate[:, None]
+    ) / model.motor_rate_scale[:, None]
+    pre = (model.motor_weight * model.motor_mask) @ centered + model.motor_intercept[:, None]
+    return torch.cat((torch.tanh(pre[:84]), torch.sigmoid(pre[84:])), 0).T
 
 
 def cns_window_loss(
     model: AnatomicalCNS,
     heads: PhysicalPredictionHeads,
-    arrays: dict[str, torch.Tensor],
+    arrays: dict[str, torch.Tensor | int | bool],
     burn_in: int,
+    *,
+    viability_weighted_motor: bool = False,
+    motor_slew_weight: float = 0.0,
+    counterfactual_stability_weight: float = 0.0,
+    motor_decoder_norm_weight: float = 0.0,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    tensor_arrays = {key: value for key, value in arrays.items() if isinstance(value, torch.Tensor)}
     state: CNSState | None = None
     with torch.no_grad():
         for tick in range(burn_in):
             _, _, state = _cns_control_step(model,
-                arrays["optic_rgb"][tick], arrays["body_afferents"][tick],
-                arrays["delivered_context"][tick], state,
+                tensor_arrays["optic_rgb"][tick], tensor_arrays["body_afferents"][tick],
+                tensor_arrays["delivered_context"][tick], state,
             )
     state = None if state is None else state.detach()
-    sequence = arrays["delivered_context"].shape[0] - burn_in
-    latent, motor = [], []
+    sequence = tensor_arrays["delivered_context"].shape[0] - burn_in
+    latent, motor, decoder_only_motor = [], [], []
     for tick in range(burn_in, burn_in + sequence + 1):
         context_tick = min(tick, burn_in + sequence - 1)
-        optic_tick = arrays["optic_rgb"][tick]
-        body_tick = arrays["body_afferents"][tick]
-        context_value = arrays["delivered_context"][context_tick]
+        optic_tick = tensor_arrays["optic_rgb"][tick]
+        body_tick = tensor_arrays["body_afferents"][tick]
+        context_value = tensor_arrays["delivered_context"][context_tick]
         if torch.is_grad_enabled() and state is not None:
             def recurrent_step(optic, body, context, *fields):
                 next_z, next_motor, next_state = _cns_control_step(model,
@@ -396,26 +530,50 @@ def cns_window_loss(
             z, m, state = _cns_control_step(model, optic_tick, body_tick, context_value, state)
         latent.append(z)
         motor.append(m)
+        decoder_only_motor.append(_decoder_only_motor(model, state))
     z = torch.stack(latent)
     predicted_motor = torch.stack(motor[:-1])
-    delivered_motor = arrays["teacher_motor"][burn_in:]
-    delivered_context = arrays["delivered_context"][burn_in:]
-    physical_motor = arrays["delivered_motor"][burn_in:]
+    decoder_candidate = torch.stack(decoder_only_motor[:-1])
+    delivered_motor = tensor_arrays["teacher_motor"][burn_in:]
+    delivered_context = tensor_arrays["delivered_context"][burn_in:]
+    physical_motor = tensor_arrays["delivered_motor"][burn_in:]
     body_delta, latent_delta, outcome, reward = heads(
         z[:-1].reshape(-1, LATENT),
         physical_motor.reshape(-1, MOTOR),
         delivered_context.reshape(-1, CONTEXT),
     )
     batch = z.shape[1]
-    body_now = arrays["body_afferents"][burn_in:-1]
-    body_next = arrays["body_afferents"][burn_in + 1:]
+    body_now = tensor_arrays["body_afferents"][burn_in:-1]
+    body_next = tensor_arrays["body_afferents"][burn_in + 1:]
     body_target = ((body_next - body_now) / model.body_scale[None, None]).clamp(-8, 8)
     latent_target = (z[1:] - z[:-1]).detach()
-    outcome_target = arrays["target_outcome"][burn_in:]
-    reward_target = arrays["target_reward"][burn_in:]
+    outcome_target = tensor_arrays["target_outcome"][burn_in:]
+    reward_target = tensor_arrays["target_reward"][burn_in:]
+    transition_weight = None
+    if viability_weighted_motor:
+        # Continuous, measured viability keeps failed transitions in the loss
+        # while giving stable/supporting demonstrations more influence.  The
+        # values are target-only and never enter model inference.
+        upright = ((outcome_target[..., 0] + 1.0) * 0.5).clamp(0, 1)
+        stability = outcome_target[..., 13].clamp(0, 1)
+        support = outcome_target[..., 6].clamp(0, 1)
+        progress = torch.sigmoid(reward_target.clamp(-8, 8))
+        success = tensor_arrays["target_success"][burn_in:].to(reward_target.dtype)
+        transition_weight = (
+            0.25 + 0.35 * upright + 0.35 * stability
+            + 0.2 * support + 0.2 * progress + 0.25 * success
+        ).detach()
+        transition_weight = transition_weight / transition_weight.mean().clamp_min(1e-6)
     terms = {
         "motor": _motor_loss(
-            predicted_motor, delivered_motor, arrays["teacher_valid"][burn_in:]
+            predicted_motor, delivered_motor, tensor_arrays["teacher_valid"][burn_in:],
+            transition_weight,
+        ),
+        "motor_slew": _motor_slew_loss(
+            predicted_motor,
+            delivered_motor,
+            tensor_arrays["teacher_valid"][burn_in:],
+            transition_weight,
         ),
         "body_prediction": F.smooth_l1_loss(
             body_delta, body_target.reshape(-1, BODY_AFFERENTS), beta=0.05
@@ -430,13 +588,44 @@ def cns_window_loss(
             reward, reward_target.reshape(-1), beta=0.05
         ),
     }
+    if bool(arrays.get("reset_prefix", False)) and counterfactual_stability_weight > 0:
+        counterfactual = _frozen_outcome_prediction(
+            heads,
+            z[:-1].detach().reshape(-1, LATENT),
+            decoder_candidate.reshape(-1, MOTOR),
+            delivered_context.detach().reshape(-1, CONTEXT),
+        )
+        terms["counterfactual_stability"] = (
+            F.softplus(0.35 - counterfactual[:, 0])
+            + 0.5 * F.softplus(-counterfactual[:, 1])
+            + 0.5 * F.softplus(0.45 - counterfactual[:, 6])
+            + 0.1 * F.softplus(counterfactual[:, 7])
+            + 0.03 * F.softplus(counterfactual[:, 14])
+        ).mean()
+    else:
+        terms["counterfactual_stability"] = predicted_motor.new_zeros(())
     terms["motor_temporal_std"] = predicted_motor.std((0, 1)).mean()
+    supported_weight = model.motor_weight * model.motor_mask
+    supported_count = model.motor_mask.sum().clamp_min(1)
+    terms["motor_decoder_rms"] = (
+        supported_weight.square().sum() / supported_count
+    ).sqrt()
+    terms["motor_decoder_penalty"] = (
+        (supported_weight / 0.02).square().sum() / supported_count
+    )
+    terms["cold_motor_abs_mean"] = (
+        predicted_motor[0, :, :84].abs().mean()
+        if bool(arrays.get("reset_prefix", False)) else predicted_motor.new_zeros(())
+    )
     total = (
         2.0 * terms["motor"]
         + terms["body_prediction"]
         + 0.5 * terms["latent_prediction"]
         + 0.25 * terms["outcome_prediction"]
         + 0.25 * terms["reward_prediction"]
+        + motor_slew_weight * terms["motor_slew"]
+        + counterfactual_stability_weight * terms["counterfactual_stability"]
+        + motor_decoder_norm_weight * terms["motor_decoder_penalty"]
     )
     return total, terms
 
@@ -450,15 +639,37 @@ def evaluate_cns(
     recipe: Recipe,
     device: torch.device,
 ) -> dict[str, float]:
-    sampler = BalancedWindowSampler(corpus, burn_in=recipe.burn_in, optimize=recipe.sequence, seed=17, split=split)
+    sampler = _cns_sampler(corpus, recipe, seed=17, split=split)
     rows: list[dict[str, float]] = []
     model.eval(); heads.eval()
     for windows in (sampler.sample(recipe.batch_size) for _ in range(8)):
         arrays = _stack_windows(sampler.episodes, windows, device)
-        total, terms = cns_window_loss(model, heads, arrays, recipe.burn_in)
+        total, terms = cns_window_loss(
+            model, heads, arrays, int(arrays["burn_in"]),
+            viability_weighted_motor=recipe.viability_weighted_motor,
+            motor_slew_weight=recipe.motor_slew_weight,
+            counterfactual_stability_weight=recipe.counterfactual_stability_weight,
+            motor_decoder_norm_weight=recipe.motor_decoder_norm_weight,
+        )
         rows.append({"total": float(total), **{key: float(value) for key, value in terms.items()}})
     model.train(); heads.train()
     return {name: float(np.mean([row[name] for row in rows])) for name in rows[0]}
+
+
+def _cns_sampler(
+    corpus: Corpus, recipe: Recipe, *, seed: int, split: str,
+) -> BalancedWindowSampler | MixedCausalSampler:
+    if recipe.reset_prefix_fraction <= 0:
+        return BalancedWindowSampler(
+            corpus, burn_in=recipe.burn_in, optimize=recipe.sequence,
+            seed=seed, split=split,
+        )
+    return MixedCausalSampler(
+        corpus, burn_in=recipe.burn_in, optimize=recipe.sequence,
+        reset_optimize=recipe.reset_sequence,
+        reset_fraction=recipe.reset_prefix_fraction,
+        seed=seed, split=split,
+    )
 
 
 def _service_kwargs(parent: dict[str, Any], calibration_sha: str, provenance: dict[str, Any]) -> dict[str, Any]:
@@ -546,13 +757,17 @@ def consequence_table(episodes: tuple[Episode, ...]) -> dict[tuple[int, int], Co
 
 
 def _resident_batch(
-    sampler: BalancedWindowSampler,
+    sampler: BalancedWindowSampler | MixedCausalSampler,
     windows: tuple[Window, ...],
     cache: dict[str, np.ndarray],
     consequence: dict[tuple[int, int], Consequence],
     device: torch.device,
 ) -> dict[str, torch.Tensor | int]:
-    latent_rows, context_rows, reward_rows, reset_rows = [], [], [], []
+    burn_ins = {window.burn_in for window in windows}
+    if len(burn_ins) != 1:
+        raise ValueError("a resident batch must use one causal burn-in length")
+    batch_burn_in = windows[0].burn_in
+    latent_rows, context_rows, previous_rows, reward_rows, reset_rows = [], [], [], [], []
     count_rows, utility_rows, uncertainty_rows = [], [], []
     for window in windows:
         episode = sampler.episodes[window.episode_index]
@@ -560,6 +775,11 @@ def _resident_batch(
         latent_rows.append(np.asarray(cache[episode.sha256][start : stop + 1, resident]))
         context = episode.delivered_context[start:stop, resident]
         context_rows.append(context)
+        previous = np.zeros((context.shape[0] + 1, CONTEXT), np.float32)
+        if start:
+            previous[0] = episode.delivered_context[start - 1, resident]
+        previous[1:] = context
+        previous_rows.append(previous)
         reward_rows.append(episode.reward[start:stop, resident])
         reset_rows.append(episode.reset[start : stop + 1, resident])
         c, u, s = [], [], []
@@ -569,25 +789,23 @@ def _resident_batch(
         count_rows.append(c); utility_rows.append(u); uncertainty_rows.append(s)
     latent = np.stack(latent_rows, axis=1)
     delivered = np.stack(context_rows, axis=1)
-    previous = np.zeros((delivered.shape[0] + 1, delivered.shape[1], CONTEXT), np.float32)
-    previous[1:] = delivered
     return {
         "cns_latent": _tensor(latent, device),
-        "previous_delivered_context": _tensor(previous, device),
+        "previous_delivered_context": _tensor(np.stack(previous_rows, axis=1), device),
         "reset": _tensor(np.stack(reset_rows, axis=1), device),
         "delivered_context": _tensor(delivered, device),
         "physical_reward": _tensor(np.stack(reward_rows, axis=1), device),
         "consequence_count": _tensor(np.asarray(count_rows, np.float32).T, device),
         "consequence_utility": _tensor(np.asarray(utility_rows, np.float32).T, device),
         "consequence_uncertainty": _tensor(np.asarray(uncertainty_rows, np.float32).T, device),
-        "burn_in": sampler.burn_in,
+        "burn_in": batch_burn_in,
     }
 
 
 @torch.inference_mode()
 def evaluate_resident(
     model: CnsResidentModel,
-    sampler: BalancedWindowSampler,
+    sampler: BalancedWindowSampler | MixedCausalSampler,
     cache: dict[str, np.ndarray],
     consequence: dict[tuple[int, int], Consequence],
     device: torch.device,
@@ -613,6 +831,7 @@ def train(arguments: argparse.Namespace) -> None:
         "sha256": sha256_file(primary.root / "corpus.json"),
     }]
     corpus = primary
+    additional_corpora: list[Corpus] = []
     if arguments.nursery_corpus is not None:
         nursery_path = arguments.nursery_corpus.expanduser().resolve()
         nursery = load_nursery_corpus(nursery_path)
@@ -623,7 +842,23 @@ def train(arguments: argparse.Namespace) -> None:
             "path": str(manifest_path),
             "sha256": sha256_file(manifest_path),
         })
-        corpus = combine_corpora(primary, nursery)
+        additional_corpora.append(nursery)
+    if arguments.recovery_corpus is not None:
+        recovery_path = arguments.recovery_corpus.expanduser().resolve()
+        recovery = load_recovery_corpus(recovery_path)
+        manifest_path = (
+            recovery_path / "recovery-corpus.json"
+            if recovery_path.is_dir() else recovery_path
+        )
+        source_receipts.append({
+            "role": "on-policy-failure-teacher-correction-release",
+            "format": recovery.manifest["format"],
+            "path": str(manifest_path),
+            "sha256": sha256_file(manifest_path),
+        })
+        additional_corpora.append(recovery)
+    if additional_corpora:
+        corpus = combine_corpora(primary, *additional_corpora)
     source_identities = [
         {name: row[name] for name in ("role", "format", "sha256")}
         for row in source_receipts
@@ -642,25 +877,37 @@ def train(arguments: argparse.Namespace) -> None:
     service_path = arguments.service.expanduser().resolve()
     parent_arrays, parent_metadata = load_service_artifact(service_path)
     parent_service_sha = sha256_file(service_path)
-    collection_service_path = (
-        service_path if arguments.collection_service is None
-        else arguments.collection_service.expanduser().resolve()
+    collection_service_paths = (
+        [service_path] if arguments.collection_service is None
+        else [path.expanduser().resolve() for path in arguments.collection_service]
     )
-    collection_arrays, collection_metadata = load_service_artifact(collection_service_path)
-    collection_service_sha = sha256_file(collection_service_path)
-    continuing = collection_service_sha != parent_service_sha
+    collection_services: dict[str, tuple[dict[str, np.ndarray], dict[str, Any], Path]] = {}
+    for path in collection_service_paths:
+        sha = sha256_file(path)
+        if sha in collection_services:
+            raise RuntimeError("collection CNS service was supplied more than once")
+        if sha == parent_service_sha:
+            arrays, metadata = parent_arrays, parent_metadata
+        else:
+            arrays, metadata = load_service_artifact(path)
+        collection_services[sha] = (arrays, metadata, path)
+    continuing = set(collection_services) != {parent_service_sha}
     if continuing and not arguments.preserve_parent_normalization:
         raise RuntimeError(
             "continuation from a service other than the collection service requires "
             "--preserve-parent-normalization"
         )
     all_episodes = (*corpus.train, *corpus.validation, *corpus.heldout)
-    if any(
-        episode.metadata["cns_service_sha256"] != collection_service_sha
-        or episode.metadata["cns_adapter_sha256"] != collection_metadata["adapter_sha256"]
-        for episode in all_episodes
-    ):
-        raise RuntimeError("corpus was not collected through the supplied collection CNS service")
+    for episode in all_episodes:
+        service_sha = episode.metadata["cns_service_sha256"]
+        record = collection_services.get(service_sha)
+        if record is None or episode.metadata["cns_adapter_sha256"] != record[1]["adapter_sha256"]:
+            raise RuntimeError("corpus was not collected through a supplied collection CNS service")
+    used_collection_services = {
+        episode.metadata["cns_service_sha256"] for episode in all_episodes
+    }
+    if used_collection_services != set(collection_services):
+        raise RuntimeError("supplied collection CNS services must exactly cover the corpora")
     device = torch.device(arguments.device)
     if device.type != "cuda" or not torch.cuda.is_available():
         raise RuntimeError("actual full-CNS training requires the isolated ROCm CUDA interface")
@@ -682,6 +929,12 @@ def train(arguments: argparse.Namespace) -> None:
         max_grad_norm=arguments.max_grad_norm,
         checkpoint_every=arguments.checkpoint_every,
         gradient_checkpoint_steps=True,
+        reset_prefix_fraction=arguments.reset_prefix_fraction,
+        reset_sequence=arguments.reset_sequence,
+        viability_weighted_motor=arguments.viability_weighted_motor,
+        motor_slew_weight=arguments.motor_slew_weight,
+        counterfactual_stability_weight=arguments.counterfactual_stability_weight,
+        motor_decoder_norm_weight=arguments.motor_decoder_norm_weight,
     )
     identity = {
         "format": TRAINING_FORMAT,
@@ -693,14 +946,19 @@ def train(arguments: argparse.Namespace) -> None:
         "corpus_sources": source_identities,
         "parent_service_sha256": parent_service_sha,
         "parent_adapter_sha256": parent_metadata["adapter_sha256"],
-        "collection_service_sha256": collection_service_sha,
-        "collection_adapter_sha256": collection_metadata["adapter_sha256"],
+        "collection_services": [
+            {"file_sha256": sha, "adapter_sha256": metadata["adapter_sha256"]}
+            for sha, (_, metadata, _) in sorted(collection_services.items())
+        ],
         "continuation_from_trained_parent": continuing,
         "normalization_mode": (
             "inherited-from-train-start-service"
             if arguments.preserve_parent_normalization else "estimated-from-current-train-worlds"
         ),
         "parent_resident_sha256": None if arguments.parent_resident is None else sha256_file(arguments.parent_resident),
+        "parent_prediction_heads_sha256": (
+            None if arguments.prediction_heads is None else sha256_file(arguments.prediction_heads)
+        ),
     }
     progress: dict[str, Any] = {
         "format": TRAINING_FORMAT, "status": "normalization", "stage": "cns",
@@ -708,12 +966,22 @@ def train(arguments: argparse.Namespace) -> None:
     }
     atomic_json(run / "progress.json", progress)
 
-    collection_model = AnatomicalCNS(collection_arrays, device=device).eval()
-    collection_cache_check = validate_collected_parent_cache(
-        collection_model, (*corpus.train, *corpus.validation, *corpus.heldout), device
-    )
-    del collection_model, collection_arrays
-    torch.cuda.empty_cache()
+    collection_cache_check = {"services": []}
+    for service_sha, (collection_arrays, collection_metadata, _) in sorted(collection_services.items()):
+        episodes = tuple(
+            episode for episode in all_episodes
+            if episode.metadata["cns_service_sha256"] == service_sha
+        )
+        collection_model = AnatomicalCNS(collection_arrays, device=device).eval()
+        check = validate_collected_parent_cache(collection_model, episodes, device)
+        collection_cache_check["services"].append({
+            "file_sha256": service_sha,
+            "adapter_sha256": collection_metadata["adapter_sha256"],
+            "worlds": len(episodes),
+            **check,
+        })
+        del collection_model
+        torch.cuda.empty_cache()
     atomic_json(run / "collection-cache-check.json", collection_cache_check)
 
     mutable_arrays = {name: np.asarray(value) for name, value in parent_arrays.items()}
@@ -735,7 +1003,13 @@ def train(arguments: argparse.Namespace) -> None:
         )
     atomic_json(run / "normalization.json", normalization)
     groups = configure_cns(model)
-    heads = PhysicalPredictionHeads().to(device)
+    if arguments.prediction_heads is None:
+        heads = PhysicalPredictionHeads().to(device)
+        prediction_heads_parent = None
+    else:
+        heads, prediction_heads_parent = load_prediction_heads(
+            arguments.prediction_heads, parent_service_sha, device
+        )
     optimizer = torch.optim.AdamW(
         [
             {"params": groups["motor"], "lr": recipe.cns_motor_lr, "name": "centered-motor"},
@@ -747,10 +1021,7 @@ def train(arguments: argparse.Namespace) -> None:
         weight_decay=recipe.weight_decay,
     )
     parameters = [parameter for group in optimizer.param_groups for parameter in group["params"]]
-    train_sampler = BalancedWindowSampler(
-        corpus, burn_in=recipe.burn_in, optimize=recipe.sequence,
-        seed=recipe.seed, split="train",
-    )
+    train_sampler = _cns_sampler(corpus, recipe, seed=recipe.seed, split="train")
     validation_before = evaluate_cns(
         model, heads, corpus, "validation-worlds", recipe, device
     )
@@ -767,7 +1038,13 @@ def train(arguments: argparse.Namespace) -> None:
         # action-conditioned prediction in both training and validation.
         batch = _stack_windows(train_sampler.episodes, windows, device)
         optimizer.zero_grad(set_to_none=True)
-        total, terms = cns_window_loss(model, heads, batch, recipe.burn_in)
+        total, terms = cns_window_loss(
+            model, heads, batch, int(batch["burn_in"]),
+            viability_weighted_motor=recipe.viability_weighted_motor,
+            motor_slew_weight=recipe.motor_slew_weight,
+            counterfactual_stability_weight=recipe.counterfactual_stability_weight,
+            motor_decoder_norm_weight=recipe.motor_decoder_norm_weight,
+        )
         if not torch.isfinite(total):
             raise RuntimeError("non-finite full-CNS physical loss")
         total.backward()
@@ -807,7 +1084,7 @@ def train(arguments: argparse.Namespace) -> None:
         **_service_kwargs(parent_metadata, calibration_sha, {
             "training_format": TRAINING_FORMAT,
             "parent_service_sha256": parent_service_sha,
-            "collection_service_sha256": collection_service_sha,
+            "collection_services": identity["collection_services"],
             "corpus_manifest_sha256": identity["corpus_manifest_sha256"],
             "world_split": "per corpus: 0..7 train, 8..9 validation, 10..11 untouched heldout",
             "model_ingress": ["optic1771 RGB", "BODY807", "delivered context12"],
@@ -823,6 +1100,23 @@ def train(arguments: argparse.Namespace) -> None:
         }),
     )
     atomic_json(run / "cns-service-receipt.json", service_receipt)
+    prediction_heads_output = run / "physical-prediction-heads.pt"
+    prediction_heads_payload = {
+        "format": PREDICTION_HEAD_FORMAT,
+        "child_service_sha256": service_receipt["file_sha256"],
+        "child_adapter_sha256": service_receipt["metadata"]["adapter_sha256"],
+        "source_checkpoint_sha256": sha256_file(run / f"cns-checkpoint-{recipe.cns_updates:06d}.pt"),
+        "source_revision": identity["source_revision"],
+        "parent_prediction_heads": prediction_heads_parent,
+        "state": heads.state_dict(),
+    }
+    atomic_torch(prediction_heads_output, prediction_heads_payload)
+    prediction_heads_receipt = {
+        key: value for key, value in prediction_heads_payload.items() if key != "state"
+    } | {
+        "path": str(prediction_heads_output),
+        "file_sha256": sha256_file(prediction_heads_output),
+    }
 
     # Recompute every latent from the final service before private-context
     # fitting.  This avoids training the resident against a stale parent cache.
@@ -837,14 +1131,28 @@ def train(arguments: argparse.Namespace) -> None:
         resident_optimizer = torch.optim.AdamW(
             resident.parameters(), lr=recipe.resident_lr, weight_decay=recipe.weight_decay
         )
-        resident_train_sampler = BalancedWindowSampler(
-            corpus, burn_in=recipe.burn_in, optimize=max(recipe.sequence, 64),
-            seed=recipe.seed + 1, split="train",
-        )
-        resident_validation_sampler = BalancedWindowSampler(
-            corpus, burn_in=recipe.burn_in, optimize=max(recipe.sequence, 64),
-            seed=23, split="validation-worlds",
-        )
+        if recipe.reset_prefix_fraction > 0:
+            resident_train_sampler = MixedCausalSampler(
+                corpus, burn_in=recipe.burn_in, optimize=max(recipe.sequence, 64),
+                reset_optimize=max(recipe.reset_sequence, 64),
+                reset_fraction=recipe.reset_prefix_fraction,
+                seed=recipe.seed + 1, split="train",
+            )
+            resident_validation_sampler = MixedCausalSampler(
+                corpus, burn_in=recipe.burn_in, optimize=max(recipe.sequence, 64),
+                reset_optimize=max(recipe.reset_sequence, 64),
+                reset_fraction=recipe.reset_prefix_fraction,
+                seed=23, split="validation-worlds",
+            )
+        else:
+            resident_train_sampler = BalancedWindowSampler(
+                corpus, burn_in=recipe.burn_in, optimize=max(recipe.sequence, 64),
+                seed=recipe.seed + 1, split="train",
+            )
+            resident_validation_sampler = BalancedWindowSampler(
+                corpus, burn_in=recipe.burn_in, optimize=max(recipe.sequence, 64),
+                seed=23, split="validation-worlds",
+            )
         consequences = consequence_table(corpus.train)
         resident_validation_before = evaluate_resident(
             resident, resident_validation_sampler, latent_cache, consequences,
@@ -947,6 +1255,7 @@ def train(arguments: argparse.Namespace) -> None:
             "heldout_offline": heldout_cns,
             "service": service_receipt,
             "updates": len(cns_history),
+            "physical_prediction_heads": prediction_heads_receipt,
         },
         "resident": {
             "trained": resident_receipt is not None,
@@ -982,19 +1291,25 @@ def parser() -> argparse.ArgumentParser:
     seal = sub.add_parser("seal")
     seal.add_argument("--source", type=Path, required=True)
     seal.add_argument("--output", type=Path, required=True)
+    extract = sub.add_parser("extract-heads")
+    extract.add_argument("--checkpoint", type=Path, required=True)
+    extract.add_argument("--result", type=Path, required=True)
+    extract.add_argument("--output", type=Path, required=True)
     fit = sub.add_parser("train")
     fit.add_argument("--corpus", type=Path, required=True)
     fit.add_argument("--nursery-corpus", type=Path)
+    fit.add_argument("--recovery-corpus", type=Path)
     fit.add_argument("--service", type=Path, required=True)
     fit.add_argument(
-        "--collection-service", type=Path,
-        help="service used to generate collected_latent; defaults to --service",
+        "--collection-service", type=Path, action="append",
+        help="service used to generate collected_latent; repeat for mixed lineages",
     )
     fit.add_argument(
         "--preserve-parent-normalization", action="store_true",
         help="retain BODY807 and centered-MN normalization from --service",
     )
     fit.add_argument("--parent-resident", type=Path)
+    fit.add_argument("--prediction-heads", type=Path)
     fit.add_argument("--run", type=Path, required=True)
     fit.add_argument("--source-revision", required=True)
     fit.add_argument("--device", default="cuda")
@@ -1013,6 +1328,12 @@ def parser() -> argparse.ArgumentParser:
     fit.add_argument("--weight-decay", type=float, default=1e-5)
     fit.add_argument("--max-grad-norm", type=float, default=1.0)
     fit.add_argument("--checkpoint-every", type=int, default=64)
+    fit.add_argument("--reset-prefix-fraction", type=float, default=0.0)
+    fit.add_argument("--reset-sequence", type=int, default=40)
+    fit.add_argument("--viability-weighted-motor", action="store_true")
+    fit.add_argument("--motor-slew-weight", type=float, default=0.0)
+    fit.add_argument("--counterfactual-stability-weight", type=float, default=0.0)
+    fit.add_argument("--motor-decoder-norm-weight", type=float, default=0.0)
     return result
 
 
@@ -1020,6 +1341,10 @@ def main() -> None:
     arguments = parser().parse_args()
     if arguments.command == "seal":
         print(json.dumps(seal_corpus(arguments.source, arguments.output), sort_keys=True))
+    elif arguments.command == "extract-heads":
+        print(json.dumps(extract_prediction_heads(
+            arguments.checkpoint, arguments.result, arguments.output
+        ), sort_keys=True))
     else:
         if (
             arguments.source_revision is None

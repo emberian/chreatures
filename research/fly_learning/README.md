@@ -187,3 +187,69 @@ python -m research.fly_learning.train train \
   --source-revision FULL_GIT_SHA \
   --run /tank/chreatures/runs/fly-learning/training/nursery-continuation-v1
 ```
+
+## On-policy stability and recovery wave
+
+`recovery.py` collects each trained child's own physical failures, an offline
+teacher correction from that exact world state, and a subsequent CNS release
+without resetting the fly. Four residents respectively exercise zero, smooth
+OU, pulsed, and reversing private context through descending neurons. Two or
+four independent B4 native worlds share one batched full-CNS model while
+retaining separate recurrent state columns and episode files.
+
+```sh
+python -m research.fly_learning.recovery collect \
+  --world-start 0 --cohort-width 2 \
+  --output /tank/chreatures/runs/fly-learning/recovery/source \
+  --scenes /tank/chreatures/runs/fly-learning/nursery/layouts \
+  --native-binary /home/ember/chreatures-runs/fly-world/bin/chreatures-fly-world \
+  --native-manifest /home/ember/chreatures-runs/fly-world/deployment.json \
+  --service /tank/chreatures/runs/fly-learning/training/nursery/actual-fly-cns-development.bin \
+  --author-source native/fly-body/assets/author-step-bank-v1/trajectory-bank.npz \
+  --body-schema native/fly-body/assets/neuromechfly-2.1.0-ca65a510-ypr/schema.json \
+  --motor-atlas research/fly_embodiment/fly-body-neural-atlas-v1.npz \
+  --source-revision FULL_GIT_SHA
+```
+
+The next fit repeats `--collection-service` for every collection-time CNS and
+adds `--recovery-corpus`. Thirty-five percent of batches begin at the real
+cold reset and optimize all first 0.4 seconds; ordinary batches retain the
+40-tick causal history. Continuous upright, support, stability and progress
+measurements weight motor imitation without removing failures from consequence
+training. A low-weight action-conditioned stability term differentiates
+through the predicted absolute M92 action using frozen predictor parameters.
+It does not expose pose or contact labels to CNS inference.
+
+```sh
+python -m research.fly_learning.train train \
+  --corpus BODY_BOOTSTRAP/corpus.json \
+  --nursery-corpus NURSERY/nursery-corpus.json \
+  --recovery-corpus RECOVERY/recovery-corpus.json \
+  --collection-service INITIALIZED/initialized-cns-v4.bin \
+  --collection-service PARENT/actual-fly-cns-development.bin \
+  --service PARENT/actual-fly-cns-development.bin \
+  --parent-resident PARENT/fly-context-resident.npz \
+  --prediction-heads PARENT/physical-prediction-heads.pt \
+  --preserve-parent-normalization \
+  --reset-prefix-fraction .35 --reset-sequence 40 \
+  --viability-weighted-motor --motor-slew-weight .2 \
+  --counterfactual-stability-weight .03 --motor-decoder-norm-weight .01 \
+  --cns-motor-lr 5e-4 --source-revision FULL_GIT_SHA --run NEW_RUN
+```
+
+M92 remains an absolute actuator target. Slew supervision shapes its temporal
+changes without adding an action integrator or a controller bypass. Reset
+prefixes are drawn from the recovery corpus when it is present, because those
+worlds deliberately begin with a stopping/stance counterfactual target rather
+than an arbitrary locomotor phase.
+
+The action-conditioned stability auxiliary starts from heads bound to the
+exact parent service. A completed older run can export them without replaying
+or optimizing anything:
+
+```sh
+python -m research.fly_learning.train extract-heads \
+  --checkpoint PARENT/cns-checkpoint-000512.pt \
+  --result PARENT/result.json \
+  --output PARENT/physical-prediction-heads.pt
+```
