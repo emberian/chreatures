@@ -32,8 +32,7 @@ struct NeuronState {
 
 @group(0) @binding(0) var<uniform> config: Config;
 @group(0) @binding(1) var<storage, read> state: array<NeuronState>;
-@group(0) @binding(2) var<storage, read> neuron_type: array<u32>;
-@group(0) @binding(3) var<storage, read> dynamics_raw: array<f32>;
+@group(0) @binding(2) var<storage, read> baseline_rate: array<f32>;
 @group(0) @binding(4) var<storage, read> readout_mask: array<u32>;
 @group(0) @binding(5) var<storage, read> projection: array<f32>;
 @group(0) @binding(6) var<storage, read_write> projection_partial: array<vec4<f32>>;
@@ -44,15 +43,6 @@ struct NeuronState {
 
 var<workgroup> reduction: array<vec4<f32>, 256>;
 
-fn sigmoid(value: f32) -> f32 {
-  return 1.0 / (1.0 + exp(-value));
-}
-
-
-fn baseline(type_index: u32) -> f32 {
-  return 0.05 + 0.4 * sigmoid(dynamics_raw[type_index]);
-}
-
 @compute @workgroup_size(256)
 fn project_partial(
   @builtin(local_invocation_index) local: u32,
@@ -62,7 +52,7 @@ fn project_partial(
   let rank = group.y;
   var value = vec4<f32>(0.0);
   if (neuron < NEURONS && readout_mask[neuron] != 0u) {
-    let x = state[neuron].rate - vec4<f32>(baseline(neuron_type[neuron]));
+    let x = state[neuron].rate - vec4<f32>(baseline_rate[neuron]);
     value = projection[rank * NEURONS + neuron] * x;
   }
   reduction[local] = value;

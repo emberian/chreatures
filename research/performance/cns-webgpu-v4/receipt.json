@@ -1,0 +1,37 @@
+{
+  "format": "chreatures-cns-webgpu-memory-layout-v1",
+  "implementation_base_revision": "1a0a3f544c96e539e93a4b44f76f29e1e5fd23b4",
+  "source_sha256": {
+    "site/live/cns-webgpu.js": "adb1ffeb97b115ab7ff75981f7bc6e9232d5572d33bf9114670dc0c2471a0737",
+    "site/live/shaders/dynamics.wgsl": "5ee156ac4fcb018c89889e5dd549a9e0ac1830a1f0bbf248bd3c9dffac8014cf",
+    "site/live/shaders/readout.wgsl": "7bca77f939086d210ee3e250c42c53dd8d274d322eb261020235ab9f059a5949",
+    "native/webgpu-probe/probe-cns-webgpu.mjs": "8a3a5b4dd05bf1cd4390aef6bdb9d9c4f60f4b67bc004a9486ff21944b26e187"
+  },
+  "evidence": {
+    "baseline": {
+      "path": "baseline.json",
+      "sha256": "225be252443f8a8ebc35e250e7b9587c42c7e425aa71dc9e47a5857db163a91a"
+    },
+    "optimized": {
+      "path": "optimized.json",
+      "sha256": "bca8c1503fc36cba099a5f443787f803c10705878452ae85f54217c189efc73c"
+    },
+    "parity": {
+      "path": "parity.json",
+      "sha256": "2fd0a4359e64d887465187f63764cb3a388395bb2dc366c8b7c893b091534e66"
+    }
+  },
+  "changes": [
+    "Derived compact rate/release GPU buffers for recurrent edge traversal",
+    "Reuse baseline-rate buffer for latent projection"
+  ],
+  "measured_no_capture_mean_ms": [
+    23.852,
+    21.173
+  ],
+  "measured_capture_mean_ms": [
+    24.147,
+    21.381
+  ],
+  "scope": "M2 Dawn B2 full-CNS step only. Frozen corrected initialization fixture; all canonical neurons, edges, quantized weights, seven-field dynamics and serialized state remain unchanged. This is not whole-physical-world or UI performance. Sparse BODY CSR attempt regressed and was reverted."
+}

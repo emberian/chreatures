@@ -30,6 +30,11 @@ struct Recur {
     ht: vec4<f32>,
 };
 
+struct Activity {
+    rate: vec4<f32>,
+    release: vec4<f32>,
+};
+
 @group(0) @binding(0) var<uniform> cfg: Config;
 @group(0) @binding(1) var<storage, read> crow: array<u32>;
 @group(0) @binding(2) var<storage, read> col: array<u32>;
@@ -41,6 +46,8 @@ struct Recur {
 @group(0) @binding(8) var<storage, read_write> recur: array<Recur>;
 @group(0) @binding(9) var<storage, read> drive: array<vec4<f32>>;
 @group(0) @binding(10) var<storage, read> neutral: array<f32>;
+@group(0) @binding(11) var<storage, read> activity_src: array<Activity>;
+@group(0) @binding(12) var<storage, read_write> activity_dst: array<Activity>;
 
 fn sigmoid(x: f32) -> f32 {
     return 1.0 / (1.0 + exp(-x));
@@ -83,6 +90,16 @@ fn reset_state(@builtin(global_invocation_id) invocation: vec3<u32>) {
     dst[neuron].da = select(old.da, vec4<f32>(0), reset);
     dst[neuron].oa = select(old.oa, vec4<f32>(0), reset);
     dst[neuron].ht = select(old.ht, vec4<f32>(0), reset);
+    activity_dst[neuron].rate = dst[neuron].rate;
+    activity_dst[neuron].release = dst[neuron].release;
+}
+
+@compute @workgroup_size(256)
+fn sync_activity(@builtin(global_invocation_id) invocation: vec3<u32>) {
+    let neuron = invocation.x;
+    if (neuron >= N) { return; }
+    activity_dst[neuron].rate = src[neuron].rate;
+    activity_dst[neuron].release = src[neuron].release;
 }
 
 // index=graph.channel, raws=baseline_by_neuron for this pass.
@@ -97,10 +114,11 @@ fn recurrent_sum(@builtin(global_invocation_id) invocation: vec3<u32>) {
     );
     for (var edge = crow[neuron]; edge < crow[neuron + 1u]; edge++) {
         let source = col[edge];
+        let activity = activity_src[source];
         let value = weight[edge]
-            * (src[source].rate - vec4<f32>(raws[source]));
+            * (activity.rate - vec4<f32>(raws[source]));
         switch index[source] {
-            case 1u: { sum.fast += value * src[source].release; }
+            case 1u: { sum.fast += value * activity.release; }
             case 2u: { sum.da += value; }
             case 3u: { sum.oa += value; }
             case 4u: { sum.ht += value; }
@@ -141,6 +159,8 @@ fn jacobi_update(@builtin(global_invocation_id) invocation: vec3<u32>) {
     dst[neuron].da = select(old.da, da, enabled);
     dst[neuron].oa = select(old.oa, oa, enabled);
     dst[neuron].ht = select(old.ht, ht, enabled);
+    activity_dst[neuron].rate = dst[neuron].rate;
+    activity_dst[neuron].release = dst[neuron].release;
 }
 
 @compute @workgroup_size(256)
@@ -163,4 +183,5 @@ fn finalize_tick(@builtin(global_invocation_id) invocation: vec3<u32>) {
     dst[neuron].adapt = select(old.adapt, adaptation, enabled);
     dst[neuron].support = select(old.support, support, enabled);
     dst[neuron].release = select(old.release, release, enabled);
+    activity_dst[neuron].release = dst[neuron].release;
 }

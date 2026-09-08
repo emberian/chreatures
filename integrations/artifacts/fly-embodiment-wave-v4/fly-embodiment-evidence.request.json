@@ -1,6 +1,6 @@
 {
   "archive_id": "fly-embodiment-wave-v4-20260908",
-  "description": "A fly in a growing world: actual body morphology, cross-animal anatomical masks, full MaleCNS numerical evidence, offline teacher feasibility and native physical ecology. Pending learning remains proposed.",
+  "description": "A fly in a growing world: actual body morphology, full MaleCNS execution, completed corpora and first-child training, adverse physical assessment, and independent native ecology studies.",
   "evidence": [
     {
       "artifact_uri": "urn:sha256:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
@@ -1101,109 +1101,853 @@
       }
     },
     {
-      "artifact_uri": null,
-      "blob_refs": [],
+      "artifact_uri": "urn:sha256:b7491bef556a66157914c7fe26b81e7e51cf601adf694941f8857fa15b3afde2",
+      "blob_refs": [
+        {
+          "bytes": 13337,
+          "media_type": "application/json",
+          "role": "sealed_bootstrap_corpus_manifest",
+          "sha256": "b7491bef556a66157914c7fe26b81e7e51cf601adf694941f8857fa15b3afde2",
+          "uri": "urn:sha256:b7491bef556a66157914c7fe26b81e7e51cf601adf694941f8857fa15b3afde2",
+          "verification": "verified_local_sha256"
+        }
+      ],
       "fields": {
-        "causal_role": "future training corpus",
-        "completion_claim": false,
-        "expected_worlds": 12,
+        "artifact_sha256": "b7491bef556a66157914c7fe26b81e7e51cf601adf694941f8857fa15b3afde2",
+        "causal_role": "training data for the first V4 child",
         "model_ingress": [
-          "optic_rgb",
+          "optic_rgb5313",
           "BODY807",
           "delivered_context12"
         ],
         "parent_roles": {
           "author-teacher-replay:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072": "offline_teacher_targets",
-          "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951": "current_full_cns",
+          "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951": "full_cns_parent",
           "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc": "actual_body_and_ecology_host"
         },
-        "status": "proposed; receipt absent",
-        "teacher_scope": "loss-only"
+        "residents": 4,
+        "splits": {
+          "heldout-worlds": [
+            10,
+            11
+          ],
+          "train": [
+            0,
+            7
+          ],
+          "validation-worlds": [
+            8,
+            9
+          ]
+        },
+        "status": "completed sealed corpus",
+        "teacher_scope": "offline loss/evaluation target only",
+        "ticks": 1024,
+        "worlds": 12
       },
-      "id": "proposed-fly-corpus:pending",
+      "id": "completed-fly-bootstrap-corpus:b7491bef556a66157914c7fe26b81e7e51cf601adf694941f8857fa15b3afde2",
       "parent_ids": [
         "author-teacher-replay:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
         "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
         "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc"
       ],
-      "record_type": "proposed_collection_result",
-      "text": "The 12-world B4 full-CNS corpus is still collecting; no completed corpus result is represented here.",
+      "record_type": "completed_fly_bootstrap_corpus",
+      "text": "Twelve B4 actual-body/full-CNS worlds were sealed as the physical bootstrap training corpus.",
       "time": {
         "domain": "live_cns_evidence_stage",
         "value": 7
       }
     },
     {
-      "artifact_uri": null,
-      "blob_refs": [],
-      "fields": {
-        "causal_role": "future learned CNS-to-context and motor adaptation",
-        "completion_claim": false,
-        "parent_roles": {
-          "proposed-fly-corpus:pending": "future_training_data"
-        },
-        "status": "proposed; receipt absent",
-        "training_status": "absent"
-      },
-      "id": "proposed-resident-training:pending",
-      "parent_ids": [
-        "proposed-fly-corpus:pending"
+      "artifact_uri": "urn:sha256:ee2b8888012b944530442e5a1e22807070d81abfc77d381f803a206958f70187",
+      "blob_refs": [
+        {
+          "bytes": 14624,
+          "media_type": "application/json",
+          "role": "first_v4_child_training_result",
+          "sha256": "ee2b8888012b944530442e5a1e22807070d81abfc77d381f803a206958f70187",
+          "uri": "urn:sha256:ee2b8888012b944530442e5a1e22807070d81abfc77d381f803a206958f70187",
+          "verification": "verified_local_sha256"
+        }
       ],
-      "record_type": "proposed_training_result",
-      "text": "Resident/CNS training has no completed receipt yet; initialized artifacts are not presented as trained.",
+      "fields": {
+        "causal_role": "produces the candidate CNS and private resident",
+        "claim": "offline developmental fit; physical competence requires a fresh matched whole-world assay",
+        "competence_claim": null,
+        "evaluation_arms": {
+          "goal_free": "trained CNS service, exact zero context12 at 100Hz",
+          "learned_private_context": "same trained CNS service plus bound native resident",
+          "teacher": "offline collection/evaluator reference only; never a deployable arm"
+        },
+        "heldout_offline": {
+          "body_prediction": 0.13409279327606782,
+          "latent_prediction": 0.003826933039817959,
+          "motor": 0.08387536648660898,
+          "motor_temporal_std": 0.04765294317621738,
+          "outcome_prediction": 1.0748475324362516,
+          "reward_prediction": 5.910467151552439,
+          "total": 2.050085637718439
+        },
+        "parent_roles": {
+          "completed-fly-bootstrap-corpus:b7491bef556a66157914c7fe26b81e7e51cf601adf694941f8857fa15b3afde2": "sealed_training_data",
+          "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951": "initialized_cns_parent"
+        },
+        "resident_artifact_sha256": "373edab010ceef920345787a9e4b3b292b5157529a8dde78c72e31c7df1cb743",
+        "source_revision": "be7139364cd6cd2bb53310ee28d4de883a983574",
+        "status": "completed offline training",
+        "trained_adapter_sha256": "214ae2a3f7e8b31693eeae5ee06db6f6356808b73b85eb4b76e8cbebe037725d",
+        "trained_service": {
+          "bytes": 276082901,
+          "file_sha256": "70e3511784354c5c54a90fb9b30268cc297ffc37d75e1f189f7dd9231a91543e"
+        }
+      },
+      "id": "completed-first-v4-child:ee2b8888012b944530442e5a1e22807070d81abfc77d381f803a206958f70187",
+      "parent_ids": [
+        "completed-fly-bootstrap-corpus:b7491bef556a66157914c7fe26b81e7e51cf601adf694941f8857fa15b3afde2",
+        "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951"
+      ],
+      "record_type": "completed_first_v4_child_training",
+      "text": "The first CNS and private-context child completed an offline physical bootstrap fit; physical competence remained unclaimed pending assay.",
       "time": {
         "domain": "live_cns_evidence_stage",
         "value": 8
       }
     },
     {
-      "artifact_uri": null,
-      "blob_refs": [],
-      "fields": {
-        "causal_role": "future mechanism analysis",
-        "completion_claim": false,
-        "parent_roles": {
-          "proposed-fly-corpus:pending": "future_observed_outcomes",
-          "proposed-resident-training:pending": "future_controller"
-        },
-        "status": "proposed; receipt absent"
-      },
-      "id": "proposed-gam-analysis:pending",
-      "parent_ids": [
-        "proposed-fly-corpus:pending",
-        "proposed-resident-training:pending"
+      "artifact_uri": "urn:sha256:6c0b2fe738c6245521486f0cb23c32adfdaf863e16c630f4119a0bed12247310",
+      "blob_refs": [
+        {
+          "bytes": 9453,
+          "media_type": "application/json",
+          "role": "embodied_nursery_corpus_manifest",
+          "sha256": "6c0b2fe738c6245521486f0cb23c32adfdaf863e16c630f4119a0bed12247310",
+          "uri": "urn:sha256:6c0b2fe738c6245521486f0cb23c32adfdaf863e16c630f4119a0bed12247310",
+          "verification": "verified_local_sha256"
+        }
       ],
-      "record_type": "proposed_gam_result",
-      "text": "No completed V4 GAM receipt exists yet.",
+      "fields": {
+        "causal_role": "distinct continuation corpus; not a parent of the first child",
+        "episodes": [
+          {
+            "sha256": "238649cab3e1393c61c132dbce90d43ac4a554c290f712250edbf72614cb6fda",
+            "split": "train",
+            "stimulus_schedule_sha256": "250c87528c56cf01dac21c2ecc7853da7e744df0add1197d44120e16aa2996ff",
+            "world_index": 0
+          },
+          {
+            "sha256": "466ca3221da94eb99d91281104ba4b900eec66c90f76781e99f11039d3799e42",
+            "split": "train",
+            "stimulus_schedule_sha256": "3b63f099e7ee647edea5cb3efeaa89db83b4dda67fa706ee7c65fb74485cd18c",
+            "world_index": 1
+          },
+          {
+            "sha256": "146d2bb881c0865cce3a2002565eb2f83cecde0e200d509f88ea1c6c55d2836c",
+            "split": "train",
+            "stimulus_schedule_sha256": "874573ff5a27605b3064c05df713c3f465c0956d5347526df48f30e353db5e90",
+            "world_index": 2
+          },
+          {
+            "sha256": "a96cf45fc4f2d342148839b5e56805fe9d1d8a999fee086fe2dbaca54382bb0a",
+            "split": "train",
+            "stimulus_schedule_sha256": "5bb540f91ad7b627470fb9a632e7755a146e88ac473229c0d98021d09f6a57e4",
+            "world_index": 3
+          },
+          {
+            "sha256": "537b04f6a8154705207119bb6df87cd153e9c80d3040dd93e698c6f33550f008",
+            "split": "train",
+            "stimulus_schedule_sha256": "e11ba61d8b919125fed82a1294e075e018de798ec809fa2a02f9c1ac51602933",
+            "world_index": 4
+          },
+          {
+            "sha256": "da92d3b6e955c21dab25a0e833828a4b31fb5c9ca75fb88eafeb75bb70910e7c",
+            "split": "train",
+            "stimulus_schedule_sha256": "5bbce4413630b084029d8adccd033fa57cf5cba7d774f5b0d139dae251ec9c96",
+            "world_index": 5
+          },
+          {
+            "sha256": "923573581eff37d167aaa39df95c3ee9ccf74fd1e7ed3a2802b9bdde87bb4a3b",
+            "split": "train",
+            "stimulus_schedule_sha256": "36451dc967939c8e92754ff76dc31644bce341804b3decd6044824f54a02c08f",
+            "world_index": 6
+          },
+          {
+            "sha256": "6492804c8536f28612d677540b17326b9a969dbad8d1293f81a526f59c4ee92b",
+            "split": "train",
+            "stimulus_schedule_sha256": "4e9d9f1bef4068d70adda1adb71088e93a339aa5cbe990406afb2b724c8910ab",
+            "world_index": 7
+          },
+          {
+            "sha256": "51deab3c5ee13dc007e9280c6950f825874166c3143dd3795b2ed489b10e2316",
+            "split": "validation-worlds",
+            "stimulus_schedule_sha256": "0d7f7f68a839263b68793d153c0da327062d4a964967222f6d9bb70f13d7e2b2",
+            "world_index": 8
+          },
+          {
+            "sha256": "dacacae9fb2ab3c61f628ec5116fd269be04fa0af82abb8a06412a6ca50ea6c1",
+            "split": "validation-worlds",
+            "stimulus_schedule_sha256": "89af7f44b6a744ac45fdce474141cba333cc3de9676a013eb78df90d44b42c03",
+            "world_index": 9
+          },
+          {
+            "sha256": "64ab5ecd48faa91008c602dcbd992c22776c7b645ad3201f34f905330aab9313",
+            "split": "heldout-worlds",
+            "stimulus_schedule_sha256": "d01ecb568842f987fd0db6624efc290217f560addafe34dba26e4f4737e2f2ac",
+            "world_index": 10
+          },
+          {
+            "sha256": "7597141f795c856c0e5bd24cc7b2761e37b0598a8f3deb5b340f5b20e0277df9",
+            "split": "heldout-worlds",
+            "stimulus_schedule_sha256": "f9444f05f1321cee925a2aee0a59d8659287e86bd9457cb3f589222fc4dd358a",
+            "world_index": 11
+          }
+        ],
+        "numerical_trajectory_hash": "sha256 over name/dtype/shape header and contiguous bytes for all 24 episode arrays in declared member order; scalar metadata excluded",
+        "parent_roles": {
+          "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951": "full_cns_collection_parent",
+          "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873": "body_cns_interface",
+          "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc": "physical_ecology_host"
+        },
+        "residents": 4,
+        "status": "completed sealed corpus",
+        "ticks": 1024,
+        "tone_capability_mapping_hz": {
+          "antenna-orient-contact": 223.711,
+          "forward-locomotion": 136.798,
+          "mouth-reach-touch-withdraw": 365.844,
+          "stopping": 83.651
+        },
+        "worlds": 12
+      },
+      "id": "completed-embodied-nursery:6c0b2fe738c6245521486f0cb23c32adfdaf863e16c630f4119a0bed12247310",
+      "parent_ids": [
+        "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+        "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+        "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873"
+      ],
+      "record_type": "completed_embodied_nursery",
+      "text": "A distinct twelve-world B4 nursery recorded counterbalanced physical layouts and stimulus schedules for subsequent learning.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 8
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:1b351c12a1811de8740f2905a3032f6ede7538cd45ae601dad0c8fb58de068db",
+      "blob_refs": [
+        {
+          "bytes": 28549,
+          "media_type": "application/json",
+          "role": "ecological_gam_receipt",
+          "sha256": "1b351c12a1811de8740f2905a3032f6ede7538cd45ae601dad0c8fb58de068db",
+          "uri": "urn:sha256:1b351c12a1811de8740f2905a3032f6ede7538cd45ae601dad0c8fb58de068db",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "causal_role": "plant/ecology mechanism study independent of CNS training",
+        "claim_limit": "Actual finite colony growth with diagnostic neutral flies. No CNS was evaluated or replaced. Constant targets, failed fits and physical failures remain visible. GAM proposals are not promoted genotypes; confirmation execution alone does not establish predictive accuracy or successful diversity.",
+        "competence_claim": null,
+        "diagnostic_motor": "all 92 outputs zero; first84 neutral servo targets,last8 adhesion/pump/saliva off; diagnostic only, no CNS",
+        "failed_worlds": [],
+        "parent_roles": {
+          "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f": "native_growth_mechanism",
+          "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc": "physical_growth_host"
+        },
+        "physical_confirmations": [
+          {
+            "absolute_error": {
+              "blocked_rate": 0.0075835525378292745,
+              "branch_count": 1.7292179109000019,
+              "canopy_span_mm": 1.4077579510358205,
+              "height_mm": 0.8976248206097481,
+              "route_permeability": 0.0
+            },
+            "checkpoint": {
+              "file_sha256": "826848f938bc456fcfa0c97931f374652a6457487f0145cf06a34bf158b10909",
+              "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/confirmation-results/confirmation-high-canopy--confirmation-layout.checkpoint.json",
+              "state_sha256": "034cee1aa8535d16ec1e4a44556c813715a0099ace842a487ff9fc25a43971e3"
+            },
+            "completed": true,
+            "error": null,
+            "intent": "high-canopy",
+            "observed": {
+              "active_branch_count": 7,
+              "blocked": 30,
+              "blocked_rate": 0.8108108108108109,
+              "branch_count": 7.0,
+              "canopy_span_mm": 3.66865313786743,
+              "captured_photon_energy": 0.11910356626727832,
+              "clearance_accepted": 7,
+              "construction_atp": 0.056,
+              "construction_material_by_pool": [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.56,
+                0.0
+              ],
+              "habitat_canopy_span_mm": 16.283120507055745,
+              "height_mm": 3.0644503451138734,
+              "lateral_count": 0,
+              "maintenance_atp": 0.06399999999999825,
+              "maximum_absolute_route_advection_m3_s": 0.0,
+              "maximum_elemental_residual": 1.7124079931818414e-12,
+              "proposed": 37,
+              "regulation_atp": 0.004081504513263796,
+              "route_permeability": 1.0,
+              "sum_edge_conductance_m3_s_by_pool": [
+                1.0976000000000033e-07,
+                5.4880000000000165e-08,
+                4.115999999999988e-08,
+                1.3720000000000041e-08,
+                1.2348000000000009e-06,
+                8.231999999999983e-07,
+                1.372e-10,
+                1.5091999999999954e-06
+              ]
+            },
+            "predicted": {
+              "blocked_rate": 0.8183943633486401,
+              "branch_count": 5.270782089099998,
+              "canopy_span_mm": 2.2608951868316094,
+              "height_mm": 3.9620751657236215,
+              "route_permeability": 1.0
+            },
+            "proposal_sha256": "a54b65576da63eed4f570a2abe81d95c71cf83a3145ed1665661f4b162855ef2",
+            "run_sha256": "7ed379c40d052b940ab61f880747d962665b442784c2aa62c3019770a05687f0"
+          },
+          {
+            "absolute_error": {
+              "blocked_rate": 0.15225041952114748,
+              "branch_count": 1.639669589517255,
+              "canopy_span_mm": 0.021602911536562353,
+              "height_mm": 1.5121500826301206,
+              "route_permeability": 0.0
+            },
+            "checkpoint": {
+              "file_sha256": "01d97ff88b2fbe690dcb96c5c69b1e1c794fa0cc773986d8efc03cc41ca251fe",
+              "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/confirmation-results/confirmation-wide-canopy--confirmation-layout.checkpoint.json",
+              "state_sha256": "d028b3980049c6081edb0ad1188d889badb4427743de4dd20c879313fc396f19"
+            },
+            "completed": true,
+            "error": null,
+            "intent": "wide-canopy",
+            "observed": {
+              "active_branch_count": 7,
+              "blocked": 14,
+              "blocked_rate": 0.6666666666666666,
+              "branch_count": 7.0,
+              "canopy_span_mm": 2.4985124479366094,
+              "captured_photon_energy": 0.11910356626727832,
+              "clearance_accepted": 7,
+              "construction_atp": 0.056,
+              "construction_material_by_pool": [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.56,
+                0.0
+              ],
+              "habitat_canopy_span_mm": 16.208146294875185,
+              "height_mm": 5.237973057031631,
+              "lateral_count": 0,
+              "maintenance_atp": 0.06399999999999825,
+              "maximum_absolute_route_advection_m3_s": 0.0,
+              "maximum_elemental_residual": 1.7124079931818414e-12,
+              "proposed": 21,
+              "regulation_atp": 0.004080732390659903,
+              "route_permeability": 1.0,
+              "sum_edge_conductance_m3_s_by_pool": [
+                1.0976000000000033e-07,
+                5.4880000000000165e-08,
+                4.115999999999988e-08,
+                1.3720000000000041e-08,
+                1.2348000000000009e-06,
+                8.231999999999983e-07,
+                1.372e-10,
+                1.5091999999999954e-06
+              ]
+            },
+            "predicted": {
+              "blocked_rate": 0.8189170861878141,
+              "branch_count": 5.360330410482745,
+              "canopy_span_mm": 2.476909536400047,
+              "height_mm": 3.7258229744015106,
+              "route_permeability": 1.0
+            },
+            "proposal_sha256": "cae1a271f992f1d8e62cca43d764afef7bf2079d38909b34c98553f127ddb160",
+            "run_sha256": "b9527bba6c773d031259dd2d3cc7783bb99ba8487121a264dc302e092e8c49b6"
+          },
+          {
+            "absolute_error": {
+              "blocked_rate": 0.156130349985936,
+              "branch_count": 0.3789296001156517,
+              "canopy_span_mm": 0.07983253623684439,
+              "height_mm": 0.7787246919068385,
+              "route_permeability": 0.0
+            },
+            "checkpoint": {
+              "file_sha256": "9b6087588687daa9d2f298def9e9a13a1989f89514c236a2a30b6a3c7984f0ff",
+              "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/confirmation-results/confirmation-permeable-branches--confirmation-layout.checkpoint.json",
+              "state_sha256": "e33fe4a890dcb948e1fa4333b9aa096f066eaa8fe4a4ee46a70938095e3cb4c6"
+            },
+            "completed": true,
+            "error": null,
+            "intent": "permeable-branches",
+            "observed": {
+              "active_branch_count": 5,
+              "blocked": 10,
+              "blocked_rate": 0.6666666666666666,
+              "branch_count": 5.0,
+              "canopy_span_mm": 2.3868347285776275,
+              "captured_photon_energy": 0.11910356626727832,
+              "clearance_accepted": 5,
+              "construction_atp": 0.04,
+              "construction_material_by_pool": [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.4,
+                0.0
+              ],
+              "habitat_canopy_span_mm": 15.654909361939414,
+              "height_mm": 3.7489206928014758,
+              "lateral_count": 1,
+              "maintenance_atp": 0.06399999999999825,
+              "maximum_absolute_route_advection_m3_s": 0.0,
+              "maximum_elemental_residual": 1.7124079931818414e-12,
+              "proposed": 15,
+              "regulation_atp": 0.004076106028158189,
+              "route_permeability": 1.0,
+              "sum_edge_conductance_m3_s_by_pool": [
+                1.0976000000000033e-07,
+                5.4880000000000165e-08,
+                4.115999999999988e-08,
+                1.3720000000000041e-08,
+                1.2348000000000009e-06,
+                8.231999999999983e-07,
+                1.372e-10,
+                1.5091999999999954e-06
+              ]
+            },
+            "predicted": {
+              "blocked_rate": 0.8227970166526026,
+              "branch_count": 5.378929600115652,
+              "canopy_span_mm": 2.466667264814472,
+              "height_mm": 2.9701960008946373,
+              "route_permeability": 1.0
+            },
+            "proposal_sha256": "76ef036c234979229033b0c17899ec43fa888c9e2b4d7bc9203358a1f6d3e0d2",
+            "run_sha256": "b63b4368287e92b792b6c62a83a55bcd6b7e668fdf178bc387c782e17b541bf6"
+          }
+        ],
+        "selected_models": {
+          "blocked_rate": "additive",
+          "branch_count": "additive",
+          "canopy_span_mm": "additive",
+          "height_mm": "joint",
+          "route_permeability": "observed-constant-mean-no-GAM"
+        },
+        "status": "actual-physical-campaign-and-native-gam-executed",
+        "worlds_completed": 72
+      },
+      "id": "completed-ecological-gam:1b351c12a1811de8740f2905a3032f6ede7538cd45ae601dad0c8fb58de068db",
+      "parent_ids": [
+        "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+        "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc"
+      ],
+      "record_type": "completed_ecological_gam_study",
+      "text": "A native GAM study fitted finite colony-growth outcomes under diagnostic neutral motor input; confirmation failed its intended ranking.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 8
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:d0b0d29f4ad3e542d9dc8d829e1845978972ade297e31d865dcb6d66d3b69398",
+      "blob_refs": [
+        {
+          "bytes": 1257,
+          "media_type": "application/json",
+          "role": "ecological_gam_scope_amendment",
+          "sha256": "d0b0d29f4ad3e542d9dc8d829e1845978972ade297e31d865dcb6d66d3b69398",
+          "uri": "urn:sha256:d0b0d29f4ad3e542d9dc8d829e1845978972ade297e31d865dcb6d66d3b69398",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "affected_fields": [
+          "route_permeability",
+          "route_diffusive_conductance_m3_s",
+          "sum_edge_conductance_m3_s_by_pool",
+          "effective_route_advection_m3_s"
+        ],
+        "causal_role": "corrects scope without rewriting raw receipts",
+        "correct_interpretation": "These were supplied default transport inputs and derived nominal conductances, not measured physical clearance. The constant-target rejection remains valid; it demonstrates no permeability learning or obstruction response. Advection was zero.",
+        "finding": "The frozen browser host initialized route openness to1.0 and exposed manual setRouteMeasurements, but had no automatic physical route sampler.",
+        "parent_roles": {
+          "completed-ecological-gam:1b351c12a1811de8740f2905a3032f6ede7538cd45ae601dad0c8fb58de068db": "amends_interpretation_only"
+        },
+        "status": "historical-route-observation-scope-corrected",
+        "unaffected_evidence": "Actual MuJoCo branch geometry, successful finite native construction, photon capture, material/ATP accounting, native GAM fits of geometric and blocked-growth outcomes, and physical confirmation/checkpoint receipts remain as recorded."
+      },
+      "id": "ecological-gam-scope-amendment:d0b0d29f4ad3e542d9dc8d829e1845978972ade297e31d865dcb6d66d3b69398",
+      "parent_ids": [
+        "completed-ecological-gam:1b351c12a1811de8740f2905a3032f6ede7538cd45ae601dad0c8fb58de068db"
+      ],
+      "record_type": "ecological_gam_scope_amendment",
+      "text": "The preserved GAM campaign used supplied default route transport values, not measured physical aperture.",
       "time": {
         "domain": "live_cns_evidence_stage",
         "value": 9
       }
     },
     {
-      "artifact_uri": null,
-      "blob_refs": [],
-      "fields": {
-        "causal_role": "future behavioral evidence",
-        "completion_claim": false,
-        "parent_roles": {
-          "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc": "validated_physical_ecology",
-          "proposed-gam-analysis:pending": "future_analysis",
-          "proposed-resident-training:pending": "future_trained_controller"
-        },
-        "status": "proposed; receipt absent"
-      },
-      "id": "proposed-trained-joined-assay:pending",
-      "parent_ids": [
-        "proposed-resident-training:pending",
-        "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
-        "proposed-gam-analysis:pending"
+      "artifact_uri": "urn:sha256:4a24083c9a5b84aa1f453ad90f84fe5f6adf84591c13e6afb67179f51ed82138",
+      "blob_refs": [
+        {
+          "bytes": 87684,
+          "media_type": "application/json",
+          "role": "physical_colony_lineage_receipt",
+          "sha256": "4a24083c9a5b84aa1f453ad90f84fe5f6adf84591c13e6afb67179f51ed82138",
+          "uri": "urn:sha256:4a24083c9a5b84aa1f453ad90f84fe5f6adf84591c13e6afb67179f51ed82138",
+          "verification": "verified_local_sha256"
+        }
       ],
-      "record_type": "proposed_joined_result",
-      "text": "No trained joined CNS/body/ecology assay receipt exists yet.",
+      "fields": {
+        "birth_count": 1,
+        "causal_role": "ecological lineage evidence independent of CNS fit",
+        "first_birth_tick": 1650,
+        "fly_control": "constant zero MOTOR92 diagnostic target; no CNS loaded in this ecological experiment",
+        "maximum_elemental_residual": 1.7053025658242404e-12,
+        "parent_roles": {
+          "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f": "lineage_and_material_authority",
+          "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc": "physical_geometry_and_light"
+        },
+        "status": "executed exact-replay receipt",
+        "ticks": 3200,
+        "whole_world_replay_exact": true
+      },
+      "id": "executed-physical-lineage:4a24083c9a5b84aa1f453ad90f84fe5f6adf84591c13e6afb67179f51ed82138",
+      "parent_ids": [
+        "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+        "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc"
+      ],
+      "record_type": "executed_physical_colony_lineage",
+      "text": "The native physical ecology produced and replayed a finite first-generation colony birth over 32 seconds.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 9
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:e5868ca795cec8788ea573e154ea6ad61e47e74118a35b84f9bb5f59cdb2fa96",
+      "blob_refs": [
+        {
+          "bytes": 8354,
+          "media_type": "application/json",
+          "role": "joined_physical_route_lineage_receipt",
+          "sha256": "e5868ca795cec8788ea573e154ea6ad61e47e74118a35b84f9bb5f59cdb2fa96",
+          "uri": "urn:sha256:e5868ca795cec8788ea573e154ea6ad61e47e74118a35b84f9bb5f59cdb2fa96",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "causal_role": "actual physical route evidence; not retroactive GAM evidence",
+        "joined_routes": {
+          "all_advection_zero": true,
+          "command": "node test.mjs",
+          "construction_tick": 200,
+          "cwd": "native/browser-world",
+          "elapsed_ms": 36675,
+          "exit_code": 0,
+          "latest_containment_queries": 6331,
+          "latest_ray_queries": 7814,
+          "maximum_route_open_fraction": 1.0,
+          "mean_advance_ms": 173.0226920594059,
+          "mean_sample_ms": 10.03923949999978,
+          "minimum_route_open_fraction": 0.03125,
+          "plan_sha256": "3a9e2540a28f492d13abcf2c062f24f67f270ffb32ec902df1be4a0e30614730",
+          "realized_growth_at_tick": 1,
+          "residents": 2,
+          "route_count": 133,
+          "scope": "Joined actual MuJoCo geometry, route measurement, conservative transport, light, construction, visitor object/force/sound, and snapshot continuation. Numerical summary transcribed from successful tool stdout; no learned behavior or matched performance comparison.",
+          "screen_affected_optic_scalars": 141,
+          "source_mjcf_sha256": "71e2a0c59f7f6407d2c0c62627ba91005c25078022fbb7899d9afe4ada0da3fe",
+          "whole_world_replay_exact": true
+        },
+        "parent_roles": {
+          "executed-physical-lineage:4a24083c9a5b84aa1f453ad90f84fe5f6adf84591c13e6afb67179f51ed82138": "lineage_source",
+          "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a": "actual_mujoco_geometry",
+          "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f": "transport_and_growth_authority"
+        },
+        "source_hashes": {
+          "native/browser-world/pkg/chreatures_browser_world_bg.wasm": "d5330fda92b08ea418f8b0a77ff941dd09562b7ce21e7ba77083fd414a03340d",
+          "native/browser-world/runtime.mjs": "28eae8ef11959427496a81133e4079c4698723df3416bd98a3981c5d8c62a3d7",
+          "native/browser-world/src/route_geometry.rs": "d1b7a92147c039dc9518d8448474218f802719961760e09a402086218ea154e0",
+          "native/browser-world/test.mjs": "b54b42502380c9981483d7d4c6b8d42307a3f1a9af0f2103ff7383267c2d09f5",
+          "native/ecology-core/src/transport_geometry.rs": "8d228434bcc6f3d135cd32772b9629c58d7c2b88f75e835c6b40a83d203d17b7"
+        },
+        "status": "executed joined physical receipt"
+      },
+      "id": "executed-joined-physical-routes:e5868ca795cec8788ea573e154ea6ad61e47e74118a35b84f9bb5f59cdb2fa96",
+      "parent_ids": [
+        "executed-physical-lineage:4a24083c9a5b84aa1f453ad90f84fe5f6adf84591c13e6afb67179f51ed82138",
+        "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+        "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+      ],
+      "record_type": "executed_joined_physical_routes",
+      "text": "Actual MuJoCo geometry drove route measurement, conservative transport, light and growth in one exactly replayed joined run.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 9
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:45c9db1aa9068c4ff2577072fe0841052695c4cb54cd5ed717643c2c07a5cbba",
+      "blob_refs": [
+        {
+          "bytes": 1254,
+          "media_type": "application/json",
+          "role": "joined_wing_aerodynamics_receipt",
+          "sha256": "45c9db1aa9068c4ff2577072fe0841052695c4cb54cd5ed717643c2c07a5cbba",
+          "uri": "urn:sha256:45c9db1aa9068c4ff2577072fe0841052695c4cb54cd5ed717643c2c07a5cbba",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "body_count": 2,
+        "causal_role": "diagnostic native mechanics join independent of learned CNS behavior",
+        "commands": "MOTOR92[0]=0.05, MOTOR92[92+42]=-0.04, all other channels zero; diagnostic, no CNS",
+        "construction_tick": 200,
+        "growth": 1,
+        "parent_roles": {
+          "executed-joined-physical-routes:e5868ca795cec8788ea573e154ea6ad61e47e74118a35b84f9bb5f59cdb2fa96": "physical_route_predecessor",
+          "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a": "articulated_body"
+        },
+        "scope": "Actual Euler step1/2 MuJoCo/Wasm body, native aerodynamic force application, sampled material routes, light-funded growth and visitor interactions. No flight, learned behavior or matched performance claim.",
+        "source_hashes": {
+          "native/browser-world/fixtures/fly-ecology/world.json": "ab6b1dcdb7c0e97bc3c4ea10e78c6e62980d48dcf8216328a25a0f91b16906c9",
+          "native/browser-world/pkg/chreatures_browser_world_bg.wasm": "526ef3bacb1077c3664ccf2531020948a59514a08ac2b1d468f366c4fde1a7b3",
+          "native/browser-world/runtime.mjs": "ddfdc7581f9021958ad386de063b54d7036b2dbb1cf78892ed8cf03ae6672bf3",
+          "native/browser-world/src/fly_aerodynamics.rs": "ff144b9ed49a5794ee88e1e909efae8943a6b7d690c36f91b423c903bcabcf00"
+        },
+        "status": "executed",
+        "whole_world_replay": "exact"
+      },
+      "id": "executed-wing-aerodynamics-join:45c9db1aa9068c4ff2577072fe0841052695c4cb54cd5ed717643c2c07a5cbba",
+      "parent_ids": [
+        "executed-joined-physical-routes:e5868ca795cec8788ea573e154ea6ad61e47e74118a35b84f9bb5f59cdb2fa96",
+        "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+      ],
+      "record_type": "executed_wing_aerodynamics_join",
+      "text": "The native host joined articulated bodies, applied wing aerodynamics, sampled material routes and light-funded growth with exact replay.",
       "time": {
         "domain": "live_cns_evidence_stage",
         "value": 10
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:3d1bda077adf242efd5d29a501fe9c5d47d35039ab439a5cb26cd4d119f0710e",
+      "blob_refs": [
+        {
+          "bytes": 2448,
+          "media_type": "application/json",
+          "role": "six_condition_physical_assessment",
+          "sha256": "3d1bda077adf242efd5d29a501fe9c5d47d35039ab439a5cb26cd4d119f0710e",
+          "uri": "urn:sha256:3d1bda077adf242efd5d29a501fe9c5d47d35039ab439a5cb26cd4d119f0710e",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "arm_summary": {
+          "initialized-cns_initialized-private": {
+            "mean_measured_oral_transfer_model_units": 0.0,
+            "mean_mechanical_work_model_units": 50.10539850085067,
+            "mean_resource_change_model_units": -0.19756034447549586,
+            "mean_root_path_mm": 1.0942752289829403,
+            "mean_upright_duration_s": 10.24
+          },
+          "trained-cns_learned-private": {
+            "mean_measured_oral_transfer_model_units": 2.192723471671343e-09,
+            "mean_mechanical_work_model_units": 1898.4133616379731,
+            "mean_resource_change_model_units": -1.9247323483812306,
+            "mean_root_path_mm": 17.65753776226903,
+            "mean_upright_duration_s": 0.25
+          },
+          "trained-cns_zero-context": {
+            "mean_measured_oral_transfer_model_units": 0.0,
+            "mean_mechanical_work_model_units": 1877.865034481198,
+            "mean_resource_change_model_units": -1.9453394364872907,
+            "mean_root_path_mm": 17.43364570772745,
+            "mean_upright_duration_s": 0.1575
+          }
+        },
+        "causal_role": "physical assessment of first trained child",
+        "competence_promoted": false,
+        "identical_physical_starts_by_layout": {
+          "heldout-10": "695e3462b2cb1cf303f6091bf4ca99f9e54f38d24b10f41c0ac3a95a0746cd7a",
+          "heldout-11": "23ec7c776c267aebfe8a3a89dcd9a5be5cf113024ded3526a402e8d3f4e95b0f"
+        },
+        "interpretation": "Training increased actuation and path length but caused rapid loss of upright posture and much greater resource/work cost; learned private context did not rescue it.",
+        "parent_roles": {
+          "completed-embodied-nursery:6c0b2fe738c6245521486f0cb23c32adfdaf863e16c630f4119a0bed12247310": "heldout_layouts_and_stimuli",
+          "completed-first-v4-child:ee2b8888012b944530442e5a1e22807070d81abfc77d381f803a206958f70187": "candidate_controller",
+          "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc": "frozen_physical_ecology"
+        },
+        "residents_per_world": 4,
+        "status": "executed adverse result",
+        "stimulus_schedule_sha256": "82869e6201530040f24264ec383dd5de0077547fc40dea539e22bd510b78d9a6",
+        "ticks": 1024,
+        "worlds": 2
+      },
+      "id": "executed-first-child-physical-assessment:3d1bda077adf242efd5d29a501fe9c5d47d35039ab439a5cb26cd4d119f0710e",
+      "parent_ids": [
+        "completed-first-v4-child:ee2b8888012b944530442e5a1e22807070d81abfc77d381f803a206958f70187",
+        "completed-embodied-nursery:6c0b2fe738c6245521486f0cb23c32adfdaf863e16c630f4119a0bed12247310",
+        "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc"
+      ],
+      "record_type": "executed_first_child_physical_assessment",
+      "text": "Two heldout B4 worlds showed increased motion but immediate falling and high work/resource cost in both trained arms.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 10
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:bdc41c523f3c3ff846f9462cec3267d63dc57b5eb107c2d2292687e269e34675",
+      "blob_refs": [
+        {
+          "bytes": 2849,
+          "media_type": "application/json",
+          "role": "trained_child_torch_dawn_parity",
+          "sha256": "bdc41c523f3c3ff846f9462cec3267d63dc57b5eb107c2d2292687e269e34675",
+          "uri": "urn:sha256:bdc41c523f3c3ff846f9462cec3267d63dc57b5eb107c2d2292687e269e34675",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "causal_role": "rules out a Dawn-only deployment error for the adverse initial actuation",
+        "comparison": {
+          "motor92_all_b4": {
+            "max_abs": 4.403293132781982e-06,
+            "mean_abs": 1.0158161647110398e-06,
+            "rms": 1.474535963083481e-06
+          },
+          "motor_neuron_rates815_resident0": {
+            "max_abs": 1.4901161193847656e-08,
+            "mean_abs": 2.9253813386694787e-10,
+            "rms": 2.0878596428157653e-09
+          }
+        },
+        "competence_claim": null,
+        "input": {
+          "body_shape": [
+            4,
+            807
+          ],
+          "compact_input_sha256": "9a92b401e5241178b1a64766084f09a099f5a21d2fbb0c8e89f91cb2fdf75618",
+          "context": "explicit float32 zeros",
+          "context_shape": [
+            4,
+            12
+          ],
+          "episode_sha256": "64ab5ecd48faa91008c602dcbd992c22776c7b645ad3201f34f905330aab9313",
+          "optic_shape": [
+            4,
+            1771,
+            3
+          ],
+          "state": "cold reset; recurrent rates initialized from sealed baseline (0.2 for this child)",
+          "tick": 0,
+          "world_index": 10
+        },
+        "interpretation": "The trained-child tick-zero servo offset is present in Torch and Dawn. Deployment graph quantization is the sealed CHCNS4 u16 half-bit graph decoded to float32 by both paths; learned readout and motor parameters remain float32. The small motor difference is amplified from sub-1.5e-8 MN-rate differences by the trained centered decoder. This is numerical parity evidence and does not establish physical competence.",
+        "parent_roles": {
+          "completed-first-v4-child:ee2b8888012b944530442e5a1e22807070d81abfc77d381f803a206958f70187": "exact_trained_service",
+          "executed-first-child-physical-assessment:3d1bda077adf242efd5d29a501fe9c5d47d35039ab439a5cb26cd4d119f0710e": "explains_adverse_tick_zero_offset"
+        },
+        "resident0": {
+          "assessment_dawn_mean_abs_servo_target_delta_rad": 0.2734621505395901,
+          "dawn_motor92_max": 0.2595805525779724,
+          "dawn_motor92_mean_abs": 0.0588863268494606,
+          "dawn_motor92_min": -0.23048588633537292,
+          "torch_max_abs_servo_target_delta_rad": 1.4448334254953266,
+          "torch_mean_abs_servo_target_delta_rad": 0.2734610119415778,
+          "torch_motor92_max": 0.2595815360546112,
+          "torch_motor92_mean_abs": 0.058886077255010605,
+          "torch_motor92_min": -0.23048630356788635,
+          "torch_vs_assessment_applied_target_max_abs_rad": 1.485840499393376e-05,
+          "torch_vs_assessment_applied_target_rms_rad": 5.554394749680863e-06
+        },
+        "status": "executed numerical parity"
+      },
+      "id": "trained-child-torch-dawn-parity:bdc41c523f3c3ff846f9462cec3267d63dc57b5eb107c2d2292687e269e34675",
+      "parent_ids": [
+        "completed-first-v4-child:ee2b8888012b944530442e5a1e22807070d81abfc77d381f803a206958f70187",
+        "executed-first-child-physical-assessment:3d1bda077adf242efd5d29a501fe9c5d47d35039ab439a5cb26cd4d119f0710e"
+      ],
+      "record_type": "trained_child_torch_dawn_parity",
+      "text": "The exact trained child reproduced its tick-zero motor-neuron state and large servo offset across Torch/ROCm and Dawn/Metal.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 11
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:27d2b570a7e5c714cd6d728a0edf4927837da203bd76f88ae86af94e3885978d",
+      "blob_refs": [
+        {
+          "bytes": 1387,
+          "media_type": "application/json",
+          "role": "assessment_observer_receipt",
+          "sha256": "27d2b570a7e5c714cd6d728a0edf4927837da203bd76f88ae86af94e3885978d",
+          "uri": "urn:sha256:27d2b570a7e5c714cd6d728a0edf4927837da203bd76f88ae86af94e3885978d",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 2450481,
+          "media_type": "image/png",
+          "role": "assessment_observer_image",
+          "sha256": "163c19852f02bade7e2974aa073768fddd93c0bfc5fe0fbc4d2cb55cad236e2b",
+          "uri": "urn:sha256:163c19852f02bade7e2974aa073768fddd93c0bfc5fe0fbc4d2cb55cad236e2b",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "fields": {
+        "causal_role": "public visual link to adverse assay",
+        "display_clip": {
+          "limit": 0.020045168697834015,
+          "method": "pooled valid-soma absolute 99.5 percentile"
+        },
+        "measured_firing_claim": false,
+        "model_time_s": 0.11,
+        "neural_field": "rate state minus immutable artifact baseline",
+        "parent_roles": {
+          "executed-first-child-physical-assessment:3d1bda077adf242efd5d29a501fe9c5d47d35039ab439a5cb26cd4d119f0710e": "rendered_executed_conditions"
+        },
+        "public_asset": "fly-cns-v4-instability.png",
+        "status": "rendered observer artifact",
+        "tick": 10
+      },
+      "id": "assessment-observer:163c19852f02bade7e2974aa073768fddd93c0bfc5fe0fbc4d2cb55cad236e2b",
+      "parent_ids": [
+        "executed-first-child-physical-assessment:3d1bda077adf242efd5d29a501fe9c5d47d35039ab439a5cb26cd4d119f0710e"
+      ],
+      "record_type": "assessment_observer_render",
+      "text": "An observer rendering joins executed articulated poses to all valid CNS soma rate-state deltas at 0.11 seconds.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 11
       }
     }
   ]

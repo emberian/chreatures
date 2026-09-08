@@ -517,6 +517,10 @@ export class MaleCNSWebGPU {
       createBuffer(D, 'CNS state A', STATE_BYTES, U.STORAGE | U.COPY_SRC | U.COPY_DST),
       createBuffer(D, 'CNS state B', STATE_BYTES, U.STORAGE | U.COPY_SRC | U.COPY_DST),
     ];
+    B.activity = [
+      createBuffer(D, 'CNS recurrence activity A', CNS_COUNTS.neurons * 32, U.STORAGE),
+      createBuffer(D, 'CNS recurrence activity B', CNS_COUNTS.neurons * 32, U.STORAGE),
+    ];
     B.recurrence = createBuffer(D, 'CNS fast/mod recurrence', VECTOR_BYTES * 4, U.STORAGE);
     B.projectionPartial = createBuffer(D, 'readout projection partial', CNS_COUNTS.rank * PROJECTION_BLOCKS * 16, U.STORAGE);
     B.projected = createBuffer(D, 'readout rank64 vec4', CNS_COUNTS.rank * 16, U.STORAGE);
@@ -539,6 +543,7 @@ export class MaleCNSWebGPU {
       clearDrive: [afferent, 'clear_drive'], mixOptic: [afferent, 'mix_optic'],
       scatterOptic: [afferent, 'scatter_optic'], encodeBody: [afferent, 'encode_body'],
       injectContext: [afferent, 'inject_context'], resetState: [dynamicsModule, 'reset_state'],
+      syncActivity: [dynamicsModule, 'sync_activity'],
       recurrentSum: [dynamicsModule, 'recurrent_sum'],
       jacobiUpdate: [dynamicsModule, 'jacobi_update'], finalizeTick: [dynamicsModule, 'finalize_tick'],
       gatherObserve: [observeModule, 'gather_observe'],
@@ -565,18 +570,19 @@ export class MaleCNSWebGPU {
     G.reduceProjection = bind(D, P.reduceProjection, { 6: B.projectionPartial, 7: B.projected });
     G.outputLatent = bind(D, P.outputLatent, { 0: B.config, 7: B.projected,
       8: B['readout.output.weight'], 9: B['readout.output.bias'], 10: B.latent });
-    G.resetState = B.state.map(state => bind(D, P.resetState, { 0: B.config, 4: B['atlas.neuron_type'],
-      5: B.dynamics, 7: state }));
-    G.recurrentSum = B.state.map(state => bind(D,P.recurrentSum,{1:B['graph.crow'],2:B['graph.col'],3:B['graph.weight'],4:B['graph.channel'],5:B.baseline,6:state,8:B.recurrence}));
+    G.resetState = B.state.map((state,index) => bind(D, P.resetState, { 0: B.config, 4: B['atlas.neuron_type'],
+      5: B.dynamics, 7: state, 12:B.activity[index] }));
+    G.syncActivity = B.state.map((state,index) => bind(D,P.syncActivity,{6:state,12:B.activity[index]}));
+    G.recurrentSum = B.state.map((state,index) => bind(D,P.recurrentSum,{1:B['graph.crow'],2:B['graph.col'],3:B['graph.weight'],4:B['graph.channel'],5:B.baseline,8:B.recurrence,11:B.activity[index]}));
     G.jacobiUpdate = B.state.map((stateIn, index) => bind(D, P.jacobiUpdate, { 0: B.config,
       4: B['atlas.neuron_type'], 5: B.dynamics, 6: stateIn, 7: B.state[1 - index],
-      8: B.recurrence, 9: B.drive, 10: B['afferent.neutral_drive'] }));
-    G.finalizeTick = B.state.map(state => bind(D, P.finalizeTick, { 0: B.config,
-      4: B['atlas.neuron_type'], 5: B.dynamics, 7: state }));
+      8: B.recurrence, 9: B.drive, 10: B['afferent.neutral_drive'], 12:B.activity[1-index] }));
+    G.finalizeTick = B.state.map((state,index) => bind(D, P.finalizeTick, { 0: B.config,
+      4: B['atlas.neuron_type'], 5: B.dynamics, 7: state, 12:B.activity[index] }));
     G.outputMotor = B.state.map(state=>bind(D,P.outputMotor,{0:state,1:B['atlas.motor_rows'],2:B['motor.weight'],3:B['atlas.motor_mask'],4:B['motor.intercept'],5:B.motor,6:B['motor.reference_rate'],7:B['motor.rate_scale']}));
     G.gatherObserve = B.state.map(state=>bind(D,P.gatherObserve,{0:B.config,1:state,2:B.observe}));
     G.projectPartial = B.state.map(state => bind(D, P.projectPartial, { 1: state,
-      2: B['atlas.neuron_type'], 3: B.dynamics, 4: B['afferent.mask'],
+      2: B.baseline, 4: B['afferent.mask'],
       5: B['readout.projection.weight'], 6: B.projectionPartial }));
   }
 
@@ -802,6 +808,9 @@ export class MaleCNSWebGPU {
       const command=this.device.createCommandEncoder({label:'CNS V4 restore'});
       command.copyBufferToBuffer(upload,0,this._buffers.state[0],0,STATE_BYTES);
       command.copyBufferToBuffer(upload,0,this._buffers.state[1],0,STATE_BYTES);
+      const pass=command.beginComputePass({label:'CNS V4 restore activity'});
+      for(let index=0;index<2;index++) dispatch(pass,this._pipelines.syncActivity,this._groups.syncActivity[index],Math.ceil(CNS_COUNTS.neurons/256));
+      pass.end();
       this.device.queue.submit([command.finish()]);
       await this.device.queue.onSubmittedWorkDone();
     } catch (error) {
