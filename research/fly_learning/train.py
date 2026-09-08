@@ -91,12 +91,8 @@ def _cns_control_step(
     model: AnatomicalCNS, optic: torch.Tensor, body: torch.Tensor,
     context: torch.Tensor, state: CNSState | None,
 ) -> tuple[torch.Tensor, torch.Tensor, CNSState]:
-    """Advance the 200 Hz CNS twice for one 100 Hz physical control tick."""
-    latent = motor = None
-    for _ in range(2):
-        latent, motor, state = model(optic, body, context, state, dt=0.005)
-    assert latent is not None and motor is not None
-    return latent, motor, state
+    """Advance one control tick with two internal dt/2 rate integrations."""
+    return model(optic, body, context, state, dt=0.01)
 
 
 def body_statistics(episodes: Iterable[Episode]) -> tuple[np.ndarray, np.ndarray]:
