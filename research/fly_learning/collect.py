@@ -15,6 +15,7 @@ import inspect
 import json
 import os
 from pathlib import Path
+import threading
 import time
 from typing import Any, Mapping, Protocol
 
@@ -46,6 +47,9 @@ from .data import (
     sha256_file,
 )
 from .teacher import FlyCurriculumTeacher, TeacherObservation
+
+
+_PROGRESS_LOCK = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -232,13 +236,14 @@ async def collect_episode(bundle: CollectionBundle, plan: Plan, output: Path) ->
         arrays["success"][tick] = _require(success, (RESIDENTS,), np.dtype("|b1"), "success")
         arrays["failure"][tick] = _require(failure, (RESIDENTS,), np.dtype("|b1"), "failure")
         if (tick + 1) % 64 == 0:
-            print(json.dumps({
-                "event": "collection-progress", "world_index": plan.world_index,
-                "completed_ticks": tick + 1, "ticks": TICKS,
-                "elapsed_seconds": time.monotonic() - began,
-                "success_ticks": int(arrays["success"][: tick + 1].sum()),
-                "failure_ticks": int(arrays["failure"][: tick + 1].sum()),
-            }, sort_keys=True), flush=True)
+            with _PROGRESS_LOCK:
+                print(json.dumps({
+                    "event": "collection-progress", "world_index": plan.world_index,
+                    "completed_ticks": tick + 1, "ticks": TICKS,
+                    "elapsed_seconds": time.monotonic() - began,
+                    "success_ticks": int(arrays["success"][: tick + 1].sum()),
+                    "failure_ticks": int(arrays["failure"][: tick + 1].sum()),
+                }, sort_keys=True), flush=True)
 
     # One final CNS observation binds the T+1 cache. It repeats the last
     # acknowledged context without causing another physical transition.

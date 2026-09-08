@@ -14,10 +14,9 @@ from typing import Any, Final
 
 import numpy as np
 
-from .batch_collection import collect_cohort
+from .batch_collection import collect_campaign
 from .curriculum import Bout, Plan, CONTROL_INDEX, PHASE_INDEX, RESIDENTS, TICKS, split_for_world
 from .data import load_episode, sha256_file
-from .native_host import BatchedTorchFullCNS
 from .recovery import build_recovery_plan, create_native_bundle
 from .teacher import FlyCurriculumTeacher, TeacherCommand, TeacherObservation
 
@@ -126,8 +125,8 @@ class SupportTeacher(FlyCurriculumTeacher):
                               "supplied-contact-gated-low-slew-support-reference")
 
 
-def create_support_bundle(arguments: Any, plan: SupportPlan):
-    bundle = create_native_bundle(arguments, plan)
+def create_support_bundle(arguments: Any, plan: SupportPlan, *, service_metadata: dict[str, Any]):
+    bundle = create_native_bundle(arguments, plan, service_metadata=service_metadata)
     try:
         bundle.teacher = SupportTeacher(Path(arguments.body_schema), bundle.teacher.author_steps)
         metadata = dict(bundle.metadata)
@@ -227,7 +226,9 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     collect = commands.add_parser("collect")
     collect.add_argument("--world-start", type=int, required=True)
-    collect.add_argument("--cohort-width", type=int, choices=(2, 4), default=2)
+    width = collect.add_mutually_exclusive_group()
+    width.add_argument("--cohort-width", type=int, choices=(2, 4), default=2)
+    width.add_argument("--cohort-widths", type=int, choices=(2, 4), nargs="+")
     for name in ("output", "scenes", "service", "native-binary", "native-manifest", "author-source", "body-schema", "motor-atlas"):
         collect.add_argument("--" + name, type=Path, required=True)
     collect.add_argument("--source-revision", required=True)
@@ -239,23 +240,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "seal":
         print(json.dumps(seal_support(args.directory, args.output), sort_keys=True)); return
-    stop = args.world_start + args.cohort_width
-    if args.world_start < 0 or stop > 12:
-        raise ValueError("support cohort leaves whole-world split 0..11")
-    plans = [build_support_plan(index, base_seed=args.seed) for index in range(args.world_start, stop)]
-    bundles = []
-    try:
-        for plan in plans:
-            bundle = create_support_bundle(args, plan)
-            bundle.metadata["collection_base_seed"] = args.seed
-            bundles.append(bundle)
-        shared = BatchedTorchFullCNS(args.service, args.device, args.cohort_width)
-        outputs = [args.output / f"episode-{plan.world_index:02d}.npz" for plan in plans]
-        print(json.dumps(collect_cohort(bundles, plans, outputs, shared), sort_keys=True))
-    except BaseException:
-        for bundle in bundles:
-            bundle.world.close()
-        raise
+    widths = args.cohort_widths or (args.cohort_width,)
+    print(json.dumps(collect_campaign(args, build_support_plan, create_support_bundle, widths), sort_keys=True))
 
 
 if __name__ == "__main__":

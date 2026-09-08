@@ -22,7 +22,7 @@ import numpy as np
 from chreatures.cns_adapter_contract import load_service_artifact
 
 from .collect import CollectionBundle, WorldSample
-from .curriculum import Plan, RESIDENTS
+from .curriculum import Plan, RESIDENTS, TICKS
 from .data import BODY_AFFERENTS, LATENT, MOTOR, OPTIC_SITES, sha256_file
 from .teacher import FlyCurriculumTeacher, TeacherObservation
 
@@ -422,17 +422,46 @@ class BatchedTorchFullCNS(TorchFullCNS):
         super().__init__(service, device)
         self.worlds = worlds
         self.forward_calls = 0
+        self.cohort_status = "idle"
+        self.sealed_cohorts = 0
+
+    def configure_cohort(self, worlds: int) -> None:
+        if worlds not in (2, 4):
+            raise ValueError("CNS cohorts require exactly two or four B4 worlds")
+        if (self.cohort_status not in ("idle", "sealed")
+                or self.state is not None or self.forward_calls):
+            raise RuntimeError("cannot reconfigure an active, unsealed, failed, or closed cohort")
+        self.worlds = worlds
+
+    def begin_cohort(self) -> None:
+        self.configure_cohort(self.worlds)
+        self.cohort_status = "active"
+
+    def release_cohort(self, *, sealed: bool) -> None:
+        """Called only after episode sealing and closure of every physical world."""
+        if self.cohort_status != "active":
+            raise RuntimeError("CNS cohort release requires an active cohort")
+        if sealed and self.forward_calls != TICKS + 1:
+            raise RuntimeError("cannot seal CNS state before its terminal observation")
+        super().close()
+        self.forward_calls = 0
+        self.cohort_status = "sealed" if sealed else "failed"
+        if sealed:
+            self.sealed_cohorts += 1
 
     def step(self, *args, **kwargs):
         raise RuntimeError("batched CNS requires step_worlds with every cohort member")
 
     def close(self) -> None:
-        # End the whole cohort. Immutable model weights remain reusable for the
-        # next independent set of episodes; no individual row is ever recycled.
+        # Final shutdown, distinct from a sealed cohort's private-state release.
         super().close()
         self.forward_calls = 0
+        self.cohort_status = "closed"
+        self.model = None
 
     def step_worlds(self, optic, body, context):
+        if self.cohort_status != "active":
+            raise RuntimeError("CNS forward requires an active physical cohort")
         packed = []
         for values, shape in (
             (optic, (RESIDENTS, OPTIC_SITES, 3)),
