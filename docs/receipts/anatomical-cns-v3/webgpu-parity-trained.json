@@ -1,0 +1,56 @@
+{
+  "format": "chreatures-cns-webgpu-v3-dawn-probe-v1",
+  "manifestArtifact": "53765d4afb16ee084d9d0866066ac1ddc4f879a54af0d4693d97230509688996",
+  "graph": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "serviceArtifactSha256": "6e1acf46d18f5db0ff6e0096ed7439ebaf5df722ce34c1f0c56276ba271fccc3",
+  "fixtureSha256": "1023956554bdb2d16c532bd4ebec6df60b313a193f6ab3630a915989b4ae6e45",
+  "adapter": {
+    "name": "apple-m2-max"
+  },
+  "capacity": 1,
+  "ticks": 3,
+  "neutralRateMaxAbs": 4.470348358154297e-8,
+  "rateMaxAbsByTick": [
+    0.00000286102294921875,
+    0.000007361173629760742,
+    0.000010311603546142578
+  ],
+  "latentMaxAbsByTick": [
+    0.000005211681127548218,
+    0.000016644597053527832,
+    0.000017508864402770996
+  ],
+  "motorMaxAbsByTick": [
+    5.578622221946716e-7,
+    2.384185791015625e-7,
+    2.384185791015625e-7
+  ],
+  "finalMaxAbs": {
+    "rates": 0.000010311603546142578,
+    "adaptation": 5.934853106737137e-7,
+    "support": 5.960464477539063e-8,
+    "release": 4.172325134277344e-7,
+    "mod_da": 6.667505658697337e-9,
+    "mod_oa": 1.917942427098751e-7,
+    "mod_ht": 5.990732461214066e-7
+  },
+  "byteExactRestore": {
+    "latent": true,
+    "motor": true,
+    "snapshot": true
+  },
+  "limits": {
+    "neutralRate": 0.000002,
+    "state": 0.0002,
+    "latent": 0.0002,
+    "motor": 0.0002
+  },
+  "limitBasis": "Approximately four times the observed binary16-versus-float32 numerical error; regression bound only, not a biological tolerance.",
+  "note": "Browser graph and projection use authenticated IEEE binary16 packing; the Torch fixture used source float32 weights.",
+  "nodeDawnLifetime": {
+    "requirement": "The object returned by create() remains strongly referenced for the full GPU lifetime.",
+    "upstream": "https://github.com/dawn-gpu/node-webgpu#lifetime",
+    "issue": "https://issues.chromium.org/issues/387965810",
+    "diagnosis": "Without the strong reference, lldb stopped in dawn::native::InstanceBase::ProcessEvents at std::mutex::lock after successful ticks."
+  }
+}

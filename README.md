@@ -39,12 +39,18 @@ back through 1,314 descending neurons. It cannot directly command the body.
 [Equations, interfaces and limits](docs/development/ANATOMICAL_CNS_V3.md) ·
 [Browser physics](docs/development/IN_TAB_PHYSICS.md)
 
+[Download the pinned V3 research artifacts](https://github.com/emberian/chreatures/releases/tag/live-cns-v3-research-20260908)
+
 The current in-tab generation uses MuJoCo articulated physics, Rust/Wasm body and
 private cognition, and WebGPU full-graph recurrence. Its inspector exposes all
 seven neural fields, actual retinal facets and paired muscle activations. Visitors
 can send four physical tones or a greeting, insert a movable object, and save the
 whole interacting life. All private neural fields, learned context memories,
 physiology, RNG state and pending inputs belong to that checkpoint.
+The final three-body headless run restored that complete state exactly, including
+an inserted object; all seven inspector fields matched private GPU state. It
+averaged 82.77 ms per 50 ms model tick on M2 Max. That is an execution measurement,
+not a browser UI or exclusive throughput benchmark.
 
 ### What the new training has established
 
@@ -56,6 +62,11 @@ from 0.07140 to 0.04997. In a subsequent matched physical comparison, joint-targ
 error fell about 20%, but effort increased and stopping decreased. Motor outputs
 were nearly constant across the counterbalanced tones. This is not learned tone
 posing, autonomous foraging or a successful developmental curriculum.
+
+A subsequent 2,048-update motor calibration was rejected before export: folding
+its high gains into the current float32 weights and bias changed outputs by up
+to 0.0215. The failed run is preserved. Storing explicit motor reference rates
+is the next numerical repair; the published model uses the valid first bootstrap.
 
 Native **GAM** completed a 25-setting release/modulation sweep, followed by a
 zero-edge control and an actual replay of its predicted setting. Its temporal
