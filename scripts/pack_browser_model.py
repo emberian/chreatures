@@ -63,6 +63,7 @@ def main():
     p.add_argument('--cns-only', action='store_true', help='pack only the CNS manifest and tensors for parity/integration')
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--revision', required=True)
+    p.add_argument('--batch', type=int, choices=(2, 4), help='physical/resident cohort size for a full joined pack')
     a=p.parse_args()
     if a.output.exists(): raise FileExistsError(a.output)
     if len(a.revision)!=40 or any(c not in '0123456789abcdef' for c in a.revision): raise ValueError('Full source revision required')
@@ -88,14 +89,14 @@ def main():
         trainingStatus=meta['training_status'],trainingScope=meta.get('provenance',{}).get('scope','See source training receipt; no embodied competence inferred'))
     (a.output/'cns-manifest.json').write_bytes(canonical(manifest)+b'\n')
     if a.cns_only:
-        if a.resident or a.soma_directory: raise ValueError('--cns-only cannot include resident or soma inputs')
+        if a.resident or a.soma_directory or a.batch is not None: raise ValueError('--cns-only cannot include resident, soma or batch inputs')
         files={f.name:dict(bytes=f.stat().st_size,sha256=file_sha(f)) for f in sorted(a.output.iterdir())}
         receipt=dict(format='chreatures-browser-cns-release-v4',sourceRevision=a.revision,
                      serviceArtifactSha256=service_hash,files=files,totalBytes=sum(f['bytes'] for f in files.values()))
         (a.output/'release.json').write_bytes(canonical(receipt)+b'\n')
         print(json.dumps(dict(output=str(a.output),totalBytes=receipt['totalBytes'],serviceArtifactSha256=service_hash,files=len(files))))
         return
-    if not a.resident or not a.soma_directory: raise ValueError('--resident and --soma-directory are required unless --cns-only')
+    if not a.resident or not a.soma_directory or a.batch is None: raise ValueError('--resident, --soma-directory and --batch are required unless --cns-only')
     # Use the production immutable loader, including component/ancestor checks.
     from chreatures.sensorimotor_worker_native import _load_resident
     resident_meta, resident_arrays, control = _load_resident(a.resident)
@@ -106,8 +107,9 @@ def main():
         packs[name]=blob(a.output,'resident-'+name,np.concatenate([resident_arrays[k].reshape(-1) for k in order]).astype('<f4'))
     resident=dict(format='chreatures-browser-resident-v1',sourceRevision=a.revision,
         cnsServiceArtifactSha256=service_hash,artifactSha256=resident_meta['artifact_sha256'],
-        config=dict(batch=3,action_mode='sample',action_seed=314159,suffix_seed=271828,tick_seconds=0.01,
+        config=dict(batch=a.batch,action_mode='sample',action_seed=314159,suffix_seed=271828,tick_seconds=0.01,
                     context_policy_version='signed-context12-v1',
+                    private_learning_version='context-consequence-v1',
                     core_sha256=components['core_packed_sha256'],predictor_sha256=components['predictor_packed_sha256'],
                     sequence_control_version=control.version,sequence_control_sha256=control.sha256,research_training=False),
         trainingStatus=resident_meta['initialization']['training_status'],buffers=packs)

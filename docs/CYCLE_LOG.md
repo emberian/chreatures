@@ -1389,3 +1389,32 @@ It varies 24 inherited settings across three actual layouts, with whole-setting
 holdouts and a separate fourth-layout confirmation. The diagnostic flies in
 this campaign receive zero motor commands; it studies ecological development,
 not a fitted surrogate for MaleCNS or learned fly behavior.
+
+The initialized complete V4 browser engine has now executed headlessly through
+Dawn: B2 articulated bodies, all seven CNS state fields, BODY807, retina5313,
+MOTOR92 and private context consequences. The 128-tick joined run plus physical
+growth restoration replayed the full life exactly. Its report is
+`3f5c9ff66f60d88ddf78a5d4824b3167c0d171676d85ae3701baa7bba06fbeaf`;
+the initialized state does not establish learned competence.
+
+All twelve first-bootstrap physical worlds were sealed. Two explicit amendments
+preserve useful records: an oral-event identifier repair affected only later
+episodes, and a metadata scope correction distinguishes anatomical body schema,
+physical morphology asset set and BODY807 schema. No numeric trajectory was
+rewritten for labels. The train-only normalization and first full-CNS/private
+training run are active on persvati. A separate twelve-layout nursery adds actual
+external tone and screen presentation, with fixed shared bootstrap associations
+and counterbalanced order. An earlier and corrected world-00 collection had
+identical hashes across all 24 numerical arrays; the earlier receipt is retained
+without duplicate training weight.
+
+The first ecological GAM campaign is complete: 72 actual eight-second worlds,
+eight serialized native GAM artifacts, and three fresh confirmation worlds.
+The joint four-gene surface uses a bounded Duchon basis after the tensor-product
+attempt proved too expensive; both analysis attempts and their recipes remain
+recorded. Held-out results are mixed. Height prediction improved on the mean
+baseline, span did not, and the proposed height ranking failed in confirmation.
+The confirmations produced 7, 7 and 5 branches. Constant route permeability was
+not fitted. The compact receipt is `research/fly_ecology_atlas/receipt.json`,
+SHA `1b351c12a1811de8740f2905a3032f6ede7538cd45ae601dad0c8fb58de068db`.
+No ecological genotype was promoted from these results.

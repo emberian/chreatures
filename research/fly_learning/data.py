@@ -68,6 +68,29 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def episode_numerical_sha256(episode: Episode) -> str:
+    """Hash all numerical chronology arrays in the nursery sealer's order."""
+    members = (
+        "optic_rgb", "body_afferents", "delivered_context", "collected_latent",
+        "delivered_motor", "cns_motor", "teacher_motor", "applied_body_control",
+        "teacher_valid", "joint_position", "joint_velocity", "segment_pose",
+        "ground_contact_raw", "sensory_site_position", "mouth_contact_raw",
+        "outcome", "reward", "success", "failure", "reset", "active", "terminal",
+        "control_source", "curriculum_phase",
+    )
+    digest = hashlib.sha256()
+    for name in members:
+        value = np.ascontiguousarray(getattr(episode, name))
+        header = json.dumps(
+            {"name": name, "dtype": value.dtype.str, "shape": value.shape},
+            sort_keys=True, separators=(",", ":"),
+        ).encode()
+        digest.update(len(header).to_bytes(4, "little"))
+        digest.update(header)
+        digest.update(value.tobytes(order="C"))
+    return digest.hexdigest()
+
+
 def _metadata(archive: np.lib.npyio.NpzFile) -> dict[str, Any]:
     if "metadata" not in archive.files:
         raise FlyLearningContractError("episode lacks scalar metadata")
@@ -373,9 +396,76 @@ def load_nursery_corpus(path: Path) -> Corpus:
     for name in ("native_runtime_sha256", "core_wasm_sha256", "collector_sha256"):
         if len({episode.metadata[name] for episode in episodes}) != 1:
             raise FlyLearningContractError(f"nursery mixes {name} without an amendment")
+    supplemental_rows = manifest.get("supplemental_train")
+    if not isinstance(supplemental_rows, list) or len(supplemental_rows) != 1:
+        raise FlyLearningContractError("nursery corpus lacks its supplemental receipt row")
+    supplemental_row = supplemental_rows[0]
+    supplemental_path = path.parent / str(supplemental_row.get("file", ""))
+    amendment_path = path.parent / str(supplemental_row.get("amendment_file", ""))
+    if (
+        supplemental_row.get("duplicate_layout_of_world") != 0
+        or sha256_file(supplemental_path) != supplemental_row.get("sha256")
+        or sha256_file(amendment_path) != supplemental_row.get("amendment_sha256")
+    ):
+        raise FlyLearningContractError("nursery supplemental file identity differs")
+    supplemental = load_episode(supplemental_path, str(supplemental_row["sha256"]))
+    amendment = json.loads(amendment_path.read_text())
+    scopes = amendment.get("correct_scopes")
+    if (
+        amendment.get("format") != "chreatures-nursery-metadata-scope-amendment-v1"
+        or amendment.get("sha256") != supplemental.sha256
+        or amendment.get("corpus_role") != "supplemental-train-history-with-duplicate-layout"
+        or amendment.get("executed_physics_and_cns_valid") is not True
+        or amendment.get("metadata_change_only") is not True
+        or amendment.get("numerical_dynamics_action_reward_contract_unchanged") is not True
+        or amendment.get("usable_for_training") is not True
+        or amendment.get("split_constraint") != (
+            "train only; shares world/layout with canonical episode-00 and is not a distinct-layout slot"
+        )
+        or not isinstance(scopes, dict)
+        or scopes.get("body_schema_sha256") != ANATOMICAL_BODY_SCHEMA_SHA256
+        or scopes.get("cns_body807_schema_sha256") != CNS_BODY807_SCHEMA_SHA256
+        or supplemental.metadata.get("body_schema_sha256") != CNS_BODY807_SCHEMA_SHA256
+        or supplemental.metadata.get("morphology_sha256") != MORPHOLOGY_ASSET_SET_SHA256
+        or supplemental.metadata.get("world_index") != 0
+        or supplemental.metadata.get("split") != "train"
+        or supplemental.metadata.get("scene_layout_identity") != episodes[0].metadata["scene_layout_identity"]
+    ):
+        raise FlyLearningContractError("nursery supplemental amendment scope differs")
+    supplemental_schedule = supplemental.metadata.get("nursery_stimulus_schedule")
+    supplemental_deliveries = supplemental.metadata.get("nursery_stimulus_deliveries")
+    if (
+        supplemental.metadata.get("nursery_format") != NURSERY_FORMAT
+        or supplemental.metadata.get("nursery_raw_stimulus_controller_access") is not False
+        or not isinstance(supplemental_schedule, list) or len(supplemental_schedule) != 16
+        or not isinstance(supplemental_deliveries, list) or len(supplemental_deliveries) != 16
+        or [int(item.get("tick", -1)) for item in supplemental_deliveries] != list(range(0, TICKS, 64))
+    ):
+        raise FlyLearningContractError("nursery supplemental stimulus contract differs")
+    for planned, delivered in zip(supplemental_schedule, supplemental_deliveries, strict=True):
+        if (
+            delivered.get("planned") != planned
+            or delivered.get("bridge_screen_sha256") != planned.get("screen_frame_sha256")
+            or delivered.get("bridge_sound", {}).get("frequency_hz") != planned.get("frequency_hz")
+        ):
+            raise FlyLearningContractError("nursery supplemental stimulus receipt differs")
+    supplemental_numerical = episode_numerical_sha256(supplemental)
+    canonical_numerical = episode_numerical_sha256(episodes[0])
+    distinct = supplemental_numerical != canonical_numerical
+    if (
+        supplemental_row.get("supplemental_numerical_trajectory_sha256") != supplemental_numerical
+        or supplemental_row.get("canonical_world00_numerical_trajectory_sha256") != canonical_numerical
+        or supplemental_row.get("numerically_distinct") is not distinct
+        or supplemental_row.get("usable_training_row") is not distinct
+        or supplemental_row.get("replicate_label") != (
+            "same-seed-layout-replicate" if distinct else "numerically-identical-receipt-only"
+        )
+    ):
+        raise FlyLearningContractError("nursery supplemental numerical deduplication differs")
+    train = tuple(episodes[:8]) + ((supplemental,) if distinct else tuple())
     return Corpus(
         path.parent, manifest,
-        tuple(episodes[:8]), tuple(episodes[8:10]), tuple(episodes[10:]),
+        train, tuple(episodes[8:10]), tuple(episodes[10:]),
     )
 
 
