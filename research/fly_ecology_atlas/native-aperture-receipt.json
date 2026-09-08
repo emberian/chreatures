@@ -1,0 +1,225 @@
+{
+  "campaign": "measured-route-aperture-native-host",
+  "claim_limit": "Synthetic colony response and selection evidence under actual native physical geometry; neutral diagnostic flies, no fly skill or CNS competence claim.",
+  "completed_confirmation_runs": 2,
+  "completed_fit_and_holdout_runs": 72,
+  "confirmation_records": [
+    {
+      "absolute_error": {
+        "aperture_change": 2.396235200117884e-05,
+        "mean_route_aperture": 0.0006662170823351632,
+        "resource_retention": 0.2841759533737913
+      },
+      "checks": {
+        "aperture_change": true,
+        "mean_route_aperture": true,
+        "resource_retention": true
+      },
+      "committed_branching_observed": false,
+      "holds": false,
+      "limits": {
+        "aperture_change": 0.0007771521651802475,
+        "mean_route_aperture": 0.0018920952159736711,
+        "resource_retention": 0.49028871088778075
+      },
+      "observed": {
+        "aperture_change": -0.0014097744360901387,
+        "initial_blocked_fraction": 0.3458646616541353,
+        "initial_mean_aperture": 0.8780545112781954,
+        "initial_minimum_aperture": 0.03125,
+        "mean_route_aperture": 0.8766447368421053,
+        "resource_retention": -0.619801562345085
+      },
+      "predicted_from_final_holdout_initial_geometry": {
+        "aperture_change": -0.00138581208408896,
+        "mean_route_aperture": 0.8759785197597701,
+        "resource_retention": -0.3356256089712937
+      },
+      "proposal": {
+        "genes": {
+          "branch_angle_rad": 0.7369095793290712,
+          "contact_avoidance": 1.977756690341122,
+          "lateral_probability": 0.09998095346034075,
+          "phototropism": 1.5109596351811447
+        },
+        "genotype_id": "confirmation-open-resource",
+        "intent": "open-resource",
+        "predicted_fit_layout_mean": {
+          "aperture_change": -0.001301016485496643,
+          "mean_route_aperture": 0.8767387806608364,
+          "resource_retention": -0.3166297672137477
+        },
+        "proposal_origin": "preserved-parent-analysis; branching objective disqualified",
+        "split": "confirmation"
+      },
+      "response_gate_holds": true,
+      "run_sha256": "bef099aebcf59df2e67721a792a56e4ba9101d7f2f663176810864b06ba5cfc8"
+    },
+    {
+      "absolute_error": {
+        "aperture_change": 0.0005484494887034292,
+        "mean_route_aperture": 0.001232720868353021,
+        "resource_retention": 0.07364397557113955
+      },
+      "checks": {
+        "aperture_change": true,
+        "mean_route_aperture": true,
+        "resource_retention": true
+      },
+      "committed_branching_observed": false,
+      "holds": false,
+      "limits": {
+        "aperture_change": 0.0007771521651802475,
+        "mean_route_aperture": 0.0018920952159736711,
+        "resource_retention": 0.49028871088778075
+      },
+      "observed": {
+        "aperture_change": -0.001879699248120259,
+        "initial_blocked_fraction": 0.3458646616541353,
+        "initial_mean_aperture": 0.8780545112781954,
+        "initial_minimum_aperture": 0.03125,
+        "mean_route_aperture": 0.8761748120300752,
+        "resource_retention": -1.0598740716011914
+      },
+      "predicted_from_final_holdout_initial_geometry": {
+        "aperture_change": -0.002428148736823688,
+        "mean_route_aperture": 0.8749420911617222,
+        "resource_retention": -0.9862300960300519
+      },
+      "proposal": {
+        "genes": {
+          "branch_angle_rad": 0.4321383131605737,
+          "contact_avoidance": 0.32039773917316605,
+          "lateral_probability": 0.550414189964912,
+          "phototropism": 0.14991597410132887
+        },
+        "genotype_id": "confirmation-branch-open",
+        "intent": "branch-open",
+        "predicted_fit_layout_mean": {
+          "aperture_change": -0.0023433531385206436,
+          "mean_route_aperture": 0.8757023499191744,
+          "resource_retention": -0.9672342543196102
+        },
+        "proposal_origin": "preserved-parent-analysis; branching objective disqualified",
+        "split": "confirmation"
+      },
+      "response_gate_holds": true,
+      "run_sha256": "9eca2ef69474933710fd981d0b492a40e11584e1d6a6caf02384011afab710ea"
+    }
+  ],
+  "confirmation_result_set_sha256": "d850e94ecc5b1dd16254283ee77092ffa802839113a79138261c4516515f50e3",
+  "confirmation_sha256": "e50faef1adadbaacf27d6d7e5feae74167b6e5b37b8a1804fd1dcd4a1f1452fb",
+  "confirmation_status": "not-promoted-insufficient-committed-structure-observation",
+  "duration_seconds_each": 32.0,
+  "failed_runs": 0,
+  "fit_layouts": 3,
+  "fit_report_sha256": "05626d5f008fca19eb0b9070cf5247daaac3100dcd2a5f14dad59cd63f4032df",
+  "fit_result_set_sha256": "f076409da8854691231d4c2f09ad49ada94e1ced6f108cd671350a2385cb8f57",
+  "format": "chreatures-native-fly-ecology-atlas-receipt-v2",
+  "frozen_runner_copy_sha256": "3a332292b77feb7e14d6d666b3d1b49037c0cc531510e7d461fa4a55076d2c55",
+  "genotype_holdout_count": 6,
+  "genotypes": 24,
+  "historical_unsampled_campaign_preserved": true,
+  "holdout_diagnostics": {
+    "aperture_change": {
+      "fit_layout_holdout": {
+        "mae": 0.00028796039033852244,
+        "max_abs": 0.0017694188636407553,
+        "rmse": 0.0003885760825901238
+      },
+      "fit_leave_genotype_out": {
+        "mae": 0.0002512278259128758,
+        "max_abs": 0.001934051052199402,
+        "rmse": 0.0003732912082581505
+      },
+      "sd": 0.00039850505227844997,
+      "selected": "joint",
+      "validation_genotype_holdout": {
+        "mae": 0.00019782988273247743,
+        "max_abs": 0.0006956644678799044,
+        "rmse": 0.00026425059328814024
+      }
+    },
+    "mean_route_aperture": {
+      "fit_layout_holdout": {
+        "mae": 0.0008621645412497411,
+        "max_abs": 0.0021079127172861645,
+        "rmse": 0.0009460476079868356
+      },
+      "fit_leave_genotype_out": {
+        "mae": 0.00024415044496065534,
+        "max_abs": 0.001885549872101322,
+        "rmse": 0.00036852817925325966
+      },
+      "sd": 0.001242207315514864,
+      "selected": "joint",
+      "validation_genotype_holdout": {
+        "mae": 0.00019217628654742228,
+        "max_abs": 0.0006647531631061021,
+        "rmse": 0.0002629918970318468
+      }
+    },
+    "resource_retention": {
+      "fit_layout_holdout": {
+        "mae": 0.12203917588960787,
+        "max_abs": 0.8706525427974792,
+        "rmse": 0.19528308143342452
+      },
+      "fit_leave_genotype_out": {
+        "mae": 0.14423918975122335,
+        "max_abs": 0.7542288939860594,
+        "rmse": 0.2157277729852655
+      },
+      "sd": 0.23206604278399548,
+      "selected": "joint",
+      "validation_genotype_holdout": {
+        "mae": 0.16667324666329802,
+        "max_abs": 0.6496095138203649,
+        "rmse": 0.24514435544389038
+      }
+    }
+  },
+  "interpretation": "Measured aperture and colony resource responses varied, and both preserved parent proposals passed those three numerical fourth-layout checks. Neither is promoted because the frozen trace cannot reconstruct committed structure counts. Prepared-site counters are excluded from the amended GAM evidence and make no construction or fly-skill claim.",
+  "invalidated_analysis_sha256": "6120aaf02b262b6635c18789ebd4a26802f287d5c9b7bd3f6e319cf108031b3e",
+  "invalidated_metrics": {
+    "branch_count": "frozen runner filtered structure owner instead of owner_id and therefore recorded zero",
+    "growth.accepted": "clearance-approved construction and birth sites before ecology commit",
+    "growth.blocked": "clearance events; not rejected committed branches and not bounded by proposal count"
+  },
+  "native_binary_sha256": "c6b0ce7299fbabdbb1dbbf5dd8063bf5c20e5fca141bba834f1c8cc094c824a0",
+  "plan_sha256": "d520b9d42d42c3c45db93dbdfbacf5327e932722f58cc5c1407c49868039a241",
+  "promoted": [],
+  "response_ranges": {
+    "aperture_change": [
+      -0.003994360902255689,
+      -0.0014097744360902498
+    ],
+    "mean_route_aperture": [
+      0.8738251879699248,
+      0.8782894736842105
+    ],
+    "resource_retention": [
+      -1.5159855940674252,
+      -0.5466597275296596
+    ]
+  },
+  "runner_sha256": "3a332292b77feb7e14d6d666b3d1b49037c0cc531510e7d461fa4a55076d2c55",
+  "selected_native_gam_models": [
+    {
+      "model": "joint",
+      "sha256": "f4bc1d39a26c3da1eb215266cee72a06c601304b513d8e3c4ec8cead71cf1ef9",
+      "target": "aperture_change"
+    },
+    {
+      "model": "joint",
+      "sha256": "3fe006626eece4fe44206ef972c2788df30876afbc7d14c60bc0de6938e72bac",
+      "target": "mean_route_aperture"
+    },
+    {
+      "model": "joint",
+      "sha256": "d3b7796aa2c2fa9589724b9bb1fe451ee93737065891ad7f9350fb67053053c1",
+      "target": "resource_retention"
+    }
+  ],
+  "status": "not-promoted-insufficient-committed-structure-observation"
+}
