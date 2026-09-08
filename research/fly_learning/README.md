@@ -227,7 +227,7 @@ It does not expose pose or contact labels to CNS inference.
 
 ```sh
 python -m research.fly_learning.train train \
-  --corpus BODY_BOOTSTRAP/corpus.json \
+  --corpus BODY_BOOTSTRAP \
   --nursery-corpus NURSERY/nursery-corpus.json \
   --recovery-corpus RECOVERY/recovery-corpus.json \
   --collection-service INITIALIZED/initialized-cns-v4.bin \
@@ -254,7 +254,7 @@ first 84 normalized position outputs; it is not evidence of learned walking.
 
 ```sh
 python -m research.fly_learning.train train \
-  --corpus BODY_BOOTSTRAP/corpus.json \
+  --corpus BODY_BOOTSTRAP \
   --nursery-corpus NURSERY/nursery-corpus.json \
   --support-corpus SUPPORT/support-acquisition-corpus.json \
   --supported-continuation-corpus CONTINUATION/supported-continuation-corpus.json \

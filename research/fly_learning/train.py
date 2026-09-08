@@ -238,7 +238,7 @@ def replay_episode(
         z, _, state = _cns_control_step(
             model, optic, body, context, state,
             reset=_tensor(episode.reset[tick], device).bool(),
-            active=_tensor(episode.active[tick], device).bool(),
+            active=_tensor(episode.active[min(tick, ticks - 1)], device).bool(),
         )
         latents[tick] = z.cpu().numpy()
         if rates is not None:
@@ -423,7 +423,7 @@ def _stack_episode_segment(
         "burn_in": 0,
         "reset_prefix": start == 0,
     }
-    state_members = ("optic_rgb", "body_afferents", "reset", "active")
+    state_members = ("optic_rgb", "body_afferents", "reset")
     transition_members = (
         "delivered_context", "delivered_motor", "teacher_motor", "teacher_valid",
         "outcome", "reward", "success", "failure",
@@ -446,14 +446,15 @@ def _stack_episode_segment(
     # transition.  When another transition exists, condition that lookahead on
     # its actual recorded context.  At world end the final delivered context is
     # the only causal value available.
-    context_rows = []
-    for episode in episodes:
-        ticks = int(episode.delivered_context.shape[0])
-        values = episode.delivered_context[start : min(stop + 1, ticks)]
-        if values.shape[0] == stop - start:
-            values = np.concatenate((values, values[-1:]), axis=0)
-        context_rows.append(values)
-    result["cns_context"] = _tensor(np.concatenate(context_rows, axis=1), device)
+    for source, target in (("delivered_context", "cns_context"), ("active", "active")):
+        rows = []
+        for episode in episodes:
+            ticks = int(episode.delivered_context.shape[0])
+            values = getattr(episode, source)[start : min(stop + 1, ticks)]
+            if values.shape[0] == stop - start:
+                values = np.concatenate((values, values[-1:]), axis=0)
+            rows.append(values)
+        result[target] = _tensor(np.concatenate(rows, axis=1), device)
     result["reset"] = result["reset"].bool()
     result["active"] = result["active"].bool()
     return result
@@ -867,7 +868,7 @@ def _cache_latents(
                 [episode.reset[tick] for episode in cohort], axis=0
             ), device).bool()
             active = _tensor(np.concatenate(
-                [episode.active[tick] for episode in cohort], axis=0
+                [episode.active[min(tick, ticks - 1)] for episode in cohort], axis=0
             ), device).bool()
             z, _, state = _cns_control_step(
                 model, optic, body, context, state, reset=reset, active=active,
