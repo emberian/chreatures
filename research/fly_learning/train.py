@@ -31,9 +31,12 @@ from research.resident_learning.model import CnsResidentModel
 
 from .curriculum import CONTEXT, CONTROL_SOURCES, PHASES, RESIDENTS, TICKS
 from .data import (
+    ANATOMICAL_BODY_SCHEMA_SHA256,
     BODY_AFFERENTS,
+    CNS_BODY807_SCHEMA_SHA256,
     LATENT,
     MOTOR,
+    MORPHOLOGY_ASSET_SET_SHA256,
     OUTCOMES,
     Corpus,
     Episode,
@@ -750,6 +753,12 @@ def train(arguments: argparse.Namespace) -> None:
             "corpus_manifest_sha256": identity["corpus_manifest_sha256"],
             "world_split": "per corpus: 0..7 train, 8..9 validation, 10..11 untouched heldout",
             "model_ingress": ["optic1771 RGB", "BODY807", "delivered context12"],
+            "physical_identity_semantics": {
+                "anatomical_body_schema_sha256": ANATOMICAL_BODY_SCHEMA_SHA256,
+                "cns_body807_schema_sha256": CNS_BODY807_SCHEMA_SHA256,
+                "morphology_asset_set_sha256": MORPHOLOGY_ASSET_SET_SHA256,
+                "bootstrap_recorded_body_schema_field": "BODY807 sensory schema; authenticated metadata amendment",
+            },
             "observer_values": "targets and sampling only",
             "training_only_heads_exported": False,
             "normalization": calibration_payload,

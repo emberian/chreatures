@@ -51,6 +51,9 @@ OUTCOME_NAMES: Final = (
 OUTCOMES: Final = len(OUTCOME_NAMES)
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
+ANATOMICAL_BODY_SCHEMA_SHA256: Final = "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+CNS_BODY807_SCHEMA_SHA256: Final = "97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786"
+MORPHOLOGY_ASSET_SET_SHA256: Final = "2da4b8004d89d2d89f211bd51079d524376a197abcdbbdd9512be1a86ecf6c94"
 
 
 class FlyLearningContractError(RuntimeError):
@@ -282,6 +285,7 @@ def load_corpus(root: Path) -> Corpus:
     _validate_core_lineage(
         root, manifest, [episode.metadata["core_wasm_sha256"] for episode in episodes]
     )
+    _validate_metadata_meaning(root, manifest, episodes)
     return Corpus(root, manifest, tuple(episodes[:8]), tuple(episodes[8:10]), tuple(episodes[10:]))
 
 
@@ -316,6 +320,9 @@ def load_nursery_corpus(path: Path) -> Corpus:
             int(metadata["world_index"]) != expected_index
             or metadata.get("nursery_format") != NURSERY_FORMAT
             or metadata.get("nursery_raw_stimulus_controller_access") is not False
+            or metadata.get("body_schema_sha256") != ANATOMICAL_BODY_SCHEMA_SHA256
+            or metadata.get("cns_body807_schema_sha256") != CNS_BODY807_SCHEMA_SHA256
+            or metadata.get("morphology_sha256") != MORPHOLOGY_ASSET_SET_SHA256
         ):
             raise FlyLearningContractError("nursery episode contract differs")
         for name in (
@@ -380,7 +387,7 @@ def combine_corpora(primary: Corpus, nursery: Corpus) -> Corpus:
     )
     contract_keys = (
         "cns_service_sha256", "cns_adapter_sha256", "motor_calibration_sha256",
-        "body_schema_sha256", "morphology_sha256", "motor_atlas_sha256",
+        "morphology_sha256", "motor_atlas_sha256",
         "retina_mapping_sha256", "body_afferent_dim", "motor_dim", "outcome_dim",
         "sensory_dim", "body_afferent_rows", "motor_rows", "control_dt_s",
     )
@@ -388,6 +395,16 @@ def combine_corpora(primary: Corpus, nursery: Corpus) -> Corpus:
         expected = episodes[0].metadata[name]
         if any(episode.metadata[name] != expected for episode in episodes[1:]):
             raise FlyLearningContractError(f"bootstrap/nursery {name} differs")
+    if (
+        primary.manifest.get("anatomical_body_schema_sha256") != ANATOMICAL_BODY_SCHEMA_SHA256
+        or primary.manifest.get("cns_body807_schema_sha256") != CNS_BODY807_SCHEMA_SHA256
+        or any(
+            episode.metadata["body_schema_sha256"] != ANATOMICAL_BODY_SCHEMA_SHA256
+            or episode.metadata["cns_body807_schema_sha256"] != CNS_BODY807_SCHEMA_SHA256
+            for episode in (*nursery.train, *nursery.validation, *nursery.heldout)
+        )
+    ):
+        raise FlyLearningContractError("bootstrap/nursery body schema semantics differ")
     return Corpus(
         primary.root,
         {
@@ -446,6 +463,44 @@ def _validate_core_lineage(
     return amendment
 
 
+def _validate_metadata_meaning(
+    root: Path, manifest: dict[str, Any], episodes: list[Episode]
+) -> dict[str, Any]:
+    """Authenticate the bootstrap's mislabeled BODY807 receipt field."""
+    amendment = manifest.get("metadata_meaning_amendment")
+    if not isinstance(amendment, dict) or amendment.get("file") != "metadata-meaning-amendment.json":
+        raise FlyLearningContractError("bootstrap corpus lacks metadata meaning amendment")
+    if not HEX64.fullmatch(str(amendment.get("sha256", ""))):
+        raise FlyLearningContractError("metadata meaning amendment identity differs")
+    path = root / "metadata-meaning-amendment.json"
+    if sha256_file(path) != amendment["sha256"]:
+        raise FlyLearningContractError("metadata meaning amendment checksum differs")
+    value = json.loads(path.read_text())
+    if value != amendment.get("value"):
+        raise FlyLearningContractError("metadata meaning amendment embedded value differs")
+    expected_fixture = episodes[0].metadata["scene_manifest_sha256"]
+    if (
+        value.get("format") != "chreatures-fly-corpus-metadata-meaning-amendment-v1"
+        or value.get("compatible_semantic_contract") is not True
+        or value.get("applies_to_world_indices") != [0, 11]
+        or value.get("collector_source_revision") != episodes[0].metadata["source_revision"]
+        or value.get("frozen_world_fixture_sha256") != expected_fixture
+        or value.get("recorded_body_schema_field_meaning") != "cns_BODY807_sensory_schema_sha256"
+        or value.get("recorded_body_schema_sha256") != CNS_BODY807_SCHEMA_SHA256
+        or value.get("actual_anatomical_body_schema_sha256") != ANATOMICAL_BODY_SCHEMA_SHA256
+        or value.get("actual_morphology_asset_set_sha256") != MORPHOLOGY_ASSET_SET_SHA256
+    ):
+        raise FlyLearningContractError("metadata meaning amendment does not match frozen body contract")
+    if any(
+        episode.metadata["body_schema_sha256"] != CNS_BODY807_SCHEMA_SHA256
+        or episode.metadata["morphology_sha256"] != MORPHOLOGY_ASSET_SET_SHA256
+        or episode.metadata["scene_manifest_sha256"] != expected_fixture
+        for episode in episodes
+    ):
+        raise FlyLearningContractError("episode identities differ from metadata meaning amendment")
+    return amendment
+
+
 def seal_corpus(source: Path, output: Path) -> dict[str, Any]:
     """Authenticate twelve collector episodes and copy them without rewriting."""
     source, output = source.resolve(), output.resolve()
@@ -493,6 +548,29 @@ def seal_corpus(source: Path, output: Path) -> dict[str, Any]:
         for key, expected in shared.items():
             if any(episode.metadata[key] != expected for episode in episodes[1:]):
                 raise FlyLearningContractError(f"mixed {key} across corpus")
+        meaning_path = source / "metadata-meaning-amendment.json"
+        meaning_value = json.loads(meaning_path.read_text())
+        if (
+            meaning_value.get("format") != "chreatures-fly-corpus-metadata-meaning-amendment-v1"
+            or meaning_value.get("compatible_semantic_contract") is not True
+            or meaning_value.get("applies_to_world_indices") != [0, 11]
+            or meaning_value.get("collector_source_revision") != shared["source_revision"]
+            or meaning_value.get("frozen_world_fixture_sha256") != shared["scene_manifest_sha256"]
+            or meaning_value.get("recorded_body_schema_field_meaning") != "cns_BODY807_sensory_schema_sha256"
+            or meaning_value.get("recorded_body_schema_sha256") != CNS_BODY807_SCHEMA_SHA256
+            or meaning_value.get("actual_anatomical_body_schema_sha256") != ANATOMICAL_BODY_SCHEMA_SHA256
+            or meaning_value.get("actual_morphology_asset_set_sha256") != MORPHOLOGY_ASSET_SET_SHA256
+            or shared["body_schema_sha256"] != CNS_BODY807_SCHEMA_SHA256
+            or shared["morphology_sha256"] != MORPHOLOGY_ASSET_SET_SHA256
+        ):
+            raise FlyLearningContractError("metadata meaning amendment does not match frozen body contract")
+        meaning_copy = staged / "metadata-meaning-amendment.json"
+        shutil.copy2(meaning_path, meaning_copy)
+        meaning_amendment = {
+            "file": meaning_copy.name,
+            "sha256": sha256_file(meaning_copy),
+            "value": meaning_value,
+        }
         core_hashes = [episode.metadata["core_wasm_sha256"] for episode in episodes]
         unique_cores = list(dict.fromkeys(core_hashes))
         amendment = None
@@ -524,6 +602,10 @@ def seal_corpus(source: Path, output: Path) -> dict[str, Any]:
             **shared, "episodes": rows,
             "core_wasm_sha256_by_episode": core_hashes,
             "source_amendment": amendment,
+            "metadata_meaning_amendment": meaning_amendment,
+            "anatomical_body_schema_sha256": ANATOMICAL_BODY_SCHEMA_SHA256,
+            "cns_body807_schema_sha256": CNS_BODY807_SCHEMA_SHA256,
+            "morphology_asset_set_sha256": MORPHOLOGY_ASSET_SET_SHA256,
             "model_ingress": ["optic_rgb", "body_afferents", "delivered_context", "reset"],
             "artifact_bound_cache": ["collected_latent", "cns_motor"],
             "target_or_evaluator_only": [
