@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
-pub const CONFIG_FORMAT: &str = "chreatures-ecology-config-v1";
-pub const SNAPSHOT_FORMAT: &str = "chreatures-ecology-snapshot-v1";
-pub const DELTA_FORMAT: &str = "chreatures-ecology-delta-v1";
-pub const BATCH_FORMAT: &str = "chreatures-ecology-batch-v1";
+pub const CONFIG_FORMAT: &str = "chreatures-ecology-config-v2";
+pub const SNAPSHOT_FORMAT: &str = "chreatures-ecology-snapshot-v2";
+pub const DELTA_FORMAT: &str = "chreatures-ecology-delta-v2";
+pub const BATCH_FORMAT: &str = "chreatures-ecology-batch-v2";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EcologyError(pub String);
@@ -104,6 +104,11 @@ pub struct Genotype {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct DevelopmentProgram {
+    pub branch_angle_rad: f64,
+    pub lateral_probability: f64,
+    pub phototropism: f64,
+    pub contact_avoidance: f64,
+    pub directional_persistence: f64,
     pub interval_s: f64,
     pub material_cost: Vec<f64>,
     pub decay_return: Vec<f64>,
@@ -118,6 +123,7 @@ pub struct DevelopmentProgram {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct ReproductionProgram {
+    pub dispersal_distance_m: f64,
     pub interval_s: f64,
     pub material_endowment: Vec<f64>,
     pub atp_cost: f64,
@@ -188,6 +194,7 @@ pub struct OrganismState {
     /// Private acclimated state; descendants start from inherited baselines.
     pub enzyme_activity: Vec<f64>,
     pub development_credit_s: f64,
+    pub development_state: DevelopmentState,
     pub reproduction_credit_s: f64,
     pub descendant_count: usize,
     pub maintenance_shortfall: f64,
@@ -355,6 +362,8 @@ pub struct AfferentSampleSite {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct TickInput {
+    /// Binds an accepted subset of the current native local-growth proposal.
+    pub growth_token: Option<String>,
     pub dt_s: f64,
     /// Aligned to config.routes and measured by the physics host.
     pub route_open_fraction: Vec<f64>,
@@ -546,4 +555,107 @@ pub(crate) struct WorldEnvelope {
     pub config: EcologyConfig,
     pub state: WorldState,
     pub pending: Option<PendingStep>,
+    pub growth: Option<PendingGrowth>,
+}
+
+/// Private developmental state, advanced only by a committed funded creation.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct DevelopmentState {
+    pub rng: u64,
+    pub attempt_index: u64,
+    pub apical_binding: Option<String>,
+    pub lateral_cursor: u64,
+}
+
+/// A nearby measured surface patch. Its normal points into free space.
+/// `attachable` authorizes an anchored colony attachment, never a fly birth.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct GrowthSurface {
+    pub surface_id: String,
+    pub region_id: String,
+    pub point_m: [f64; 3],
+    pub normal: [f64; 3],
+    pub attachable: bool,
+}
+
+/// Local ray measurement; free_distance_m ends at the first physical hit.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct GrowthClearanceSample {
+    pub origin_m: [f64; 3],
+    pub direction: [f64; 3],
+    pub free_distance_m: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct ColonyGrowthInput {
+    pub organism_id: String,
+    pub position_m: [f64; 3],
+    pub orientation_xyzw: [f64; 4],
+    pub surface_normal: [f64; 3],
+    pub light_direction: [f64; 3],
+    /// Bounded local irradiance response, in [0,1]; no object/role label.
+    pub light_intensity: f64,
+    pub nearby_surfaces: Vec<GrowthSurface>,
+    pub clearance_samples: Vec<GrowthClearanceSample>,
+    pub host_template_id: String,
+    pub child_template_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct GrowthInput {
+    pub dt_s: f64,
+    pub colonies: Vec<ColonyGrowthInput>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum GrowthKind {
+    Apical,
+    Lateral,
+    ColonyBirth,
+}
+
+/// Host performs the final capsule clearance query before accepting a site.
+/// The attachment's binding may touch the proximal end of this capsule.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct GrowthClearanceQuery {
+    pub site_id: String,
+    pub organism_id: String,
+    pub kind: GrowthKind,
+    pub from_m: [f64; 3],
+    pub to_m: [f64; 3],
+    pub radius_m: f64,
+    pub attachment_binding: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct GrowthProposals {
+    pub format: String,
+    pub token: String,
+    pub step_index: u64,
+    pub construction_sites: Vec<ConstructionSite>,
+    pub birth_sites: Vec<BirthSite>,
+    pub clearance_queries: Vec<GrowthClearanceQuery>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct GrowthTransition {
+    pub organism_id: String,
+    pub next_rng: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct PendingGrowth {
+    pub input: GrowthInput,
+    pub proposals: GrowthProposals,
+    pub transitions: Vec<GrowthTransition>,
 }

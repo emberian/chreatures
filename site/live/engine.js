@@ -25,6 +25,9 @@ export class LiveEngine {
     const [residentBinary, worldBinary, physicsBinary] = await Promise.all(['pkg/resident_runtime_bg.wasm', 'pkg/chreatures_browser_world_bg.wasm', 'vendor/mujoco/mujoco.wasm'].map(runtimeBytes));
     const [fixtureBytes, xmlBytes] = await Promise.all(['fixtures/fly-ecology/world.json', 'fixtures/fly-ecology/scene.xml'].map(runtimeBytes));
     const fixture = JSON.parse(decoder.decode(fixtureBytes));
+    const motorSchemaBytes = await runtimeBytes('fixtures/fly-ecology/motor92.json');
+    if (await digest(motorSchemaBytes) !== fixture.actuator_schema_sha256) throw new Error('Motor display schema differs from the physical/CNS interface');
+    engine.motorSchema = JSON.parse(decoder.decode(motorSchemaBytes));
     for (const [key, identityKey] of [['morphology_sha256','morphology'],['sensory_schema_sha256','sensorySchema'],['actuator_schema_sha256','actuatorSchema']]) {
       if (fixture[key] !== cns.identity[identityKey]) throw new Error(`Physical/CNS ${key} differs`);
     }
@@ -43,7 +46,7 @@ export class LiveEngine {
     const packed = await Promise.all(['core', 'predictor', 'sequence'].map(name => loadBlob(resident.buffers[name], engine.modelURL, add)));
     engine.resident = new Resident(JSON.stringify(resident.config), ...packed.map(bytes => new Float32Array(bytes)));
     engine.brain = await MaleCNSWebGPU.load({device, manifest: cns, baseURL: engine.modelURL, capacity: engine.batch, onProgress: ({bytes}) => add(bytes), shaderBaseURL: new URL("cns-webgpu.js", engine.baseURL)});
-    await engine.brain.reset(Array.from({length: engine.batch}, (_, i) => i), engine.world.observe().residents.map(r => ({id: r.id, physicalEpoch: engine.world.engine, seed: 20260907})));
+    await engine.brain.reset(Array.from({length: engine.batch}, (_, i) => i), engine.world.observe().residents.map(r => ({id: r.id, physicalEpoch: engine.world.engine, seed: 20260908})));
     const [soma, valid] = await Promise.all(['positions', 'valid'].map(name => loadBlob(observer.buffers[name], engine.modelURL, add)));
     engine.brainPositions = new Float32Array(soma); engine.brainValid = new Uint8Array(valid);
     engine.neuralBaseline = engine.brain.baselineRates;
@@ -62,7 +65,7 @@ export class LiveEngine {
       validSoma: this.brainValid.reduce((sum, value) => sum + value, 0), residents: this.world.observe().residents,
       modelStatus: this.modelStatus, controllerStatus: this.controllerStatus,
       brainPositions: this.brainPositions, brainValid: this.brainValid, neuralBaseline: this.neuralBaseline,
-      retinalSites: this.retinalSites, retinalSupported: this.retinalSupported,
+      retinalSites: this.retinalSites, retinalSupported: this.retinalSupported, motorSchema: this.motorSchema,
       identity: this.identity};
   }
   async advance(capture = false) {
@@ -107,6 +110,10 @@ export class LiveEngine {
       return {...this.world.observe(), neuralRates: neural.selectedRates,
         neuralSignal: neural.selectedSignal, neuralField: neural.selectedField,
         retinalRGB: capture ? optic.slice(this.selected * 5313, (this.selected + 1) * 5313) : undefined,
+        // Read-only observation of the exact input supplied above. It is never
+        // passed to the private resident, which receives CNS latent512 only.
+        bodySense: capture ? body.slice(this.selected * 807, (this.selected + 1) * 807) : undefined,
+        bodySenseTime: (this.tick - 1) * .01,
         selectedResidentId: this.world.observe().residents[this.selected].id,
         motorActivation: this.lastMotor.slice(this.selected * 92, (this.selected + 1) * 92),
         deliveredContext: this.deliveredContext.slice(this.selected * 12, (this.selected + 1) * 12),

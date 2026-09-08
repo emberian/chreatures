@@ -161,10 +161,20 @@ def _runtime_identity(revision: str) -> None:
              "pkg/resident_runtime.js", "pkg/resident_runtime_bg.wasm",
              "pkg/chreatures_browser_world.js", "pkg/chreatures_browser_world_bg.wasm",
              "vendor/mujoco/mujoco.js", "vendor/mujoco/mujoco.wasm",
-             "shaders/afferent.wgsl", "shaders/dynamics.wgsl", "shaders/readout.wgsl", "shaders/motor.wgsl", "shaders/observe.wgsl",
-             "fixtures/garden.json", "fixtures/garden.xml"]
+             "shaders/afferent.wgsl", "shaders/dynamics.wgsl", "shaders/readout.wgsl", "shaders/motor.wgsl", "shaders/observe.wgsl"]
+    physics = json.loads((live / "physics-assets.json").read_text())
+    if physics["format"] != "chreatures-browser-physics-assets-v4":
+        raise ValueError("Stage the current anatomical fly runtime before building Pages")
+    for name, expected in physics["assets"].items():
+        path = (live / name).resolve()
+        if not path.is_relative_to(live.resolve()):
+            raise ValueError("Invalid physical asset path")
+        raw = path.read_bytes()
+        if len(raw) != expected["bytes"] or hashlib.sha256(raw).hexdigest() != expected["sha256"]:
+            raise ValueError(f"Staged physical asset differs: {name}")
+        names.append(name)
     manifest = {"format": "chreatures-live-runtime-v1", "sourceRevision": revision, "files": {}}
-    for name in names:
+    for name in sorted(set(names)):
         content = (live / name).read_bytes()
         manifest["files"][name] = {"url": name, "byteLength": len(content),
                                     "sha256": hashlib.sha256(content).hexdigest()}

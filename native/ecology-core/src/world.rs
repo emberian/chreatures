@@ -92,6 +92,10 @@ impl EcologyWorld {
                 genotype: seed.genotype.clone(),
                 enzyme_activity: seed.genotype.enzyme_baseline.clone(),
                 development_credit_s: 0.0,
+                development_state: crate::growth::seed_state(splitmix_seed(
+                    config.seed,
+                    index as u64,
+                )),
                 reproduction_credit_s: 0.0,
                 descendant_count: 0,
                 maintenance_shortfall: 0.0,
@@ -149,6 +153,7 @@ impl EcologyWorld {
             config,
             state,
             pending: None,
+            growth: None,
         };
         let indices = Indices::build(&envelope.config, &envelope.state);
         Ok(Self { envelope, indices })
@@ -313,6 +318,40 @@ impl EcologyWorld {
         Ok(FlyChemicalProjection { odor, taste })
     }
 
+    /// Generate local candidate geometry without spending matter or advancing
+    /// committed development/RNG. The host must measure final capsule clearance.
+    pub fn propose_growth(&mut self, input: &GrowthInput) -> EcologyResult<GrowthProposals> {
+        if self.envelope.pending.is_some() {
+            return err("cannot propose growth during a prepared ecology step");
+        }
+        if let Some(plan) = &self.envelope.growth {
+            if &plan.input == input {
+                return Ok(plan.proposals.clone());
+            }
+            return err("a different growth proposal is already outstanding");
+        }
+        let plan = crate::growth::build(&self.envelope.config, &self.envelope.state, input)?;
+        let output = plan.proposals.clone();
+        self.envelope.growth = Some(plan);
+        Ok(output)
+    }
+
+    pub fn discard_growth(&mut self, token: &str) -> EcologyResult<()> {
+        if self.envelope.pending.is_some() {
+            return err("abort the prepared step before discarding growth");
+        }
+        if self
+            .envelope
+            .growth
+            .as_ref()
+            .is_none_or(|p| p.proposals.token != token)
+        {
+            return err("growth discard token differs");
+        }
+        self.envelope.growth = None;
+        Ok(())
+    }
+
     pub fn pending_delta(&self) -> Option<&WorldDelta> {
         self.envelope.pending.as_ref().map(|value| &value.delta)
     }
@@ -340,6 +379,11 @@ impl EcologyWorld {
                 return err("ecology pending snapshot differs");
             }
             validate_state(&envelope.config, &pending.next_state)?;
+        }
+        if let Some(plan) = &envelope.growth {
+            if &crate::growth::build(&envelope.config, &envelope.state, &plan.input)? != plan {
+                return err("ecology growth snapshot provenance or private transition differs");
+            }
         }
         let indices = Indices::build(&envelope.config, &envelope.state);
         Ok(Self { envelope, indices })
@@ -390,6 +434,7 @@ impl EcologyWorld {
         self.validate_receipt(receipt)?;
         let pending = self.envelope.pending.take().unwrap();
         self.envelope.state = pending.next_state;
+        self.envelope.growth = None;
         self.indices = Indices::build(&self.envelope.config, &self.envelope.state);
         Ok(())
     }
@@ -409,6 +454,7 @@ impl EcologyWorld {
             return err("ecology world already has a pending step");
         }
         self.validate_input(input)?;
+        crate::growth::validate_selection(self.envelope.growth.as_ref(), input)?;
         let mut digest = Sha256::new();
         digest.update(self.envelope.config_sha256.as_bytes());
         digest.update(self.envelope.state.step_index.to_le_bytes());
@@ -455,6 +501,9 @@ impl EcologyWorld {
             &mut blocked_events,
         )?;
 
+        if let Some(plan) = &self.envelope.growth {
+            crate::growth::install(plan, &mut next, &physical_creations);
+        }
         next.time_s += input.dt_s;
         next.step_index = next.step_index.saturating_add(1);
         let after = element_totals(&self.envelope.config, &next);
@@ -1541,6 +1590,7 @@ impl EcologyWorld {
                 enzyme_activity: child_genotype.enzyme_baseline.clone(),
                 genotype: child_genotype,
                 development_credit_s: 0.0,
+                development_state: crate::growth::seed_state(child_rng),
                 reproduction_credit_s: 0.0,
                 descendant_count: 0,
                 maintenance_shortfall: 0.0,
@@ -1625,6 +1675,20 @@ fn mutate_genotype(parent: &Genotype, rng: &mut u64, fraction: f64, generation: 
     perturb_positive(&mut child.enzyme_time_constant_s, 1.0e-3, 1.0e6);
     perturb_positive(&mut child.enzyme_change_atp_cost, 0.0, 1.0e6);
     perturb_positive(&mut child.maintenance_atp_s, 0.0, 1.0e6);
+    if let Some(program) = &mut child.development {
+        perturb_positive(
+            &mut program.branch_angle_rad,
+            0.0,
+            std::f64::consts::FRAC_PI_2,
+        );
+        perturb_positive(&mut program.lateral_probability, 0.0, 1.0);
+        perturb_positive(&mut program.phototropism, 0.0, 4.0);
+        perturb_positive(&mut program.contact_avoidance, 0.0, 4.0);
+        perturb_positive(&mut program.directional_persistence, 0.0, 1.0);
+    }
+    if let Some(program) = &mut child.reproduction {
+        perturb_positive(&mut program.dispersal_distance_m, 1e-9, 1e6);
+    }
     child
 }
 
@@ -1975,12 +2039,22 @@ fn validate_genotype(config: &EcologyConfig, genotype: &Genotype) -> EcologyResu
             || !finite_nonnegative(&[
                 program.interval_s,
                 program.atp_cost,
+                program.branch_angle_rad,
+                program.lateral_probability,
+                program.phototropism,
+                program.contact_avoidance,
+                program.directional_persistence,
                 program.nominal_radius_m,
                 program.nominal_length_m,
                 program.nominal_volume_m3,
                 program.decay_time_constant_s,
             ])
             || program.interval_s <= 0.0
+            || program.branch_angle_rad > std::f64::consts::FRAC_PI_2
+            || program.lateral_probability > 1.0
+            || program.phototropism > 4.0
+            || program.contact_avoidance > 4.0
+            || program.directional_persistence > 1.0
             || program.maximum_structures == 0
             || program.maximum_structures > 4096
             || program.nominal_radius_m <= 0.0
@@ -2007,8 +2081,10 @@ fn validate_genotype(config: &EcologyConfig, genotype: &Genotype) -> EcologyResu
                 program.atp_cost,
                 program.atp_endowment,
                 program.mutation_fraction,
+                program.dispersal_distance_m,
             ])
             || program.interval_s <= 0.0
+            || program.dispersal_distance_m <= 0.0
             || program.maximum_descendants == 0
             || program.maximum_descendants > 4096
             || program.mutation_fraction > 0.5
@@ -2050,7 +2126,17 @@ fn validate_state(config: &EcologyConfig, state: &WorldState) -> EcologyResult<(
     let mut bindings = HashSet::new();
     for organism in &state.organisms {
         validate_genotype(config, &organism.genotype)?;
-        if !bindings.insert(organism.physics_binding.as_str())
+        if organism
+            .development_state
+            .apical_binding
+            .as_ref()
+            .is_some_and(|binding| {
+                !state
+                    .structures
+                    .iter()
+                    .any(|s| &s.physics_binding == binding && s.owner_id == organism.id)
+            })
+            || !bindings.insert(organism.physics_binding.as_str())
             || !valid_store(&organism.material.quantity, &organism.capacity, k)
             || organism.enzyme_activity.len() != config.reactions.len()
             || !finite_nonnegative(&organism.enzyme_activity)

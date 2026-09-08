@@ -16,7 +16,7 @@ function frame(value) {
   if (deliveredMeshRevision === revision) delete value.meshes;
   else deliveredMeshRevision = revision;
   const transferable = [];
-  for (const field of ['positions', 'rotations', 'colors', 'bodyPositions', 'bodyRotations', 'food', 'neuralRates', 'neuralSignal', 'retinalRGB', 'motorActivation', 'deliveredContext']) {
+  for (const field of ['positions', 'rotations', 'colors', 'bodyPositions', 'bodyRotations', 'food', 'neuralRates', 'neuralSignal', 'retinalRGB', 'bodySense', 'motorActivation', 'deliveredContext']) {
     if (value[field]?.buffer && !transferable.includes(value[field].buffer)) transferable.push(value[field].buffer);
   }
   post('frame', {...value, paused: !running}, transferable);

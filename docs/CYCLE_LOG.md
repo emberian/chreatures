@@ -1275,3 +1275,117 @@ difference 1.75e-5. Initialized-model parity was not reused as trained evidence.
 Native Universal Weave imported, serialized and reloaded the combined record:
 39 nodes, 81 edges and 26 evidence joins. Its public projection preserves the
 rejected calibration, unsuccessful GAM prediction and exact model parents.
+
+## 2026-09-08 — Start from the fly's body (V4 development branch)
+
+The user's correction changes the embodiment foundation. The current branch
+imports NeuroMechFly/FlyGym v2.1.0, revision
+`ca65a510c2afe6ac61c51df4f274c8d190c2f95f`, with its actual micro-CT-derived
+69-segment morphology, 126 articulated axes, meshes, neutral pose and effective
+actuator settings. This female body specimen is explicitly paired with the male
+CNS reconstruction; neither is represented as the other specimen. The earlier
+12-hinge body is superseded in the current live source. Its public V3 release
+remains frozen until the new executable, learned artifacts and scene are joined.
+
+The new CNS interface is BODY807 plus the 1,771 RGB retinal sites. Anatomical
+masks connect body signals to 11,798 annotated sensory rows, private context12
+to 1,314 descending rows, and 815 motor rows to MOTOR92. Motor outputs now mean
+84 signed effective position-servo targets, six adhesion channels, a pharyngeal
+pump and salivary drive. They are not claimed to be identified individual muscles.
+All visual/body input and private contextual influence still pass through full
+165,122-row MaleCNS recurrence. The signed decoder explicitly retains its motor
+reference rates and scales; it no longer folds a cancellation-sensitive reference
+into a large float32 bias.
+
+The original initialized numerical V4 tensors passed actual Torch/ROCm,
+Metal and Dawn/WebGPU comparisons, including seven recurrent fields and exact
+same-runtime neural snapshot continuation. A later correction changed only an
+incorrect actuator-schema identity in metadata: the corrected service is
+`8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951`.
+All 42 service arrays and 20 numerical fixture arrays remained byte-identical,
+recorded separately in an identity-equivalence receipt. Earlier numerical runs
+are not relabeled as executions of the corrected file. A trained child will need
+its own joined comparison.
+
+Rust now transduces actual joint position, velocity and load; sampled segment
+and foot contacts; moving antennae, eyes and mouth; local chemistry; haltere
+inertial proxies; and finite internal state. The control interval is 10 ms;
+MuJoCo integrates 100 steps of 0.1 ms, with contacts sampled at 1 kHz. Oral
+transfer requires sampled contact at the mouth. Physiology uses an explicitly
+synthetic, conservative eight-pool chemistry, rather than an assertion about
+physical joules or a complete fly digestive tract.
+
+The composed scene has leaves, branched stems, curved bark, ramps, moist patches,
+movable grains and a physical screen. Sixty material regions and 133 routes
+surround the bodies. The native ecology extension adds inherited apical/lateral
+branching, phototropism, contact avoidance, resource-funded construction and
+private developmental RNG. The first actual MuJoCo growth join realized one
+branch at tick 200, blocked another candidate against actual geometry, and
+restored coupled physics, material, topology and rejection history exactly.
+The separate native development scenario also exercised anchored colony birth;
+the current MuJoCo host does not spawn offspring bodies. Subsequent work couples
+measured light to the material energy budget and removes repeated clearance-model
+compilation from blocked attempts.
+
+A concrete Node pipe now supplies actual MuJoCo/Wasm samples to the full Torch
+CNS collector. The first 12-world corpus consists of fresh seeded instances on
+one shared B4 geometry, with counterbalanced offline author-teacher and CNS-driven
+bouts. Phase names are collection intentions, not evidence that every named
+physical task was realized. The author walking bank is an offline teaching
+source and is absent from the production controller. Failed and fallen histories
+are retained. The first complete episode contains 4,096 resident transitions
+and took 290.4 seconds on persvati; the second took 293.2 seconds. Adjacent
+success/failure flags are not independent successful behaviors.
+
+Two integration corrections were made before the accepted corpus: the Torch
+model already performs its two half-tick rate integrations internally, so the
+collector must call it once with dt=0.01; and the physical ray cutoff must use the
+120 mm fixture range, not the inherited literal 3.2 now interpreted as millimetres.
+Rejected preliminary logs remain separate. Frozen corpus source, patched runtime,
+Wasm, scene, model and instance identities are recorded, and subsequent physical
+engine development does not silently change the ongoing collection.
+
+hbox was not a viable fresh training node during this increment. Its ZFS special
+vdev was full and bulk-disk latency caused long initialization waits despite an
+idle GPU. No project-owned culprit was identified and no resident service was
+stopped. Collection moved to persvati's native ROCm 7 environment and local NVMe.
+A complete B4 recurrent forward/backward comparison there retained a sparse
+BODY807 projection: 276,625 supported coefficients instead of 9,520,986 dense
+positions, 1.79% measured whole-path improvement and 7.79 MB lower peak allocation.
+This is a modest measured gain, not a language-based speed claim.
+
+In parallel, native wing-motion acoustics and a physically realized developmental
+GAM atlas are being integrated. The wing module derives local disturbances from
+actual thorax-relative motion, with no song oscillator; its sampling limits remain
+explicit. The first atlas pilot exposed repeated blocked-candidate compilation
+and an unconnected photon-energy input. That pilot is retained as throughput and
+integration evidence and excluded from the corrected biological-response fit.
+No V4 learned behavior, end-to-end release or new GAM improvement is claimed yet.
+
+The subsequent coupled host batch is now executed. Its B2 scenario received
+the screen at 18 mm through the corrected 120 mm ray cutoff: 141 optic scalars
+changed, with no self-hits. Only the 1,486 anatomically supported sites per
+resident are traced. Mean B2 sampling cost was 7.14 ms; the earlier 123.54 ms
+measurement used B4, so those numbers are not a matched speedup estimate.
+Measured sky/screen exposure supplied 0.143139 synthetic photon-energy units
+over approximately 2.02 seconds. One funded branch appeared at tick 200 and a
+colliding candidate was blocked. Two candidates shared one scratch compilation
+and 275 actual geometry-distance queries. Coupled restoration was exact;
+scratch caches and their operational counters are derived observer state.
+
+Wing acoustics are now in the native tick and checkpoint. Ten actual 1 kHz
+kinematic samples feed bilateral antenna flow and a 128 ms spectral window.
+The source is thorax-relative wing motion, including self-generated flow; no
+behavioral song oscillator or aerodynamic lift is supplied. Bands above the
+declared endogenous sampling limit stay zero. External tones use the separately
+declared effective point-source model. A read-only body-senses tab exposes the
+exact BODY807 input delivered to the CNS; it does not feed raw body state into
+private cognition.
+
+The corrected 72-world native-growth/GAM campaign is running four workers under
+`paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910`.
+Its frozen plan is `9339a0f5e7c3d1fdad178b61b704d24d64860f2927621ab4a824275dea996f57`.
+It varies 24 inherited settings across three actual layouts, with whole-setting
+holdouts and a separate fourth-layout confirmation. The diagnostic flies in
+this campaign receive zero motor commands; it studies ecological development,
+not a fitted surrogate for MaleCNS or learned fly behavior.

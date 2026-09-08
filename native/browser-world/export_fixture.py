@@ -16,6 +16,15 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def assemble(physics: dict, recipe: dict, seed: int) -> dict:
     fixture = copy.deepcopy(physics)
+    for body, resident in zip(fixture["bodies"], fixture["residents"], strict=True):
+        segments = {s["semantic_id"]: s["body_id"] for s in resident["segments69"]}
+        body["wings"] = [segments["l_wing"], segments["r_wing"]]
+        body["wing_centroid_local_mm"] = [[-0.1255656,1.1510138,0.1189536],[-0.1255656,-1.1510138,0.1189536]]
+        body["wing_source_gain"] = [1.0,1.0]
+    fixture["acoustics"] = dict(sample_hz=1000.0,highpass_hz=20.0,
+        lowpass_fraction_of_sample_hz=0.4,spectrum_window_s=0.128,
+        dipole_radius_mm=0.55,coupling_scale=0.12,body_band_reference_mm_s=1.0)
+    fixture["acoustics_notice"] = "Engineering near-field dipole proxy from actual thorax-relative wing motion; no song oscillator, lift, measured fluid calibration or input anti-alias guarantee. At 1kHz sampling, endogenous bands above400Hz are zero."
     chemistry = copy.deepcopy(recipe["ecology"])
     chemistry["seed"] = seed
     chemistry["coordinate_contract"]["world_min_m"] = [-0.025, -0.020, -0.002]
@@ -68,7 +77,10 @@ def assemble(physics: dict, recipe: dict, seed: int) -> dict:
         colony.update(id=f"colony-{index}",physics_binding=entity_id,anchored_region=region["id"],
                       initial=[1.5,1.2,0.8,0.6,0.8,0.6,1.6,0.05],atp=0.8)
         colony["genotype"]["lineage_id"] = f"colony-founder-{index}"
-        colony["genotype"]["development"].update(interval_s=2.0,maximum_structures=24,decay_time_constant_s=40.0)
+        colony["genotype"]["development"].update(
+            interval_s=2.0,maximum_structures=24,decay_time_constant_s=40.0,
+            branch_angle_rad=0.55+0.25*index,lateral_probability=0.22+0.16*index,
+            phototropism=0.8-0.35*index,contact_avoidance=1.2,directional_persistence=0.8)
         colony["genotype"]["reproduction"].update(interval_s=16.0,maximum_descendants=4)
         chemistry["organisms"].append(colony)
     packets = []
@@ -85,6 +97,8 @@ def assemble(physics: dict, recipe: dict, seed: int) -> dict:
             bindings.append(dict(body=entity["body"],geoms=entity["geoms"],store={"kind":"organism","id":f"colony-{index}"},exposed=True))
     chemistry["packets"] = packets
     fixture.update(ecology=chemistry,material_bindings=bindings,interoception=recipe["fly_interoception"],
+                   illumination=dict(sky_direction_world=[0.0,0.0,1.0],sky_intensity=0.8,
+                                     screen_intensity=0.2,photon_energy_per_second=0.3),
                    airflow_mm_s=[0.8,0.2,0.0],volatile_fraction=[0.01,0,0,0,1,1,0,1],
                    ray_distance_mm=120.0,atp_per_model_work=0.001,world_size=[50,40,16],
                    physiology_notice="Engineered finite eight-pool physiology with five conserved material axes; model mass/work units are not asserted to be SI mass/joules.",
@@ -95,7 +109,7 @@ def assemble(physics: dict, recipe: dict, seed: int) -> dict:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--physics",type=Path,default=Path(__file__).parent/"fixtures/fly-ecology/physics.json")
-    parser.add_argument("--recipe",type=Path,default=ROOT/"native/ecology-core/fixtures/finite-garden-v1.json")
+    parser.add_argument("--recipe",type=Path,default=ROOT/"native/ecology-core/fixtures/finite-garden-v2.json")
     parser.add_argument("--output",type=Path)
     parser.add_argument("--seed",type=int,default=20260908)
     args = parser.parse_args()
