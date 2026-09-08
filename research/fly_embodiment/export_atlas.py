@@ -538,6 +538,7 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--channel-schema", type=Path)
     parser.add_argument("--motor-schema", type=Path)
+    parser.add_argument("--physical-fixture", type=Path)
     args = parser.parse_args()
 
     body = json.loads(args.body_schema.read_text())
@@ -600,6 +601,7 @@ def main() -> None:
         ],
     }
     motor_schema_path.write_text(json.dumps(motor_schema, indent=2) + "\n")
+    cross_schema_identity: dict[str, dict[str, str]] = {}
 
     with np.load(args.neurons, allow_pickle=False) as neurons:
         superclasses = neurons["superclasses"]
@@ -680,6 +682,50 @@ def main() -> None:
             "channels": body_channels,
         }
         channel_schema_path.write_text(json.dumps(channel_schema, indent=2) + "\n")
+        if args.physical_fixture is not None:
+            physical = json.loads(args.physical_fixture.read_text())
+            cns_sensory_sha = sha256(channel_schema_path)
+            cns_actuator_sha = sha256(motor_schema_path)
+            if physical.get("body_schema_sha256") != sha256(args.body_schema):
+                raise SystemExit("physical fixture and canonical body schema identities differ")
+            if physical.get("cns_sensory_schema_sha256") != cns_sensory_sha:
+                raise SystemExit("physical fixture and BODY807 schema identities differ")
+            if physical.get("cns_actuator_schema_sha256") != cns_actuator_sha:
+                raise SystemExit("physical fixture and MOTOR92 schema identities differ")
+            if physical.get("sensory_schema_sha256") != cns_sensory_sha:
+                raise SystemExit("physical fixture sensory compatibility identity differs")
+            if physical.get("actuator_schema_sha256") != cns_actuator_sha:
+                raise SystemExit("physical fixture actuator compatibility identity differs")
+            cross_schema_identity = {
+                "body_schema_sha256": {
+                    "sha256": sha256(args.body_schema),
+                    "scope": "canonical author-derived morphology, 126-DOF order and physical M90 schema file",
+                },
+                "morphology_asset_set_sha256": {
+                    "sha256": str(physical["morphology_asset_set_sha256"]),
+                    "scope": "canonical hash of model asset file paths and content hashes used by the compiled physical fixture",
+                },
+                "cns_sensory_schema_sha256": {
+                    "sha256": cns_sensory_sha,
+                    "scope": "canonical BODY807 neural channel names, ranges, units and evidence",
+                },
+                "physical_sensory_schema_sha256": {
+                    "sha256": str(physical["physical_sensory_schema_sha256"]),
+                    "scope": "compiled contact schema, compound-eye source, physical eye/olfactory/mouth anchors and engineered optic calibration",
+                },
+                "cns_actuator_schema_sha256": {
+                    "sha256": cns_actuator_sha,
+                    "scope": "canonical MOTOR92 semantic order, ranges, activation and MJCF/native boundary",
+                },
+                "physical_actuator_schema_sha256": {
+                    "sha256": str(physical["physical_actuator_schema_sha256"]),
+                    "scope": "compiled resident M90 numeric actuator/control map",
+                },
+                "optic_calibration_schema_sha256": {
+                    "sha256": str(physical["optic_calibration"]["schema_sha256"]),
+                    "scope": "engineered 1771-ray equidistant projection from author camera field of view",
+                },
+            }
 
         output = args.output.resolve()
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -743,6 +789,7 @@ def main() -> None:
             "body807_channel_schema": {"name": channel_schema_path.name, "sha256": sha256(channel_schema_path)},
             "motor92_channel_schema": {"name": motor_schema_path.name, "sha256": sha256(motor_schema_path)},
         },
+        "cross_schema_identity": cross_schema_identity,
         "counts": {
             "motor_rows": 815,
             "motor_rows_with_m92_support": int(np.any(motor_mask != 0, axis=0).sum()),

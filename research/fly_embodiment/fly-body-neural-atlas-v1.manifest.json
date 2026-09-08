@@ -14,6 +14,40 @@
     "body807_channel_schema": {
       "name": "body807-channel-schema.json",
       "sha256": "97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786"
+    },
+    "motor92_channel_schema": {
+      "name": "motor92-channel-schema.json",
+      "sha256": "00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928"
+    }
+  },
+  "cross_schema_identity": {
+    "body_schema_sha256": {
+      "sha256": "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+      "scope": "canonical author-derived morphology, 126-DOF order and physical M90 schema file"
+    },
+    "morphology_asset_set_sha256": {
+      "sha256": "2da4b8004d89d2d89f211bd51079d524376a197abcdbbdd9512be1a86ecf6c94",
+      "scope": "canonical hash of model asset file paths and content hashes used by the compiled physical fixture"
+    },
+    "cns_sensory_schema_sha256": {
+      "sha256": "97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+      "scope": "canonical BODY807 neural channel names, ranges, units and evidence"
+    },
+    "physical_sensory_schema_sha256": {
+      "sha256": "62738ff3c6da3971799b3574620cccf92d27d30d25db1ebfbff4ecf2dc4eb3b0",
+      "scope": "compiled contact schema, compound-eye source, physical eye/olfactory/mouth anchors and engineered optic calibration"
+    },
+    "cns_actuator_schema_sha256": {
+      "sha256": "00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+      "scope": "canonical MOTOR92 semantic order, ranges, activation and MJCF/native boundary"
+    },
+    "physical_actuator_schema_sha256": {
+      "sha256": "09685e5cfc3ed56d5c218498965c32b0cd61814c79644a60bd9dbf5e9991bff7",
+      "scope": "compiled two-resident M90 numeric actuator/control map"
+    },
+    "optic_calibration_schema_sha256": {
+      "sha256": "6e150bcffe27a8cfcb53444c4af2d6e1e01c832e33bac7194c6fdfa2dda3b946",
+      "scope": "engineered 1771-ray equidistant projection from author camera field of view"
     }
   },
   "counts": {

@@ -1,170 +1,126 @@
-//! Browser embodiment: physical truth stays inside this module and MuJoCo.
-//! Only retina RGB and the fixed 110 body-local afferents cross to the CNS.
+//! Full fly embodiment: MuJoCo owns mechanics, Rust owns transduction and ecology.
+//! Only retina5313 and body807 leave this boundary for the actual MaleCNS.
+mod fly_optics;
+mod fly_senses;
+mod fly_types;
+use chreatures_ecology_core as eco;
+use fly_types::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
-const SITES: usize = 1771;
-const CHANNELS: usize = 110;
-const MOTOR_CHANNELS: usize = 34;
-const MUSCLES: usize = 24;
-const JOINTS: usize = 12;
-#[derive(Clone, Serialize, Deserialize)]
-struct Controller {
-    max_joint_torque: f64,
-    hip_passive_damping: f64,
-    knee_passive_damping: f64,
-    posture_kp: f64,
-    posture_kd: f64,
-    max_posture_torque: f64,
-}
-#[derive(Clone, Serialize, Deserialize)]
-struct Body {
-    root: usize,
-    head: usize,
-    qpos: Vec<usize>,
-    dofs: Vec<usize>,
-    controller: Controller,
-    physiology: [f64; 12],
-    eyes: [[f64; 3]; 2],
-}
-#[derive(Clone, Serialize, Deserialize)]
-struct Entity {
-    body: usize,
-    free: bool,
-    food: f64,
-    nutrition: f64,
-    odor: i32,
-    strength: f64,
-    growth: f64,
-    geoms: Vec<usize>,
-}
-#[derive(Clone, Serialize, Deserialize)]
-struct Config {
-    engine: String,
-    source_mjcf_sha256: String,
-    atlas_sha256: String,
-    anatomical_sites: Vec<[i16; 3]>,
-    supported_sites: Vec<bool>,
-    bodies: Vec<Body>,
-    entities: Vec<Entity>,
-    screen_geom: usize,
-}
-#[derive(Clone, Serialize, Deserialize)]
-struct Resident {
-    physiology: [f64; 12],
-    grip: Option<usize>,
-    gaze: f64,
-    signals: [f64; 3],
-    work: f64,
-    /// Engineered antagonist activation state. This synthetic body makes no NMJ claim.
-    muscle_activation: [f64; MUSCLES],
-    joint_fatigue: [f64; JOINTS],
-}
-#[derive(Clone, Serialize, Deserialize)]
-struct Emission {
-    origin: [f64; 3],
-    born: f64,
-    frequency_hz: f64,
-    envelope: f64,
-    duration: f64,
-    kind: u8,
+
+#[derive(Clone, Default, Serialize, Deserialize)]
+struct HostEcology {
+    route_open_fraction: Vec<f64>,
+    route_advection_m3_s: Vec<f64>,
+    construction_sites: Vec<eco::ConstructionSite>,
+    birth_sites: Vec<eco::BirthSite>,
+    photon_exposures: Vec<eco::PhotonExposure>,
 }
 #[derive(Serialize, Deserialize)]
-struct Saved {
+struct Envelope {
     format: String,
-    engine: String,
-    model: String,
-    atlas: String,
-    time: f64,
-    rng: u64,
-    residents: Vec<Resident>,
-    food: Vec<f64>,
-    reservoir: Vec<f64>,
-    emissions: Vec<Emission>,
-    memory: String,
+    state: Saved,
+    ecology: String,
+    host: HostEcology,
 }
+struct Pending {
+    state: Saved,
+    token: String,
+    previous_config: Option<Config>,
+}
+
 #[wasm_bindgen]
 pub struct WorldCore {
     config: Config,
     state: Saved,
-    directions: Vec<[f64; 3]>,
+    ecology: eco::EcologyWorld,
+    host: HostEcology,
+    pending: Option<Pending>,
 }
-fn err(s: &str) -> JsValue {
-    JsValue::from_str(s)
+fn err(s: impl AsRef<str>) -> JsValue {
+    JsValue::from_str(s.as_ref())
 }
-fn rotate(m: &[f64], v: [f64; 3]) -> [f64; 3] {
-    std::array::from_fn(|i| (0..3).map(|j| m[i * 3 + j] * v[j]).sum())
+fn hash(s: &str) -> bool {
+    s.len() == 64
+        && s.bytes()
+            .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
 }
-fn local(m: &[f64], v: [f64; 3]) -> [f64; 3] {
-    std::array::from_fn(|i| (0..3).map(|j| m[j * 3 + i] * v[j]).sum())
+fn commands_valid(a: &[f64], b: usize) -> bool {
+    a.len() == b * MOTOR_CHANNELS
+        && finite(a)
+        && a.chunks_exact(MOTOR_CHANNELS).all(|r| {
+            r.iter().enumerate().all(|(i, v)| {
+                if i < 84 {
+                    (-1.0..=1.0).contains(v)
+                } else {
+                    (0.0..=1.0).contains(v)
+                }
+            })
+        })
 }
-fn dist(a: &[f64], b: &[f64]) -> f64 {
-    a.iter()
-        .zip(b)
-        .map(|(x, y)| (x - y).powi(2))
-        .sum::<f64>()
-        .sqrt()
-}
-fn finite(v: &[f64]) -> bool {
-    v.iter().all(|x| x.is_finite())
-}
+
 #[wasm_bindgen]
 impl WorldCore {
     #[wasm_bindgen(constructor)]
     pub fn new(config: &str, seed: u32) -> Result<WorldCore, JsValue> {
         let c: Config =
-            serde_json::from_str(config).map_err(|_| err("invalid world configuration"))?;
-        if c.anatomical_sites.len() != SITES
-            || c.supported_sites.len() != SITES
+            serde_json::from_str(config).map_err(|e| err(format!("fly fixture: {e}")))?;
+        if c.engine != ENGINE
+            || [
+                &c.source_mjcf_sha256,
+                &c.atlas_sha256,
+                &c.morphology_sha256,
+                &c.sensory_schema_sha256,
+                &c.actuator_schema_sha256,
+            ]
+            .iter()
+            .any(|x| !hash(x))
             || c.bodies.is_empty()
             || c.bodies.len() > 32
-            || c.entities.len() > 96
-            || c.anatomical_sites.iter().filter(|s| s[0] == 1).count() != 879
-            || c.anatomical_sites.iter().filter(|s| s[0] == 2).count() != 892
-            || c.anatomical_sites
+            || c.ecology.pools.len() != 8
+            || c.anatomical_sites.len() != SITES
+            || c.supported_sites.len() != SITES
+            || c.retinal_directions.len() != SITES
+            || c.anatomical_sites.iter().any(|s| s[0] != 1 && s[0] != 2)
+            || c.retinal_directions
                 .iter()
-                .any(|s| s[0] < 1 || s[0] > 2 || s[1].abs() > 100 || s[2].abs() > 100)
-            || c.bodies.iter().any(|b| {
-                b.root > 4096
-                    || b.head > 4096
-                    || b.qpos.len() != 12
-                    || b.dofs.len() != 12
-                    || b.qpos.iter().chain(&b.dofs).any(|i| *i > 8192)
-                    || b.physiology
-                        .iter()
-                        .any(|v| !v.is_finite() || *v < 0.0 || *v > 1.0)
-                    || b.eyes
-                        .iter()
-                        .flatten()
-                        .any(|v| !v.is_finite() || v.abs() > 1.0)
-                    || b.controller.max_joint_torque <= 0.0
-                    || b.controller.hip_passive_damping < 0.0
-                    || b.controller.knee_passive_damping < 0.0
-            })
-            || c.entities.iter().any(|e| {
-                e.body > 4096
-                    || e.geoms.iter().any(|i| *i > 4096)
-                    || e.food < 0.0
-                    || e.nutrition < 0.0
-                    || e.nutrition > 1.0
-                    || e.growth < 0.0
-            })
+                .any(|v| !finite(v) || (norm(*v) - 1.0).abs() > 1e-5)
+            || c.geoms.iter().enumerate().any(|(i, g)| i != g.id)
+            || c.screen_geom >= c.geoms.len()
+            || !c.ray_distance_mm.is_finite()
+            || c.ray_distance_mm <= 0.0
+            || !finite(&c.airflow_mm_s)
+            || !finite(&c.volatile_fraction)
+            || !c.atp_per_model_work.is_finite()
+            || c.atp_per_model_work < 0.0
+            || c.volatile_fraction.iter().any(|x| !(0.0..=1.0).contains(x))
         {
-            return Err(err("invalid anatomy/cohort"));
+            return Err(err("invalid current fly world contract"));
         }
-        let directions = c
-            .anatomical_sites
-            .iter()
-            .map(|s| {
-                let sign = if s[0] == 1 { 1.0 } else { -1.0 };
-                let q = s[1] as f64 - 18.85;
-                let r = s[2] as f64 - 19.92;
-                let az = (sign * (55.0 + 2.7 * q + 1.35 * r)).to_radians();
-                let el = (-1.35 * q + 2.7 * r).to_radians();
-                [el.cos() * az.cos(), el.cos() * az.sin(), el.sin()]
-            })
-            .collect();
+        for b in &c.bodies {
+            if b.qpos.len() != JOINTS
+                || b.dofs.len() != JOINTS
+                || b.segments.len() != SEGMENTS
+                || b.actuators.len() != PHYSICAL_CONTROLS
+                || b.neutral.len() != 84
+                || b.control_ranges.len() != 84
+                || !finite(&b.neutral)
+                || b.control_ranges.iter().zip(&b.neutral).any(|(range, q)| {
+                    !finite(range) || range[0] >= range[1] || *q < range[0] || *q > range[1]
+                })
+                || b.feet
+                    .iter()
+                    .any(|f| f.is_empty() || f.iter().any(|id| !b.segments.contains(id)))
+                || !b.mouth.contact_radius_mm.is_finite()
+                || b.mouth.contact_radius_mm <= 0.0
+                || !c.ecology.organisms.iter().any(|o| o.id == b.ecology_id)
+            {
+                return Err(err("incomplete anatomical fly body mapping"));
+            }
+        }
+        let ecology = eco::EcologyWorld::new(c.ecology.clone()).map_err(|e| err(e.to_string()))?;
         let state = Saved {
-            format: "chreatures-browser-world-state-v2".into(),
+            format: "chreatures-fly-core-state-v4".into(),
             engine: c.engine.clone(),
             model: c.source_mjcf_sha256.clone(),
             atlas: c.atlas_sha256.clone(),
@@ -173,137 +129,415 @@ impl WorldCore {
             residents: c
                 .bodies
                 .iter()
-                .map(|b| Resident {
-                    physiology: b.physiology,
-                    grip: None,
-                    gaze: 0.0,
-                    signals: [0.0; 3],
+                .map(|_| Resident {
+                    fatigue: vec![0.0; MOTOR_CHANNELS],
+                    pump_phase: 0.0,
+                    pump_flow: 0.0,
+                    salivary_flow: 0.0,
                     work: 0.0,
-                    muscle_activation: [0.0; MUSCLES],
-                    joint_fatigue: [0.0; JOINTS],
+                    last_commands: vec![0.0; MOTOR_CHANNELS],
                 })
                 .collect(),
-            food: c.entities.iter().map(|e| e.food).collect(),
-            reservoir: c.entities.iter().map(|e| e.food * 2.0).collect(),
             emissions: Vec::new(),
             memory: String::new(),
+            afferents: vec![0.0; c.bodies.len() * CHANNELS],
+        };
+        let host = HostEcology {
+            route_open_fraction: c
+                .ecology
+                .routes
+                .iter()
+                .map(|r| r.base_open_fraction)
+                .collect(),
+            route_advection_m3_s: vec![0.0; c.ecology.routes.len()],
+            ..HostEcology::default()
         };
         Ok(Self {
             config: c,
             state,
-            directions,
+            ecology,
+            host,
+            pending: None,
         })
-    }
-    pub fn snapshot(&self) -> String {
-        serde_json::to_string(&self.state).unwrap()
-    }
-    pub fn restore(&mut self, snapshot: &str) -> Result<(), JsValue> {
-        let s: Saved = serde_json::from_str(snapshot).map_err(|_| err("invalid world snapshot"))?;
-        if s.format != self.state.format
-            || s.engine != self.state.engine
-            || s.model != self.state.model
-            || s.atlas != self.state.atlas
-            || s.residents.len() != self.state.residents.len()
-            || s.food.len() != self.state.food.len()
-            || s.reservoir.len() != s.food.len()
-            || s.reservoir.iter().any(|v| !v.is_finite() || *v < 0.0)
-            || s.emissions.len() > 1024
-            || s.emissions.iter().any(|e| {
-                !finite(&e.origin)
-                    || !e.born.is_finite()
-                    || !e.frequency_hz.is_finite()
-                    || !(40.0..=1600.0).contains(&e.frequency_hz)
-                    || !e.envelope.is_finite()
-                    || !(0.0..=1.0).contains(&e.envelope)
-                    || !e.duration.is_finite()
-                    || !(0.005..=20.0).contains(&e.duration)
-                    || e.kind > 1
-            })
-            || !s.time.is_finite()
-            || s.food.iter().any(|f| !f.is_finite() || *f < 0.0)
-            || s.residents.iter().any(|r| {
-                !finite(&r.physiology)
-                    || !finite(&r.signals)
-                    || !r.gaze.is_finite()
-                    || !r.work.is_finite()
-                    || !finite(&r.muscle_activation)
-                    || !finite(&r.joint_fatigue)
-                    || r.muscle_activation.iter().any(|v| !(0.0..=1.0).contains(v))
-                    || r.joint_fatigue.iter().any(|v| !(0.0..=1.0).contains(v))
-                    || r.physiology.iter().any(|v| *v < 0.0 || *v > 1.0)
-                    || r.grip.is_some_and(|g| g >= s.food.len())
-            })
-        {
-            return Err(err("snapshot identity or dimensions differ"));
-        }
-        self.state = s;
-        Ok(())
-    }
-    /// Explicit append-only physical topology transaction; personal state is preserved.
-    pub fn append_entity_config(&mut self, config: &str) -> Result<(), JsValue> {
-        let next: Config = serde_json::from_str(config)
-            .map_err(|_| err("invalid appended model configuration"))?;
-        if next.engine != self.config.engine
-            || next.atlas_sha256 != self.config.atlas_sha256
-            || next.anatomical_sites != self.config.anatomical_sites
-            || next.supported_sites != self.config.supported_sites
-            || next.screen_geom != self.config.screen_geom
-            || serde_json::to_string(&next.bodies).unwrap()
-                != serde_json::to_string(&self.config.bodies).unwrap()
-            || next.entities.len() != self.config.entities.len() + 1
-            || next.entities.len() > 96
-            || serde_json::to_string(&next.entities[..self.config.entities.len()]).unwrap()
-                != serde_json::to_string(&self.config.entities).unwrap()
-        {
-            return Err(err("append topology contract differs"));
-        }
-        let added = next.entities.last().unwrap();
-        if !added.food.is_finite()
-            || added.food < 0.0
-            || added.food > 10.0
-            || !added.nutrition.is_finite()
-            || added.nutrition < 0.0
-            || added.nutrition > 1.0
-            || !added.growth.is_finite()
-            || added.growth < 0.0
-            || added.growth > 0.1
-            || !added.strength.is_finite()
-            || added.strength < 0.0
-            || added.strength > 4.0
-        {
-            return Err(err("invalid appended material"));
-        }
-        self.state.food.push(added.food);
-        self.state.reservoir.push(added.food * 2.0);
-        self.state.model = next.source_mjcf_sha256.clone();
-        self.config = next;
-        Ok(())
-    }
-    /// Opaque CNS-derived memory checkpoint supplied by the cognitive owner.
-    pub fn set_memory(&mut self, memory: String) {
-        self.state.memory = memory;
     }
     pub fn time(&self) -> f64 {
         self.state.time
     }
+    pub fn set_memory(&mut self, memory: String) -> Result<(), JsValue> {
+        if self.pending.is_some() {
+            return Err(err("ecological mutation pending"));
+        }
+        self.state.memory = memory;
+        Ok(())
+    }
+    /// Append physical geometry only after the host has compiled and validated
+    /// its candidate. Existing body/joint/actuator addresses cannot change.
+    pub fn rebind_physics(&mut self, config: &str) -> Result<(), JsValue> {
+        let next: Config = serde_json::from_str(config).map_err(|e| err(e.to_string()))?;
+        let stable = |c: &Config| {
+            let mut v = serde_json::to_value(c).unwrap();
+            let m = v.as_object_mut().unwrap();
+            for key in ["source_mjcf_sha256", "geoms", "material_bindings"] { m.remove(key); }
+            v
+        };
+        if !hash(&next.source_mjcf_sha256) || stable(&next) != stable(&self.config)
+            || next.geoms.len() < self.config.geoms.len()
+            || next.geoms.iter().enumerate().any(|(i,g)|g.id!=i)
+            || serde_json::to_value(&next.geoms[..self.config.geoms.len()]).unwrap()!=serde_json::to_value(&self.config.geoms).unwrap()
+            || next.material_bindings.len()<self.config.material_bindings.len()
+            || serde_json::to_value(&next.material_bindings[..self.config.material_bindings.len()]).unwrap()!=serde_json::to_value(&self.config.material_bindings).unwrap()
+            || next.material_bindings.iter().any(|b|b.geoms.iter().any(|i|*i>=next.geoms.len())) {
+            return Err(err("physical rebind changed existing world semantics"));
+        }
+        for binding in &next.material_bindings[self.config.material_bindings.len()..] {
+            let present = match &binding.store {
+                eco::StoreId::Region(id)=>self.config.ecology.regions.iter().any(|s|&s.id==id),
+                eco::StoreId::Organism(id)=>self.ecology.state().organisms.iter().any(|s|&s.id==id),
+                eco::StoreId::Packet(id)=>self.ecology.state().packets.iter().any(|s|&s.id==id),
+                eco::StoreId::Structure(id)=>self.ecology.state().structures.iter().any(|s|&s.id==id)
+                    ||self.ecology.pending_delta().is_some_and(|d|d.physical_creations.iter().any(|p|p.material_store==binding.store)),
+            };
+            if !present {return Err(err("physical rebind invented an unaccounted material store"));}
+        }
+        if let Some(p) = &mut self.pending {
+            if p.previous_config.is_none(){p.previous_config=Some(self.config.clone());}
+            p.state.model=next.source_mjcf_sha256.clone();
+        } else {self.state.model=next.source_mjcf_sha256.clone();}
+        self.config=next;Ok(())
+    }
+    pub fn afferents(&self) -> Vec<f32> {
+        self.state.afferents.clone()
+    }
+    /// Observer-only finite material and physiology, never a resident input.
+    pub fn ecology_observe(&self) -> String {
+        serde_json::to_string(self.ecology.state()).unwrap()
+    }
+    pub fn actuator_state(&self) -> String {
+        serde_json::to_string(&self.state.residents).unwrap()
+    }
     pub fn food(&self) -> Vec<f64> {
-        self.state.food.clone()
+        self.ecology
+            .state()
+            .packets
+            .iter()
+            .map(|p| p.material.quantity[1])
+            .collect()
     }
     pub fn growth_scales(&self) -> Vec<f64> {
-        self.config
-            .entities
+        self.ecology
+            .state()
+            .packets
             .iter()
-            .enumerate()
-            .map(|(i, e)| {
-                if e.food > 0.0 {
-                    (self.state.food[i] / e.food).max(0.01).cbrt()
+            .map(|p| {
+                let seed = self.config.ecology.packets.iter().find(|v| v.id == p.id);
+                let initial = seed.map(|v| v.initial.iter().sum::<f64>()).unwrap_or(0.0);
+                if initial > 0.0 {
+                    (p.material.quantity.iter().sum::<f64>() / initial)
+                        .max(0.0)
+                        .cbrt()
                 } else {
                     1.0
                 }
             })
             .collect()
     }
-    /// Owner-created acoustic source at an actual 3D world location.
+    /// Pure learned-output-to-effective-servo conversion. No posture correction,
+    /// gait, destination, abstract thrust or oral decision is supplied here.
+    pub fn actuation(&self, commands: &[f64]) -> Result<Vec<f64>, JsValue> {
+        if !commands_valid(commands, self.config.bodies.len()) {
+            return Err(err("invalid CNS MOTOR92"));
+        }
+        let mut controls = vec![0.0; self.config.bodies.len() * PHYSICAL_CONTROLS];
+        for (row, b) in self.config.bodies.iter().enumerate() {
+            let a = &commands[row * MOTOR_CHANNELS..(row + 1) * MOTOR_CHANNELS];
+            let out = &mut controls[row * PHYSICAL_CONTROLS..(row + 1) * PHYSICAL_CONTROLS];
+            for j in 0..84 {
+                let q0 = b.neutral[j];
+                let [lo, hi] = b.control_ranges[j];
+                out[j] = q0 + a[j] * if a[j] >= 0.0 { hi - q0 } else { q0 - lo };
+            }
+            out[84..90].copy_from_slice(&a[84..90]);
+        }
+        Ok(controls)
+    }
+    /// Effective force capacity belongs to body physiology. The host multiplies
+    /// each original actuator force bound, preserving the desired servo target.
+    pub fn actuator_capacity(&self) -> Result<Vec<f64>, JsValue> {
+        let mut out = Vec::with_capacity(self.config.bodies.len() * PHYSICAL_CONTROLS);
+        for (row, b) in self.config.bodies.iter().enumerate() {
+            let internal = self
+                .ecology
+                .fly_interoception12(&b.ecology_id, &self.config.interoception)
+                .map_err(|e| err(e.to_string()))?;
+            let resource = (0.1 + 0.9 * internal[0]) * (0.25 + 0.75 * internal[5]);
+            out.extend(
+                self.state.residents[row].fatigue[..PHYSICAL_CONTROLS]
+                    .iter()
+                    .map(|f| resource * (1.0 - 0.8 * f)),
+            );
+        }
+        Ok(out)
+    }
+    pub fn set_route_measurements(&mut self, open: &[f64], flows: &[f64]) -> Result<(), JsValue> {
+        if self.pending.is_some()
+            || open.len() != self.config.ecology.routes.len()
+            || flows.len() != open.len()
+            || !finite(open)
+            || !finite(flows)
+            || open.iter().any(|v| !(0.0..=1.0).contains(v))
+        {
+            return Err(err("invalid measured material routes"));
+        }
+        self.host.route_open_fraction = open.to_vec();
+        self.host.route_advection_m3_s = flows.to_vec();
+        Ok(())
+    }
+    /// Host-only geometry candidates and measured light. They are not goals or
+    /// observations passed to any cognitive controller.
+    pub fn set_ecology_sites(&mut self, sites: &str) -> Result<(), JsValue> {
+        if self.pending.is_some() {
+            return Err(err("ecological mutation pending"));
+        }
+        #[derive(Deserialize)]
+        struct Sites {
+            construction_sites: Vec<eco::ConstructionSite>,
+            birth_sites: Vec<eco::BirthSite>,
+            photon_exposures: Vec<eco::PhotonExposure>,
+        }
+        let s: Sites = serde_json::from_str(sites).map_err(|e| err(e.to_string()))?;
+        if s.construction_sites.len() > 4096
+            || s.birth_sites.len() > 4096
+            || s.photon_exposures.len() > 4096
+        {
+            return Err(err("too many physical ecology candidates"));
+        }
+        self.host.construction_sites = s.construction_sites;
+        self.host.birth_sites = s.birth_sites;
+        self.host.photon_exposures = s.photon_exposures;
+        Ok(())
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub fn sense_physics(
+        &mut self,
+        qpos: &[f64],
+        qvel: &[f64],
+        loads: &[f64],
+        positions: &[f64],
+        rotations: &[f64],
+        velocities: &[f64],
+        contacts: &[f64],
+        offsets: &[u32],
+        irradiance: &[f64],
+    ) -> Result<(), JsValue> {
+        if self.pending.is_some() {
+            return Err(err("ecological mutation pending"));
+        }
+        let packet = PhysicalPacket {
+            qpos,
+            qvel,
+            loads,
+            positions,
+            rotations,
+            velocities,
+            contacts,
+            offsets,
+            irradiance,
+        };
+        self.state.afferents =
+            fly_senses::transduce(&self.config, &self.state, &self.ecology, &packet)
+                .map_err(err)?
+                .afferents;
+        Ok(())
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub fn prepare_advance(
+        &mut self,
+        commands: &[f64],
+        qpos: &[f64],
+        qvel: &[f64],
+        loads: &[f64],
+        positions: &[f64],
+        rotations: &[f64],
+        velocities: &[f64],
+        contacts: &[f64],
+        offsets: &[u32],
+        irradiance: &[f64],
+        dt: f64,
+    ) -> Result<String, JsValue> {
+        if self.pending.is_some() || dt != DT || !commands_valid(commands, self.config.bodies.len())
+        {
+            return Err(err("invalid or overlapping fly tick"));
+        }
+        let packet = PhysicalPacket {
+            qpos,
+            qvel,
+            loads,
+            positions,
+            rotations,
+            velocities,
+            contacts,
+            offsets,
+            irradiance,
+        };
+        let sensed = fly_senses::transduce(&self.config, &self.state, &self.ecology, &packet)
+            .map_err(err)?;
+        let mut next = self.state.clone();
+        let mut exchanges = Vec::new();
+        for (row, b) in self.config.bodies.iter().enumerate() {
+            let a = &commands[row * MOTOR_CHANNELS..(row + 1) * MOTOR_CHANNELS];
+            let r = &mut next.residents[row];
+            r.last_commands.copy_from_slice(a);
+            r.work = sensed.mechanical_work_rate[row] * dt;
+            for (j, value) in a.iter().enumerate() {
+                let recruitment = value.abs();
+                r.fatigue[j] = (r.fatigue[j]
+                    + dt * (0.25 * recruitment * recruitment - 0.08 * (1.0 - recruitment)))
+                    .clamp(0.0, 1.0);
+            }
+            // Engineered finite pump: drive sets frequency, volume is transferred
+            // only through measured mouth contact. The MN command supplies drive.
+            let advance = std::f64::consts::TAU * 8.0 * a[90] * dt * (1.0 - 0.6 * r.fatigue[90]);
+            r.pump_phase = (r.pump_phase + advance) % std::f64::consts::TAU;
+            r.pump_flow = 0.0;
+            r.salivary_flow = 0.0;
+            let total = sensed.mouth_contacts[row]
+                .iter()
+                .map(|(_, f)| *f)
+                .sum::<f64>()
+                .max(1.0);
+            for &(mi, fraction) in &sensed.mouth_contacts[row] {
+                let material = &self.config.material_bindings[mi];
+                let chemical = fly_senses::store_concentration(&self.ecology, &material.store);
+                // 0.02 nL effective stroke volume; the phenomenological scale is
+                // explicit and fitted later, not a measured fly ingestion law.
+                let volume = 2e-14 * advance / std::f64::consts::TAU * fraction / total;
+                let quantity: Vec<f64> = chemical.iter().map(|v| v * volume).collect();
+                exchanges.push(eco::DirectedExchange {
+                    event_id: format!("pump:{}:{mi}", b.id),
+                    from: material.store.clone(),
+                    to: eco::StoreId::Organism(b.ecology_id.clone()),
+                    maximum_quantity: quantity,
+                });
+                let mut saliva = vec![0.0; 8];
+                saliva[0] = a[91] * (1.0 - 0.6 * r.fatigue[91]) * dt * 0.002 * fraction / total;
+                exchanges.push(eco::DirectedExchange {
+                    event_id: format!("saliva:{}:{mi}", b.id),
+                    from: eco::StoreId::Organism(b.ecology_id.clone()),
+                    to: material.store.clone(),
+                    maximum_quantity: saliva,
+                });
+            }
+        }
+        next.rng ^= next.rng << 13;
+        next.rng ^= next.rng >> 7;
+        next.rng ^= next.rng << 17;
+        next.time += dt;
+        next.emissions
+            .retain(|e| next.time - e.born < e.duration + 1.0);
+        let mut respiratory_contacts=Vec::new();
+        for b in &self.config.bodies {
+            let p=packet.pos(packet.samples()-1,b.root).map(|x|x*0.001);
+            if let Some(region)=self.config.ecology.regions.iter().min_by(|a,b|{
+                let da=(0..3).map(|k|(a.center_m[k]-p[k]).powi(2)).sum::<f64>();
+                let db=(0..3).map(|k|(b.center_m[k]-p[k]).powi(2)).sum::<f64>();da.total_cmp(&db)
+            }) {
+                respiratory_contacts.push(eco::ContactEvent{a:eco::StoreId::Region(region.id.clone()),b:eco::StoreId::Organism(b.ecology_id.clone()),conductance_m3_s:vec![2e-14,0.0,0.0,0.0,1e-12,1e-12,0.0,1e-12]});
+            }
+        }
+        // Anchored living surfaces exchange with their containing material cell.
+        for organism in &self.ecology.state().organisms {
+            if let Some(region)=&organism.anchored_region {
+                respiratory_contacts.push(eco::ContactEvent{a:eco::StoreId::Region(region.clone()),b:eco::StoreId::Organism(organism.id.clone()),conductance_m3_s:vec![2e-12,2e-13,2e-13,2e-13,1e-12,1e-12,0.0,1e-12]});
+            }
+        }
+        let input = eco::TickInput {
+            dt_s: dt,
+            route_open_fraction: self.host.route_open_fraction.clone(),
+            route_advection_m3_s: self.host.route_advection_m3_s.clone(),
+            contacts: respiratory_contacts,
+            directed_exchanges: exchanges,
+            metabolic_work_demands: self
+                .config
+                .bodies
+                .iter()
+                .enumerate()
+                .map(|(row, b)| eco::MetabolicWorkDemand {
+                    organism_id: b.ecology_id.clone(),
+                    atp_quantity: next.residents[row].work * self.config.atp_per_model_work,
+                })
+                .collect(),
+            photon_exposures: self.host.photon_exposures.clone(),
+            construction_sites: self.host.construction_sites.clone(),
+            birth_sites: self.host.birth_sites.clone(),
+            packet_retirements: Vec::new(),
+            afferent_sample_sites: Vec::new(),
+        };
+        let delta = self
+            .ecology
+            .prepare_step(&input)
+            .map_err(|e| err(e.to_string()))?;
+        for (row, b) in self.config.bodies.iter().enumerate() {
+            for transfer in &delta.transfers {
+                if transfer.detail_id.starts_with(&format!("pump:{}:", b.id)) {
+                    next.residents[row].pump_flow += transfer.quantity.iter().sum::<f64>() / dt;
+                }
+                if transfer.detail_id.starts_with(&format!("saliva:{}:", b.id)) {
+                    next.residents[row].salivary_flow += transfer.quantity.iter().sum::<f64>() / dt;
+                }
+            }
+        }
+        // Compute afferents from the candidate chemistry without committing the
+        // authoritative world. The physical host must first accept its geometry.
+        let mut projected = self.ecology.clone();
+        projected
+            .commit_step(&eco::CommitReceipt::accept_all(&delta))
+            .map_err(|e| err(e.to_string()))?;
+        match fly_senses::transduce(&self.config, &next, &projected, &packet) {
+            Ok(s) => next.afferents = s.afferents,
+            Err(e) => {
+                self.ecology
+                    .abort_step(&delta.token)
+                    .map_err(|v| err(v.to_string()))?;
+                return Err(err(e));
+            }
+        }
+        self.pending = Some(Pending {
+            state: next,
+            token: delta.token.clone(),
+            previous_config: None,
+        });
+        serde_json::to_string(&delta).map_err(|e| err(e.to_string()))
+    }
+    pub fn commit_advance(&mut self, receipt: &str) -> Result<(), JsValue> {
+        let r: eco::CommitReceipt =
+            serde_json::from_str(receipt).map_err(|e| err(e.to_string()))?;
+        let pending = self
+            .pending
+            .as_ref()
+            .ok_or_else(|| err("no prepared fly tick"))?;
+        if r.token != pending.token {
+            return Err(err("fly commit token differs"));
+        }
+        self.ecology
+            .commit_step(&r)
+            .map_err(|e| err(e.to_string()))?;
+        self.state = self.pending.take().unwrap().state;
+        Ok(())
+    }
+    pub fn abort_advance(&mut self, token: &str) -> Result<(), JsValue> {
+        let p = self
+            .pending
+            .as_ref()
+            .ok_or_else(|| err("no prepared fly tick"))?;
+        if p.token != token {
+            return Err(err("fly abort token differs"));
+        }
+        self.ecology
+            .abort_step(token)
+            .map_err(|e| err(e.to_string()))?;
+        if let Some(previous)=self.pending.take().and_then(|p|p.previous_config){self.config=previous;}
+        Ok(())
+    }
     pub fn visitor_sound(
         &mut self,
         position: &[f64],
@@ -311,7 +545,8 @@ impl WorldCore {
         envelope: f64,
         duration: f64,
     ) -> Result<(), JsValue> {
-        if position.len() != 3
+        if self.pending.is_some()
+            || position.len() != 3
             || !finite(position)
             || !frequency_hz.is_finite()
             || !(40.0..=1600.0).contains(&frequency_hz)
@@ -321,543 +556,108 @@ impl WorldCore {
             || !(0.005..=20.0).contains(&duration)
             || self.state.emissions.len() >= 1024
         {
-            return Err(err("invalid visitor acoustic source"));
+            return Err(err("invalid physical sound source"));
         }
         self.state.emissions.push(Emission {
-            origin: position.try_into().unwrap(),
+            origin_mm: position.try_into().unwrap(),
             born: self.state.time,
             frequency_hz,
             envelope,
             duration,
-            kind: 0,
         });
         Ok(())
     }
-    /// CNS motor head -> engineered antagonist muscles -> 12 physical hinge torques.
-    pub fn actuation(
-        &mut self,
-        commands: &[f64],
-        qpos: &[f64],
-        qvel: &[f64],
-        positions: &[f64],
-        rotations: &[f64],
-        velocities: &[f64],
-        time: f64,
-        dt: f64,
-    ) -> Result<Vec<f64>, JsValue> {
-        let n = self.config.bodies.len();
-        if commands.len() != n * MOTOR_CHANNELS
-            || velocities.len() != n * 6
-            || !finite(commands)
-            || !finite(qpos)
-            || !finite(qvel)
-            || !finite(positions)
-            || !finite(rotations)
-            || !finite(velocities)
-            || !time.is_finite()
-            || !dt.is_finite()
-            || dt <= 0.0
-            || dt > 0.05
-            || commands.chunks_exact(MOTOR_CHANNELS).any(|a| {
-                a.iter().enumerate().any(|(k, v)| {
-                    if k == 24 || k == 25 {
-                        !(-1.0..=1.0).contains(v)
-                    } else {
-                        !(0.0..=1.0).contains(v)
-                    }
-                })
-            })
-        {
-            return Err(err("invalid physical actuation packet"));
-        }
-        if self.config.bodies.iter().any(|b| {
-            b.qpos.len() != 12
-                || b.dofs.len() != 12
-                || b.qpos.iter().any(|i| *i >= qpos.len())
-                || b.dofs.iter().any(|i| *i >= qvel.len())
-                || b.root * 9 + 9 > rotations.len()
-                || b.root * 3 + 3 > positions.len()
-        }) || self
-            .config
-            .entities
-            .iter()
-            .any(|e| e.body * 3 + 3 > positions.len())
-        {
-            return Err(err("physical model layout differs"));
-        }
-        let mut output = vec![0.0; n * 19];
-        for row in 0..n {
-            let b = &self.config.bodies[row];
-            let c = &b.controller;
-            let r = &mut self.state.residents[row];
-            let a = &commands[row * MOTOR_CHANNELS..row * MOTOR_CHANNELS + MOTOR_CHANNELS];
-            let out = &mut output[row * 19..row * 19 + 19];
-            let resource = (0.12 + 0.88 * r.physiology[0]) * (0.55 + 0.45 * r.physiology[6]);
-            let alpha = 1.0 - (-dt / 0.04).exp();
-            for muscle in 0..MUSCLES {
-                let excitation = a[muscle].clamp(0.0, 1.0);
-                r.muscle_activation[muscle] += alpha * (excitation - r.muscle_activation[muscle]);
-            }
-            for j in 0..JOINTS {
-                let angle = qpos[b.qpos[j]];
-                let velocity = qvel[b.dofs[j]];
-                let normalized_length = angle / if j % 2 == 0 { 0.733 } else { 1.012 };
-                let force_length = (-1.35 * normalized_length * normalized_length).exp();
-                let force_velocity = (1.0 - 0.18 * velocity.abs()).clamp(0.28, 1.0);
-                let local_capacity = resource * (1.0 - 0.82 * r.joint_fatigue[j]);
-                let positive = r.muscle_activation[j * 2];
-                let negative = r.muscle_activation[j * 2 + 1];
-                let active = (positive - negative)
-                    * c.max_joint_torque
-                    * local_capacity
-                    * force_length
-                    * force_velocity;
-                let passive = -if j % 2 == 0 {
-                    c.hip_passive_damping
-                } else {
-                    c.knee_passive_damping
-                } * velocity
-                    - c.max_joint_torque * 0.08 * normalized_length.powi(3);
-                let torque = (active + passive).clamp(-c.max_joint_torque, c.max_joint_torque);
-                out[j] = torque;
-                let recruitment = 0.5 * (positive + negative);
-                r.joint_fatigue[j] = (r.joint_fatigue[j]
-                    + dt * (0.34 * recruitment * recruitment - 0.075 * (1.0 - recruitment)))
-                    .clamp(0.0, 1.0);
-                r.work += (active * velocity).abs() * dt + 0.02 * recruitment * dt;
-            }
-            let rot = &rotations[b.root * 9..b.root * 9 + 9];
-            let vel = &velocities[row * 6..row * 6 + 6];
-            let posture = a[25].clamp(-1.0, 1.0);
-            let mut correction = [
-                rot[5] * c.posture_kp - vel[0] * c.posture_kd,
-                -rot[2] * c.posture_kp - vel[1] * c.posture_kd,
-                0.0,
-            ];
-            correction[0] *= posture;
-            correction[1] *= posture;
-            let norm = correction[0].hypot(correction[1]);
-            if norm > c.max_posture_torque {
-                for x in &mut correction {
-                    *x *= c.max_posture_torque / norm
-                }
-            }
-            out[12..15].copy_from_slice(&correction);
-            let p = &positions[b.root * 3..b.root * 3 + 3];
-            if a[31] > 0.5 || a[26] < 0.1 {
-                r.grip = None;
-            } else if r.grip.is_none() {
-                r.grip = self
-                    .config
-                    .entities
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, e)| e.free)
-                    .filter_map(|(i, e)| {
-                        let ep = &positions[e.body * 3..e.body * 3 + 3];
-                        let lp = local(rot, std::array::from_fn(|k| ep[k] - p[k]));
-                        let d = dist(&lp, &[0.17, 0.0, 0.04]);
-                        if d < 0.16 {
-                            Some((i, d))
-                        } else {
-                            None
-                        }
-                    })
-                    .min_by(|a, b| a.1.total_cmp(&b.1))
-                    .map(|x| x.0);
-            }
-            out[15] = -1.0;
-            if let Some(i) = r.grip {
-                out[15] = i as f64;
-                let e = &self.config.entities[i];
-                let ep = &positions[e.body * 3..e.body * 3 + 3];
-                let offset = rotate(rot, [0.17, 0.0, 0.04]);
-                let force: [f64; 3] = std::array::from_fn(|k| 15.0 * (p[k] + offset[k] - ep[k]));
-                let norm = dist(&force, &[0.0; 3]);
-                for k in 0..3 {
-                    out[16 + k] = force[k] * (8.0 / norm.max(8.0));
-                }
-            }
-            r.gaze = (r.gaze + a[24].clamp(-1.0, 1.0) * dt).clamp(-0.7, 0.7);
-        }
-        Ok(output)
-    }
-    /// Whole-world ecological state advances once per control tick, not per visual frame.
-    pub fn advance(&mut self, commands: &[f64], positions: &[f64], dt: f64) -> Result<(), JsValue> {
-        let n = self.state.residents.len();
-        if commands.len() != n * MOTOR_CHANNELS
-            || !finite(commands)
-            || !finite(positions)
-            || !dt.is_finite()
-            || dt <= 0.0
-            || dt > 0.1
-            || commands.chunks_exact(MOTOR_CHANNELS).any(|a| {
-                a.iter().enumerate().any(|(k, v)| {
-                    if k == 24 || k == 25 {
-                        !(-1.0..=1.0).contains(v)
-                    } else {
-                        !(0.0..=1.0).contains(v)
-                    }
-                })
-            })
-            || self
-                .config
-                .bodies
-                .iter()
-                .any(|b| b.root * 3 + 3 > positions.len())
-            || self
-                .config
-                .entities
-                .iter()
-                .any(|e| e.body * 3 + 3 > positions.len())
-        {
-            return Err(err("invalid ecological tick"));
-        }
-        self.state.rng ^= self.state.rng << 13;
-        self.state.rng ^= self.state.rng >> 7;
-        self.state.rng ^= self.state.rng << 17;
-        for (i, e) in self.config.entities.iter().enumerate() {
-            let growth = (e.growth * dt * (1.0 - self.state.food[i] / e.food.max(0.001)))
-                .max(0.0)
-                .min(self.state.reservoir[i]);
-            self.state.reservoir[i] -= growth;
-            self.state.food[i] = (self.state.food[i] + growth).clamp(0.0, e.food.max(0.0));
-        }
-        self.state
-            .emissions
-            .retain(|e| self.state.time - e.born < e.duration);
-        for row in 0..n {
-            let r = &mut self.state.residents[row];
-            let a = &commands[row * MOTOR_CHANNELS..row * MOTOR_CHANNELS + MOTOR_CHANNELS];
-            let p =
-                &positions[self.config.bodies[row].root * 3..self.config.bodies[row].root * 3 + 3];
-            if a[30] > 0.1 {
-                for (i, e) in self.config.entities.iter().enumerate() {
-                    if dist(p, &positions[e.body * 3..e.body * 3 + 3]) < 0.28 {
-                        let eaten = (a[30].clamp(0.0, 1.0) * 0.12 * dt)
-                            .min(self.state.food[i])
-                            .min(1.0 - r.physiology[1]);
-                        self.state.food[i] -= eaten;
-                        r.physiology[1] += eaten * e.nutrition;
-                    }
-                }
-            }
-            let digested = r.physiology[1].min(0.018 * dt);
-            r.physiology[1] -= digested;
-            r.physiology[0] =
-                (r.physiology[0] + digested * 0.8 - 0.0015 * dt - 0.025 * r.work).clamp(0.0, 1.0);
-            r.physiology[2] = (r.physiology[2] + 0.05 * r.work - 0.006 * dt).clamp(0.0, 1.0);
-            r.physiology[6] =
-                (r.physiology[6] + (r.physiology[0] - 0.2) * 0.0005 * dt).clamp(0.0, 1.0);
-            let allocate = a[33].clamp(0.0, 1.0) * 0.002 * dt * r.physiology[0];
-            r.physiology[7] = (r.physiology[7] + allocate).min(1.0);
-            r.physiology[0] = (r.physiology[0] - allocate).max(0.0);
-            let secretion = (a[32].clamp(0.0, 1.0) * 0.01 * dt).min(r.physiology[8]);
-            r.physiology[8] = (r.physiology[8] + 0.001 * dt - secretion).clamp(0.0, 1.0);
-            if secretion > 0.0 && self.state.emissions.len() < 1024 {
-                self.state.emissions.push(Emission {
-                    origin: p.try_into().unwrap(),
-                    born: self.state.time,
-                    frequency_hz: 1600.0,
-                    envelope: (secretion * 100.0).min(1.0),
-                    duration: 8.0,
-                    kind: 1,
-                });
-            }
-            for k in 0..3 {
-                r.signals[k] = a[27 + k].clamp(0.0, 1.0);
-            }
-            if r.signals.iter().any(|v| *v > 0.01) && self.state.emissions.len() < 1024 {
-                for k in 0..3 {
-                    if r.signals[k] > 0.01 && self.state.emissions.len() < 1024 {
-                        self.state.emissions.push(Emission {
-                            origin: p.try_into().unwrap(),
-                            born: self.state.time,
-                            frequency_hz: [80.0, 320.0, 1280.0][k],
-                            envelope: r.signals[k],
-                            duration: 0.12,
-                            kind: 0,
-                        });
-                    }
-                }
-            }
-            r.work = 0.0;
-        }
-        self.state.time += dt;
-        Ok(())
-    }
-    /// Physics-only packet to MuJoCo: each eye is origin3 followed by 1771 direction3.
     pub fn rays(
         &self,
         row: usize,
-        head_position: &[f64],
-        head_rotation: &[f64],
+        positions: &[f64],
+        rotations: &[f64],
     ) -> Result<Vec<f64>, JsValue> {
-        if row >= self.config.bodies.len()
-            || head_position.len() != 3
-            || head_rotation.len() != 9
-            || !finite(head_position)
-            || !finite(head_rotation)
-        {
-            return Err(err("invalid head pose"));
-        }
-        let b = &self.config.bodies[row];
-        let gaze = self.state.residents[row].gaze;
-        let mut out = Vec::with_capacity(2 * (3 + SITES * 3));
-        for eye in 0..2 {
-            let origin = rotate(head_rotation, b.eyes[eye]);
-            for k in 0..3 {
-                out.push(head_position[k] + origin[k]);
-            }
-            for d in &self.directions {
-                let tilted = [
-                    gaze.cos() * d[0] - gaze.sin() * d[2],
-                    d[1],
-                    gaze.sin() * d[0] + gaze.cos() * d[2],
-                ];
-                out.extend(rotate(head_rotation, tilted));
-            }
-        }
-        Ok(out)
+        fly_optics::rays(&self.config, row, positions, rotations).map_err(err)
     }
-    /// Actual MuJoCo nearest hits, then physical screen UV emission (screen can be occluded).
+    #[allow(clippy::too_many_arguments)]
     pub fn retina(
         &self,
         row: usize,
         rays: &[f64],
-        hit_geoms: &[i32],
+        hits: &[i32],
         distances: &[f64],
-        geom_positions: &[f64],
-        geom_rotations: &[f64],
-        geom_sizes: &[f64],
-        geom_colors: &[f64],
+        positions: &[f64],
+        rotations: &[f64],
+        sizes: &[f64],
+        colors: &[f64],
         frame: &[f32],
         width: usize,
         height: usize,
     ) -> Result<Vec<f32>, JsValue> {
-        let ng = geom_positions.len() / 3;
-        if row >= self.config.bodies.len()
-            || rays.len() != 2 * (3 + SITES * 3)
-            || hit_geoms.len() != SITES * 2
-            || distances.len() != SITES * 2
-            || geom_rotations.len() != ng * 9
-            || geom_sizes.len() != ng * 3
-            || geom_colors.len() != ng * 4
-            || width < 1
-            || height < 1
-            || width > 2048
-            || height > 2048
-            || frame.len() != width * height * 3
-            || !finite(rays)
-            || !finite(distances)
-            || !finite(geom_positions)
-            || !finite(geom_rotations)
-            || !finite(geom_sizes)
-            || !finite(geom_colors)
-            || frame.iter().any(|x| !x.is_finite() || *x < 0.0 || *x > 1.0)
-            || hit_geoms.iter().any(|g| *g >= ng as i32)
-        {
-            return Err(err("invalid ray result"));
-        }
-        let mut rgb = vec![0.0; SITES * 3];
-        for site in 0..SITES {
-            if !self.config.supported_sites[site] {
-                continue;
-            }
-            let eye = self.config.anatomical_sites[site][0] as usize - 1;
-            let hit = hit_geoms[eye * SITES + site];
-            let distance = distances[eye * SITES + site];
-            let value = if hit < 0 || distance < 0.0 || distance > 3.2 {
-                [0.015, 0.02, 0.025]
-            } else {
-                let g = hit as usize;
-                if g == self.config.screen_geom {
-                    let base = eye * (3 + SITES * 3);
-                    let p: [f64; 3] = std::array::from_fn(|k| {
-                        rays[base + k] + distance * rays[base + 3 + site * 3 + k]
-                            - geom_positions[g * 3 + k]
-                    });
-                    let lp = local(&geom_rotations[g * 9..g * 9 + 9], p);
-                    let ld = local(
-                        &geom_rotations[g * 9..g * 9 + 9],
-                        std::array::from_fn(|k| rays[base + 3 + site * 3 + k]),
-                    );
-                    if ld[0] <= 0.0 {
-                        [0.02; 3]
-                    } else {
-                        let u = (0.5 - lp[1] / (2.0 * geom_sizes[g * 3 + 1])).clamp(0.0, 1.0);
-                        let v = (0.5 - lp[2] / (2.0 * geom_sizes[g * 3 + 2])).clamp(0.0, 1.0);
-                        let x = u * (width - 1) as f64;
-                        let y = v * (height - 1) as f64;
-                        let x0 = x.floor() as usize;
-                        let y0 = y.floor() as usize;
-                        let x1 = (x0 + 1).min(width - 1);
-                        let y1 = (y0 + 1).min(height - 1);
-                        let fx = (x - x0 as f64) as f32;
-                        let fy = (y - y0 as f64) as f32;
-                        std::array::from_fn(|k| {
-                            let top = frame[(y0 * width + x0) * 3 + k] * (1.0 - fx)
-                                + frame[(y0 * width + x1) * 3 + k] * fx;
-                            let bot = frame[(y1 * width + x0) * 3 + k] * (1.0 - fx)
-                                + frame[(y1 * width + x1) * 3 + k] * fx;
-                            top * (1.0 - fy) + bot * fy
-                        })
-                    }
-                } else {
-                    std::array::from_fn(|k| geom_colors[g * 4 + k] as f32 * 0.72)
-                }
-            };
-            rgb[site * 3..site * 3 + 3].copy_from_slice(&value);
-        }
-        Ok(rgb)
+        fly_optics::retina(
+            &self.config,
+            row,
+            rays,
+            hits,
+            distances,
+            positions,
+            rotations,
+            sizes,
+            colors,
+            frame,
+            width,
+            height,
+        )
+        .map_err(err)
     }
-    /// Body-local contract order exactly matches optic_retina.rs transduce_nonvisual.
-    pub fn afferents(
-        &self,
-        positions: &[f64],
-        rotations: &[f64],
-        local_velocities: &[f64],
-        contacts: &[f64],
-        shade_distances: &[f64],
-        qpos: &[f64],
-        qvel: &[f64],
-        joint_loads: &[f64],
-        foot_contacts: &[f64],
-    ) -> Result<Vec<f32>, JsValue> {
-        let n = self.state.residents.len();
-        if local_velocities.len() != n * 6
-            || contacts.len() != n * 25
-            || shade_distances.len() != n
-            || joint_loads.len() != n * JOINTS
-            || foot_contacts.len() != n * 6
-            || !finite(shade_distances)
-            || !finite(positions)
-            || !finite(rotations)
-            || !finite(local_velocities)
-            || !finite(contacts)
-            || !finite(qpos)
-            || !finite(qvel)
-            || !finite(joint_loads)
-            || !finite(foot_contacts)
-            || self.config.bodies.iter().any(|b| {
-                b.root * 3 + 3 > positions.len()
-                    || b.root * 9 + 9 > rotations.len()
-                    || b.qpos.iter().any(|i| *i >= qpos.len())
-                    || b.dofs.iter().any(|i| *i >= qvel.len())
+    pub fn snapshot(&self) -> Result<String, JsValue> {
+        if self.pending.is_some() {
+            return Err(err(
+                "cannot snapshot an uncommitted physical/ecological mutation",
+            ));
+        }
+        let value = Envelope {
+            format: "chreatures-fly-world-state-v4".into(),
+            state: self.state.clone(),
+            ecology: self
+                .ecology
+                .snapshot_json()
+                .map_err(|e| err(e.to_string()))?,
+            host: self.host.clone(),
+        };
+        serde_json::to_string(&value).map_err(|e| err(e.to_string()))
+    }
+    pub fn restore(&mut self, snapshot: &str) -> Result<(), JsValue> {
+        let e: Envelope = serde_json::from_str(snapshot).map_err(|e| err(e.to_string()))?;
+        if e.format != "chreatures-fly-world-state-v4"
+            || e.state.format != "chreatures-fly-core-state-v4"
+            || e.state.engine != self.config.engine
+            || e.state.model != self.config.source_mjcf_sha256
+            || e.state.atlas != self.config.atlas_sha256
+            || e.state.residents.len() != self.config.bodies.len()
+            || e.state.afferents.len() != self.config.bodies.len() * CHANNELS
+            || !e.state.time.is_finite()
+            || e.state.time < 0.0
+            || e.state.afferents.iter().any(|x| !x.is_finite())
+            || e.state.residents.iter().any(|r| {
+                r.fatigue.len() != 92
+                    || r.last_commands.len() != 92
+                    || !finite(&r.fatigue)
+                    || !finite(&r.last_commands)
+                    || !finite(&[r.pump_phase, r.pump_flow, r.salivary_flow, r.work])
+                    || r.fatigue.iter().any(|v| !(0.0..=1.0).contains(v))
             })
-            || self
-                .config
-                .entities
-                .iter()
-                .any(|e| e.body * 3 + 3 > positions.len())
         {
-            return Err(err("invalid afferent physics packet"));
+            return Err(err("fly snapshot identity/state differs"));
         }
-        let mut out = vec![0.0; n * CHANNELS];
-        for row in 0..n {
-            let b = &self.config.bodies[row];
-            let r = &self.state.residents[row];
-            let o = &mut out[row * CHANNELS..row * CHANNELS + CHANNELS];
-            let p = &positions[b.root * 3..b.root * 3 + 3];
-            let rot = &rotations[b.root * 9..b.root * 9 + 9];
-            for eye in 0..2 {
-                let offset = rotate(rot, [0.182, if eye == 0 { 0.038 } else { -0.038 }, 0.026]);
-                let ap: [f64; 3] = std::array::from_fn(|k| p[k] + offset[k]);
-                for (i, e) in self.config.entities.iter().enumerate() {
-                    if e.odor >= 0 && e.odor < 3 {
-                        let d = dist(&ap, &positions[e.body * 3..e.body * 3 + 3]);
-                        let amount = e.strength * (self.state.food[i] / e.food.max(0.001));
-                        o[eye * 3 + e.odor as usize] += (amount * (-d / 0.7).exp() / 4.0) as f32;
-                    }
-                }
-            }
-            for v in &mut o[..6] {
-                *v = v.clamp(0.0, 1.0)
-            }
-            for (source, destination, scale) in [(3, 6, 4.0), (0, 12, 8.0)] {
-                for k in 0..3 {
-                    let v =
-                        (local_velocities[row * 6 + source + k] / scale).clamp(-1.0, 1.0) as f32;
-                    o[destination + k * 2] = v.max(0.0);
-                    o[destination + k * 2 + 1] = (-v).max(0.0);
-                }
-            }
-            let count = contacts[row * 25].clamp(0.0, 8.0) as usize;
-            for i in 0..count {
-                let normal = local(
-                    rot,
-                    std::array::from_fn(|k| contacts[row * 25 + 1 + i * 3 + k]),
-                );
-                for k in 0..3 {
-                    o[18 + k * 2] = o[18 + k * 2].max(normal[k].max(0.0) as f32);
-                    o[19 + k * 2] = o[19 + k * 2].max((-normal[k]).max(0.0) as f32);
-                }
-            }
-            o[24] = count as f32 / 8.0;
-            o[25] = if count > 0 { 1.0 } else { 0.0 };
-            o[26] = o[25];
-            for emission in &self.state.emissions {
-                let distance = dist(p, &emission.origin);
-                let age = self.state.time - emission.born;
-                if emission.kind == 0 {
-                    // Finite spherical propagation: 30m/s in this enlarged engineered world.
-                    let arrived = age - distance / 30.0;
-                    if (0.0..emission.duration).contains(&arrived) {
-                        let attack = (arrived / 0.015).clamp(0.0, 1.0);
-                        let release = ((emission.duration - arrived) / 0.03).clamp(0.0, 1.0);
-                        let temporal = attack.min(release);
-                        let log_frequency = emission.frequency_hz.ln();
-                        let lo = 40.0_f64.ln();
-                        let hi = 1600.0_f64.ln();
-                        for k in 0..16 {
-                            let centre = lo + (hi - lo) * k as f64 / 15.0;
-                            let sigma = 0.35 * 2.0_f64.ln();
-                            let tuning = (-0.5 * ((log_frequency - centre) / sigma).powi(2)).exp();
-                            o[27 + k] += (emission.envelope * temporal * tuning
-                                / (1.0 + distance * distance))
-                                as f32;
-                        }
-                    }
-                } else {
-                    for eye in 0..2 {
-                        let offset =
-                            rotate(rot, [0.182, if eye == 0 { 0.038 } else { -0.038 }, 0.026]);
-                        let ap: [f64; 3] = std::array::from_fn(|k| p[k] + offset[k]);
-                        let d = dist(&ap, &emission.origin);
-                        let spread = 0.08 + 0.04 * age;
-                        for k in 0..3 {
-                            o[eye * 3 + k] += (if k == 2 { emission.envelope } else { 0.0 }
-                                * (-d * d / spread).exp()
-                                * (-age / 8.0).exp()
-                                / 4.0) as f32;
-                        }
-                    }
-                }
-            }
-            for v in &mut o[..6] {
-                *v = v.min(1.0);
-            }
-            for v in &mut o[27..43] {
-                *v = v.min(1.0)
-            }
-            o[43] = if shade_distances[row] >= 0.0 && shade_distances[row] < 3.2 {
-                1.0
-            } else {
-                0.0
-            };
-            for k in 0..12 {
-                o[44 + k] = r.physiology[k] as f32;
-                let angle_scale = if k % 2 == 0 { 0.733 } else { 1.012 };
-                o[56 + k] = (qpos[b.qpos[k]] / angle_scale).clamp(-1.0, 1.0) as f32;
-                o[68 + k] = (qvel[b.dofs[k]] / 20.0).clamp(-1.0, 1.0) as f32;
-                o[80 + k] = (joint_loads[row * JOINTS + k] / b.controller.max_joint_torque)
-                    .clamp(-1.0, 1.0) as f32;
-                o[98 + k] = r.joint_fatigue[k] as f32;
-            }
-            for k in 0..6 {
-                o[92 + k] = foot_contacts[row * 6 + k].clamp(0.0, 1.0) as f32;
-            }
+        let ecology =
+            eco::EcologyWorld::from_snapshot_json(&e.ecology).map_err(|e| err(e.to_string()))?;
+        if ecology.config_sha256() != self.ecology.config_sha256()
+            || ecology.pending_delta().is_some()
+            || (ecology.state().time_s - e.state.time).abs() > 1e-9
+        {
+            return Err(err("fly/ecology snapshot clock or configuration differs"));
         }
-        Ok(out)
+        self.state = e.state;
+        self.ecology = ecology;
+        self.host = e.host;
+        self.pending = None;
+        Ok(())
     }
 }

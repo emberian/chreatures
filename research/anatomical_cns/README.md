@@ -101,6 +101,7 @@ python -m research.anatomical_cns.export \
   --fly-atlas research/fly_embodiment/fly-body-neural-atlas-v1.npz \
   --morphology-schema native/fly-body/assets/neuromechfly-2.1.0-ca65a510-ypr/schema.json \
   --sensory-schema research/fly_embodiment/body807-channel-schema.json \
+  --actuator-schema research/fly_embodiment/motor92-channel-schema.json \
   --output /tank/chreatures/runs/malecns-v4/seed/initialized-cns-v4.bin
 ```
 

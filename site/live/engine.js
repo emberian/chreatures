@@ -8,7 +8,7 @@ import mujocoFactory from './vendor/mujoco/mujoco.js';
 import { MaleCNSWebGPU } from './cns-webgpu.js';
 
 const encoder = new TextEncoder(), decoder = new TextDecoder();
-const MAGIC = encoder.encode('CHLIVE3\0');
+const MAGIC = encoder.encode('CHLIVE4\0');
 export class LiveEngine {
   static async create({baseURL, device, progress = () => {}, modules = {}}) {
     const engine = new LiveEngine();
@@ -23,13 +23,17 @@ export class LiveEngine {
     engine.identity = await digest(encoder.encode(JSON.stringify({manifests, runtimeFiles: runtime.files})));
     const runtimeBytes = async name => loadBlob(runtime.files[name], engine.baseURL);
     const [residentBinary, worldBinary, physicsBinary] = await Promise.all(['pkg/resident_runtime_bg.wasm', 'pkg/chreatures_browser_world_bg.wasm', 'vendor/mujoco/mujoco.wasm'].map(runtimeBytes));
-    const [fixtureBytes, xmlBytes] = await Promise.all(['fixtures/garden.json', 'fixtures/garden.xml'].map(runtimeBytes));
+    const [fixtureBytes, xmlBytes] = await Promise.all(['fixtures/fly-ecology/world.json', 'fixtures/fly-ecology/scene.xml'].map(runtimeBytes));
     const fixture = JSON.parse(decoder.decode(fixtureBytes));
+    for (const [key, identityKey] of [['morphology_sha256','morphology'],['sensory_schema_sha256','sensorySchema'],['actuator_schema_sha256','actuatorSchema']]) {
+      if (fixture[key] !== cns.identity[identityKey]) throw new Error(`Physical/CNS ${key} differs`);
+    }
+    const assets = Object.fromEntries(await Promise.all(fixture.mesh_assets.map(async item => [item.path, new Uint8Array(await runtimeBytes(`fixtures/fly-ecology/${item.path}`))])));
     engine.retinalSites = Int16Array.from(fixture.anatomical_sites.flat());
     engine.retinalSupported = Uint8Array.from(fixture.supported_sites, Number);
-    engine.factoryOptions = {mujocoFactory: modules.mujocoFactory ?? mujocoFactory, coreModule: modules.worldModule ?? worldModule, coreWasm: modules.worldWasm ?? worldBinary};
+    engine.factoryOptions = {assets, mujocoFactory: modules.mujocoFactory ?? mujocoFactory, coreModule: modules.worldModule ?? worldModule, coreWasm: modules.worldWasm ?? worldBinary};
     engine.physicsBinary = new Uint8Array(physicsBinary);
-    engine.world = await createBrowserWorld({...engine.factoryOptions, fixture, xml: decoder.decode(xmlBytes), seed: 20260907, mujocoOptions: {wasmBinary: engine.physicsBinary}});
+    engine.world = await createBrowserWorld({...engine.factoryOptions, fixture, xml: decoder.decode(xmlBytes), seed: 20260908, mujocoOptions: {wasmBinary: engine.physicsBinary}});
     engine.batch = engine.world.residents;
     if (engine.batch !== resident.config.batch) throw new Error('Physical and cognitive cohort differ');
     await (modules.initResident ?? initResident)({module_or_path: residentBinary});
@@ -48,13 +52,13 @@ export class LiveEngine {
     engine.deliveredContext = new Float32Array(engine.batch * 12);
     engine.pendingContext = new Float32Array(engine.batch * 12);
     engine.pendingTick = null;
-    engine.lastMotor = new Float32Array(engine.batch * 34);
+    engine.lastMotor = new Float32Array(engine.batch * 92);
     engine.tick = 0; engine.selected = 0; engine.neuralField = 'rate'; engine.failed = false; engine.journal = []; engine.externalEvents = [];
     engine.loadedBytes = loaded;
     return engine;
   }
   describe() {
-    return {engine: 'Anatomical MaleCNS V3 · WebGPU + Rust/Wasm + MuJoCo', neurons: 165122,
+    return {engine: 'MaleCNS V4 · NeuroMechFly body · native finite ecology', neurons: 165122,
       validSoma: this.brainValid.reduce((sum, value) => sum + value, 0), residents: this.world.observe().residents,
       modelStatus: this.modelStatus, controllerStatus: this.controllerStatus,
       brainPositions: this.brainPositions, brainValid: this.brainValid, neuralBaseline: this.neuralBaseline,
@@ -70,7 +74,7 @@ export class LiveEngine {
         this.world.visitorSound(event.position, event.frequency, event.amplitude, event.duration);
       }
       const {optic, body} = this.world.sample();
-      const neural = await this.brain.step({dt: .05, activeMask: (1 << this.batch) - 1,
+      const neural = await this.brain.step({dt: .01, activeMask: (1 << this.batch) - 1,
         opticRGB: optic, body, context: this.pendingContext,
         ...(capture ? {selectedResident: this.selected, selectedField: this.neuralField} : {})});
       if (!(neural.latent instanceof Float32Array) || neural.latent.length !== this.batch * 512 ||
@@ -83,10 +87,10 @@ export class LiveEngine {
         if (!accepted.every(Boolean)) throw new Error('Delivered CNS context receipt rejected');
       }
       this.deliveredContext = this.pendingContext.slice();
-      if (!(neural.motor instanceof Float32Array) || neural.motor.length !== this.batch * 34 ||
-          !neural.motor.every((v, i) => Number.isFinite(v) && v <= 1 && v >= (i % 34 === 24 || i % 34 === 25 ? -1 : 0)))
+      if (!(neural.motor instanceof Float32Array) || neural.motor.length !== this.batch * 92 ||
+          !neural.motor.every((v, i) => Number.isFinite(v) && v <= 1 && v >= (i % 92 < 84 ? -1 : 0)))
         throw new Error('Invalid anatomical motor output');
-      this.world.advance(neural.motor, .05);
+      await this.world.advance(neural.motor, .01);
       this.lastMotor = neural.motor.slice();
       const ticks = new BigUint64Array(this.batch).fill(BigInt(this.tick));
       const resets = new Uint8Array(this.batch).fill(this.tick === 0 ? 1 : 0);
@@ -104,7 +108,7 @@ export class LiveEngine {
         neuralSignal: neural.selectedSignal, neuralField: neural.selectedField,
         retinalRGB: capture ? optic.slice(this.selected * 5313, (this.selected + 1) * 5313) : undefined,
         selectedResidentId: this.world.observe().residents[this.selected].id,
-        motorActivation: this.lastMotor.slice(this.selected * 34, (this.selected + 1) * 34),
+        motorActivation: this.lastMotor.slice(this.selected * 92, (this.selected + 1) * 92),
         deliveredContext: this.deliveredContext.slice(this.selected * 12, (this.selected + 1) * 12),
         diagnostics: JSON.parse(diagnostics), tick: this.tick, wallMilliseconds: performance.now() - started};
     } catch (error) {this.failed = true; throw error;}
@@ -124,30 +128,30 @@ export class LiveEngine {
         !Number.isFinite(duration) || duration <= 0 || duration > 5 ||
         !Number.isFinite(amplitude) || amplitude < 0 || amplitude > 1)
       throw new Error('Tone outside the physical source limits');
-    this.externalEvents.push({tick: this.tick, position: [1.1, 1.8, .4], frequency, amplitude, duration});
+    this.externalEvents.push({tick: this.tick, position: [0, 0, 2], frequency, amplitude, duration});
     this.externalEvents.sort((a, b) => a.tick - b.tick);
     this.record('visitor-tone', {frequency, duration, amplitude});
   }
   greet(notes = [0, 1, 2]) {
     if (notes.length > 8 || notes.some(n => !Number.isInteger(n) || n < 0 || n > 2)) throw new Error('Choose up to eight notes');
     const frequencies = [100, 250, 630];
-    notes.forEach((note, index) => this.externalEvents.push({tick: this.tick + index * 6,
-      position: [1.1, 1.8, .4], frequency: frequencies[note], amplitude: .65, duration: .2}));
+    notes.forEach((note, index) => this.externalEvents.push({tick: this.tick + index * 30,
+      position: [0, 0, 2], frequency: frequencies[note], amplitude: .65, duration: .2}));
     this.externalEvents.sort((a, b) => a.tick - b.tick);
     this.record('visitor-sound', {notes, frequencies: notes.map(n => frequencies[n])});
   }
   async insertToy() {
-    const result = await this.world.insertObject({position: [1.2, 2.15, .6], size: [.07, .07, .07], shape: 'sphere', rgba: [.83, .37, .16, 1]});
+    const result = await this.world.insertObject({position: [0, -2, 1], size: [.35, .35, .35], shape: 'sphere', rgba: [.83, .37, .16, 1]});
     this.lastToy = result.id ?? result; this.record('insert-object', {id: this.lastToy}); return result;
   }
-  shove(id, force = [1.2, .4, 0]) {
+  shove(id, force = [.03, .01, 0]) {
     this.world.queueVisitorForce(id ?? this.lastToy, force); this.record('visitor-force', {id: id ?? this.lastToy, force});
   }
   destroy() { this.world.dispose(); this.resident.free(); this.brain.destroy(); }
   async save() {
     if (this.failed) throw new Error('Cannot save a partially advanced life');
     const cns = new Uint8Array(await this.brain.snapshot()), resident = this.resident.saveBytes();
-    const header = encoder.encode(JSON.stringify({format: 'chreatures-live-life-v3', identity: this.identity,
+    const header = encoder.encode(JSON.stringify({format: 'chreatures-live-life-v4', identity: this.identity,
       tick: this.tick, selected: this.selected, deliveredContext: Array.from(this.deliveredContext),
       pendingContext: Array.from(this.pendingContext), pendingTick: this.pendingTick, lastMotor: Array.from(this.lastMotor), world: this.world.snapshot(),
       journal: this.journal, externalEvents: this.externalEvents, filmTime: this.filmTime ?? null, lastToy: this.lastToy ?? null,
@@ -164,17 +168,17 @@ export class LiveEngine {
     const length = new DataView(buffer).getUint32(8, true);
     if (length > 8 * 1024**2 || length + 12 > bytes.length) throw new Error('Invalid life envelope');
     const h = JSON.parse(decoder.decode(bytes.subarray(12, 12 + length)));
-    if (h.format !== 'chreatures-live-life-v3' || h.identity !== this.identity ||
+    if (h.format !== 'chreatures-live-life-v4' || h.identity !== this.identity ||
         !Number.isSafeInteger(h.tick) || h.tick < 0 || !Number.isInteger(h.selected) || h.selected < 0 || h.selected >= this.batch ||
         !Array.isArray(h.deliveredContext) || h.deliveredContext.length !== this.batch * 12 ||
         !h.deliveredContext.every(v => Number.isFinite(v) && Math.abs(v) <= 1) ||
         !Array.isArray(h.pendingContext) || h.pendingContext.length !== this.batch * 12 ||
         !h.pendingContext.every(v => Number.isFinite(v) && Math.abs(v) <= 1) ||
         h.pendingTick !== (h.tick === 0 ? null : h.tick - 1) ||
-        !Array.isArray(h.lastMotor) || h.lastMotor.length !== this.batch * 34 ||
-        !h.lastMotor.every((v,i) => Number.isFinite(v) && v <= 1 && v >= (i % 34 === 24 || i % 34 === 25 ? -1 : 0)) ||
+        !Array.isArray(h.lastMotor) || h.lastMotor.length !== this.batch * 92 ||
+        !h.lastMotor.every((v,i) => Number.isFinite(v) && v <= 1 && v >= (i % 92 < 84 ? -1 : 0)) ||
         !Number.isSafeInteger(h.cnsBytes) || h.cnsBytes < 0 || !Number.isSafeInteger(h.residentBytes) || h.residentBytes < 0 ||
-        12 + length + h.cnsBytes + h.residentBytes !== bytes.length || Math.abs(h.world.physical[0] - h.tick * .05) > 1e-7) throw new Error('Life identity, length or clock differs');
+        12 + length + h.cnsBytes + h.residentBytes !== bytes.length || Math.abs(h.world.physical[0] - h.tick * .01) > 1e-7) throw new Error('Life identity, length or clock differs');
     if (!Array.isArray(h.externalEvents) || h.externalEvents.length > 4096 || h.externalEvents.some(e => !Number.isSafeInteger(e.tick) || e.tick < h.tick || e.position?.length !== 3 || !e.position.every(Number.isFinite) || !Number.isFinite(e.frequency) || e.frequency < 40 || e.frequency > 1600 || !Number.isFinite(e.amplitude) || e.amplitude < 0 || e.amplitude > 1 || !Number.isFinite(e.duration) || e.duration <= 0 || e.duration > 5)) throw new Error('Invalid pending physical signals');
     const cns = bytes.slice(12 + length, 12 + length + h.cnsBytes);
     const resident = bytes.slice(12 + length + h.cnsBytes);

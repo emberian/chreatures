@@ -1,0 +1,10 @@
+[package]
+name = "chreatures-fly-body"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Standalone native validator for the pinned NeuroMechFly body"
+
+[build-dependencies]
+cc = "1.4.5"
+

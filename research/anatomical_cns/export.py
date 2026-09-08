@@ -99,6 +99,7 @@ def main():
     parser.add_argument("--fly-atlas", type=Path, required=True)
     parser.add_argument("--morphology-schema", type=Path, required=True)
     parser.add_argument("--sensory-schema", type=Path, required=True)
+    parser.add_argument("--actuator-schema", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=20260908)
     arguments = parser.parse_args()
@@ -135,6 +136,24 @@ def main():
         arguments.sensory_schema
     ):
         raise ValueError("fly atlas body or sensory schema identity differs")
+
+    actuator_schema = json.loads(arguments.actuator_schema.read_text())
+    if (
+        actuator_schema.get("schema") != "chreatures.motor-output-channels.v1"
+        or actuator_schema.get("identity") != "MOTOR92"
+        or actuator_schema.get("length") != 92
+        or actuator_schema.get("body_schema_sha256")
+        != digest(arguments.morphology_schema)
+    ):
+        raise ValueError("actuator schema is not the canonical MOTOR92 interface")
+    channels = actuator_schema.get("channels")
+    channel_indices = (
+        [entry.get("index") for entry in channels]
+        if isinstance(channels, list)
+        else None
+    )
+    if channel_indices != list(range(92)):
+        raise ValueError("actuator schema channels must cover indices 0 through 91")
 
     graph_source = np.ascontiguousarray(measured_graph_weight, dtype="<f4")
     quantized = graph_source.astype("<f2").view("<u2")
@@ -215,7 +234,7 @@ def main():
         anatomy_sha256=digest(arguments.fly_atlas),
         morphology_sha256=digest(arguments.morphology_schema),
         sensory_schema_sha256=digest(arguments.sensory_schema),
-        actuator_schema_sha256=digest(arguments.morphology_schema),
+        actuator_schema_sha256=digest(arguments.actuator_schema),
         motor_calibration_sha256=calibration_sha,
         graph_source_weight_sha256=hashlib.sha256(graph_source).hexdigest(),
         training_status="initialized-untrained",

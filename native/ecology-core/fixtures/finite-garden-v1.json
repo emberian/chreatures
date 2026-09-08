@@ -1,0 +1,692 @@
+{
+  "ecology": {
+    "coordinate_contract": {
+      "length_unit": "meter",
+      "material_unit": "abstract_conserved_quantity",
+      "time_unit": "second",
+      "world_max_m": [
+        0.012,
+        0.008,
+        0.004
+      ],
+      "world_min_m": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "elements": [
+      "carbon",
+      "nitrogen",
+      "water",
+      "mineral",
+      "oxygen"
+    ],
+    "format": "chreatures-ecology-config-v1",
+    "organisms": [
+      {
+        "anchored_region": "west",
+        "atp": 0.8,
+        "atp_capacity": 1.0,
+        "capacity": [
+          3.0,
+          2.0,
+          3.0,
+          2.0,
+          4.0,
+          3.0,
+          2.0,
+          2.0
+        ],
+        "genotype": {
+          "development": {
+            "atp_cost": 0.008,
+            "decay_return": [
+              0.08,
+              0.08,
+              0.08,
+              0.008,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "decay_time_constant_s": 3.0,
+            "interval_s": 1.0,
+            "material_cost": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.08,
+              0.0
+            ],
+            "maximum_structures": 1,
+            "nominal_length_m": 0.0014,
+            "nominal_radius_m": 0.00018,
+            "nominal_volume_m3": 1.4e-10
+          },
+          "enzyme_atp_response": [
+            -0.1,
+            0.2,
+            -0.1,
+            -0.1,
+            0.0,
+            0.0
+          ],
+          "enzyme_baseline": [
+            0.3,
+            0.8,
+            0.08,
+            1.25,
+            0.3,
+            0.15
+          ],
+          "enzyme_change_atp_cost": 0.004,
+          "enzyme_maximum": 1.6,
+          "enzyme_substrate_response": [
+            0.15,
+            0.2,
+            0.15,
+            0.2,
+            0.2,
+            0.1
+          ],
+          "enzyme_time_constant_s": 1.5,
+          "enzyme_total_budget": 4.0,
+          "lineage_id": "lineage-a",
+          "maintenance_atp_s": 0.002,
+          "membrane_permeability": [
+            0.8,
+            0.8,
+            0.9,
+            0.7,
+            0.4,
+            0.05,
+            0.8,
+            0.7
+          ],
+          "reproduction": {
+            "atp_cost": 0.03,
+            "atp_endowment": 0.06,
+            "interval_s": 4.0,
+            "material_endowment": [
+              0.08,
+              0.05,
+              0.03,
+              0.01,
+              0.02,
+              0.02,
+              0.08,
+              0.01
+            ],
+            "maximum_descendants": 1,
+            "mutation_fraction": 0.12
+          }
+        },
+        "id": "resident-a",
+        "initial": [
+          0.8,
+          1.5,
+          0.3,
+          0.25,
+          0.2,
+          0.1,
+          0.9,
+          0.1
+        ],
+        "internal_volume_m3": 4e-9,
+        "physics_binding": "body-a"
+      },
+      {
+        "anchored_region": null,
+        "atp": 0.35,
+        "atp_capacity": 0.7,
+        "capacity": [
+          2.0,
+          1.5,
+          2.5,
+          1.5,
+          3.0,
+          2.5,
+          1.5,
+          1.5
+        ],
+        "genotype": {
+          "development": null,
+          "enzyme_atp_response": [
+            -0.1,
+            0.2,
+            -0.1,
+            -0.1,
+            0.0,
+            0.0
+          ],
+          "enzyme_baseline": [
+            1.25,
+            0.08,
+            1.25,
+            0.03,
+            0.65,
+            0.35
+          ],
+          "enzyme_change_atp_cost": 0.004,
+          "enzyme_maximum": 1.6,
+          "enzyme_substrate_response": [
+            0.15,
+            0.2,
+            0.15,
+            0.2,
+            0.2,
+            0.1
+          ],
+          "enzyme_time_constant_s": 1.5,
+          "enzyme_total_budget": 4.0,
+          "lineage_id": "lineage-b",
+          "maintenance_atp_s": 0.002,
+          "membrane_permeability": [
+            0.3,
+            0.5,
+            0.8,
+            0.3,
+            0.7,
+            1.0,
+            0.9,
+            0.9
+          ],
+          "reproduction": null
+        },
+        "id": "resident-b",
+        "initial": [
+          0.5,
+          0.35,
+          0.1,
+          0.1,
+          0.15,
+          0.08,
+          0.25,
+          0.08
+        ],
+        "internal_volume_m3": 3e-9,
+        "physics_binding": "body-b"
+      }
+    ],
+    "packets": [
+      {
+        "capacity": [
+          0.4,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          1.4,
+          0.3
+        ],
+        "id": "packet-food",
+        "initial": [
+          0.05,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.1,
+          0.0
+        ],
+        "physics_binding": "food-body",
+        "volume_m3": 8e-10
+      }
+    ],
+    "pools": [
+      {
+        "chemical_energy_per_quantity": 0.0,
+        "diffusivity_m2_s": 8e-8,
+        "elemental_composition": [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        "id": "water"
+      },
+      {
+        "chemical_energy_per_quantity": 1.0,
+        "diffusivity_m2_s": 4e-8,
+        "elemental_composition": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "id": "soluble-carbon"
+      },
+      {
+        "chemical_energy_per_quantity": 1.2,
+        "diffusivity_m2_s": 3e-8,
+        "elemental_composition": [
+          1.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "id": "amino-nutrient"
+      },
+      {
+        "chemical_energy_per_quantity": 0.0,
+        "diffusivity_m2_s": 1e-8,
+        "elemental_composition": [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        "id": "mineral"
+      },
+      {
+        "chemical_energy_per_quantity": 0.0,
+        "diffusivity_m2_s": 9e-7,
+        "elemental_composition": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "id": "oxygen"
+      },
+      {
+        "chemical_energy_per_quantity": 0.0,
+        "diffusivity_m2_s": 6e-7,
+        "elemental_composition": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "id": "oxidized-carbon"
+      },
+      {
+        "chemical_energy_per_quantity": 2.0,
+        "diffusivity_m2_s": 1e-10,
+        "elemental_composition": [
+          2.0,
+          1.0,
+          1.0,
+          0.1,
+          0.0
+        ],
+        "id": "biomass"
+      },
+      {
+        "chemical_energy_per_quantity": 0.8,
+        "diffusivity_m2_s": 1.1e-6,
+        "elemental_composition": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "id": "volatile-carbon"
+      }
+    ],
+    "reactions": [
+      {
+        "atp_cost_per_flux": 0.0,
+        "atp_yield_per_flux": 0.72,
+        "base_rate_quantity_s": 0.035,
+        "half_saturation_quantity": [
+          0.0,
+          0.04,
+          0.0,
+          0.0,
+          0.04,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "id": "catabolism",
+        "photon_cost_per_flux": 0.0,
+        "stoichiometry": [
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+          -1.0,
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "atp_cost_per_flux": 0.2,
+        "atp_yield_per_flux": 0.0,
+        "base_rate_quantity_s": 0.012,
+        "half_saturation_quantity": [
+          0.04,
+          0.04,
+          0.04,
+          0.04,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "id": "assimilation",
+        "photon_cost_per_flux": 0.0,
+        "stoichiometry": [
+          -1.0,
+          -1.0,
+          -1.0,
+          -0.1,
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "atp_cost_per_flux": 0.3,
+        "atp_yield_per_flux": 0.0,
+        "base_rate_quantity_s": 0.022,
+        "half_saturation_quantity": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.04,
+          0.0
+        ],
+        "id": "mineralization",
+        "photon_cost_per_flux": 0.0,
+        "stoichiometry": [
+          1.0,
+          1.0,
+          1.0,
+          0.1,
+          0.0,
+          0.0,
+          -1.0,
+          0.0
+        ]
+      },
+      {
+        "atp_cost_per_flux": 0.0,
+        "atp_yield_per_flux": 0.0,
+        "base_rate_quantity_s": 0.04,
+        "half_saturation_quantity": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.04,
+          0.0,
+          0.0
+        ],
+        "id": "photo-reduction",
+        "photon_cost_per_flux": 1.25,
+        "stoichiometry": [
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0,
+          -1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "atp_cost_per_flux": 0.0,
+        "atp_yield_per_flux": 0.0,
+        "base_rate_quantity_s": 0.018,
+        "half_saturation_quantity": [
+          0.0,
+          0.04,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "id": "volatile-synthesis",
+        "photon_cost_per_flux": 0.0,
+        "stoichiometry": [
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      {
+        "atp_cost_per_flux": 0.0,
+        "atp_yield_per_flux": 0.0,
+        "base_rate_quantity_s": 0.018,
+        "half_saturation_quantity": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.04,
+          0.0,
+          0.0,
+          0.04
+        ],
+        "id": "volatile-decay",
+        "photon_cost_per_flux": 0.0,
+        "stoichiometry": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          -1.0,
+          1.0,
+          0.0,
+          -1.0
+        ]
+      }
+    ],
+    "regions": [
+      {
+        "capacity": [
+          20.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          12.0,
+          8.0,
+          8.0
+        ],
+        "center_m": [
+          0.002,
+          0.004,
+          0.001
+        ],
+        "id": "west",
+        "initial": [
+          6.0,
+          3.0,
+          1.4,
+          1.2,
+          3.0,
+          0.4,
+          0.0,
+          0.3
+        ],
+        "volume_m3": 1.5e-7
+      },
+      {
+        "capacity": [
+          20.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          12.0,
+          8.0,
+          8.0
+        ],
+        "center_m": [
+          0.006,
+          0.004,
+          0.001
+        ],
+        "id": "middle",
+        "initial": [
+          5.0,
+          1.0,
+          0.4,
+          0.4,
+          2.0,
+          0.2,
+          0.0,
+          0.0
+        ],
+        "volume_m3": 1.5e-7
+      },
+      {
+        "capacity": [
+          20.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          12.0,
+          8.0,
+          8.0
+        ],
+        "center_m": [
+          0.01,
+          0.004,
+          0.001
+        ],
+        "id": "east",
+        "initial": [
+          4.0,
+          0.3,
+          0.2,
+          0.2,
+          1.0,
+          0.2,
+          0.0,
+          0.0
+        ],
+        "volume_m3": 1.5e-7
+      }
+    ],
+    "routes": [
+      {
+        "a": "west",
+        "b": "middle",
+        "base_open_fraction": 1.0,
+        "cross_section_m2": 2e-6,
+        "hydraulic_capacity_m3_s": 2e-9,
+        "id": "west-middle",
+        "length_m": 0.004
+      },
+      {
+        "a": "middle",
+        "b": "east",
+        "base_open_fraction": 1.0,
+        "cross_section_m2": 2e-6,
+        "hydraulic_capacity_m3_s": 2e-9,
+        "id": "middle-east",
+        "length_m": 0.004
+      }
+    ],
+    "seed": 104372539623688
+  },
+  "fly_chemical_sense": {
+    "half_saturation_quantity_m3": [
+      10000000.0,
+      10000000.0,
+      10000000.0,
+      10000000.0,
+      10000000.0,
+      10000000.0,
+      10000000.0,
+      10000000.0
+    ],
+    "odor_permeability": [
+      0.01,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0
+    ]
+  },
+  "fly_interoception": {
+    "carbon_reserve_pool_ids": [
+      "soluble-carbon",
+      "amino-nutrient"
+    ],
+    "gut_pool_ids": [
+      "biomass",
+      "soluble-carbon",
+      "amino-nutrient"
+    ],
+    "nitrogen_reserve_pool_ids": [
+      "amino-nutrient"
+    ],
+    "osmotic_pool_ids": [
+      "soluble-carbon",
+      "amino-nutrient",
+      "water"
+    ],
+    "osmotic_scale_quantity_m3": 100000000.0,
+    "osmotic_target_quantity_m3": 300000000.0,
+    "oxygen_pool_id": "oxygen",
+    "salivary_pool_id": "water",
+    "structural_pool_ids": [
+      "biomass"
+    ],
+    "water_pool_id": "water"
+  },
+  "format": "chreatures-finite-garden-export-v1",
+  "host_exchange_contract": {
+    "controller_visibility": "chemical and interoceptive values enter only masked CNS afferents",
+    "mouth_intake": "DirectedExchange only after measured mouth contact and pump actuation",
+    "respiratory_exchange": "passive ContactEvent between measured local region and organism; inherited membrane_permeability is applied by ecology-core",
+    "respiratory_surface_conductance_m3_s_by_pool": [
+      2e-14,
+      0.0,
+      0.0,
+      0.0,
+      1e-12,
+      1e-12,
+      0.0,
+      1e-12
+    ],
+    "saliva": "DirectedExchange of finite organism water to the measured contacted store"
+  },
+  "pool_order": [
+    "water",
+    "soluble-carbon",
+    "amino-nutrient",
+    "mineral",
+    "oxygen",
+    "oxidized-carbon",
+    "biomass",
+    "volatile-carbon"
+  ]
+}

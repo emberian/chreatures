@@ -1,0 +1,17 @@
+{
+  "engine": "mujoco-3.12.0-wasm",
+  "model": "/Users/ember/dev/chreatures/native/fly-body/assets/neuromechfly-2.1.0-ca65a510-ypr/model/model.xml",
+  "steps": 100,
+  "time_s": 0.009999999999999995,
+  "nq": 133,
+  "nv": 132,
+  "nu": 90,
+  "nbody": 71,
+  "njnt": 127,
+  "ngeom": 72,
+  "nsite": 69,
+  "nsensor": 6,
+  "nsensordata": 96,
+  "contacts_after_startup": 0,
+  "finite": true
+}

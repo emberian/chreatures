@@ -171,6 +171,8 @@ evidence rather than extrapolated to the other five legs and nonleg anatomy.
 
 `research/fly_embodiment/body807-channel-schema.json` is the shared channel
 ledger with exact names, units, raw ranges, evidence grades and bases.
+`research/fly_embodiment/motor92-channel-schema.json` owns the exact neural
+output order, range, activation and MJCF/native-physiology boundary.
 `research/fly_embodiment/fly-body-neural-atlas-v1.manifest.json` records array
 semantics, counts, hashes and every unsupported motor row.
 `research/fly_embodiment/source_ledger.json` pins the primary papers, author
@@ -182,3 +184,27 @@ The source ledger includes Cheong et al. (eLife, DOI
 `10.1038/s41586-024-07389-x`), the MaleCNS primary paper and author release
 (Nature, DOI `10.1038/s41586-026-10735-w`), the author MANC/FANC comparative
 repository, Lee et al.'s proprioception implementation, FlyGym and FlyMimic.
+
+## Cross-schema identity
+
+The neural semantic schemas and compiled physical calibration payloads have
+different content and therefore different hashes. The runtime and CNS artifact
+must carry both where they meet; one hash must never be relabeled as the other.
+
+| Identity | SHA-256 | Exact scope |
+|---|---|---|
+| Body schema | `d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a` | Canonical author-derived morphology, 126-DOF order and physical M90 schema file |
+| Morphology asset set | `2da4b8004d89d2d89f211bd51079d524376a197abcdbbdd9512be1a86ecf6c94` | Model asset paths and content hashes used by the compiled fixture |
+| CNS sensory schema | `97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786` | Canonical BODY807 names, ranges, units and evidence |
+| Physical sensory schema | `62738ff3c6da3971799b3574620cccf92d27d30d25db1ebfbff4ecf2dc4eb3b0` | Contact schema, compound-eye source, body anchors and engineered optic calibration |
+| CNS actuator schema | `00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928` | Canonical MOTOR92 order, ranges, activations and physical/native boundary |
+| Physical actuator schema | `09685e5cfc3ed56d5c218498965c32b0cd61814c79644a60bd9dbf5e9991bff7` | Compiled resident M90 numeric actuator/control map |
+| Optic calibration schema | `6e150bcffe27a8cfcb53444c4af2d6e1e01c832e33bac7194c6fdfa2dda3b946` | Engineered 1,771-ray equidistant projection from the author camera field of view |
+
+In `physics.json`, compatibility fields `sensory_schema_sha256` and
+`actuator_schema_sha256` now mean the CNS BODY807 and MOTOR92 semantic schemas.
+The explicit `physical_sensory_schema_sha256` and
+`physical_actuator_schema_sha256` fields preserve the compiled anchor,
+calibration and numeric-control identities. CNS metadata uses the body-schema,
+CNS-sensory and CNS-actuator hashes; it must not substitute either physical
+fixture hash for those canonical semantic inputs.
