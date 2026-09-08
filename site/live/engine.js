@@ -7,7 +7,7 @@ import flyWorldFactory from './pkg/chreatures-fly-world.mjs';
 import { MaleCNSWebGPU } from './cns-webgpu.js';
 
 const encoder = new TextEncoder(), decoder = new TextDecoder();
-const MAGIC = encoder.encode('CHLIVE5\0');
+const MAGIC = encoder.encode('CHLIVE6\0');
 const FIELDS = ['rate', 'adaptation', 'support', 'release', 'dopamine', 'octopamine', 'serotonin'];
 const sameTime = (a, b) => Number.isFinite(a) && Math.abs(a - b) <= 1e-7 + Math.abs(b) * 1e-9;
 export class LiveEngine {
@@ -61,7 +61,7 @@ export class LiveEngine {
       engine.pendingContext = new Float32Array(engine.batch * 12);
       engine.pendingTick = null;
       engine.lastMotor = new Float32Array(engine.batch * 92);
-      engine.tick = 0; engine.selected = 0; engine.neuralField = 'rate'; engine.failed = false; engine.journal = []; engine.externalEvents = [];
+      engine.tick = 0; engine.selected = 0; engine.neuralField = 'rate'; engine.failed = false; engine.journal = [];
       engine.loadedBytes = loaded;
       return engine;
     } catch (error) {
@@ -75,16 +75,15 @@ export class LiveEngine {
       modelStatus: this.modelStatus, controllerStatus: this.controllerStatus,
       brainPositions: this.brainPositions, brainValid: this.brainValid, neuralBaseline: this.neuralBaseline,
       retinalSites: this.retinalSites, retinalSupported: this.retinalSupported, motorSchema: this.motorSchema,
-      identity: this.identity};
+      interactionStatus: this.interactionStatus(), identity: this.identity};
   }
   async advance(capture = false) {
     if (this.failed) throw new Error('An incomplete tick paused this life; restore a coherent checkpoint');
     const started = performance.now();
     try {
-      while (this.externalEvents.length && this.externalEvents[0].tick <= this.tick) {
-        const event = this.externalEvents.shift();
-        this.world.visitorSound(event.position, event.frequency, event.amplitude, event.duration);
-      }
+      // Native model-time events are part of the physical life. Deliver them
+      // before sampling the senses, never as an observer-side read effect.
+      this.world.prepareInteractionTick();
       const {optic, body} = this.world.sample();
       const neural = await this.brain.step({dt: .01, activeMask: (1 << this.batch) - 1,
         opticRGB: optic, body, context: this.pendingContext,
@@ -127,10 +126,19 @@ export class LiveEngine {
         selectedResidentId: this.world.residentDescriptors[this.selected].id,
         motorActivation: this.lastMotor.slice(this.selected * 92, (this.selected + 1) * 92),
         deliveredContext: this.deliveredContext.slice(this.selected * 12, (this.selected + 1) * 12),
-        diagnostics: JSON.parse(diagnostics), tick: this.tick, wallMilliseconds: performance.now() - started};
+        diagnostics: JSON.parse(diagnostics), interactionStatus: this.interactionStatus(),
+        tick: this.tick, wallMilliseconds: performance.now() - started};
     } catch (error) {this.failed = true; throw error;}
   }
-  observe() { return {...this.world.observe(), tick: this.tick}; }
+  observe() { return {...this.world.observe(), interactionStatus: this.interactionStatus(), tick: this.tick}; }
+  interactionStatus() { return this.world.interactionStatus(); }
+  screenObservation() { return this.world.screenObservation(); }
+  scheduleInteraction(program) {
+    if (this.failed) throw new Error('Restore a coherent life before scheduling an encounter');
+    const receipt = this.world.scheduleInteraction(program);
+    this.record('visitor-program', {receipt});
+    return receipt;
+  }
   async inspectPlasticity() {
     if (this.failed) throw new Error('Restore a coherent life before inspecting private state');
     const plasticity = await this.brain.inspectPlasticity(this.selected);
@@ -151,24 +159,23 @@ export class LiveEngine {
         !Number.isFinite(duration) || duration <= 0 || duration > 5 ||
         !Number.isFinite(amplitude) || amplitude < 0 || amplitude > 1)
       throw new Error('Tone outside the physical source limits');
-    this.externalEvents.push({tick: this.tick, position: [0, 0, 2], frequency, amplitude, duration});
-    this.externalEvents.sort((a, b) => a.tick - b.tick);
-    this.record('visitor-tone', {frequency, duration, amplitude});
+    return this.scheduleInteraction({events: [{offset_ticks: 0, event: {kind: 'tone',
+      position_mm: [0, 0, 2], frequency_hz: frequency, amplitude, duration_s: duration}}]});
   }
   greet(notes = [0, 1, 2]) {
     if (notes.length > 8 || notes.some(n => !Number.isInteger(n) || n < 0 || n > 2)) throw new Error('Choose up to eight notes');
     const frequencies = [100, 250, 630];
-    notes.forEach((note, index) => this.externalEvents.push({tick: this.tick + index * 30,
-      position: [0, 0, 2], frequency: frequencies[note], amplitude: .65, duration: .2}));
-    this.externalEvents.sort((a, b) => a.tick - b.tick);
-    this.record('visitor-sound', {notes, frequencies: notes.map(n => frequencies[n])});
+    return this.scheduleInteraction({events: notes.map((note, index) => ({
+      offset_ticks: index * 30, event: {kind: 'tone', position_mm: [0, 0, 2],
+      frequency_hz: frequencies[note], amplitude: .65, duration_s: .2}}))});
   }
   async insertToy(position) {
     const result = await this.world.insertObject({position, size: [.35, .35, .35], shape: 'sphere', rgba: [.83, .37, .16, 1]});
     this.lastToy = result.id ?? result; this.record('insert-object', {id: this.lastToy, position: Array.from(position)}); return result;
   }
   shove(id, force = [.03, .01, 0]) {
-    this.world.queueVisitorForce(id ?? this.lastToy, force); this.record('visitor-force', {id: id ?? this.lastToy, force});
+    return this.scheduleInteraction({events: [{offset_ticks: 0, event: {kind: 'toy_force',
+      entity_id: id ?? this.lastToy, force: Array.from(force)}}]});
   }
   destroy() {
     try { this.world?.dispose(); }
@@ -185,10 +192,10 @@ export class LiveEngine {
     const world = this.world.snapshot();
     const cns = new Uint8Array(await this.brain.snapshot()), resident = this.resident.saveBytes();
     const [worldSHA, cnsSHA, residentSHA] = await Promise.all([world, cns, resident].map(digest));
-    const header = encoder.encode(JSON.stringify({format: 'chreatures-live-life-v5', identity: this.identity,
+    const header = encoder.encode(JSON.stringify({format: 'chreatures-live-life-v6', identity: this.identity,
       tick: this.tick, selected: this.selected, deliveredContext: Array.from(this.deliveredContext),
       pendingContext: Array.from(this.pendingContext), pendingTick: this.pendingTick, lastMotor: Array.from(this.lastMotor),
-      journal: this.journal, externalEvents: this.externalEvents, filmTime: this.filmTime ?? null, lastToy: this.lastToy ?? null,
+      journal: this.journal, filmTime: this.filmTime ?? null, lastToy: this.lastToy ?? null,
       neuralField: this.neuralField, worldTime: this.world.time,
       worldBytes: world.length, cnsBytes: cns.length, residentBytes: resident.length, worldSHA, cnsSHA, residentSHA}));
     const result = new Uint8Array(12 + header.length + world.length + cns.length + resident.length);
@@ -205,7 +212,7 @@ export class LiveEngine {
     const length = new DataView(buffer).getUint32(8, true);
     if (length > 8 * 1024**2 || length + 12 > bytes.length) throw new Error('Invalid life envelope');
     const h = JSON.parse(decoder.decode(bytes.subarray(12, 12 + length)));
-    if (h.format !== 'chreatures-live-life-v5' || h.identity !== this.identity ||
+    if (h.format !== 'chreatures-live-life-v6' || h.identity !== this.identity ||
         !Number.isSafeInteger(h.tick) || h.tick < 0 || !Number.isInteger(h.selected) || h.selected < 0 || h.selected >= this.batch ||
         !Array.isArray(h.deliveredContext) || h.deliveredContext.length !== this.batch * 12 ||
         !h.deliveredContext.every(v => Number.isFinite(v) && Math.abs(v) <= 1) ||
@@ -217,9 +224,7 @@ export class LiveEngine {
         ![h.worldBytes, h.cnsBytes, h.residentBytes].every(size => Number.isSafeInteger(size) && size > 0) ||
         12 + length + h.worldBytes + h.cnsBytes + h.residentBytes !== bytes.length ||
         !sameTime(h.worldTime, h.tick * .01) || !FIELDS.includes(h.neuralField)) throw new Error('Life identity, length or clock differs');
-    if (!Array.isArray(h.externalEvents) || h.externalEvents.length > 4096 || h.externalEvents.some(e => !Number.isSafeInteger(e.tick) || e.tick < h.tick || e.position?.length !== 3 || !e.position.every(Number.isFinite) || !Number.isFinite(e.frequency) || e.frequency < 40 || e.frequency > 1600 || !Number.isFinite(e.amplitude) || e.amplitude < 0 || e.amplitude > 1 || !Number.isFinite(e.duration) || e.duration <= 0 || e.duration > 5)) throw new Error('Invalid pending physical signals');
-    if (h.externalEvents.some((event, index) => index > 0 && event.tick < h.externalEvents[index - 1].tick) ||
-        !Array.isArray(h.journal) || h.journal.length > 4096 ||
+    if (!Array.isArray(h.journal) || h.journal.length > 4096 ||
         h.journal.some(event => !Number.isSafeInteger(event.tick) || event.tick < 0 || event.tick > h.tick ||
           !Number.isFinite(event.time) || event.time < 0 || typeof event.kind !== 'string') ||
         !(h.filmTime === null || Number.isFinite(h.filmTime) && h.filmTime >= 0) ||
@@ -253,7 +258,7 @@ export class LiveEngine {
     this.world.dispose(); this.world = world; this.tick = h.tick; this.selected = h.selected;
     this.deliveredContext = Float32Array.from(h.deliveredContext);
     this.pendingContext = Float32Array.from(h.pendingContext); this.pendingTick = h.pendingTick;
-    this.lastMotor = Float32Array.from(h.lastMotor); this.journal = h.journal; this.externalEvents = h.externalEvents;
+    this.lastMotor = Float32Array.from(h.lastMotor); this.journal = h.journal;
     this.filmTime = h.filmTime; this.lastToy = h.lastToy; this.neuralField = h.neuralField; this.failed = false;
   }
 }

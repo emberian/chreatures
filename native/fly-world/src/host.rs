@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use crate::ffi::{Dimensions, Physics};
+use crate::interaction::{
+    control_tick_from_seconds, InteractionEvent, InteractionProgram, InteractionScheduleReceipt,
+    InteractionScheduler, InteractionStatus, InteractionTickReceipt, PATTERN_HEIGHT, PATTERN_WIDTH,
+};
 use chreatures_browser_world::{AeroWorld, FlyWorldConfig, WorldCore};
 use chreatures_ecology_core::{
     RouteGeometryPlan, RouteGeometryState, ROUTE_ENDPOINT_PROBE_RADIUS_M,
@@ -132,10 +136,32 @@ struct HostFields {
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 struct GrowthStats {
-    proposed: u64,
-    accepted: u64,
-    blocked: u64,
-    offspring_rejected: u64,
+    construction_proposed: u64,
+    birth_proposed: u64,
+    construction_clearance_approved: u64,
+    birth_clearance_approved: u64,
+    construction_clearance_blocked: u64,
+    birth_clearance_blocked: u64,
+    construction_capacity_rejected: u64,
+    birth_capacity_rejected: u64,
+    construction_resource_rejected: u64,
+    birth_resource_rejected: u64,
+    committed_constructions: u64,
+    committed_births: u64,
+    aborted_transactions: u64,
+    construction_material_allocated: Vec<f64>,
+    birth_material_endowed: Vec<f64>,
+    last_committed: Vec<GrowthCommit>,
+}
+#[derive(Clone, Serialize, Deserialize)]
+struct GrowthCommit {
+    proposal_id: String,
+    kind: String,
+    physics_binding: String,
+    material_store: Value,
+    owner_id: String,
+    material_quantity: Vec<f64>,
+    topology_revision: u64,
 }
 #[derive(Clone, Serialize, Deserialize, Default)]
 struct AeroStats {
@@ -155,6 +181,7 @@ struct Snapshot {
     frame: Vec<f32>,
     width: usize,
     height: usize,
+    screen_revision: u64,
     physics_sensed: bool,
     route_open: Vec<f64>,
     route_flow: Vec<f64>,
@@ -162,6 +189,7 @@ struct Snapshot {
     topology_revision: u64,
     clearance_memory: HashMap<String, Vec<Value>>,
     growth: GrowthStats,
+    interaction: InteractionScheduler,
     last_illumination: Vec<Value>,
     geom_size: Vec<f64>,
     geom_pos: Vec<f64>,
@@ -260,6 +288,7 @@ pub struct NativeFlyWorld {
     frame: Vec<f32>,
     width: usize,
     height: usize,
+    screen_revision: u64,
     physics_sensed: bool,
     paused: bool,
     route_open: Vec<f64>,
@@ -269,6 +298,7 @@ pub struct NativeFlyWorld {
     topology_revision: u64,
     clearance_memory: HashMap<String, Vec<Value>>,
     growth: GrowthStats,
+    interaction: InteractionScheduler,
     last_illumination: Vec<Value>,
     clearance_scratch: Option<Physics>,
     visitor_forces: Vec<(usize, [f64; 3])>,
@@ -534,6 +564,7 @@ impl NativeFlyWorld {
             frame: vec![0.0; 12],
             width: 2,
             height: 2,
+            screen_revision: 0,
             growth_rays,
             physics_sensed: false,
             paused: false,
@@ -544,6 +575,7 @@ impl NativeFlyWorld {
             topology_revision: 0,
             clearance_memory: HashMap::new(),
             growth: GrowthStats::default(),
+            interaction: InteractionScheduler::default(),
             last_illumination: Vec::new(),
             clearance_scratch: None,
             visitor_forces: Vec::new(),
@@ -633,10 +665,19 @@ impl NativeFlyWorld {
         {
             return Err("invalid physical screen frame".into());
         }
+        let revision = self
+            .screen_revision
+            .checked_add(1)
+            .ok_or("screen revision space exhausted")?;
         self.frame = frame.to_vec();
         self.width = width;
         self.height = height;
+        self.screen_revision = revision;
         Ok(())
+    }
+
+    pub fn screen_frame(&self) -> (&[f32], usize, usize, u64) {
+        (&self.frame, self.width, self.height, self.screen_revision)
     }
     pub fn visitor_sound(
         &mut self,
@@ -663,6 +704,75 @@ impl NativeFlyWorld {
         self.visitor_forces.push((body, force));
         self.visitor_counter += 1;
         Ok(())
+    }
+
+    pub fn control_tick(&self) -> Result<u64, String> {
+        control_tick_from_seconds(self.time())
+    }
+
+    fn validate_force_target(&self, entity_id: &str) -> Result<(), String> {
+        if self
+            .host
+            .entities
+            .iter()
+            .any(|entity| entity.id == entity_id && entity.free)
+        {
+            Ok(())
+        } else {
+            Err("interaction force target is not a movable entity".into())
+        }
+    }
+
+    pub fn schedule_interaction(
+        &mut self,
+        program: InteractionProgram,
+    ) -> Result<InteractionScheduleReceipt, String> {
+        let tick = self.control_tick()?;
+        for relative in &program.events {
+            if let InteractionEvent::ToyForce { entity_id, .. } = &relative.event {
+                self.validate_force_target(entity_id)?;
+            }
+        }
+        self.interaction
+            .schedule_relative(tick, program, |_| Ok(()))
+    }
+
+    pub fn interaction_status(&self) -> Result<InteractionStatus, String> {
+        Ok(self
+            .interaction
+            .status(self.control_tick()?, self.screen_revision))
+    }
+
+    pub fn prepare_interaction_tick(&mut self) -> Result<InteractionTickReceipt, String> {
+        if self.paused {
+            return Err("native world paused after failed mutation".into());
+        }
+        let tick = self.control_tick()?;
+        let receipt = self.interaction.prepare_tick(tick)?;
+        for dispatched in &receipt.dispatched {
+            let result = match &dispatched.event {
+                InteractionEvent::Tone {
+                    position_mm,
+                    frequency_hz,
+                    amplitude,
+                    duration_s,
+                } => self.visitor_sound(*position_mm, *frequency_hz, *amplitude, *duration_s),
+                InteractionEvent::Pattern { pattern } => {
+                    self.set_screen(&pattern.render_rgb(), PATTERN_WIDTH, PATTERN_HEIGHT)
+                }
+                InteractionEvent::ToyForce { entity_id, force } => {
+                    self.queue_visitor_force(entity_id, *force)
+                }
+            };
+            if let Err(error) = result {
+                self.paused = true;
+                return Err(error);
+            }
+        }
+        if !receipt.dispatched.is_empty() {
+            self.physics_sensed = false;
+        }
+        Ok(receipt)
     }
     pub fn insert_visitor_object(
         &mut self,
@@ -897,6 +1007,21 @@ impl NativeFlyWorld {
             mesh_normals: self.physics.num(crate::ffi::NumField::MeshNormal)?,
             mesh_faces: self.physics.int(crate::ffi::IntField::MeshFace)?,
         })
+    }
+
+    pub fn ecology_status(&self) -> Result<Value, String> {
+        let mut ecology: Value =
+            serde_json::from_str(&self.core.ecology_observe()).map_err(|e| e.to_string())?;
+        ecology["native_host"] = json!({
+            "growth": self.growth,
+            "illumination": self.last_illumination,
+            "aerodynamics": self.last_aero,
+            "retinal_rays_per_resident": 1486,
+            "route_plan_sha256": self.route_plan.sha256,
+            "route_open_fraction": self.route_open,
+            "topology_revision": self.topology_revision,
+        });
+        Ok(ecology)
     }
 
     fn geom_normal(&self, geom: usize, point: [f64; 3]) -> Result<Option<[f64; 3]>, String> {
@@ -1244,7 +1369,8 @@ impl NativeFlyWorld {
             .as_array()
             .cloned()
             .unwrap_or_default();
-        self.growth.proposed += constructions.len() as u64;
+        self.growth.construction_proposed += constructions.len() as u64;
+        self.growth.birth_proposed += births.len() as u64;
         let ecology: Value =
             serde_json::from_str(&self.core.ecology_observe()).map_err(|e| e.to_string())?;
         let colonies = ecology["organisms"]
@@ -1257,6 +1383,7 @@ impl NativeFlyWorld {
         let max_geoms = self.host.ecology_capacity["max_geoms"]
             .as_u64()
             .unwrap_or(2048) as usize;
+        let original_birth_count = births.len();
         let births = births
             .into_iter()
             .filter(|v| {
@@ -1264,9 +1391,25 @@ impl NativeFlyWorld {
             })
             .take(max_colonies.saturating_sub(colonies))
             .collect::<Vec<_>>();
+        self.growth.birth_capacity_rejected +=
+            (original_birth_count.saturating_sub(births.len())) as u64;
         let mut sites = constructions;
         sites.extend(births.iter().cloned());
-        sites.truncate(max_geoms.saturating_sub(self.physics.dimensions().ngeom));
+        let available_geoms = max_geoms.saturating_sub(self.physics.dimensions().ngeom);
+        if sites.len() > available_geoms {
+            let birth_ids = births
+                .iter()
+                .filter_map(|value| value["site_id"].as_str())
+                .collect::<HashSet<_>>();
+            for site in &sites[available_geoms..] {
+                if birth_ids.contains(site["site_id"].as_str().unwrap_or("")) {
+                    self.growth.birth_capacity_rejected += 1;
+                } else {
+                    self.growth.construction_capacity_rejected += 1;
+                }
+            }
+            sites.truncate(available_geoms);
+        }
         let queries = proposal["clearance_queries"]
             .as_array()
             .cloned()
@@ -1327,7 +1470,14 @@ impl NativeFlyWorld {
                     }
                 }
                 if let Some(witness) = blocked {
-                    self.growth.blocked += 1;
+                    if births
+                        .iter()
+                        .any(|birth| birth["site_id"] == site["site_id"])
+                    {
+                        self.growth.birth_clearance_blocked += 1;
+                    } else {
+                        self.growth.construction_clearance_blocked += 1;
+                    }
                     let from = value_f64_3(&query["from_m"], "growth from")?;
                     let toward = sub(scale(witness, 0.001), from);
                     let failure = json!({"origin_m":from,"direction":normalize(toward),"free_distance_m":norm(toward).max(0.0)});
@@ -1485,12 +1635,18 @@ impl NativeFlyWorld {
             .to_owned();
         match self.verify_growth(&proposal) {
             Ok((construction_sites, birth_sites)) => {
-                self.growth.accepted += (construction_sites.len() + birth_sites.len()) as u64;
-                self.core.set_ecology_sites(&json!({"growth_token":token,"construction_sites":construction_sites,"birth_sites":birth_sites,"photon_exposures":photons}).to_string())?;
+                self.growth.construction_clearance_approved += construction_sites.len() as u64;
+                self.growth.birth_clearance_approved += birth_sites.len() as u64;
+                if let Err(error) = self.core.set_ecology_sites(&json!({"growth_token":token,"construction_sites":construction_sites,"birth_sites":birth_sites,"photon_exposures":photons}).to_string()) {
+                    self.growth.aborted_transactions += 1;
+                    let _ = self.core.discard_growth(&token);
+                    return Err(error);
+                }
                 self.last_illumination = illumination;
                 Ok(())
             }
             Err(e) => {
+                self.growth.aborted_transactions += 1;
                 let _ = self.core.discard_growth(&token);
                 Err(e)
             }
@@ -1687,9 +1843,7 @@ impl NativeFlyWorld {
                 entity_positions.extend([0.0; 3])
             }
         }
-        let mut ecology: Value =
-            serde_json::from_str(&self.core.ecology_observe()).map_err(|e| e.to_string())?;
-        ecology["native_host"] = json!({"growth":self.growth,"illumination":self.last_illumination,"aerodynamics":self.last_aero,"retinal_rays_per_resident":1486,"route_plan_sha256":self.route_plan.sha256,"route_open_fraction":self.route_open,"topology_revision":self.topology_revision});
+        let ecology = self.ecology_status()?;
         Ok(ResearchSample {
             optic: sensory.optic,
             body: sensory.body,
@@ -1701,7 +1855,7 @@ impl NativeFlyWorld {
             geom_positions,
             geom_rotations,
             geom_sizes: self.physics.num(crate::ffi::NumField::GeomSize)?,
-            geom_colors: self.physics.num(crate::ffi::NumField::GeomRgba)?,
+            geom_colors: self.colors()?,
             sensor_data: self.physics.num(crate::ffi::NumField::SensorData)?,
             controls: self.physics.num(crate::ffi::NumField::Ctrl)?,
             entity_ids,
@@ -2008,6 +2162,138 @@ impl NativeFlyWorld {
             }
         }
     }
+    fn record_growth_commits(&mut self, proposal: &Value) -> Result<(), String> {
+        let creations = proposal["physical_creations"]
+            .as_array()
+            .ok_or("ecology physical creations missing")?;
+        let transfers = proposal["transfers"]
+            .as_array()
+            .ok_or("ecology transfers missing")?;
+        let ecology: Value =
+            serde_json::from_str(&self.core.ecology_observe()).map_err(|e| e.to_string())?;
+        let structures = ecology["structures"]
+            .as_array()
+            .ok_or("postcommit ecology structures missing")?;
+        let organisms = ecology["organisms"]
+            .as_array()
+            .ok_or("postcommit ecology organisms missing")?;
+        let mut construction_resource_rejected = 0u64;
+        let mut birth_resource_rejected = 0u64;
+        for blocked in proposal["blocked_events"]
+            .as_array()
+            .ok_or("ecology blocked events missing")?
+        {
+            match blocked["reason"].as_str() {
+                Some("development-resource-or-atp-shortfall") => {
+                    construction_resource_rejected += 1
+                }
+                Some("birth-resource-atp-or-capacity-shortfall") => birth_resource_rejected += 1,
+                _ => {}
+            }
+        }
+        let mut construction_count = 0u64;
+        let mut birth_count = 0u64;
+        let mut construction_material = self.growth.construction_material_allocated.clone();
+        let mut birth_material = self.growth.birth_material_endowed.clone();
+        let mut committed = Vec::with_capacity(creations.len());
+        for creation in creations {
+            let kind = creation["kind"]
+                .as_str()
+                .ok_or("physical creation kind missing")?;
+            if kind != "constructed_geometry" && kind != "offspring_body" {
+                continue;
+            }
+            let store = creation["material_store"].clone();
+            let store_id = store["id"].as_str().ok_or("creation store id missing")?;
+            let expected_store_kind = if kind == "constructed_geometry" {
+                "structure"
+            } else {
+                "organism"
+            };
+            if store["kind"] != expected_store_kind {
+                return Err("committed growth material store differs".into());
+            }
+            let binding = creation["physics_binding"]
+                .as_str()
+                .ok_or("creation physics binding missing")?;
+            let expected_cause = if kind == "constructed_geometry" {
+                "construction_allocation"
+            } else {
+                "birth_endowment"
+            };
+            let transfer = transfers
+                .iter()
+                .find(|entry| entry["cause"] == expected_cause && entry["to"] == store)
+                .ok_or("committed growth material transfer missing")?;
+            let quantity = transfer["quantity"]
+                .as_array()
+                .ok_or("growth material quantity missing")?
+                .iter()
+                .map(|value| value.as_f64().ok_or("growth material quantity differs"))
+                .collect::<Result<Vec<_>, _>>()?;
+            if quantity
+                .iter()
+                .any(|value| !value.is_finite() || *value < 0.0)
+            {
+                return Err("growth material allocation outside bounds".into());
+            }
+            let material_total = if kind == "constructed_geometry" {
+                &mut construction_material
+            } else {
+                &mut birth_material
+            };
+            if material_total.is_empty() {
+                material_total.resize(quantity.len(), 0.0);
+            }
+            if material_total.len() != quantity.len() {
+                return Err("growth material pool count changed".into());
+            }
+            for (total, amount) in material_total.iter_mut().zip(&quantity) {
+                *total += amount;
+            }
+            let owner_id = if kind == "constructed_geometry" {
+                let structure = structures
+                    .iter()
+                    .find(|entry| entry["id"] == store_id && entry["physics_binding"] == binding)
+                    .ok_or("committed structure absent from postcommit ecology")?;
+                construction_count += 1;
+                structure["owner_id"]
+                    .as_str()
+                    .ok_or("committed structure owner missing")?
+                    .to_owned()
+            } else {
+                organisms
+                    .iter()
+                    .find(|entry| entry["id"] == store_id && entry["physics_binding"] == binding)
+                    .ok_or("committed offspring absent from postcommit ecology")?;
+                birth_count += 1;
+                transfer["from"]["id"]
+                    .as_str()
+                    .map(str::to_owned)
+                    .ok_or("committed offspring parent missing")?
+            };
+            committed.push(GrowthCommit {
+                proposal_id: creation["proposal_id"]
+                    .as_str()
+                    .ok_or("physical creation proposal id missing")?
+                    .to_owned(),
+                kind: kind.to_owned(),
+                physics_binding: binding.to_owned(),
+                material_store: store,
+                owner_id,
+                material_quantity: quantity,
+                topology_revision: self.topology_revision,
+            });
+        }
+        self.growth.construction_resource_rejected += construction_resource_rejected;
+        self.growth.birth_resource_rejected += birth_resource_rejected;
+        self.growth.committed_constructions += construction_count;
+        self.growth.committed_births += birth_count;
+        self.growth.construction_material_allocated = construction_material;
+        self.growth.birth_material_endowed = birth_material;
+        self.growth.last_committed = committed;
+        Ok(())
+    }
     fn resize_aero_buffers(&mut self) {
         let nbody = self.physics.dimensions().nbody;
         self.aero_positions.resize(nbody * 3, 0.0);
@@ -2086,7 +2372,14 @@ impl NativeFlyWorld {
                 .as_str()
                 .ok_or("ecology proposal token missing")?
                 .to_owned();
-            let transaction = self.apply_ecology_proposal(&proposal)?;
+            let transaction = match self.apply_ecology_proposal(&proposal) {
+                Ok(transaction) => transaction,
+                Err(error) => {
+                    self.growth.aborted_transactions += 1;
+                    let _ = self.core.abort_advance(&token);
+                    return Err(error);
+                }
+            };
             let created = proposal["physical_creations"]
                 .as_array()
                 .map(|v| {
@@ -2105,11 +2398,16 @@ impl NativeFlyWorld {
                 .unwrap_or_default();
             let receipt = json!({"token":token,"created":created,"removed":removed});
             if let Err(error) = self.core.commit_advance(&receipt.to_string()) {
+                self.growth.aborted_transactions += 1;
                 drop(transaction);
                 let _ = self.core.abort_advance(&token);
                 return Err(error);
             }
             self.commit_physical(transaction);
+            self.record_growth_commits(&proposal)?;
+            // A committed obstruction must update the aperture supplied to the
+            // following transport tick and the postcommit observer immediately.
+            self.measure_routes_if_due()?;
             self.last_aero = aero;
             self.visitor_forces.clear();
             self.physics_sensed = true;
@@ -2125,7 +2423,7 @@ impl NativeFlyWorld {
             return Err("cannot checkpoint paused native world".into());
         }
         let value = Snapshot {
-            format: "chreatures-native-fly-world-v1".into(),
+            format: "chreatures-native-fly-world-v2".into(),
             model: self.host.source_mjcf_sha256.clone(),
             fixture: self.fixture_value.clone(),
             xml: self.xml.clone(),
@@ -2134,6 +2432,7 @@ impl NativeFlyWorld {
             frame: self.frame.clone(),
             width: self.width,
             height: self.height,
+            screen_revision: self.screen_revision,
             physics_sensed: self.physics_sensed,
             route_open: self.route_open.clone(),
             route_flow: self.route_flow.clone(),
@@ -2141,6 +2440,7 @@ impl NativeFlyWorld {
             topology_revision: self.topology_revision,
             clearance_memory: self.clearance_memory.clone(),
             growth: self.growth.clone(),
+            interaction: self.interaction.clone(),
             last_illumination: self.last_illumination.clone(),
             geom_size: self.physics.num(crate::ffi::NumField::GeomSize)?,
             geom_pos: self.physics.num(crate::ffi::NumField::GeomPos)?,
@@ -2161,7 +2461,7 @@ impl NativeFlyWorld {
     pub fn restore(&mut self, bytes: &[u8]) -> Result<(), String> {
         let saved: Snapshot =
             serde_json::from_slice(bytes).map_err(|e| format!("native checkpoint: {e}"))?;
-        if saved.format != "chreatures-native-fly-world-v1"
+        if saved.format != "chreatures-native-fly-world-v2"
             || saved.width == 0
             || saved.height == 0
             || saved.frame.len() != saved.width * saved.height * 3
@@ -2200,6 +2500,20 @@ impl NativeFlyWorld {
         if (physics.time() - core.time()).abs() > 1e-8 {
             return Err("checkpoint physical/core clock differs".into());
         }
+        let restored_tick = control_tick_from_seconds(core.time())?;
+        saved
+            .interaction
+            .validate_restore(restored_tick, |entity_id| {
+                if host
+                    .entities
+                    .iter()
+                    .any(|entity| entity.id == entity_id && entity.free)
+                {
+                    Ok(())
+                } else {
+                    Err("interaction force target is not a movable entity".into())
+                }
+            })?;
         self.physics = physics;
         self.core = core;
         self.aero_world = aero_world;
@@ -2213,6 +2527,7 @@ impl NativeFlyWorld {
         self.frame = saved.frame;
         self.width = saved.width;
         self.height = saved.height;
+        self.screen_revision = saved.screen_revision;
         self.physics_sensed = saved.physics_sensed;
         self.route_open = saved.route_open;
         self.route_flow = saved.route_flow;
@@ -2220,6 +2535,7 @@ impl NativeFlyWorld {
         self.topology_revision = saved.topology_revision;
         self.clearance_memory = saved.clearance_memory;
         self.growth = saved.growth;
+        self.interaction = saved.interaction;
         self.last_illumination = saved.last_illumination;
         self.base_force_range = saved.base_force_range;
         self.base_gain = saved.base_gain;

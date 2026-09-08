@@ -3,6 +3,7 @@
 
 mod ffi;
 mod host;
+pub mod interaction;
 mod protocol;
 #[cfg(target_os = "emscripten")]
 mod wasm_abi;
