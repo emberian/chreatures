@@ -1,0 +1,78 @@
+{
+  "format": "chreatures-supported-author-continuation-demonstration-v1",
+  "status": "executed",
+  "scope": "Paired offline branches in the joined native MuJoCo host; no CNS or runtime policy bypass.",
+  "identity": {
+    "world": "/Users/ember/paperbin/chreatures/integration/fly-habitat-v4/seed-20260908-b4/world.json",
+    "world_sha256": "858f2e7fefa21eedd2f16c3aaf897b8eecdac6d9935d97bdeddf49363837e7c8",
+    "scene_xml_sha256": "4b2039ea1dd4fbe49a3c38938816216e17f5bc842431d9b7d52914797ada0c25",
+    "native_host": "/Users/ember/dev/chreatures/native/fly-world/target/release/chreatures-fly-world",
+    "native_host_sha256": "c6b0ce7299fbabdbb1dbbf5dd8063bf5c20e5fca141bba834f1c8cc094c824a0",
+    "author_bank_sha256": "97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+    "author_source_revision": "ca65a510c2afe6ac61c51df4f274c8d190c2f95f",
+    "recorded_probe_sha256": "01f63dc0cb57ebbc78ec7fd6bf4f1698582063173ffe8e2c7bec7fe973db311a",
+    "recorded_probe_source_episode_sha256": "66b104acdc23f609207b46bcaab07c610d32d06d7f432a49037ceb77a92a80ac",
+    "last_supported_snapshot_sha256": "91931c7acc85f70abbac3985a5e56e63ad81ac1e05add2e7ca374d4ea4064bfa"
+  },
+  "timing": {
+    "physics_dt_s": 0.0001,
+    "control_dt_s": 0.01,
+    "settle_ticks": 40
+  },
+  "failed_branch": {
+    "recorded_source_ticks": [
+      40,
+      48
+    ],
+    "selected_resident": 2,
+    "initial_supported": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "residents_losing_support": [
+      2,
+      1,
+      3,
+      0
+    ],
+    "selected_last_supported_probe_tick": 0,
+    "selected_end_root_up": -0.2902611834541801,
+    "selected_end_contact_feet": 0,
+    "preserved": true
+  },
+  "restored_sibling": {
+    "provenance": "exact native physical snapshot at the last support-gated state on the failed branch",
+    "restore_exact": true,
+    "private_cns_state_included": false,
+    "fit": {
+      "eligible": true,
+      "reason": "supported-fit",
+      "phase_cycles": 0.9931640625,
+      "amplitude": 0.05,
+      "score": 1.6520562706686305e-05,
+      "joint_rms_normalized": 0.0034765418252630134,
+      "delivered_target_rms_normalized": 0.0021057586860519467,
+      "contacting_feet_released_by_candidate": 0
+    },
+    "requested_ticks": 128,
+    "delivered_ticks": 128,
+    "bridge_complete_tick": 1,
+    "lost_support_tick": null,
+    "end_root_up": 0.9976841963527756,
+    "end_contact_feet": 6,
+    "max_servo_slew_rad_per_tick": 0.040000000000000036,
+    "max_adhesion_slew_unitless_per_tick": 0.25
+  },
+  "trace": {
+    "file": "paired-branches.npz",
+    "sha256": "607c1dd6049f8278e7f10deec75abaed0a3b0cd913b21a739be23c5a82cf6d22"
+  },
+  "native_stderr": "",
+  "limits": [
+    "Eligibility requires measured upright support and at least three contacting feet; excluded fallen states are not self-righting cases.",
+    "The fitted phase and amplitude are an engineered state match to the sealed author trajectory, not a biological recovery law.",
+    "The sibling contains physical state only. Any later learning branch must recompute private CNS history from its checkpoint without a sensory discontinuity."
+  ]
+}

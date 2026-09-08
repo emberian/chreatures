@@ -8,6 +8,7 @@ controller and does not pass world state around the CNS.
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import hashlib
 import json
 import math
@@ -18,6 +19,7 @@ import numpy as np
 
 LEGS = ("lf", "lm", "lh", "rf", "rm", "rh")
 MODES = ("forward", "turn_left", "stop", "turn_right")
+TRIPOD_PHASE = np.asarray([0.0, 0.5, 0.0, 0.5, 0.0, 0.5], dtype=np.float64)
 
 
 def sha256(path: Path) -> str:
@@ -40,6 +42,221 @@ def periodic_leg_sample(samples: np.ndarray, phases: np.ndarray) -> np.ndarray:
 def periodic_adhesion(samples: np.ndarray, phases: np.ndarray) -> np.ndarray:
     indices = np.floor(np.mod(phases, 1.0) * len(samples)).astype(np.int64)
     return np.asarray([samples[index, leg] for leg, index in enumerate(indices)], dtype=np.float64)
+
+
+@dataclass(frozen=True)
+class ContinuationFit:
+    """A support-gated fit to the already sealed FlyGym trajectory bank."""
+
+    eligible: bool
+    reason: str
+    phase_cycles: float | None
+    amplitude: float | None
+    score: float | None
+    joint_rms_normalized: float | None
+    delivered_target_rms_normalized: float | None
+    contacting_feet_released_by_candidate: int | None
+
+
+@dataclass(frozen=True)
+class ContinuationCommand:
+    """One legal physical command and diagnostics from the offline teacher."""
+
+    servo_targets_rad: np.ndarray
+    adhesion: np.ndarray
+    normalized_motor92: np.ndarray
+    phase_cycles: float
+    amplitude: float
+    bridge_complete: bool
+    max_servo_delta_rad: float
+    max_adhesion_delta: float
+
+
+class SupportedAuthorContinuation:
+    """Continue the sealed author step from an actually supported state.
+
+    This class is an offline demonstration source. It observes physical support,
+    joint angles and the command that was actually delivered at takeover. It is
+    neither a deployed controller nor a self-righting mechanism.
+    """
+
+    def __init__(
+        self,
+        joint_targets_rad: np.ndarray,
+        adhesion: np.ndarray,
+        teacher_neutral_rad: np.ndarray,
+        fixture_neutral84_rad: np.ndarray,
+        control_ranges84_rad: np.ndarray,
+        *,
+        frequency_hz: float = 1.5,
+        amplitude_bounds: tuple[float, float] = (0.05, 0.50),
+        servo_slew_rad_per_tick: float = 0.04,
+        adhesion_slew_per_tick: float = 0.25,
+        upright_min: float = 0.65,
+        contact_feet_min: int = 3,
+        delivered_target_weight: float = 1.0,
+        contact_release_penalty: float = 0.25,
+        bridge_tolerance_rad: float = 0.04,
+        bridge_stable_ticks: int = 2,
+    ) -> None:
+        self.targets = np.asarray(joint_targets_rad, dtype=np.float64)
+        self.adhesion_bank = np.asarray(adhesion, dtype=np.float64)
+        self.teacher_neutral = np.asarray(teacher_neutral_rad, dtype=np.float64)
+        self.neutral = np.asarray(fixture_neutral84_rad, dtype=np.float64)
+        self.ranges = np.asarray(control_ranges84_rad, dtype=np.float64)
+        if self.targets.ndim != 2 or self.targets.shape[1] != 42:
+            raise ValueError("author trajectory must have 42 walking coordinates")
+        if self.adhesion_bank.shape != (len(self.targets), 6):
+            raise ValueError("author adhesion must align with the trajectory bank")
+        if self.teacher_neutral.shape != (42,) or self.neutral.shape != (84,):
+            raise ValueError("continuation requires teacher42 and fixture84 neutral angles")
+        if self.ranges.shape != (84, 2) or np.any(self.ranges[:, 1] <= self.ranges[:, 0]):
+            raise ValueError("continuation requires ordered 84-servo physical ranges")
+        if not (0.0 <= amplitude_bounds[0] <= amplitude_bounds[1] <= 1.0):
+            raise ValueError("amplitude bounds must be inside the sealed author's scale")
+        if frequency_hz <= 0.0 or servo_slew_rad_per_tick <= 0.0:
+            raise ValueError("frequency and physical-radian slew must be positive")
+        if not 0.0 < adhesion_slew_per_tick <= 1.0:
+            raise ValueError("adhesion slew must be in unitless activation per tick")
+        self.frequency_hz = float(frequency_hz)
+        self.amplitude_bounds = tuple(float(x) for x in amplitude_bounds)
+        self.servo_slew = float(servo_slew_rad_per_tick)
+        self.adhesion_slew = float(adhesion_slew_per_tick)
+        self.upright_min = float(upright_min)
+        self.contact_feet_min = int(contact_feet_min)
+        self.delivered_weight = float(delivered_target_weight)
+        self.release_penalty = float(contact_release_penalty)
+        self.bridge_tolerance = float(bridge_tolerance_rad)
+        self.bridge_stable_ticks = int(bridge_stable_ticks)
+        self._fit: ContinuationFit | None = None
+        self._phase = 0.0
+        self._bridge_stable = 0
+
+    def _supported(self, thorax_up: float, foot_contact: np.ndarray) -> bool:
+        contact = np.asarray(foot_contact, dtype=bool)
+        return bool(thorax_up >= self.upright_min and contact.shape == (6,) and contact.sum() >= self.contact_feet_min)
+
+    def _desired_walking(self, phase: float, amplitude: float) -> np.ndarray:
+        raw = periodic_leg_sample(self.targets, TRIPOD_PHASE + phase)
+        return self.neutral[:42] + amplitude * (raw - self.teacher_neutral)
+
+    def fit(
+        self,
+        actual_joint84_rad: np.ndarray,
+        last_delivered_servo84_rad: np.ndarray,
+        foot_contact: np.ndarray,
+        thorax_up: float,
+    ) -> ContinuationFit:
+        q = np.asarray(actual_joint84_rad, dtype=np.float64)
+        delivered = np.asarray(last_delivered_servo84_rad, dtype=np.float64)
+        contact = np.asarray(foot_contact, dtype=bool)
+        if q.shape != (84,) or delivered.shape != (84,) or contact.shape != (6,):
+            raise ValueError("fit requires q84, delivered-servo84 and foot-contact6")
+        if not np.all(np.isfinite(q)) or not np.all(np.isfinite(delivered)):
+            raise ValueError("fit inputs must be finite model-space radians")
+        if not self._supported(thorax_up, contact):
+            result = ContinuationFit(False, "outside-supported-author-domain", None, None, None, None, None, None)
+            self._fit = result
+            return result
+
+        # Fit in model-space radians, normalized only by each physical servo's
+        # full range so a broad coxa axis cannot dominate a narrow tarsus axis.
+        span = self.ranges[:42, 1] - self.ranges[:42, 0]
+        q_residual = (q[:42] - self.neutral[:42]) / span
+        delivered_residual = (delivered[:42] - self.neutral[:42]) / span
+        best: tuple[float, float, float, float, float, int] | None = None
+        for index in range(len(self.targets)):
+            phase = index / len(self.targets)
+            raw = periodic_leg_sample(self.targets, TRIPOD_PHASE + phase)
+            direction = (raw - self.teacher_neutral) / span
+            denominator = float((1.0 + self.delivered_weight) * np.dot(direction, direction))
+            if denominator <= 1e-18:
+                amplitude = self.amplitude_bounds[0]
+            else:
+                numerator = float(np.dot(direction, q_residual) + self.delivered_weight * np.dot(direction, delivered_residual))
+                amplitude = float(np.clip(numerator / denominator, *self.amplitude_bounds))
+            desired_norm = amplitude * direction
+            joint_rms = float(np.sqrt(np.mean(np.square(q_residual - desired_norm))))
+            delivered_rms = float(np.sqrt(np.mean(np.square(delivered_residual - desired_norm))))
+            candidate_adhesion = periodic_adhesion(self.adhesion_bank, TRIPOD_PHASE + phase) >= 0.5
+            released = int(np.logical_and(contact, ~candidate_adhesion).sum())
+            score = joint_rms * joint_rms + self.delivered_weight * delivered_rms * delivered_rms + self.release_penalty * released
+            candidate = (score, phase, amplitude, joint_rms, delivered_rms, released)
+            if best is None or candidate < best:
+                best = candidate
+        assert best is not None
+        score, phase, amplitude, joint_rms, delivered_rms, released = best
+        result = ContinuationFit(True, "supported-fit", phase, amplitude, score, joint_rms, delivered_rms, released)
+        self._fit = result
+        self._phase = phase
+        self._bridge_stable = 0
+        return result
+
+    def command(
+        self,
+        actual_joint84_rad: np.ndarray,
+        last_delivered_servo84_rad: np.ndarray,
+        last_delivered_adhesion: np.ndarray,
+        foot_contact: np.ndarray,
+        thorax_up: float,
+        *,
+        control_dt_s: float = 0.01,
+    ) -> ContinuationCommand | None:
+        """Return the next command, or None after support leaves the author domain."""
+        if self._fit is None or not self._fit.eligible:
+            raise RuntimeError("fit an eligible supported state before requesting continuation")
+        q = np.asarray(actual_joint84_rad, dtype=np.float64)
+        previous = np.asarray(last_delivered_servo84_rad, dtype=np.float64)
+        previous_adhesion = np.asarray(last_delivered_adhesion, dtype=np.float64)
+        contact = np.asarray(foot_contact, dtype=bool)
+        if q.shape != (84,) or previous.shape != (84,) or previous_adhesion.shape != (6,) or contact.shape != (6,):
+            raise ValueError("command requires q84, delivered-servo84, adhesion6 and contact6")
+        if not self._supported(thorax_up, contact):
+            return None
+        assert self._fit.amplitude is not None
+        desired = self.neutral.copy()
+        desired[:42] = self._desired_walking(self._phase, self._fit.amplitude)
+        servo = previous + np.clip(desired - previous, -self.servo_slew, self.servo_slew)
+        servo = np.clip(servo, self.ranges[:, 0], self.ranges[:, 1])
+
+        # The bridge completes when the command itself has reached the fitted
+        # trajectory without a discontinuity. Physical tracking remains an
+        # observed outcome and is not used to pretend a fallen state recovered.
+        command_error = float(np.max(np.abs(servo - desired)))
+        if command_error <= self.bridge_tolerance:
+            self._bridge_stable += 1
+        else:
+            self._bridge_stable = 0
+        bridge_complete = self._bridge_stable >= self.bridge_stable_ticks
+        author_adhesion = periodic_adhesion(self.adhesion_bank, TRIPOD_PHASE + self._phase)
+        adhesion_goal = author_adhesion if bridge_complete else np.maximum(author_adhesion, contact.astype(np.float64))
+        adhesion = previous_adhesion + np.clip(adhesion_goal - previous_adhesion, -self.adhesion_slew, self.adhesion_slew)
+        adhesion = np.clip(adhesion, 0.0, 1.0)
+
+        normalized = np.zeros(92, dtype=np.float32)
+        above = servo >= self.neutral
+        positive_span = self.ranges[:, 1] - self.neutral
+        negative_span = self.neutral - self.ranges[:, 0]
+        normalized[:84] = np.where(
+            above,
+            (servo - self.neutral) / positive_span,
+            (servo - self.neutral) / negative_span,
+        ).astype(np.float32)
+        normalized[:84] = np.clip(normalized[:84], -1.0, 1.0)
+        normalized[84:90] = adhesion.astype(np.float32)
+        command_phase = self._phase
+        if bridge_complete:
+            self._phase = (self._phase + self.frequency_hz * control_dt_s) % 1.0
+        return ContinuationCommand(
+            servo_targets_rad=servo,
+            adhesion=adhesion,
+            normalized_motor92=normalized,
+            phase_cycles=command_phase,
+            amplitude=self._fit.amplitude,
+            bridge_complete=bridge_complete,
+            max_servo_delta_rad=float(np.max(np.abs(servo - previous))),
+            max_adhesion_delta=float(np.max(np.abs(adhesion - previous_adhesion))),
+        )
 
 
 def yaw(rotation: np.ndarray) -> float:
