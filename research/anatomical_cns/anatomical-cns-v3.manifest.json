@@ -1,0 +1,990 @@
+{
+  "artifact": "anatomical-cns-v3.npz",
+  "bytes": 33164141,
+  "graph_channels": {
+    "dopamine": {
+      "edges": 244694,
+      "normalization": "positive within-family incoming target counts",
+      "sources": 395,
+      "synapses": 590338
+    },
+    "fast": {
+      "edges": 24624743,
+      "normalization": "all incoming target counts",
+      "sources": 161695,
+      "synapses": 121160944
+    },
+    "octopamine": {
+      "edges": 205129,
+      "normalization": "positive within-family incoming target counts",
+      "sources": 133,
+      "synapses": 625893
+    },
+    "serotonin": {
+      "edges": 187326,
+      "normalization": "positive within-family incoming target counts",
+      "sources": 375,
+      "synapses": 599868
+    }
+  },
+  "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "interfaces": {
+    "body": {
+      "channels": [
+        {
+          "count": 500,
+          "name": "odor/L/0",
+          "rule": "olfactory; anatomical side; exact-type digest identity partition",
+          "status": "mapped"
+        },
+        {
+          "count": 446,
+          "name": "odor/L/1",
+          "rule": "olfactory; anatomical side; exact-type digest identity partition",
+          "status": "mapped"
+        },
+        {
+          "count": 349,
+          "name": "odor/L/2",
+          "rule": "olfactory; anatomical side; exact-type digest identity partition",
+          "status": "mapped"
+        },
+        {
+          "count": 703,
+          "name": "odor/R/0",
+          "rule": "olfactory; anatomical side; exact-type digest identity partition",
+          "status": "mapped"
+        },
+        {
+          "count": 605,
+          "name": "odor/R/1",
+          "rule": "olfactory; anatomical side; exact-type digest identity partition",
+          "status": "mapped"
+        },
+        {
+          "count": 447,
+          "name": "odor/R/2",
+          "rule": "olfactory; anatomical side; exact-type digest identity partition",
+          "status": "mapped"
+        },
+        {
+          "count": 90,
+          "name": "linear/x/positive",
+          "rule": "linear mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 37,
+          "name": "linear/x/negative",
+          "rule": "linear mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 77,
+          "name": "linear/y/positive",
+          "rule": "linear mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 47,
+          "name": "linear/y/negative",
+          "rule": "linear mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 133,
+          "name": "linear/z/positive",
+          "rule": "linear mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 147,
+          "name": "linear/z/negative",
+          "rule": "linear mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 90,
+          "name": "angular/x/positive",
+          "rule": "angular mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 37,
+          "name": "angular/x/negative",
+          "rule": "angular mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 77,
+          "name": "angular/y/positive",
+          "rule": "angular mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 47,
+          "name": "angular/y/negative",
+          "rule": "angular mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 133,
+          "name": "angular/z/positive",
+          "rule": "angular mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 147,
+          "name": "angular/z/negative",
+          "rule": "angular mechanosensory cohort; exact-type digest axis/sign partition",
+          "status": "mapped"
+        },
+        {
+          "count": 933,
+          "name": "contact/normal_x/positive",
+          "rule": "tactile/mechanosensory; exact-type digest direction partition",
+          "status": "mapped"
+        },
+        {
+          "count": 398,
+          "name": "contact/normal_x/negative",
+          "rule": "tactile/mechanosensory; exact-type digest direction partition",
+          "status": "mapped"
+        },
+        {
+          "count": 403,
+          "name": "contact/normal_y/positive",
+          "rule": "tactile/mechanosensory; exact-type digest direction partition",
+          "status": "mapped"
+        },
+        {
+          "count": 444,
+          "name": "contact/normal_y/negative",
+          "rule": "tactile/mechanosensory; exact-type digest direction partition",
+          "status": "mapped"
+        },
+        {
+          "count": 1160,
+          "name": "contact/normal_z/positive",
+          "rule": "tactile/mechanosensory; exact-type digest direction partition",
+          "status": "mapped"
+        },
+        {
+          "count": 953,
+          "name": "contact/normal_z/negative",
+          "rule": "tactile/mechanosensory; exact-type digest direction partition",
+          "status": "mapped"
+        },
+        {
+          "count": 4291,
+          "name": "contact/count",
+          "rule": "all tactile/mechanosensory afferents",
+          "status": "mapped"
+        },
+        {
+          "count": 2102,
+          "name": "contact/touch/L",
+          "rule": "tactile/mechanosensory; anatomical side",
+          "status": "mapped"
+        },
+        {
+          "count": 2189,
+          "name": "contact/touch/R",
+          "rule": "tactile/mechanosensory; anatomical side",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_00",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_01",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_02",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_03",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_04",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_05",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_06",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_07",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_08",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_09",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_10",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_11",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_12",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_13",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_14",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 114,
+          "name": "auditory/band_15",
+          "rule": "all typed auditory afferents; trainable per-cell band tuning (annotation has no measured frequency assignment)",
+          "status": "mapped"
+        },
+        {
+          "count": 91,
+          "name": "shade",
+          "rule": "hygro/thermosensory proxy; engineered and non-photometric",
+          "status": "mapped"
+        },
+        {
+          "count": 26,
+          "name": "intero/00",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 31,
+          "name": "intero/01",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 72,
+          "name": "intero/02",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 192,
+          "name": "intero/03",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 114,
+          "name": "intero/04",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 91,
+          "name": "intero/05",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 5,
+          "name": "intero/06",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 20,
+          "name": "intero/07",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 169,
+          "name": "intero/08",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 31,
+          "name": "intero/09",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 44,
+          "name": "intero/10",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 420,
+          "name": "intero/11",
+          "rule": "abdominal/pharyngeal afferent proxy; exact-type digest partition",
+          "status": "proxy"
+        },
+        {
+          "count": 41,
+          "name": "joint_angle/front/L/proximal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 41,
+          "name": "joint_angle/front/L/distal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 41,
+          "name": "joint_velocity/front/L/proximal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 41,
+          "name": "joint_velocity/front/L/distal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 41,
+          "name": "joint_load/front/L/proximal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 41,
+          "name": "joint_load/front/L/distal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 17,
+          "name": "joint_angle/front/R/proximal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 17,
+          "name": "joint_angle/front/R/distal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 17,
+          "name": "joint_velocity/front/R/proximal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 17,
+          "name": "joint_velocity/front/R/distal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 17,
+          "name": "joint_load/front/R/proximal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 17,
+          "name": "joint_load/front/R/distal",
+          "rule": "proprioceptive; entry nerve ProLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 135,
+          "name": "joint_angle/middle/L/proximal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 135,
+          "name": "joint_angle/middle/L/distal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 135,
+          "name": "joint_velocity/middle/L/proximal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 135,
+          "name": "joint_velocity/middle/L/distal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 135,
+          "name": "joint_load/middle/L/proximal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 135,
+          "name": "joint_load/middle/L/distal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 140,
+          "name": "joint_angle/middle/R/proximal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 140,
+          "name": "joint_angle/middle/R/distal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 140,
+          "name": "joint_velocity/middle/R/proximal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 140,
+          "name": "joint_velocity/middle/R/distal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 140,
+          "name": "joint_load/middle/R/proximal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 140,
+          "name": "joint_load/middle/R/distal",
+          "rule": "proprioceptive; entry nerve MesoLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 138,
+          "name": "joint_angle/hind/L/proximal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 138,
+          "name": "joint_angle/hind/L/distal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 138,
+          "name": "joint_velocity/hind/L/proximal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 138,
+          "name": "joint_velocity/hind/L/distal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 138,
+          "name": "joint_load/hind/L/proximal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 138,
+          "name": "joint_load/hind/L/distal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side L; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 151,
+          "name": "joint_angle/hind/R/proximal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 151,
+          "name": "joint_angle/hind/R/distal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 151,
+          "name": "joint_velocity/hind/R/proximal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 151,
+          "name": "joint_velocity/hind/R/distal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 151,
+          "name": "joint_load/hind/R/proximal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 151,
+          "name": "joint_load/hind/R/distal",
+          "rule": "proprioceptive; entry nerve MetaLN; anatomical side R; shared trainable tuning",
+          "status": "mapped"
+        },
+        {
+          "count": 151,
+          "name": "foot_contact/front/L",
+          "rule": "tactile/mechanosensory; leg entry nerve and side",
+          "status": "mapped"
+        },
+        {
+          "count": 115,
+          "name": "foot_contact/front/R",
+          "rule": "tactile/mechanosensory; leg entry nerve and side",
+          "status": "mapped"
+        },
+        {
+          "count": 378,
+          "name": "foot_contact/middle/L",
+          "rule": "tactile/mechanosensory; leg entry nerve and side",
+          "status": "mapped"
+        },
+        {
+          "count": 428,
+          "name": "foot_contact/middle/R",
+          "rule": "tactile/mechanosensory; leg entry nerve and side",
+          "status": "mapped"
+        },
+        {
+          "count": 394,
+          "name": "foot_contact/hind/L",
+          "rule": "tactile/mechanosensory; leg entry nerve and side",
+          "status": "mapped"
+        },
+        {
+          "count": 411,
+          "name": "foot_contact/hind/R",
+          "rule": "tactile/mechanosensory; leg entry nerve and side",
+          "status": "mapped"
+        },
+        {
+          "count": 41,
+          "name": "fatigue/front/L/proximal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        },
+        {
+          "count": 41,
+          "name": "fatigue/front/L/distal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        },
+        {
+          "count": 17,
+          "name": "fatigue/front/R/proximal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        },
+        {
+          "count": 17,
+          "name": "fatigue/front/R/distal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        },
+        {
+          "count": 135,
+          "name": "fatigue/middle/L/proximal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        },
+        {
+          "count": 135,
+          "name": "fatigue/middle/L/distal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        },
+        {
+          "count": 140,
+          "name": "fatigue/middle/R/proximal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        },
+        {
+          "count": 140,
+          "name": "fatigue/middle/R/distal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        },
+        {
+          "count": 138,
+          "name": "fatigue/hind/L/proximal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        },
+        {
+          "count": 138,
+          "name": "fatigue/hind/L/distal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        },
+        {
+          "count": 151,
+          "name": "fatigue/hind/R/proximal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        },
+        {
+          "count": 151,
+          "name": "fatigue/hind/R/distal",
+          "rule": "proprioceptive proxy for local muscle state; leg entry nerve and side",
+          "status": "proxy"
+        }
+      ],
+      "nnz": 26968,
+      "omissions": {
+        "annotation_missing_auditory": 1,
+        "sensory_ascending_chordotonal": 22
+      },
+      "shape": [
+        11233,
+        110
+      ]
+    },
+    "context": {
+      "partitions_for_initialization": [
+        {
+          "count": 109,
+          "name": "context/L/0",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        },
+        {
+          "count": 125,
+          "name": "context/L/1",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        },
+        {
+          "count": 140,
+          "name": "context/L/2",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        },
+        {
+          "count": 106,
+          "name": "context/L/3",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        },
+        {
+          "count": 88,
+          "name": "context/L/4",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        },
+        {
+          "count": 98,
+          "name": "context/L/5",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        },
+        {
+          "count": 111,
+          "name": "context/R/0",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        },
+        {
+          "count": 122,
+          "name": "context/R/1",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        },
+        {
+          "count": 139,
+          "name": "context/R/2",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        },
+        {
+          "count": 104,
+          "name": "context/R/3",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        },
+        {
+          "count": 86,
+          "name": "context/R/4",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        },
+        {
+          "count": 96,
+          "name": "context/R/5",
+          "rule": "descending_neuron; anatomical side (midline shared); exact-type digest partition"
+        }
+      ],
+      "selection": "all annotated descending_neuron rows",
+      "shape": [
+        1314
+      ]
+    },
+    "motor": {
+      "channels": [
+        {
+          "count": 12,
+          "name": "joint/front/L/proximal/positive",
+          "rule": "motor; L; T1/ProLN; MANC type contains ('extensor', 'promotor', 'anterior rotator', 'levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 36,
+          "name": "joint/front/L/proximal/negative",
+          "rule": "motor; L; T1/ProLN; MANC type contains ('flexor', 'remotor', 'reductor', 'posterior rotator')",
+          "status": "mapped"
+        },
+        {
+          "count": 4,
+          "name": "joint/front/L/distal/positive",
+          "rule": "motor; L; T1/ProLN; MANC type contains ('ti extensor', 'ta levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 20,
+          "name": "joint/front/L/distal/negative",
+          "rule": "motor; L; T1/ProLN; MANC type contains ('ti flexor', 'ta depressor')",
+          "status": "mapped"
+        },
+        {
+          "count": 13,
+          "name": "joint/front/R/proximal/positive",
+          "rule": "motor; R; T1/ProLN; MANC type contains ('extensor', 'promotor', 'anterior rotator', 'levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 34,
+          "name": "joint/front/R/proximal/negative",
+          "rule": "motor; R; T1/ProLN; MANC type contains ('flexor', 'remotor', 'reductor', 'posterior rotator')",
+          "status": "mapped"
+        },
+        {
+          "count": 5,
+          "name": "joint/front/R/distal/positive",
+          "rule": "motor; R; T1/ProLN; MANC type contains ('ti extensor', 'ta levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 18,
+          "name": "joint/front/R/distal/negative",
+          "rule": "motor; R; T1/ProLN; MANC type contains ('ti flexor', 'ta depressor')",
+          "status": "mapped"
+        },
+        {
+          "count": 6,
+          "name": "joint/middle/L/proximal/positive",
+          "rule": "motor; L; T2/MesoLN; MANC type contains ('extensor', 'promotor', 'anterior rotator', 'levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 30,
+          "name": "joint/middle/L/proximal/negative",
+          "rule": "motor; L; T2/MesoLN; MANC type contains ('flexor', 'remotor', 'reductor', 'posterior rotator')",
+          "status": "mapped"
+        },
+        {
+          "count": 2,
+          "name": "joint/middle/L/distal/positive",
+          "rule": "motor; L; T2/MesoLN; MANC type contains ('ti extensor', 'ta levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 11,
+          "name": "joint/middle/L/distal/negative",
+          "rule": "motor; L; T2/MesoLN; MANC type contains ('ti flexor', 'ta depressor')",
+          "status": "mapped"
+        },
+        {
+          "count": 6,
+          "name": "joint/middle/R/proximal/positive",
+          "rule": "motor; R; T2/MesoLN; MANC type contains ('extensor', 'promotor', 'anterior rotator', 'levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 30,
+          "name": "joint/middle/R/proximal/negative",
+          "rule": "motor; R; T2/MesoLN; MANC type contains ('flexor', 'remotor', 'reductor', 'posterior rotator')",
+          "status": "mapped"
+        },
+        {
+          "count": 2,
+          "name": "joint/middle/R/distal/positive",
+          "rule": "motor; R; T2/MesoLN; MANC type contains ('ti extensor', 'ta levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 11,
+          "name": "joint/middle/R/distal/negative",
+          "rule": "motor; R; T2/MesoLN; MANC type contains ('ti flexor', 'ta depressor')",
+          "status": "mapped"
+        },
+        {
+          "count": 5,
+          "name": "joint/hind/L/proximal/positive",
+          "rule": "motor; L; T3/MetaLN; MANC type contains ('extensor', 'promotor', 'anterior rotator', 'levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 34,
+          "name": "joint/hind/L/proximal/negative",
+          "rule": "motor; L; T3/MetaLN; MANC type contains ('flexor', 'remotor', 'reductor', 'posterior rotator')",
+          "status": "mapped"
+        },
+        {
+          "count": 2,
+          "name": "joint/hind/L/distal/positive",
+          "rule": "motor; L; T3/MetaLN; MANC type contains ('ti extensor', 'ta levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 17,
+          "name": "joint/hind/L/distal/negative",
+          "rule": "motor; L; T3/MetaLN; MANC type contains ('ti flexor', 'ta depressor')",
+          "status": "mapped"
+        },
+        {
+          "count": 6,
+          "name": "joint/hind/R/proximal/positive",
+          "rule": "motor; R; T3/MetaLN; MANC type contains ('extensor', 'promotor', 'anterior rotator', 'levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 33,
+          "name": "joint/hind/R/proximal/negative",
+          "rule": "motor; R; T3/MetaLN; MANC type contains ('flexor', 'remotor', 'reductor', 'posterior rotator')",
+          "status": "mapped"
+        },
+        {
+          "count": 2,
+          "name": "joint/hind/R/distal/positive",
+          "rule": "motor; R; T3/MetaLN; MANC type contains ('ti extensor', 'ta levator')",
+          "status": "mapped"
+        },
+        {
+          "count": 16,
+          "name": "joint/hind/R/distal/negative",
+          "rule": "motor; R; T3/MetaLN; MANC type contains ('ti flexor', 'ta depressor')",
+          "status": "mapped"
+        },
+        {
+          "count": 86,
+          "name": "ancillary/gaze_pitch",
+          "rule": "engineered body action over exact motor exit nerve/type",
+          "status": "mapped"
+        },
+        {
+          "count": 500,
+          "name": "ancillary/posture",
+          "rule": "engineered body action over exact motor exit nerve/type",
+          "status": "mapped"
+        },
+        {
+          "count": 14,
+          "name": "ancillary/grip",
+          "rule": "engineered body action over exact motor exit nerve/type",
+          "status": "mapped"
+        },
+        {
+          "count": 6,
+          "name": "ancillary/signal_low",
+          "rule": "engineered body action over exact motor exit nerve/type",
+          "status": "mapped"
+        },
+        {
+          "count": 10,
+          "name": "ancillary/signal_mid",
+          "rule": "engineered body action over exact motor exit nerve/type",
+          "status": "mapped"
+        },
+        {
+          "count": 12,
+          "name": "ancillary/signal_high",
+          "rule": "engineered body action over exact motor exit nerve/type",
+          "status": "mapped"
+        },
+        {
+          "count": 66,
+          "name": "ancillary/eat",
+          "rule": "engineered body action over exact motor exit nerve/type",
+          "status": "mapped"
+        },
+        {
+          "count": 66,
+          "name": "ancillary/release",
+          "rule": "engineered body action over exact motor exit nerve/type",
+          "status": "mapped"
+        },
+        {
+          "count": 238,
+          "name": "ancillary/secrete",
+          "rule": "engineered body action over exact motor exit nerve/type",
+          "status": "mapped"
+        },
+        {
+          "count": 815,
+          "name": "ancillary/allocate",
+          "rule": "engineered body action over exact motor exit nerve/type",
+          "status": "mapped"
+        }
+      ],
+      "nnz": 2168,
+      "rows": 815,
+      "shape": [
+        34,
+        815
+      ]
+    }
+  },
+  "schema": "chreatures-anatomical-cns-v3",
+  "sha256": "ef33cf190cd587c43ecdc8e6025fe07f4e49af94929398b589a0c1972b65b255"
+}

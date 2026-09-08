@@ -104,3 +104,10 @@ and parameter identity
 `ee3cb6c51664ff02e01ae48c99949daef5b333bb61bdc93bb4bd9014eb7a2f3b`.
 Evaluation latents and probe weights stay beside it as research outputs. No
 resident corpus, cold parent, new service or policy-training run was produced.
+
+Coverage clarification: each fine-tuning epoch optimized target ticks 0–479 in
+each training world (15 chunks of 32), with four-tick lookahead through input
+tick 483. The final 29 input ticks (484–512) were not used by the optimizer.
+Evaluation replayed all 513 inputs and scored the declared initialization-trimmed
+ranges. “Two epochs” therefore does not mean all 512 transition targets were
+optimized; the world groups identify complete worlds without crossing identities.
