@@ -214,6 +214,7 @@ class NodeActualFlyWorld:
         sensor = _decode(packet["sensordata"], (int(packet["sensordata"]["length"]),))
         control = _decode(packet["ctrl"], (int(packet["ctrl"]["length"]),))
         entity = _decode(packet["entityPosition"], (int(packet["entityPosition"]["length"]) // 3, 3))
+        entity_ids = _entity_ids(packet["entityIds"], entity)
         joint_position = np.empty((RESIDENTS, 126), np.float32)
         joint_velocity = np.empty_like(joint_position)
         segment_pose = np.empty((RESIDENTS, 69, 7), np.float32)
@@ -277,7 +278,7 @@ class NodeActualFlyWorld:
             "thorax_position": thorax_position,
             "thorax_rotation": thorax_rotation,
             "entity_position": entity.astype(np.float32),
-            "entity_ids": tuple(item.get("id", "") for item in self.ready["fixture"]["entities"]),
+            "entity_ids": entity_ids,
             "ecology": packet["ecology"],
             "actuator_state": packet["actuatorState"],
         }
@@ -461,6 +462,15 @@ def _organism_reserve(ecology: Mapping[str, Any], organism_id: str) -> float:
     raise RuntimeError(f"ecology observer lacks organism {organism_id}")
 
 
+def _entity_ids(ids, positions: np.ndarray) -> tuple[str, ...]:
+    ids = tuple(ids)
+    if (positions.shape != (len(ids), 3)
+            or any(not isinstance(identity, str) or not identity for identity in ids)
+            or len(set(ids)) != len(ids)):
+        raise ValueError("entity positions require aligned, unique, nonempty IDs")
+    return ids
+
+
 class ActualOutcomeEvaluator:
     """Phase labels from actual committed mechanics and conserved ecology only."""
 
@@ -480,9 +490,19 @@ class ActualOutcomeEvaluator:
         br = before.observer["thorax_rotation"]
         ar = after.observer["thorax_rotation"]
         delta = ap - bp
-        entity_delta = np.linalg.norm(
-            after.observer["entity_position"] - before.observer["entity_position"], axis=1
-        )
+        before_entities = before.observer["entity_position"]
+        after_entities = after.observer["entity_position"]
+        before_ids = _entity_ids(before.observer["entity_ids"], before_entities)
+        after_ids = _entity_ids(after.observer["entity_ids"], after_entities)
+        before_index = {identity: index for index, identity in enumerate(before_ids)}
+        matched = [(before_index[identity], index) for index, identity in enumerate(after_ids)
+                   if identity in before_index]
+        # Birth/removal changes the observer topology. Only persistent entities
+        # have a measured displacement; a new branch has no pre-birth position.
+        entity_delta = np.asarray([
+            np.linalg.norm(after_entities[new] - before_entities[old])
+            for old, new in matched
+        ], dtype=np.float32)
         for row in range(RESIDENTS):
             forward = br[row, :, 0]
             old_heading = np.arctan2(br[row, 1, 0], br[row, 0, 0])

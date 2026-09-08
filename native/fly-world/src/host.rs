@@ -191,6 +191,7 @@ pub struct ResearchSample {
     pub body_rotations: Vec<f64>,
     pub sensor_data: Vec<f64>,
     pub controls: Vec<f64>,
+    pub entity_ids: Vec<String>,
     pub entity_positions: Vec<f32>,
     pub body_map: Value,
     pub ecology: Value,
@@ -1418,6 +1419,12 @@ impl NativeFlyWorld {
             return Err("research BODY cache differs".into());
         }
         let geom_positions = self.physics.num(crate::ffi::NumField::GeomXpos)?;
+        let entity_ids = self
+            .host
+            .entities
+            .iter()
+            .map(|entity| entity.id.clone())
+            .collect();
         let mut entity_positions = Vec::with_capacity(self.host.entities.len() * 3);
         for entity in &self.host.entities {
             if let Some(geom) = entity.geoms.first() {
@@ -1439,6 +1446,7 @@ impl NativeFlyWorld {
             body_rotations: self.physics.num(crate::ffi::NumField::BodyXmat)?,
             sensor_data: self.physics.num(crate::ffi::NumField::SensorData)?,
             controls: self.physics.num(crate::ffi::NumField::Ctrl)?,
+            entity_ids,
             entity_positions,
             body_map: json!({"bodies":self.fixture_value["bodies"],"residents":self.host.residents}),
             ecology,

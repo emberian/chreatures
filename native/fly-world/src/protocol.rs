@@ -100,7 +100,7 @@ fn packet(sample: ResearchSample) -> Value {
         "bodyQuaternions": encode_f64(&sample.body_quaternions),
         "bodyRotations": encode_f64(&sample.body_rotations),
         "sensordata": encode_f64(&sample.sensor_data), "ctrl": encode_f64(&sample.controls),
-        "entityPosition": encode_f32(&sample.entity_positions),
+        "entityIds": sample.entity_ids, "entityPosition": encode_f32(&sample.entity_positions),
         "bodyMap": sample.body_map, "ecology": sample.ecology,
         "actuatorState": sample.actuator_state, "time": sample.time,
     })
