@@ -14,10 +14,8 @@ import subprocess
 from typing import Any, Mapping
 
 import numpy as np
-import torch
 
 from chreatures.cns_adapter_contract import load_service_artifact
-from research.anatomical_cns.model import AnatomicalCNS, CNSState
 
 from .collect import CollectionBundle, WorldSample
 from .curriculum import Plan, RESIDENTS
@@ -270,28 +268,39 @@ class NodeActualFlyWorld:
 
 class TorchFullCNS:
     def __init__(self, service: Path, device: str) -> None:
+        import torch
+        from research.anatomical_cns.model import AnatomicalCNS
+
         self.path = service.resolve()
         arrays, metadata = load_service_artifact(self.path)
         self.metadata = dict(metadata)
         self.metadata["cns_service_sha256"] = sha256_file(self.path)
         self.device = torch.device(device)
         self.model = AnatomicalCNS(arrays, device=self.device).eval()
-        self.state: CNSState | None = None
+        self.state = None
+        self._torch = torch
 
-    @torch.inference_mode()
     def step(
         self, optic_rgb: np.ndarray, body_afferents: np.ndarray,
         delivered_context: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
-        optic = torch.as_tensor(np.ascontiguousarray(optic_rgb), device=self.device)
-        body = torch.as_tensor(np.ascontiguousarray(body_afferents), device=self.device)
-        context = torch.as_tensor(np.ascontiguousarray(delivered_context), device=self.device)
-        # One public .01 step performs the frozen pair of internal dt/2 rate
-        # integrations and one .01 slow-state update. Calling twice would
-        # incorrectly advance adaptation/support/release twice.
-        latent, motor, self.state = self.model(
-            optic, body, context, self.state, dt=0.01
-        )
+        torch = self._torch
+        with torch.inference_mode():
+            optic = torch.as_tensor(
+                np.ascontiguousarray(optic_rgb), device=self.device
+            )
+            body = torch.as_tensor(
+                np.ascontiguousarray(body_afferents), device=self.device
+            )
+            context = torch.as_tensor(
+                np.ascontiguousarray(delivered_context), device=self.device
+            )
+            # One public .01 step performs the frozen pair of internal dt/2 rate
+            # integrations and one .01 slow-state update. Calling twice would
+            # incorrectly advance adaptation/support/release twice.
+            latent, motor, self.state = self.model(
+                optic, body, context, self.state, dt=0.01
+            )
         return (
             np.ascontiguousarray(latent.cpu().numpy(), dtype="<f4"),
             np.ascontiguousarray(motor.cpu().numpy(), dtype="<f4"),
@@ -408,6 +417,7 @@ def create_bundle(arguments: Any, plan: Plan) -> CollectionBundle:
         "scene_manifest_sha256": world.ready["fixture_sha256"],
         "scene_xml_sha256": world.ready["scene_xml_sha256"],
         "core_wasm_sha256": world.ready["core_wasm_sha256"],
+        "native_runtime_sha256": sha256_file(Path(arguments.runtime).resolve()),
         "author_trajectory_bank_sha256": sha256_file(Path(arguments.author_source).resolve()),
         "author_trajectory_manifest_sha256": sha256_file(Path(arguments.author_source).with_name("manifest.json")),
         "cns_format": cns.metadata["format"],
