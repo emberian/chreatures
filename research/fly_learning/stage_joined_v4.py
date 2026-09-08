@@ -30,7 +30,17 @@ def main() -> None:
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--revision", required=True)
     parser.add_argument("--batch", type=int, default=2)
+    parser.add_argument(
+        "--fixture",
+        type=Path,
+        default=ROOT / "native/browser-world/fixtures/fly-ecology/world.json",
+    )
     parser.add_argument("--cargo-target-dir", type=Path, required=True)
+    parser.add_argument(
+        "--physical-runtime",
+        type=Path,
+        help="frozen live directory supplying world-runtime.mjs and browser-world pkg",
+    )
     arguments = parser.parse_args()
     if arguments.output.exists():
         raise FileExistsError(arguments.output)
@@ -38,8 +48,8 @@ def main() -> None:
         character not in "0123456789abcdef" for character in arguments.revision
     ):
         raise ValueError("revision must be a lowercase full Git identity")
-    if arguments.batch != 2:
-        raise ValueError("the current joined V4 evidence contract is exactly B2")
+    if arguments.batch not in {2, 4}:
+        raise ValueError("the current joined V4 evidence contract supports B2 or B4")
 
     output = arguments.output.resolve()
     live = output / "live"
@@ -50,11 +60,21 @@ def main() -> None:
     )
 
     model = arguments.model.resolve()
-    shutil.copytree(model, live / "model")
+    # Model packs are immutable and large. Hard-link them when the staging tree
+    # shares a filesystem, while retaining a copy fallback for other volumes.
+    def link_or_copy(source: str, destination: str) -> str:
+        try:
+            Path(destination).hardlink_to(source)
+        except OSError:
+            shutil.copy2(source, destination)
+        return destination
+
+    shutil.copytree(model, live / "model", copy_function=link_or_copy)
     resident_manifest_path = live / "model/resident-manifest.json"
     resident = json.loads(resident_manifest_path.read_text())
     cns = json.loads((live / "model/cns-manifest.json").read_text())
     observer = json.loads((live / "model/observer-manifest.json").read_text())
+    release = json.loads((live / "model/release.json").read_text())
     if (
         resident.get("format") != "chreatures-browser-resident-v1"
         or resident.get("cnsServiceArtifactSha256")
@@ -62,40 +82,43 @@ def main() -> None:
         or observer.get("graph") != cns.get("identity", {}).get("graph")
     ):
         raise ValueError("joined model identities differ")
-    resident["config"]["batch"] = arguments.batch
-    resident["config"]["private_learning_version"] = "context-consequence-v1"
-    resident_manifest_path.write_text(
-        json.dumps(resident, sort_keys=True, separators=(",", ":")) + "\n"
-    )
-    model_files = {
-        path.name: {"bytes": path.stat().st_size, "sha256": sha256(path)}
-        for path in sorted((live / "model").iterdir())
-        if path.is_file() and path.name != "release.json"
-    }
-    release = {
-        "format": "chreatures-browser-release-v1",
-        "sourceRevision": arguments.revision,
-        "serviceArtifactSha256": cns["serviceArtifactSha256"],
-        "residentArtifactSha256": resident["artifactSha256"],
-        "files": model_files,
-        "totalBytes": sum(item["bytes"] for item in model_files.values()),
-    }
-    (live / "model/release.json").write_text(
-        json.dumps(release, sort_keys=True, separators=(",", ":")) + "\n"
-    )
+    if resident.get("config", {}).get("batch") != arguments.batch:
+        raise ValueError("resident pack batch differs from the staged physical cohort")
+    if resident["config"].get("private_learning_version") != "context-consequence-v1":
+        raise ValueError("resident pack lacks the current private learning contract")
+    if (
+        release.get("format") != "chreatures-browser-release-v1"
+        or release.get("sourceRevision") != arguments.revision
+        or release.get("serviceArtifactSha256") != cns["serviceArtifactSha256"]
+        or release.get("residentArtifactSha256") != resident["artifactSha256"]
+    ):
+        raise ValueError("model release identities differ from the staged inputs")
+    for name, identity in release.get("files", {}).items():
+        path = live / "model" / name
+        if path.stat().st_size != identity["bytes"] or sha256(path) != identity["sha256"]:
+            raise ValueError(f"model release file differs: {name}")
 
     browser = ROOT / "native/browser-world"
-    fixture_source = browser / "fixtures/fly-ecology"
-    fixture = json.loads((fixture_source / "world.json").read_text())
+    fixture_path = arguments.fixture.resolve()
+    fixture_source = fixture_path.parent
+    fixture = json.loads(fixture_path.read_text())
+    if len(fixture.get("bodies", ())) != arguments.batch:
+        raise ValueError("fixture body count differs from the staged resident batch")
     physical = {
-        "fixtures/fly-ecology/world.json": fixture_source / "world.json",
-        "fixtures/fly-ecology/scene.xml": fixture_source / "scene.xml",
+        "fixtures/fly-ecology/world.json": fixture_path,
+        "fixtures/fly-ecology/scene.xml": fixture_source / fixture["scene_xml"],
         "fixtures/fly-ecology/motor92.json": ROOT
         / "research/fly_embodiment/motor92-channel-schema.json",
-        "pkg/chreatures_browser_world.js": browser
-        / "pkg/chreatures_browser_world.js",
-        "pkg/chreatures_browser_world_bg.wasm": browser
-        / "pkg/chreatures_browser_world_bg.wasm",
+        "pkg/chreatures_browser_world.js": (
+            arguments.physical_runtime / "pkg/chreatures_browser_world.js"
+            if arguments.physical_runtime
+            else browser / "pkg/chreatures_browser_world.js"
+        ),
+        "pkg/chreatures_browser_world_bg.wasm": (
+            arguments.physical_runtime / "pkg/chreatures_browser_world_bg.wasm"
+            if arguments.physical_runtime
+            else browser / "pkg/chreatures_browser_world_bg.wasm"
+        ),
         "vendor/mujoco/mujoco.js": browser
         / "node_modules/@mujoco/mujoco/mujoco.js",
         "vendor/mujoco/mujoco.wasm": browser
@@ -115,13 +138,16 @@ def main() -> None:
     for name, source in physical.items():
         copy(source, live / name)
 
-    runtime_source = (browser / "runtime.mjs").read_text()
-    (live / "world-runtime.mjs").write_text(
-        "// GENERATED from native/browser-world/runtime.mjs.\n"
-        + runtime_source.replace(
-            'import("@mujoco/mujoco")', 'import("./vendor/mujoco/mujoco.js")'
+    if arguments.physical_runtime:
+        copy(arguments.physical_runtime / "world-runtime.mjs", live / "world-runtime.mjs")
+    else:
+        runtime_source = (browser / "runtime.mjs").read_text()
+        (live / "world-runtime.mjs").write_text(
+            "// GENERATED from native/browser-world/runtime.mjs.\n"
+            + runtime_source.replace(
+                'import("@mujoco/mujoco")', 'import("./vendor/mujoco/mujoco.js")'
+            )
         )
-    )
     subprocess.run(
         [
             "python3",
