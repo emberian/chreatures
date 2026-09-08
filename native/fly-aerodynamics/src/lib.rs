@@ -189,20 +189,28 @@ impl ModelUnitScale {
         Ok(value / self.seconds_per_time_unit)
     }
 
+    pub fn model_force_units_per_newton(self) -> Result<f64, AeroError> {
+        self.validate()?;
+        Ok(self.seconds_per_time_unit * self.seconds_per_time_unit
+            / (self.kilograms_per_mass_unit * self.meters_per_length_unit))
+    }
+
+    pub fn model_torque_units_per_newton_meter(self) -> Result<f64, AeroError> {
+        self.validate()?;
+        Ok(self.seconds_per_time_unit * self.seconds_per_time_unit
+            / (self.kilograms_per_mass_unit
+                * self.meters_per_length_unit
+                * self.meters_per_length_unit))
+    }
+
     pub fn force_to_model(self, force_n: Vec3) -> Result<Vec3, AeroError> {
         self.validate()?;
-        Ok(force_n
-            / (self.kilograms_per_mass_unit * self.meters_per_length_unit
-                / (self.seconds_per_time_unit * self.seconds_per_time_unit)))
+        Ok(force_n * self.model_force_units_per_newton()?)
     }
 
     pub fn torque_to_model(self, torque_n_m: Vec3) -> Result<Vec3, AeroError> {
         self.validate()?;
-        Ok(torque_n_m
-            / (self.kilograms_per_mass_unit
-                * self.meters_per_length_unit
-                * self.meters_per_length_unit
-                / (self.seconds_per_time_unit * self.seconds_per_time_unit)))
+        Ok(torque_n_m * self.model_torque_units_per_newton_meter()?)
     }
 }
 
@@ -270,6 +278,31 @@ pub struct WingGeometry {
     pub normal_local: Vec3,
     pub planform_area_m2: f64,
     pub elements: &'static [BladeElement],
+}
+
+/// Configuration and immutable geometry validated once outside the physics
+/// hot path.
+#[derive(Clone, Copy, Debug)]
+pub struct PreparedWing {
+    config: AeroConfig,
+    geometry: &'static WingGeometry,
+}
+
+impl PreparedWing {
+    pub fn new(config: AeroConfig, geometry: &'static WingGeometry) -> Result<Self, AeroError> {
+        config.validate()?;
+        geometry.validate()?;
+        Ok(Self { config, geometry })
+    }
+
+    pub fn evaluate_into(
+        &self,
+        kinematics: &WingKinematics,
+        element_loads: &mut [ElementLoad],
+    ) -> Result<WingLoad, AeroError> {
+        kinematics.validate()?;
+        evaluate_validated(&self.config, self.geometry, kinematics, element_loads)
+    }
 }
 
 impl WingGeometry {
@@ -432,6 +465,15 @@ pub fn evaluate_into(
     config.validate()?;
     geometry.validate()?;
     kinematics.validate()?;
+    evaluate_validated(config, geometry, kinematics, element_loads)
+}
+
+fn evaluate_validated(
+    config: &AeroConfig,
+    geometry: &WingGeometry,
+    kinematics: &WingKinematics,
+    element_loads: &mut [ElementLoad],
+) -> Result<WingLoad, AeroError> {
     if element_loads.len() < geometry.elements.len() {
         return Err(AeroError::OutputTooShort {
             required: geometry.elements.len(),

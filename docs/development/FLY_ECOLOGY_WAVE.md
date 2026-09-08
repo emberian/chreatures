@@ -18,11 +18,24 @@ identified muscles. There is no supplied production gait or destination rule.
 
 Physics uses the author model's millimetres, seconds and radians, with a
 0.0001-second integration step. Its mass base unit is not explicitly declared
-by the source; retain model mass units rather than silently asserting SI mass.
+by the source. The aerodynamic extension explicitly declares an inferred gram
+mass scale: the imported total model mass then corresponds to 1.02531 mg.
+That calibration is included in the aerodynamic identity; it is not an author
+measurement or a conversion of synthetic metabolic quantities into joules.
 Ecology positions cross a millimetre-to-metre boundary. Material quantities
 and chemical energy are separately declared synthetic conserved quantities.
 Control and sensation advance every 0.01 seconds, after 100 physical steps.
 CNS recurrence takes two 0.005-second substeps per control transition.
+
+The current wing load model evaluates 24 mesh-derived spanwise strips per wing
+at each physics substep. It uses actual wing pose and body-origin velocity,
+relative to the fixture's air velocity. The Euler host calls `mj_step1`, computes
+external loads from refreshed kinematics, then calls `mj_step2`. The native host
+can apply the individual forces at their world points; the browser host applies
+their equivalent summed force and moment about the wing's actual center of mass.
+No wingbeat or desired trajectory is supplied. This translational quasi-steady
+model omits rotational circulation, wake history and added mass; it does not
+establish flight capability. See `native/fly-aerodynamics/DESIGN.md`.
 
 ## Fixed CNS V4 interface
 

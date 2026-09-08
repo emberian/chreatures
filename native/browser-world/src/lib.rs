@@ -1,17 +1,19 @@
 //! Full fly embodiment: MuJoCo owns mechanics, Rust owns transduction and ecology.
 //! Only retina5313 and body807 leave this boundary for the actual MaleCNS.
-mod fly_optics;
 mod fly_acoustics;
+pub mod fly_aerodynamics;
+mod fly_optics;
 mod fly_senses;
 mod fly_types;
 mod route_geometry;
 use chreatures_ecology_core as eco;
+pub use fly_aerodynamics::AeroWorld;
+pub use fly_types::Config as FlyWorldConfig;
 use fly_types::*;
+pub use route_geometry::RouteGeometry;
 use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-pub use fly_types::Config as FlyWorldConfig;
-pub use route_geometry::RouteGeometry;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 struct HostEcology {
@@ -75,12 +77,17 @@ fn mix_wing_afferents(out: &mut [f32], frame: &fly_acoustics::AcousticFrame) -> 
     for (i, row) in out.chunks_exact_mut(CHANNELS).enumerate() {
         for antenna in 0..2 {
             for axis in 0..3 {
-                row[40 + 3 * antenna + axis] += frame.antenna_airflow_local_mm_s[i][antenna][axis] as f32;
+                row[40 + 3 * antenna + axis] +=
+                    frame.antenna_airflow_local_mm_s[i][antenna][axis] as f32;
             }
         }
-        for band in 0..16 { row[46 + band] += frame.acoustic_bands[i][band] as f32; }
+        for band in 0..16 {
+            row[46 + band] += frame.acoustic_bands[i][band] as f32;
+        }
     }
-    if out.iter().any(|v| !v.is_finite()) { return Err("nonfinite endogenous afferent".into()); }
+    if out.iter().any(|v| !v.is_finite()) {
+        return Err("nonfinite endogenous afferent".into());
+    }
     Ok(())
 }
 
@@ -209,34 +216,67 @@ impl WorldCore {
         let stable = |c: &Config| {
             let mut v = serde_json::to_value(c).unwrap();
             let m = v.as_object_mut().unwrap();
-            for key in ["source_mjcf_sha256", "geoms", "material_bindings"] { m.remove(key); }
+            for key in ["source_mjcf_sha256", "geoms", "material_bindings"] {
+                m.remove(key);
+            }
             v
         };
-        if !hash(&next.source_mjcf_sha256) || stable(&next) != stable(&self.config)
+        if !hash(&next.source_mjcf_sha256)
+            || stable(&next) != stable(&self.config)
             || next.geoms.len() < self.config.geoms.len()
-            || next.geoms.iter().enumerate().any(|(i,g)|g.id!=i)
-            || serde_json::to_value(&next.geoms[..self.config.geoms.len()]).unwrap()!=serde_json::to_value(&self.config.geoms).unwrap()
-            || next.material_bindings.len()<self.config.material_bindings.len()
-            || serde_json::to_value(&next.material_bindings[..self.config.material_bindings.len()]).unwrap()!=serde_json::to_value(&self.config.material_bindings).unwrap()
-            || next.material_bindings.iter().any(|b|b.geoms.iter().any(|i|*i>=next.geoms.len())) {
+            || next.geoms.iter().enumerate().any(|(i, g)| g.id != i)
+            || serde_json::to_value(&next.geoms[..self.config.geoms.len()]).unwrap()
+                != serde_json::to_value(&self.config.geoms).unwrap()
+            || next.material_bindings.len() < self.config.material_bindings.len()
+            || serde_json::to_value(&next.material_bindings[..self.config.material_bindings.len()])
+                .unwrap()
+                != serde_json::to_value(&self.config.material_bindings).unwrap()
+            || next
+                .material_bindings
+                .iter()
+                .any(|b| b.geoms.iter().any(|i| *i >= next.geoms.len()))
+        {
             return Err(err("physical rebind changed existing world semantics"));
         }
         for binding in &next.material_bindings[self.config.material_bindings.len()..] {
             let present = match &binding.store {
-                eco::StoreId::Region(id)=>self.config.ecology.regions.iter().any(|s|&s.id==id),
-                eco::StoreId::Organism(id)=>self.ecology.state().organisms.iter().any(|s|&s.id==id)
-                    ||self.ecology.pending_delta().is_some_and(|d|d.physical_creations.iter().any(|p|p.material_store==binding.store)),
-                eco::StoreId::Packet(id)=>self.ecology.state().packets.iter().any(|s|&s.id==id),
-                eco::StoreId::Structure(id)=>self.ecology.state().structures.iter().any(|s|&s.id==id)
-                    ||self.ecology.pending_delta().is_some_and(|d|d.physical_creations.iter().any(|p|p.material_store==binding.store)),
+                eco::StoreId::Region(id) => self.config.ecology.regions.iter().any(|s| &s.id == id),
+                eco::StoreId::Organism(id) => {
+                    self.ecology.state().organisms.iter().any(|s| &s.id == id)
+                        || self.ecology.pending_delta().is_some_and(|d| {
+                            d.physical_creations
+                                .iter()
+                                .any(|p| p.material_store == binding.store)
+                        })
+                }
+                eco::StoreId::Packet(id) => {
+                    self.ecology.state().packets.iter().any(|s| &s.id == id)
+                }
+                eco::StoreId::Structure(id) => {
+                    self.ecology.state().structures.iter().any(|s| &s.id == id)
+                        || self.ecology.pending_delta().is_some_and(|d| {
+                            d.physical_creations
+                                .iter()
+                                .any(|p| p.material_store == binding.store)
+                        })
+                }
             };
-            if !present {return Err(err("physical rebind invented an unaccounted material store"));}
+            if !present {
+                return Err(err(
+                    "physical rebind invented an unaccounted material store",
+                ));
+            }
         }
         if let Some(p) = &mut self.pending {
-            if p.previous_config.is_none(){p.previous_config=Some(self.config.clone());}
-            p.state.model=next.source_mjcf_sha256.clone();
-        } else {self.state.model=next.source_mjcf_sha256.clone();}
-        self.config=next;Ok(())
+            if p.previous_config.is_none() {
+                p.previous_config = Some(self.config.clone());
+            }
+            p.state.model = next.source_mjcf_sha256.clone();
+        } else {
+            self.state.model = next.source_mjcf_sha256.clone();
+        }
+        self.config = next;
+        Ok(())
     }
     pub fn afferents(&self) -> Vec<f32> {
         self.state.afferents.clone()
@@ -358,15 +398,27 @@ impl WorldCore {
     /// Local developmental dynamics propose physical growth. Only the host can
     /// measure geometry and accept a collision-free subset; no CNS input uses it.
     pub fn propose_growth(&mut self, input: &str) -> Result<String, String> {
-        if self.pending.is_some() { return Err(err("ecological mutation pending")); }
-        let input: eco::GrowthInput = serde_json::from_str(input).map_err(|e| err(e.to_string()))?;
-        if input.dt_s != DT { return Err(err("growth and physical tick differ")); }
-        let proposal = self.ecology.propose_growth(&input).map_err(|e| err(e.to_string()))?;
+        if self.pending.is_some() {
+            return Err(err("ecological mutation pending"));
+        }
+        let input: eco::GrowthInput =
+            serde_json::from_str(input).map_err(|e| err(e.to_string()))?;
+        if input.dt_s != DT {
+            return Err(err("growth and physical tick differ"));
+        }
+        let proposal = self
+            .ecology
+            .propose_growth(&input)
+            .map_err(|e| err(e.to_string()))?;
         serde_json::to_string(&proposal).map_err(|e| err(e.to_string()))
     }
     pub fn discard_growth(&mut self, token: &str) -> Result<(), String> {
-        if self.pending.is_some() { return Err(err("ecological mutation pending")); }
-        self.ecology.discard_growth(token).map_err(|e| err(e.to_string()))?;
+        if self.pending.is_some() {
+            return Err(err("ecological mutation pending"));
+        }
+        self.ecology
+            .discard_growth(token)
+            .map_err(|e| err(e.to_string()))?;
         if self.host.growth_token.as_deref() == Some(token) {
             self.host.growth_token = None;
             self.host.construction_sites.clear();
@@ -455,16 +507,29 @@ impl WorldCore {
                     linear_velocity_mm_s: velocity[3..].try_into().unwrap(),
                 }
             };
-            let bodies = self.config.bodies.iter().map(|b| fly_acoustics::ResidentKinematics {
-                root: motion(b.root), wings: b.wings.map(motion),
-                wing_centroid_local_mm: b.wing_centroid_local_mm,
-                wing_source_gain: b.wing_source_gain,
-                antenna_position_mm: std::array::from_fn(|i| {
-                    let a = &b.olfactory_sites[i]; packet.site(sample, a.body, a.position)
-                }),
-                antenna_world_from_local: std::array::from_fn(|i| packet.rot(sample, b.olfactory_sites[i].body).try_into().unwrap()),
-            }).collect::<Vec<_>>();
-            acoustics.push_sample(self.state.time + (sample + 1) as f64 * period, &bodies)
+            let bodies = self
+                .config
+                .bodies
+                .iter()
+                .map(|b| fly_acoustics::ResidentKinematics {
+                    root: motion(b.root),
+                    wings: b.wings.map(motion),
+                    wing_centroid_local_mm: b.wing_centroid_local_mm,
+                    wing_source_gain: b.wing_source_gain,
+                    antenna_position_mm: std::array::from_fn(|i| {
+                        let a = &b.olfactory_sites[i];
+                        packet.site(sample, a.body, a.position)
+                    }),
+                    antenna_world_from_local: std::array::from_fn(|i| {
+                        packet
+                            .rot(sample, b.olfactory_sites[i].body)
+                            .try_into()
+                            .unwrap()
+                    }),
+                })
+                .collect::<Vec<_>>();
+            acoustics
+                .push_sample(self.state.time + (sample + 1) as f64 * period, &bodies)
                 .map_err(|e| err(e.to_string()))?;
         }
         let mut next = self.state.clone();
@@ -520,20 +585,29 @@ impl WorldCore {
         next.time += dt;
         next.emissions
             .retain(|e| next.time - e.born < e.duration + 1.0);
-        let mut respiratory_contacts=Vec::new();
+        let mut respiratory_contacts = Vec::new();
         for b in &self.config.bodies {
-            let p=packet.pos(packet.samples()-1,b.root).map(|x|x*0.001);
-            if let Some(region)=self.config.ecology.regions.iter().min_by(|a,b|{
-                let da=(0..3).map(|k|(a.center_m[k]-p[k]).powi(2)).sum::<f64>();
-                let db=(0..3).map(|k|(b.center_m[k]-p[k]).powi(2)).sum::<f64>();da.total_cmp(&db)
+            let p = packet.pos(packet.samples() - 1, b.root).map(|x| x * 0.001);
+            if let Some(region) = self.config.ecology.regions.iter().min_by(|a, b| {
+                let da = (0..3).map(|k| (a.center_m[k] - p[k]).powi(2)).sum::<f64>();
+                let db = (0..3).map(|k| (b.center_m[k] - p[k]).powi(2)).sum::<f64>();
+                da.total_cmp(&db)
             }) {
-                respiratory_contacts.push(eco::ContactEvent{a:eco::StoreId::Region(region.id.clone()),b:eco::StoreId::Organism(b.ecology_id.clone()),conductance_m3_s:vec![2e-14,0.0,0.0,0.0,1e-12,1e-12,0.0,1e-12]});
+                respiratory_contacts.push(eco::ContactEvent {
+                    a: eco::StoreId::Region(region.id.clone()),
+                    b: eco::StoreId::Organism(b.ecology_id.clone()),
+                    conductance_m3_s: vec![2e-14, 0.0, 0.0, 0.0, 1e-12, 1e-12, 0.0, 1e-12],
+                });
             }
         }
         // Anchored living surfaces exchange with their containing material cell.
         for organism in &self.ecology.state().organisms {
-            if let Some(region)=&organism.anchored_region {
-                respiratory_contacts.push(eco::ContactEvent{a:eco::StoreId::Region(region.clone()),b:eco::StoreId::Organism(organism.id.clone()),conductance_m3_s:vec![2e-12,2e-13,2e-13,2e-13,1e-12,1e-12,0.0,1e-12]});
+            if let Some(region) = &organism.anchored_region {
+                respiratory_contacts.push(eco::ContactEvent {
+                    a: eco::StoreId::Region(region.clone()),
+                    b: eco::StoreId::Organism(organism.id.clone()),
+                    conductance_m3_s: vec![2e-12, 2e-13, 2e-13, 2e-13, 1e-12, 1e-12, 0.0, 1e-12],
+                });
             }
         }
         let input = eco::TickInput {
@@ -583,10 +657,12 @@ impl WorldCore {
             Ok(s) => {
                 next.afferents = s.afferents;
                 if let Err(error) = mix_wing_afferents(&mut next.afferents, &acoustics.frame()) {
-                    self.ecology.abort_step(&delta.token).map_err(|e| err(e.to_string()))?;
+                    self.ecology
+                        .abort_step(&delta.token)
+                        .map_err(|e| err(e.to_string()))?;
                     return Err(err(error));
                 }
-            },
+            }
             Err(e) => {
                 self.ecology
                     .abort_step(&delta.token)
@@ -631,7 +707,9 @@ impl WorldCore {
         self.ecology
             .abort_step(token)
             .map_err(|e| err(e.to_string()))?;
-        if let Some(previous)=self.pending.take().and_then(|p|p.previous_config){self.config=previous;}
+        if let Some(previous) = self.pending.take().and_then(|p| p.previous_config) {
+            self.config = previous;
+        }
         Ok(())
     }
     pub fn visitor_sound(
@@ -755,7 +833,8 @@ impl WorldCore {
             || match e.acoustics.last_sample_time_s {
                 Some(time) => (time - e.state.time).abs() > 1e-9,
                 None => e.state.time != 0.0,
-            } {
+            }
+        {
             return Err(err("wing acoustics and physical snapshot clocks differ"));
         }
         let acoustics = fly_acoustics::FlyAcoustics::restore(self.config.acoustics, e.acoustics)
