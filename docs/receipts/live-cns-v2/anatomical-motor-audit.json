@@ -1,0 +1,227 @@
+{
+  "format": "chreatures-anatomical-motor-audit-v1",
+  "audit_date": "2026-09-07",
+  "source_revision": "a278f45b495080e12f43ebb0390e8a75bf8a4f7a",
+  "execution": {
+    "kind": "read-only metadata and memory-mapped edge audit",
+    "node": "hbox",
+    "graph_directory": "/tank/chreatures/data/malecns/derived",
+    "metadata_file": "/tank/chreatures/data/malecns/derived/neurons.npz",
+    "edge_source_index_file": "/tank/chreatures/data/malecns/derived/indices.npy",
+    "edge_synapse_count_file": "/tank/chreatures/data/malecns/derived/counts.npy",
+    "repository_manifest": "data/malecns/manifest.json",
+    "method": [
+      "Load neurons.npz without pickle and indices.npy/counts.npy with NumPy memory mapping.",
+      "Count exact metadata values with boolean equality masks; nonempty field coverage is count(value != '').",
+      "For each effective neurotransmitter k, source-edge count is count(effective_nt[indices] == k) and source-synapse count is sum(counts[effective_nt[indices] == k]).",
+      "Zero-coupling edge and synapse counts use sign[indices] == 0.",
+      "No graph state was advanced and no service or resident was contacted."
+    ]
+  },
+  "dataset": {
+    "name": "MaleCNS connectome",
+    "version": "v1.0",
+    "scope": "adult male Drosophila brain and ventral nerve cord; curated Traced neurons",
+    "dataset_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "neurons": 165122,
+    "directed_edges": 25563197,
+    "synapses": 124025046
+  },
+  "anatomical_populations": {
+    "motor_neurons_exact": {
+      "selection": "superclasses in ['cb_motor', 'vnc_motor']",
+      "count": 815,
+      "cb_motor": 107,
+      "vnc_motor": 708
+    },
+    "broad_efferent": {
+      "selection": "repository efferent selector: superclass contains '_motor' or '_efferent', or starts with 'efferent_'",
+      "count": 925,
+      "distinction": "This broader interface population includes 110 non-cb_motor/non-vnc_motor efferents and must not be reported as 925 motor neurons."
+    },
+    "descending_neuron": 1314,
+    "ascending_neuron": 1846,
+    "motor_metadata_coverage": {
+      "denominator": 815,
+      "types": {
+        "nonempty": 805,
+        "unique_nonempty": 185
+      },
+      "manc_types": {
+        "nonempty": 699,
+        "unique_nonempty": 142
+      },
+      "sides": {
+        "nonempty": 815,
+        "unique_nonempty": 2
+      },
+      "soma_neuromeres": {
+        "nonempty": 727,
+        "unique_nonempty": 15
+      },
+      "exit_nerves": {
+        "nonempty": 814,
+        "unique_nonempty": 21
+      },
+      "subclasses": {
+        "nonempty": 815,
+        "unique_nonempty": 11
+      },
+      "classes": {
+        "nonempty": 0,
+        "unique_nonempty": 0
+      },
+      "entry_nerves": {
+        "nonempty": 0,
+        "unique_nonempty": 0
+      },
+      "root_sides": {
+        "nonempty": 0,
+        "unique_nonempty": 0
+      }
+    },
+    "thoracic_motor_soma_neuromeres": {
+      "T1": 173,
+      "T2": 175,
+      "T3": 152
+    },
+    "auditory": {
+      "selection": "subclasses == 'auditory'",
+      "annotated_total": 115,
+      "cb_sensory_and_current_body_afferent_eligible": 114,
+      "omitted_by_current_body_selector": 1,
+      "omission_reason": "One auditory row has an empty superclass; current V2 body rows select only cb_sensory or vnc_sensory."
+    },
+    "chordotonal_organ": {
+      "selection": "subclasses == 'chordotonal organ'",
+      "annotated_total": 425,
+      "vnc_sensory_and_current_body_afferent_eligible": 403,
+      "sensory_ascending_omitted_by_current_body_selector": 22,
+      "omission_reason": "Current V2 body rows select only cb_sensory or vnc_sensory, not sensory_ascending."
+    },
+    "muscle_mapping_boundary": {
+      "retained_fields": [
+        "types",
+        "manc_types",
+        "subclasses",
+        "sides",
+        "soma_neuromeres",
+        "exit_nerves"
+      ],
+      "absent_fields": [
+        "muscle_id",
+        "muscle_name",
+        "neuromuscular_junction",
+        "joint",
+        "actuator"
+      ],
+      "finding": "The retained graph metadata can constrain anatomical motor pools, but it is not an explicit motor-neuron-to-muscle or motor-neuron-to-MuJoCo-actuator mapping table."
+    }
+  },
+  "effective_coupling": {
+    "weight_formula": "synapse_count / postsynaptic_retained_incoming_synapse_count * source_neuron_sign",
+    "sign_model": {
+      "acetylcholine": 1.0,
+      "gaba": -1.0,
+      "glutamate": -1.0,
+      "histamine": -1.0,
+      "dopamine": 0.0,
+      "octopamine": 0.0,
+      "serotonin": 0.0,
+      "unavailable": 0.0
+    },
+    "zero_sign_source_edges": 938454,
+    "zero_sign_source_synapses": 2864102,
+    "zero_sign_breakdown": {
+      "dopamine": {
+        "neurons": 395,
+        "source_edges": 244694,
+        "source_synapses": 590338
+      },
+      "octopamine": {
+        "neurons": 133,
+        "source_edges": 205129,
+        "source_synapses": 625893
+      },
+      "serotonin": {
+        "neurons": 375,
+        "source_edges": 187326,
+        "source_synapses": 599868
+      },
+      "unavailable": {
+        "neurons": 2524,
+        "source_edges": 301305,
+        "source_synapses": 1048003
+      }
+    },
+    "distinction": "The complete topology is retained in the artifact, but these source edges currently contribute exactly zero to recurrent dynamics."
+  },
+  "deployed_v2_path": {
+    "information_path": "optic RGB and 43 body-local channels -> learned afferent currents -> full recurrent MaleCNS graph -> learned rank-64 factorization producing Z512 -> Rust resident -> 12 abstract actions -> engineered gait and PD actuation",
+    "readout": {
+      "projection_shape": [
+        64,
+        165122
+      ],
+      "output_shape": [
+        512,
+        64
+      ],
+      "masked_injected_rows": 15340,
+      "fixed_population_means": false,
+      "anatomical_motor_pool_decoder": false,
+      "linear_projection_rank_upper_bound": 64,
+      "rank_scope": "The linear map U V has rank at most 64; tanh outputs depend on 64 projected values. This does not claim that a matrix of Z observations has rank at most 64."
+    },
+    "body_afferent_adapter": {
+      "shape": "43 -> 128 tanh -> 11233 sigmoid",
+      "target_selection": "superclasses in ['cb_sensory', 'vnc_sensory']",
+      "modality_blocked": false,
+      "individual_leg_joint_angles_present": false,
+      "individual_leg_joint_velocities_present": false,
+      "sound_channels": 3,
+      "sound_targets_restricted_to_auditory_neurons": false
+    },
+    "actuation": {
+      "abstract_actions": [
+        "thrust",
+        "yaw",
+        "gaze_pitch",
+        "posture",
+        "grip",
+        "signal_low",
+        "signal_mid",
+        "signal_high",
+        "eat",
+        "release",
+        "secrete",
+        "allocate"
+      ],
+      "physical_mechanism": "Engineered tripod oscillator, hip/knee target generation, twelve joint PD torques, and root posture correction.",
+      "motor_neuron_to_muscle_decode": false,
+      "anatomical_fly_musculature": false
+    }
+  },
+  "code_references": [
+    "site/live/engine.js:69",
+    "site/live/cns-webgpu.js:4",
+    "site/live/cns-webgpu.js:39",
+    "research/sensorimotor_skills/cns_adapter.py:163",
+    "research/sensorimotor_skills/cns_adapter.py:253",
+    "research/sensorimotor_skills/cns_adapter.py:411",
+    "research/sensorimotor_skills/cns_adapter.py:443",
+    "research/sensorimotor_skills/cns_adapter.py:551",
+    "scripts/acquire_malecns.py:265",
+    "native/browser-world/runtime.mjs:5",
+    "native/browser-world/src/lib.rs:319",
+    "native/browser-world/src/lib.rs:681",
+    "docs/development/CNS_DYNAMICS_V2.md:63",
+    "docs/development/IN_TAB_PHYSICS.md:93",
+    "docs/NEURAL_PORTS.md:3"
+  ],
+  "interpretation": {
+    "executed": "The full curated graph is advanced with the current engineered graded-rate dynamics and learned interfaces.",
+    "not_executed": "No explicit anatomical motor-neuron-to-muscle transform or modality-specific auditory/proprioceptive transduction is deployed.",
+    "historical_boundary": "The 384 fixed population-mean neural-port interface is historical and separate; deployed V2 uses the learned rank-64 Z512 readout."
+  }
+}
