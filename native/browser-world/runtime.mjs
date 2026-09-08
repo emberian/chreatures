@@ -70,6 +70,19 @@ function compileModel(mj, xml, fixture, assets) {
     vfs.delete();
   }
 }
+// Rebuilding MuJoCo's geometry constants uses the reference pose as scratch.
+// Preserve the complete integration state while refreshing collision bounds.
+function refreshModelConstants(mj, model, data, scratch) {
+  const mask = mj.mjtState.mjSTATE_INTEGRATION.value;
+  const buffer = scratch ?? new mj.DoubleBuffer(mj.mj_stateSize(model, mask));
+  try {
+    mj.mj_getState(model, data, buffer, mask);
+    mj.mj_setConst(model, data);
+    mj.mj_setState(model, data, buffer.GetView(), mask);
+  } finally {
+    if (!scratch) buffer.delete();
+  }
+}
 function xmlAttribute(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
 }
@@ -830,6 +843,7 @@ class BrowserWorld {
       model.geom_conaffinity.set(old.model.geom_conaffinity.subarray(0, old.model.ngeom));
       model.actuator_forcerange.set(old.model.actuator_forcerange);
       model.actuator_gainprm.set(old.model.actuator_gainprm);
+      refreshModelConstants(this.#mj, model, data);
       this.#mj.mj_forward(model, data);
       for (const item of items) {
         const name = `ecology:${item.physics_binding}`;
@@ -886,6 +900,7 @@ class BrowserWorld {
     });
     const changes = [...removals, ...(proposal.geom_updates ?? [])];
     const saved = new Map();
+    let geometryChanged = false;
     try {
       for (const change of changes) {
         const geom = change.geom ?? change.reserved_geom;
@@ -901,12 +916,21 @@ class BrowserWorld {
           m.geom_contype[geom] = 0; m.geom_conaffinity[geom] = 0; m.geom_rgba[geom * 4 + 3] = 0;
           continue;
         }
-        if (change.size) { checkNumbers(change.size, 3, "Proposed geom size"); m.geom_size.set(change.size, geom * 3); }
-        if (change.position) { checkNumbers(change.position, 3, "Proposed geom position"); m.geom_pos.set(change.position, geom * 3); }
+        if (change.size) {
+          checkNumbers(change.size, 3, "Proposed geom size");
+          geometryChanged ||= change.size.some((x, i) => x !== m.geom_size[geom * 3 + i]);
+          m.geom_size.set(change.size, geom * 3);
+        }
+        if (change.position) {
+          checkNumbers(change.position, 3, "Proposed geom position");
+          geometryChanged ||= change.position.some((x, i) => x !== m.geom_pos[geom * 3 + i]);
+          m.geom_pos.set(change.position, geom * 3);
+        }
         if (change.rgba) { checkNumbers(change.rgba, 4, "Proposed geom color"); m.geom_rgba.set(change.rgba, geom * 4); }
         if (change.contype !== undefined) m.geom_contype[geom] = change.contype;
         if (change.conaffinity !== undefined) m.geom_conaffinity[geom] = change.conaffinity;
       }
+      if (geometryChanged) refreshModelConstants(this.#mj, m, this.#data, this.#buffers.state);
       this.#mj.mj_forward(m, this.#data);
       return {
         applied_geoms: [...saved.keys()],
@@ -921,6 +945,7 @@ class BrowserWorld {
             m.geom_rgba.set(old.rgba, geom * 4); m.geom_contype[geom] = old.contype;
             m.geom_conaffinity[geom] = old.conaffinity;
           }
+          if (geometryChanged) refreshModelConstants(this.#mj, m, this.#data, this.#buffers.state);
           this.#mj.mj_forward(m, this.#data); topology?.rollback();
         },
       };
@@ -930,6 +955,7 @@ class BrowserWorld {
         m.geom_rgba.set(old.rgba, geom * 4); m.geom_contype[geom] = old.contype;
         m.geom_conaffinity[geom] = old.conaffinity;
       }
+      if (geometryChanged) refreshModelConstants(this.#mj, m, this.#data, this.#buffers.state);
       this.#mj.mj_forward(m, this.#data);
       topology?.rollback();
       throw error;
@@ -1426,17 +1452,18 @@ class BrowserWorld {
       this.#routeGeometry.restore(snapshot.routeGeometry);
       this.#routeTopologyRevision = snapshot.routeTopologyRevision;
       this.#wingDiagnostics.set(snapshot.wingDiagnostics);
+      this.#model.geom_size.set(snapshot.geomSize);
+      this.#model.geom_pos.set(snapshot.geomPos);
+      this.#model.geom_rgba.set(snapshot.geomRGBA);
+      this.#model.geom_contype.set(snapshot.geomContype);
+      this.#model.geom_conaffinity.set(snapshot.geomConaffinity);
+      this.#mj.mj_setConst(this.#model, this.#data);
       this.#mj.mj_setState(
         this.#model,
         this.#data,
         snapshot.physical,
         this.#mj.mjtState.mjSTATE_INTEGRATION.value,
       );
-      this.#model.geom_size.set(snapshot.geomSize);
-      this.#model.geom_pos.set(snapshot.geomPos);
-      this.#model.geom_rgba.set(snapshot.geomRGBA);
-      this.#model.geom_contype.set(snapshot.geomContype);
-      this.#model.geom_conaffinity.set(snapshot.geomConaffinity);
       this.#data.ctrl.set(snapshot.ctrl);
       this.#model.actuator_forcerange.set(snapshot.actuatorForceRange);
       this.#model.actuator_gainprm.set(snapshot.actuatorGainParameters);
@@ -1557,6 +1584,7 @@ class BrowserWorld {
       model.geom_conaffinity.set(this.#model.geom_conaffinity.subarray(0, this.#model.ngeom));
       model.actuator_forcerange.set(this.#model.actuator_forcerange);
       model.actuator_gainprm.set(this.#model.actuator_gainprm);
+      refreshModelConstants(this.#mj, model, data);
       this.#mj.mj_forward(model, data);
       const contacts = data.contact;
       try {

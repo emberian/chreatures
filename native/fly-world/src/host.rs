@@ -1685,7 +1685,13 @@ impl NativeFlyWorld {
                 candidate.write_int(crate::ffi::IntField::GeomConaffinity, &ca)?
             }
         }
+        // mj_setConst evaluates the model's reference configuration and can
+        // overwrite integration qpos in mjData. Preserve the fully copied
+        // live state across the required constant refresh so an append-only
+        // physical transaction cannot reset resident poses at commit.
+        let live_state = candidate.state()?;
         candidate.set_const()?;
+        candidate.set_state(&live_state)?;
         candidate.forward()?;
         let (records, distances) = candidate.contacts_with_distances()?;
         if records

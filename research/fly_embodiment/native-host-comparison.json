@@ -1,0 +1,150 @@
+{
+  "format": "chreatures-native-host-joined-comparison-v1",
+  "evidence": {
+    "original_native_reference": {
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-world-native-v1/native-b2-aero-reference.json",
+      "sha256": "942f0517e789fa3c8c6f2102962fa4dfc7bbc7b4a71948a8a0e7f7a15a2f6d66"
+    },
+    "state_preserving_native_reference": {
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-world-native-v1/native-b2-aero-reference-r2.json",
+      "sha256": "8404cff559190db4ef3c0866dd9ba973489edd01f27b0c39dda029453ffc06ba"
+    },
+    "original_join": {
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-world-native-v1/browser-b2-aero-comparison.json",
+      "sha256": "62d68cefb284e2894b404073d485a717b7168805f5f925a291c3aa8c3ce8691a"
+    },
+    "state_preserving_join": {
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-world-native-v1/browser-b2-aero-comparison-root-r3.json",
+      "sha256": "12ebaf9ef0d531a4b45e89d277394a11392e0b79ec44cd5c4b355c6a423385cd"
+    }
+  },
+  "retained_ticks": 200,
+  "fixture_sha256": "ab6b1dcdb7c0e97bc3c4ea10e78c6e62980d48dcf8216328a25a0f91b16906c9",
+  "core_wasm_sha256": "526ef3bacb1077c3664ccf2531020948a59514a08ac2b1d468f366c4fde1a7b3",
+  "browser_runtime_sha256": "2e71d5185355b8c154f2a3bfe9a3b1c1bc1af7f8e694e84590aee0b23cf558c9",
+  "original_comparison": {
+    "optic": {
+      "length": 10626,
+      "max_abs": 0.7800000011920929,
+      "rms": 0.08483238382359791,
+      "outside_atol_1e6_rtol_1e6": 2403
+    },
+    "body": {
+      "length": 1614,
+      "max_abs": 1.4551915228366852e-11,
+      "rms": 3.6221663437653937e-13,
+      "outside_atol_1e6_rtol_1e6": 0
+    },
+    "qpos": {
+      "length": 322,
+      "max_abs": 1.0178454393398235,
+      "rms": 0.08988949802981289,
+      "outside_atol_1e6_rtol_1e6": 270
+    },
+    "qvel": {
+      "length": 312,
+      "max_abs": 4.538907444340268e-12,
+      "rms": 6.219143346535987e-13,
+      "outside_atol_1e6_rtol_1e6": 0
+    },
+    "bodyPositions": {
+      "length": 504,
+      "max_abs": 1.072175681090482,
+      "rms": 0.49945083079076596,
+      "outside_atol_1e6_rtol_1e6": 431
+    },
+    "bodyQuaternions": {
+      "length": 672,
+      "max_abs": 0.10974478940139343,
+      "rms": 0.0313536267964655,
+      "outside_atol_1e6_rtol_1e6": 563
+    },
+    "bodyRotations": {
+      "length": 1512,
+      "max_abs": 0.2270975922288339,
+      "rms": 0.05905997553194541,
+      "outside_atol_1e6_rtol_1e6": 1263
+    },
+    "sensordata": {
+      "length": 192,
+      "max_abs": 7.531145486381013,
+      "rms": 1.5693466430949665,
+      "outside_atol_1e6_rtol_1e6": 70
+    },
+    "ctrl": {
+      "length": 180,
+      "max_abs": 0,
+      "rms": 0,
+      "outside_atol_1e6_rtol_1e6": 0
+    }
+  },
+  "corrected_comparison": {
+    "optic": {
+      "length": 10626,
+      "max_abs": 0.2240000069141388,
+      "rms": 0.0025522444566186474,
+      "outside_atol_1e_6_rtol_1e_6": 3
+    },
+    "body": {
+      "length": 1614,
+      "max_abs": 1.4551915228366852e-11,
+      "rms": 3.6221663437653937e-13,
+      "outside_atol_1e_6_rtol_1e_6": 0
+    },
+    "qpos": {
+      "length": 322,
+      "max_abs": 5.290646393207865e-14,
+      "rms": 4.703488570275308e-15,
+      "outside_atol_1e_6_rtol_1e_6": 0
+    },
+    "qvel": {
+      "length": 312,
+      "max_abs": 4.538907444340268e-12,
+      "rms": 6.219143346535987e-13,
+      "outside_atol_1e_6_rtol_1e_6": 0
+    },
+    "bodyPositions": {
+      "length": 504,
+      "max_abs": 0.02479799809428851,
+      "rms": 0.001125152981158606,
+      "outside_atol_1e_6_rtol_1e_6": 3
+    },
+    "bodyQuaternions": {
+      "length": 672,
+      "max_abs": 0.017716752790353965,
+      "rms": 0.0006960363151226141,
+      "outside_atol_1e_6_rtol_1e_6": 3
+    },
+    "bodyRotations": {
+      "length": 1512,
+      "max_abs": 0.03542571156326811,
+      "rms": 0.0013124052504921904,
+      "outside_atol_1e_6_rtol_1e_6": 9
+    },
+    "sensordata": {
+      "length": 192,
+      "max_abs": 1.1248779685502086e-12,
+      "rms": 1.8036565955162264e-13,
+      "outside_atol_1e_6_rtol_1e_6": 0
+    },
+    "ctrl": {
+      "length": 180,
+      "max_abs": 0,
+      "rms": 0,
+      "outside_atol_1e_6_rtol_1e_6": 0
+    }
+  },
+  "routes": {
+    "length": 133,
+    "max_abs": 0,
+    "rms": 0,
+    "outside_atol_1e_6_rtol_1e_6": 0
+  },
+  "native_replay_exact": true,
+  "browser_replay_exact": true,
+  "strict_cross_host_numeric_match": false,
+  "diagnosis": "Native mj_setConst after copying a construction candidate reset qpos to the reference pose. Preserving integration state around constant refresh removes that reset. Browser also refreshes geometry constants without resetting its integration state.",
+  "remaining_difference": "One new colony branch has a 24.8 micrometre placement difference and three retinal RGB outputs differ. Native and browser anatomical qpos/qvel, BODY807, sensordata and commands otherwise meet the declared tolerance. Construction alignment is still under investigation; no whole-world equivalence claim.",
+  "timing_scope": "Both actual 200-tick joined runs, not matched device-load benchmarks; native mean30.37ms, browser root mean122.45ms.",
+  "training_scope": "No CNS or policy executed in this host comparison. On-policy recovery collection uses an explicitly identified native host; this receipt does not establish learned competence."
+}

@@ -1457,3 +1457,53 @@ The compact combined record is
 `research/fly_embodiment/ecology-route-lineage-receipt.json`. The new physical
 checkpoint format includes the route plan identity, cached measurements and
 topology revision. Superseded running worlds retain their frozen implementation.
+
+## September 8 daytime — storage recovery and native collection
+
+The disk outage was dominated by obsolete automatic neural snapshot sequences,
+not source code. Cleanup removed 4.04 GiB of reproducible build/site output and
+41.79 GiB across 5,642 unreferenced autosaves from five stopped runs. It retained
+all explicitly referenced snapshots found in project and project-paperbin
+JSON/JSONL/Markdown records, the first two and latest ten snapshots per world,
+hourly history, and all named/non-autosave artifacts. In total 112 automatic
+snapshots remain. Local receipts are `runs/cleanup-build-caches-20260908.json`
+and `runs/cleanup-stale-autosaves-20260908.json`. The project shrank from roughly
+51 GiB to 5.6 GiB; source, active training data and current model packs remain.
+
+The native Rust/MuJoCo host and batched full-CNS recovery collector are now
+committed. Actual physical worlds share one GPU model while retaining separate
+neural and physical states. The recovery chronology alternates child-controlled
+probes, offline teacher correction, and child-controlled release. The trainer
+now supports cold-reset prefixes, measured-viability-weighted motor examples,
+valid teacher action differences, and a bounded decoder-only auxiliary through
+learned physical outcome predictions. That auxiliary is a learned surrogate,
+not a physics gradient or evidence of improved behavior. Its inputs and neural
+features are detached so it cannot reshape the CNS to fool the surrogate.
+
+The first trained child's immediate instability is reproduced in both Torch
+and Dawn: its initial motor command shifts physical servo targets by a mean
+0.273461 radians and maximum 1.444833 radians. The cross-backend M92 discrepancy
+is at most 4.4e-6. The adverse physical outcome belongs to the learned artifact;
+it is not explained by a Dawn-only deployment fault. Native Universal Weave
+now preserves 25 nodes and 45 edges connecting the actual collection, fits,
+physical results, failed GAM confirmation, and this numerical check.
+
+Compact GPU rate/release buffers reduce repeated state traffic without changing
+canonical states or dynamics. On M2 Dawn, a complete B2 CNS step improved from
+23.852 to 21.173 ms without observer capture, and 24.147 to 21.381 ms with it.
+Full state/latent/motor parity and exact restoration passed. These are neural
+step timings, not whole-world or browser UI timings. The source-bound records
+are in `research/performance/cns-webgpu-v4/`.
+
+A joined native/Wasm physical chronology identified a geometry-update fault
+before recovery collection produced an episode: after construction at tick 200,
+BODY, commands and route measurements matched while actual poses did not.
+Preserving integration state around the native constant refresh removes the
+reset: the corrected fly qpos discrepancy is at most 5.3e-14. One constructed
+branch still differs by 24.8 micrometres, affecting three retinal RGB values;
+the comparison is explicitly not whole-world numerical equivalence. Both hosts
+restore their own worlds exactly. Failed and corrected comparisons are retained
+in `research/fly_embodiment/native-host-comparison.json`. The previously staged
+initialized full-CNS/body/private
+resident join separately completed 128 ticks, captured all seven neural fields,
+and restored the complete life exactly, including an inserted physical object.
