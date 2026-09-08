@@ -149,44 +149,57 @@ def _variant_scene(root: Path, world_index: int) -> Path:
 def create_native_bundle(arguments: Any, plan: RecoveryPlan) -> CollectionBundle:
     """Create one world/teacher/evaluator; cohort orchestration injects CNS."""
     scene = _variant_scene(Path(arguments.scenes), plan.world_index)
+    scene_contract = json.loads(scene.read_text())
+    author = SampledAuthorSteps(Path(arguments.author_source))
+    teacher = FlyCurriculumTeacher(Path(arguments.body_schema), author)
+    _, service_metadata = load_service_artifact(Path(arguments.service).resolve())
+    motor_atlas_sha = sha256_file(Path(arguments.motor_atlas).resolve())
+    service_sha = sha256_file(Path(arguments.service).resolve())
+    author_bank_sha = sha256_file(Path(arguments.author_source).resolve())
+    author_manifest_sha = sha256_file(Path(arguments.author_source).with_name("manifest.json"))
     local = SimpleNamespace(**vars(arguments))
     local.scene = scene
     world = NativeActualFlyWorld(local, plan)
-    author = SampledAuthorSteps(Path(arguments.author_source))
-    teacher = FlyCurriculumTeacher(Path(arguments.body_schema), author)
-    fixture = world.ready["fixture"]
-    ecology_ids = tuple(str(item["ecology_id"]) for item in fixture["bodies"])
-    _, service_metadata = load_service_artifact(Path(arguments.service).resolve())
-    ready = world.ready
-    deployment = world.deployment_identity
-    metadata = {
-        "source_revision": str(arguments.source_revision),
-        "morphology_source_revision": fixture["source_revision"],
-        "body_schema_sha256": fixture["body_schema_sha256"],
-        "cns_body807_schema_sha256": fixture["sensory_schema_sha256"],
-        "physical_sensory_schema_sha256": fixture["physical_sensory_schema_sha256"],
-        "morphology_sha256": fixture["morphology_sha256"],
-        "motor_atlas_sha256": sha256_file(Path(arguments.motor_atlas).resolve()),
-        "cns_service_sha256": sha256_file(Path(arguments.service).resolve()),
-        "cns_adapter_sha256": service_metadata["adapter_sha256"],
-        "motor_calibration_sha256": service_metadata["motor_calibration_sha256"],
-        "retina_mapping_sha256": service_metadata["atlas_sha256"],
-        "scene_manifest_sha256": ready["fixture_sha256"],
-        "scene_xml_sha256": ready["scene_xml_sha256"],
-        "native_runtime_sha256": deployment["native_host_binary_sha256"],
-        **deployment,
-        "author_trajectory_bank_sha256": sha256_file(Path(arguments.author_source).resolve()),
-        "author_trajectory_manifest_sha256": sha256_file(Path(arguments.author_source).with_name("manifest.json")),
-        "cns_format": service_metadata["format"],
-        "native_world_engine": ready["engine"],
-        "recovery_format": RECOVERY_FORMAT,
-        "recovery_source_sha256": sha256_file(Path(__file__)),
-        "observer_values": "teacher targets and physical labels only",
-    }
-    return SimpleNamespace(
-        world=world, cns=None, teacher=teacher,
-        evaluator=ActualOutcomeEvaluator(ecology_ids), metadata=metadata,
-    )
+    try:
+        fixture = world.ready["fixture"]
+        # Native READY deliberately returns only the small runtime projection.
+        # The full contract lives in the exact scene bytes READY authenticates.
+        if sha256_file(scene) != world.ready["fixture_sha256"]:
+            raise ValueError("native READY fixture identity differs from the scene bytes")
+        ecology_ids = tuple(str(item["ecology_id"]) for item in fixture["bodies"])
+        ready = world.ready
+        deployment = world.deployment_identity
+        metadata = {
+            "source_revision": str(arguments.source_revision),
+            "morphology_source_revision": scene_contract["source_revision"],
+            "body_schema_sha256": scene_contract["body_schema_sha256"],
+            "cns_body807_schema_sha256": scene_contract["sensory_schema_sha256"],
+            "physical_sensory_schema_sha256": scene_contract["physical_sensory_schema_sha256"],
+            "morphology_sha256": scene_contract["morphology_sha256"],
+            "motor_atlas_sha256": motor_atlas_sha,
+            "cns_service_sha256": service_sha,
+            "cns_adapter_sha256": service_metadata["adapter_sha256"],
+            "motor_calibration_sha256": service_metadata["motor_calibration_sha256"],
+            "retina_mapping_sha256": service_metadata["atlas_sha256"],
+            "scene_manifest_sha256": ready["fixture_sha256"],
+            "scene_xml_sha256": ready["scene_xml_sha256"],
+            "native_runtime_sha256": deployment["native_host_binary_sha256"],
+            **deployment,
+            "author_trajectory_bank_sha256": author_bank_sha,
+            "author_trajectory_manifest_sha256": author_manifest_sha,
+            "cns_format": service_metadata["format"],
+            "native_world_engine": ready["engine"],
+            "recovery_format": RECOVERY_FORMAT,
+            "recovery_source_sha256": sha256_file(Path(__file__)),
+            "observer_values": "teacher targets and physical labels only",
+        }
+        return SimpleNamespace(
+            world=world, cns=None, teacher=teacher,
+            evaluator=ActualOutcomeEvaluator(ecology_ids), metadata=metadata,
+        )
+    except BaseException:
+        world.close()
+        raise
 
 
 def seal_recovery(directory: Path, output: Path) -> dict[str, Any]:
@@ -289,7 +302,10 @@ def main() -> None:
     plans = [build_recovery_plan(index, base_seed=arguments.seed) for index in range(arguments.world_start, stop)]
     bundles = []
     try:
-        bundles = [create_native_bundle(arguments, plan) for plan in plans]
+        # Append as construction succeeds so an error in a later native process
+        # still closes every already-authenticated world.
+        for plan in plans:
+            bundles.append(create_native_bundle(arguments, plan))
         shared = BatchedTorchFullCNS(arguments.service, arguments.device, arguments.cohort_width)
         outputs = [arguments.output / f"episode-{plan.world_index:02d}.npz" for plan in plans]
         print(json.dumps(collect_cohort(bundles, plans, outputs, shared), sort_keys=True))
