@@ -114,6 +114,54 @@ export class UnifiedWasmFlyWorld {
       this.handle, entityPointer, entity.byteLength, forcePointer, values.length));
   }
 
+  scheduleInteraction(program) {
+    const bytes = encoder.encode(JSON.stringify(program));
+    const pointer = this.#buffer('interaction-program', bytes.byteLength);
+    this.module.HEAPU8.set(bytes, pointer);
+    const length = this.module._chreatures_fly_world_schedule_interaction(
+      this.handle, pointer, bytes.byteLength);
+    if (!length) throw new Error(UnifiedWasmFlyWorld.error(this.module));
+    return this.#readJson('interaction_json', length);
+  }
+
+  prepareInteractionTick() {
+    const length = this.module._chreatures_fly_world_prepare_interaction_tick(this.handle);
+    if (!length) throw new Error(UnifiedWasmFlyWorld.error(this.module));
+    return this.#readJson('interaction_json', length);
+  }
+
+  interactionStatus() {
+    const length = this.module._chreatures_fly_world_interaction_status(this.handle);
+    if (!length) throw new Error(UnifiedWasmFlyWorld.error(this.module));
+    return this.#readJson('interaction_json', length);
+  }
+
+  screenObservation() {
+    const revision = this.module._chreatures_fly_world_screen_revision(this.handle);
+    if (revision < 0) throw new Error(UnifiedWasmFlyWorld.error(this.module));
+    if (this.screenCache?.revision === revision) return this.screenCache;
+    const width = this.module._chreatures_fly_world_screen_width(this.handle);
+    const height = this.module._chreatures_fly_world_screen_height(this.handle);
+    const length = this.module._chreatures_fly_world_screen_length(this.handle);
+    if (!width || !height || length !== width * height * 3)
+      throw new Error(UnifiedWasmFlyWorld.error(this.module));
+    const pointer = this.#buffer('screen-observation', length * Float32Array.BYTES_PER_ELEMENT);
+    this.#check(this.module._chreatures_fly_world_screen_frame(this.handle, pointer, length));
+    this.screenCache = {
+      revision,
+      width,
+      height,
+      rgb: this.module.HEAPF32.slice(pointer >>> 2, (pointer >>> 2) + length),
+    };
+    return this.screenCache;
+  }
+
+  ecologyStatus() {
+    const length = this.module._chreatures_fly_world_ecology_status(this.handle);
+    if (!length) throw new Error(UnifiedWasmFlyWorld.error(this.module));
+    return this.#readJson('ecology_json', length);
+  }
+
   setRoutes(open, flow) {
     const openness = Float64Array.from(open), advection = Float64Array.from(flow);
     const openPointer = this.#buffer('route-open', openness.byteLength);
@@ -174,6 +222,7 @@ export class UnifiedWasmFlyWorld {
     this.module.HEAPU8.set(snapshot, pointer);
     this.#check(this.module._chreatures_fly_world_restore(this.handle, pointer, snapshot.byteLength));
     this.geometryCache = undefined;
+    this.screenCache = undefined;
   }
 
   observe() {

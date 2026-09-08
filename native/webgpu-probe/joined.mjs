@@ -40,7 +40,9 @@ assert(adapter, 'Actual GPU adapter required');
 const device = await adapter.requestDevice();
 let engine;
 const began = performance.now();
-const exact = (a, b) => Buffer.from(a).equals(Buffer.from(b));
+const raw = value => ArrayBuffer.isView(value)
+  ? Buffer.from(value.buffer, value.byteOffset, value.byteLength) : Buffer.from(value);
+const exact = (a, b) => raw(a).equals(raw(b));
 const sha = bytes => createHash('sha256').update(Buffer.from(bytes)).digest('hex');
 try {
   const [{default: initResident}, {LiveEngine}] = await Promise.all([
@@ -55,6 +57,21 @@ try {
   assert(atlas.retinalSupported.reduce((sum, value) => sum + value, 0) > 0);
   assert.equal(engine.batch, 2);
   const first = engine.observe(); const timings = [];
+  let physicalStepCalls = 0;
+  const advance = async capture => { const frame = await engine.advance(capture); physicalStepCalls++; return frame; };
+  // One finite native program drives the same alternating photon field as the
+  // earlier physical probe. Its remaining suffix crosses the life checkpoint.
+  const program = engine.scheduleInteraction({events: [
+    ...Array.from({length: 128}, (_, tick) => ({offset_ticks: tick, event: {
+      kind: 'pattern', pattern: {mode: 'uniform', rgb: new Array(3).fill(tick % 4 < 2 ? 1 : 0)},
+    }})),
+    {offset_ticks: 128, event: {kind: 'pattern', pattern: {mode: 'uniform', rgb: [.15, .35, .8]}}},
+    {offset_ticks: 128, event: {kind: 'tone', position_mm: [0,0,2], frequency_hz: 250, amplitude: .65, duration_s: .2}},
+    {offset_ticks: 132, event: {kind: 'pattern', pattern: {mode: 'blank'}}},
+  ]});
+  const beforeObserver = engine.world.snapshot();
+  engine.observe(); engine.interactionStatus(); engine.screenObservation();
+  assert(exact(beforeObserver, engine.world.snapshot()), 'Observer dispatched a pending encounter');
   const motorLow = new Float32Array(92).fill(Infinity), motorHigh = new Float32Array(92).fill(-Infinity);
   let contextMagnitude = 0;
   const observedFields = new Set(), fields = ['rate', 'adaptation', 'support', 'release', 'dopamine', 'octopamine', 'serotonin'];
@@ -62,8 +79,8 @@ try {
     engine.neuralField = fields[Math.min(6, Math.floor(tick / 19))];
     if (tick === 4) engine.greet([0, 1, 2]);
     if ([16, 48, 80, 112].includes(tick)) engine.tone([80, 200, 500, 1250][(tick - 16) / 32], .4);
-    engine.screen(new Float32Array(12).fill(tick % 4 < 2 ? 1 : 0), 2, 2, null);
-    const frame = await engine.advance(true); timings.push(frame.wallMilliseconds);
+    const frame = await advance(true); timings.push(frame.wallMilliseconds);
+    assert.equal(frame.interactionStatus.current_tick, frame.tick);
     assert(frame.positions.every(Number.isFinite));
     assert.equal(frame.neuralField, engine.neuralField);
     assert.equal(frame.neuralSignal.length, 165122);
@@ -101,6 +118,9 @@ try {
     }
   }
   const checkpoint = await engine.save();
+  const pendingEncounter = engine.interactionStatus();
+  assert(pendingEncounter.pending_events >= 3, 'Saved life has no pending encounter suffix');
+  assert.equal(pendingEncounter.next_event_tick, 128);
   const inspected = await engine.inspectPlasticity();
   assert.equal(inspected.residentId, engine.world.residentDescriptors[engine.selected].id);
   assert.equal(inspected.plasticity.resident, engine.selected);
@@ -126,9 +146,19 @@ try {
     }
     return {lane, changedEdges, eligibleEdges, maximumDepression, maximumEligibility};
   });
-  const next = await engine.advance(true); const future = await engine.save();
+  const next = await advance(true); const future = await engine.save();
+  const screen = engine.screenObservation();
+  assert.equal(screen.width, 160); assert.equal(screen.height, 120);
+  const expectedColor = Float32Array.from([.15, .35, .8]);
+  for (let pixel = 0; pixel < screen.rgb.length; pixel++) {
+    assert.equal(screen.rgb[pixel], expectedColor[pixel % 3], 'Observer screen differs from delivered pattern');
+  }
+  const deliveredEncounter = engine.interactionStatus();
+  assert.equal(deliveredEncounter.completed_events - pendingEncounter.completed_events, 2);
   await engine.load(checkpoint);
-  const replay = await engine.advance(true); const restoredFuture = await engine.save();
+  const replay = await advance(true); const restoredFuture = await engine.save();
+  assert.deepEqual(engine.interactionStatus(), deliveredEncounter, 'Pending encounter replay differs');
+  assert(exact(screen.rgb, engine.screenObservation().rgb), 'Restored native screen pixels differ');
   assert(exact(next.positions.buffer, replay.positions.buffer), 'Physical continuation differs');
   assert(exact(next.neuralRates.buffer, replay.neuralRates.buffer), 'Full CNS continuation differs');
   assert(exact(next.motorActivation.buffer, replay.motorActivation.buffer), 'Motor recruitment continuation differs');
@@ -140,7 +170,7 @@ try {
   const insertionPosition = (args['insertion-position'] ?? '12,-12,8').split(',').map(Number);
   const inserted = await engine.insertToy(insertionPosition);
   engine.shove(inserted.id, [.1, 0, 0]);
-  const grown = await engine.save(); await engine.advance(); await engine.load(grown);
+  const grown = await engine.save(); await advance(); await engine.load(grown);
   assert.equal(engine.observe().geometry.length, beforeInsert + 1);
   const after = engine.observe();
   let maxTravel = 0;
@@ -148,11 +178,11 @@ try {
     const index = resident.root * 3;
     maxTravel = Math.max(maxTravel, Math.hypot(...after.bodyPositions.slice(index, index + 3).map((x, i) => x - first.bodyPositions[index + i])));
   }
-  const report = {format: 'chreatures-fly-cns-v5-joined-headless-v1', engineIdentity: engine.identity,
+  const report = {format: 'chreatures-fly-cns-v5-encounter-joined-headless-v1', engineIdentity: engine.identity,
     serviceArtifactSha256: engine.brain.manifest.serviceArtifactSha256,
     adapterSha256: engine.brain.manifest.identity.artifact,
     adapter: adapter.info?.device || adapter.info?.description || 'Dawn Metal', neurons: 165122, edges: 25563197,
-    residents: engine.batch, physicalStepCalls: 131, retainedModelTicks: engine.tick, checkpointReplayCalls: 1, modelSeconds: engine.world.time,
+    residents: engine.batch, physicalStepCalls, retainedModelTicks: engine.tick, checkpointReplayCalls: 1, modelSeconds: engine.world.time,
     meanCompleteTickMs: timings.reduce((a,b) => a+b, 0) / timings.length, maxCompleteTickMs: Math.max(...timings),
     maxRootTravelMillimeters: maxTravel, snapshotBytes: checkpoint.byteLength, snapshotSHA256: sha(checkpoint),
     physicalReplayExact: true, fullNeuralReplayExact: true, wholeLifeReplayExact: true,
@@ -160,6 +190,8 @@ try {
     contextOutputs: 12, anatomicalMotorOutputs: 92, physicalBodyInputs: 807, privateNeuralFields: 7,
     privatePlasticEdges: 4184, privatePlasticFields: ['efficacy-deviation', 'eligibility'], plasticity,
     synapticObserverIsReadOnly: true,
+    nativeEncounter: {program, pendingAtCheckpoint: pendingEncounter, afterReplay: deliveredEncounter,
+      observerDidNotDispatch: true, savedSuffixReplayExact: true, deliveredScreenPixelsExact: true},
     motorDynamicRanges: Array.from(motorHigh, (x, i) => x - motorLow[i]), maximumDeliveredContextMagnitude: contextMagnitude,
     neuralCapture: 'every physical tick', retinalInputSites: 1771,
     supportedRetinalSites: atlas.retinalSupported.reduce((sum, value) => sum + value, 0),

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use crate::host::{NativeFlyWorld, ResearchSample};
+use crate::interaction::InteractionProgram;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::io::{self, BufRead, Write};
@@ -116,7 +117,7 @@ pub fn serve_stdio(world: &mut NativeFlyWorld) -> Result<(), String> {
     let ready = json!({
         "ok":true, "event":"ready", "residents":world.residents(), "engine":world.engine(),
         "fixture_sha256":world.fixture_sha256(), "scene_xml_sha256":world.scene_sha256(),
-        "native_host":"chreatures-native-fly-world-v1",
+        "native_host":"chreatures-native-fly-world-v2",
         "initial_snapshot_sha256":sha256(&snapshot), "fixture":world.ready_fixture(),
     });
     let stdin = io::stdin();
@@ -128,9 +129,11 @@ pub fn serve_stdio(world: &mut NativeFlyWorld) -> Result<(), String> {
             serde_json::from_str(&line).map_err(|e| format!("request JSON: {e}"))?;
         let id = request.get("id").cloned().unwrap_or(Value::Null);
         let result = match request.get("command").and_then(Value::as_str) {
-            Some("sample") => world
-                .research_sample()
-                .map(|sample| json!({"id":id,"ok":true,"sample":packet(sample)})),
+            Some("sample") => world.prepare_interaction_tick().and_then(|interaction| {
+                world.research_sample().map(|sample| {
+                    json!({"id":id,"ok":true,"interaction":interaction,"sample":packet(sample)})
+                })
+            }),
             Some("advance") => (|| {
                 let encoded = request
                     .get("motor92_base64")
@@ -225,6 +228,27 @@ pub fn serve_stdio(world: &mut NativeFlyWorld) -> Result<(), String> {
                 world.queue_visitor_force(entity, force)?;
                 Ok(json!({"id":id,"ok":true}))
             })(),
+            Some("schedule_interaction") => (|| {
+                let program: InteractionProgram = serde_json::from_value(
+                    request
+                        .get("program")
+                        .cloned()
+                        .ok_or("interaction program missing")?,
+                )
+                .map_err(|error| format!("interaction program: {error}"))?;
+                world
+                    .schedule_interaction(program)
+                    .map(|receipt| json!({"id":id,"ok":true,"receipt":receipt}))
+            })(),
+            Some("prepare_interaction_tick") => world
+                .prepare_interaction_tick()
+                .map(|receipt| json!({"id":id,"ok":true,"receipt":receipt})),
+            Some("interaction_status") => world
+                .interaction_status()
+                .map(|status| json!({"id":id,"ok":true,"status":status})),
+            Some("ecology_status") => world
+                .ecology_status()
+                .map(|status| json!({"id":id,"ok":true,"status":status})),
             Some("insert_object") => (|| {
                 let position: [f64; 3] = serde_json::from_value(
                     request

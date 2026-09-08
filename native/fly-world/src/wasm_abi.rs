@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Flat Emscripten ABI for one persistent native fly world.
 
+use crate::interaction::InteractionProgram;
 use crate::{GeometrySample, NativeFlyWorld, ResearchSample};
 use serde_json::json;
 use std::cell::RefCell;
@@ -21,6 +22,8 @@ struct Entry {
     geometry_json: Vec<u8>,
     geometry: Option<GeometrySample>,
     mutation_json: Vec<u8>,
+    interaction_json: Vec<u8>,
+    ecology_json: Vec<u8>,
 }
 
 thread_local! {
@@ -117,7 +120,7 @@ pub unsafe extern "C" fn chreatures_fly_world_open(
         let text = std::str::from_utf8(bytes).map_err(|_| "scene path is not UTF-8")?;
         let world = NativeFlyWorld::open(Path::new(text), seed)?;
         let metadata = serde_json::to_vec(&json!({
-            "format": "chreatures-fly-world-wasm-v1",
+            "format": "chreatures-fly-world-wasm-v2",
             "engine": world.engine(),
             "residents": world.residents(),
             "scene_sha256": world.scene_sha256(),
@@ -139,6 +142,8 @@ pub unsafe extern "C" fn chreatures_fly_world_open(
             geometry_json: Vec::new(),
             geometry: None,
             mutation_json: Vec::new(),
+            interaction_json: Vec::new(),
+            ecology_json: Vec::new(),
         })
     })();
     match result {
@@ -273,6 +278,169 @@ pub unsafe extern "C" fn chreatures_fly_world_visitor_force(
     };
     match with_entry(handle, |entry| {
         entry.world.queue_visitor_force(&entity, force)
+    }) {
+        Ok(()) => 0,
+        Err(error) => fail(error),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn chreatures_fly_world_schedule_interaction(
+    handle: u32,
+    pointer: *const u8,
+    length: usize,
+) -> usize {
+    let program = match input(pointer, length, "interaction program").and_then(|bytes| {
+        serde_json::from_slice::<InteractionProgram>(bytes)
+            .map_err(|error| format!("interaction program: {error}"))
+    }) {
+        Ok(program) => program,
+        Err(error) => {
+            fail(error);
+            return 0;
+        }
+    };
+    with_entry(handle, |entry| {
+        let receipt = entry.world.schedule_interaction(program)?;
+        entry.interaction_json = serde_json::to_vec(&receipt).map_err(|error| error.to_string())?;
+        Ok(entry.interaction_json.len())
+    })
+    .unwrap_or_else(|error| {
+        fail(error);
+        0
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn chreatures_fly_world_prepare_interaction_tick(handle: u32) -> usize {
+    with_entry(handle, |entry| {
+        let receipt = entry.world.prepare_interaction_tick()?;
+        entry.interaction_json = serde_json::to_vec(&receipt).map_err(|error| error.to_string())?;
+        Ok(entry.interaction_json.len())
+    })
+    .unwrap_or_else(|error| {
+        fail(error);
+        0
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn chreatures_fly_world_interaction_status(handle: u32) -> usize {
+    with_entry(handle, |entry| {
+        let status = entry.world.interaction_status()?;
+        entry.interaction_json = serde_json::to_vec(&status).map_err(|error| error.to_string())?;
+        Ok(entry.interaction_json.len())
+    })
+    .unwrap_or_else(|error| {
+        fail(error);
+        0
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn chreatures_fly_world_interaction_json(
+    handle: u32,
+    pointer: *mut u8,
+    length: usize,
+) -> i32 {
+    match with_entry(handle, |entry| {
+        output(
+            pointer,
+            length,
+            entry.interaction_json.len(),
+            "interaction JSON output",
+        )?
+        .copy_from_slice(&entry.interaction_json);
+        Ok(())
+    }) {
+        Ok(()) => 0,
+        Err(error) => fail(error),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn chreatures_fly_world_screen_revision(handle: u32) -> f64 {
+    with_entry(handle, |entry| {
+        let (_, _, _, revision) = entry.world.screen_frame();
+        if revision > (1u64 << 53) - 1 {
+            return Err("screen revision exceeds exact JavaScript integer range".into());
+        }
+        Ok(revision as f64)
+    })
+    .unwrap_or_else(|error| {
+        fail(error);
+        -1.0
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn chreatures_fly_world_screen_width(handle: u32) -> usize {
+    with_entry(handle, |entry| Ok(entry.world.screen_frame().1)).unwrap_or_else(|error| {
+        fail(error);
+        0
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn chreatures_fly_world_screen_height(handle: u32) -> usize {
+    with_entry(handle, |entry| Ok(entry.world.screen_frame().2)).unwrap_or_else(|error| {
+        fail(error);
+        0
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn chreatures_fly_world_screen_length(handle: u32) -> usize {
+    with_entry(handle, |entry| Ok(entry.world.screen_frame().0.len())).unwrap_or_else(|error| {
+        fail(error);
+        0
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn chreatures_fly_world_screen_frame(
+    handle: u32,
+    pointer: *mut f32,
+    length: usize,
+) -> i32 {
+    match with_entry(handle, |entry| {
+        let (frame, _, _, _) = entry.world.screen_frame();
+        output(pointer, length, frame.len(), "screen frame output")?.copy_from_slice(frame);
+        Ok(())
+    }) {
+        Ok(()) => 0,
+        Err(error) => fail(error),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn chreatures_fly_world_ecology_status(handle: u32) -> usize {
+    with_entry(handle, |entry| {
+        entry.ecology_json = serde_json::to_vec(&entry.world.ecology_status()?)
+            .map_err(|error| error.to_string())?;
+        Ok(entry.ecology_json.len())
+    })
+    .unwrap_or_else(|error| {
+        fail(error);
+        0
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn chreatures_fly_world_ecology_json(
+    handle: u32,
+    pointer: *mut u8,
+    length: usize,
+) -> i32 {
+    match with_entry(handle, |entry| {
+        output(
+            pointer,
+            length,
+            entry.ecology_json.len(),
+            "ecology JSON output",
+        )?
+        .copy_from_slice(&entry.ecology_json);
+        Ok(())
     }) {
         Ok(()) => 0,
         Err(error) => fail(error),

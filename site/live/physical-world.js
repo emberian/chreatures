@@ -198,6 +198,27 @@ class PhysicalWorld {
     this.native.queueVisitorForce(entityId, force);
   }
 
+  scheduleInteraction(program) {
+    return this.native.scheduleInteraction(program);
+  }
+
+  prepareInteractionTick() {
+    const delivery = this.native.prepareInteractionTick();
+    if (delivery.dispatched.length > 0) {
+      this.observation = null;
+      this.sensoryCurrent = false;
+    }
+    return delivery;
+  }
+
+  interactionStatus() {
+    return this.native.interactionStatus();
+  }
+
+  screenObservation() {
+    return this.native.screenObservation();
+  }
+
   insertObject(options) {
     const result = this.native.insertObject(options);
     this.catalog = null;
