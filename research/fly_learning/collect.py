@@ -194,7 +194,8 @@ async def collect_episode(bundle: CollectionBundle, plan: Plan, output: Path) ->
                 bout_index[resident] += 1
             bout = bouts[bout_index[resident]]
             command = bundle.teacher.command(
-                bout, tick - bout.start, sample.teacher_observation[resident], rngs[resident]
+                bout, tick - bout.start, sample.teacher_observation[resident], rngs[resident],
+                resident=resident,
             )
             teacher[resident] = command.normalized_motor
             teacher_valid[resident] = command.valid
@@ -220,6 +221,7 @@ async def collect_episode(bundle: CollectionBundle, plan: Plan, output: Path) ->
             await advanced
         sample = bundle.world.sample()
         _validate_sample(sample)
+        bundle.teacher.acknowledge(delivered)
         arrays["applied_body_control"][tick] = sample.applied_body_control
         _write_sample(arrays, tick + 1, sample)
         outcome, reward, success, failure = bundle.evaluator.transition(
