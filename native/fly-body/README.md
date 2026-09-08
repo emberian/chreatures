@@ -95,6 +95,26 @@ body-forward direction and the stop command drifted 0.000137 mm. The two simple
 asymmetric-amplitude probes both yawed in the same direction, so this replay
 does not establish reliable directional turning.
 
+`SupportedAuthorContinuation` in `tools/replay_author_teacher.py` provides a
+narrower offline use of the same sealed bank after a learner command. It accepts
+only a physically upright state with at least three contacting feet. At
+takeover it fits one shared tripod phase and a bounded amplitude against both
+the actual walking-joint angles and the last physical servo targets, in radians
+scaled by each joint's control span. Candidate phases that would immediately
+release a contacting foot are penalized. It then slews all 84 active servo
+targets toward the fitted reference at no more than 0.04 radians per 100 Hz
+tick; six unitless adhesion commands use a separate 0.25-per-tick bridge.
+
+`tools/demonstrate_supported_author_continuation.py` records paired physical
+research branches. The first retains an actual CNS action block and its failed
+outcome. The sibling restores the exact last support-gated MuJoCo snapshot and
+starts the fitted continuation. The restored snapshot contains no private CNS
+state; a future collector must recompute private CNS history from its checkpoint
+and preserve the matching recurrent-state cadence (currently seven private CNS
+state tensors) before presenting the sibling as training evidence. States
+outside the support gate remain failed evidence and are never described as
+self-righting.
+
 ## Standalone startup
 
 The native validator links to the MuJoCo library supplied by the project Python
