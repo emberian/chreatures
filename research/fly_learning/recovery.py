@@ -17,9 +17,7 @@ from typing import Any, Final
 
 import numpy as np
 
-from chreatures.cns_adapter_contract import load_service_artifact
-
-from .batch_collection import collect_cohort
+from .batch_collection import collect_campaign
 from .collect import CollectionBundle
 from .curriculum import (
     Bout, CONTEXT, CONTROL_INDEX, PHASE_INDEX, Plan, RESIDENTS, TICKS,
@@ -28,7 +26,6 @@ from .curriculum import (
 from .data import load_episode, sha256_file
 from .native_host import (
     ActualOutcomeEvaluator,
-    BatchedTorchFullCNS,
     NativeActualFlyWorld,
     SampledAuthorSteps,
 )
@@ -146,15 +143,16 @@ def _variant_scene(root: Path, world_index: int) -> Path:
     return scene
 
 
-def create_native_bundle(arguments: Any, plan: RecoveryPlan) -> CollectionBundle:
+def create_native_bundle(arguments: Any, plan: RecoveryPlan, *, service_metadata: dict[str, Any]) -> CollectionBundle:
     """Create one world/teacher/evaluator; cohort orchestration injects CNS."""
     scene = _variant_scene(Path(arguments.scenes), plan.world_index)
     scene_contract = json.loads(scene.read_text())
     author = SampledAuthorSteps(Path(arguments.author_source))
     teacher = FlyCurriculumTeacher(Path(arguments.body_schema), author)
-    _, service_metadata = load_service_artifact(Path(arguments.service).resolve())
     motor_atlas_sha = sha256_file(Path(arguments.motor_atlas).resolve())
-    service_sha = sha256_file(Path(arguments.service).resolve())
+    # The campaign passes metadata from the exact already-loaded shared model.
+    # Do not reread a half-gigabyte service for every newly constructed world.
+    service_sha = service_metadata["cns_service_sha256"]
     author_bank_sha = sha256_file(Path(arguments.author_source).resolve())
     author_manifest_sha = sha256_file(Path(arguments.author_source).with_name("manifest.json"))
     local = SimpleNamespace(**vars(arguments))
@@ -277,7 +275,9 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     collect = commands.add_parser("collect")
     collect.add_argument("--world-start", type=int, required=True)
-    collect.add_argument("--cohort-width", type=int, choices=(2, 4), default=2)
+    width = collect.add_mutually_exclusive_group()
+    width.add_argument("--cohort-width", type=int, choices=(2, 4), default=2)
+    width.add_argument("--cohort-widths", type=int, choices=(2, 4), nargs="+")
     collect.add_argument("--output", type=Path, required=True)
     collect.add_argument("--scenes", type=Path, required=True)
     collect.add_argument("--service", type=Path, required=True)
@@ -296,23 +296,9 @@ def main() -> None:
     if arguments.command == "seal":
         print(json.dumps(seal_recovery(arguments.directory, arguments.output), sort_keys=True))
         return
-    stop = arguments.world_start + arguments.cohort_width
-    if arguments.world_start < 0 or stop > 12:
-        raise ValueError("cohort leaves frozen world indices0..11")
-    plans = [build_recovery_plan(index, base_seed=arguments.seed) for index in range(arguments.world_start, stop)]
-    bundles = []
-    try:
-        # Append as construction succeeds so an error in a later native process
-        # still closes every already-authenticated world.
-        for plan in plans:
-            bundles.append(create_native_bundle(arguments, plan))
-        shared = BatchedTorchFullCNS(arguments.service, arguments.device, arguments.cohort_width)
-        outputs = [arguments.output / f"episode-{plan.world_index:02d}.npz" for plan in plans]
-        print(json.dumps(collect_cohort(bundles, plans, outputs, shared), sort_keys=True))
-    except BaseException:
-        for bundle in bundles:
-            bundle.world.close()
-        raise
+    widths = arguments.cohort_widths or (arguments.cohort_width,)
+    print(json.dumps(collect_campaign(arguments, build_recovery_plan, create_native_bundle, widths), sort_keys=True))
+
 
 
 if __name__ == "__main__":
