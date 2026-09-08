@@ -27,7 +27,6 @@ pub(crate) struct ActiveSuffix {
     pub source_generation: u64,
     pub length: usize,
     pub phase: usize,
-    pub support: u32,
     pub recall_score: f32,
     pub empirical_utility: f32,
     pub consequence_uncertainty: f32,
@@ -242,61 +241,6 @@ impl ContextSuffixMemory {
             self.rng[row] = splitmix64(&mut state);
         }
         self.batch = new_batch;
-        Ok(())
-    }
-
-    pub(crate) fn clear_resident(&mut self, row: usize, seed: u64) -> Result<(), String> {
-        if row >= self.batch {
-            return Err("context suffix resident differs".into());
-        }
-        let slots = row * SLOTS..(row + 1) * SLOTS;
-        self.valid[slots.clone()].fill(false);
-        self.generation[slots.clone()].fill(0);
-        self.length[slots.clone()].fill(0);
-        self.recorded_tick[slots.clone()].fill(0);
-        self.support[slots.clone()].fill(0);
-        self.proposals[slots.clone()].fill(0);
-        self.executions[slots].fill(0);
-        self.context
-            [row * SLOTS * MAX_HORIZON * CONTEXT..(row + 1) * SLOTS * MAX_HORIZON * CONTEXT]
-            .fill(0.0);
-        self.actions
-            [row * SLOTS * MAX_HORIZON * ACTIONS..(row + 1) * SLOTS * MAX_HORIZON * ACTIONS]
-            .fill(0.0);
-        self.outcomes
-            [row * SLOTS * MAX_HORIZON * OUTCOMES..(row + 1) * SLOTS * MAX_HORIZON * OUTCOMES]
-            .fill(0.0);
-        self.outcome_m2
-            [row * SLOTS * MAX_HORIZON * OUTCOMES..(row + 1) * SLOTS * MAX_HORIZON * OUTCOMES]
-            .fill(0.0);
-        self.outcome_count
-            [row * SLOTS * MAX_HORIZON * OUTCOMES..(row + 1) * SLOTS * MAX_HORIZON * OUTCOMES]
-            .fill(0);
-        self.endpoint_context[row * SLOTS * CONTEXT..(row + 1) * SLOTS * CONTEXT].fill(0.0);
-        self.capture_context[row * MAX_HORIZON * CONTEXT..(row + 1) * MAX_HORIZON * CONTEXT]
-            .fill(0.0);
-        self.capture_actions[row * MAX_HORIZON * ACTIONS..(row + 1) * MAX_HORIZON * ACTIONS]
-            .fill(0.0);
-        self.capture_outcomes[row * MAX_HORIZON * OUTCOMES..(row + 1) * MAX_HORIZON * OUTCOMES]
-            .fill(0.0);
-        self.capture_next_context[row * MAX_HORIZON * CONTEXT..(row + 1) * MAX_HORIZON * CONTEXT]
-            .fill(0.0);
-        self.capture_ticks[row * MAX_HORIZON..(row + 1) * MAX_HORIZON].fill(0);
-        self.capture_cursor[row] = 0;
-        self.capture_count[row] = 0;
-        self.seen_sequences[row] = 0;
-        self.learned_total[row] = 0;
-        self.clear_execution(row);
-        self.completed_total[row] = 0;
-        self.interrupted_total[row] = 0;
-        self.policy_cancelled_total[row] = 0;
-        self.receipt_cancelled_total[row] = 0;
-        self.gap_cancelled_total[row] = 0;
-        self.reset_cancelled_total[row] = 0;
-        self.invalid_source_total[row] = 0;
-        self.last_cancellation[row] = None;
-        let mut state = seed ^ (row as u64).wrapping_mul(0xd134_2543_de82_ef95);
-        self.rng[row] = splitmix64(&mut state);
         Ok(())
     }
 
@@ -663,7 +607,6 @@ impl ContextSuffixMemory {
             source_generation: self.active_generation[row],
             length: self.active_length[row] as usize,
             phase: self.active_phase[row],
-            support: self.active_support[row],
             recall_score: self.active_recall_score[row],
             empirical_utility: self.active_empirical_utility[row],
             consequence_uncertainty: self.active_consequence_uncertainty[row],
@@ -742,10 +685,6 @@ impl ContextSuffixMemory {
             self.completed_total[row] = self.completed_total[row].saturating_add(1);
             self.clear_execution(row);
         }
-    }
-
-    pub(crate) fn execution_counts(&self, row: usize) -> (u64, u64) {
-        (self.completed_total[row], self.interrupted_total[row])
     }
 
     pub(crate) fn cancellation_counts(&self, row: usize) -> [u64; 5] {
@@ -987,26 +926,26 @@ mod tests {
                     ContextSuffixMemory::restore_json(&memory.snapshot_json().unwrap(), 2).unwrap();
             }
         }
-        assert_eq!(memory.execution_counts(0), (1, 0));
+        assert_eq!((memory.completed_total[0], memory.interrupted_total[0]), (1, 0));
         assert_eq!(memory.support[index], 2);
         assert!((memory.outcomes[index * MAX_HORIZON * OUTCOMES] - 0.3).abs() < 1e-6);
         memory.start(0, &initial).unwrap();
         memory.note_executed(0, 17, &[0.1; ACTIONS], &[9.0]);
         memory.cancel_execution(0, CancellationReason::Policy);
-        assert_eq!(memory.execution_counts(0), (1, 1));
+        assert_eq!((memory.completed_total[0], memory.interrupted_total[0]), (1, 1));
         assert_eq!(memory.support[index], 2);
         let first = index * MAX_HORIZON * OUTCOMES;
         assert!((memory.outcomes[first] - 3.2).abs() < 1e-6);
         assert_eq!(memory.outcome_count[first], 3);
         memory.start(0, &initial).unwrap();
         memory.note_executed(0, 18, &[0.9; ACTIONS], &[9.0]); // Host override.
-        assert_eq!(memory.execution_counts(0), (1, 2));
+        assert_eq!((memory.completed_total[0], memory.interrupted_total[0]), (1, 2));
         assert!((memory.outcomes[first] - 3.2).abs() < 1e-6);
         memory.start(0, &initial).unwrap();
         memory.note_executed(0, 19, &[0.1; ACTIONS], &[9.0]);
         memory.continue_execution(0).unwrap();
         memory.note_executed(0, 21, &[0.2; ACTIONS], &[9.0]); // Missing tick.
-        assert_eq!(memory.execution_counts(0), (1, 3));
+        assert_eq!((memory.completed_total[0], memory.interrupted_total[0]), (1, 3));
         assert!((memory.outcomes[first] - 4.65).abs() < 1e-6);
         assert_eq!(memory.outcome_count[first], 4);
         assert_eq!(memory.cancellation_counts(0)[0..3], [1, 1, 1]);
@@ -1025,16 +964,13 @@ mod tests {
         }
         assert_eq!(memory.active_slot[0], -1);
         assert_eq!(memory.support[index], 2);
-        assert_eq!(memory.execution_counts(0), (2, 3));
+        assert_eq!((memory.completed_total[0], memory.interrupted_total[0]), (2, 3));
         assert_eq!(memory.cancellation_counts(0)[4], 1);
         memory.grow(3, 99).unwrap();
         let restored =
             ContextSuffixMemory::restore_json(&memory.snapshot_json().unwrap(), 3).unwrap();
-        assert_eq!(restored.execution_counts(0), (2, 3));
+        assert_eq!((restored.completed_total[0], restored.interrupted_total[0]), (2, 3));
         assert_eq!(restored.counts(1), (0, 0));
         assert_eq!(restored.counts(2), (0, 0));
-        memory.clear_resident(0, 81).unwrap();
-        assert_eq!(memory.execution_counts(0), (0, 0));
-        assert_eq!(memory.counts(0), (0, 0));
     }
 }

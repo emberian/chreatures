@@ -164,15 +164,6 @@ impl LearnedSequenceControl {
         Ok(())
     }
 
-    pub(crate) fn clear_resident(&mut self, row: usize, seed: u64) -> Result<(), String> {
-        if row >= self.batch {
-            return Err("sequence-control resident differs".into());
-        }
-        let mut s = seed ^ (row as u64).wrapping_mul(0xd134_2543_de82_ef95);
-        self.rng[row] = splitmix64(&mut s);
-        Ok(())
-    }
-
     fn logits(
         &self,
         state: &[f32],
@@ -449,39 +440,6 @@ impl LearnedSequenceControl {
             out.logp[b] = out.hazard_logp[b] + out.selector_logp[b];
         }
         Ok(out)
-    }
-
-    pub(crate) fn decide_row(
-        &mut self,
-        row: usize,
-        state: &[f32],
-        proposals: &[f32],
-        active: &[f32],
-        proposal_mask: &[bool],
-        active_mask: bool,
-        sample: bool,
-    ) -> Result<ControlDecision, String> {
-        if row >= self.batch {
-            return Err("sequence-control resident differs".into());
-        }
-        let mut one = Self {
-            batch: 1,
-            policy_version: self.policy_version.clone(),
-            policy_sha256: self.policy_sha256.clone(),
-            heads: self.heads.clone(),
-            packed: self.packed.clone(),
-            rng: vec![self.rng[row]],
-        };
-        let decision = one.decide(
-            state,
-            proposals,
-            active,
-            proposal_mask,
-            &[active_mask],
-            sample,
-        )?;
-        self.rng[row] = one.rng[0];
-        Ok(decision)
     }
 
     #[cfg(test)]
