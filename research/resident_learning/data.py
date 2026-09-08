@@ -1,9 +1,9 @@
 """Authenticated episode format for the current CNS-only resident.
 
-Only the masked full-CNS latent and the resident's previous delivered command
-are controller inputs.  Delivered commands and scalar physical rewards are
-teacher signals.  Geometry used to calculate a reward is deliberately not
-written into this artifact.
+Only the masked full-CNS latent and the resident's own previously delivered
+neural context current are controller inputs. Delivered context currents and
+scalar physical rewards are training targets. Geometry used to calculate a
+reward is deliberately not written into this artifact.
 """
 
 from __future__ import annotations
@@ -19,11 +19,12 @@ import uuid
 
 import numpy as np
 
-FORMAT = "chreatures-cns-resident-episode-v1"
-CONTROLLER_FIELDS = ("cns_latent", "previous_delivered_command", "reset")
-TEACHER_FIELDS = ("delivered_command", "physical_reward", "terminal")
+FORMAT = "chreatures-cns-context-resident-episode-v2"
+CONTEXT_POLICY_VERSION = "signed-context12-v1"
+CONTROLLER_FIELDS = ("cns_latent", "previous_delivered_context", "reset")
+TEACHER_FIELDS = ("delivered_context", "physical_reward", "terminal")
 ARRAY_FIELDS = CONTROLLER_FIELDS + TEACHER_FIELDS
-CORPUS_FORMAT = "chreatures-cns-resident-corpus-v1"
+CORPUS_FORMAT = "chreatures-cns-context-resident-corpus-v2"
 SKILLS = (
     "approach",
     "heading-correction",
@@ -70,11 +71,11 @@ class ResidentEpisode:
 
     @property
     def transitions(self) -> int:
-        return self.arrays["delivered_command"].shape[0]
+        return self.arrays["delivered_context"].shape[0]
 
     @property
     def residents(self) -> int:
-        return self.arrays["delivered_command"].shape[1]
+        return self.arrays["delivered_context"].shape[1]
 
     @property
     def curriculum(self) -> dict[str, Any]:
@@ -165,20 +166,20 @@ def _validated_arrays(values: Mapping[str, Any]) -> dict[str, np.ndarray]:
         raise ValueError("CNS resident episode tensor set differs")
     arrays = {
         "cns_latent": np.ascontiguousarray(values["cns_latent"], dtype=np.float32),
-        "previous_delivered_command": np.ascontiguousarray(
-            values["previous_delivered_command"], dtype=np.float32
+        "previous_delivered_context": np.ascontiguousarray(
+            values["previous_delivered_context"], dtype=np.float32
         ),
         "reset": np.ascontiguousarray(values["reset"], dtype=np.bool_),
-        "delivered_command": np.ascontiguousarray(values["delivered_command"], dtype=np.float32),
+        "delivered_context": np.ascontiguousarray(values["delivered_context"], dtype=np.float32),
         "physical_reward": np.ascontiguousarray(values["physical_reward"], dtype=np.float32),
         "terminal": np.ascontiguousarray(values["terminal"], dtype=np.bool_),
     }
-    t, b, action = arrays["delivered_command"].shape
+    t, b, action = arrays["delivered_context"].shape
     if t < 2 or b < 1 or action != 12:
         raise ValueError("episode must contain at least two [resident,action12] transitions")
     expected = {
         "cns_latent": (t + 1, b, 512),
-        "previous_delivered_command": (t + 1, b, 12),
+        "previous_delivered_context": (t + 1, b, 12),
         "reset": (t + 1, b),
         "physical_reward": (t, b),
         "terminal": (t, b),
@@ -189,16 +190,16 @@ def _validated_arrays(values: Mapping[str, Any]) -> dict[str, np.ndarray]:
     for name, value in arrays.items():
         if value.dtype.kind == "f" and not np.isfinite(value).all():
             raise ValueError(f"episode tensor is nonfinite: {name}")
-    for name in ("previous_delivered_command", "delivered_command"):
+    for name in ("previous_delivered_context", "delivered_context"):
         value = arrays[name]
-        if np.any(np.abs(value[..., :4]) > 1.000001) or np.any(value[..., 4:] < -1e-7) or np.any(value[..., 4:] > 1.000001):
-            raise ValueError(f"episode action bounds differ: {name}")
+        if np.any(np.abs(value) > 1.000001):
+            raise ValueError(f"episode signed context bounds differ: {name}")
     if not arrays["reset"][0].all():
         raise ValueError("every episode resident must start with reset=true")
     if np.any(arrays["terminal"][:-1]):
         raise ValueError("terminal is only valid at an episode's final transition")
-    if not np.allclose(arrays["previous_delivered_command"][1:], arrays["delivered_command"], atol=0, rtol=0):
-        raise ValueError("previous delivered command is not the exact causal action receipt")
+    if not np.allclose(arrays["previous_delivered_context"][1:], arrays["delivered_context"], atol=0, rtol=0):
+        raise ValueError("previous delivered context is not the exact CNS-injection receipt")
     return arrays
 
 
@@ -222,7 +223,8 @@ def write_episode(
             "raw_visual", "raw_sensory", "raw_physiology", "world_position",
             "world_geometry", "object_kind", "reward", "outcome",
         ],
-        "causality": "z_t,previous_delivered_t -> command_t -> physics/CNS -> z_t+1",
+        "context_policy_version": CONTEXT_POLICY_VERSION,
+        "causality": "z_t,previous_delivered_context_t -> proposed_context_t -> CNS_t+1 -> z_t+1",
         "cns_service": dict(cns_service),
         "resident_artifact": dict(resident_artifact),
         "provenance": dict(provenance),
@@ -257,10 +259,11 @@ def load_episode(path: str | Path) -> ResidentEpisode:
         arrays = _validated_arrays({name: archive[name] for name in ARRAY_FIELDS})
     required = {
         "format", "controller_input_fields", "teacher_only_fields",
-        "forbidden_controller_fields", "causality", "cns_service",
+        "forbidden_controller_fields", "context_policy_version", "causality", "cns_service",
         "resident_artifact", "provenance", "arrays", "episode_sha256",
     }
-    if set(metadata) != required or metadata["format"] != FORMAT:
+    if (set(metadata) != required or metadata["format"] != FORMAT
+            or metadata["context_policy_version"] != CONTEXT_POLICY_VERSION):
         raise ValueError("CNS resident episode metadata differs")
     if tuple(metadata["controller_input_fields"]) != CONTROLLER_FIELDS or tuple(metadata["teacher_only_fields"]) != TEACHER_FIELDS:
         raise ValueError("CNS resident episode information boundary differs")
@@ -304,7 +307,7 @@ class ClosedLoopCollector:
 
     def append(
         self,
-        delivered_command: Any,
+        delivered_context: Any,
         physical_reward: Any,
         terminal: Any,
         next_cns_latent: Any,
@@ -313,19 +316,19 @@ class ClosedLoopCollector:
     ) -> None:
         if self._closed:
             raise RuntimeError("closed-loop collector is finalized")
-        command = np.ascontiguousarray(delivered_command, dtype=np.float32)
+        context = np.ascontiguousarray(delivered_context, dtype=np.float32)
         reward = np.ascontiguousarray(physical_reward, dtype=np.float32)
         done = np.ascontiguousarray(terminal, dtype=np.bool_)
         latent = np.ascontiguousarray(next_cns_latent, dtype=np.float32)
         reset = np.zeros(self._batch, np.bool_) if next_reset is None else np.ascontiguousarray(next_reset, dtype=np.bool_)
-        if command.shape != (self._batch, 12) or reward.shape != (self._batch,) or done.shape != (self._batch,) or latent.shape != (self._batch, 512) or reset.shape != (self._batch,):
+        if context.shape != (self._batch, 12) or reward.shape != (self._batch,) or done.shape != (self._batch,) or latent.shape != (self._batch, 512) or reset.shape != (self._batch,):
             raise ValueError("closed-loop transition shapes differ")
-        if not np.isfinite(command).all() or not np.isfinite(reward).all() or not np.isfinite(latent).all():
+        if not np.isfinite(context).all() or np.any(np.abs(context) > 1.000001) or not np.isfinite(reward).all() or not np.isfinite(latent).all():
             raise ValueError("closed-loop transition is nonfinite")
         if self._terminal and self._terminal[-1].any():
             raise RuntimeError("cannot append after a terminal transition")
-        self._delivered.append(command); self._reward.append(reward); self._terminal.append(done)
-        self._latent.append(latent); self._previous.append(command.copy()); self._reset.append(reset)
+        self._delivered.append(context); self._reward.append(reward); self._terminal.append(done)
+        self._latent.append(latent); self._previous.append(context.copy()); self._reset.append(reset)
 
     def finalize(self, path: str | Path) -> ResidentEpisode:
         if self._closed or len(self._delivered) < 2:
@@ -335,9 +338,9 @@ class ClosedLoopCollector:
             path,
             {
                 "cns_latent": np.stack(self._latent),
-                "previous_delivered_command": np.stack(self._previous),
+                "previous_delivered_context": np.stack(self._previous),
                 "reset": np.stack(self._reset),
-                "delivered_command": np.stack(self._delivered),
+                "delivered_context": np.stack(self._delivered),
                 "physical_reward": np.stack(self._reward),
                 "terminal": np.stack(self._terminal),
             },

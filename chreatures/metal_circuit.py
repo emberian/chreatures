@@ -16,9 +16,11 @@ from pathlib import Path
 
 import numpy as np
 
+from .cns_adapter_contract import FORMAT as SERVICE_FORMAT, SENSORY_DIM, LATENT_DIM, CONTEXT_DIM, MOTOR_DIM
+
 SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}\Z")
-IDENTITY_KEYS = ("graph_sha256", "atlas_sha256", "readout_mask_sha256", "adapter_sha256")
-INPUT_COUNT, LATENT_COUNT, NEURON_COUNT = 5356, 512, 165122
+IDENTITY_KEYS = ("graph_sha256", "atlas_sha256", "anatomy_sha256", "readout_mask_sha256", "adapter_sha256")
+INPUT_COUNT, LATENT_COUNT, NEURON_COUNT = SENSORY_DIM, LATENT_DIM, 165122
 
 
 def _sha256(path):
@@ -34,7 +36,42 @@ def _canonical(value):
 
 
 def input_names():
-    return [f"optic.{site}.{rgb}" for site in range(1771) for rgb in "rgb"] + [f"body.{i}" for i in range(43)]
+    return [f"optic.{site}.{rgb}" for site in range(1771) for rgb in "rgb"] + [f"body.{i}" for i in range(110)]
+
+
+def context_names():
+    return [f"cns.context.{i}" for i in range(CONTEXT_DIM)]
+
+
+def motor_names():
+    return [f"joint.{joint}.{direction}" for joint in range(12) for direction in ("positive", "negative")] + [
+        "gaze_pitch", "posture", "grip", "signal_low", "signal_mid", "signal_high",
+        "eat", "release", "secrete", "allocate",
+    ]
+
+
+def validate_entries(entries):
+    """Validate the transport boundary before sending any neural mutation."""
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("CNS step requires a nonempty resident list")
+    ids = []
+    for entry in entries:
+        if not isinstance(entry, dict) or set(entry) != {"id", "sensory", "context"}:
+            raise ValueError("CNS V3 entry requires exactly id, sensory and explicit context")
+        if not isinstance(entry["id"], str) or not 1 <= len(entry["id"]) <= 128:
+            raise ValueError("CNS step resident identity is invalid")
+        sensory = np.asarray(entry["sensory"], dtype=np.float32)
+        context = np.asarray(entry["context"], dtype=np.float32)
+        if sensory.shape != (INPUT_COUNT,) or not np.isfinite(sensory).all():
+            raise ValueError("CNS sensory row must have 5423 finite values")
+        if np.any(sensory[:5313] < 0) or np.any(sensory[:5313] > 1):
+            raise ValueError("optic RGB must be in [0,1]")
+        if context.shape != (CONTEXT_DIM,) or not np.isfinite(context).all() or np.any(np.abs(context) > 1):
+            raise ValueError("CNS context row must have 12 signed values in [-1,1]")
+        ids.append(entry["id"])
+    if len(set(ids)) != len(ids):
+        raise ValueError("CNS step resident identities must be unique")
+    return ids
 
 
 class MetalCircuit:
@@ -58,15 +95,20 @@ class MetalCircuit:
             ready = json.loads(self._process.stdout.readline())
             if (ready.get("ok") is not True or ready.get("inputs") != INPUT_COUNT
                     or ready.get("readouts") != LATENT_COUNT or ready.get("neurons") != NEURON_COUNT
-                    or ready.get("capacity") != capacity):
+                    or ready.get("capacity") != capacity
+                    or ready.get("context_inputs") != CONTEXT_DIM
+                    or ready.get("motor_outputs") != MOTOR_DIM):
                 raise ValueError("native CNS dimensions differ from current interface")
-            model = ready.get("cns_adapter", ready.get("metadata", ready))
+            model = ready["cns_adapter"]
+            if model.get("format") != SERVICE_FORMAT or model.get("service_artifact_sha256") != self.artifact_sha256:
+                raise ValueError("native CNS service artifact identity differs")
             self.cns_identity = {key: model[key] for key in IDENTITY_KEYS}
             if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value)
                    for value in self.cns_identity.values()):
                 raise ValueError("native CNS artifact lacks authenticated model identities")
-            self.cns_identity.update(format="chreatures-cns-service-v2", service_artifact_sha256=self.artifact_sha256,
-                                     sensory_dim=INPUT_COUNT, latent_dim=LATENT_COUNT)
+            self.cns_identity.update(format=SERVICE_FORMAT, service_artifact_sha256=self.artifact_sha256,
+                                     sensory_dim=INPUT_COUNT, latent_dim=LATENT_COUNT,
+                                     context_dim=CONTEXT_DIM, motor_dim=MOTOR_DIM)
             self.native_startup = ready
         except Exception:
             self.close()
@@ -75,6 +117,7 @@ class MetalCircuit:
         self.n, self.edge_count = NEURON_COUNT, int(ready.get("edges", 25563197))
         self.input_names = input_names()
         self.readout_names = [f"cns.latent.{i}" for i in range(LATENT_COUNT)]
+        self.context_names, self.motor_names = context_names(), motor_names()
         self._resident_for_slot = [None] * capacity
         self._slots = {}
         self.times = np.zeros(capacity, dtype=np.float64)
@@ -138,17 +181,19 @@ class MetalCircuit:
         with self._lock:
             if not math.isfinite(dt) or dt <= 0 or dt > 0.1:
                 raise ValueError("CNS step duration must be in (0,.1]")
-            ids = [entry["id"] for entry in entries]
+            ids = validate_entries(entries)
             if not ids or len(set(ids)) != len(ids) or any(rid not in self._slots for rid in ids):
                 raise ValueError("CNS step resident set is invalid")
             sensory = np.zeros((INPUT_COUNT, self.capacity), dtype=np.float32)
+            context = np.zeros((CONTEXT_DIM, self.capacity), dtype=np.float32)
             for entry in entries:
                 row = np.asarray(entry["sensory"], dtype=np.float32)
                 if row.shape != (INPUT_COUNT,) or not np.isfinite(row).all():
-                    raise ValueError("CNS sensory row must have 5356 finite values")
+                    raise ValueError("CNS sensory row must have 5423 finite values")
                 sensory[:, self._slots[entry["id"]]] = row
+                context[:, self._slots[entry["id"]]] = entry["context"]
             request = {"op": "step", "dt": dt, "active_mask": sum(1 << self._slots[rid] for rid in ids),
-                       "sensory": sensory.reshape(-1).tolist()}
+                       "sensory": sensory.reshape(-1).tolist(), "context": context.reshape(-1).tolist()}
             if selected_neuron_indices is not None:
                 indices = list(selected_neuron_indices)
                 if any(type(i) is not int or not 0 <= i < self.n for i in indices) or len(set(indices)) != len(indices):
@@ -157,16 +202,23 @@ class MetalCircuit:
             result = self._call(request)
             try:
                 latent = np.asarray(result["latent"], dtype=np.float32).reshape(LATENT_COUNT, self.capacity)
+                motor = np.asarray(result["motor"], dtype=np.float32).reshape(MOTOR_DIM, self.capacity)
+                if (not np.isfinite(motor).all() or np.any(np.abs(motor[24:26]) > 1)
+                        or np.any(motor[:24] < 0) or np.any(motor[:24] > 1)
+                        or np.any(motor[26:] < 0) or np.any(motor[26:] > 1)):
+                    raise ValueError("native CNS motor output violates actuator bounds")
                 stats = np.asarray(result["physiology"], dtype=np.float32).reshape(3, self.capacity)
                 times = np.asarray(result["times"], dtype=np.float64)
                 if times.shape != (self.capacity,) or not np.isfinite(latent).all() or not np.isfinite(stats).all() or not np.isfinite(times).all():
                     raise ValueError("native CNS returned invalid state")
                 self.times[:] = times
                 selected = None if selected_neuron_indices is None else np.asarray(result["selected_rates"], dtype=np.float32).reshape(len(indices), self.capacity)
+                if selected is not None and not np.isfinite(selected).all():
+                    raise ValueError("native CNS observer output is nonfinite")
                 output = []
                 for rid in ids:
                     slot = self._slots[rid]
-                    row = {"id": rid, "time": float(times[slot]), "features": latent[:, slot].tolist(),
+                    row = {"id": rid, "time": float(times[slot]), "features": latent[:, slot].tolist(), "motor": motor[:, slot].tolist(),
                            "activity": float(stats[0, slot]), "activity_peak": float(stats[1, slot]), "support": float(stats[2, slot]),
                            "cns_adapter_sha256": self.cns_identity["adapter_sha256"]}
                     if selected is not None:
@@ -198,6 +250,7 @@ class MetalCircuit:
                 "capacity": self.capacity, "residents": self.resident_ids,
                 "device": {"type": "metal", "name": self.native_startup.get("device"), "kernel": self.kernel},
                 "inputs": self.input_names, "readouts": self.readout_names,
+                "contexts": self.context_names, "motors": self.motor_names,
                 "cns_adapter": copy.deepcopy(self.cns_identity), "execution": copy.deepcopy(self.execution_identity)}
 
     def _path(self, directory, name):
@@ -211,7 +264,7 @@ class MetalCircuit:
                 raise ValueError("CNS snapshots require the complete ordered cohort")
             path = self._path(directory, name)
             path.parent.mkdir(parents=True, exist_ok=True)
-            metadata = {"format": "chreatures-cns-host-state-v1", "identity": self.cns_identity,
+            metadata = {"format": "chreatures-cns-host-state-v3", "identity": self.cns_identity,
                         "capacity": self.capacity, "resident_slots": self._resident_for_slot,
                         "execution": self.execution_identity}
             self._call({"op": "snapshot", "path": str(path), "metadata": _canonical(metadata)}, mutation=False)
@@ -226,7 +279,7 @@ class MetalCircuit:
             inspected = self._call({"op": "inspect_snapshot", "path": str(path)}, mutation=False)
             metadata = json.loads(inspected["metadata"])
             slots = metadata.get("resident_slots")
-            if (metadata.get("format") != "chreatures-cns-host-state-v1" or metadata.get("identity") != self.cns_identity
+            if (metadata.get("format") != "chreatures-cns-host-state-v3" or metadata.get("identity") != self.cns_identity
                     or metadata.get("execution") != self.execution_identity
                     or metadata.get("capacity") != self.capacity or not isinstance(slots, list) or len(slots) != self.capacity):
                 raise ValueError("CNS snapshot host identity differs")

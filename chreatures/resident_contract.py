@@ -1,10 +1,10 @@
 """Torch-free identities for the one current CNS-only resident lineage."""
 
-CONTROLLER_INPUT_FORMAT = "chreatures-cns-only-controller-v1"
-NATIVE_POPULATION_FORMAT = "chreatures-native-cns-only-resident-population-v1"
-NATIVE_EXECUTION = "native-cns-only-resident-v1"
+CONTROLLER_INPUT_FORMAT = "chreatures-cns-context-controller-v1"
+NATIVE_POPULATION_FORMAT = "chreatures-native-cns-context-resident-population-v1"
+NATIVE_EXECUTION = "native-cns-context-resident-v1"
 NATIVE_POPULATION_VERSION = 1
-NATIVE_SNAPSHOT_FORMAT = "chreatures-native-cns-only-resident-snapshot-v1"
+NATIVE_SNAPSHOT_FORMAT = "chreatures-native-cns-context-resident-snapshot-v1"
 NATIVE_SNAPSHOT_VERSION = 1
 
 # Archived Torch-v5 research corpus tools may identify their own source data

@@ -4,11 +4,12 @@
 use crate::learned_sequence_control::{
     ControlDecision, LearnedSequenceControl, CANDIDATES, CHOICE, STATE as CONTROL_STATE,
 };
-use crate::motor_suffix::{CancellationReason, MotorSuffixMemory, ACTIONS, CONTEXT, MAX_HORIZON};
+use crate::context_suffix::{CancellationReason, ContextSuffixMemory, ACTIONS, CONTEXT, MAX_HORIZON};
 use crate::{gemm_into, gru, linear, tanh_all, Gru, Linear};
 use serde::{Deserialize, Serialize};
 
-const FORMAT: &str = "chreatures-cns-resident-native-v10";
+const FORMAT: &str = "chreatures-cns-context-resident-native-v11";
+pub const CONTEXT_POLICY_VERSION: &str = "signed-context12-v1";
 const Z: usize = 512;
 const HIDDEN: usize = 256;
 const GOAL: usize = 128;
@@ -203,13 +204,14 @@ struct PredictorMember {
 #[serde(deny_unknown_fields)]
 struct PrivateSnapshot {
     format: String,
+    context_policy_version: String,
     batch: usize,
     sample: bool,
     research_training: bool,
     core_sha256: String,
     predictor_sha256: String,
     state: Vec<f32>,
-    previous_command: Vec<f32>,
+    previous_context: Vec<f32>,
     current_key: Vec<f32>,
     goal: Vec<f32>,
     goal_origin_slot: Vec<i32>,
@@ -217,15 +219,15 @@ struct PrivateSnapshot {
     goal_origin_tick: Vec<u64>,
     goal_selected_tick: Vec<u64>,
     memory_inserted_slot: Vec<i32>,
-    command_pending: Vec<bool>,
+    context_pending: Vec<bool>,
     pending_tick: Vec<u64>,
-    pending_command: Vec<f32>,
+    pending_context_current: Vec<f32>,
     pending_context: Vec<f32>,
     pending_goal: Vec<f32>,
     acknowledged_valid: Vec<bool>,
     acknowledged_suffix: Vec<bool>,
     acknowledged_tick: Vec<u64>,
-    acknowledged_command: Vec<f32>,
+    acknowledged_context_current: Vec<f32>,
     acknowledged_context: Vec<f32>,
     acknowledged_goal: Vec<f32>,
 }
@@ -241,10 +243,10 @@ pub struct DevelopmentalResidentCohort {
     core: Core,
     predictor: Vec<PredictorMember>,
     sequence_control: LearnedSequenceControl,
-    suffixes: MotorSuffixMemory,
+    suffixes: ContextSuffixMemory,
     goal_memory: CnsGoalMemory,
     state: Vec<f32>,
-    previous_command: Vec<f32>,
+    previous_context: Vec<f32>,
     current_key: Vec<f32>,
     goal: Vec<f32>,
     goal_origin_slot: Vec<i32>,
@@ -253,15 +255,15 @@ pub struct DevelopmentalResidentCohort {
     goal_selected_tick: Vec<u64>,
     memory_inserted_slot: Vec<i32>,
     canonical_context: Vec<f32>,
-    command_pending: Vec<bool>,
+    context_pending: Vec<bool>,
     pending_tick: Vec<u64>,
-    pending_command: Vec<f32>,
+    pending_context_current: Vec<f32>,
     pending_context: Vec<f32>,
     pending_goal: Vec<f32>,
     acknowledged_valid: Vec<bool>,
     acknowledged_suffix: Vec<bool>,
     acknowledged_tick: Vec<u64>,
-    acknowledged_command: Vec<f32>,
+    acknowledged_context_current: Vec<f32>,
     acknowledged_context: Vec<f32>,
     acknowledged_goal: Vec<f32>,
     candidate_actions: Vec<f32>,
@@ -292,15 +294,10 @@ fn valid_hash(value: &str) -> bool {
             .all(|x| x.is_ascii_digit() || (b'a'..=b'f').contains(&x))
 }
 
-fn commands_valid(values: &[f32]) -> bool {
-    values.chunks_exact(ACTIONS).all(|command| {
-        command[..4]
-            .iter()
-            .all(|value| value.is_finite() && (-1.0..=1.0).contains(value))
-            && command[4..]
-                .iter()
-                .all(|value| value.is_finite() && (0.0..=1.0).contains(value))
-    })
+fn contexts_valid(values: &[f32]) -> bool {
+    values
+        .iter()
+        .all(|value| value.is_finite() && (-1.0..=1.0).contains(value))
 }
 
 fn normalize_rows(values: &mut [f32], width: usize) {
@@ -339,8 +336,8 @@ impl DevelopmentalResidentCohort {
             .checked_add(additions)
             .filter(|batch| additions > 0 && *batch <= 4096)
             .ok_or("CNS resident expansion differs")?;
-        if self.command_pending.iter().any(|pending| *pending) {
-            return Err("CNS resident expansion requires acknowledged commands".into());
+        if self.context_pending.iter().any(|pending| *pending) {
+            return Err("CNS resident expansion requires acknowledged context currents".into());
         }
         let mut result = self.clone();
         result
@@ -356,7 +353,7 @@ impl DevelopmentalResidentCohort {
             };
         }
         grow!(state, HIDDEN, 0.0);
-        grow!(previous_command, ACTIONS, 0.0);
+        grow!(previous_context, ACTIONS, 0.0);
         grow!(current_key, GOAL, 0.0);
         grow!(goal, GOAL, 0.0);
         grow!(goal_origin_slot, 1, -1);
@@ -365,15 +362,15 @@ impl DevelopmentalResidentCohort {
         grow!(goal_selected_tick, 1, 0);
         grow!(memory_inserted_slot, 1, -1);
         grow!(canonical_context, CANONICAL_CONTEXT, 0.0);
-        grow!(command_pending, 1, false);
+        grow!(context_pending, 1, false);
         grow!(pending_tick, 1, 0);
-        grow!(pending_command, ACTIONS, 0.0);
+        grow!(pending_context_current, ACTIONS, 0.0);
         grow!(pending_context, CONTEXT, 0.0);
         grow!(pending_goal, GOAL, 0.0);
         grow!(acknowledged_valid, 1, false);
         grow!(acknowledged_suffix, 1, false);
         grow!(acknowledged_tick, 1, 0);
-        grow!(acknowledged_command, ACTIONS, 0.0);
+        grow!(acknowledged_context_current, ACTIONS, 0.0);
         grow!(acknowledged_context, CONTEXT, 0.0);
         grow!(acknowledged_goal, GOAL, 0.0);
         grow!(candidate_actions, CANDIDATES * ACTIONS, 0.0);
@@ -431,7 +428,7 @@ impl DevelopmentalResidentCohort {
         for row in 0..self.batch {
             if reset[row] {
                 self.state[row * HIDDEN..(row + 1) * HIDDEN].fill(0.0);
-                self.previous_command[row * ACTIONS..(row + 1) * ACTIONS].fill(0.0);
+                self.previous_context[row * ACTIONS..(row + 1) * ACTIONS].fill(0.0);
             }
         }
         let mut input = vec![0.0; self.batch * CORE_INPUT];
@@ -452,9 +449,9 @@ impl DevelopmentalResidentCohort {
         self.state = next;
         for row in 0..self.batch {
             if reset[row] {
-                self.previous_command[row * ACTIONS..(row + 1) * ACTIONS].fill(0.0);
+                self.previous_context[row * ACTIONS..(row + 1) * ACTIONS].fill(0.0);
             } else {
-                self.previous_command[row * ACTIONS..(row + 1) * ACTIONS]
+                self.previous_context[row * ACTIONS..(row + 1) * ACTIONS]
                     .copy_from_slice(&previous[row * ACTIONS..(row + 1) * ACTIONS]);
             }
         }
@@ -491,7 +488,7 @@ impl DevelopmentalResidentCohort {
             self.canonical_context[dst + Z + HIDDEN..dst + Z + HIDDEN + GOAL]
                 .copy_from_slice(&self.goal[row * GOAL..(row + 1) * GOAL]);
             self.canonical_context[dst + Z + HIDDEN + GOAL..(row + 1) * CANONICAL_CONTEXT]
-                .copy_from_slice(&self.previous_command[row * ACTIONS..(row + 1) * ACTIONS]);
+                .copy_from_slice(&self.previous_context[row * ACTIONS..(row + 1) * ACTIONS]);
         }
     }
 
@@ -512,7 +509,7 @@ impl DevelopmentalResidentCohort {
             let target = &self.acknowledged_goal[row * GOAL..(row + 1) * GOAL];
             let outcome = current.iter().zip(target).map(|(a, b)| a * b).sum::<f32>()
                 - before.iter().zip(target).map(|(a, b)| a * b).sum::<f32>();
-            let action = &self.acknowledged_command[row * ACTIONS..(row + 1) * ACTIONS];
+            let action = &self.acknowledged_context_current[row * ACTIONS..(row + 1) * ACTIONS];
             if self.acknowledged_suffix[row] {
                 if contiguous {
                     self.suffixes.note_executed(
@@ -547,7 +544,7 @@ impl DevelopmentalResidentCohort {
             input[dst + HIDDEN..dst + HIDDEN + GOAL]
                 .copy_from_slice(&self.goal[row * GOAL..(row + 1) * GOAL]);
             input[dst + HIDDEN + GOAL..(row + 1) * PROPOSAL_INPUT]
-                .copy_from_slice(&self.previous_command[row * ACTIONS..(row + 1) * ACTIONS]);
+                .copy_from_slice(&self.previous_context[row * ACTIONS..(row + 1) * ACTIONS]);
         }
         let mut hidden = Vec::new();
         gemm_into(
@@ -566,17 +563,9 @@ impl DevelopmentalResidentCohort {
             &self.core.proposal_out,
             &mut local,
         );
-        for command in local.chunks_exact_mut(ACTIONS) {
-            for value in &mut command[..4] {
+        for context in local.chunks_exact_mut(ACTIONS) {
+            for value in context {
                 *value = value.tanh();
-            }
-            for value in &mut command[4..] {
-                *value = if *value >= 0.0 {
-                    1.0 / (1.0 + (-*value).exp())
-                } else {
-                    let exp = value.exp();
-                    exp / (1.0 + exp)
-                };
             }
         }
         for row in 0..self.batch {
@@ -665,8 +654,8 @@ impl DevelopmentalResidentCohort {
         ticks: &[u64],
         reset: &[bool],
     ) -> Result<Vec<f32>, String> {
-        if self.command_pending.iter().any(|x| *x) {
-            return Err("an unacknowledged command is pending".into());
+        if self.context_pending.iter().any(|x| *x) {
+            return Err("an unacknowledged context current is pending".into());
         }
         self.core_observe(z, previous, ticks, reset);
         self.resolve_acknowledged(ticks, reset)?;
@@ -859,9 +848,9 @@ impl DevelopmentalResidentCohort {
                     self.suffixes.start(row, suffix)?;
                 }
             }
-            self.command_pending[row] = true;
+            self.context_pending[row] = true;
             self.pending_tick[row] = ticks[row];
-            self.pending_command[row * ACTIONS..(row + 1) * ACTIONS]
+            self.pending_context_current[row * ACTIONS..(row + 1) * ACTIONS]
                 .copy_from_slice(&proposed[row * ACTIONS..(row + 1) * ACTIONS]);
             self.pending_context[row * CONTEXT..(row + 1) * CONTEXT]
                 .copy_from_slice(&self.current_key[row * GOAL..(row + 1) * GOAL]);
@@ -874,13 +863,14 @@ impl DevelopmentalResidentCohort {
     fn private_snapshot(&self) -> PrivateSnapshot {
         PrivateSnapshot {
             format: FORMAT.into(),
+            context_policy_version: CONTEXT_POLICY_VERSION.into(),
             batch: self.batch,
             sample: self.sample,
             research_training: self.research_training,
             core_sha256: self.core_sha256.clone(),
             predictor_sha256: self.predictor_sha256.clone(),
             state: self.state.clone(),
-            previous_command: self.previous_command.clone(),
+            previous_context: self.previous_context.clone(),
             current_key: self.current_key.clone(),
             goal: self.goal.clone(),
             goal_origin_slot: self.goal_origin_slot.clone(),
@@ -888,15 +878,15 @@ impl DevelopmentalResidentCohort {
             goal_origin_tick: self.goal_origin_tick.clone(),
             goal_selected_tick: self.goal_selected_tick.clone(),
             memory_inserted_slot: self.memory_inserted_slot.clone(),
-            command_pending: self.command_pending.clone(),
+            context_pending: self.context_pending.clone(),
             pending_tick: self.pending_tick.clone(),
-            pending_command: self.pending_command.clone(),
+            pending_context_current: self.pending_context_current.clone(),
             pending_context: self.pending_context.clone(),
             pending_goal: self.pending_goal.clone(),
             acknowledged_valid: self.acknowledged_valid.clone(),
             acknowledged_suffix: self.acknowledged_suffix.clone(),
             acknowledged_tick: self.acknowledged_tick.clone(),
-            acknowledged_command: self.acknowledged_command.clone(),
+            acknowledged_context_current: self.acknowledged_context_current.clone(),
             acknowledged_context: self.acknowledged_context.clone(),
             acknowledged_goal: self.acknowledged_goal.clone(),
         }
@@ -912,8 +902,9 @@ mod python;
 pub struct ResidentSnapshot {
     pub format: String,
     pub version: u8,
+    pub context_policy_version: String,
     pub private: String,
-    pub motor_suffix_memory: String,
+    pub context_suffix_memory: String,
     pub goal_memory: String,
     pub sequence_control: String,
 }
@@ -924,6 +915,7 @@ impl DevelopmentalResidentCohort {
         action_mode: &str,
         action_seed: u64,
         suffix_seed: u64,
+        context_policy_version: &str,
         core_packed: &[f32],
         core_sha256: String,
         predictor_packed: &[f32],
@@ -936,10 +928,11 @@ impl DevelopmentalResidentCohort {
         if batch == 0
             || batch > 4096
             || !matches!(action_mode, "sample" | "map")
+            || context_policy_version != CONTEXT_POLICY_VERSION
             || !valid_hash(&core_sha256)
             || !valid_hash(&predictor_sha256)
         {
-            return Err("CNS resident configuration differs".to_string());
+            return Err("CNS context-resident configuration identity differs".to_string());
         }
         let flat = core_packed;
         if flat.iter().any(|x| !x.is_finite()) {
@@ -987,10 +980,10 @@ impl DevelopmentalResidentCohort {
             core,
             predictor,
             sequence_control,
-            suffixes: MotorSuffixMemory::new(batch, suffix_seed)?,
+            suffixes: ContextSuffixMemory::new(batch, suffix_seed)?,
             goal_memory: CnsGoalMemory::new(batch, suffix_seed ^ 0x474f_414c_4d45_4d31),
             state: vec![0.0; batch * HIDDEN],
-            previous_command: vec![0.0; batch * ACTIONS],
+            previous_context: vec![0.0; batch * ACTIONS],
             current_key: vec![0.0; batch * GOAL],
             goal: vec![0.0; batch * GOAL],
             goal_origin_slot: vec![-1; batch],
@@ -999,15 +992,15 @@ impl DevelopmentalResidentCohort {
             goal_selected_tick: vec![0; batch],
             memory_inserted_slot: vec![-1; batch],
             canonical_context: vec![0.0; batch * CANONICAL_CONTEXT],
-            command_pending: vec![false; batch],
+            context_pending: vec![false; batch],
             pending_tick: vec![0; batch],
-            pending_command: vec![0.0; batch * ACTIONS],
+            pending_context_current: vec![0.0; batch * ACTIONS],
             pending_context: vec![0.0; batch * CONTEXT],
             pending_goal: vec![0.0; batch * GOAL],
             acknowledged_valid: vec![false; batch],
             acknowledged_suffix: vec![false; batch],
             acknowledged_tick: vec![0; batch],
-            acknowledged_command: vec![0.0; batch * ACTIONS],
+            acknowledged_context_current: vec![0.0; batch * ACTIONS],
             acknowledged_context: vec![0.0; batch * CONTEXT],
             acknowledged_goal: vec![0.0; batch * GOAL],
             candidate_actions: vec![0.0; batch * CANDIDATES * ACTIONS],
@@ -1042,8 +1035,9 @@ impl DevelopmentalResidentCohort {
     ) -> Result<Self, String> {
         self.expanded_inner(additions, action_seed, suffix_seed)
     }
-    /// The only sensory input is the trainable CNS-derived latent. Commands are
-    /// the resident's own previous motor output, never body/world observations.
+    /// The only sensory input is the trainable CNS-derived latent. `previous`
+    /// is this resident's own context12 that actually entered the prior CNS
+    /// recurrence, never a physical motor command or body/world observation.
     pub fn step_flat(
         &mut self,
         z: &[f32],
@@ -1058,9 +1052,10 @@ impl DevelopmentalResidentCohort {
         {
             return Err("CNS resident step shapes differ".into());
         }
-        if z.iter().any(|x| !x.is_finite()) || !commands_valid(previous) {
+        if z.iter().any(|x| !x.is_finite()) || !contexts_valid(previous) {
             return Err(
-                "CNS latent must be finite and previous commands must obey canonical bounds".into(),
+                "CNS latent must be finite and previous context12 must be signed and bounded"
+                    .into(),
             );
         }
         self.prepare_decision(z, previous, ticks, reset)
@@ -1068,25 +1063,25 @@ impl DevelopmentalResidentCohort {
     pub fn acknowledge_flat(
         &mut self,
         ticks: &[u64],
-        delivered_command: &[f32],
+        delivered_context: &[f32],
     ) -> Result<Vec<bool>, String> {
-        if ticks.len() != self.batch || delivered_command.len() != self.batch * ACTIONS {
-            return Err("command receipt shapes differ".into());
+        if ticks.len() != self.batch || delivered_context.len() != self.batch * ACTIONS {
+            return Err("context receipt shapes differ".into());
         }
         let t = ticks;
-        let delivered = delivered_command;
-        if !commands_valid(delivered) {
-            return Err("delivered commands must obey canonical bounds".to_string());
+        let delivered = delivered_context;
+        if !contexts_valid(delivered) {
+            return Err("delivered context12 must be signed and bounded".to_string());
         }
         for row in 0..self.batch {
-            if !self.command_pending[row] || self.pending_tick[row] != t[row] {
-                return Err("command receipt boundary differs".to_string());
+            if !self.context_pending[row] || self.pending_tick[row] != t[row] {
+                return Err("context receipt boundary differs".to_string());
             }
         }
         let mut exact = vec![false; self.batch];
         for row in 0..self.batch {
             let actual = &delivered[row * ACTIONS..(row + 1) * ACTIONS];
-            let expected = &self.pending_command[row * ACTIONS..(row + 1) * ACTIONS];
+            let expected = &self.pending_context_current[row * ACTIONS..(row + 1) * ACTIONS];
             exact[row] = actual == expected;
             let suffix_pending = self.suffixes.active(row).is_some();
             if !exact[row] && suffix_pending {
@@ -1096,21 +1091,23 @@ impl DevelopmentalResidentCohort {
             self.acknowledged_valid[row] = true;
             self.acknowledged_suffix[row] = exact[row] && suffix_pending;
             self.acknowledged_tick[row] = t[row];
-            self.acknowledged_command[row * ACTIONS..(row + 1) * ACTIONS].copy_from_slice(actual);
+            self.acknowledged_context_current[row * ACTIONS..(row + 1) * ACTIONS]
+                .copy_from_slice(actual);
             self.acknowledged_context[row * CONTEXT..(row + 1) * CONTEXT]
                 .copy_from_slice(&self.pending_context[row * CONTEXT..(row + 1) * CONTEXT]);
             self.acknowledged_goal[row * GOAL..(row + 1) * GOAL]
                 .copy_from_slice(&self.pending_goal[row * GOAL..(row + 1) * GOAL]);
-            self.command_pending[row] = false;
+            self.context_pending[row] = false;
         }
         Ok(exact)
     }
     pub fn snapshot_data(&self) -> Result<ResidentSnapshot, String> {
         Ok(ResidentSnapshot {
             format: FORMAT.into(),
-            version: 10,
+            version: 11,
+            context_policy_version: CONTEXT_POLICY_VERSION.into(),
             private: serde_json::to_string(&self.private_snapshot()).map_err(|e| e.to_string())?,
-            motor_suffix_memory: self.suffixes.snapshot_json()?,
+            context_suffix_memory: self.suffixes.snapshot_json()?,
             goal_memory: serde_json::to_string(&self.goal_memory).map_err(|e| e.to_string())?,
             sequence_control: self.sequence_control.snapshot_json()?,
         })
@@ -1123,19 +1120,23 @@ impl DevelopmentalResidentCohort {
         self.restore_snapshot(&value)
     }
     pub fn restore_snapshot(&mut self, value: &ResidentSnapshot) -> Result<(), String> {
-        if value.format != FORMAT || value.version != 10 {
+        if value.format != FORMAT
+            || value.version != 11
+            || value.context_policy_version != CONTEXT_POLICY_VERSION
+        {
             return Err("CNS snapshot identity differs".into());
         }
         let p: PrivateSnapshot = serde_json::from_str(&value.private).map_err(|e| e.to_string())?;
         let expected = self.private_snapshot();
         if p.format != FORMAT
+            || p.context_policy_version != CONTEXT_POLICY_VERSION
             || p.batch != self.batch
             || p.sample != self.sample
             || p.research_training != self.research_training
             || p.core_sha256 != self.core_sha256
             || p.predictor_sha256 != self.predictor_sha256
             || p.state.len() != expected.state.len()
-            || p.previous_command.len() != expected.previous_command.len()
+            || p.previous_context.len() != expected.previous_context.len()
             || p.current_key.len() != expected.current_key.len()
             || p.goal.len() != expected.goal.len()
             || p.goal_origin_slot.len() != self.batch
@@ -1143,41 +1144,41 @@ impl DevelopmentalResidentCohort {
             || p.goal_origin_tick.len() != self.batch
             || p.goal_selected_tick.len() != self.batch
             || p.memory_inserted_slot.len() != self.batch
-            || p.command_pending.len() != self.batch
+            || p.context_pending.len() != self.batch
             || p.pending_tick.len() != self.batch
-            || p.pending_command.len() != expected.pending_command.len()
+            || p.pending_context_current.len() != expected.pending_context_current.len()
             || p.pending_context.len() != expected.pending_context.len()
             || p.pending_goal.len() != expected.pending_goal.len()
             || p.acknowledged_valid.len() != self.batch
             || p.acknowledged_suffix.len() != self.batch
             || p.acknowledged_tick.len() != self.batch
-            || p.acknowledged_command.len() != expected.acknowledged_command.len()
+            || p.acknowledged_context_current.len() != expected.acknowledged_context_current.len()
             || p.acknowledged_context.len() != expected.acknowledged_context.len()
             || p.acknowledged_goal.len() != expected.acknowledged_goal.len()
-            || !commands_valid(&p.previous_command)
-            || !commands_valid(&p.pending_command)
-            || !commands_valid(&p.acknowledged_command)
+            || !contexts_valid(&p.previous_context)
+            || !contexts_valid(&p.pending_context_current)
+            || !contexts_valid(&p.acknowledged_context_current)
             || p.goal_origin_slot
                 .iter()
                 .chain(&p.memory_inserted_slot)
                 .any(|slot| *slot < -1 || *slot >= GOAL_SLOTS as i32)
-            || (0..self.batch).any(|row| p.command_pending[row] && p.acknowledged_valid[row])
+            || (0..self.batch).any(|row| p.context_pending[row] && p.acknowledged_valid[row])
             || p.state
                 .iter()
-                .chain(&p.previous_command)
+                .chain(&p.previous_context)
                 .chain(&p.current_key)
                 .chain(&p.goal)
-                .chain(&p.pending_command)
+                .chain(&p.pending_context_current)
                 .chain(&p.pending_context)
                 .chain(&p.pending_goal)
-                .chain(&p.acknowledged_command)
+                .chain(&p.acknowledged_context_current)
                 .chain(&p.acknowledged_context)
                 .chain(&p.acknowledged_goal)
                 .any(|x| !x.is_finite())
         {
             return Err("CNS snapshot state differs".to_string());
         }
-        let suffixes = MotorSuffixMemory::restore_json(&value.motor_suffix_memory, self.batch)?;
+        let suffixes = ContextSuffixMemory::restore_json(&value.context_suffix_memory, self.batch)?;
         let goal_memory: CnsGoalMemory =
             serde_json::from_str(&value.goal_memory).map_err(|e| e.to_string())?;
         if !goal_memory.validate(self.batch) {
@@ -1208,7 +1209,7 @@ impl DevelopmentalResidentCohort {
         let mut sequence_control = self.sequence_control.clone();
         sequence_control.restore_checked(&value.sequence_control)?;
         self.state = p.state;
-        self.previous_command = p.previous_command;
+        self.previous_context = p.previous_context;
         self.current_key = p.current_key;
         self.goal = p.goal;
         self.goal_origin_slot = p.goal_origin_slot;
@@ -1216,15 +1217,15 @@ impl DevelopmentalResidentCohort {
         self.goal_origin_tick = p.goal_origin_tick;
         self.goal_selected_tick = p.goal_selected_tick;
         self.memory_inserted_slot = p.memory_inserted_slot;
-        self.command_pending = p.command_pending;
+        self.context_pending = p.context_pending;
         self.pending_tick = p.pending_tick;
-        self.pending_command = p.pending_command;
+        self.pending_context_current = p.pending_context_current;
         self.pending_context = p.pending_context;
         self.pending_goal = p.pending_goal;
         self.acknowledged_valid = p.acknowledged_valid;
         self.acknowledged_suffix = p.acknowledged_suffix;
         self.acknowledged_tick = p.acknowledged_tick;
-        self.acknowledged_command = p.acknowledged_command;
+        self.acknowledged_context_current = p.acknowledged_context_current;
         self.acknowledged_context = p.acknowledged_context;
         self.acknowledged_goal = p.acknowledged_goal;
         self.suffixes = suffixes;
@@ -1240,7 +1241,8 @@ impl DevelopmentalResidentCohort {
             "current_cns_key": self.current_key, "goal_origin_slot": self.goal_origin_slot,
             "goal_origin_generation": self.goal_origin_generation, "goal_origin_tick": self.goal_origin_tick,
             "goal_selected_tick": self.goal_selected_tick, "memory_inserted_slot": self.memory_inserted_slot,
-            "memory_count": self.goal_memory.count, "command_pending": self.command_pending,
+            "memory_count": self.goal_memory.count, "context_pending": self.context_pending,
+            "context_policy_version": CONTEXT_POLICY_VERSION,
             "cns_outcome_pending": self.acknowledged_valid,
             "sequence_control_policy_version": self.sequence_control.policy_version,
             "sequence_control_policy_sha256": self.sequence_control.policy_sha256,
@@ -1252,7 +1254,7 @@ impl DevelopmentalResidentCohort {
             "candidate_is_recalled_suffix": self.candidate_recalled,
             "active_source_slot": self.active_source_slot, "active_phase": self.active_phase,
             "active_remaining": self.active_remaining,
-            "motor_suffix_cancellation_totals": (0..self.batch).map(|row| self.suffixes.cancellation_counts(row)).collect::<Vec<_>>()
+            "context_suffix_cancellation_totals": (0..self.batch).map(|row| self.suffixes.cancellation_counts(row)).collect::<Vec<_>>()
         })).map_err(|e| e.to_string())
     }
 }

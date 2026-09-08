@@ -11,7 +11,6 @@ from typing import Any, Mapping
 
 import numpy as np
 
-from .organism_interface import ACTION_DIM, RECTIFIED_AXES, SIGNED_AXES
 from .resident_contract import (
     CONTROLLER_INPUT_FORMAT,
     NATIVE_EXECUTION,
@@ -22,6 +21,7 @@ from .resident_contract import (
 )
 from .sequence_control import (
     CNS_LATENT_DIM,
+    ACTION_DIM, CONTEXT_POLICY_VERSION, controller_interface,
     CONTRACT_SHA256 as CONTROL_CONTRACT_SHA256,
     CORE_ORDER,
     EMBEDDED_ORDER,
@@ -39,7 +39,7 @@ from .sequence_control import (
 )
 
 DEVELOPMENTAL_FORMAT = NATIVE_POPULATION_FORMAT
-NATIVE_RESULT_FORMAT = "chreatures-cns-resident-native-v10"
+NATIVE_RESULT_FORMAT = "chreatures-cns-context-resident-native-v11"
 
 
 def _extension():
@@ -157,6 +157,8 @@ def _load_resident(
     service_provenance = metadata.get("cns_service_provenance", {})
     if (
         initialization.get("training_status") not in {"initialized-untrained", "trained"}
+        or initialization.get("context_policy_version") != CONTEXT_POLICY_VERSION
+        or initialization.get("source_policy") is not None
         or initialization.get("competence_claim") is not None
         or service_provenance.get("training_status") not in {
             "initialized-untrained", "trained"
@@ -166,7 +168,7 @@ def _load_resident(
     cns = validate_dependencies(metadata.get("cns_service", {}), control=False)
     interface = metadata.get("organism_interface")
     if (
-        not isinstance(interface, dict)
+        interface != controller_interface()
         or hashlib.sha256(canonical(interface)).hexdigest()
         != metadata.get("organism_interface_sha256")
     ):
@@ -258,6 +260,7 @@ class DevelopmentalResidentCohort:
             action_mode,
             action_seed,
             suffix_seed,
+            CONTEXT_POLICY_VERSION,
             _packed(arrays, CORE_ORDER),
             metadata["controller_components"]["core_packed_sha256"],
             _packed(arrays, PREDICTOR_ORDER),
@@ -348,34 +351,34 @@ class DevelopmentalResidentCohort:
         result._native = native
         return result
 
-    def step(self, cns_latent, previous_command, ticks, reset) -> dict[str, Any]:
+    def step(self, cns_latent, previous_context, ticks, reset) -> dict[str, Any]:
         result = self._native.step(
             self._input(cns_latent, (self.batch_size, CNS_LATENT_DIM), np.float32, "cns_latent"),
-            self._input(previous_command, (self.batch_size, ACTION_DIM), np.float32, "previous_command"),
+            self._input(previous_context, (self.batch_size, ACTION_DIM), np.float32, "previous_context"),
             self._input(ticks, (self.batch_size,), np.uint64, "ticks"),
             self._input(reset, (self.batch_size,), np.bool_, "reset"),
         )
         return self._validate_decision(result)
 
     def preview_sequence_control(
-        self, cns_latent, previous_command, ticks, reset
+        self, cns_latent, previous_context, ticks, reset
     ) -> dict[str, Any]:
         result = self._native.preview_sequence_control(
             self._input(cns_latent, (self.batch_size, CNS_LATENT_DIM), np.float32, "cns_latent"),
-            self._input(previous_command, (self.batch_size, ACTION_DIM), np.float32, "previous_command"),
+            self._input(previous_context, (self.batch_size, ACTION_DIM), np.float32, "previous_context"),
             self._input(ticks, (self.batch_size,), np.uint64, "ticks"),
             self._input(reset, (self.batch_size,), np.bool_, "reset"),
         )
         return self._validate_decision(result)
 
-    def acknowledge(self, ticks, delivered_command) -> dict[str, Any]:
+    def acknowledge(self, ticks, delivered_context) -> dict[str, Any]:
         result = self._native.acknowledge(
             self._input(ticks, (self.batch_size,), np.uint64, "ticks"),
             self._input(
-                delivered_command,
+                delivered_context,
                 (self.batch_size, ACTION_DIM),
                 np.float32,
-                "delivered_command",
+                "delivered_context",
             ),
         )
         return self._validate_acknowledgement(result)
@@ -477,7 +480,7 @@ class DevelopmentalResidentCohort:
             "sequence_control_policy_sha256": str,
         }
         arrays = {
-            "proposed_command": ((self.batch_size, 12), np.float32),
+            "proposed_context": ((self.batch_size, 12), np.float32),
             "cns_recurrent_state": ((self.batch_size, 256), np.float32),
             "latent_goal": ((self.batch_size, 128), np.float32),
             "current_cns_key": ((self.batch_size, 128), np.float32),
@@ -506,7 +509,7 @@ class DevelopmentalResidentCohort:
             "active_remaining": ((self.batch_size,), np.uint8),
             "motor_suffix_cancellation_totals": ((self.batch_size, 5), np.uint64),
             "motor_suffix_cancellation_reason": ((self.batch_size,), np.str_),
-            "command_pending": ((self.batch_size,), np.bool_),
+            "context_pending": ((self.batch_size,), np.bool_),
             "goal_origin_slot": ((self.batch_size,), np.int32),
             "goal_origin_generation": ((self.batch_size,), np.uint64),
             "goal_origin_tick": ((self.batch_size,), np.uint64),
@@ -541,13 +544,9 @@ class DevelopmentalResidentCohort:
             or result["sequence_control_policy_sha256"] != self._control.sha256
         ):
             raise RuntimeError("native sequence-control identity differs")
-        proposed = result["proposed_command"]
-        if (
-            np.any(np.abs(proposed[:, SIGNED_AXES]) > 1.000001)
-            or np.any(proposed[:, RECTIFIED_AXES] < -1e-7)
-            or np.any(proposed[:, RECTIFIED_AXES] > 1.000001)
-        ):
-            raise RuntimeError("native proposed command violates canonical bounds")
+        proposed = result["proposed_context"]
+        if np.any(np.abs(proposed) > 1.000001):
+            raise RuntimeError("native proposed context violates signed bounds")
         return result
 
     def _validate_acknowledgement(self, raw: Mapping[str, Any]) -> dict[str, Any]:
@@ -557,14 +556,14 @@ class DevelopmentalResidentCohort:
         }
         expected = {
             "acknowledged": ((self.batch_size,), np.bool_),
-            "command_exact": ((self.batch_size,), np.bool_),
-            "command_pending": ((self.batch_size,), np.bool_),
+            "context_exact": ((self.batch_size,), np.bool_),
+            "context_pending": ((self.batch_size,), np.bool_),
             "cns_outcome_pending": ((self.batch_size,), np.bool_),
             "motor_suffix_cancellation_totals": ((self.batch_size, 5), np.uint64),
             "motor_suffix_cancellation_reason": ((self.batch_size,), np.str_),
         }
         if not isinstance(raw, Mapping) or set(raw) != set(expected) | scalar_names:
-            raise RuntimeError("native command acknowledgement fields differ")
+            raise RuntimeError("native context acknowledgement fields differ")
         result = {
             "format": raw["format"],
             "sequence_control_policy_version": raw["sequence_control_policy_version"],
@@ -575,23 +574,23 @@ class DevelopmentalResidentCohort:
             or not isinstance(result["sequence_control_policy_version"], (int, np.integer))
             or not isinstance(result["sequence_control_policy_sha256"], str)
         ):
-            raise RuntimeError("native command acknowledgement scalars differ")
+            raise RuntimeError("native context acknowledgement scalars differ")
         for name, (shape, dtype) in expected.items():
             value = np.asarray(raw[name])
             if value.shape != shape or (
                 dtype is np.str_ and value.dtype.kind not in "US"
             ) or (dtype is not np.str_ and value.dtype != dtype):
-                raise RuntimeError(f"native command acknowledgement differs: {name}")
+                raise RuntimeError(f"native context acknowledgement differs: {name}")
             result[name] = value
         if (
             result["format"] != NATIVE_RESULT_FORMAT
             or int(result["sequence_control_policy_version"]) != self._control.version
             or result["sequence_control_policy_sha256"] != self._control.sha256
             or not result["acknowledged"].all()
-            or result["command_pending"].any()
+            or result["context_pending"].any()
             or not result["cns_outcome_pending"].all()
         ):
-            raise RuntimeError("native command acknowledgement was incomplete")
+            raise RuntimeError("native context acknowledgement was incomplete")
         return result
 
     def snapshot_value(self) -> dict[str, Any]:

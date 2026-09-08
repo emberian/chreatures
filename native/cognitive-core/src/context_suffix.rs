@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Bounded private memory of action suffixes learned only from physical execution.
+//! Bounded private memory of neural-context suffixes learned only from contexts
+//! actually delivered into CNS recurrence.
 
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +9,7 @@ pub(crate) const CONTEXT: usize = 128;
 pub(crate) const OUTCOMES: usize = 1;
 pub(crate) const MAX_HORIZON: usize = 8;
 pub(crate) const SLOTS: usize = 32;
-const FORMAT: &str = "chreatures-private-motor-suffix-v4";
+const FORMAT: &str = "chreatures-private-cns-context-suffix-v1";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum CancellationReason {
@@ -45,7 +46,7 @@ pub(crate) struct RecalledSuffix {
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct MotorSuffixMemory {
+pub(crate) struct ContextSuffixMemory {
     format: String,
     batch: usize,
     valid: Vec<bool>,
@@ -96,20 +97,17 @@ fn splitmix64(state: &mut u64) -> u64 {
     z ^ (z >> 31)
 }
 
-fn action_is_canonical(action: &[f32]) -> bool {
-    action.len() == ACTIONS
-        && action[..4]
+fn context_current_is_canonical(current: &[f32]) -> bool {
+    current.len() == ACTIONS
+        && current
             .iter()
             .all(|value| value.is_finite() && (-1.0..=1.0).contains(value))
-        && action[4..]
-            .iter()
-            .all(|value| value.is_finite() && (0.0..=1.0).contains(value))
 }
 
-impl MotorSuffixMemory {
+impl ContextSuffixMemory {
     pub(crate) fn new(batch: usize, seed: u64) -> Result<Self, String> {
         if batch == 0 || batch > 4096 {
-            return Err("motor suffix batch differs".into());
+            return Err("context suffix batch differs".into());
         }
         let mut rng = vec![0; batch];
         for (row, value) in rng.iter_mut().enumerate() {
@@ -162,7 +160,7 @@ impl MotorSuffixMemory {
 
     pub(crate) fn grow(&mut self, new_batch: usize, seed: u64) -> Result<(), String> {
         if new_batch <= self.batch || new_batch > 4096 {
-            return Err("motor suffix growth differs".into());
+            return Err("context suffix growth differs".into());
         }
         let old = self.batch;
         macro_rules! grow {
@@ -220,7 +218,7 @@ impl MotorSuffixMemory {
 
     pub(crate) fn clear_resident(&mut self, row: usize, seed: u64) -> Result<(), String> {
         if row >= self.batch {
-            return Err("motor suffix resident differs".into());
+            return Err("context suffix resident differs".into());
         }
         let slots = row * SLOTS..(row + 1) * SLOTS;
         self.valid[slots.clone()].fill(false);
@@ -266,7 +264,7 @@ impl MotorSuffixMemory {
 
     pub(crate) fn reset_episode(&mut self, row: usize) -> Result<(), String> {
         if row >= self.batch {
-            return Err("motor suffix resident differs".into());
+            return Err("context suffix resident differs".into());
         }
         self.capture_context[row * MAX_HORIZON * CONTEXT..(row + 1) * MAX_HORIZON * CONTEXT]
             .fill(0.0);
@@ -291,17 +289,17 @@ impl MotorSuffixMemory {
     ) -> Result<(), String> {
         if row >= self.batch
             || context.len() != CONTEXT
-            || !action_is_canonical(action)
+            || !context_current_is_canonical(action)
             || outcome.len() != OUTCOMES
             || context.iter().chain(outcome).any(|x| !x.is_finite())
         {
-            return Err("motor suffix execution differs".into());
+            return Err("context suffix delivery differs".into());
         }
         if self.capture_count[row] > 0 {
             let prior = (self.capture_cursor[row] + MAX_HORIZON - 1) % MAX_HORIZON;
             let prior_tick = self.capture_ticks[row * MAX_HORIZON + prior];
             if tick <= prior_tick {
-                return Err("motor suffix ticks are not increasing".into());
+                return Err("context suffix ticks are not increasing".into());
             }
             if prior_tick.checked_add(1) != Some(tick) {
                 self.reset_episode(row)?;
@@ -483,7 +481,7 @@ impl MotorSuffixMemory {
             || suffix.length < 4
             || suffix.length > MAX_HORIZON
         {
-            return Err("motor suffix start differs".into());
+            return Err("context suffix start differs".into());
         }
         if self.active_slot[row] >= 0 {
             self.cancel_execution(row, CancellationReason::Policy);
@@ -528,7 +526,7 @@ impl MotorSuffixMemory {
 
     pub(crate) fn continue_execution(&mut self, row: usize) -> Result<(), String> {
         if self.active(row).is_none() || self.active_pending[row] {
-            return Err("motor suffix continuation boundary differs".into());
+            return Err("context suffix continuation boundary differs".into());
         }
         self.active_pending[row] = true;
         Ok(())
@@ -629,7 +627,7 @@ impl MotorSuffixMemory {
     pub(crate) fn restore_json(value: &str, batch: usize) -> Result<Self, String> {
         let result: Self = serde_json::from_str(value).map_err(|e| e.to_string())?;
         if result.format != FORMAT || result.batch != batch {
-            return Err("motor suffix snapshot identity differs".into());
+            return Err("context suffix snapshot identity differs".into());
         }
         let expected = Self::new(batch, 0)?;
         if result.valid.len() != expected.valid.len()
@@ -697,9 +695,9 @@ impl MotorSuffixMemory {
                 .chunks_exact(ACTIONS)
                 .chain(result.capture_actions.chunks_exact(ACTIONS))
                 .chain(result.active_actions.chunks_exact(ACTIONS))
-                .any(|action| !action_is_canonical(action))
+                .any(|current| !context_current_is_canonical(current))
         {
-            return Err("motor suffix snapshot shape differs".into());
+            return Err("context suffix snapshot shape differs".into());
         }
         for row in 0..batch {
             let active = result.active_slot[row];
@@ -718,7 +716,7 @@ impl MotorSuffixMemory {
                         || result.active_last_tick[row].is_some()
                         || result.active_pending[row]))
             {
-                return Err("motor suffix execution cursor differs".into());
+                return Err("context suffix execution cursor differs".into());
             }
         }
         Ok(result)
@@ -730,13 +728,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn physical_suffix_recall_and_restore_are_exact() {
-        let mut memory = MotorSuffixMemory::new(1, 17).unwrap();
+    fn signed_context_suffix_recall_and_restore_are_exact() {
+        let mut memory = ContextSuffixMemory::new(1, 17).unwrap();
         for tick in 1..=8 {
             let mut context = [0.0; CONTEXT];
             context[0] = tick as f32 * 0.01;
             let mut action = [0.0; ACTIONS];
             action[0] = tick as f32 * 0.1;
+            action[7] = -(tick as f32) * 0.1;
             memory
                 .record_executed(0, tick, &context, &action, &[0.2])
                 .unwrap();
@@ -747,7 +746,7 @@ mod tests {
         assert!((4..=8).contains(&recalled[0].length));
         assert!(recalled[0].empirical_utility > 0.0);
         let snapshot = memory.snapshot_json().unwrap();
-        let mut restored = MotorSuffixMemory::restore_json(&snapshot, 1).unwrap();
+        let mut restored = ContextSuffixMemory::restore_json(&snapshot, 1).unwrap();
         let replay = restored.recall(0, &query, 4);
         assert_eq!(recalled[0].slot, replay[0].slot);
         assert_eq!(recalled[0].generation, replay[0].generation);
@@ -755,7 +754,7 @@ mod tests {
     }
     #[test]
     fn joined_execution_continuation_outcome_interrupt_and_restore() {
-        let mut memory = MotorSuffixMemory::new(2, 71).unwrap();
+        let mut memory = ContextSuffixMemory::new(2, 71).unwrap();
         let context = [0.0; CONTEXT];
         for tick in 1..=8 {
             let action = [tick as f32 / 10.0; ACTIONS];
@@ -773,7 +772,7 @@ mod tests {
         memory.start(0, &initial).unwrap();
         // Save with an action proposed but not yet physically acknowledged.
         let mut restored =
-            MotorSuffixMemory::restore_json(&memory.snapshot_json().unwrap(), 2).unwrap();
+            ContextSuffixMemory::restore_json(&memory.snapshot_json().unwrap(), 2).unwrap();
         for phase in 0..8 {
             for state in [&mut memory, &mut restored] {
                 if phase > 0 {
@@ -805,7 +804,7 @@ mod tests {
             );
             if phase == 3 {
                 restored =
-                    MotorSuffixMemory::restore_json(&memory.snapshot_json().unwrap(), 2).unwrap();
+                    ContextSuffixMemory::restore_json(&memory.snapshot_json().unwrap(), 2).unwrap();
             }
         }
         assert_eq!(memory.execution_counts(0), (1, 0));
@@ -847,7 +846,7 @@ mod tests {
         assert_eq!(memory.cancellation_counts(0)[4], 1);
         memory.grow(3, 99).unwrap();
         let restored =
-            MotorSuffixMemory::restore_json(&memory.snapshot_json().unwrap(), 3).unwrap();
+            ContextSuffixMemory::restore_json(&memory.snapshot_json().unwrap(), 3).unwrap();
         assert_eq!(restored.execution_counts(0), (2, 3));
         assert_eq!(restored.counts(1), (0, 0));
         assert_eq!(restored.counts(2), (0, 0));

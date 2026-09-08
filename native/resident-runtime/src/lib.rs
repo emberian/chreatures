@@ -12,6 +12,7 @@ struct Config {
     action_mode: String,
     action_seed: u64,
     suffix_seed: u64,
+    context_policy_version: String,
     core_sha256: String,
     predictor_sha256: String,
     sequence_control_version: u64,
@@ -27,14 +28,14 @@ fn error(message: String) -> JsValue {
 /// A copy of one completed decision, stable across subsequent engine calls.
 #[wasm_bindgen]
 pub struct ResidentStep {
-    proposed_command: Vec<f32>,
+    proposed_context: Vec<f32>,
     diagnostics_json: String,
 }
 #[wasm_bindgen]
 impl ResidentStep {
-    #[wasm_bindgen(getter, js_name = proposedCommand)]
-    pub fn proposed_command(&self) -> Vec<f32> {
-        self.proposed_command.clone()
+    #[wasm_bindgen(getter, js_name = proposedContext)]
+    pub fn proposed_context(&self) -> Vec<f32> {
+        self.proposed_context.clone()
     }
     #[wasm_bindgen(getter, js_name = diagnosticsJson)]
     pub fn diagnostics_json(&self) -> String {
@@ -66,6 +67,7 @@ impl ResidentRuntime {
                 &c.action_mode,
                 c.action_seed,
                 c.suffix_seed,
+                &c.context_policy_version,
                 core,
                 c.core_sha256,
                 predictor,
@@ -85,8 +87,9 @@ impl ResidentRuntime {
     }
 
     /// Inputs are resident-major B×512 and B×12; ticks are BigUint64Array,
-    /// resets Uint8Array containing exactly 0 or 1. The command needs a receipt
-    /// after physics execution, before another decision is allowed.
+    /// resets Uint8Array containing exactly 0 or 1. The proposed context needs
+    /// a receipt after it actually enters CNS recurrence; until then no next
+    /// decision is allowed.
     #[wasm_bindgen(js_name = stepFlat)]
     pub fn step_flat(
         &mut self,
@@ -99,13 +102,13 @@ impl ResidentRuntime {
             return Err(error("reset must contain only 0 or 1".into()));
         }
         let reset: Vec<bool> = reset.iter().map(|&x| x != 0).collect();
-        let proposed_command = self
+        let proposed_context = self
             .core
             .step_flat(z, previous, ticks, &reset)
             .map_err(error)?;
         let diagnostics_json = self.core.diagnostics_json().map_err(error)?;
         Ok(ResidentStep {
-            proposed_command,
+            proposed_context,
             diagnostics_json,
         })
     }
@@ -113,10 +116,10 @@ impl ResidentRuntime {
     pub fn acknowledge(
         &mut self,
         ticks: &[u64],
-        delivered_command: &[f32],
+        delivered_context: &[f32],
     ) -> Result<Vec<u8>, JsValue> {
         self.core
-            .acknowledge_flat(ticks, delivered_command)
+            .acknowledge_flat(ticks, delivered_context)
             .map(|values| values.into_iter().map(u8::from).collect())
             .map_err(error)
     }

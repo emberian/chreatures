@@ -30,7 +30,6 @@ from chreatures.cns_adapter_contract import (
     canonical as cns_canonical,
     service_identity,
 )
-from chreatures.organism_interface import ACTION_NAMES
 from chreatures.resident_contract import (
     NATIVE_EXECUTION,
     NATIVE_POPULATION_FORMAT,
@@ -38,6 +37,7 @@ from chreatures.resident_contract import (
 )
 from chreatures.sequence_control import (
     CORE_ORDER,
+    controller_interface,
     EMBEDDED_ORDER,
     ORDER as CONTROL_ORDER,
     PREDICTOR_ORDER,
@@ -97,7 +97,7 @@ def read_cns_service_identity(path: Path) -> dict[str, Any]:
         raise ValueError("CNS service artifact byte length differs")
     metadata = json.loads(encoded)
     required = {
-        "format", "graph_sha256", "atlas_sha256", "readout_mask_sha256",
+        "format", "graph_sha256", "atlas_sha256", "anatomy_sha256", "readout_mask_sha256",
         "dimensions", "parameter_order", "training_status", "provenance",
         "array_sha256", "adapter_sha256",
     }
@@ -113,30 +113,13 @@ def read_cns_service_identity(path: Path) -> dict[str, Any]:
         or metadata["training_status"] not in {"initialized-untrained", "trained"}
     ):
         raise ValueError("CNS service artifact identity differs")
-    for name in ("graph_sha256", "atlas_sha256", "readout_mask_sha256"):
+    for name in ("graph_sha256", "atlas_sha256", "anatomy_sha256", "readout_mask_sha256"):
         if not valid_sha256(metadata[name]):
             raise ValueError(f"CNS service metadata requires SHA-256: {name}")
     return {
         "identity": service_identity(metadata, file_sha256(source)),
         "training_status": metadata["training_status"],
         "path": str(source),
-    }
-
-
-def controller_interface() -> dict[str, Any]:
-    return {
-        "format": "chreatures-cns-only-organism-interface-v1",
-        "controller_input": CONTROLLER_FORMAT,
-        "cns_latent": {"dtype": "float32", "dimension": 512},
-        "previous_delivered_command": {
-            "dtype": "float32", "dimension": 12, "order": list(ACTION_NAMES)
-        },
-        "ticks": "uint64",
-        "reset": "bool",
-        "output_command": {
-            "dtype": "float32", "dimension": 12, "order": list(ACTION_NAMES)
-        },
-        "receipt": ["ticks", "delivered_command"],
     }
 
 
@@ -248,10 +231,12 @@ def main() -> int:
         "initialization": {
             "training_status": "initialized-untrained",
             "competence_claim": None,
+            "context_policy_version": "signed-context12-v1",
+            "source_policy": None,
             "seed": args.seed,
             "algorithm": (
-                "numpy-pcg64-xavier; proposal output gain0.3 with rectified-axis "
-                "bias -2; zero predictor/control output projections except hazard bias -ln(7)"
+                "fresh signed-context12 numpy-pcg64-xavier; proposal output gain0.3 with "
+                "zero bias; zero predictor/control output projections except hazard bias -ln(7)"
             ),
         },
         "pack_order": list(RESIDENT_ORDER),

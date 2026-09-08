@@ -13,9 +13,12 @@ import uuid
 import numpy as np
 
 from chreatures.sequence_control import (
-    CORE_ORDER, EMBEDDED_ORDER, ORDER as CONTROL_ORDER, PREDICTOR_ORDER,
+    CONTEXT_POLICY_VERSION, CORE_ORDER, EMBEDDED_ORDER, ORDER as CONTROL_ORDER, PREDICTOR_ORDER,
     RESIDENT_ORDER, RESIDENT_SHAPES, canonical, packed_sha256, write_control_artifact,
+    controller_interface,
 )
+
+RESIDENT_FORMAT = "chreatures-native-cns-context-resident-population-v1"
 
 
 def file_sha256(path: Path) -> str:
@@ -30,6 +33,10 @@ def load_parent(path: str | Path) -> tuple[dict[str, Any], dict[str, np.ndarray]
             raise ValueError("parent resident tensor set differs")
         metadata = json.loads(str(archive["metadata"].item()))
         arrays = {name: np.ascontiguousarray(archive[name], dtype=np.float32) for name in RESIDENT_ORDER}
+    if (metadata.get("format") != RESIDENT_FORMAT
+            or metadata.get("context_policy_version") != CONTEXT_POLICY_VERSION
+            or metadata.get("controller_input") != controller_interface()):
+        raise ValueError("parent is not a fresh signed context12 resident artifact")
     for name, value in arrays.items():
         if value.shape != RESIDENT_SHAPES[name] or not np.isfinite(value).all():
             raise ValueError(f"parent resident tensor differs: {name}")
@@ -73,6 +80,7 @@ def publish_trained(
         "source_revision": parent_metadata["source_revision"],
         "core_packed_sha256": core_hash,
         "predictor_packed_sha256": predictor_hash,
+        "context_policy_version": CONTEXT_POLICY_VERSION,
     }
     head_arrays = {name: values[embedded] for name, embedded in zip(CONTROL_ORDER, EMBEDDED_ORDER, strict=True)}
     control = write_control_artifact(
@@ -81,6 +89,9 @@ def publish_trained(
         provenance={"training_status": "trained", "operation": "joint-cns-resident-closed-loop-fit", "episodes": episode_identities, **dict(training)},
     )
     metadata = copy.deepcopy(dict(parent_metadata))
+    metadata["format"] = RESIDENT_FORMAT
+    metadata["context_policy_version"] = CONTEXT_POLICY_VERSION
+    metadata["controller_input"] = controller_interface()
     metadata["controller_components"] = {
         "core_pack_order": list(CORE_ORDER), "core_packed_sha256": core_hash,
         "predictor_pack_order": list(PREDICTOR_ORDER), "predictor_packed_sha256": predictor_hash,
@@ -88,6 +99,7 @@ def publish_trained(
     }
     metadata["initialization"] = {
         "training_status": "trained", "competence_claim": None,
+        "source_policy": None,
         "parent_artifact_sha256": parent_metadata["artifact_sha256"],
         "episodes": episode_identities, "training": dict(training),
     }

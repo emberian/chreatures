@@ -203,7 +203,11 @@ def run_window(
         pose = _tensor(episode.root_pose[tick, resident : resident + 1], device)
         next_pose = _tensor(episode.root_pose[tick + 1, resident : resident + 1], device)
         latent, predicted_motor, state = model(optic, body, context, state)
-        predicted_sensory, predicted_pose, predicted_joint = heads(latent, predicted_motor)
+        # The recorded next state was caused by the delivered teacher motor.
+        # Condition the temporal model on that experienced intervention; using
+        # the currently predicted motor here would pair the wrong action with
+        # the physical outcome and corrupt both objectives.
+        predicted_sensory, predicted_pose, predicted_joint = heads(latent, target_motor)
         sensory_target = target_sensory_delta(body, next_body, optic, next_optic)
         pose_target = normalize_pose_delta(pose, next_pose)
         values["motor"].append(motor_loss(predicted_motor, target_motor))

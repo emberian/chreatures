@@ -24,20 +24,21 @@ import init, { ResidentRuntime } from './pkg/resident_runtime.js';
 await init();
 const resident = new ResidentRuntime(JSON.stringify({
   batch: 3, action_mode: 'sample', action_seed: 314, suffix_seed: 271,
+  context_policy_version: 'signed-context12-v1',
   core_sha256, predictor_sha256,
   sequence_control_version: 1, sequence_control_sha256,
   research_training: false,
 }), corePacked, predictorPacked, sequencePacked);
 
 // z: Float32Array[B*512], previous: Float32Array[B*12], resident-major.
-// The graph/readout supplies z; the physics receipt supplies own prior command.
+// The graph/readout supplies z; previous is own context actually injected into CNS.
 const ticks = new BigUint64Array(3).fill(0n);
 const result = resident.stepFlat(z, previous, ticks, new Uint8Array([1, 1, 1]));
-const commands = result.proposedCommand;             // stable copied Float32Array
+const context = result.proposedContext;              // stable copied Float32Array
 const observer = JSON.parse(result.diagnosticsJson); // copied observer data
 result.free();
-// After physics executes the commands, acknowledge exactly what it delivered.
-resident.acknowledge(ticks, commands);
+// After context enters the next CNS recurrence, acknowledge exactly that vector.
+resident.acknowledge(ticks, context);
 const checkpoint = resident.saveBytes();             // copied Uint8Array
 resident.loadBytes(checkpoint);                      // validates then commits
 const expanded = resident.expanded(1, 19n, 23n);      // explicit new cohort
@@ -57,7 +58,7 @@ memory counts, sampled control decision/value/log probability, recalled suffix
 flags, execution phase, cancellation counters, and receipt status. Observer
 data must never be routed back to the policy as a parallel sensory input.
 
-The checkpoint envelope preserves the existing v10 schema and its private RNG,
+The v11 signed-context checkpoint preserves private RNG,
 memory and pending receipt boundaries. It does not contain browser world or
 neural graph state: the orchestrator must checkpoint all three together.
 

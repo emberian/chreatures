@@ -6,7 +6,7 @@ mod contextual_episodic;
 pub mod developmental;
 pub mod gam_law;
 mod learned_sequence_control;
-mod motor_suffix;
+mod context_suffix;
 pub mod personal_consequences;
 pub mod personal_goals;
 pub mod population_response;
