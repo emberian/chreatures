@@ -104,6 +104,14 @@ scaled by each joint's control span. Candidate phases that would immediately
 release a contacting foot are penalized. It then slews all 84 active servo
 targets toward the fitted reference at no more than 0.04 radians per 100 Hz
 tick; six unitless adhesion commands use a separate 0.25-per-tick bridge.
+The same helper supplies continuation, stop, left/right asymmetric amplitude,
+and neutral-leg antenna modes. A requested author amplitude is reached from the
+fitted entry amplitude over 64 actually delivered supported ticks. Phase is not
+reset between modes and continues through supported stop/antenna intervals.
+Counterfactual teacher targets use `advance_state=False`, so a learner-controlled
+tick cannot advance hidden teacher phase or ramp state. `neutral_command` shares
+the physical slew and normalization path and remains available outside the
+author support domain for cold support and failed-life correction.
 
 `tools/demonstrate_supported_author_continuation.py` records paired physical
 research branches. The first retains an actual CNS action block and its failed

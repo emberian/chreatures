@@ -23,6 +23,7 @@ EPISODE_FORMAT: Final = "chreatures-actual-fly-cns-development-episode-v1"
 NURSERY_FORMAT: Final = "chreatures-embodied-nursery-corpus-v1"
 RECOVERY_FORMAT: Final = "chreatures-fly-on-policy-recovery-corpus-v1"
 SUPPORT_ACQUISITION_FORMAT: Final = "chreatures-fly-support-acquisition-corpus-v1"
+SUPPORTED_CONTINUATION_FORMAT: Final = "chreatures-fly-supported-continuation-corpus-v1"
 OPTIC_SITES: Final = 1771
 LATENT: Final = 512
 BODY_AFFERENTS: Final = 807
@@ -668,6 +669,86 @@ def load_support_acquisition_corpus(path: Path) -> Corpus:
     ):
         if len({episode.metadata[key] for episode in episodes}) != 1:
             raise FlyLearningContractError(f"support-acquisition mixes {key}")
+    return Corpus(
+        path.parent, manifest, tuple(episodes[:8]),
+        tuple(episodes[8:10]), tuple(episodes[10:]),
+    )
+
+
+def load_supported_continuation_corpus(path: Path) -> Corpus:
+    """Load long supplied-author continuations and rare terminal CNS probes."""
+    path = path.resolve()
+    if path.is_dir():
+        path = path / "supported-continuation-corpus.json"
+    manifest = json.loads(path.read_text())
+    if (
+        manifest.get("format") != SUPPORTED_CONTINUATION_FORMAT
+        or manifest.get("completed") is not True
+        or int(manifest.get("worlds", -1)) != 12
+        or int(manifest.get("ticks", -1)) != TICKS
+        or int(manifest.get("residents", -1)) != RESIDENTS
+        or int(manifest.get("cold_support_ticks", -1)) != 40
+        or int(manifest.get("author_bout_ticks", -1)) != 160
+        or int(manifest.get("author_bouts", -1)) != 6
+        or int(manifest.get("probe_start", -1)) != 1000
+        or int(manifest.get("probe_ticks", -1)) != 8
+        or int(manifest.get("probe_residents_per_world", -1)) != 2
+        or manifest.get("context") != "exact zero12 throughout"
+        or manifest.get("reset_between_interventions") is not False
+        or manifest.get("observer_teacher_only") is not True
+    ):
+        raise FlyLearningContractError("sealed supported-continuation corpus required")
+    rows = manifest.get("episodes")
+    if not isinstance(rows, list) or len(rows) != 12:
+        raise FlyLearningContractError("supported-continuation corpus must contain twelve whole worlds")
+    from .supported_continuation import SHARED_KEYS, validate_episode
+
+    episodes = []
+    for index, row in enumerate(rows):
+        if (
+            int(row.get("world_index", -1)) != index
+            or row.get("split") != split_for_world(index)
+            or not HEX64.fullmatch(str(row.get("sha256", "")))
+            or not all(HEX64.fullmatch(str(row.get(key, ""))) for key in (
+                "scene_layout_identity", "initial_snapshot_sha256", "collection_life_identity"
+            ))
+        ):
+            raise FlyLearningContractError("supported-continuation manifest order or identity differs")
+        episode = load_episode(path.parent / str(row["file"]), str(row["sha256"]))
+        meta = episode.metadata
+        if (
+            meta.get("supported_continuation_format") != SUPPORTED_CONTINUATION_FORMAT
+            or meta.get("execution_backend") != "native-fly-world"
+            or meta.get("raw_geometry_controller_access") is not False
+            or int(meta.get("world_index", -1)) != index
+            or row.get("scene_layout_identity") != meta["scene_layout_identity"]
+            or row.get("initial_snapshot_sha256") != meta["initial_snapshot_sha256"]
+            or row.get("collection_life_identity") != meta["collection_life_identity"]
+        ):
+            raise FlyLearningContractError("supported-continuation episode identity differs")
+        try:
+            validate_episode(episode, index)
+        except (KeyError, TypeError, ValueError) as error:
+            raise FlyLearningContractError(
+                f"supported-continuation episode {index} contract differs"
+            ) from error
+        episodes.append(episode)
+    shared = manifest.get("shared_identity")
+    if not isinstance(shared, dict) or set(shared) != set(SHARED_KEYS):
+        raise FlyLearningContractError("supported-continuation shared identity differs")
+    for key in SHARED_KEYS:
+        if shared[key] != episodes[0].metadata[key] or any(
+            episode.metadata[key] != shared[key] for episode in episodes[1:]
+        ):
+            raise FlyLearningContractError(f"supported-continuation mixes {key}")
+    if manifest.get("source_service_sha256") != shared["cns_service_sha256"]:
+        raise FlyLearningContractError("supported-continuation source service differs")
+    for key in (
+        "scene_layout_identity", "initial_snapshot_sha256",
+        "world_instance_identity", "collection_life_identity",
+    ):
+        if len({episode.metadata[key] for episode in episodes}) != 12:
+            raise FlyLearningContractError(f"supported-continuation {key} values overlap")
     return Corpus(
         path.parent, manifest, tuple(episodes[:8]),
         tuple(episodes[8:10]), tuple(episodes[10:]),

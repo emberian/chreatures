@@ -45,6 +45,7 @@ from .data import (
     load_nursery_corpus,
     load_recovery_corpus,
     load_support_acquisition_corpus,
+    load_supported_continuation_corpus,
     seal_corpus,
     sha256_file,
 )
@@ -886,6 +887,20 @@ def train(arguments: argparse.Namespace) -> None:
             "sha256": sha256_file(manifest_path),
         })
         additional_corpora.append(support)
+    if arguments.supported_continuation_corpus is not None:
+        continuation_path = arguments.supported_continuation_corpus.expanduser().resolve()
+        continuation = load_supported_continuation_corpus(continuation_path)
+        manifest_path = (
+            continuation_path / "supported-continuation-corpus.json"
+            if continuation_path.is_dir() else continuation_path
+        )
+        source_receipts.append({
+            "role": "supplied-author-supported-continuation-and-rare-cns-probe",
+            "format": continuation.manifest["format"],
+            "path": str(manifest_path),
+            "sha256": sha256_file(manifest_path),
+        })
+        additional_corpora.append(continuation)
     if additional_corpora:
         corpus = combine_corpora(primary, *additional_corpora)
     source_identities = [
@@ -1331,6 +1346,7 @@ def parser() -> argparse.ArgumentParser:
     fit.add_argument("--nursery-corpus", type=Path)
     fit.add_argument("--recovery-corpus", type=Path)
     fit.add_argument("--support-corpus", type=Path)
+    fit.add_argument("--supported-continuation-corpus", type=Path)
     fit.add_argument("--service", type=Path, required=True)
     fit.add_argument(
         "--collection-service", type=Path, action="append",

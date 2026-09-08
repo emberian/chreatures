@@ -14,7 +14,6 @@ import json
 import math
 from pathlib import Path
 
-import mujoco as mj
 import numpy as np
 
 LEGS = ("lf", "lm", "lh", "rf", "rm", "rh")
@@ -67,6 +66,8 @@ class ContinuationCommand:
     normalized_motor92: np.ndarray
     phase_cycles: float
     amplitude: float
+    requested_amplitude: float
+    mode: str
     bridge_complete: bool
     max_servo_delta_rad: float
     max_adhesion_delta: float
@@ -98,6 +99,7 @@ class SupportedAuthorContinuation:
         contact_release_penalty: float = 0.25,
         bridge_tolerance_rad: float = 0.04,
         bridge_stable_ticks: int = 2,
+        amplitude_ramp_supported_ticks: int = 64,
     ) -> None:
         self.targets = np.asarray(joint_targets_rad, dtype=np.float64)
         self.adhesion_bank = np.asarray(adhesion, dtype=np.float64)
@@ -128,9 +130,17 @@ class SupportedAuthorContinuation:
         self.release_penalty = float(contact_release_penalty)
         self.bridge_tolerance = float(bridge_tolerance_rad)
         self.bridge_stable_ticks = int(bridge_stable_ticks)
+        if amplitude_ramp_supported_ticks <= 0:
+            raise ValueError("amplitude ramp duration must be positive")
+        self.amplitude_ramp_ticks = int(amplitude_ramp_supported_ticks)
         self._fit: ContinuationFit | None = None
         self._phase = 0.0
         self._bridge_stable = 0
+        self._phase_running = False
+        self._amplitude = 0.0
+        self._ramp_start = 0.0
+        self._ramp_target = 0.0
+        self._ramp_progress = 0
 
     def _supported(self, thorax_up: float, foot_contact: np.ndarray) -> bool:
         contact = np.asarray(foot_contact, dtype=bool)
@@ -190,7 +200,79 @@ class SupportedAuthorContinuation:
         self._fit = result
         self._phase = phase
         self._bridge_stable = 0
+        self._phase_running = False
+        self._amplitude = amplitude
+        self._ramp_start = amplitude
+        self._ramp_target = amplitude
+        self._ramp_progress = self.amplitude_ramp_ticks
         return result
+
+    def _amplitude_preview(self, requested: float | None) -> tuple[float, float, float, int]:
+        # None keeps the existing request so stop/antenna bouts can carry the
+        # same supported-tick ramp without restarting or cancelling it.
+        target = self._ramp_target if requested is None else float(requested)
+        if not self.amplitude_bounds[0] <= target <= self.amplitude_bounds[1]:
+            raise ValueError("requested amplitude leaves configured author-bank bounds")
+        if target != self._ramp_target:
+            start, progress = self._amplitude, 0
+        else:
+            start, progress = self._ramp_start, self._ramp_progress
+        progress = min(progress + 1, self.amplitude_ramp_ticks)
+        amplitude = start + (target - start) * progress / self.amplitude_ramp_ticks
+        return amplitude, start, target, progress
+
+    def _bounded_command(
+        self,
+        desired_servo84_rad: np.ndarray,
+        adhesion_goal: np.ndarray,
+        previous_servo84_rad: np.ndarray,
+        previous_adhesion: np.ndarray,
+        *,
+        phase_cycles: float,
+        amplitude: float,
+        requested_amplitude: float,
+        mode: str,
+        bridge_complete: bool,
+    ) -> ContinuationCommand:
+        desired = np.asarray(desired_servo84_rad, dtype=np.float64)
+        previous = np.asarray(previous_servo84_rad, dtype=np.float64)
+        adhesion_goal = np.asarray(adhesion_goal, dtype=np.float64)
+        previous_adhesion = np.asarray(previous_adhesion, dtype=np.float64)
+        if desired.shape != (84,) or previous.shape != (84,):
+            raise ValueError("physical servo command requires desired84 and previous84 radians")
+        if adhesion_goal.shape != (6,) or previous_adhesion.shape != (6,):
+            raise ValueError("physical adhesion command requires desired6 and previous6")
+        servo = previous + np.clip(desired - previous, -self.servo_slew, self.servo_slew)
+        servo = np.clip(servo, self.ranges[:, 0], self.ranges[:, 1])
+        adhesion = previous_adhesion + np.clip(
+            adhesion_goal - previous_adhesion, -self.adhesion_slew, self.adhesion_slew
+        )
+        adhesion = np.clip(adhesion, 0.0, 1.0)
+        normalized = np.zeros(92, dtype=np.float32)
+        above = servo >= self.neutral
+        positive_span = self.ranges[:, 1] - self.neutral
+        negative_span = self.neutral - self.ranges[:, 0]
+        normalized[:84] = np.where(
+            above,
+            (servo - self.neutral) / positive_span,
+            (servo - self.neutral) / negative_span,
+        ).astype(np.float32)
+        normalized[:84] = np.clip(normalized[:84], -1.0, 1.0)
+        normalized[84:90] = adhesion.astype(np.float32)
+        if not np.all(np.isfinite(normalized)):
+            raise ValueError("physical normalization produced a non-finite action")
+        return ContinuationCommand(
+            servo_targets_rad=servo,
+            adhesion=adhesion,
+            normalized_motor92=normalized,
+            phase_cycles=phase_cycles,
+            amplitude=amplitude,
+            requested_amplitude=requested_amplitude,
+            mode=mode,
+            bridge_complete=bridge_complete,
+            max_servo_delta_rad=float(np.max(np.abs(servo - previous))),
+            max_adhesion_delta=float(np.max(np.abs(adhesion - previous_adhesion))),
+        )
 
     def command(
         self,
@@ -201,6 +283,10 @@ class SupportedAuthorContinuation:
         thorax_up: float,
         *,
         control_dt_s: float = 0.01,
+        mode: str = "continuation",
+        requested_amplitude: float | None = None,
+        nonwalking_target84_rad: np.ndarray | None = None,
+        advance_state: bool = True,
     ) -> ContinuationCommand | None:
         """Return the next command, or None after support leaves the author domain."""
         if self._fit is None or not self._fit.eligible:
@@ -213,49 +299,93 @@ class SupportedAuthorContinuation:
             raise ValueError("command requires q84, delivered-servo84, adhesion6 and contact6")
         if not self._supported(thorax_up, contact):
             return None
+        if control_dt_s <= 0.0:
+            raise ValueError("control interval must be positive")
+        if mode not in ("continuation", "stop", "left", "right", "antenna"):
+            raise ValueError(f"unsupported author continuation mode: {mode}")
         assert self._fit.amplitude is not None
+        amplitude, ramp_start, ramp_target, ramp_progress = self._amplitude_preview(requested_amplitude)
         desired = self.neutral.copy()
-        desired[:42] = self._desired_walking(self._phase, self._fit.amplitude)
-        servo = previous + np.clip(desired - previous, -self.servo_slew, self.servo_slew)
-        servo = np.clip(servo, self.ranges[:, 0], self.ranges[:, 1])
+        if mode in ("continuation", "left", "right"):
+            raw = periodic_leg_sample(self.targets, TRIPOD_PHASE + self._phase)
+            leg_scale = np.ones(6, np.float64)
+            if mode == "left":
+                leg_scale[:3] = 0.35
+            elif mode == "right":
+                leg_scale[3:] = 0.35
+            desired[:42] += np.repeat(leg_scale, 7) * amplitude * (raw - self.teacher_neutral)
+        if nonwalking_target84_rad is not None:
+            nonwalking = np.asarray(nonwalking_target84_rad, dtype=np.float64)
+            if mode != "antenna" or nonwalking.shape != (84,):
+                raise ValueError("nonwalking target84 is accepted only in antenna mode")
+            if not np.allclose(nonwalking[:42], self.neutral[:42], rtol=0.0, atol=1e-12):
+                raise ValueError("antenna target must keep walking42 at fixture neutral")
+            desired[42:] = nonwalking[42:]
+        elif mode == "antenna":
+            desired[42:] = self.neutral[42:]
 
         # The bridge completes when the command itself has reached the fitted
         # trajectory without a discontinuity. Physical tracking remains an
         # observed outcome and is not used to pretend a fallen state recovered.
-        command_error = float(np.max(np.abs(servo - desired)))
+        servo_preview = previous + np.clip(desired - previous, -self.servo_slew, self.servo_slew)
+        servo_preview = np.clip(servo_preview, self.ranges[:, 0], self.ranges[:, 1])
+        command_error = float(np.max(np.abs(servo_preview - desired)))
         if command_error <= self.bridge_tolerance:
-            self._bridge_stable += 1
+            bridge_stable = self._bridge_stable + 1
         else:
-            self._bridge_stable = 0
-        bridge_complete = self._bridge_stable >= self.bridge_stable_ticks
+            bridge_stable = 0
+        bridge_complete = self._phase_running or bridge_stable >= self.bridge_stable_ticks
         author_adhesion = periodic_adhesion(self.adhesion_bank, TRIPOD_PHASE + self._phase)
-        adhesion_goal = author_adhesion if bridge_complete else np.maximum(author_adhesion, contact.astype(np.float64))
-        adhesion = previous_adhesion + np.clip(adhesion_goal - previous_adhesion, -self.adhesion_slew, self.adhesion_slew)
-        adhesion = np.clip(adhesion, 0.0, 1.0)
-
-        normalized = np.zeros(92, dtype=np.float32)
-        above = servo >= self.neutral
-        positive_span = self.ranges[:, 1] - self.neutral
-        negative_span = self.neutral - self.ranges[:, 0]
-        normalized[:84] = np.where(
-            above,
-            (servo - self.neutral) / positive_span,
-            (servo - self.neutral) / negative_span,
-        ).astype(np.float32)
-        normalized[:84] = np.clip(normalized[:84], -1.0, 1.0)
-        normalized[84:90] = adhesion.astype(np.float32)
         command_phase = self._phase
-        if bridge_complete:
+        if mode in ("stop", "antenna"):
+            adhesion_goal = contact.astype(np.float64)
+        else:
+            adhesion_goal = author_adhesion if bridge_complete else np.maximum(
+                author_adhesion, contact.astype(np.float64)
+            )
+        result = self._bounded_command(
+            desired, adhesion_goal, previous, previous_adhesion,
+            phase_cycles=command_phase, amplitude=amplitude,
+            requested_amplitude=ramp_target, mode=mode, bridge_complete=bridge_complete,
+        )
+        if advance_state:
+            self._bridge_stable = bridge_stable
+            self._phase_running = bridge_complete
+            self._amplitude = amplitude
+            self._ramp_start = ramp_start
+            self._ramp_target = ramp_target
+            self._ramp_progress = ramp_progress
+        if bridge_complete and advance_state:
             self._phase = (self._phase + self.frequency_hz * control_dt_s) % 1.0
-        return ContinuationCommand(
-            servo_targets_rad=servo,
-            adhesion=adhesion,
-            normalized_motor92=normalized,
-            phase_cycles=command_phase,
-            amplitude=self._fit.amplitude,
-            bridge_complete=bridge_complete,
-            max_servo_delta_rad=float(np.max(np.abs(servo - previous))),
-            max_adhesion_delta=float(np.max(np.abs(adhesion - previous_adhesion))),
+        return result
+
+    def neutral_command(
+        self,
+        last_delivered_servo84_rad: np.ndarray,
+        last_delivered_adhesion: np.ndarray,
+        foot_contact: np.ndarray,
+        *,
+        advance_state: bool = True,
+    ) -> ContinuationCommand:
+        """Bounded neutral/contact-hold action, valid outside the author domain.
+
+        ``advance_state`` is accepted for the same teacher call boundary as
+        :meth:`command`; neutral correction never changes author phase, bridge,
+        or amplitude state.
+        """
+        del advance_state
+        contact = np.asarray(foot_contact, dtype=bool)
+        if contact.shape != (6,):
+            raise ValueError("neutral correction requires foot-contact6")
+        amplitude = self._amplitude if self._fit is not None and self._fit.eligible else 0.0
+        return self._bounded_command(
+            self.neutral, contact.astype(np.float64),
+            last_delivered_servo84_rad, last_delivered_adhesion,
+            phase_cycles=self._phase, amplitude=amplitude,
+            requested_amplitude=(
+                self._ramp_target if self._fit is not None and self._fit.eligible else amplitude
+            ),
+            mode="neutral-correction", bridge_complete=self._phase_running,
         )
 
 
@@ -265,6 +395,8 @@ def yaw(rotation: np.ndarray) -> float:
 
 
 def main() -> None:
+    import mujoco as mj
+
     here = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
     parser.add_argument("--scene", type=Path, default=here / "scenes/training-4/scene.xml")
