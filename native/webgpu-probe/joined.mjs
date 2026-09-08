@@ -101,6 +101,12 @@ try {
     }
   }
   const checkpoint = await engine.save();
+  const inspected = await engine.inspectPlasticity();
+  assert.equal(inspected.residentId, engine.world.residentDescriptors[engine.selected].id);
+  assert.equal(inspected.plasticity.resident, engine.selected);
+  assert.equal(inspected.plasticity.efficacy.length, 4184);
+  assert.equal(inspected.plasticity.eligibility.length, 4184);
+  assert(exact(checkpoint, await engine.save()), 'Read-only synapse inspection changed the life');
   if (args.checkpoint) await writeFile(args.checkpoint, new Uint8Array(checkpoint), {flag: 'wx'});
   if (args.snapshot) await writeFile(args.snapshot, engine.world.snapshot(), {flag: 'wx'});
   const neuralSnapshot = await engine.brain.snapshot();
@@ -153,6 +159,7 @@ try {
     observedNeuralFields: [...observedFields], observerMatchesPrivateStateExactly: true,
     contextOutputs: 12, anatomicalMotorOutputs: 92, physicalBodyInputs: 807, privateNeuralFields: 7,
     privatePlasticEdges: 4184, privatePlasticFields: ['efficacy-deviation', 'eligibility'], plasticity,
+    synapticObserverIsReadOnly: true,
     motorDynamicRanges: Array.from(motorHigh, (x, i) => x - motorLow[i]), maximumDeliveredContextMagnitude: contextMagnitude,
     neuralCapture: 'every physical tick', retinalInputSites: 1771,
     supportedRetinalSites: atlas.retinalSupported.reduce((sum, value) => sum + value, 0),

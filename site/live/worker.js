@@ -61,6 +61,12 @@ self.onmessage = ({data: message}) => {
         if (!['rate','adaptation','support','release','dopamine','octopamine','serotonin'].includes(message.field)) throw new Error('Unknown neural observation field');
         engine.neuralField = message.field; break;
       case 'tone': engine.tone(message.frequency, message.duration, message.amplitude); break;
+      case 'inspect-plasticity': {
+        const detail = await engine.inspectPlasticity();
+        post('plasticity', {requestId, ...detail},
+          [detail.plasticity.efficacy.buffer, detail.plasticity.eligibility.buffer]);
+        break;
+      }
       case 'insert-toy': post('inserted', {requestId, object: await engine.insertToy(message.position)}); frame(engine.observe()); break;
       case 'shove': engine.shove(message.id, message.force); break;
       case 'select': {

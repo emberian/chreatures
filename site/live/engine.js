@@ -131,6 +131,12 @@ export class LiveEngine {
     } catch (error) {this.failed = true; throw error;}
   }
   observe() { return {...this.world.observe(), tick: this.tick}; }
+  async inspectPlasticity() {
+    if (this.failed) throw new Error('Restore a coherent life before inspecting private state');
+    const plasticity = await this.brain.inspectPlasticity(this.selected);
+    return {residentId: this.world.residentDescriptors[this.selected].id, time: this.world.time,
+      identity: this.brain.manifest.identity.plasticity, plasticity};
+  }
   record(kind, details) {
     this.journal.push({tick: this.tick, time: this.world.time, kind, details});
     // The journal is observer history, never a memory input to the creature.
