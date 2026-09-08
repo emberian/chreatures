@@ -7,6 +7,13 @@ The topology remains the pinned 165,122 neuron / 25,563,197 edge MaleCNS v1.0,
 with signed synapse-count / incoming-synapse-count CSR weights. No synthetic
 edges, random replacement areas, or sensory readout skips are introduced.
 
+The stored topology is broader than the current physiological model: transmitter
+resolution assigns ACh +1, GABA/glutamate/histamine -1, and other or unavailable
+transmitters 0. Consequently 938,454 stored edges (2,864,102 anatomical synapses)
+have zero effective coupling. Dopamine, octopamine and serotonin do not yet have
+implemented target-specific modulatory dynamics. The source/data and motor-interface
+audit is in [Anatomical motor bootstrap](ANATOMICAL_MOTOR_BOOTSTRAP.md).
+
 ## Exact frozen equations
 
 All five raw dynamics arrays have shape `[11752]`, indexed by the existing
