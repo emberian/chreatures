@@ -373,6 +373,7 @@ class Recipe:
     motor_slew_weight: float
     counterfactual_stability_weight: float
     motor_decoder_norm_weight: float
+    cold_neutral_weight: float
 
 
 def configure_cns(model: AnatomicalCNS) -> dict[str, list[nn.Parameter]]:
@@ -497,6 +498,7 @@ def cns_window_loss(
     motor_slew_weight: float = 0.0,
     counterfactual_stability_weight: float = 0.0,
     motor_decoder_norm_weight: float = 0.0,
+    cold_neutral_weight: float = 0.0,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     tensor_arrays = {key: value for key, value in arrays.items() if isinstance(value, torch.Tensor)}
     state: CNSState | None = None
@@ -613,6 +615,16 @@ def cns_window_loss(
     terms["motor_decoder_penalty"] = (
         (supported_weight / 0.02).square().sum() / supported_count
     )
+    # The normalized position contract defines zero as the authored neutral
+    # pose. Anchor the explicit centered decoder at the real CNS cold state so
+    # ordinary imitation cannot hide a large unsafe servo offset in its
+    # intercept. Dynamic weights remain trainable and are still supervised by
+    # every ordinary/history-conditioned transition.
+    cold_motor = _decoder_only_motor(model, model.initial_state(batch))
+    terms["cold_neutral"] = F.smooth_l1_loss(
+        cold_motor[:, :84], torch.zeros_like(cold_motor[:, :84]), beta=0.02
+    )
+    terms["cold_reference_servo_abs_mean"] = cold_motor[:, :84].abs().mean()
     terms["cold_motor_abs_mean"] = (
         predicted_motor[0, :, :84].abs().mean()
         if bool(arrays.get("reset_prefix", False)) else predicted_motor.new_zeros(())
@@ -626,6 +638,7 @@ def cns_window_loss(
         + motor_slew_weight * terms["motor_slew"]
         + counterfactual_stability_weight * terms["counterfactual_stability"]
         + motor_decoder_norm_weight * terms["motor_decoder_penalty"]
+        + cold_neutral_weight * terms["cold_neutral"]
     )
     return total, terms
 
@@ -650,6 +663,7 @@ def evaluate_cns(
             motor_slew_weight=recipe.motor_slew_weight,
             counterfactual_stability_weight=recipe.counterfactual_stability_weight,
             motor_decoder_norm_weight=recipe.motor_decoder_norm_weight,
+            cold_neutral_weight=recipe.cold_neutral_weight,
         )
         rows.append({"total": float(total), **{key: float(value) for key, value in terms.items()}})
     model.train(); heads.train()
@@ -935,6 +949,7 @@ def train(arguments: argparse.Namespace) -> None:
         motor_slew_weight=arguments.motor_slew_weight,
         counterfactual_stability_weight=arguments.counterfactual_stability_weight,
         motor_decoder_norm_weight=arguments.motor_decoder_norm_weight,
+        cold_neutral_weight=arguments.cold_neutral_weight,
     )
     identity = {
         "format": TRAINING_FORMAT,
@@ -1044,6 +1059,7 @@ def train(arguments: argparse.Namespace) -> None:
             motor_slew_weight=recipe.motor_slew_weight,
             counterfactual_stability_weight=recipe.counterfactual_stability_weight,
             motor_decoder_norm_weight=recipe.motor_decoder_norm_weight,
+            cold_neutral_weight=recipe.cold_neutral_weight,
         )
         if not torch.isfinite(total):
             raise RuntimeError("non-finite full-CNS physical loss")
@@ -1334,6 +1350,7 @@ def parser() -> argparse.ArgumentParser:
     fit.add_argument("--motor-slew-weight", type=float, default=0.0)
     fit.add_argument("--counterfactual-stability-weight", type=float, default=0.0)
     fit.add_argument("--motor-decoder-norm-weight", type=float, default=0.0)
+    fit.add_argument("--cold-neutral-weight", type=float, default=0.0)
     return result
 
 
