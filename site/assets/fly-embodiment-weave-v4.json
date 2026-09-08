@@ -1,0 +1,1926 @@
+{
+  "archive": {
+    "archive_id": "fly-embodiment-wave-v4-20260908",
+    "description": "A fly in a growing world: actual body morphology, cross-animal anatomical masks, full MaleCNS numerical evidence, offline teacher feasibility and native physical ecology. Pending learning remains proposed.",
+    "habitat_id": null,
+    "library": "universal-weave 0.5.0",
+    "schema_version": 2,
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f"
+  },
+  "artifact": "fly-embodiment-evidence.weave.json",
+  "artifact_sha256": "052cbf816407ec87f5b54e150bbf0f8c85d5f0eb02bb0cf925712b7772bff67d",
+  "bytes": 53738,
+  "edge_count": 30,
+  "edges": [
+    {
+      "role": "physical_measurement_source",
+      "source": "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+      "target": "body807-interface:97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786"
+    },
+    {
+      "role": "physical_actuator_boundary",
+      "source": "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+      "target": "motor92-interface:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928"
+    },
+    {
+      "role": "shared_joint_order",
+      "source": "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+      "target": "author-teacher-bank:97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b"
+    },
+    {
+      "role": "walking42_and_adhesion6_targets",
+      "source": "motor92-interface:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+      "target": "author-teacher-bank:97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b"
+    },
+    {
+      "role": "target_trajectory",
+      "source": "author-teacher-bank:97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+      "target": "author-teacher-replay:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072"
+    },
+    {
+      "role": "physical_body",
+      "source": "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+      "target": "author-teacher-replay:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072"
+    },
+    {
+      "role": "morphology_order",
+      "source": "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+      "target": "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873"
+    },
+    {
+      "role": "sensory_channels",
+      "source": "body807-interface:97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+      "target": "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873"
+    },
+    {
+      "role": "actuator_channels",
+      "source": "motor92-interface:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+      "target": "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873"
+    },
+    {
+      "role": "neuron_annotations",
+      "source": "male-cns-source-ledger:dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661",
+      "target": "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873"
+    },
+    {
+      "role": "anatomical_arrays",
+      "source": "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+      "target": "original-v4-service:b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601"
+    },
+    {
+      "role": "executed_service",
+      "source": "original-v4-service:b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601",
+      "target": "original-v4-full-cns-parity:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5"
+    },
+    {
+      "role": "full_graph_interfaces",
+      "source": "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+      "target": "original-v4-full-cns-parity:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5"
+    },
+    {
+      "role": "canonical_motor92_binding",
+      "source": "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+      "target": "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951"
+    },
+    {
+      "role": "metadata_correction_predecessor",
+      "source": "original-v4-service:b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601",
+      "target": "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951"
+    },
+    {
+      "role": "original_executed_numbers",
+      "source": "original-v4-full-cns-parity:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+      "target": "corrected-v4-numeric-equivalence:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4"
+    },
+    {
+      "role": "corrected_identity",
+      "source": "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+      "target": "corrected-v4-numeric-equivalence:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4"
+    },
+    {
+      "role": "cns_service_dependency",
+      "source": "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+      "target": "initialized-private-resident:9bdea07f91141b4c6fff30825d7bb5f83fd2c13237b76919d16ea92994cee03b"
+    },
+    {
+      "role": "numerical_identity_boundary",
+      "source": "corrected-v4-numeric-equivalence:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4",
+      "target": "initialized-private-resident:9bdea07f91141b4c6fff30825d7bb5f83fd2c13237b76919d16ea92994cee03b"
+    },
+    {
+      "role": "native_growth_transaction",
+      "source": "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+      "target": "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc"
+    },
+    {
+      "role": "physical_geometry",
+      "source": "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+      "target": "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc"
+    },
+    {
+      "role": "offline_teacher_targets",
+      "source": "author-teacher-replay:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
+      "target": "proposed-fly-corpus:pending"
+    },
+    {
+      "role": "current_full_cns",
+      "source": "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+      "target": "proposed-fly-corpus:pending"
+    },
+    {
+      "role": "actual_body_and_ecology_host",
+      "source": "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+      "target": "proposed-fly-corpus:pending"
+    },
+    {
+      "role": "future_training_data",
+      "source": "proposed-fly-corpus:pending",
+      "target": "proposed-resident-training:pending"
+    },
+    {
+      "role": "future_observed_outcomes",
+      "source": "proposed-fly-corpus:pending",
+      "target": "proposed-gam-analysis:pending"
+    },
+    {
+      "role": "future_controller",
+      "source": "proposed-resident-training:pending",
+      "target": "proposed-gam-analysis:pending"
+    },
+    {
+      "role": "future_trained_controller",
+      "source": "proposed-resident-training:pending",
+      "target": "proposed-trained-joined-assay:pending"
+    },
+    {
+      "role": "validated_physical_ecology",
+      "source": "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+      "target": "proposed-trained-joined-assay:pending"
+    },
+    {
+      "role": "future_analysis",
+      "source": "proposed-gam-analysis:pending",
+      "target": "proposed-trained-joined-assay:pending"
+    }
+  ],
+  "format": "chreatures-portable-weave-biography-v1",
+  "integration": "native-universal-weave-dag",
+  "library": {
+    "name": "universal-weave",
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+    "version": "0.5.0"
+  },
+  "multi_parent_nodes": 11,
+  "node_count": 18,
+  "node_id_contract": "lowercase first-128-bit SHA-256 of source_id",
+  "public_summary": {
+    "architecture": "fly-embodiment-v4",
+    "body_channels": 807,
+    "body_subject": "female FlyGym/NeuroMechFly morphology",
+    "cns_subject": "MaleCNS male brain and cord",
+    "executed_receipt_nodes": 5,
+    "materialized_nodes": 14,
+    "motor_channels": 92,
+    "native_layout": "Universal Weave stable node IDs and topological order",
+    "neurons": 165122,
+    "original_corrected_identity_separation": true,
+    "proposed_nodes": 4,
+    "title": "A fly in a growing world",
+    "training_status": "pending"
+  },
+  "records": [
+    {
+      "artifact_uri": "urn:sha256:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+      "blob_refs": [
+        {
+          "bytes": 137797,
+          "media_type": "application/json",
+          "role": "female_flygym_body_schema",
+          "sha256": "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+          "uri": "urn:sha256:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "8b48ef528006e2106bfe5dbbb5aa04c6",
+      "parent_source_ids": [],
+      "parents": [],
+      "record_type": "body_morphology_import",
+      "source": {
+        "artifact_uri": "urn:sha256:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+        "blob_refs": [
+          {
+            "bytes": 137797,
+            "media_type": "application/json",
+            "role": "female_flygym_body_schema",
+            "sha256": "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+            "uri": "urn:sha256:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "axis_order": "yaw_pitch_roll",
+          "biological_subject": "micro-CT-derived morphology of one adult female Drosophila; not the MaleCNS specimen",
+          "causal_role": "defines physical geometry, 126 joint axes and the M90 MuJoCo control order",
+          "evidence": {
+            "engineered": "effective position servos and adhesion",
+            "inferred": "joint/servo mechanics are model choices",
+            "observed": "author morphology and rigging"
+          },
+          "joint_dofs": 126,
+          "mass_unit_status": "FlyGym source does not explicitly name the mass base unit; the numerical total is consistent with 0.9997844 mg only if interpreted as grams",
+          "morphology_asset_set_sha256": "2da4b8004d89d2d89f211bd51079d524376a197abcdbbdd9512be1a86ecf6c94",
+          "parent_roles": {},
+          "physical_actuators": 90,
+          "segments": 69,
+          "source": {
+            "license": "Apache-2.0",
+            "mesh_variant": "simplified_max2000faces with author left-to-right mirroring",
+            "morphology_basis": "micro-CT scan of one adult female Drosophila melanogaster; author-adjusted segments include antennae",
+            "project": "FlyGym / NeuroMechFly v2",
+            "repository": "https://github.com/NeLy-EPFL/flygym",
+            "revision": "ca65a510c2afe6ac61c51df4f274c8d190c2f95f",
+            "version": "2.1.0"
+          },
+          "status": "author-derived artifact imported"
+        },
+        "id": "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+        "parent_ids": [],
+        "record_type": "body_morphology_import",
+        "text": "FlyGym/NeuroMechFly supplies the articulated body geometry, joint order and effective servo boundary used by this wave.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 0
+        }
+      },
+      "source_id": "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+      "text": "FlyGym/NeuroMechFly supplies the articulated body geometry, joint order and effective servo boundary used by this wave.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 0
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+      "blob_refs": [
+        {
+          "bytes": 335896,
+          "media_type": "application/json",
+          "role": "body807_cns_sensory_schema",
+          "sha256": "97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+          "uri": "urn:sha256:97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "368bb1c5fbb604f662d7d20281c996d4",
+      "parent_source_ids": [
+        "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+      ],
+      "parents": [
+        "8b48ef528006e2106bfe5dbbb5aa04c6"
+      ],
+      "record_type": "body_to_cns_interface",
+      "source": {
+        "artifact_uri": "urn:sha256:97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+        "blob_refs": [
+          {
+            "bytes": 335896,
+            "media_type": "application/json",
+            "role": "body807_cns_sensory_schema",
+            "sha256": "97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+            "uri": "urn:sha256:97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "blocks": [
+            {
+              "name": "olfaction",
+              "range": [
+                0,
+                32
+              ]
+            },
+            {
+              "name": "gustation",
+              "range": [
+                32,
+                40
+              ]
+            },
+            {
+              "name": "airflow",
+              "range": [
+                40,
+                46
+              ]
+            },
+            {
+              "name": "audition",
+              "range": [
+                46,
+                62
+              ]
+            },
+            {
+              "name": "thorax_velocity",
+              "range": [
+                62,
+                68
+              ]
+            },
+            {
+              "name": "irradiance",
+              "range": [
+                68,
+                69
+              ]
+            },
+            {
+              "name": "interoception",
+              "range": [
+                69,
+                81
+              ]
+            },
+            {
+              "name": "joint_position",
+              "range": [
+                81,
+                207
+              ]
+            },
+            {
+              "name": "joint_velocity",
+              "range": [
+                207,
+                333
+              ]
+            },
+            {
+              "name": "joint_load",
+              "range": [
+                333,
+                459
+              ]
+            },
+            {
+              "name": "foot_contact_and_slip",
+              "range": [
+                459,
+                495
+              ]
+            },
+            {
+              "name": "segment_contact",
+              "range": [
+                495,
+                702
+              ]
+            },
+            {
+              "name": "haltere_inertial_load",
+              "range": [
+                702,
+                708
+              ]
+            },
+            {
+              "name": "mouth_contact",
+              "range": [
+                708,
+                712
+              ]
+            },
+            {
+              "name": "actuator_fatigue",
+              "range": [
+                712,
+                804
+              ]
+            },
+            {
+              "name": "pump_state",
+              "range": [
+                804,
+                807
+              ]
+            }
+          ],
+          "causal_role": "normalizes body-local state before anatomy-masked injection into full CNS recurrence",
+          "channels": 807,
+          "controller_bypass": false,
+          "evidence_grade_counts": {
+            "engineered": 413,
+            "inter_animal_inferred": 327,
+            "measured": 0,
+            "unsupported": 67
+          },
+          "parent_roles": {
+            "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a": "physical_measurement_source"
+          },
+          "status": "implemented structural interface",
+          "supported_afferent_rows": 10609,
+          "unsupported_afferent_rows": 1189,
+          "unsupported_channels": 67
+        },
+        "id": "body807-interface:97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+        "parent_ids": [
+          "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+        ],
+        "record_type": "body_to_cns_interface",
+        "text": "BODY807 names the physical and engineered channels that may reach annotated MaleCNS afferents; zero-mask channels remain explicit.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 1
+        }
+      },
+      "source_id": "body807-interface:97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+      "text": "BODY807 names the physical and engineered channels that may reach annotated MaleCNS afferents; zero-mask channels remain explicit.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 1
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+      "blob_refs": [
+        {
+          "bytes": 35146,
+          "media_type": "application/json",
+          "role": "motor92_cns_actuator_schema",
+          "sha256": "00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+          "uri": "urn:sha256:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "08f24f0b5237effa434d5e4398127842",
+      "parent_source_ids": [
+        "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+      ],
+      "parents": [
+        "8b48ef528006e2106bfe5dbbb5aa04c6"
+      ],
+      "record_type": "cns_to_body_interface",
+      "source": {
+        "artifact_uri": "urn:sha256:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+        "blob_refs": [
+          {
+            "bytes": 35146,
+            "media_type": "application/json",
+            "role": "motor92_cns_actuator_schema",
+            "sha256": "00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+            "uri": "urn:sha256:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "blocks": [
+            {
+              "activation": "tanh",
+              "name": "position_target",
+              "normalized_range": [
+                -1.0,
+                1.0
+              ],
+              "range": [
+                0,
+                84
+              ]
+            },
+            {
+              "activation": "sigmoid",
+              "name": "adhesion",
+              "normalized_range": [
+                0.0,
+                1.0
+              ],
+              "range": [
+                84,
+                90
+              ]
+            },
+            {
+              "activation": "sigmoid",
+              "name": "pharyngeal_pump",
+              "normalized_range": [
+                0.0,
+                1.0
+              ],
+              "range": [
+                90,
+                91
+              ]
+            },
+            {
+              "activation": "sigmoid",
+              "name": "salivary_drive",
+              "normalized_range": [
+                0.0,
+                1.0
+              ],
+              "range": [
+                91,
+                92
+              ]
+            }
+          ],
+          "causal_role": "decodes post-recurrence motor-neuron state to physical targets",
+          "channels": 92,
+          "native_physiology_outputs": 2,
+          "parent_roles": {
+            "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a": "physical_actuator_boundary"
+          },
+          "physical_mjcf_outputs": 90,
+          "status": "implemented semantic interface",
+          "warning": "signed servo weights are learned within anatomical masks; direction is not inferred from side or muscle name"
+        },
+        "id": "motor92-interface:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+        "parent_ids": [
+          "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+        ],
+        "record_type": "cns_to_body_interface",
+        "text": "MOTOR92 defines signed effective body targets plus adhesion, pharyngeal pump and salivary drive; it does not claim individual muscle recruitment.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 1
+        }
+      },
+      "source_id": "motor92-interface:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+      "text": "MOTOR92 defines signed effective body targets plus adhesion, pharyngeal pump and salivary drive; it does not claim individual muscle recruitment.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 1
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:ff1319fe85a340e01209d577293d3d9ee83e69ee895193dd2e15e924bed24e5f",
+      "blob_refs": [
+        {
+          "bytes": 8196,
+          "media_type": "application/json",
+          "role": "author_teacher_bank_manifest",
+          "sha256": "ff1319fe85a340e01209d577293d3d9ee83e69ee895193dd2e15e924bed24e5f",
+          "uri": "urn:sha256:ff1319fe85a340e01209d577293d3d9ee83e69ee895193dd2e15e924bed24e5f",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 651237,
+          "media_type": "application/x-npz",
+          "role": "author_teacher_trajectory_bank",
+          "sha256": "97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+          "uri": "urn:sha256:97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "90afd8418c2b0007dd3d57b7a62268ca",
+      "parent_source_ids": [
+        "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+        "motor92-interface:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928"
+      ],
+      "parents": [
+        "8b48ef528006e2106bfe5dbbb5aa04c6",
+        "08f24f0b5237effa434d5e4398127842"
+      ],
+      "record_type": "offline_author_teacher",
+      "source": {
+        "artifact_uri": "urn:sha256:ff1319fe85a340e01209d577293d3d9ee83e69ee895193dd2e15e924bed24e5f",
+        "blob_refs": [
+          {
+            "bytes": 8196,
+            "media_type": "application/json",
+            "role": "author_teacher_bank_manifest",
+            "sha256": "ff1319fe85a340e01209d577293d3d9ee83e69ee895193dd2e15e924bed24e5f",
+            "uri": "urn:sha256:ff1319fe85a340e01209d577293d3d9ee83e69ee895193dd2e15e924bed24e5f",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 651237,
+            "media_type": "application/x-npz",
+            "role": "author_teacher_trajectory_bank",
+            "sha256": "97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+            "uri": "urn:sha256:97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "causal_role": "offline supervision only",
+          "limits": [
+            "The trajectories derive from a short NeuroMechFly v1 ball-walking clip and a hand-picked inverse-kinematic extraction, not measured motor-neuron or muscle activation.",
+            "FlyBodyPreprogrammedSteps was fitted for the author's FlyBody model. Replaying it on the imported NeuroMechFly body is an engineered cross-morphology transfer through shared anatomical joint IDs.",
+            "Left and right reuse the same F/M/H trajectory under FlyBody's symmetric joint-axis convention.",
+            "Successful replay is a physical teacher diagnostic and does not demonstrate autonomous CNS control or faithful live-fly locomotion."
+          ],
+          "parent_roles": {
+            "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a": "shared_joint_order",
+            "motor92-interface:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928": "walking42_and_adhesion6_targets"
+          },
+          "production_policy_ingress": false,
+          "sample_count": 2048,
+          "source": {
+            "class": "flygym_demo.complex_terrain.preprogrammed.FlyBodyPreprogrammedSteps",
+            "files_sha256": {
+              "FlyGym-LICENSE": "02afa15750a169f0815ff1525dacf28d010f1dfd4cb119fc9e96bfca4f426eb4",
+              "ball_flybody_clip.npz": "f04c7e019e1049eb7eeb808abda971555c4d44542d7a3038b207aa02c8517cb0",
+              "common.py": "306b5a287de6aa26a3de110dbe16f706b9df8c592386b6fdc770d6724d38ffd8",
+              "preprogrammed.py": "ad945cee5af607e24f1a17ada0b8becd622c1fabebbb9f4f35e49dc7fd69e97f",
+              "single_steps_flybody.meta.json": "b22bba44c402a334dc23de491f613bdb58c0d4c3e262fc081b507b16909ee486",
+              "single_steps_flybody.npz": "25c4d9ae6fa2adf7f4e30c696b8c07f8810721e352feb17e462b094defe2736b"
+            },
+            "git_revision": "ca65a510c2afe6ac61c51df4f274c8d190c2f95f",
+            "license": "Apache-2.0",
+            "project": "FlyGym / NeuroMechFly v2",
+            "version": "2.1.0"
+          },
+          "status": "derived author artifact"
+        },
+        "id": "author-teacher-bank:97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+        "parent_ids": [
+          "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+          "motor92-interface:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928"
+        ],
+        "record_type": "offline_author_teacher",
+        "text": "An author walking trajectory bank supplies loss-only targets through shared joint IDs and is absent from the deployed controller.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 3
+        }
+      },
+      "source_id": "author-teacher-bank:97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+      "text": "An author walking trajectory bank supplies loss-only targets through shared joint IDs and is absent from the deployed controller.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 3
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
+      "blob_refs": [
+        {
+          "bytes": 4331,
+          "media_type": "application/json",
+          "role": "author_teacher_physical_replay",
+          "sha256": "ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
+          "uri": "urn:sha256:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 1154553,
+          "media_type": "application/x-npz",
+          "role": "author_teacher_replay_trace",
+          "sha256": "f3ad8f438687886f662e14f89d5458d48af466a7bc46f41f2a0549e0e1418d9a",
+          "uri": "urn:sha256:f3ad8f438687886f662e14f89d5458d48af466a7bc46f41f2a0549e0e1418d9a",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 649,
+          "media_type": "application/json",
+          "role": "b4_native_physical_startup",
+          "sha256": "a02e6cfad2dcd02c54c8b1171cf92f0b7a2c07c09ce0b1b51bee9081e9befd06",
+          "uri": "urn:sha256:a02e6cfad2dcd02c54c8b1171cf92f0b7a2c07c09ce0b1b51bee9081e9befd06",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "7983d525d8cee171ab3d518a8c1b7983",
+      "parent_source_ids": [
+        "author-teacher-bank:97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+        "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+      ],
+      "parents": [
+        "90afd8418c2b0007dd3d57b7a62268ca",
+        "8b48ef528006e2106bfe5dbbb5aa04c6"
+      ],
+      "record_type": "executed_teacher_replay",
+      "source": {
+        "artifact_uri": "urn:sha256:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
+        "blob_refs": [
+          {
+            "bytes": 4331,
+            "media_type": "application/json",
+            "role": "author_teacher_physical_replay",
+            "sha256": "ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
+            "uri": "urn:sha256:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 1154553,
+            "media_type": "application/x-npz",
+            "role": "author_teacher_replay_trace",
+            "sha256": "f3ad8f438687886f662e14f89d5458d48af466a7bc46f41f2a0549e0e1418d9a",
+            "uri": "urn:sha256:f3ad8f438687886f662e14f89d5458d48af466a7bc46f41f2a0549e0e1418d9a",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 649,
+            "media_type": "application/json",
+            "role": "b4_native_physical_startup",
+            "sha256": "a02e6cfad2dcd02c54c8b1171cf92f0b7a2c07c09ce0b1b51bee9081e9befd06",
+            "uri": "urn:sha256:a02e6cfad2dcd02c54c8b1171cf92f0b7a2c07c09ce0b1b51bee9081e9befd06",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "causal_role": "checks the offline teacher/body pairing",
+          "control_ticks": 200,
+          "interpretation": "Research-only author teacher replay. Displacement and contact show behavior of this engineered model/controller pairing; they do not establish faithful fly locomotion or learned CNS control.",
+          "modes": [
+            "forward",
+            "turn_left",
+            "stop",
+            "turn_right"
+          ],
+          "observed_checks": {
+            "asymmetric_turn_commands_produced_opposite_yaw_signs": false,
+            "forward_displacement_positive": true,
+            "stop_translation_mm": 0.00013742648822303587
+          },
+          "outcomes": [
+            {
+              "displacement_world_mm": [
+                -3.5366933979097404,
+                0.3132282896980936,
+                -0.6562595039720481
+              ],
+              "forward_displacement_mm": 3.580632854800066,
+              "lateral_displacement_mm": -0.2791115834994268,
+              "leg_contact_found_fraction": [
+                0.075,
+                0.58,
+                0.11,
+                0.11,
+                0.27,
+                0.135
+              ],
+              "mean_contact_force_model_units": 5.9667398330144374,
+              "mode": "forward",
+              "resident": 0,
+              "root_height_range_mm": [
+                0.4489475038272494,
+                2.3758357746938175
+              ],
+              "yaw_change_rad": -1.2153864409213024
+            },
+            {
+              "displacement_world_mm": [
+                -1.2454347632552596,
+                -0.9340802554773733,
+                0.9999668153844323
+              ],
+              "forward_displacement_mm": 0.8473778228972992,
+              "lateral_displacement_mm": -1.2454170119897405,
+              "leg_contact_found_fraction": [
+                0.13,
+                0.89,
+                0.17,
+                0.115,
+                0.755,
+                0.14
+              ],
+              "mean_contact_force_model_units": 13.137128893059582,
+              "mode": "turn_left",
+              "resident": 1,
+              "root_height_range_mm": [
+                1.165419061067001,
+                2.4690230980558145
+              ],
+              "yaw_change_rad": -0.4898211397090415
+            },
+            {
+              "displacement_world_mm": [
+                -0.00010375280242413965,
+                -4.100007910319919e-08,
+                -9.011877703035687e-05
+              ],
+              "forward_displacement_mm": -9.587267994880477e-05,
+              "lateral_displacement_mm": -4.24046224450605e-08,
+              "leg_contact_found_fraction": [
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ],
+              "mean_contact_force_model_units": 41.77627510288943,
+              "mode": "stop",
+              "resident": 2,
+              "root_height_range_mm": [
+                1.1653349872227483,
+                1.1654251965970783
+              ],
+              "yaw_change_rad": -1.6887632353618452e-07
+            },
+            {
+              "displacement_world_mm": [
+                1.926962985339697,
+                0.7973912128193321,
+                -0.7614639896554258
+              ],
+              "forward_displacement_mm": 0.8476916291466315,
+              "lateral_displacement_mm": -1.9584779552808018,
+              "leg_contact_found_fraction": [
+                0.295,
+                0.145,
+                0.12,
+                0.175,
+                0.95,
+                0.15
+              ],
+              "mean_contact_force_model_units": 9.567475848426215,
+              "mode": "turn_right",
+              "resident": 3,
+              "root_height_range_mm": [
+                0.3667372797222645,
+                2.701291983772511
+              ],
+              "yaw_change_rad": -1.7482005376103265
+            }
+          ],
+          "parent_roles": {
+            "author-teacher-bank:97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b": "target_trajectory",
+            "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a": "physical_body"
+          },
+          "physics_dt_s": 0.0001,
+          "residents": 4,
+          "status": "executed physical receipt"
+        },
+        "id": "author-teacher-replay:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
+        "parent_ids": [
+          "author-teacher-bank:97a5615c5e59baf86f29293fc06c2d92eee2bd8b84ea1abe42a378fc394a929b",
+          "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+        ],
+        "record_type": "executed_teacher_replay",
+        "text": "Four author-derived target modes ran for two seconds in the actual B4 MuJoCo body; this tests physical feasibility, not learned control.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 4
+        }
+      },
+      "source_id": "author-teacher-replay:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
+      "text": "Four author-derived target modes ran for two seconds in the actual B4 MuJoCo body; this tests physical feasibility, not learned control.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 4
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661",
+      "blob_refs": [
+        {
+          "bytes": 6511,
+          "media_type": "application/json",
+          "role": "anatomical_source_ledger",
+          "sha256": "dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661",
+          "uri": "urn:sha256:dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "edb4b96ceb982c5806088aa8f337b0ff",
+      "parent_source_ids": [],
+      "parents": [],
+      "record_type": "male_cns_anatomical_sources",
+      "source": {
+        "artifact_uri": "urn:sha256:dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661",
+        "blob_refs": [
+          {
+            "bytes": 6511,
+            "media_type": "application/json",
+            "role": "anatomical_source_ledger",
+            "sha256": "dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661",
+            "uri": "urn:sha256:dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "biological_subject": "male CNS reconstruction; MANC/FANC homolog evidence includes different animals and a female VNC reference",
+          "causal_role": "defines CNS rows and the evidence basis for body-part masks",
+          "evidence_terms": {
+            "engineered": "simulation control/sensor mechanism with no claimed biological identity",
+            "inter_animal_inferred": "author annotation or Chreatures transfer joins different animals, datasets, or body axes",
+            "measured": "author dataset identifies the peripheral modality/site within MaleCNS",
+            "unsupported": "no defensible mapping is available; represented by a zero mask"
+          },
+          "parent_roles": {},
+          "source_count": 7,
+          "status": "source ledger verified locally"
+        },
+        "id": "male-cns-source-ledger:dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661",
+        "parent_ids": [],
+        "record_type": "male_cns_anatomical_sources",
+        "text": "MaleCNS neuron identities are joined to MANC/FANC and sensory literature with every cross-animal inference labeled.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 0
+        }
+      },
+      "source_id": "male-cns-source-ledger:dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661",
+      "text": "MaleCNS neuron identities are joined to MANC/FANC and sensory literature with every cross-animal inference labeled.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 0
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+      "blob_refs": [
+        {
+          "bytes": 378639,
+          "media_type": "application/x-npz",
+          "role": "male_cns_fly_body_atlas",
+          "sha256": "066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+          "uri": "urn:sha256:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 8739,
+          "media_type": "application/json",
+          "role": "anatomical_atlas_manifest",
+          "sha256": "0cd64ededf76124a008332f3f60021896910321860b39b61265531dcedcb9b97",
+          "uri": "urn:sha256:0cd64ededf76124a008332f3f60021896910321860b39b61265531dcedcb9b97",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "48f6c32e5919b0064d9ab6818a5da7a6",
+      "parent_source_ids": [
+        "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+        "body807-interface:97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+        "motor92-interface:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+        "male-cns-source-ledger:dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661"
+      ],
+      "parents": [
+        "8b48ef528006e2106bfe5dbbb5aa04c6",
+        "368bb1c5fbb604f662d7d20281c996d4",
+        "08f24f0b5237effa434d5e4398127842",
+        "edb4b96ceb982c5806088aa8f337b0ff"
+      ],
+      "record_type": "anatomy_mask_join",
+      "source": {
+        "artifact_uri": "urn:sha256:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+        "blob_refs": [
+          {
+            "bytes": 378639,
+            "media_type": "application/x-npz",
+            "role": "male_cns_fly_body_atlas",
+            "sha256": "066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+            "uri": "urn:sha256:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 8739,
+            "media_type": "application/json",
+            "role": "anatomical_atlas_manifest",
+            "sha256": "0cd64ededf76124a008332f3f60021896910321860b39b61265531dcedcb9b97",
+            "uri": "urn:sha256:0cd64ededf76124a008332f3f60021896910321860b39b61265531dcedcb9b97",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "afferent_rows": 11798,
+          "afferent_rows_supported": 10609,
+          "animals": {
+            "body": "female FlyGym specimen",
+            "brain_and_cord": "MaleCNS male specimen",
+            "fine_motor_homology": "MANC/FANC cross-animal inference"
+          },
+          "causal_role": "structural masks constrain trainable BODY807 and MOTOR92 adapters",
+          "fine_cohort_rows": 400,
+          "fine_unresolved_motor_rows": 415,
+          "learned_adapter_scope": "signed weights may distribute only within nonzero anatomical cohorts",
+          "motor_rows": 815,
+          "motor_rows_supported": 802,
+          "motor_rows_unsupported": 13,
+          "parent_roles": {
+            "body807-interface:97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786": "sensory_channels",
+            "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a": "morphology_order",
+            "male-cns-source-ledger:dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661": "neuron_annotations",
+            "motor92-interface:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928": "actuator_channels"
+          },
+          "status": "machine-readable atlas generated",
+          "unsupported_motor": [
+            {
+              "canonical_row": 354,
+              "id": "10383",
+              "motor_index": 3,
+              "reason": "rm eye motor with passive eye axes",
+              "subclass": "rm",
+              "type": "PS349"
+            },
+            {
+              "canonical_row": 1174,
+              "id": "11265",
+              "motor_index": 17,
+              "reason": "rm eye motor with passive eye axes",
+              "subclass": "rm",
+              "type": "PS349"
+            },
+            {
+              "canonical_row": 1942,
+              "id": "12076",
+              "motor_index": 29,
+              "reason": "rm eye motor with passive eye axes",
+              "subclass": "rm",
+              "type": "GNG647"
+            },
+            {
+              "canonical_row": 1987,
+              "id": "12126",
+              "motor_index": 31,
+              "reason": "rm eye motor with passive eye axes",
+              "subclass": "rm",
+              "type": "GNG647"
+            },
+            {
+              "canonical_row": 2031,
+              "id": "12173",
+              "motor_index": 33,
+              "reason": "rm eye motor with passive eye axes",
+              "subclass": "rm",
+              "type": "GNG314"
+            },
+            {
+              "canonical_row": 2461,
+              "id": "12631",
+              "motor_index": 36,
+              "reason": "rm eye motor with passive eye axes",
+              "subclass": "rm",
+              "type": "GNG314"
+            },
+            {
+              "canonical_row": 3353,
+              "id": "13592",
+              "motor_index": 42,
+              "reason": "rm eye motor with passive eye axes",
+              "subclass": "rm",
+              "type": "GNG647"
+            },
+            {
+              "canonical_row": 151904,
+              "id": "811395",
+              "motor_index": 471,
+              "reason": "xm target identity unsupported",
+              "subclass": "xm",
+              "type": "MNxm02"
+            },
+            {
+              "canonical_row": 151908,
+              "id": "811400",
+              "motor_index": 472,
+              "reason": "xm target identity unsupported",
+              "subclass": "xm",
+              "type": "MNxm02"
+            },
+            {
+              "canonical_row": 153000,
+              "id": "812752",
+              "motor_index": 485,
+              "reason": "xm target identity unsupported",
+              "subclass": "xm",
+              "type": "MNxm03"
+            },
+            {
+              "canonical_row": 153181,
+              "id": "812988",
+              "motor_index": 489,
+              "reason": "xm target identity unsupported",
+              "subclass": "xm",
+              "type": "MNxm03"
+            },
+            {
+              "canonical_row": 156112,
+              "id": "817026",
+              "motor_index": 526,
+              "reason": "xm target identity unsupported",
+              "subclass": "xm",
+              "type": "MNxm01"
+            },
+            {
+              "canonical_row": 156747,
+              "id": "818098",
+              "motor_index": 544,
+              "reason": "xm target identity unsupported",
+              "subclass": "xm",
+              "type": "MNxm01"
+            }
+          ]
+        },
+        "id": "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+        "parent_ids": [
+          "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+          "body807-interface:97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+          "motor92-interface:00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+          "male-cns-source-ledger:dd50fa9d202f5fee7fd850b1305343156b5d51ab2f92b300c5bc8fc3aca67661"
+        ],
+        "record_type": "anatomy_mask_join",
+        "text": "The anatomical atlas joins the female body model to the male CNS through explicit measured, inter-animal inferred, engineered and unsupported mappings.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 2
+        }
+      },
+      "source_id": "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+      "text": "The anatomical atlas joins the female body model to the male CNS through explicit measured, inter-animal inferred, engineered and unsupported mappings.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 2
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "fd755577cdc295f8fdde442a4e791b20",
+      "parent_source_ids": [
+        "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873"
+      ],
+      "parents": [
+        "48f6c32e5919b0064d9ab6818a5da7a6"
+      ],
+      "record_type": "original_initialized_cns_identity",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "adapter_sha256": "e2fdea45614280b1dc8c9fcb11cf7b70504353afd4b44f890bf0afa07ce2553a",
+          "causal_role": "historical input to the executed parity run",
+          "incorrect_actuator_schema_sha256": "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+          "parent_roles": {
+            "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873": "anatomical_arrays"
+          },
+          "service_artifact_sha256": "b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601",
+          "status": "superseded identity; numerical execution retained"
+        },
+        "id": "original-v4-service:b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601",
+        "parent_ids": [
+          "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873"
+        ],
+        "record_type": "original_initialized_cns_identity",
+        "text": "The first initialized CHCNS4 file carried the morphology hash in its actuator-schema field; its numerical tensors remain a distinct historical identity.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 3
+        }
+      },
+      "source_id": "original-v4-service:b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601",
+      "text": "The first initialized CHCNS4 file carried the morphology hash in its actuator-schema field; its numerical tensors remain a distinct historical identity.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 3
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+      "blob_refs": [
+        {
+          "bytes": 5592,
+          "media_type": "application/json",
+          "role": "original_v4_full_cns_webgpu_parity",
+          "sha256": "29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+          "uri": "urn:sha256:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 3511735,
+          "media_type": "application/x-npz",
+          "role": "original_v4_torch_parity_fixture",
+          "sha256": "fafa0ea1c14c584884b60fe51aaa78a6a65b6f8a68829d5172aac93df867d32e",
+          "uri": "urn:sha256:fafa0ea1c14c584884b60fe51aaa78a6a65b6f8a68829d5172aac93df867d32e",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "86b9b46fe72d365b874576a087f75768",
+      "parent_source_ids": [
+        "original-v4-service:b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601",
+        "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873"
+      ],
+      "parents": [
+        "fd755577cdc295f8fdde442a4e791b20",
+        "48f6c32e5919b0064d9ab6818a5da7a6"
+      ],
+      "record_type": "executed_original_full_cns_parity",
+      "source": {
+        "artifact_uri": "urn:sha256:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+        "blob_refs": [
+          {
+            "bytes": 5592,
+            "media_type": "application/json",
+            "role": "original_v4_full_cns_webgpu_parity",
+            "sha256": "29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+            "uri": "urn:sha256:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 3511735,
+            "media_type": "application/x-npz",
+            "role": "original_v4_torch_parity_fixture",
+            "sha256": "fafa0ea1c14c584884b60fe51aaa78a6a65b6f8a68829d5172aac93df867d32e",
+            "uri": "urn:sha256:fafa0ea1c14c584884b60fe51aaa78a6a65b6f8a68829d5172aac93df867d32e",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "byte_exact_restore": {
+            "latent": true,
+            "motor": true,
+            "snapshot": true
+          },
+          "causal_role": "checks WebGPU recurrence, Z512 and MOTOR92 against Torch",
+          "final_max_abs": {
+            "adaptation": 5.0640664994716644e-09,
+            "mod_da": 1.0133641703546914e-09,
+            "mod_ht": 4.0245140553452075e-10,
+            "mod_oa": 4.861249180976301e-10,
+            "rates": 7.450580596923828e-08,
+            "release": 5.960464477539063e-08,
+            "support": 5.960464477539063e-08
+          },
+          "latent_max_abs_by_tick": [
+            1.8835999071598053e-07,
+            8.773058652877808e-07,
+            1.5869736671447754e-06
+          ],
+          "limits": {
+            "latent": 2e-05,
+            "motor": 2e-05,
+            "neutralRate": 2e-06,
+            "state": 2e-05
+          },
+          "motor_max_abs_by_tick": [
+            6.441999289563682e-08,
+            5.8778141465154476e-08,
+            7.267834689628216e-08
+          ],
+          "neurons": 165122,
+          "parent_roles": {
+            "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873": "full_graph_interfaces",
+            "original-v4-service:b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601": "executed_service"
+          },
+          "scope": "original service identity only; no corrected file execution is claimed",
+          "service_artifact_sha256": "b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601",
+          "status": "executed numerical parity",
+          "ticks": 3
+        },
+        "id": "original-v4-full-cns-parity:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+        "parent_ids": [
+          "original-v4-service:b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601",
+          "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873"
+        ],
+        "record_type": "executed_original_full_cns_parity",
+        "text": "Dawn/WebGPU executed the original initialized full 165,122-neuron V4 recurrence against its Torch fixture and passed the declared numerical gate.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 4
+        }
+      },
+      "source_id": "original-v4-full-cns-parity:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+      "text": "Dawn/WebGPU executed the original initialized full 165,122-neuron V4 recurrence against its Torch fixture and passed the declared numerical gate.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 4
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+      "blob_refs": [
+        {
+          "bytes": 276082627,
+          "media_type": "application/octet-stream",
+          "role": "corrected_initialized_chcns4_service",
+          "sha256": "8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+          "uri": "urn:sha256:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+          "verification": "verified_local_sha256"
+        },
+        {
+          "bytes": 3511739,
+          "media_type": "application/x-npz",
+          "role": "corrected_v4_torch_parity_fixture",
+          "sha256": "7e0fe0e52ae70eaf2b378edd66ad625615e872cc9fce827c9eee5a6fdcd87189",
+          "uri": "urn:sha256:7e0fe0e52ae70eaf2b378edd66ad625615e872cc9fce827c9eee5a6fdcd87189",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "61ee2d7f1d629b42c78182b70e7ecb5e",
+      "parent_source_ids": [
+        "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+        "original-v4-service:b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601"
+      ],
+      "parents": [
+        "48f6c32e5919b0064d9ab6818a5da7a6",
+        "fd755577cdc295f8fdde442a4e791b20"
+      ],
+      "record_type": "corrected_initialized_cns_identity",
+      "source": {
+        "artifact_uri": "urn:sha256:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+        "blob_refs": [
+          {
+            "bytes": 276082627,
+            "media_type": "application/octet-stream",
+            "role": "corrected_initialized_chcns4_service",
+            "sha256": "8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+            "uri": "urn:sha256:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+            "verification": "verified_local_sha256"
+          },
+          {
+            "bytes": 3511739,
+            "media_type": "application/x-npz",
+            "role": "corrected_v4_torch_parity_fixture",
+            "sha256": "7e0fe0e52ae70eaf2b378edd66ad625615e872cc9fce827c9eee5a6fdcd87189",
+            "uri": "urn:sha256:7e0fe0e52ae70eaf2b378edd66ad625615e872cc9fce827c9eee5a6fdcd87189",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "actuator_schema_sha256": "00a4a98097f90f6a511e9ee72741e2ee403a8017cfd9d0c0b8c474e195940928",
+          "adapter_sha256": "dd62a37681c6f49159f5efc54f5a090cd43a874f9b4a2db1c1d372fff9d02f0d",
+          "causal_role": "current full-CNS substrate for collection",
+          "competence_claim": null,
+          "parent_roles": {
+            "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873": "canonical_motor92_binding",
+            "original-v4-service:b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601": "metadata_correction_predecessor"
+          },
+          "service_artifact_sha256": "8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+          "status": "initialized-untrained artifact",
+          "training_status": "initialized-untrained"
+        },
+        "id": "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+        "parent_ids": [
+          "cross-animal-anatomical-atlas:066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873",
+          "original-v4-service:b53b1babb883dfd7798e06bec5d36eff68fb9cbf083cffca2889a5ab81b54601"
+        ],
+        "record_type": "corrected_initialized_cns_identity",
+        "text": "The corrected initialized CHCNS4 binds the canonical MOTOR92 schema and has a new service and adapter identity.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 4
+        }
+      },
+      "source_id": "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+      "text": "The corrected initialized CHCNS4 binds the canonical MOTOR92 schema and has a new service and adapter identity.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 4
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4",
+      "blob_refs": [
+        {
+          "bytes": 2120,
+          "media_type": "application/json",
+          "role": "v4_identity_correction_equivalence",
+          "sha256": "4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4",
+          "uri": "urn:sha256:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "ce5a0b1a810539587f9c5f3ee7913d59",
+      "parent_source_ids": [
+        "original-v4-full-cns-parity:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+        "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951"
+      ],
+      "parents": [
+        "86b9b46fe72d365b874576a087f75768",
+        "61ee2d7f1d629b42c78182b70e7ecb5e"
+      ],
+      "record_type": "executed_identity_equivalence",
+      "source": {
+        "artifact_uri": "urn:sha256:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4",
+        "blob_refs": [
+          {
+            "bytes": 2120,
+            "media_type": "application/json",
+            "role": "v4_identity_correction_equivalence",
+            "sha256": "4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4",
+            "uri": "urn:sha256:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "causal_role": "transfers numerical values while preserving distinct artifact identities",
+          "fixture_arrays_identical": true,
+          "fixture_numeric_array_count": 20,
+          "linked_numeric_evidence": {
+            "basis": "All service tensors and all fixture numerical arrays are byte-identical; only service/adapter identity metadata changed.",
+            "metal": {
+              "modulation_max_abs": 4.41e-10,
+              "motor_max_abs": 7.74e-08,
+              "overall_max_abs": 1.3206e-06,
+              "rate_max_abs": 8.94e-08
+            },
+            "webgpu": {
+              "latent_max_abs": 1.58697e-06,
+              "motor_max_abs": 7.26783e-08,
+              "neutral_max_abs": 1.49e-08,
+              "report_path": "/Users/ember/paperbin/chreatures/integration/fly-v4/initialized/webgpu-parity-v4.json",
+              "report_sha256": "29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+              "snapshot_restore_exact": true,
+              "state_max_abs": 7.45e-08
+            }
+          },
+          "original_backend_execution_relabelled": false,
+          "parent_roles": {
+            "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951": "corrected_identity",
+            "original-v4-full-cns-parity:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5": "original_executed_numbers"
+          },
+          "reason": "Bind actuator_schema_sha256 to the canonical MOTOR92 channel schema rather than the morphology schema.",
+          "service_array_count": 42,
+          "service_arrays_identical": true,
+          "status": "executed byte-identity comparison"
+        },
+        "id": "corrected-v4-numeric-equivalence:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4",
+        "parent_ids": [
+          "original-v4-full-cns-parity:29d76d83ba7ad95cc519163dbc9f071a8a68430e877545fbc12496538701e7e5",
+          "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951"
+        ],
+        "record_type": "executed_identity_equivalence",
+        "text": "A separate receipt proves the original and corrected artifacts have identical 42 service arrays and 20 parity arrays; it does not relabel the original backend run.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 5
+        }
+      },
+      "source_id": "corrected-v4-numeric-equivalence:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4",
+      "text": "A separate receipt proves the original and corrected artifacts have identical 42 service arrays and 20 parity arrays; it does not relabel the original backend run.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 5
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:d79557f671c7da72f74661f541c8b5df3d54f8d73a460b6da935fbd3d8a0d675",
+      "blob_refs": [
+        {
+          "bytes": 3096,
+          "media_type": "application/json",
+          "role": "initialized_private_resident_receipt",
+          "sha256": "d79557f671c7da72f74661f541c8b5df3d54f8d73a460b6da935fbd3d8a0d675",
+          "uri": "urn:sha256:d79557f671c7da72f74661f541c8b5df3d54f8d73a460b6da935fbd3d8a0d675",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "3f10b9167201e395a3193931ebbf180b",
+      "parent_source_ids": [
+        "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+        "corrected-v4-numeric-equivalence:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4"
+      ],
+      "parents": [
+        "61ee2d7f1d629b42c78182b70e7ecb5e",
+        "ce5a0b1a810539587f9c5f3ee7913d59"
+      ],
+      "record_type": "initialized_private_resident",
+      "source": {
+        "artifact_uri": "urn:sha256:d79557f671c7da72f74661f541c8b5df3d54f8d73a460b6da935fbd3d8a0d675",
+        "blob_refs": [
+          {
+            "bytes": 3096,
+            "media_type": "application/json",
+            "role": "initialized_private_resident_receipt",
+            "sha256": "d79557f671c7da72f74661f541c8b5df3d54f8d73a460b6da935fbd3d8a0d675",
+            "uri": "urn:sha256:d79557f671c7da72f74661f541c8b5df3d54f8d73a460b6da935fbd3d8a0d675",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "artifact_sha256": "9bdea07f91141b4c6fff30825d7bb5f83fd2c13237b76919d16ea92994cee03b",
+          "causal_role": "future parent for private context/consequence learning",
+          "ingress": {
+            "cns_latent": 512,
+            "physical_actuation": false,
+            "previous_delivered_context": 12,
+            "reset": "bool",
+            "ticks": "uint64"
+          },
+          "initialization": {
+            "algorithm": "fresh signed-context12 numpy-pcg64-xavier; proposal output gain0.3 with zero bias; zero predictor/control output projections except hazard bias -ln(7)",
+            "competence_claim": null,
+            "context_policy_version": "signed-context12-v1",
+            "context_suffix_memory_format": "chreatures-private-cns-context-suffix-v2",
+            "goal_horizon_seconds": 0.4,
+            "native_runtime_format": "chreatures-cns-context-resident-native-v12",
+            "private_learning_version": "context-consequence-v1",
+            "seed": 20260908,
+            "source_policy": null,
+            "tick_seconds": 0.01,
+            "training_status": "initialized-untrained"
+          },
+          "native_validation": {
+            "acknowledged": 4,
+            "browser_production_loader": true,
+            "context_exact": 4,
+            "context_suffix_memory_format": "chreatures-private-cns-context-suffix-v2",
+            "finite": true,
+            "load_parent": true,
+            "native_extension_sha256": "3501e20542b7ebce18b528aec07c48b5e12b9fc3afdc5e7618f1735a36ae6aca",
+            "native_runtime_format": "chreatures-cns-context-resident-native-v12",
+            "private_learning_version": "context-consequence-v1",
+            "proposed_context_shape": [
+              4,
+              12
+            ],
+            "step_batch": 4,
+            "tick_seconds": 0.01
+          },
+          "parent_roles": {
+            "corrected-v4-numeric-equivalence:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4": "numerical_identity_boundary",
+            "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951": "cns_service_dependency"
+          },
+          "sequence_control_artifact_sha256": "2665853154363f0205a4eef02e462bf96f08f0810f50b045814fcaac941021bd",
+          "status": "initialized-untrained"
+        },
+        "id": "initialized-private-resident:9bdea07f91141b4c6fff30825d7bb5f83fd2c13237b76919d16ea92994cee03b",
+        "parent_ids": [
+          "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+          "corrected-v4-numeric-equivalence:4eeebc393b86e6cd621e9d622161f31488a5b0d742a15b01fbfa3ffb7e774bc4"
+        ],
+        "record_type": "initialized_private_resident",
+        "text": "A fresh private context resident is bound to the corrected CNS and carries no trained-status or competence claim.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 6
+        }
+      },
+      "source_id": "initialized-private-resident:9bdea07f91141b4c6fff30825d7bb5f83fd2c13237b76919d16ea92994cee03b",
+      "text": "A fresh private context resident is bound to the corrected CNS and carries no trained-status or competence claim.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 6
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+      "blob_refs": [
+        {
+          "bytes": 737,
+          "media_type": "application/json",
+          "role": "native_ecology_growth_receipt",
+          "sha256": "1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+          "uri": "urn:sha256:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "4e8e42542279e3843c8792939ed703c4",
+      "parent_source_ids": [],
+      "parents": [],
+      "record_type": "executed_native_ecology_growth",
+      "source": {
+        "artifact_uri": "urn:sha256:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+        "blob_refs": [
+          {
+            "bytes": 737,
+            "media_type": "application/json",
+            "role": "native_ecology_growth_receipt",
+            "sha256": "1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+            "uri": "urn:sha256:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "abort_restores_exact": true,
+          "anchored_colony_births": 1,
+          "apical_creations": 1,
+          "blocked_route_flux": 0.00020745858542571967,
+          "causal_role": "owns finite material, developmental RNG and growth transactions",
+          "format": "chreatures-ecology-growth-joined-v2",
+          "geometry_changed_route_clearance": true,
+          "lateral_creations": 7,
+          "light_and_contact_change_growth": true,
+          "maximum_elemental_residual": 3.552713678800501e-15,
+          "mobile_births": 0,
+          "open_route_flux": 0.0009374568735753729,
+          "parent_roles": {},
+          "passed": true,
+          "pending_proposal_restore_exact": true,
+          "pending_transaction_restore_exact": true,
+          "rejected_geometry_rng_unchanged": true,
+          "scope": "native inherited colony growth plus analytical capsule-clearance/route host; not a MuJoCo physical integration claim",
+          "scope_boundary": "native inherited colony growth plus analytical capsule-clearance/route host; not a MuJoCo physical integration claim",
+          "status": "executed native receipt",
+          "unfunded_rng_unchanged": true
+        },
+        "id": "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+        "parent_ids": [],
+        "record_type": "executed_native_ecology_growth",
+        "text": "Native ecology executed inherited apical and lateral construction, anchored colony birth, transaction replay and geometry-dependent route transport.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 3
+        }
+      },
+      "source_id": "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+      "text": "Native ecology executed inherited apical and lateral construction, anchored colony birth, transaction replay and geometry-dependent route transport.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 3
+      }
+    },
+    {
+      "artifact_uri": "urn:sha256:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+      "blob_refs": [
+        {
+          "bytes": 1547,
+          "media_type": "application/json",
+          "role": "photon_coupled_mujoco_growth_receipt",
+          "sha256": "05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+          "uri": "urn:sha256:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+          "verification": "verified_local_sha256"
+        }
+      ],
+      "node_id": "17fa02710818a8de99ceabfd6c318263",
+      "parent_source_ids": [
+        "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+        "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+      ],
+      "parents": [
+        "4e8e42542279e3843c8792939ed703c4",
+        "8b48ef528006e2106bfe5dbbb5aa04c6"
+      ],
+      "record_type": "executed_photon_physical_growth_join",
+      "source": {
+        "artifact_uri": "urn:sha256:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+        "blob_refs": [
+          {
+            "bytes": 1547,
+            "media_type": "application/json",
+            "role": "photon_coupled_mujoco_growth_receipt",
+            "sha256": "05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+            "uri": "urn:sha256:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+            "verification": "verified_local_sha256"
+          }
+        ],
+        "fields": {
+          "causal_role": "couples physical photons and geomDistance clearance to native growth",
+          "checks": {
+            "autonomous_physical_construction": true,
+            "finite_body_optic": true,
+            "full_snapshot_restore_replay": "exact",
+            "physical_light_funds_native_photon_capture": true
+          },
+          "growth": {
+            "accepted": 1,
+            "actual_geom_distance_checks": 275,
+            "blocked": 1,
+            "clearance_scratch_builds": 1,
+            "proposed_at_construction": 2
+          },
+          "illumination": {
+            "captured_photon_energy": 0.14313934624603566,
+            "contract": {
+              "photon_energy_per_second": 0.3,
+              "screen_intensity": 0.2,
+              "sky_intensity": 0.8
+            }
+          },
+          "limitations": "Joined mechanism validation; it does not claim learned behavioral competence.",
+          "parent_roles": {
+            "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a": "physical_geometry",
+            "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f": "native_growth_transaction"
+          },
+          "performance": {
+            "elapsed_ms": 20199,
+            "mean_advance_ms": 90.60644948019798
+          },
+          "retina": {
+            "mean_sample_ms": 7.143228999999792,
+            "prior_rays_per_resident": 3542,
+            "ray_cutoff_mm": 120,
+            "screen_affected_scalars": 141,
+            "screen_distance_mm": 18,
+            "self_hits": 0,
+            "supported_rays_per_resident": 1486
+          },
+          "scenario": {
+            "control_ticks_to_construction": 200,
+            "physical_dt_s": 0.0001,
+            "physics_steps_per_control_tick": 100,
+            "residents": 2
+          },
+          "status": "executed joined host receipt"
+        },
+        "id": "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+        "parent_ids": [
+          "native-ecology-growth:1cd773bdce2187259cfb0b4f5c05420bbb92e64c6b546833cee4eb9395e16a6f",
+          "female-body-morphology:d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a"
+        ],
+        "record_type": "executed_photon_physical_growth_join",
+        "text": "The MuJoCo/Wasm host supplied physical light and geometry to native ecology: one branch was accepted, one blocked, and the coupled state replayed exactly.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 5
+        }
+      },
+      "source_id": "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+      "text": "The MuJoCo/Wasm host supplied physical light and geometry to native ecology: one branch was accepted, one blocked, and the coupled state replayed exactly.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 5
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "b07ff503e2c31006335b44d90b6c6a71",
+      "parent_source_ids": [
+        "author-teacher-replay:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
+        "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+        "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc"
+      ],
+      "parents": [
+        "7983d525d8cee171ab3d518a8c1b7983",
+        "61ee2d7f1d629b42c78182b70e7ecb5e",
+        "17fa02710818a8de99ceabfd6c318263"
+      ],
+      "record_type": "proposed_collection_result",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "causal_role": "future training corpus",
+          "completion_claim": false,
+          "expected_worlds": 12,
+          "model_ingress": [
+            "optic_rgb",
+            "BODY807",
+            "delivered_context12"
+          ],
+          "parent_roles": {
+            "author-teacher-replay:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072": "offline_teacher_targets",
+            "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951": "current_full_cns",
+            "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc": "actual_body_and_ecology_host"
+          },
+          "status": "proposed; receipt absent",
+          "teacher_scope": "loss-only"
+        },
+        "id": "proposed-fly-corpus:pending",
+        "parent_ids": [
+          "author-teacher-replay:ffeb432f84d06b0caf414b2ab5469561b19b7be19ed1672d913439e23c40a072",
+          "corrected-v4-service:8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+          "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc"
+        ],
+        "record_type": "proposed_collection_result",
+        "text": "The 12-world B4 full-CNS corpus is still collecting; no completed corpus result is represented here.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 7
+        }
+      },
+      "source_id": "proposed-fly-corpus:pending",
+      "text": "The 12-world B4 full-CNS corpus is still collecting; no completed corpus result is represented here.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 7
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "d6f7689354ce3ce7ce768b77c62f1a16",
+      "parent_source_ids": [
+        "proposed-fly-corpus:pending"
+      ],
+      "parents": [
+        "b07ff503e2c31006335b44d90b6c6a71"
+      ],
+      "record_type": "proposed_training_result",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "causal_role": "future learned CNS-to-context and motor adaptation",
+          "completion_claim": false,
+          "parent_roles": {
+            "proposed-fly-corpus:pending": "future_training_data"
+          },
+          "status": "proposed; receipt absent",
+          "training_status": "absent"
+        },
+        "id": "proposed-resident-training:pending",
+        "parent_ids": [
+          "proposed-fly-corpus:pending"
+        ],
+        "record_type": "proposed_training_result",
+        "text": "Resident/CNS training has no completed receipt yet; initialized artifacts are not presented as trained.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 8
+        }
+      },
+      "source_id": "proposed-resident-training:pending",
+      "text": "Resident/CNS training has no completed receipt yet; initialized artifacts are not presented as trained.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 8
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "5662595970c54c6025688fa8565094f6",
+      "parent_source_ids": [
+        "proposed-fly-corpus:pending",
+        "proposed-resident-training:pending"
+      ],
+      "parents": [
+        "b07ff503e2c31006335b44d90b6c6a71",
+        "d6f7689354ce3ce7ce768b77c62f1a16"
+      ],
+      "record_type": "proposed_gam_result",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "causal_role": "future mechanism analysis",
+          "completion_claim": false,
+          "parent_roles": {
+            "proposed-fly-corpus:pending": "future_observed_outcomes",
+            "proposed-resident-training:pending": "future_controller"
+          },
+          "status": "proposed; receipt absent"
+        },
+        "id": "proposed-gam-analysis:pending",
+        "parent_ids": [
+          "proposed-fly-corpus:pending",
+          "proposed-resident-training:pending"
+        ],
+        "record_type": "proposed_gam_result",
+        "text": "No completed V4 GAM receipt exists yet.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 9
+        }
+      },
+      "source_id": "proposed-gam-analysis:pending",
+      "text": "No completed V4 GAM receipt exists yet.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 9
+      }
+    },
+    {
+      "artifact_uri": null,
+      "blob_refs": [],
+      "node_id": "92568fb80354ea9d7cb929c003011660",
+      "parent_source_ids": [
+        "proposed-resident-training:pending",
+        "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+        "proposed-gam-analysis:pending"
+      ],
+      "parents": [
+        "d6f7689354ce3ce7ce768b77c62f1a16",
+        "17fa02710818a8de99ceabfd6c318263",
+        "5662595970c54c6025688fa8565094f6"
+      ],
+      "record_type": "proposed_joined_result",
+      "source": {
+        "artifact_uri": null,
+        "blob_refs": [],
+        "fields": {
+          "causal_role": "future behavioral evidence",
+          "completion_claim": false,
+          "parent_roles": {
+            "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc": "validated_physical_ecology",
+            "proposed-gam-analysis:pending": "future_analysis",
+            "proposed-resident-training:pending": "future_trained_controller"
+          },
+          "status": "proposed; receipt absent"
+        },
+        "id": "proposed-trained-joined-assay:pending",
+        "parent_ids": [
+          "proposed-resident-training:pending",
+          "photon-physical-growth:05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+          "proposed-gam-analysis:pending"
+        ],
+        "record_type": "proposed_joined_result",
+        "text": "No trained joined CNS/body/ecology assay receipt exists yet.",
+        "time": {
+          "domain": "live_cns_evidence_stage",
+          "value": 10
+        }
+      },
+      "source_id": "proposed-trained-joined-assay:pending",
+      "text": "No trained joined CNS/body/ecology assay receipt exists yet.",
+      "time": {
+        "domain": "live_cns_evidence_stage",
+        "value": 10
+      }
+    }
+  ],
+  "reload_equal": true,
+  "topological_order": [
+    "8b48ef528006e2106bfe5dbbb5aa04c6",
+    "368bb1c5fbb604f662d7d20281c996d4",
+    "08f24f0b5237effa434d5e4398127842",
+    "90afd8418c2b0007dd3d57b7a62268ca",
+    "7983d525d8cee171ab3d518a8c1b7983",
+    "edb4b96ceb982c5806088aa8f337b0ff",
+    "48f6c32e5919b0064d9ab6818a5da7a6",
+    "fd755577cdc295f8fdde442a4e791b20",
+    "86b9b46fe72d365b874576a087f75768",
+    "61ee2d7f1d629b42c78182b70e7ecb5e",
+    "ce5a0b1a810539587f9c5f3ee7913d59",
+    "3f10b9167201e395a3193931ebbf180b",
+    "4e8e42542279e3843c8792939ed703c4",
+    "17fa02710818a8de99ceabfd6c318263",
+    "b07ff503e2c31006335b44d90b6c6a71",
+    "d6f7689354ce3ce7ce768b77c62f1a16",
+    "5662595970c54c6025688fa8565094f6",
+    "92568fb80354ea9d7cb929c003011660"
+  ],
+  "validated_after_reload": true
+}

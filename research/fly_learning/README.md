@@ -149,3 +149,23 @@ normalization tensors, a fresh CHCNS4 service, final-service latent replays, and
 freshly bound resident/control artifacts. Offline validation cannot establish
 locomotor competence; the final headless assay replays matched held-out worlds
 with the trained service under zero context and under the learned resident.
+
+The physical-stimulus nursery remains a separately sealed corpus because its
+twelve scene and layout identities intentionally differ. Passing its manifest
+adds the nursery train, validation and held-out worlds to the corresponding
+whole-world splits; omitting it preserves the body-bootstrap recipe above.
+
+```sh
+python -m research.fly_learning.train train \
+  --corpus /tank/chreatures/runs/fly-learning/body-bootstrap \
+  --nursery-corpus /tank/chreatures/runs/fly-learning/nursery/nursery-corpus.json \
+  --service /tank/chreatures/runs/malecns-v4/seed/initialized-cns-v4.bin \
+  --parent-resident /tank/chreatures/runs/malecns-v4/seed/initialized-resident-v4.npz \
+  --source-revision FULL_GIT_SHA \
+  --run /tank/chreatures/runs/fly-learning/training/nursery-development-v1
+```
+
+The nursery loader verifies every episode hash, twelve distinct physical
+layouts and initial snapshots, and all sixteen screen/sound bridge
+acknowledgements. Stimulus plans and acknowledgements remain corpus provenance;
+model ingress is still optic1771, BODY807, delivered context12 and reset only.

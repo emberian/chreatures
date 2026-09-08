@@ -1,0 +1,24 @@
+{
+  "edge_count": 30,
+  "exporter_sha256": "a84f1530ad3ec488258ab4cf47c7257f326b698b70c0747801a3f4098fd2dfb3",
+  "format": "chreatures-fly-embodiment-weave-export-v1",
+  "multi_parent_nodes": 11,
+  "native_public_sha256": "052cbf816407ec87f5b54e150bbf0f8c85d5f0eb02bb0cf925712b7772bff67d",
+  "node_count": 18,
+  "pending": {
+    "corpus": true,
+    "gam": true,
+    "joined_assay": true,
+    "training": true
+  },
+  "portable_sha256": "0c42aca39ff5cd04542b9a40c7d369a5bc7a72a442c08b8097bf01a2375e1e3a",
+  "reload_equal": true,
+  "request_sha256": "8f30c30603cf1ebba62536587d462d13f530c977662f0f437b4388f3b56a0010",
+  "universal_weave": {
+    "name": "universal-weave",
+    "source_commit": "7a5a0dabb94885e44ad8a6c4355c015d7f38020f",
+    "version": "0.5.0"
+  },
+  "validated_after_reload": true,
+  "weave_sha256": "052cbf816407ec87f5b54e150bbf0f8c85d5f0eb02bb0cf925712b7772bff67d"
+}

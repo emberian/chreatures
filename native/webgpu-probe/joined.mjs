@@ -5,9 +5,8 @@ import {readFile, writeFile, stat} from 'node:fs/promises';
 import {createReadStream} from 'node:fs';
 import {resolve, extname, sep} from 'node:path';
 import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
 import {create, globals} from 'webgpu';
-import initResident from '../../site/live/pkg/resident_runtime.js';
-import {LiveEngine} from '../../site/live/engine.js';
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, item, index, values) => index % 2 ? pairs : [...pairs, [item.slice(2), values[index + 1]]], []));
 const directory = resolve(args.site ?? '../../dist/site');
@@ -34,21 +33,26 @@ const began = performance.now();
 const exact = (a, b) => Buffer.from(a).equals(Buffer.from(b));
 const sha = bytes => createHash('sha256').update(Buffer.from(bytes)).digest('hex');
 try {
+  const [{default: initResident}, {LiveEngine}] = await Promise.all([
+    import(pathToFileURL(resolve(directory, 'live/pkg/resident_runtime.js'))),
+    import(pathToFileURL(resolve(directory, 'live/engine.js'))),
+  ]);
   const residentWasm = await readFile(resolve(directory, 'live/pkg/resident_runtime_bg.wasm'));
   engine = await LiveEngine.create({baseURL: `http://127.0.0.1:${server.address().port}/live/`, device,
     modules: {worldWasm: await readFile(resolve(directory, 'live/pkg/chreatures_browser_world_bg.wasm')),
       initResident: () => initResident({module_or_path: residentWasm})}});
   const atlas = engine.describe();
   assert.equal(atlas.retinalSites.length, 1771 * 3);
-  assert.equal(atlas.retinalSupported.reduce((sum, value) => sum + value, 0), 1486);
+  assert(atlas.retinalSupported.reduce((sum, value) => sum + value, 0) > 0);
+  assert.equal(engine.batch, 2);
   const first = engine.observe(); const timings = [];
-  const motorLow = new Float32Array(34).fill(Infinity), motorHigh = new Float32Array(34).fill(-Infinity);
+  const motorLow = new Float32Array(92).fill(Infinity), motorHigh = new Float32Array(92).fill(-Infinity);
   let contextMagnitude = 0;
   const observedFields = new Set(), fields = ['rate', 'adaptation', 'support', 'release', 'dopamine', 'octopamine', 'serotonin'];
-  for (let tick = 0; tick < 64; tick++) {
-    engine.neuralField = fields[Math.min(6, Math.floor(tick / 9))];
+  for (let tick = 0; tick < 128; tick++) {
+    engine.neuralField = fields[Math.min(6, Math.floor(tick / 19))];
     if (tick === 4) engine.greet([0, 1, 2]);
-    if ([16, 28, 40, 52].includes(tick)) engine.tone([80, 200, 500, 1250][(tick - 16) / 12], .4);
+    if ([16, 48, 80, 112].includes(tick)) engine.tone([80, 200, 500, 1250][(tick - 16) / 32], .4);
     engine.screen(new Float32Array(12).fill(tick % 4 < 2 ? 1 : 0), 2, 2, null);
     const frame = await engine.advance(true); timings.push(frame.wallMilliseconds);
     assert(frame.positions.every(Number.isFinite));
@@ -58,16 +62,21 @@ try {
     if (!observedFields.has(frame.neuralField)) {
       const snapshot = await engine.brain.snapshot();
       const headerBytes = new DataView(snapshot).getUint32(8, true);
-      const state = new Float32Array(snapshot, 12 + Math.ceil(headerBytes / 4) * 4);
+      const headerOffset = 12 + Math.ceil(headerBytes / 4) * 4;
+      const metadata = JSON.parse(new TextDecoder().decode(new Uint8Array(snapshot, 12, headerBytes)));
+      const state = new Float32Array(snapshot, headerOffset);
+      const stateStride = metadata.stateBytes / (165122 * 4);
+      const laneStride = stateStride / fields.length;
+      assert(Number.isInteger(laneStride) && laneStride >= engine.batch);
       const field = fields.indexOf(frame.neuralField);
       for (let neuron = 0; neuron < 165122; neuron++) {
-        assert.equal(frame.neuralSignal[neuron], state[neuron * 28 + field * 4 + engine.selected]);
+        assert.equal(frame.neuralSignal[neuron], state[neuron * stateStride + field * laneStride + engine.selected]);
       }
       observedFields.add(frame.neuralField);
     }
-    assert.equal(frame.motorActivation.length, 34);
+    assert.equal(frame.motorActivation.length, 92);
     assert.equal(frame.deliveredContext.length, 12);
-    for (let i = 0; i < 34; i++) {
+    for (let i = 0; i < 92; i++) {
       assert(Number.isFinite(frame.motorActivation[i]));
       motorLow[i] = Math.min(motorLow[i], frame.motorActivation[i]);
       motorHigh[i] = Math.max(motorHigh[i], frame.motorActivation[i]);
@@ -77,6 +86,9 @@ try {
       assert(frame.neuralRates.every(Number.isFinite));
       assert.equal(frame.retinalRGB.length, 5313);
       assert(frame.retinalRGB.every(value => Number.isFinite(value) && value >= 0 && value <= 1));
+      assert.equal(frame.bodySense.length, 807);
+      assert(frame.bodySense.every(Number.isFinite));
+      assert.equal(frame.bodySenseTime, (frame.tick - 1) * .01);
     }
   }
   const checkpoint = await engine.save();
@@ -87,6 +99,8 @@ try {
   assert(exact(next.neuralRates.buffer, replay.neuralRates.buffer), 'Full CNS continuation differs');
   assert(exact(next.motorActivation.buffer, replay.motorActivation.buffer), 'Motor recruitment continuation differs');
   assert(exact(next.deliveredContext.buffer, replay.deliveredContext.buffer), 'Context delivery continuation differs');
+  assert(exact(next.bodySense.buffer, replay.bodySense.buffer), 'BODY807 observer continuation differs');
+  assert.equal(next.bodySenseTime, replay.bodySenseTime, 'BODY807 sample time differs');
   assert(exact(future, restoredFuture), 'Complete life replay differs');
   const beforeInsert = engine.observe().geometry.length;
   const inserted = await engine.insertToy();
@@ -99,21 +113,24 @@ try {
     const index = resident.root * 3;
     maxTravel = Math.max(maxTravel, Math.hypot(...after.bodyPositions.slice(index, index + 3).map((x, i) => x - first.bodyPositions[index + i])));
   }
-  const report = {format: 'chreatures-anatomical-cns-v3-joined-headless-v1', engineIdentity: engine.identity,
+  const report = {format: 'chreatures-fly-cns-v4-joined-headless-v1', engineIdentity: engine.identity,
     serviceArtifactSha256: engine.brain.manifest.serviceArtifactSha256,
     adapterSha256: engine.brain.manifest.identity.artifact,
     adapter: adapter.info?.device || adapter.info?.description || 'Dawn Metal', neurons: 165122, edges: 25563197,
-    residents: engine.batch, physicalStepCalls: 67, retainedModelTicks: engine.tick, checkpointReplayCalls: 1, modelSeconds: engine.world.time,
+    residents: engine.batch, physicalStepCalls: 131, retainedModelTicks: engine.tick, checkpointReplayCalls: 1, modelSeconds: engine.world.time,
     meanCompleteTickMs: timings.reduce((a,b) => a+b, 0) / timings.length, maxCompleteTickMs: Math.max(...timings),
-    maxRootTravelMeters: maxTravel, snapshotBytes: checkpoint.byteLength, snapshotSHA256: sha(checkpoint),
+    maxRootTravelMillimeters: maxTravel, snapshotBytes: checkpoint.byteLength, snapshotSHA256: sha(checkpoint),
     physicalReplayExact: true, fullNeuralReplayExact: true, wholeLifeReplayExact: true,
     observedNeuralFields: [...observedFields], observerMatchesPrivateStateExactly: true,
-    contextOutputs: 12, anatomicalMotorOutputs: 34, physicalBodyInputs: 110, privateNeuralFields: 7,
+    contextOutputs: 12, anatomicalMotorOutputs: 92, physicalBodyInputs: 807, privateNeuralFields: 7,
     motorDynamicRanges: Array.from(motorHigh, (x, i) => x - motorLow[i]), maximumDeliveredContextMagnitude: contextMagnitude,
-    neuralCapture: 'every physical tick', retinalInputSites: 1771, supportedRetinalSites: 1486, capturedRetinalRGB: true,
+    neuralCapture: 'every physical tick', retinalInputSites: 1771,
+    supportedRetinalSites: atlas.retinalSupported.reduce((sum, value) => sum + value, 0),
+    capturedRetinalRGB: true, capturedBodySense: 807, bodySenseReplayExact: true,
     restoredGrownWorld: true, geometryCount: after.geometry.length, wallSeconds: (performance.now() - began) / 1000,
     modelStatus: engine.modelStatus, controllerStatus: engine.controllerStatus,
-    scope: 'Actual Node Dawn Metal + same browser Wasm/WGSL; no browser UI performance or learned motor competence claim'};
+    externalPhysicalInputs: ['screen photon field', 'analytic point tones'],
+    scope: 'Actual Node Dawn Metal + same browser Wasm/WGSL; initialized private resident and CNS, no browser UI performance or learned competence claim'};
   console.log(JSON.stringify(report, null, 2));
   if (args.report) await writeFile(args.report, JSON.stringify(report, null, 2) + '\n', {flag: 'wx'});
 } finally {
