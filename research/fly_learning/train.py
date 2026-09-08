@@ -187,6 +187,44 @@ def install_train_world_normalization(
     }
 
 
+@torch.inference_mode()
+def validate_collected_parent_cache(
+    model: AnatomicalCNS, episodes: tuple[Episode, ...], device: torch.device,
+    ticks: int = 16,
+) -> dict[str, Any]:
+    """Confirm collection timing/service before changing trainable interfaces."""
+    maxima: list[float] = []
+    for episode in episodes:
+        state: CNSState | None = None
+        error = 0.0
+        for tick in range(min(ticks, TICKS + 1)):
+            context_tick = min(tick, TICKS - 1)
+            z, _, state = _cns_control_step(
+                model,
+                _tensor(episode.optic_rgb[tick], device),
+                _tensor(episode.body_afferents[tick], device),
+                _tensor(episode.delivered_context[context_tick], device),
+                state,
+            )
+            error = max(
+                error,
+                float(np.max(np.abs(z.cpu().numpy() - episode.collected_latent[tick]))),
+            )
+        maxima.append(error)
+    maximum = max(maxima, default=0.0)
+    if maximum > 5e-5:
+        raise RuntimeError(
+            f"collected parent latent/timing replay differs (max {maximum:.9g})"
+        )
+    return {
+        "ticks_per_world": ticks,
+        "world_max_abs_error": maxima,
+        "max_abs_error": maximum,
+        "tolerance": 5e-5,
+        "cadence": "one dt=.01 forward with two internal dt/2 rate integrations",
+    }
+
+
 class PhysicalPredictionHeads(nn.Module):
     """Training-only action-conditioned consequences from CNS latent state."""
 
@@ -528,6 +566,11 @@ def train(arguments: argparse.Namespace) -> None:
     service_path = arguments.service.expanduser().resolve()
     parent_arrays, parent_metadata = load_service_artifact(service_path)
     parent_service_sha = sha256_file(service_path)
+    if (
+        corpus.manifest.get("cns_service_sha256") != parent_service_sha
+        or corpus.manifest.get("cns_adapter_sha256") != parent_metadata["adapter_sha256"]
+    ):
+        raise RuntimeError("corpus was not collected through the supplied parent CNS service")
     device = torch.device(arguments.device)
     if device.type != "cuda" or not torch.cuda.is_available():
         raise RuntimeError("actual full-CNS training requires the isolated ROCm CUDA interface")
@@ -567,6 +610,14 @@ def train(arguments: argparse.Namespace) -> None:
     }
     atomic_json(run / "progress.json", progress)
 
+    parent_model = AnatomicalCNS(parent_arrays, device=device).eval()
+    parent_cache_check = validate_collected_parent_cache(
+        parent_model, (*corpus.train, *corpus.validation, *corpus.heldout), device
+    )
+    del parent_model
+    torch.cuda.empty_cache()
+    atomic_json(run / "parent-cache-check.json", parent_cache_check)
+
     mutable_arrays = {name: np.asarray(value) for name, value in parent_arrays.items()}
     mean, scale = body_statistics(corpus.train)
     mutable_arrays["body.mean"] = mean
@@ -599,7 +650,10 @@ def train(arguments: argparse.Namespace) -> None:
     validation_before = evaluate_cns(
         model, heads, corpus, "validation-worlds", recipe, device
     )
-    progress.update(status="running", normalization=normalization, validation_before=validation_before)
+    progress.update(
+        status="running", normalization=normalization,
+        parent_cache_check=parent_cache_check, validation_before=validation_before,
+    )
     atomic_json(run / "progress.json", progress)
     began = time.monotonic()
     cns_history: list[dict[str, float]] = []
@@ -777,6 +831,7 @@ def train(arguments: argparse.Namespace) -> None:
         "identity": identity,
         "elapsed_seconds": time.monotonic() - began,
         "normalization": normalization,
+        "parent_cache_check": parent_cache_check,
         "cns": {
             "validation_before": validation_before,
             "validation_after": validation_after,
