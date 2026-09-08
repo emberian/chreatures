@@ -431,7 +431,9 @@ def _version_live_publication() -> dict[str, object]:
         raise FileNotFoundError("authenticated live runtime manifest is required")
     runtime = json.loads((live / "runtime-manifest.json").read_text())
     inputs = {"runtime": runtime["files"], "files": {}}
-    for relative in ("live.js", "live.css", "live/view.js", "live/model/cns-manifest.json",
+    for relative in ("live.js", "live.css", "live/view.js", "live/neuron-inspector.js", "live/neuron-annotations.js",
+                     "live/assets/observer/male-cns-observer-annotations-v1.manifest.json",
+                     "live/assets/observer/male-cns-observer-annotations-v1.json.gz", "live/model/cns-manifest.json",
                      "live/model/resident-manifest.json", "live/model/observer-manifest.json"):
         path = OUTPUT / relative
         if not path.is_file():
