@@ -1,31 +1,20 @@
 //! Browser embodiment: physical truth stays inside this module and MuJoCo.
-//! Only retina RGB and the fixed 43 body-local afferents cross to the CNS.
+//! Only retina RGB and the fixed 110 body-local afferents cross to the CNS.
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 const SITES: usize = 1771;
-const CHANNELS: usize = 43;
+const CHANNELS: usize = 110;
+const MOTOR_CHANNELS: usize = 34;
+const MUSCLES: usize = 24;
+const JOINTS: usize = 12;
 #[derive(Clone, Serialize, Deserialize)]
 struct Controller {
-    frequency_hz: f64,
-    stance_fraction: f64,
-    hip_sweep_degrees: f64,
-    knee_stance_degrees: f64,
-    knee_swing_degrees: f64,
-    idle_knee_degrees: f64,
     max_joint_torque: f64,
-    turn_gain: f64,
-    hip_kp: f64,
-    knee_kp: f64,
-    hip_kd: f64,
-    knee_kd: f64,
+    hip_passive_damping: f64,
+    knee_passive_damping: f64,
     posture_kp: f64,
     posture_kd: f64,
     max_posture_torque: f64,
-}
-#[derive(Clone, Serialize, Deserialize)]
-struct Leg {
-    side: f64,
-    phase: f64,
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct Body {
@@ -34,7 +23,6 @@ struct Body {
     qpos: Vec<usize>,
     dofs: Vec<usize>,
     controller: Controller,
-    legs: Vec<Leg>,
     physiology: [f64; 12],
     eyes: [[f64; 3]; 2],
 }
@@ -67,12 +55,17 @@ struct Resident {
     gaze: f64,
     signals: [f64; 3],
     work: f64,
+    /// Engineered antagonist activation state. This synthetic body makes no NMJ claim.
+    muscle_activation: [f64; MUSCLES],
+    joint_fatigue: [f64; JOINTS],
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct Emission {
     origin: [f64; 3],
     born: f64,
-    amplitude: [f64; 3],
+    frequency_hz: f64,
+    envelope: f64,
+    duration: f64,
     kind: u8,
 }
 #[derive(Serialize, Deserialize)]
@@ -135,7 +128,6 @@ impl WorldCore {
                     || b.head > 4096
                     || b.qpos.len() != 12
                     || b.dofs.len() != 12
-                    || b.legs.len() != 6
                     || b.qpos.iter().chain(&b.dofs).any(|i| *i > 8192)
                     || b.physiology
                         .iter()
@@ -144,9 +136,9 @@ impl WorldCore {
                         .iter()
                         .flatten()
                         .any(|v| !v.is_finite() || v.abs() > 1.0)
-                    || b.controller.frequency_hz <= 0.0
-                    || !(0.05..0.95).contains(&b.controller.stance_fraction)
                     || b.controller.max_joint_torque <= 0.0
+                    || b.controller.hip_passive_damping < 0.0
+                    || b.controller.knee_passive_damping < 0.0
             })
             || c.entities.iter().any(|e| {
                 e.body > 4096
@@ -172,7 +164,7 @@ impl WorldCore {
             })
             .collect();
         let state = Saved {
-            format: "chreatures-browser-world-state-v1".into(),
+            format: "chreatures-browser-world-state-v2".into(),
             engine: c.engine.clone(),
             model: c.source_mjcf_sha256.clone(),
             atlas: c.atlas_sha256.clone(),
@@ -187,6 +179,8 @@ impl WorldCore {
                     gaze: 0.0,
                     signals: [0.0; 3],
                     work: 0.0,
+                    muscle_activation: [0.0; MUSCLES],
+                    joint_fatigue: [0.0; JOINTS],
                 })
                 .collect(),
             food: c.entities.iter().map(|e| e.food).collect(),
@@ -215,7 +209,15 @@ impl WorldCore {
             || s.reservoir.iter().any(|v| !v.is_finite() || *v < 0.0)
             || s.emissions.len() > 1024
             || s.emissions.iter().any(|e| {
-                !finite(&e.origin) || !finite(&e.amplitude) || !e.born.is_finite() || e.kind > 1
+                !finite(&e.origin)
+                    || !e.born.is_finite()
+                    || !e.frequency_hz.is_finite()
+                    || !(40.0..=1600.0).contains(&e.frequency_hz)
+                    || !e.envelope.is_finite()
+                    || !(0.0..=1.0).contains(&e.envelope)
+                    || !e.duration.is_finite()
+                    || !(0.005..=20.0).contains(&e.duration)
+                    || e.kind > 1
             })
             || !s.time.is_finite()
             || s.food.iter().any(|f| !f.is_finite() || *f < 0.0)
@@ -224,6 +226,10 @@ impl WorldCore {
                     || !finite(&r.signals)
                     || !r.gaze.is_finite()
                     || !r.work.is_finite()
+                    || !finite(&r.muscle_activation)
+                    || !finite(&r.joint_fatigue)
+                    || r.muscle_activation.iter().any(|v| !(0.0..=1.0).contains(v))
+                    || r.joint_fatigue.iter().any(|v| !(0.0..=1.0).contains(v))
                     || r.physiology.iter().any(|v| *v < 0.0 || *v > 1.0)
                     || r.grip.is_some_and(|g| g >= s.food.len())
             })
@@ -298,12 +304,21 @@ impl WorldCore {
             .collect()
     }
     /// Owner-created acoustic source at an actual 3D world location.
-    pub fn visitor_sound(&mut self, position: &[f64], amplitude: &[f64]) -> Result<(), JsValue> {
+    pub fn visitor_sound(
+        &mut self,
+        position: &[f64],
+        frequency_hz: f64,
+        envelope: f64,
+        duration: f64,
+    ) -> Result<(), JsValue> {
         if position.len() != 3
-            || amplitude.len() != 3
             || !finite(position)
-            || !finite(amplitude)
-            || amplitude.iter().any(|v| *v < 0.0 || *v > 1.0)
+            || !frequency_hz.is_finite()
+            || !(40.0..=1600.0).contains(&frequency_hz)
+            || !envelope.is_finite()
+            || !(0.0..=1.0).contains(&envelope)
+            || !duration.is_finite()
+            || !(0.005..=20.0).contains(&duration)
             || self.state.emissions.len() >= 1024
         {
             return Err(err("invalid visitor acoustic source"));
@@ -311,12 +326,14 @@ impl WorldCore {
         self.state.emissions.push(Emission {
             origin: position.try_into().unwrap(),
             born: self.state.time,
-            amplitude: amplitude.try_into().unwrap(),
+            frequency_hz,
+            envelope,
+            duration,
             kind: 0,
         });
         Ok(())
     }
-    /// Physics transport: 12 joint torques + world posture torque + grip entity and force.
+    /// CNS motor head -> engineered antagonist muscles -> 12 physical hinge torques.
     pub fn actuation(
         &mut self,
         commands: &[f64],
@@ -329,7 +346,7 @@ impl WorldCore {
         dt: f64,
     ) -> Result<Vec<f64>, JsValue> {
         let n = self.config.bodies.len();
-        if commands.len() != n * 12
+        if commands.len() != n * MOTOR_CHANNELS
             || velocities.len() != n * 6
             || !finite(commands)
             || !finite(qpos)
@@ -341,13 +358,21 @@ impl WorldCore {
             || !dt.is_finite()
             || dt <= 0.0
             || dt > 0.05
+            || commands.chunks_exact(MOTOR_CHANNELS).any(|a| {
+                a.iter().enumerate().any(|(k, v)| {
+                    if k == 24 || k == 25 {
+                        !(-1.0..=1.0).contains(v)
+                    } else {
+                        !(0.0..=1.0).contains(v)
+                    }
+                })
+            })
         {
             return Err(err("invalid physical actuation packet"));
         }
         if self.config.bodies.iter().any(|b| {
             b.qpos.len() != 12
                 || b.dofs.len() != 12
-                || b.legs.len() != 6
                 || b.qpos.iter().any(|i| *i >= qpos.len())
                 || b.dofs.iter().any(|i| *i >= qvel.len())
                 || b.root * 9 + 9 > rotations.len()
@@ -365,61 +390,52 @@ impl WorldCore {
             let b = &self.config.bodies[row];
             let c = &b.controller;
             let r = &mut self.state.residents[row];
-            let a = &commands[row * 12..row * 12 + 12];
+            let a = &commands[row * MOTOR_CHANNELS..row * MOTOR_CHANNELS + MOTOR_CHANNELS];
             let out = &mut output[row * 19..row * 19 + 19];
-            let f = a[0].clamp(-1.0, 1.0);
-            let turn = a[1].clamp(-1.0, 1.0);
-            let activity = f.abs().max(turn.abs());
-            let strength = (1.0 - 0.72 * r.physiology[2]) * (0.18 + 0.82 * r.physiology[0]);
-            let freq = c.frequency_hz * (0.32 + 0.68 * activity);
-            let lim = c.max_joint_torque * strength;
-            for (leg, l) in b.legs.iter().enumerate() {
-                let drive = (f + l.side * c.turn_gain * turn).clamp(-1.0, 1.0);
-                let (hip, knee) = if activity < 1e-4 || drive.abs() < 1e-4 {
-                    (0.0, l.side * c.idle_knee_degrees.to_radians())
+            let resource = (0.12 + 0.88 * r.physiology[0]) * (0.55 + 0.45 * r.physiology[6]);
+            let alpha = 1.0 - (-dt / 0.04).exp();
+            for muscle in 0..MUSCLES {
+                let excitation = a[muscle].clamp(0.0, 1.0);
+                r.muscle_activation[muscle] += alpha * (excitation - r.muscle_activation[muscle]);
+            }
+            for j in 0..JOINTS {
+                let angle = qpos[b.qpos[j]];
+                let velocity = qvel[b.dofs[j]];
+                let normalized_length = angle / if j % 2 == 0 { 0.733 } else { 1.012 };
+                let force_length = (-1.35 * normalized_length * normalized_length).exp();
+                let force_velocity = (1.0 - 0.18 * velocity.abs()).clamp(0.28, 1.0);
+                let local_capacity = resource * (1.0 - 0.82 * r.joint_fatigue[j]);
+                let positive = r.muscle_activation[j * 2];
+                let negative = r.muscle_activation[j * 2 + 1];
+                let active = (positive - negative)
+                    * c.max_joint_torque
+                    * local_capacity
+                    * force_length
+                    * force_velocity;
+                let passive = -if j % 2 == 0 {
+                    c.hip_passive_damping
                 } else {
-                    let cycle = (time * freq + l.phase) % 1.0;
-                    let (sweep, k) = if cycle < c.stance_fraction {
-                        (1.0 - 2.0 * cycle / c.stance_fraction, c.knee_stance_degrees)
-                    } else {
-                        (
-                            -1.0 + 2.0 * (cycle - c.stance_fraction) / (1.0 - c.stance_fraction),
-                            c.knee_swing_degrees,
-                        )
-                    };
-                    (
-                        -l.side
-                            * drive.signum()
-                            * c.hip_sweep_degrees.to_radians()
-                            * (0.30 + 0.70 * drive.abs())
-                            * sweep,
-                        l.side * k.to_radians(),
-                    )
-                };
-                for kind in 0..2 {
-                    let j = leg * 2 + kind;
-                    let (kp, kd, target) = if kind == 0 {
-                        (c.hip_kp, c.hip_kd, hip)
-                    } else {
-                        (
-                            c.knee_kp,
-                            c.knee_kd,
-                            knee + a[3].clamp(-1.0, 1.0) * 0.1 * l.side,
-                        )
-                    };
-                    let torque =
-                        (kp * (target - qpos[b.qpos[j]]) - kd * qvel[b.dofs[j]]).clamp(-lim, lim);
-                    out[j] = torque;
-                    r.work += (torque * qvel[b.dofs[j]]).max(0.0) * dt;
-                }
+                    c.knee_passive_damping
+                } * velocity
+                    - c.max_joint_torque * 0.08 * normalized_length.powi(3);
+                let torque = (active + passive).clamp(-c.max_joint_torque, c.max_joint_torque);
+                out[j] = torque;
+                let recruitment = 0.5 * (positive + negative);
+                r.joint_fatigue[j] = (r.joint_fatigue[j]
+                    + dt * (0.34 * recruitment * recruitment - 0.075 * (1.0 - recruitment)))
+                    .clamp(0.0, 1.0);
+                r.work += (active * velocity).abs() * dt + 0.02 * recruitment * dt;
             }
             let rot = &rotations[b.root * 9..b.root * 9 + 9];
             let vel = &velocities[row * 6..row * 6 + 6];
+            let posture = a[25].clamp(-1.0, 1.0);
             let mut correction = [
                 rot[5] * c.posture_kp - vel[0] * c.posture_kd,
                 -rot[2] * c.posture_kp - vel[1] * c.posture_kd,
                 0.0,
             ];
+            correction[0] *= posture;
+            correction[1] *= posture;
             let norm = correction[0].hypot(correction[1]);
             if norm > c.max_posture_torque {
                 for x in &mut correction {
@@ -428,7 +444,7 @@ impl WorldCore {
             }
             out[12..15].copy_from_slice(&correction);
             let p = &positions[b.root * 3..b.root * 3 + 3];
-            if a[9] > 0.5 || a[4] < 0.1 {
+            if a[31] > 0.5 || a[26] < 0.1 {
                 r.grip = None;
             } else if r.grip.is_none() {
                 r.grip = self
@@ -462,19 +478,28 @@ impl WorldCore {
                     out[16 + k] = force[k] * (8.0 / norm.max(8.0));
                 }
             }
-            r.gaze = (r.gaze + a[2].clamp(-1.0, 1.0) * dt).clamp(-0.7, 0.7);
+            r.gaze = (r.gaze + a[24].clamp(-1.0, 1.0) * dt).clamp(-0.7, 0.7);
         }
         Ok(output)
     }
     /// Whole-world ecological state advances once per control tick, not per visual frame.
     pub fn advance(&mut self, commands: &[f64], positions: &[f64], dt: f64) -> Result<(), JsValue> {
         let n = self.state.residents.len();
-        if commands.len() != n * 12
+        if commands.len() != n * MOTOR_CHANNELS
             || !finite(commands)
             || !finite(positions)
             || !dt.is_finite()
             || dt <= 0.0
             || dt > 0.1
+            || commands.chunks_exact(MOTOR_CHANNELS).any(|a| {
+                a.iter().enumerate().any(|(k, v)| {
+                    if k == 24 || k == 25 {
+                        !(-1.0..=1.0).contains(v)
+                    } else {
+                        !(0.0..=1.0).contains(v)
+                    }
+                })
+            })
             || self
                 .config
                 .bodies
@@ -500,16 +525,16 @@ impl WorldCore {
         }
         self.state
             .emissions
-            .retain(|e| self.state.time - e.born < if e.kind == 0 { 3.0 } else { 20.0 });
+            .retain(|e| self.state.time - e.born < e.duration);
         for row in 0..n {
             let r = &mut self.state.residents[row];
-            let a = &commands[row * 12..row * 12 + 12];
+            let a = &commands[row * MOTOR_CHANNELS..row * MOTOR_CHANNELS + MOTOR_CHANNELS];
             let p =
                 &positions[self.config.bodies[row].root * 3..self.config.bodies[row].root * 3 + 3];
-            if a[8] > 0.1 {
+            if a[30] > 0.1 {
                 for (i, e) in self.config.entities.iter().enumerate() {
                     if dist(p, &positions[e.body * 3..e.body * 3 + 3]) < 0.28 {
-                        let eaten = (a[8].clamp(0.0, 1.0) * 0.12 * dt)
+                        let eaten = (a[30].clamp(0.0, 1.0) * 0.12 * dt)
                             .min(self.state.food[i])
                             .min(1.0 - r.physiology[1]);
                         self.state.food[i] -= eaten;
@@ -524,29 +549,37 @@ impl WorldCore {
             r.physiology[2] = (r.physiology[2] + 0.05 * r.work - 0.006 * dt).clamp(0.0, 1.0);
             r.physiology[6] =
                 (r.physiology[6] + (r.physiology[0] - 0.2) * 0.0005 * dt).clamp(0.0, 1.0);
-            let allocate = a[11].clamp(0.0, 1.0) * 0.002 * dt * r.physiology[0];
+            let allocate = a[33].clamp(0.0, 1.0) * 0.002 * dt * r.physiology[0];
             r.physiology[7] = (r.physiology[7] + allocate).min(1.0);
             r.physiology[0] = (r.physiology[0] - allocate).max(0.0);
-            let secretion = (a[10].clamp(0.0, 1.0) * 0.01 * dt).min(r.physiology[8]);
+            let secretion = (a[32].clamp(0.0, 1.0) * 0.01 * dt).min(r.physiology[8]);
             r.physiology[8] = (r.physiology[8] + 0.001 * dt - secretion).clamp(0.0, 1.0);
             if secretion > 0.0 && self.state.emissions.len() < 1024 {
                 self.state.emissions.push(Emission {
                     origin: p.try_into().unwrap(),
                     born: self.state.time,
-                    amplitude: [0.0, 0.0, secretion * 100.0],
+                    frequency_hz: 1600.0,
+                    envelope: (secretion * 100.0).min(1.0),
+                    duration: 8.0,
                     kind: 1,
                 });
             }
             for k in 0..3 {
-                r.signals[k] = a[5 + k].clamp(0.0, 1.0);
+                r.signals[k] = a[27 + k].clamp(0.0, 1.0);
             }
             if r.signals.iter().any(|v| *v > 0.01) && self.state.emissions.len() < 1024 {
-                self.state.emissions.push(Emission {
-                    origin: p.try_into().unwrap(),
-                    born: self.state.time,
-                    amplitude: r.signals,
-                    kind: 0,
-                });
+                for k in 0..3 {
+                    if r.signals[k] > 0.01 && self.state.emissions.len() < 1024 {
+                        self.state.emissions.push(Emission {
+                            origin: p.try_into().unwrap(),
+                            born: self.state.time,
+                            frequency_hz: [80.0, 320.0, 1280.0][k],
+                            envelope: r.signals[k],
+                            duration: 0.12,
+                            kind: 0,
+                        });
+                    }
+                }
             }
             r.work = 0.0;
         }
@@ -686,21 +719,32 @@ impl WorldCore {
         local_velocities: &[f64],
         contacts: &[f64],
         shade_distances: &[f64],
+        qpos: &[f64],
+        qvel: &[f64],
+        joint_loads: &[f64],
+        foot_contacts: &[f64],
     ) -> Result<Vec<f32>, JsValue> {
         let n = self.state.residents.len();
         if local_velocities.len() != n * 6
             || contacts.len() != n * 25
             || shade_distances.len() != n
+            || joint_loads.len() != n * JOINTS
+            || foot_contacts.len() != n * 6
             || !finite(shade_distances)
             || !finite(positions)
             || !finite(rotations)
             || !finite(local_velocities)
             || !finite(contacts)
-            || self
-                .config
-                .bodies
-                .iter()
-                .any(|b| b.root * 3 + 3 > positions.len() || b.root * 9 + 9 > rotations.len())
+            || !finite(qpos)
+            || !finite(qvel)
+            || !finite(joint_loads)
+            || !finite(foot_contacts)
+            || self.config.bodies.iter().any(|b| {
+                b.root * 3 + 3 > positions.len()
+                    || b.root * 9 + 9 > rotations.len()
+                    || b.qpos.iter().any(|i| *i >= qpos.len())
+                    || b.dofs.iter().any(|i| *i >= qvel.len())
+            })
             || self
                 .config
                 .entities
@@ -758,11 +802,20 @@ impl WorldCore {
                 if emission.kind == 0 {
                     // Finite spherical propagation: 30m/s in this enlarged engineered world.
                     let arrived = age - distance / 30.0;
-                    if (0.0..0.15).contains(&arrived) {
-                        for k in 0..3 {
-                            o[27 + k] += (emission.amplitude[k] * (1.0 - arrived / 0.15)
-                                / (1.0 + distance * distance)
-                                / 2.0) as f32;
+                    if (0.0..emission.duration).contains(&arrived) {
+                        let attack = (arrived / 0.015).clamp(0.0, 1.0);
+                        let release = ((emission.duration - arrived) / 0.03).clamp(0.0, 1.0);
+                        let temporal = attack.min(release);
+                        let log_frequency = emission.frequency_hz.ln();
+                        let lo = 40.0_f64.ln();
+                        let hi = 1600.0_f64.ln();
+                        for k in 0..16 {
+                            let centre = lo + (hi - lo) * k as f64 / 15.0;
+                            let sigma = 0.35 * 2.0_f64.ln();
+                            let tuning = (-0.5 * ((log_frequency - centre) / sigma).powi(2)).exp();
+                            o[27 + k] += (emission.envelope * temporal * tuning
+                                / (1.0 + distance * distance))
+                                as f32;
                         }
                     }
                 } else {
@@ -773,7 +826,7 @@ impl WorldCore {
                         let d = dist(&ap, &emission.origin);
                         let spread = 0.08 + 0.04 * age;
                         for k in 0..3 {
-                            o[eye * 3 + k] += (emission.amplitude[k]
+                            o[eye * 3 + k] += (if k == 2 { emission.envelope } else { 0.0 }
                                 * (-d * d / spread).exp()
                                 * (-age / 8.0).exp()
                                 / 4.0) as f32;
@@ -784,19 +837,26 @@ impl WorldCore {
             for v in &mut o[..6] {
                 *v = v.min(1.0);
             }
-            for v in &mut o[27..30] {
+            for v in &mut o[27..43] {
                 *v = v.min(1.0)
             }
-            o[30] = if shade_distances[row] >= 0.0 && shade_distances[row] < 3.2 {
+            o[43] = if shade_distances[row] >= 0.0 && shade_distances[row] < 3.2 {
                 1.0
             } else {
                 0.0
             };
             for k in 0..12 {
-                o[31 + k] = r.physiology[k] as f32;
+                o[44 + k] = r.physiology[k] as f32;
+                let angle_scale = if k % 2 == 0 { 0.733 } else { 1.012 };
+                o[56 + k] = (qpos[b.qpos[k]] / angle_scale).clamp(-1.0, 1.0) as f32;
+                o[68 + k] = (qvel[b.dofs[k]] / 20.0).clamp(-1.0, 1.0) as f32;
+                o[80 + k] = (joint_loads[row * JOINTS + k] / b.controller.max_joint_torque)
+                    .clamp(-1.0, 1.0) as f32;
+                o[98 + k] = r.joint_fatigue[k] as f32;
             }
-            o[34] = (local_velocities[row * 6 + 3] / 4.0).clamp(-1.0, 1.0) as f32;
-            o[35] = (local_velocities[row * 6 + 2] / 8.0).clamp(-1.0, 1.0) as f32;
+            for k in 0..6 {
+                o[92 + k] = foot_contacts[row * 6 + k].clamp(0.0, 1.0) as f32;
+            }
         }
         Ok(out)
     }
