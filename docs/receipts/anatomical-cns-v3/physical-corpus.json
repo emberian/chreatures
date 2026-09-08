@@ -1,0 +1,100 @@
+{
+  "completed": true,
+  "curriculum_contract_sha256": "cc2877610986cc3f52691ee4f7a70fcdb2bd5060eb18d03ade55c6a4ec613273",
+  "episodes": [
+    {
+      "collector_sha256": "5d9a7f8c478692714c85834ec9252f5d943e6ffaaecea6dd369ac5be539d1692",
+      "episode_index": 0,
+      "file": "episode-00-train.npz",
+      "layout_identity": "cc495aa038458e2324b338c6613eaf3b871d96cced19f35feeaa8f59f5cbd562",
+      "sha256": "ec8a88daa756837129fc184b60dad20a066eece53487dd821ef97ef2f124913d",
+      "split": "train",
+      "variation_seed": 71053,
+      "world_seed": 3031101
+    },
+    {
+      "collector_sha256": "5d9a7f8c478692714c85834ec9252f5d943e6ffaaecea6dd369ac5be539d1692",
+      "episode_index": 1,
+      "file": "episode-01-train.npz",
+      "layout_identity": "f359245192dec7de90c9c42ffad1d6eb91348a34dfb5fa54fd8e4a56ed35cc9f",
+      "sha256": "08735bccce9635543ec6a40d074a0600d5e43642d187459de9823269da11319c",
+      "split": "train",
+      "variation_seed": 81071,
+      "world_seed": 3031207
+    },
+    {
+      "collector_sha256": "5d9a7f8c478692714c85834ec9252f5d943e6ffaaecea6dd369ac5be539d1692",
+      "episode_index": 2,
+      "file": "episode-02-train.npz",
+      "layout_identity": "c9c4b3805d6be69a6719d506396ab824f03df0fc81c5fa2ccc42ffaa7a4a7944",
+      "sha256": "cfea42a43797e0983aefc91a14a1ddd1e1aa0024609a50585a9671cb45bc9a18",
+      "split": "train",
+      "variation_seed": 91081,
+      "world_seed": 3031313
+    },
+    {
+      "collector_sha256": "5d9a7f8c478692714c85834ec9252f5d943e6ffaaecea6dd369ac5be539d1692",
+      "episode_index": 3,
+      "file": "episode-03-train.npz",
+      "layout_identity": "c6dd65dac23b6fa611775683375dc33b70cb784497de499e958faea5c27e3f8b",
+      "sha256": "b8e54205a1ae772b323c5fa9cdb01610633958882cafdf4ef6b006b38876a8d9",
+      "split": "train",
+      "variation_seed": 101089,
+      "world_seed": 3031419
+    },
+    {
+      "collector_sha256": "5d9a7f8c478692714c85834ec9252f5d943e6ffaaecea6dd369ac5be539d1692",
+      "episode_index": 4,
+      "file": "episode-04-train.npz",
+      "layout_identity": "53da426538e2a7871d2d76861f9716f45ceeb7575b4faf0ff3ac6dee323338bb",
+      "sha256": "a44f9fd79a8e4445badaad5a4102bbb48afff177eaf5e312f0fcfcfc931ff550",
+      "split": "train",
+      "variation_seed": 111103,
+      "world_seed": 3031523
+    },
+    {
+      "collector_sha256": "5d9a7f8c478692714c85834ec9252f5d943e6ffaaecea6dd369ac5be539d1692",
+      "episode_index": 5,
+      "file": "episode-05-train.npz",
+      "layout_identity": "7c3552415e8a3b3b5cf7e51f0b5aee85795df7d67175dfd7bd0d53c0a276d02d",
+      "sha256": "d70ff1b82707c2152486189d173768afef39f6080cb6c2326bfcbb7de3ab449b",
+      "split": "train",
+      "variation_seed": 121117,
+      "world_seed": 3031601
+    },
+    {
+      "collector_sha256": "5d9a7f8c478692714c85834ec9252f5d943e6ffaaecea6dd369ac5be539d1692",
+      "episode_index": 6,
+      "file": "episode-06-heldout-world.npz",
+      "layout_identity": "f2716e2c7e1ee6e8bc60a8951821cdadc22fe9dbd60e2e73aceacb84c2b54de8",
+      "sha256": "d9178a03599156db1709f49b3d47f757eb7d50e9479736d23ecb13de38fff0e2",
+      "split": "heldout-worlds",
+      "variation_seed": 131129,
+      "world_seed": 3031709
+    },
+    {
+      "collector_sha256": "5d9a7f8c478692714c85834ec9252f5d943e6ffaaecea6dd369ac5be539d1692",
+      "episode_index": 7,
+      "file": "episode-07-heldout-world.npz",
+      "layout_identity": "e1f6386bd56b1e884ed64824aa58b30f58b313cc64c793a3d40cf006092a201a",
+      "sha256": "5e8248ef1ef2d74e3b6df183fc1c0d52f5f80221c3ace508e2b6a3978a82ace8",
+      "split": "heldout-worlds",
+      "variation_seed": 141143,
+      "world_seed": 3031817
+    }
+  ],
+  "format": "chreatures-anatomical-cns-physical-corpus-v1",
+  "model_inputs": [
+    "optic_rgb",
+    "body",
+    "delivered_context"
+  ],
+  "raw_world_geometry_retained": false,
+  "split_policy": "episodes 0..5 train; 6..7 heldout-worlds; heldout worlds never select checkpoints",
+  "target_only": [
+    "delivered_motor",
+    "teacher_joint_target",
+    "root_pose",
+    "skill_id"
+  ]
+}
