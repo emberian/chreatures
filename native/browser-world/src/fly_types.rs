@@ -47,6 +47,9 @@ pub struct Body {
     pub mouth: Mouth,
     pub feet: [Vec<usize>; 6],
     pub halteres: [usize; 2],
+    pub wings: [usize; 2],
+    pub wing_centroid_local_mm: [[f64; 3]; 2],
+    pub wing_source_gain: [f64; 2],
     pub ecology_id: String,
 }
 
@@ -90,6 +93,7 @@ pub struct Config {
     pub ray_distance_mm: f64,
     /// Explicit engineered conversion; model mechanical work is not SI joules.
     pub atp_per_model_work: f64,
+    pub acoustics: crate::fly_acoustics::AcousticConfig,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

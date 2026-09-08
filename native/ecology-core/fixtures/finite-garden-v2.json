@@ -22,7 +22,7 @@
       "mineral",
       "oxygen"
     ],
-    "format": "chreatures-ecology-config-v1",
+    "format": "chreatures-ecology-config-v2",
     "organisms": [
       {
         "anchored_region": "west",
@@ -41,6 +41,8 @@
         "genotype": {
           "development": {
             "atp_cost": 0.008,
+            "branch_angle_rad": 0.65,
+            "contact_avoidance": 1.2,
             "decay_return": [
               0.08,
               0.08,
@@ -52,7 +54,9 @@
               0.0
             ],
             "decay_time_constant_s": 3.0,
+            "directional_persistence": 0.8,
             "interval_s": 1.0,
+            "lateral_probability": 0.3,
             "material_cost": [
               0.0,
               0.0,
@@ -66,7 +70,8 @@
             "maximum_structures": 1,
             "nominal_length_m": 0.0014,
             "nominal_radius_m": 0.00018,
-            "nominal_volume_m3": 1.4e-10
+            "nominal_volume_m3": 1.4e-10,
+            "phototropism": 0.7
           },
           "enzyme_atp_response": [
             -0.1,
@@ -111,6 +116,7 @@
           "reproduction": {
             "atp_cost": 0.03,
             "atp_endowment": 0.06,
+            "dispersal_distance_m": 0.003,
             "interval_s": 4.0,
             "material_endowment": [
               0.08,
@@ -137,7 +143,7 @@
           0.9,
           0.1
         ],
-        "internal_volume_m3": 4e-9,
+        "internal_volume_m3": 4e-09,
         "physics_binding": "body-a"
       },
       {
@@ -209,7 +215,7 @@
           0.25,
           0.08
         ],
-        "internal_volume_m3": 3e-9,
+        "internal_volume_m3": 3e-09,
         "physics_binding": "body-b"
       }
     ],
@@ -243,7 +249,7 @@
     "pools": [
       {
         "chemical_energy_per_quantity": 0.0,
-        "diffusivity_m2_s": 8e-8,
+        "diffusivity_m2_s": 8e-08,
         "elemental_composition": [
           0.0,
           0.0,
@@ -255,7 +261,7 @@
       },
       {
         "chemical_energy_per_quantity": 1.0,
-        "diffusivity_m2_s": 4e-8,
+        "diffusivity_m2_s": 4e-08,
         "elemental_composition": [
           1.0,
           0.0,
@@ -267,7 +273,7 @@
       },
       {
         "chemical_energy_per_quantity": 1.2,
-        "diffusivity_m2_s": 3e-8,
+        "diffusivity_m2_s": 3e-08,
         "elemental_composition": [
           1.0,
           1.0,
@@ -279,7 +285,7 @@
       },
       {
         "chemical_energy_per_quantity": 0.0,
-        "diffusivity_m2_s": 1e-8,
+        "diffusivity_m2_s": 1e-08,
         "elemental_composition": [
           0.0,
           0.0,
@@ -291,7 +297,7 @@
       },
       {
         "chemical_energy_per_quantity": 0.0,
-        "diffusivity_m2_s": 9e-7,
+        "diffusivity_m2_s": 9e-07,
         "elemental_composition": [
           0.0,
           0.0,
@@ -303,7 +309,7 @@
       },
       {
         "chemical_energy_per_quantity": 0.0,
-        "diffusivity_m2_s": 6e-7,
+        "diffusivity_m2_s": 6e-07,
         "elemental_composition": [
           1.0,
           0.0,
@@ -327,7 +333,7 @@
       },
       {
         "chemical_energy_per_quantity": 0.8,
-        "diffusivity_m2_s": 1.1e-6,
+        "diffusivity_m2_s": 1.1e-06,
         "elemental_composition": [
           1.0,
           0.0,
@@ -530,7 +536,7 @@
           0.0,
           0.3
         ],
-        "volume_m3": 1.5e-7
+        "volume_m3": 1.5e-07
       },
       {
         "capacity": [
@@ -559,7 +565,7 @@
           0.0,
           0.0
         ],
-        "volume_m3": 1.5e-7
+        "volume_m3": 1.5e-07
       },
       {
         "capacity": [
@@ -588,7 +594,7 @@
           0.0,
           0.0
         ],
-        "volume_m3": 1.5e-7
+        "volume_m3": 1.5e-07
       }
     ],
     "routes": [
@@ -596,8 +602,8 @@
         "a": "west",
         "b": "middle",
         "base_open_fraction": 1.0,
-        "cross_section_m2": 2e-6,
-        "hydraulic_capacity_m3_s": 2e-9,
+        "cross_section_m2": 2e-06,
+        "hydraulic_capacity_m3_s": 2e-09,
         "id": "west-middle",
         "length_m": 0.004
       },
@@ -605,8 +611,8 @@
         "a": "middle",
         "b": "east",
         "base_open_fraction": 1.0,
-        "cross_section_m2": 2e-6,
-        "hydraulic_capacity_m3_s": 2e-9,
+        "cross_section_m2": 2e-06,
+        "hydraulic_capacity_m3_s": 2e-09,
         "id": "middle-east",
         "length_m": 0.004
       }

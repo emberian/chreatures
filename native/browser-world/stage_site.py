@@ -13,6 +13,7 @@ items = {
     'world-runtime.mjs': HERE/'runtime.mjs',
     'fixtures/fly-ecology/world.json': SOURCE/'world.json',
     'fixtures/fly-ecology/scene.xml': SOURCE/'scene.xml',
+    'fixtures/fly-ecology/motor92.json': ROOT/'research/fly_embodiment/motor92-channel-schema.json',
     'pkg/chreatures_browser_world.js': HERE/'pkg/chreatures_browser_world.js',
     'pkg/chreatures_browser_world_bg.wasm': HERE/'pkg/chreatures_browser_world_bg.wasm',
     'vendor/mujoco/mujoco.js': HERE/'node_modules/@mujoco/mujoco/mujoco.js',

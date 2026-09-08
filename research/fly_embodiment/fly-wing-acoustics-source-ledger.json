@@ -1,0 +1,81 @@
+{
+  "schema": "chreatures.fly-wing-acoustics-source-ledger.v1",
+  "retrieved_at": "2026-09-08",
+  "implementation": "native/browser-world/src/fly_acoustics.rs",
+  "sources": [
+    {
+      "id": "bennet-clark-ewing-1968",
+      "title": "The Wing Mechanism Involved in the Courtship of Drosophila",
+      "kind": "primary experiment",
+      "doi": "10.1242/jeb.49.1.117",
+      "url": "https://journals.biologists.com/jeb/article/49/1/117/21374/The-Wing-Mechanism-Involved-in-the-Courtship-of",
+      "claims_used": [
+        "Courtship sound accompanies movement of an extended wing.",
+        "Measured wing-stroke timing and sound waveforms support mechanical generation by the wing stroke."
+      ],
+      "implementation_effect": "Requires actual wing kinematics as the only endogenous source; no song oscillator."
+    },
+    {
+      "id": "morley-steinmann-casas-robert-2012",
+      "title": "Directional cues in Drosophila melanogaster audition: structure of acoustic flow and inter-antennal velocity differences",
+      "kind": "primary experiment and acoustic model",
+      "doi": "10.1242/jeb.068940",
+      "pmid": 22723479,
+      "url": "https://pubmed.ncbi.nlm.nih.gov/22723479/",
+      "claims_used": [
+        "Drosophila antennae receive the particle-velocity component in the acoustic near field.",
+        "Acoustic flow is directional and differs between the bilateral antennae."
+      ],
+      "implementation_effect": "Produces vector particle velocity independently at the two actual antennal anchors."
+    },
+    {
+      "id": "arthur-sunayama-murthy-stern-2013",
+      "title": "Multi-channel acoustic recording and automated analysis of Drosophila courtship songs",
+      "kind": "primary methods paper",
+      "doi": "10.1186/1471-2202-14-11",
+      "pmcid": "PMC3599446",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3599446/",
+      "claims_used": [
+        "Pressure-gradient microphones indirectly measure directional particle velocity.",
+        "The idealized nearby point-source particle-velocity magnitude falls rapidly, described as inverse cube."
+      ],
+      "implementation_effect": "Motivates a bounded inverse-cube dipole proxy while keeping its gain explicitly engineered."
+    },
+    {
+      "id": "yorozu-et-al-2009",
+      "title": "Distinct sensory representations of wind and near-field sound in the Drosophila brain",
+      "kind": "primary physiology and behavior experiment",
+      "doi": "10.1038/nature07843",
+      "pmid": 19279637,
+      "pmcid": "PMC2755041",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2755041/",
+      "claims_used": [
+        "Different Johnston's-organ populations respond to oscillatory near-field sound and sustained wind-like deflection.",
+        "Auditory populations are phasic while wind-sensitive populations can respond tonically."
+      ],
+      "implementation_effect": "Keeps instantaneous bilateral airflow distinct from oscillatory acoustic-band history."
+    },
+    {
+      "id": "clemens-ozeri-engelhard-murthy-2018",
+      "title": "Fast intensity adaptation enhances the encoding of sound in Drosophila",
+      "kind": "primary physiology and computational experiment",
+      "doi": "10.1038/s41467-017-02453-9",
+      "pmid": 29317624,
+      "pmcid": "PMC5760620",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5760620/",
+      "claims_used": [
+        "Sound-sensitive Johnston's-organ neurons respond to fast vibrations in the approximately 100--350 Hz courtship-song range.",
+        "Natural near-field sound intensity is treated as air particle velocity and auditory responses adapt to its statistics."
+      ],
+      "implementation_effect": "Supports preserving physical sample history and sub-400-Hz bands without claiming cell-level tuning."
+    }
+  ],
+  "discovery": {
+    "service": "Scry",
+    "schema_endpoint": "https://api.scry.io/v1/scry/schema",
+    "schema_relation": "academic.catalog",
+    "query": "SELECT title, doi, pmid, pmcid, published_year, authors FROM academic.catalog WHERE pmid IN (22723479, 19693030, 29359185, 20820151) ORDER BY published_year DESC LIMIT 10",
+    "result": "query_capacity_exhausted after two bounded attempts; no Scry rows were used as evidence",
+    "followup": "Primary publisher, PubMed, and PubMed Central records were inspected directly."
+  }
+}

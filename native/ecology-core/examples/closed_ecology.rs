@@ -53,6 +53,11 @@ fn genotype(
         membrane_permeability: permeability.to_vec(),
         maintenance_atp_s: 0.002,
         development: development.then_some(DevelopmentProgram {
+            branch_angle_rad: 0.65,
+            lateral_probability: 0.3,
+            phototropism: 0.7,
+            contact_avoidance: 1.2,
+            directional_persistence: 0.8,
             interval_s: 1.0,
             material_cost: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.08, 0.0].to_vec(),
             decay_return: [0.08, 0.08, 0.08, 0.008, 0.0, 0.0, 0.0, 0.0].to_vec(),
@@ -64,6 +69,7 @@ fn genotype(
             decay_time_constant_s: 3.0,
         }),
         reproduction: reproduction.then_some(ReproductionProgram {
+            dispersal_distance_m: 0.003,
             interval_s: 4.0,
             material_endowment: [0.08, 0.05, 0.03, 0.01, 0.02, 0.02, 0.08, 0.01].to_vec(),
             atp_cost: 0.03,
@@ -74,7 +80,7 @@ fn genotype(
     }
 }
 
-fn fixture_config(seed: u64) -> EcologyConfig {
+pub fn fixture_config(seed: u64) -> EcologyConfig {
     let pools = vec![
         PoolSpec {
             id: "water".into(),
@@ -428,6 +434,7 @@ fn tick_input(world: &EcologyWorld, host: &MockPhysicalHost, step: usize) -> Tic
         });
     }
     TickInput {
+        growth_token: None,
         dt_s: 0.25,
         route_open_fraction: host.openness(),
         route_advection_m3_s: vec![7.0e-10, 4.0e-10],
@@ -504,6 +511,7 @@ fn tick_input(world: &EcologyWorld, host: &MockPhysicalHost, step: usize) -> Tic
 
 fn quiet_tick() -> TickInput {
     TickInput {
+        growth_token: None,
         dt_s: 0.05,
         route_open_fraction: vec![1.0, 1.0],
         route_advection_m3_s: vec![0.0, 0.0],

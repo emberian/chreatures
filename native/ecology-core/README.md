@@ -59,7 +59,7 @@ Export the same validated recipe without advancing a world:
 
 ```sh
 cargo run --release --example closed_ecology -- \
-  --export-config fixtures/finite-garden-v1.json
+  --export-config fixtures/finite-garden-v2.json
 ```
 
 The checked-in export also records the fixed odor permeability vector and the
@@ -72,3 +72,64 @@ The executable asserts all transactions and reports the maximum elemental
 residual. It establishes implemented coupling and deterministic restoration;
 it does not claim learned feeding, ecological optimality or biological rate
 calibration.
+
+
+## Autonomous local colony development
+
+`propose_growth(&GrowthInput)` creates candidate sites from inherited development,
+anchored colony poses, current committed structures, local light, measured surface
+patches and clearance rays. Apical extension follows the last funded apical tip;
+lateral branching visits committed stems with a private cursor. The inherited
+`branch_angle_rad`, `lateral_probability`, `phototropism`, `contact_avoidance` and
+`directional_persistence` determine orientation. The parent's developmental
+parameters mutate with its existing bounded inheritance rule. Reproduction also
+inherits `dispersal_distance_m`.
+
+The host supplies `GrowthInput { dt_s, colonies }`. Each colony entry contains
+`organism_id`, `position_m`, `orientation_xyzw`, `surface_normal`,
+`light_direction`, bounded `light_intensity`, `nearby_surfaces`,
+`clearance_samples`, `host_template_id` and optional `child_template_id`.
+A measured surface has `surface_id`, `region_id`, `point_m`, a free-space
+`normal`, and `attachable`. A clearance ray has `origin_m`, `direction` and the
+measured `free_distance_m`. Every position, radius and distance uses meters.
+Empty surface/ray arrays mean no such measurements are available, never that
+an unqueried world is collision-free.
+
+The returned `GrowthProposals` contains a token, the committed step index,
+construction/birth sites and `clearance_queries`. Each query names a site and
+has `from_m`, `to_m`, `radius_m`, `kind` and optional `attachment_binding`.
+The candidate capsule's local +z axis runs from `from_m` to `to_m`; its pose is
+centered between them. The attachment may touch the proximal connection. The
+host must check the complete proposed capsule against actual current geometry.
+It passes only exact accepted sites into `TickInput`, with
+`growth_token: Some(proposal.token)`. Geometry cannot be edited under that token.
+Resource allocation and physical create/commit remain the ordinary transaction.
+The nearest intersected material route is reported only as a hint; the next
+host-measured route openness controls actual diffusion/advection.
+
+Repeated identical proposal input is idempotent. Different input requires
+`discard_growth(token)` or completion of the current tick. Pending proposals,
+tentative RNG and prepared ecology transactions survive snapshots. Only an
+actually funded and committed creation installs developmental RNG/cursor changes;
+rejected geometry and material/ATP shortfall do not. Aborting a step restores the
+exact pre-prepare state and retains the known proposal. A rejected capsule's
+measured obstruction can be supplied in the next tick's clearance rays to steer
+subsequent growth, without adding hidden controller observations.
+
+Birth proposals require both an anchored parent and an explicit attachable nearby
+surface within inherited dispersal range. `child_template_id: None` disables them.
+The child is an anchored ecological colony with finite parental endowment, not a
+synthetic fly offspring. Mobile organisms never generate proposals through this
+API. Raw geometry and material-region identities stay entirely in the host/ecology
+boundary and cannot enter the fly controller.
+
+The joined development scenario runs one complete native growth/transaction loop:
+
+```sh
+cargo run --release --example developmental_growth
+```
+
+It couples phototropism, contact avoidance, apical/lateral growth, inherited colony
+birth, finite funding, changed route transport and exact pending restore/abort.
+Its clearance host is explicitly analytical capsule geometry. The production
+MuJoCo integration is a separate host measurement, not claimed by this example.

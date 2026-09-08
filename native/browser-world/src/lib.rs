@@ -1,6 +1,7 @@
 //! Full fly embodiment: MuJoCo owns mechanics, Rust owns transduction and ecology.
 //! Only retina5313 and body807 leave this boundary for the actual MaleCNS.
 mod fly_optics;
+mod fly_acoustics;
 mod fly_senses;
 mod fly_types;
 use chreatures_ecology_core as eco;
@@ -10,6 +11,7 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 struct HostEcology {
+    growth_token: Option<String>,
     route_open_fraction: Vec<f64>,
     route_advection_m3_s: Vec<f64>,
     construction_sites: Vec<eco::ConstructionSite>,
@@ -22,11 +24,13 @@ struct Envelope {
     state: Saved,
     ecology: String,
     host: HostEcology,
+    acoustics: fly_acoustics::AcousticSnapshot,
 }
 struct Pending {
     state: Saved,
     token: String,
     previous_config: Option<Config>,
+    acoustics: fly_acoustics::FlyAcoustics,
 }
 
 #[wasm_bindgen]
@@ -36,6 +40,7 @@ pub struct WorldCore {
     ecology: eco::EcologyWorld,
     host: HostEcology,
     pending: Option<Pending>,
+    acoustics: fly_acoustics::FlyAcoustics,
 }
 fn err(s: impl AsRef<str>) -> JsValue {
     JsValue::from_str(s.as_ref())
@@ -57,6 +62,22 @@ fn commands_valid(a: &[f64], b: usize) -> bool {
                 }
             })
         })
+}
+fn mix_wing_afferents(out: &mut [f32], frame: &fly_acoustics::AcousticFrame) -> Result<(), String> {
+    let n = out.len() / CHANNELS;
+    if frame.antenna_airflow_local_mm_s.len() != n || frame.acoustic_bands.len() != n {
+        return Err("endogenous acoustic cohort differs".into());
+    }
+    for (i, row) in out.chunks_exact_mut(CHANNELS).enumerate() {
+        for antenna in 0..2 {
+            for axis in 0..3 {
+                row[40 + 3 * antenna + axis] += frame.antenna_airflow_local_mm_s[i][antenna][axis] as f32;
+            }
+        }
+        for band in 0..16 { row[46 + band] += frame.acoustic_bands[i][band] as f32; }
+    }
+    if out.iter().any(|v| !v.is_finite()) { return Err("nonfinite endogenous afferent".into()); }
+    Ok(())
 }
 
 #[wasm_bindgen]
@@ -105,6 +126,10 @@ impl WorldCore {
                 || b.neutral.len() != 84
                 || b.control_ranges.len() != 84
                 || !finite(&b.neutral)
+                || b.wings.iter().any(|w| !b.segments.contains(w))
+                || b.wing_centroid_local_mm.iter().any(|v| !finite(v))
+                || !finite(&b.wing_source_gain)
+                || b.wing_source_gain.iter().any(|v| *v < 0.0)
                 || b.control_ranges.iter().zip(&b.neutral).any(|(range, q)| {
                     !finite(range) || range[0] >= range[1] || *q < range[0] || *q > range[1]
                 })
@@ -119,6 +144,8 @@ impl WorldCore {
             }
         }
         let ecology = eco::EcologyWorld::new(c.ecology.clone()).map_err(|e| err(e.to_string()))?;
+        let acoustics = fly_acoustics::FlyAcoustics::new(c.acoustics, c.bodies.len())
+            .map_err(|e| err(e.to_string()))?;
         let state = Saved {
             format: "chreatures-fly-core-state-v4".into(),
             engine: c.engine.clone(),
@@ -158,6 +185,7 @@ impl WorldCore {
             ecology,
             host,
             pending: None,
+            acoustics,
         })
     }
     pub fn time(&self) -> f64 {
@@ -300,6 +328,7 @@ impl WorldCore {
         }
         #[derive(Deserialize)]
         struct Sites {
+            growth_token: Option<String>,
             construction_sites: Vec<eco::ConstructionSite>,
             birth_sites: Vec<eco::BirthSite>,
             photon_exposures: Vec<eco::PhotonExposure>,
@@ -311,9 +340,29 @@ impl WorldCore {
         {
             return Err(err("too many physical ecology candidates"));
         }
+        self.host.growth_token = s.growth_token;
         self.host.construction_sites = s.construction_sites;
         self.host.birth_sites = s.birth_sites;
         self.host.photon_exposures = s.photon_exposures;
+        Ok(())
+    }
+    /// Local developmental dynamics propose physical growth. Only the host can
+    /// measure geometry and accept a collision-free subset; no CNS input uses it.
+    pub fn propose_growth(&mut self, input: &str) -> Result<String, JsValue> {
+        if self.pending.is_some() { return Err(err("ecological mutation pending")); }
+        let input: eco::GrowthInput = serde_json::from_str(input).map_err(|e| err(e.to_string()))?;
+        if input.dt_s != DT { return Err(err("growth and physical tick differ")); }
+        let proposal = self.ecology.propose_growth(&input).map_err(|e| err(e.to_string()))?;
+        serde_json::to_string(&proposal).map_err(|e| err(e.to_string()))
+    }
+    pub fn discard_growth(&mut self, token: &str) -> Result<(), JsValue> {
+        if self.pending.is_some() { return Err(err("ecological mutation pending")); }
+        self.ecology.discard_growth(token).map_err(|e| err(e.to_string()))?;
+        if self.host.growth_token.as_deref() == Some(token) {
+            self.host.growth_token = None;
+            self.host.construction_sites.clear();
+            self.host.birth_sites.clear();
+        }
         Ok(())
     }
     #[allow(clippy::too_many_arguments)]
@@ -347,6 +396,7 @@ impl WorldCore {
             fly_senses::transduce(&self.config, &self.state, &self.ecology, &packet)
                 .map_err(err)?
                 .afferents;
+        mix_wing_afferents(&mut self.state.afferents, &self.acoustics.frame()).map_err(err)?;
         Ok(())
     }
     #[allow(clippy::too_many_arguments)]
@@ -381,6 +431,33 @@ impl WorldCore {
         };
         let sensed = fly_senses::transduce(&self.config, &self.state, &self.ecology, &packet)
             .map_err(err)?;
+        let period = self.config.acoustics.sample_period_s();
+        if (period * packet.samples() as f64 - dt).abs() > 1e-10 {
+            return Err(err("wing sampling cadence differs from physical packet"));
+        }
+        let mut acoustics = self.acoustics.clone();
+        for sample in 0..packet.samples() {
+            let motion = |body| {
+                let velocity = packet.vel(sample, body);
+                fly_acoustics::RigidMotion {
+                    position_mm: packet.pos(sample, body),
+                    world_from_local: packet.rot(sample, body).try_into().unwrap(),
+                    angular_velocity_rad_s: velocity[..3].try_into().unwrap(),
+                    linear_velocity_mm_s: velocity[3..].try_into().unwrap(),
+                }
+            };
+            let bodies = self.config.bodies.iter().map(|b| fly_acoustics::ResidentKinematics {
+                root: motion(b.root), wings: b.wings.map(motion),
+                wing_centroid_local_mm: b.wing_centroid_local_mm,
+                wing_source_gain: b.wing_source_gain,
+                antenna_position_mm: std::array::from_fn(|i| {
+                    let a = &b.olfactory_sites[i]; packet.site(sample, a.body, a.position)
+                }),
+                antenna_world_from_local: std::array::from_fn(|i| packet.rot(sample, b.olfactory_sites[i].body).try_into().unwrap()),
+            }).collect::<Vec<_>>();
+            acoustics.push_sample(self.state.time + (sample + 1) as f64 * period, &bodies)
+                .map_err(|e| err(e.to_string()))?;
+        }
         let mut next = self.state.clone();
         let mut exchanges = Vec::new();
         for (row, b) in self.config.bodies.iter().enumerate() {
@@ -413,7 +490,7 @@ impl WorldCore {
                 let volume = 2e-14 * advance / std::f64::consts::TAU * fraction / total;
                 let quantity: Vec<f64> = chemical.iter().map(|v| v * volume).collect();
                 exchanges.push(eco::DirectedExchange {
-                    event_id: format!("pump:{}:{mi}", b.id),
+                    event_id: format!("pump-{}-{mi}", b.id),
                     from: material.store.clone(),
                     to: eco::StoreId::Organism(b.ecology_id.clone()),
                     maximum_quantity: quantity,
@@ -421,7 +498,7 @@ impl WorldCore {
                 let mut saliva = vec![0.0; 8];
                 saliva[0] = a[91] * (1.0 - 0.6 * r.fatigue[91]) * dt * 0.002 * fraction / total;
                 exchanges.push(eco::DirectedExchange {
-                    event_id: format!("saliva:{}:{mi}", b.id),
+                    event_id: format!("saliva-{}-{mi}", b.id),
                     from: eco::StoreId::Organism(b.ecology_id.clone()),
                     to: material.store.clone(),
                     maximum_quantity: saliva,
@@ -451,6 +528,7 @@ impl WorldCore {
             }
         }
         let input = eco::TickInput {
+            growth_token: self.host.growth_token.clone(),
             dt_s: dt,
             route_open_fraction: self.host.route_open_fraction.clone(),
             route_advection_m3_s: self.host.route_advection_m3_s.clone(),
@@ -478,10 +556,10 @@ impl WorldCore {
             .map_err(|e| err(e.to_string()))?;
         for (row, b) in self.config.bodies.iter().enumerate() {
             for transfer in &delta.transfers {
-                if transfer.detail_id.starts_with(&format!("pump:{}:", b.id)) {
+                if transfer.detail_id.starts_with(&format!("pump-{}-", b.id)) {
                     next.residents[row].pump_flow += transfer.quantity.iter().sum::<f64>() / dt;
                 }
-                if transfer.detail_id.starts_with(&format!("saliva:{}:", b.id)) {
+                if transfer.detail_id.starts_with(&format!("saliva-{}-", b.id)) {
                     next.residents[row].salivary_flow += transfer.quantity.iter().sum::<f64>() / dt;
                 }
             }
@@ -493,7 +571,13 @@ impl WorldCore {
             .commit_step(&eco::CommitReceipt::accept_all(&delta))
             .map_err(|e| err(e.to_string()))?;
         match fly_senses::transduce(&self.config, &next, &projected, &packet) {
-            Ok(s) => next.afferents = s.afferents,
+            Ok(s) => {
+                next.afferents = s.afferents;
+                if let Err(error) = mix_wing_afferents(&mut next.afferents, &acoustics.frame()) {
+                    self.ecology.abort_step(&delta.token).map_err(|e| err(e.to_string()))?;
+                    return Err(err(error));
+                }
+            },
             Err(e) => {
                 self.ecology
                     .abort_step(&delta.token)
@@ -505,6 +589,7 @@ impl WorldCore {
             state: next,
             token: delta.token.clone(),
             previous_config: None,
+            acoustics,
         });
         serde_json::to_string(&delta).map_err(|e| err(e.to_string()))
     }
@@ -521,7 +606,9 @@ impl WorldCore {
         self.ecology
             .commit_step(&r)
             .map_err(|e| err(e.to_string()))?;
-        self.state = self.pending.take().unwrap().state;
+        let committed = self.pending.take().unwrap();
+        self.state = committed.state;
+        self.acoustics = committed.acoustics;
         Ok(())
     }
     pub fn abort_advance(&mut self, token: &str) -> Result<(), JsValue> {
@@ -620,6 +707,7 @@ impl WorldCore {
                 .snapshot_json()
                 .map_err(|e| err(e.to_string()))?,
             host: self.host.clone(),
+            acoustics: self.acoustics.snapshot(),
         };
         serde_json::to_string(&value).map_err(|e| err(e.to_string()))
     }
@@ -654,10 +742,20 @@ impl WorldCore {
         {
             return Err(err("fly/ecology snapshot clock or configuration differs"));
         }
+        if e.acoustics.resident_count != self.config.bodies.len()
+            || match e.acoustics.last_sample_time_s {
+                Some(time) => (time - e.state.time).abs() > 1e-9,
+                None => e.state.time != 0.0,
+            } {
+            return Err(err("wing acoustics and physical snapshot clocks differ"));
+        }
+        let acoustics = fly_acoustics::FlyAcoustics::restore(self.config.acoustics, e.acoustics)
+            .map_err(|e| err(e.to_string()))?;
         self.state = e.state;
         self.ecology = ecology;
         self.host = e.host;
         self.pending = None;
+        self.acoustics = acoustics;
         Ok(())
     }
 }

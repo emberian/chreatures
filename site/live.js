@@ -15,8 +15,8 @@ const pauseButton = $('#pause');
 const saveButton = $('#save');
 const loadInput = $('#load');
 const greetButton = $('#greet');
-const muscleDisplay = $('#muscle-recruitment');
-const muscleBars = [];
+const motorDisplay = $('#motor-output');
+let motorBars = [];
 const addToyButton = $('#add-toy');
 const shoveToyButton = $('#shove-toy');
 const stimulusVideo = $('#stimulus-video');
@@ -38,18 +38,84 @@ let stimulusMode = 'blank';
 let stimulusTimer = null;
 let stimulusStarted = performance.now();
 let noticeTimer = null;
+const acousticBars = Array.from({length: 16}, (_, index) => {
+  const frequency = 40 * 40 ** (index / 15);
+  const column = document.createElement('span'), fill = document.createElement('i');
+  column.title = `${frequency.toFixed(1)} Hz · no input yet`;
+  column.append(fill); $('#acoustic-bands').append(column);
+  return {column, fill, frequency};
+});
+const footReadouts = ['Left front', 'Left middle', 'Left hind', 'Right front', 'Right middle', 'Right hind'].map(name => {
+  const row = document.createElement('div'), label = document.createElement('span'), value = document.createElement('output');
+  label.textContent = name; value.textContent = '—'; row.append(label, value); $('#foot-senses').append(row);
+  return value;
+});
 
-const legNames = ['LF', 'LM', 'LH', 'RF', 'RM', 'RH'];
-for (let joint = 0; joint < 12; joint++) {
-  const row = document.createElement('div');
-  const label = document.createElement('span'); label.textContent = `${legNames[Math.floor(joint/2)]} ${joint % 2 ? 'knee' : 'hip'}`;
-  row.append(label);
-  for (let direction = 0; direction < 2; direction++) {
-    const meter = document.createElement('meter'); meter.min = 0; meter.max = 1; meter.value = 0;
-    meter.setAttribute('aria-label', `${label.textContent}, ${direction ? 'negative' : 'positive'} direction`);
-    row.append(meter); muscleBars.push(meter);
+function updateBodySenses(body, time) {
+  if (!(body instanceof Float32Array) || body.length !== 807 || !body.every(Number.isFinite))
+    throw new Error('Body sensory observer extent differs');
+  $('#sense-time').textContent = `${time.toFixed(2)} s`;
+  for (let i = 0; i < 16; i++) {
+    const {column, fill, frequency} = acousticBars[i], value = body[46 + i];
+    fill.style.height = `${100 * Math.min(1, Math.log1p(Math.max(0, value) * 100) / Math.log(101))}%`;
+    column.title = `${frequency.toFixed(1)} Hz · ${value.toExponential(3)}`;
   }
-  muscleDisplay.append(row);
+  const magnitude = offset => Math.hypot(body[offset], body[offset + 1], body[offset + 2]);
+  for (let i = 0; i < 6; i++) {
+    const offset = 459 + 6 * i;
+    footReadouts[i].textContent = `${magnitude(offset).toPrecision(3)} / ${magnitude(offset + 3).toPrecision(3)}`;
+  }
+  $('#mouth-contact').textContent = `${(100 * body[711]).toFixed(1)}% of sampled interval`;
+  $('#antenna-flow').textContent = `${magnitude(40).toPrecision(3)} / ${magnitude(43).toPrecision(3)} mm/s`;
+  let square = 0;
+  for (let i = 207; i < 333; i++) square += body[i] ** 2;
+  $('#joint-speed').textContent = `${Math.sqrt(square / 126).toPrecision(3)} rad/s`;
+  $('#body-reserves').textContent = `${body[69].toFixed(3)} / ${body[73].toFixed(3)}`;
+}
+
+function initializeMotorDisplay(schema) {
+  const channels = schema?.channels;
+  if (!Array.isArray(channels) || channels.length !== 92 || channels.some((c, i) => c.index !== i)) {
+    throw new Error('Anatomical motor schema is missing');
+  }
+  const names = {walking: 'Six legs', head: 'Head', pedicels: 'Antennae', proboscis: 'Proboscis',
+    abdomen: 'Abdomen', wings: 'Wings', halteres: 'Halteres', adhesion: 'Foot adhesion',
+    pharyngeal_pump: 'Pharyngeal pump', salivary_drive: 'Salivary drive'};
+  const groups = new Map();
+  motorBars = Array(92);
+  motorDisplay.replaceChildren();
+  for (const channel of channels) {
+    let group = groups.get(channel.group);
+    if (!group) {
+      group = document.createElement('details');
+      group.open = ['walking', 'head', 'proboscis', 'adhesion', 'pharyngeal_pump'].includes(channel.group);
+      const summary = document.createElement('summary'); summary.textContent = names[channel.group] || channel.group;
+      group.append(summary); groups.set(channel.group, group); motorDisplay.append(group);
+    }
+    const row = document.createElement('div'); row.className = 'motor-channel';
+    const parts = channel.target.split('-');
+    const label = document.createElement('span');
+    label.textContent = parts.length > 1 ? `${parts.at(-2).replaceAll('_', ' ')} ${parts.at(-1)}` : channel.target.replaceAll('_', ' ');
+    const track = document.createElement('span'); track.className = 'motor-track';
+    const signed = channel.normalized_range[0] < 0;
+    track.dataset.signed = String(signed);
+    const fill = document.createElement('i'); track.append(fill);
+    const value = document.createElement('output'); value.textContent = '—';
+    row.title = channel.id; row.append(label, track, value); group.append(row);
+    motorBars[channel.index] = {fill, value, signed};
+  }
+}
+
+function updateMotorDisplay(values) {
+  if (values.length !== 92 || motorBars.length !== 92) throw new Error('Motor observer extent differs');
+  for (let i = 0; i < 92; i++) {
+    const bar = motorBars[i], x = values[i];
+    if (!Number.isFinite(x) || x < (bar.signed ? -1 : 0) || x > 1) throw new Error('Invalid motor observation');
+    bar.fill.style.left = `${bar.signed ? 50 + Math.min(0, x) * 50 : 0}%`;
+    bar.fill.style.width = `${Math.abs(x) * (bar.signed ? 50 : 100)}%`;
+    bar.fill.dataset.negative = String(x < 0);
+    bar.value.textContent = x.toFixed(2);
+  }
 }
 
 function createView() {
@@ -131,6 +197,10 @@ function selectResident(id) {
   view.clearNeural();
   view.clearRetina();
   $('#neural-rms').textContent = '—'; $('#neural-peak').textContent = '—';
+  $('#sense-time').textContent = '—';
+  for (const {fill} of acousticBars) fill.style.height = '0%';
+  for (const value of footReadouts) value.textContent = '—';
+  for (const id of ['mouth-contact', 'antenna-flow', 'joint-speed', 'body-reserves']) $(`#${id}`).textContent = '—';
   for (const button of residentList.querySelectorAll('button')) button.setAttribute('aria-pressed', String(button.dataset.resident === id));
   if (worker) post('select', {residentId: id});
 }
@@ -151,6 +221,7 @@ function updateProgress(message) {
 }
 
 function handleReady(message) {
+  initializeMotorDisplay(message.motorSchema);
   const residents = Array.isArray(message.residents) ? message.residents : [];
   if (!residents.length) throw new Error('Worker reported no residents');
   if (!(message.brainPositions instanceof Float32Array) || !(message.brainValid instanceof Uint8Array) || !(message.neuralBaseline instanceof Float32Array)) {
@@ -193,7 +264,8 @@ function updateFrame(message) {
       $('#neural-peak').textContent = activity.peak.toExponential(2);
     }
     if (message.retinalRGB) view.updateRetina(message.retinalRGB);
-    if (message.motorActivation?.length === 34) for (let i = 0; i < 24; i++) muscleBars[i].value = message.motorActivation[i];
+    if (message.motorActivation) updateMotorDisplay(message.motorActivation);
+    if (message.bodySense) updateBodySenses(message.bodySense, message.bodySenseTime);
   }
   const visitorIds = new Set();
   for (const item of message.geometry) {
@@ -322,6 +394,7 @@ for (const button of document.querySelectorAll('[data-neural-panel]')) button.ad
   for (const item of document.querySelectorAll('[data-neural-panel]')) item.setAttribute('aria-selected', String(item === button));
   $('#brain-panel').hidden = panel !== 'brain';
   $('#eyes-panel').hidden = panel !== 'eyes';
+  $('#body-panel').hidden = panel !== 'body';
   if (panel === 'eyes') requestAnimationFrame(() => view?.renderRetina());
 });
 

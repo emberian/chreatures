@@ -7,6 +7,7 @@
 //! controller observations. In the current Chreatures contract they may reach a
 //! policy only after CNS recurrence.
 
+mod growth;
 mod model;
 mod world;
 

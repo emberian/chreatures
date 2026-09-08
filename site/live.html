@@ -38,6 +38,7 @@
         <div class="neural-tabs" role="tablist" aria-label="Selected resident senses and CNS">
           <button id="brain-tab" type="button" role="tab" aria-selected="true" aria-controls="brain-panel" data-neural-panel="brain">CNS activity</button>
           <button id="eyes-tab" type="button" role="tab" aria-selected="false" aria-controls="eyes-panel" data-neural-panel="eyes">Retinal facets</button>
+          <button id="body-tab" type="button" role="tab" aria-selected="false" aria-controls="body-panel" data-neural-panel="body">Body senses</button>
         </div>
         <div id="brain-panel" role="tabpanel" aria-labelledby="brain-tab">
           <label class="neural-field-control">Inspect dynamics
@@ -66,6 +67,20 @@
           <p class="retina-count">1,771 facets · 1,486 connectome-anchored sites</p>
           <p class="rate-note">These colors are the selected resident’s latest physical-world rays passed to its CNS. The q/r hex layout is engineered; column membership is anatomical. The body camera is a separate observer view.</p>
         </div>
+        <div id="body-panel" role="tabpanel" aria-labelledby="body-tab" hidden>
+          <p class="sense-caption">Antenna sound bands <output id="sense-time">—</output></p>
+          <div id="acoustic-bands" class="acoustic-bands" aria-label="Sixteen sampled acoustic bands"></div>
+          <div class="sense-axis"><span>40 Hz</span><span>1,600 Hz</span></div>
+          <p class="sense-caption">Feet · contact load / slip speed</p>
+          <div id="foot-senses" class="foot-senses"></div>
+          <dl class="body-readouts">
+            <div><dt>Mouth contact</dt><dd id="mouth-contact">—</dd></div>
+            <div><dt>Antenna flow L / R</dt><dd id="antenna-flow">—</dd></div>
+            <div><dt>Joint speed RMS</dt><dd id="joint-speed">—</dd></div>
+            <div><dt>ATP / water fractions</dt><dd id="body-reserves">—</dd></div>
+          </dl>
+          <p class="rate-note">The latest BODY807 input to MaleCNS. Contact loads use the imported model’s force units; slip and airflow use mm/s. Sound bars use a fixed logarithmic display of effective amplitude. Wing-generated flow and external tones share these senses; this is an engineered acoustic model.</p>
+        </div>
       </section>
 
       <section class="control-card">
@@ -92,13 +107,13 @@
           <button type="button" data-tone="500">500 Hz</button>
           <button type="button" data-tone="1250">1,250 Hz</button>
         </div>
-        <p>Send a tone and watch the response. Sound travels through the garden and enters the auditory neurons.</p>
+        <p>Send a tone and watch the response. Sound is sampled at the moving antennae and enters the anatomically masked CNS interface.</p>
       </section>
 
-      <section class="control-card muscle-card">
-        <div class="section-head"><div><small>selected resident</small><h2>Muscle recruitment</h2></div></div>
-        <div id="muscle-recruitment" class="muscle-recruitment" aria-label="Twelve pairs of antagonist activations"></div>
-        <p>Paired activations from motor-neuron activity. These drive the synthetic joint actuators; the display does not assign a pose.</p>
+      <section class="control-card motor-card">
+        <div class="section-head"><div><small>selected resident</small><h2>Motor output</h2></div></div>
+        <div id="motor-output" class="motor-output" aria-label="Anatomical fly motor outputs"></div>
+        <p>84 signed joint targets, six foot adhesion channels and two oral drives, decoded from motor-neuron activity. Zero is each joint’s imported neutral pose. These are effective servos, not identified muscles.</p>
       </section>
 
       <section class="checkpoint-card">
@@ -111,7 +126,7 @@
         <p><strong>Neural model</strong><span id="model-status">loads from the pinned release</span></p>
         <p><strong>Memory organ</strong><span id="controller-status">loads from its manifest</span></p>
         <p><strong>Engine</strong><span id="engine-status">MuJoCo 3.12.0 Wasm + Rust/Wasm</span></p>
-        <p>This research generation has a fitted CNS interface and a new, untrained memory organ. Tone-specific movement and useful autonomous control remain to be learned.</p>
+        <p>A micro-CT-derived NeuroMechFly body is paired with MaleCNS brain and cord connectivity. Its model and memory training status are pinned above; geometry, fitted control and learned behavior are distinct parts of the experiment.</p>
         <a href="evidence.html">Follow the experiments behind this life ↗</a>
       </section>
     </aside>
