@@ -7,10 +7,7 @@ use metal::{
     Buffer, CompileOptions, ComputePipelineState, Device, MTLCommandBufferStatus,
     MTLResourceOptions, MTLSize,
 };
-use mps_matrix::{
-    command_buffer_error, command_buffer_gpu_milliseconds, recommended_row_bytes,
-    MatrixMultiplication,
-};
+use mps_matrix::{command_buffer_error, command_buffer_gpu_milliseconds, recommended_row_bytes};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -24,10 +21,10 @@ use std::{
 };
 
 const SHADER: &str = include_str!("../brain.metal");
-const ARTIFACT_MAGIC: &[u8; 8] = b"CHCNS2\0\0";
-const SNAPSHOT_MAGIC: &[u8; 9] = b"CNSSTATE2";
-const FORMAT: &str = "chreatures-cns-service-v2";
-const SNAPSHOT_FORMAT: &str = "chreatures-cns-state-v2";
+const ARTIFACT_MAGIC: &[u8; 8] = b"CHCNS3\0\0";
+const SNAPSHOT_MAGIC: &[u8; 9] = b"CNSSTATE3";
+const FORMAT: &str = "chreatures-cns-service-v3";
+const SNAPSHOT_FORMAT: &str = "chreatures-cns-state-v3";
 const N: usize = 165_122;
 const E: usize = 25_563_197;
 const SITES: usize = 1_771;
@@ -36,60 +33,83 @@ const RECEPTOR_TYPES: usize = 10;
 const SITE_EDGES: usize = 4_669;
 const BODY_TARGETS: usize = 11_233;
 const NEURON_TYPES: usize = 11_752;
-const BODY_INPUTS: usize = 43;
-const BODY_HIDDEN: usize = 128;
-const INPUTS: usize = 5_356;
+const BODY_INPUTS: usize = 110;
+const CONTEXT_INPUTS: usize = 12;
+const CONTEXT_TARGETS: usize = 1_314;
+const MOTOR_OUTPUTS: usize = 34;
+const MOTOR_TARGETS: usize = 815;
+const INPUTS: usize = 5_423;
 const LATENT: usize = 512;
 const READOUT_RANK: usize = 64;
 const MAX_CAPACITY: usize = 32;
-const PARAMETER_ORDER: [&str; 17] = [
+const MODULATOR_FAMILIES: usize = 3;
+const PARAMETER_ORDER: [&str; 24] = [
     "optic.spectral_logits",
     "optic.gain_raw",
     "optic.bias",
     "body.mean",
     "body.scale",
-    "body.input.weight",
-    "body.input.bias",
-    "body.output.weight",
-    "body.output.bias",
+    "body.weight",
+    "body.bias",
+    "context.weight",
+    "context.bias",
     "dynamics.baseline_raw",
     "dynamics.recurrent_gain_raw",
     "dynamics.tau_raw",
     "dynamics.adaptation_gain_raw",
     "dynamics.adaptation_tau_raw",
+    "dynamics.release_tau_raw",
+    "dynamics.release_use_raw",
+    "dynamics.mod_gain_raw",
+    "dynamics.mod_adaptation_raw",
+    "dynamics.modulation_tau_raw",
     "readout.projection.weight",
     "readout.output.weight",
     "readout.output.bias",
+    "motor.weight_raw",
+    "motor.bias",
 ];
-const ARRAY_NAMES: [&str; 28] = [
+const ARRAY_NAMES: [&str; 40] = [
     "graph.crow",
     "graph.col",
     "graph.weight",
+    "graph.channel",
     "atlas.receptor_rows",
     "atlas.receptor_type",
     "atlas.receptor_ptr",
     "atlas.site_indices",
     "atlas.site_weight",
     "atlas.body_rows",
+    "atlas.body_mask",
+    "atlas.context_rows",
+    "atlas.motor_rows",
+    "atlas.motor_mask",
     "atlas.neuron_type",
     "optic.spectral_logits",
     "optic.gain_raw",
     "optic.bias",
     "body.mean",
     "body.scale",
-    "body.input.weight",
-    "body.input.bias",
-    "body.output.weight",
-    "body.output.bias",
+    "body.weight",
+    "body.bias",
+    "context.weight",
+    "context.bias",
     "dynamics.baseline_raw",
     "dynamics.recurrent_gain_raw",
     "dynamics.tau_raw",
     "dynamics.adaptation_gain_raw",
     "dynamics.adaptation_tau_raw",
+    "dynamics.release_tau_raw",
+    "dynamics.release_use_raw",
+    "dynamics.mod_gain_raw",
+    "dynamics.mod_adaptation_raw",
+    "dynamics.modulation_tau_raw",
     "afferent.neutral_drive",
     "readout.projection.weight",
     "readout.output.weight",
     "readout.output.bias",
+    "motor.weight_raw",
+    "motor.bias",
 ];
 
 #[repr(C)]
@@ -104,6 +124,7 @@ struct Params {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 struct Dimensions {
     neurons: usize,
     edges: usize,
@@ -114,10 +135,13 @@ struct Dimensions {
     body_targets: usize,
     neuron_types: usize,
     body_inputs: usize,
-    body_hidden: usize,
-    inputs: usize,
+    context_inputs: usize,
+    context_targets: usize,
+    motor_outputs: usize,
+    motor_targets: usize,
     latent: usize,
     readout_rank: usize,
+    modulator_families: usize,
 }
 
 fn dimensions() -> Dimensions {
@@ -131,10 +155,13 @@ fn dimensions() -> Dimensions {
         body_targets: BODY_TARGETS,
         neuron_types: NEURON_TYPES,
         body_inputs: BODY_INPUTS,
-        body_hidden: BODY_HIDDEN,
-        inputs: INPUTS,
+        context_inputs: CONTEXT_INPUTS,
+        context_targets: CONTEXT_TARGETS,
+        motor_outputs: MOTOR_OUTPUTS,
+        motor_targets: MOTOR_TARGETS,
         latent: LATENT,
         readout_rank: READOUT_RANK,
+        modulator_families: MODULATOR_FAMILIES,
     }
 }
 
@@ -143,6 +170,7 @@ struct ArtifactMetadata {
     format: String,
     graph_sha256: String,
     atlas_sha256: String,
+    anatomy_sha256: String,
     readout_mask_sha256: String,
     adapter_sha256: String,
     dimensions: Dimensions,
@@ -173,6 +201,7 @@ impl ArtifactMetadata {
         for hash in [
             &self.graph_sha256,
             &self.atlas_sha256,
+            &self.anatomy_sha256,
             &self.readout_mask_sha256,
             &self.adapter_sha256,
         ] {
@@ -193,6 +222,7 @@ impl ArtifactMetadata {
             "format",
             "graph_sha256",
             "atlas_sha256",
+            "anatomy_sha256",
             "readout_mask_sha256",
             "dimensions",
             "parameter_order",
@@ -366,6 +396,7 @@ enum Request {
         dt: f64,
         active_mask: u32,
         sensory: Vec<f32>,
+        context: Vec<f32>,
         #[serde(default)]
         selected_neuron_indices: Vec<u32>,
     },
@@ -400,6 +431,7 @@ struct SnapshotHeader {
     service_artifact_sha256: String,
     graph_sha256: String,
     atlas_sha256: String,
+    anatomy_sha256: String,
     readout_mask_sha256: String,
     adapter_sha256: String,
     metadata: String,
@@ -408,15 +440,15 @@ struct SnapshotHeader {
 struct SnapshotData {
     header: SnapshotHeader,
     times: Vec<f64>,
-    state: Option<[Vec<[f32; 4]>; 3]>,
+    state: Option<[Vec<[f32; 4]>; 7]>,
 }
 
 fn validate_physical_state(
-    state: &[Vec<[f32; 4]>; 3],
+    state: &[Vec<[f32; 4]>; 7],
     capacity: usize,
     tiles: usize,
 ) -> Result<(), String> {
-    let [rate, adapt, support] = state;
+    let [rate, adapt, support, release, modulation0, modulation1, modulation2] = state;
     for row in 0..N {
         for slot in 0..capacity {
             let index = row * tiles + slot / 4;
@@ -424,6 +456,10 @@ fn validate_physical_state(
             if !(0.0..=1.0).contains(&rate[index][lane])
                 || !(-1.0..=1.0).contains(&adapt[index][lane])
                 || !(0.65..=1.0).contains(&support[index][lane])
+                || !(0.2..=1.0).contains(&release[index][lane])
+                || !modulation0[index][lane].is_finite()
+                || !modulation1[index][lane].is_finite()
+                || !modulation2[index][lane].is_finite()
             {
                 return Err("snapshot CNS state is nonfinite or outside physical bounds".into());
             }
@@ -433,8 +469,6 @@ fn validate_physical_state(
 }
 
 struct Engine {
-    body_input_mm: MatrixMultiplication,
-    body_output_mm: MatrixMultiplication,
     device: Device,
     queue: metal::CommandQueue,
     capacity: usize,
@@ -442,46 +476,53 @@ struct Engine {
     simd_rows: bool,
     metadata: ArtifactMetadata,
     artifact_sha256: String,
-    rec: [Buffer; 3],
+    rec: [Buffer; 4],
     receptor: [Buffer; 5],
     body_rows: Buffer,
+    body_mask: Buffer,
+    context_rows: Buffer,
+    motor_rows: Buffer,
+    motor_mask: Buffer,
     optic_spectral: Buffer,
     optic_gain: Buffer,
     optic_bias: Buffer,
     body_mean: Buffer,
     body_scale: Buffer,
-    // MPSMatrix retains these backing allocations indirectly; fields make that lifetime explicit.
-    _body_input_weight: Buffer,
-    body_input_bias: Buffer,
-    _body_output_weight: Buffer,
-    body_output_bias: Buffer,
-    dynamics: [Buffer; 5],
+    body_weight: Buffer,
+    body_bias: Buffer,
+    context_weight: Buffer,
+    context_bias: Buffer,
+    neuron_type: Buffer,
+    dynamics: [Buffer; 10],
     neutral_drive: Buffer,
     readout_projection_weight: Buffer,
     readout_projection_stride: Buffer,
     readout_output_weight: Buffer,
     readout_output_bias: Buffer,
+    motor_weight: Buffer,
+    motor_bias: Buffer,
     sensory: Buffer,
-    body_normalized: Buffer,
-    body_hidden_pre: Buffer,
-    body_hidden: Buffer,
-    body_current_pre: Buffer,
+    context: Buffer,
     rate: [Buffer; 2],
     adapt: Buffer,
     support: Buffer,
+    release: Buffer,
+    modulation: [Buffer; 2],
     drive: Buffer,
     readout_hidden: Buffer,
     latent: Buffer,
+    motor: Buffer,
     physiology_partial: Buffer,
     physiology: Buffer,
     times: Vec<f64>,
     poisoned: Option<String>,
     k_clear: ComputePipelineState,
     k_optic: ComputePipelineState,
-    k_normalize_body: ComputePipelineState,
-    k_tanh_bias: ComputePipelineState,
     k_body_scatter: ComputePipelineState,
+    k_context_scatter: ComputePipelineState,
     k_rec: ComputePipelineState,
+    k_finalize: ComputePipelineState,
+    k_motor: ComputePipelineState,
     k_gather: ComputePipelineState,
     k_projection: ComputePipelineState,
     k_readout_output: ComputePipelineState,
@@ -499,7 +540,7 @@ impl Engine {
         let mut magic = [0u8; 8];
         reader.read_exact(&mut magic)?;
         if &magic != ARTIFACT_MAGIC {
-            return Err("artifact header differs; only CHCNS2 is accepted".into());
+            return Err("artifact header differs; only CHCNS3 is accepted".into());
         }
         let mut length = [0u8; 4];
         reader.read_exact(&mut length)?;
@@ -518,12 +559,19 @@ impl Engine {
         let graph_crow = reader.array::<u32>(&metadata, "graph.crow", N + 1)?;
         let graph_col = reader.array::<u32>(&metadata, "graph.col", E)?;
         let graph_weight = reader.array::<f32>(&metadata, "graph.weight", E)?;
+        let graph_channel = reader.array::<u32>(&metadata, "graph.channel", N)?;
         let receptor_rows = reader.array::<u32>(&metadata, "atlas.receptor_rows", RECEPTORS)?;
         let receptor_type = reader.array::<u32>(&metadata, "atlas.receptor_type", RECEPTORS)?;
         let receptor_ptr = reader.array::<u32>(&metadata, "atlas.receptor_ptr", RECEPTORS + 1)?;
         let site_indices = reader.array::<u32>(&metadata, "atlas.site_indices", SITE_EDGES)?;
         let site_weight = reader.array::<f32>(&metadata, "atlas.site_weight", SITE_EDGES)?;
         let body_rows = reader.array::<u32>(&metadata, "atlas.body_rows", BODY_TARGETS)?;
+        let body_mask =
+            reader.array::<f32>(&metadata, "atlas.body_mask", BODY_TARGETS * BODY_INPUTS)?;
+        let context_rows = reader.array::<u32>(&metadata, "atlas.context_rows", CONTEXT_TARGETS)?;
+        let motor_rows = reader.array::<u32>(&metadata, "atlas.motor_rows", MOTOR_TARGETS)?;
+        let motor_mask =
+            reader.array::<f32>(&metadata, "atlas.motor_mask", MOTOR_OUTPUTS * MOTOR_TARGETS)?;
         let neuron_type = reader.array::<u32>(&metadata, "atlas.neuron_type", N)?;
         let spectral_logits =
             reader.array::<f32>(&metadata, "optic.spectral_logits", RECEPTOR_TYPES * 3)?;
@@ -531,12 +579,15 @@ impl Engine {
         let optic_bias = reader.array::<f32>(&metadata, "optic.bias", RECEPTOR_TYPES)?;
         let body_mean = reader.array::<f32>(&metadata, "body.mean", BODY_INPUTS)?;
         let body_scale = reader.array::<f32>(&metadata, "body.scale", BODY_INPUTS)?;
-        let body_input_weight =
-            reader.array::<f32>(&metadata, "body.input.weight", BODY_HIDDEN * BODY_INPUTS)?;
-        let body_input_bias = reader.array::<f32>(&metadata, "body.input.bias", BODY_HIDDEN)?;
-        let body_output_weight =
-            reader.array::<f32>(&metadata, "body.output.weight", BODY_TARGETS * BODY_HIDDEN)?;
-        let body_output_bias = reader.array::<f32>(&metadata, "body.output.bias", BODY_TARGETS)?;
+        let body_weight =
+            reader.array::<f32>(&metadata, "body.weight", BODY_TARGETS * BODY_INPUTS)?;
+        let body_bias = reader.array::<f32>(&metadata, "body.bias", BODY_TARGETS)?;
+        let context_weight = reader.array::<f32>(
+            &metadata,
+            "context.weight",
+            CONTEXT_TARGETS * CONTEXT_INPUTS,
+        )?;
+        let context_bias = reader.array::<f32>(&metadata, "context.bias", CONTEXT_TARGETS)?;
         let dynamics_baseline_raw =
             reader.array::<f32>(&metadata, "dynamics.baseline_raw", NEURON_TYPES)?;
         let dynamics_recurrent_gain_raw =
@@ -546,12 +597,25 @@ impl Engine {
             reader.array::<f32>(&metadata, "dynamics.adaptation_gain_raw", NEURON_TYPES)?;
         let dynamics_adaptation_tau_raw =
             reader.array::<f32>(&metadata, "dynamics.adaptation_tau_raw", NEURON_TYPES)?;
+        let dynamics_release_tau_raw =
+            reader.array::<f32>(&metadata, "dynamics.release_tau_raw", NEURON_TYPES)?;
+        let dynamics_release_use_raw =
+            reader.array::<f32>(&metadata, "dynamics.release_use_raw", NEURON_TYPES)?;
+        let dynamics_mod_gain_raw =
+            reader.array::<f32>(&metadata, "dynamics.mod_gain_raw", NEURON_TYPES * 3)?;
+        let dynamics_mod_adaptation_raw =
+            reader.array::<f32>(&metadata, "dynamics.mod_adaptation_raw", NEURON_TYPES * 3)?;
+        let dynamics_modulation_tau_raw =
+            reader.array::<f32>(&metadata, "dynamics.modulation_tau_raw", 3)?;
         let neutral_drive = reader.array::<f32>(&metadata, "afferent.neutral_drive", N)?;
         let mut readout_projection =
             reader.array::<f32>(&metadata, "readout.projection.weight", READOUT_RANK * N)?;
         let readout_output =
             reader.array::<f32>(&metadata, "readout.output.weight", LATENT * READOUT_RANK)?;
         let readout_output_bias = reader.array::<f32>(&metadata, "readout.output.bias", LATENT)?;
+        let motor_weight =
+            reader.array::<f32>(&metadata, "motor.weight_raw", MOTOR_OUTPUTS * MOTOR_TARGETS)?;
+        let motor_bias = reader.array::<f32>(&metadata, "motor.bias", MOTOR_OUTPUTS)?;
         let artifact_sha256 = reader.finish()?;
 
         if graph_crow.first() != Some(&0)
@@ -570,6 +634,9 @@ impl Engine {
             ("graph.col", graph_col.as_slice(), N),
             ("atlas.receptor_rows", receptor_rows.as_slice(), N),
             ("atlas.body_rows", body_rows.as_slice(), N),
+            ("atlas.context_rows", context_rows.as_slice(), N),
+            ("atlas.motor_rows", motor_rows.as_slice(), N),
+            ("graph.channel", graph_channel.as_slice(), 5),
             (
                 "atlas.receptor_type",
                 receptor_type.as_slice(),
@@ -582,14 +649,11 @@ impl Engine {
                 return Err(format!("out-of-range CNS index: {name}"));
             }
         }
-        if receptor_rows.windows(2).any(|x| x[0] >= x[1])
-            || body_rows.windows(2).any(|x| x[0] >= x[1])
-        {
-            return Err("afferent rows must be unique and ascending".into());
-        }
-        let receptor_set: BTreeSet<u32> = receptor_rows.iter().copied().collect();
-        if body_rows.iter().any(|row| receptor_set.contains(row)) {
-            return Err("optic and body afferents overlap".into());
+        let mut injected = BTreeSet::new();
+        for &row in receptor_rows.iter().chain(&body_rows).chain(&context_rows) {
+            if !injected.insert(row) {
+                return Err("injected rows overlap".into());
+            }
         }
         if site_weight.iter().any(|x| !x.is_finite() || *x <= 0.0) {
             return Err("atlas.site_weight must be finite and positive".into());
@@ -610,10 +674,12 @@ impl Engine {
             ("optic.bias", optic_bias.as_slice()),
             ("body.mean", body_mean.as_slice()),
             ("body.scale", body_scale.as_slice()),
-            ("body.input.weight", body_input_weight.as_slice()),
-            ("body.input.bias", body_input_bias.as_slice()),
-            ("body.output.weight", body_output_weight.as_slice()),
-            ("body.output.bias", body_output_bias.as_slice()),
+            ("atlas.body_mask", body_mask.as_slice()),
+            ("atlas.motor_mask", motor_mask.as_slice()),
+            ("body.weight", body_weight.as_slice()),
+            ("body.bias", body_bias.as_slice()),
+            ("context.weight", context_weight.as_slice()),
+            ("context.bias", context_bias.as_slice()),
             ("dynamics.baseline_raw", dynamics_baseline_raw.as_slice()),
             (
                 "dynamics.recurrent_gain_raw",
@@ -628,19 +694,45 @@ impl Engine {
                 "dynamics.adaptation_tau_raw",
                 dynamics_adaptation_tau_raw.as_slice(),
             ),
+            (
+                "dynamics.release_tau_raw",
+                dynamics_release_tau_raw.as_slice(),
+            ),
+            (
+                "dynamics.release_use_raw",
+                dynamics_release_use_raw.as_slice(),
+            ),
+            ("dynamics.mod_gain_raw", dynamics_mod_gain_raw.as_slice()),
+            (
+                "dynamics.mod_adaptation_raw",
+                dynamics_mod_adaptation_raw.as_slice(),
+            ),
+            (
+                "dynamics.modulation_tau_raw",
+                dynamics_modulation_tau_raw.as_slice(),
+            ),
             ("afferent.neutral_drive", neutral_drive.as_slice()),
             ("readout.projection.weight", readout_projection.as_slice()),
             ("readout.output.weight", readout_output.as_slice()),
             ("readout.output.bias", readout_output_bias.as_slice()),
+            ("motor.weight_raw", motor_weight.as_slice()),
+            ("motor.bias", motor_bias.as_slice()),
         ] {
             all_finite(name, values)?;
         }
         if body_scale.iter().any(|x| *x <= 0.0) {
             return Err("body.scale must be positive".into());
         }
+        if body_mask
+            .iter()
+            .chain(&motor_mask)
+            .any(|&x| x != 0.0 && x != 1.0)
+        {
+            return Err("structural masks must be binary".into());
+        }
 
         let mut readout_mask = vec![1u8; N];
-        for &row in receptor_rows.iter().chain(body_rows.iter()) {
+        for &row in receptor_rows.iter().chain(&body_rows).chain(&context_rows) {
             readout_mask[row as usize] = 0;
         }
         if sha256_hex(&readout_mask) != metadata.readout_mask_sha256 {
@@ -658,7 +750,7 @@ impl Engine {
         }
         for projection_row in 0..READOUT_RANK {
             let base = projection_row * N;
-            for &afferent in receptor_rows.iter().chain(body_rows.iter()) {
+            for &afferent in receptor_rows.iter().chain(&body_rows).chain(&context_rows) {
                 readout_projection[base + afferent as usize] = 0.0;
             }
         }
@@ -684,6 +776,12 @@ impl Engine {
         let dyn_tau = expand(&dynamics_tau_raw, |x| 0.02 + 0.23 * sigmoid(x));
         let dyn_adaptation_gain = expand(&dynamics_adaptation_gain_raw, |x| 0.5 * sigmoid(x));
         let dyn_adaptation_tau = expand(&dynamics_adaptation_tau_raw, |x| 0.25 + 4.75 * sigmoid(x));
+        let dyn_release_tau = expand(&dynamics_release_tau_raw, |x| 0.05 + 1.95 * sigmoid(x));
+        let dyn_release_use = expand(&dynamics_release_use_raw, |x| 0.01 + 0.49 * sigmoid(x));
+        let modulation_tau: Vec<f32> = dynamics_modulation_tau_raw
+            .iter()
+            .map(|&x| 0.1 + 4.9 * sigmoid(x))
+            .collect();
 
         let device = Device::system_default().ok_or_else(|| "no Metal device".to_string())?;
         let library = device
@@ -717,6 +815,7 @@ impl Engine {
             buf(&device, &graph_crow),
             buf(&device, &graph_col),
             buf(&device, &graph_weight),
+            buf(&device, &graph_channel),
         ];
         let receptor = [
             buf(&device, &receptor_rows),
@@ -726,28 +825,31 @@ impl Engine {
             buf(&device, &site_weight),
         ];
         let body_rows_buffer = buf(&device, &body_rows);
+        let body_mask_buffer = buf(&device, &body_mask);
+        let context_rows_buffer = buf(&device, &context_rows);
+        let motor_rows_buffer = buf(&device, &motor_rows);
+        let motor_mask_buffer = buf(&device, &motor_mask);
         let optic_spectral_buffer = buf(&device, &spectral);
         let optic_gain_buffer = buf(&device, &optic_gain);
         let optic_bias_buffer = buf(&device, &optic_bias);
         let body_mean_buffer = buf(&device, &body_mean);
         let body_scale_buffer = buf(&device, &body_scale);
-        let body_input_row_bytes = recommended_row_bytes(BODY_INPUTS);
-        let body_input_weight_padded = pad_matrix_rows(
-            &body_input_weight,
-            BODY_HIDDEN,
-            BODY_INPUTS,
-            body_input_row_bytes,
-        )?;
-        let body_input_weight_buffer = buf(&device, &body_input_weight_padded);
-        let body_input_bias_buffer = buf(&device, &body_input_bias);
-        let body_output_weight_buffer = buf(&device, &body_output_weight);
-        let body_output_bias_buffer = buf(&device, &body_output_bias);
+        let body_weight_buffer = buf(&device, &body_weight);
+        let body_bias_buffer = buf(&device, &body_bias);
+        let context_weight_buffer = buf(&device, &context_weight);
+        let context_bias_buffer = buf(&device, &context_bias);
+        let neuron_type_buffer = buf(&device, &neuron_type);
         let dynamics = [
             buf(&device, &dyn_baseline),
             buf(&device, &dyn_recurrent_gain),
             buf(&device, &dyn_tau),
             buf(&device, &dyn_adaptation_gain),
             buf(&device, &dyn_adaptation_tau),
+            buf(&device, &dyn_release_tau),
+            buf(&device, &dyn_release_use),
+            buf(&device, &dynamics_mod_gain_raw),
+            buf(&device, &dynamics_mod_adaptation_raw),
+            buf(&device, &modulation_tau),
         ];
         let neutral_drive_buffer = buf(&device, &neutral_drive);
         let projection_row_bytes = recommended_row_bytes(N);
@@ -758,51 +860,25 @@ impl Engine {
             buf(&device, &[(projection_row_bytes / size_of::<f32>()) as u32]);
         let readout_output_weight_buffer = buf(&device, &readout_output);
         let readout_output_bias_buffer = buf(&device, &readout_output_bias);
+        let motor_weight_buffer = buf(&device, &motor_weight);
+        let motor_bias_buffer = buf(&device, &motor_bias);
         let sensory = zeros(&device, INPUTS * tiles);
-        let body_normalized = zeros(&device, BODY_INPUTS * tiles);
-        let body_hidden_pre = zeros(&device, BODY_HIDDEN * tiles);
-        let body_hidden = zeros(&device, BODY_HIDDEN * tiles);
-        let body_current_pre = zeros(&device, BODY_TARGETS * tiles);
+        let context = zeros(&device, CONTEXT_INPUTS * tiles);
         let rate = [buf(&device, &initial_rate), buf(&device, &initial_rate)];
         let adapt = buf(&device, &z);
         let support = buf(&device, &ones);
+        let release = buf(&device, &ones);
+        let modulation = [
+            buf(&device, &vec![[0f32; 4]; N * tiles * 3]),
+            buf(&device, &vec![[0f32; 4]; N * tiles * 3]),
+        ];
         let drive = zeros(&device, N * tiles);
         let readout_hidden = zeros(&device, READOUT_RANK * tiles);
         let latent = zeros(&device, LATENT * tiles);
+        let motor = zeros(&device, MOTOR_OUTPUTS * tiles);
         let physiology_partial = zeros(&device, N.div_ceil(256) * tiles * 3);
         let physiology = zeros(&device, 3 * tiles);
-        let row_bytes = tiles * size_of::<[f32; 4]>();
-        let body_input_mm = MatrixMultiplication::new(
-            &device,
-            &body_input_weight_buffer,
-            BODY_HIDDEN,
-            BODY_INPUTS,
-            body_input_row_bytes,
-            0,
-            &body_normalized,
-            capacity,
-            row_bytes,
-            0,
-            &body_hidden_pre,
-            row_bytes,
-        )?;
-        let body_output_mm = MatrixMultiplication::new(
-            &device,
-            &body_output_weight_buffer,
-            BODY_TARGETS,
-            BODY_HIDDEN,
-            BODY_HIDDEN * size_of::<f32>(),
-            0,
-            &body_hidden,
-            capacity,
-            row_bytes,
-            0,
-            &body_current_pre,
-            row_bytes,
-        )?;
         Ok(Self {
-            body_input_mm,
-            body_output_mm,
             queue: device.new_command_queue(),
             capacity,
             tiles,
@@ -812,46 +888,50 @@ impl Engine {
             rec,
             receptor,
             body_rows: body_rows_buffer,
+            body_mask: body_mask_buffer,
+            context_rows: context_rows_buffer,
+            motor_rows: motor_rows_buffer,
+            motor_mask: motor_mask_buffer,
             optic_spectral: optic_spectral_buffer,
             optic_gain: optic_gain_buffer,
             optic_bias: optic_bias_buffer,
             body_mean: body_mean_buffer,
             body_scale: body_scale_buffer,
-            _body_input_weight: body_input_weight_buffer,
-            body_input_bias: body_input_bias_buffer,
-            _body_output_weight: body_output_weight_buffer,
-            body_output_bias: body_output_bias_buffer,
+            body_weight: body_weight_buffer,
+            body_bias: body_bias_buffer,
+            context_weight: context_weight_buffer,
+            context_bias: context_bias_buffer,
+            neuron_type: neuron_type_buffer,
             dynamics,
             neutral_drive: neutral_drive_buffer,
             readout_projection_weight: projection_weight_buffer,
             readout_projection_stride: projection_stride_buffer,
             readout_output_weight: readout_output_weight_buffer,
             readout_output_bias: readout_output_bias_buffer,
+            motor_weight: motor_weight_buffer,
+            motor_bias: motor_bias_buffer,
             sensory,
-            body_normalized,
-            body_hidden_pre,
-            body_hidden,
-            body_current_pre,
+            context,
             rate,
             adapt,
             support,
+            release,
+            modulation,
             drive,
             readout_hidden,
             latent,
+            motor,
             physiology_partial,
             physiology,
             times: vec![0.0; capacity],
             poisoned: None,
             k_clear: pipeline("clear_drive")?,
             k_optic: pipeline("project_optic")?,
-            k_normalize_body: pipeline("normalize_body")?,
-            k_tanh_bias: pipeline("tanh_bias")?,
-            k_body_scatter: pipeline("sigmoid_bias_scatter_body")?,
-            k_rec: pipeline(if simd_rows {
-                "csr_rate_simd"
-            } else {
-                "csr_rate"
-            })?,
+            k_body_scatter: pipeline("v3_project_body_masked")?,
+            k_context_scatter: pipeline("v3_project_context_zero_neutral")?,
+            k_rec: pipeline("v3_csr_dynamics")?,
+            k_finalize: pipeline("v3_finalize_private_state")?,
+            k_motor: pipeline("v3_motor34_masked_softplus")?,
             k_gather: pipeline("gather_rates")?,
             k_projection: pipeline("dense_projection")?,
             k_readout_output: pipeline("dense_readout_output")?,
@@ -907,8 +987,20 @@ impl Engine {
         dt: f64,
         mask: u32,
         sensory: &[f32],
+        context: &[f32],
         selected_indices: &[u32],
-    ) -> Result<(Vec<f32>, Vec<f32>, Vec<f32>, Vec<f64>, f64, [f64; 4]), String> {
+    ) -> Result<
+        (
+            Vec<f32>,
+            Vec<f32>,
+            Vec<f32>,
+            Vec<f32>,
+            Vec<f64>,
+            f64,
+            [f64; 4],
+        ),
+        String,
+    > {
         if let Some(reason) = &self.poisoned {
             return Err(format!(
                 "CNS state is poisoned after a failed GPU tick ({reason}); restore a full coherent snapshot or cold-reset all slots"
@@ -923,6 +1015,14 @@ impl Engine {
         if sensory.len() != INPUTS * self.capacity || sensory.iter().any(|x| !x.is_finite()) {
             return Err(format!(
                 "sensory must be finite channel-major [{INPUTS},{}]",
+                self.capacity
+            ));
+        }
+        if context.len() != CONTEXT_INPUTS * self.capacity
+            || context.iter().any(|x| !x.is_finite() || x.abs() > 1.0)
+        {
+            return Err(format!(
+                "context must be finite, signed [-1,1], channel-major [{CONTEXT_INPUTS},{}]",
                 self.capacity
             ));
         }
@@ -948,6 +1048,20 @@ impl Engine {
                 packed.len(),
             );
         }
+        let mut packed_context = vec![[0f32; 4]; CONTEXT_INPUTS * self.tiles];
+        for row in 0..CONTEXT_INPUTS {
+            for resident in 0..self.capacity {
+                packed_context[row * self.tiles + resident / 4][resident % 4] =
+                    context[row * self.capacity + resident];
+            }
+        }
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                packed_context.as_ptr(),
+                self.context.contents() as *mut [f32; 4],
+                packed_context.len(),
+            );
+        }
         let selected_index_buffer =
             (!selected_indices.is_empty()).then(|| buf(&self.device, selected_indices));
         let selected_buffer = (!selected_indices.is_empty())
@@ -955,7 +1069,6 @@ impl Engine {
         let gpu_dt = dt as f32;
         let p0 = buf(&self.device, &[self.params(gpu_dt, mask, false)]);
         let p1 = buf(&self.device, &[self.params(gpu_dt, mask, true)]);
-        let hidden_rows = buf(&self.device, &[BODY_HIDDEN as u32]);
         let cb_afferents = self.queue.new_command_buffer();
 
         self.encode_compute(
@@ -964,18 +1077,6 @@ impl Engine {
             &[&self.drive],
             &p0,
             N * self.tiles,
-        );
-        self.encode_compute(
-            cb_afferents,
-            &self.k_normalize_body,
-            &[
-                &self.sensory,
-                &self.body_mean,
-                &self.body_scale,
-                &self.body_normalized,
-            ],
-            &p0,
-            BODY_INPUTS * self.tiles,
         );
         {
             let enc = cb_afferents.new_compute_command_encoder();
@@ -1000,42 +1101,60 @@ impl Engine {
             Self::grid(enc, &self.k_optic, RECEPTORS * self.tiles);
             enc.end_encoding();
         }
-        self.body_input_mm.encode(cb_afferents);
         {
             let enc = cb_afferents.new_compute_command_encoder();
             bind(
                 enc,
-                &self.k_tanh_bias,
+                &self.k_body_scatter,
                 &[
-                    &self.body_hidden_pre,
-                    &self.body_input_bias,
-                    &self.body_hidden,
+                    &self.sensory,
+                    &self.body_mean,
+                    &self.body_scale,
+                    &self.body_weight,
+                    &self.body_mask,
+                    &self.body_bias,
+                    &self.body_rows,
+                    &self.drive,
                 ],
             );
+            enc.set_buffer(
+                0,
+                Some(&self.sensory),
+                (SITES * 3 * self.tiles * size_of::<[f32; 4]>()) as u64,
+            );
             enc.set_buffer(8, Some(&p0), 0);
-            enc.set_buffer(9, Some(&hidden_rows), 0);
-            Self::grid(enc, &self.k_tanh_bias, BODY_HIDDEN * self.tiles);
+            Self::grid(enc, &self.k_body_scatter, BODY_TARGETS * self.tiles);
             enc.end_encoding();
         }
-        self.body_output_mm.encode(cb_afferents);
         self.encode_compute(
             cb_afferents,
-            &self.k_body_scatter,
+            &self.k_context_scatter,
             &[
-                &self.body_current_pre,
-                &self.body_output_bias,
-                &self.body_rows,
+                &self.context,
+                &self.context_weight,
+                &self.context_bias,
+                &self.context_rows,
                 &self.drive,
-                &self.body_normalized,
-                &self.neutral_drive,
             ],
             &p0,
-            BODY_TARGETS * self.tiles,
+            CONTEXT_TARGETS * self.tiles,
         );
         let cb_recurrence = self.queue.new_command_buffer();
-        for (params, input, output) in [
-            (&p0, &self.rate[0], &self.rate[1]),
-            (&p1, &self.rate[1], &self.rate[0]),
+        for (params, input, output, modulation_in, modulation_out) in [
+            (
+                &p0,
+                &self.rate[0],
+                &self.rate[1],
+                &self.modulation[0],
+                &self.modulation[1],
+            ),
+            (
+                &p1,
+                &self.rate[1],
+                &self.rate[0],
+                &self.modulation[1],
+                &self.modulation[0],
+            ),
         ] {
             let enc = cb_recurrence.new_compute_command_encoder();
             bind(
@@ -1045,28 +1164,45 @@ impl Engine {
                     &self.rec[0],
                     &self.rec[1],
                     &self.rec[2],
+                    &self.rec[3],
                     input,
                     output,
-                    &self.adapt,
-                    &self.support,
-                    &self.drive,
+                    modulation_in,
+                    modulation_out,
                 ],
             );
             enc.set_buffer(8, Some(params), 0);
-            for (slot, parameter) in self.dynamics.iter().enumerate() {
-                enc.set_buffer(9 + slot as u64, Some(parameter), 0);
+            enc.set_buffer(9, Some(&self.adapt), 0);
+            enc.set_buffer(10, Some(&self.support), 0);
+            enc.set_buffer(11, Some(&self.release), 0);
+            enc.set_buffer(12, Some(&self.drive), 0);
+            for i in 0..4 {
+                enc.set_buffer(13 + i as u64, Some(&self.dynamics[i]), 0);
             }
-            enc.set_buffer(14, Some(&self.neutral_drive), 0);
-            if self.simd_rows {
-                enc.dispatch_threads(
-                    MTLSize::new((N * self.tiles * 32) as u64, 1, 1),
-                    MTLSize::new(256, 1, 1),
-                );
-            } else {
-                Self::grid(enc, &self.k_rec, N * self.tiles);
+            enc.set_buffer(17, Some(&self.neuron_type), 0);
+            for i in 7..10 {
+                enc.set_buffer(11 + i as u64, Some(&self.dynamics[i]), 0);
             }
+            enc.set_buffer(21, Some(&self.neutral_drive), 0);
+            Self::grid(enc, &self.k_rec, N * self.tiles);
             enc.end_encoding();
         }
+        self.encode_compute(
+            cb_recurrence,
+            &self.k_finalize,
+            &[
+                &self.rate[0],
+                &self.adapt,
+                &self.support,
+                &self.release,
+                &self.dynamics[0],
+                &self.dynamics[4],
+                &self.dynamics[5],
+                &self.dynamics[6],
+            ],
+            &p1,
+            N * self.tiles,
+        );
         let cb_readout = self.queue.new_command_buffer();
         {
             let enc = cb_readout.new_compute_command_encoder();
@@ -1099,6 +1235,20 @@ impl Engine {
             ],
             &p1,
             LATENT * self.tiles,
+        );
+        self.encode_compute(
+            cb_readout,
+            &self.k_motor,
+            &[
+                &self.rate[0],
+                &self.motor_rows,
+                &self.motor_weight,
+                &self.motor_mask,
+                &self.motor_bias,
+                &self.motor,
+            ],
+            &p1,
+            MOTOR_OUTPUTS * self.tiles,
         );
         let cb_observer = self.queue.new_command_buffer();
         if let (Some(indices), Some(selected)) = (&selected_index_buffer, &selected_buffer) {
@@ -1161,6 +1311,7 @@ impl Engine {
         }
         let phase_ms = command_buffers.map(command_buffer_gpu_milliseconds);
         let latent = unpack(&self.latent, LATENT);
+        let motor = unpack(&self.motor, MOTOR_OUTPUTS);
         let selected = selected_buffer
             .as_ref()
             .map_or_else(Vec::new, |b| unpack(b, selected_indices.len()));
@@ -1168,6 +1319,7 @@ impl Engine {
         if latent
             .iter()
             .chain(selected.iter())
+            .chain(motor.iter())
             .chain(physiology.iter())
             .any(|x| !x.is_finite())
         {
@@ -1183,6 +1335,7 @@ impl Engine {
         }
         Ok((
             latent,
+            motor,
             selected,
             physiology,
             self.times.clone(),
@@ -1201,6 +1354,7 @@ impl Engine {
             let rate1 = self.rate[1].contents() as *mut [f32; 4];
             let adapt = self.adapt.contents() as *mut [f32; 4];
             let support = self.support.contents() as *mut [f32; 4];
+            let release = self.release.contents() as *mut [f32; 4];
             for row in 0..N {
                 for slot in 0..self.capacity {
                     if mask & (1u32 << slot) != 0 {
@@ -1209,6 +1363,14 @@ impl Engine {
                         (*rate1.add(index))[slot % 4] = baseline[row];
                         (*adapt.add(index))[slot % 4] = 0.0;
                         (*support.add(index))[slot % 4] = 1.0;
+                        (*release.add(index))[slot % 4] = 1.0;
+                        for modulation_buffer in &self.modulation {
+                            let modulation = modulation_buffer.contents() as *mut [f32; 4];
+                            for family in 0..3 {
+                                (*modulation.add((row * 3 + family) * self.tiles + slot / 4))
+                                    [slot % 4] = 0.0;
+                            }
+                        }
                     }
                 }
             }
@@ -1229,11 +1391,14 @@ impl Engine {
             "format": FORMAT,
             "graph_sha256": self.metadata.graph_sha256,
             "atlas_sha256": self.metadata.atlas_sha256,
+            "anatomy_sha256": self.metadata.anatomy_sha256,
             "readout_mask_sha256": self.metadata.readout_mask_sha256,
             "adapter_sha256": self.metadata.adapter_sha256,
             "service_artifact_sha256": self.artifact_sha256,
             "sensory_dim": INPUTS,
             "latent_dim": LATENT,
+            "context_dim": CONTEXT_INPUTS,
+            "motor_dim": MOTOR_OUTPUTS,
         })
     }
 
@@ -1243,13 +1408,15 @@ impl Engine {
             "neurons": N,
             "inputs": INPUTS,
             "readouts": LATENT,
+            "context_inputs": CONTEXT_INPUTS,
+            "motor_outputs": MOTOR_OUTPUTS,
             "kernel": if self.simd_rows { "simd" } else { "row" },
             "capacity": self.capacity,
             "storage_tiles": self.tiles,
-            "dynamics": "operating-point-relative-v2",
+            "dynamics": "typed-release-modulation-v3",
             "readout_rank": READOUT_RANK,
             "snapshot_format": SNAPSHOT_FORMAT,
-            "sensory_order": "optic_site_major_rgb_then_body43",
+            "sensory_order": "channel-major optic_site_rgb_then_body110",
             "training_status": self.metadata.training_status,
             "provenance": self.metadata.provenance,
             "cns_adapter": self.identity(),
@@ -1265,6 +1432,7 @@ impl Engine {
             service_artifact_sha256: self.artifact_sha256.clone(),
             graph_sha256: self.metadata.graph_sha256.clone(),
             atlas_sha256: self.metadata.atlas_sha256.clone(),
+            anatomy_sha256: self.metadata.anatomy_sha256.clone(),
             readout_mask_sha256: self.metadata.readout_mask_sha256.clone(),
             adapter_sha256: self.metadata.adapter_sha256.clone(),
             metadata,
@@ -1279,6 +1447,7 @@ impl Engine {
             || header.service_artifact_sha256 != self.artifact_sha256
             || header.graph_sha256 != self.metadata.graph_sha256
             || header.atlas_sha256 != self.metadata.atlas_sha256
+            || header.anatomy_sha256 != self.metadata.anatomy_sha256
             || header.readout_mask_sha256 != self.metadata.readout_mask_sha256
             || header.adapter_sha256 != self.metadata.adapter_sha256
         {
@@ -1303,10 +1472,25 @@ impl Engine {
                 self.times.len() * size_of::<f64>(),
             )
         };
+        let modulation = copy::<[f32; 4]>(&self.modulation[0], N * self.tiles * 3);
+        let modulation_family = |family: usize| -> Vec<[f32; 4]> {
+            let mut values = vec![[0.0; 4]; N * self.tiles];
+            for row in 0..N {
+                for tile in 0..self.tiles {
+                    values[row * self.tiles + tile] =
+                        modulation[(row * 3 + family) * self.tiles + tile];
+                }
+            }
+            values
+        };
         let state = [
             copy::<[f32; 4]>(&self.rate[0], N * self.tiles),
             copy::<[f32; 4]>(&self.adapt, N * self.tiles),
             copy::<[f32; 4]>(&self.support, N * self.tiles),
+            copy::<[f32; 4]>(&self.release, N * self.tiles),
+            modulation_family(0),
+            modulation_family(1),
+            modulation_family(2),
         ];
         validate_physical_state(&state, self.capacity, self.tiles)?;
         exclusive_atomic_write(path, |file| {
@@ -1332,7 +1516,7 @@ impl Engine {
         file.read_exact(&mut magic)
             .map_err(|e| format!("read snapshot header: {e}"))?;
         if &magic != SNAPSHOT_MAGIC {
-            return Err("snapshot header differs; only CNSSTATE2 is accepted".into());
+            return Err("snapshot header differs; only CNSSTATE3 is accepted".into());
         }
         let mut length = [0u8; 8];
         file.read_exact(&mut length)
@@ -1361,7 +1545,7 @@ impl Engine {
         }
         let state_bytes = N * self.tiles * size_of::<[f32; 4]>();
         let state = if load_state {
-            let mut arrays = [Vec::new(), Vec::new(), Vec::new()];
+            let mut arrays: [Vec<[f32; 4]>; 7] = std::array::from_fn(|_| Vec::new());
             for values in &mut arrays {
                 values.resize(N * self.tiles, [0f32; 4]);
                 file.read_exact(unsafe {
@@ -1374,7 +1558,7 @@ impl Engine {
             }
             Some(arrays)
         } else {
-            file.seek(SeekFrom::Current((3 * state_bytes) as i64))
+            file.seek(SeekFrom::Current((7 * state_bytes) as i64))
                 .map_err(|e| format!("inspect snapshot state length: {e}"))?;
             None
         };
@@ -1385,7 +1569,7 @@ impl Engine {
             + 8
             + header_len as u64
             + (self.capacity * size_of::<f64>()) as u64
-            + (3 * state_bytes) as u64;
+            + (7 * state_bytes) as u64;
         if file
             .stream_position()
             .map_err(|e| format!("inspect snapshot position: {e}"))?
@@ -1411,9 +1595,9 @@ impl Engine {
         }
         let loaded = self.read_snapshot(path, true)?;
         let state = loaded.state.unwrap();
-        for (buffer, values) in [&self.rate[0], &self.adapt, &self.support]
+        for (buffer, values) in [&self.rate[0], &self.adapt, &self.support, &self.release]
             .into_iter()
-            .zip(state.iter())
+            .zip(state[..4].iter())
         {
             unsafe {
                 let target = buffer.contents() as *mut [f32; 4];
@@ -1422,6 +1606,23 @@ impl Engine {
                         if mask & (1u32 << slot) != 0 {
                             let index = row * self.tiles + slot / 4;
                             (*target.add(index))[slot % 4] = values[index][slot % 4];
+                        }
+                    }
+                }
+            }
+        }
+        unsafe {
+            for modulation_buffer in &self.modulation {
+                let target = modulation_buffer.contents() as *mut [f32; 4];
+                for family in 0..3 {
+                    for row in 0..N {
+                        for slot in 0..self.capacity {
+                            if mask & (1u32 << slot) != 0 {
+                                let target_index = (row * 3 + family) * self.tiles + slot / 4;
+                                let source_index = row * self.tiles + slot / 4;
+                                (*target.add(target_index))[slot % 4] =
+                                    state[4 + family][source_index][slot % 4];
+                            }
                         }
                     }
                 }
@@ -1559,11 +1760,19 @@ fn main() {
                     dt,
                     active_mask,
                     sensory,
+                    context,
                     selected_neuron_indices,
-                }) => match engine.step(dt, active_mask, &sensory, &selected_neuron_indices) {
-                    Ok((latent, selected, physiology, times, gpu_ms, phase_ms)) => {
+                }) => match engine.step(
+                    dt,
+                    active_mask,
+                    &sensory,
+                    &context,
+                    &selected_neuron_indices,
+                ) {
+                    Ok((latent, motor, selected, physiology, times, gpu_ms, phase_ms)) => {
                         ok_reply(json!({
                             "latent": latent,
+                            "motor": motor,
                             "selected_rates": if selected_neuron_indices.is_empty() { None } else { Some(selected) },
                             "physiology": physiology,
                             "times": times,

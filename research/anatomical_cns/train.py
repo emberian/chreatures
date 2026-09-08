@@ -157,7 +157,10 @@ class Recipe:
     updates: int
     sequence: int
     burn_in: int
-    learning_rate: float
+    motor_learning_rate: float
+    body_learning_rate: float
+    dynamics_learning_rate: float
+    head_learning_rate: float
     weight_decay: float
     max_grad_norm: float
     checkpoint_every: int
@@ -180,6 +183,7 @@ def run_window(
     sequence: int,
     burn_in: int,
     device: torch.device,
+    diagnostics: bool = False,
 ) -> dict[str, torch.Tensor]:
     first = max(0, start - burn_in)
     state = None
@@ -192,6 +196,7 @@ def run_window(
     if state is not None:
         state = state.detach()
     values: dict[str, list[torch.Tensor]] = {name: [] for name in ("motor", "sensory", "pose", "joint", "persistence_sensory", "persistence_pose")}
+    predicted_motors: list[torch.Tensor] = []
     for tick in range(start, start + sequence):
         optic = _tensor(episode.optic_rgb[tick, resident : resident + 1].reshape(1, 1771, 3), device)
         next_optic = _tensor(episode.optic_rgb[tick + 1, resident : resident + 1].reshape(1, 1771, 3), device)
@@ -216,7 +221,12 @@ def run_window(
         values["joint"].append(F.smooth_l1_loss(predicted_joint, target_joint, beta=.08))
         values["persistence_sensory"].append(F.smooth_l1_loss(torch.zeros_like(sensory_target), sensory_target, beta=.05))
         values["persistence_pose"].append(F.smooth_l1_loss(torch.zeros_like(pose_target), pose_target, beta=.05))
-    return {name: torch.stack(items).mean() for name, items in values.items()}
+        if diagnostics:
+            predicted_motors.append(predicted_motor.detach())
+    result = {name: torch.stack(items).mean() for name, items in values.items()}
+    if diagnostics:
+        result["_motor_values"] = torch.cat(predicted_motors, dim=0)
+    return result
 
 
 def combined_loss(losses: dict[str, torch.Tensor], recipe: Recipe) -> torch.Tensor:
@@ -251,15 +261,36 @@ def evaluate(
     model.eval(); heads.eval()
     rows = []
     for episode, resident, start in fixed_evaluation_windows(episodes, recipe.sequence):
-        losses = run_window(model, heads, episode, resident, start, recipe.sequence, recipe.burn_in, device)
-        rows.append({name: float(value) for name, value in losses.items()})
-    mean = {name: float(np.mean([row[name] for row in rows])) for name in rows[0]}
+        losses = run_window(model, heads, episode, resident, start, recipe.sequence, recipe.burn_in, device, diagnostics=True)
+        motors = losses.pop("_motor_values")
+        rows.append({name: float(value) for name, value in losses.items()} | {
+            "motor_mean": motors.mean(0).cpu().tolist(),
+            "motor_min": float(motors.min()), "motor_max": float(motors.max()),
+            "motor_low_fraction": float((motors < .01).float().mean()),
+            "motor_high_fraction": float((motors > .99).float().mean()),
+        })
+    loss_names = ("motor", "sensory", "pose", "joint", "persistence_sensory", "persistence_pose")
+    mean = {name: float(np.mean([row[name] for row in rows])) for name in loss_names}
     mean["total"] = float(
         recipe.motor_weight * mean["motor"] + recipe.sensory_weight * mean["sensory"]
         + recipe.pose_weight * mean["pose"] + recipe.joint_target_weight * mean["joint"]
     )
+    vectors = np.asarray([row["motor_mean"] for row in rows], np.float64).reshape(len(episodes), len(SKILLS), MOTOR)
+    skill_means = vectors.mean(0)
+    pairwise = [float(np.sqrt(np.mean(np.square(skill_means[a] - skill_means[b]))))
+                for a in range(4) for b in range(a + 1, 4)]
+    responsiveness = {
+        "motor_mean_by_skill": {skill: skill_means[index].tolist() for index, skill in enumerate(SKILLS)},
+        "four_tone_skill_pairwise_rms_mean": float(np.mean(pairwise)),
+        "four_tone_skill_pairwise_rms_min": float(np.min(pairwise)),
+        "window_motor_min": float(min(row["motor_min"] for row in rows)),
+        "window_motor_max": float(max(row["motor_max"] for row in rows)),
+        "low_saturation_fraction": float(np.mean([row["motor_low_fraction"] for row in rows])),
+        "high_saturation_fraction": float(np.mean([row["motor_high_fraction"] for row in rows])),
+        "warning": "fixed collection bout order confounds tone and physical state; counterbalanced physical assay required for tone mapping",
+    }
     model.train(); heads.train()
-    return {"overall": mean, "windows": rows, "whole_world_split": "heldout-worlds"}
+    return {"overall": mean, "responsiveness": responsiveness, "windows": rows, "whole_world_split": "heldout-worlds"}
 
 
 def atomic_json(path: Path, value: Any) -> None:
@@ -324,14 +355,26 @@ def command_train(arguments: argparse.Namespace) -> None:
     heads = TrainingHeads().to(device)
     recipe = Recipe(
         seed=arguments.seed, updates=arguments.updates, sequence=arguments.sequence,
-        burn_in=arguments.burn_in, learning_rate=arguments.learning_rate,
+        burn_in=arguments.burn_in, motor_learning_rate=arguments.motor_learning_rate,
+        body_learning_rate=arguments.body_learning_rate, dynamics_learning_rate=arguments.dynamics_learning_rate,
+        head_learning_rate=arguments.head_learning_rate,
         weight_decay=arguments.weight_decay, max_grad_norm=arguments.max_grad_norm,
         checkpoint_every=arguments.checkpoint_every, motor_weight=arguments.motor_weight,
         sensory_weight=arguments.sensory_weight, pose_weight=arguments.pose_weight,
         joint_target_weight=arguments.joint_target_weight,
     )
-    parameters = [parameter for parameter in model.parameters() if parameter.requires_grad] + list(heads.parameters())
-    optimizer = torch.optim.AdamW(parameters, lr=recipe.learning_rate, weight_decay=recipe.weight_decay)
+    named = dict(model.named_parameters())
+    motor_parameters = [named[name] for name in ("motor_weight_raw", "motor_bias")]
+    body_parameters = [named[name] for name in ("body_weight", "body_bias")]
+    dynamics_parameters = [named[name] for name in trainable if name.startswith("dynamics_")]
+    head_parameters = list(heads.parameters())
+    parameters = motor_parameters + body_parameters + dynamics_parameters + head_parameters
+    optimizer = torch.optim.AdamW([
+        {"params": motor_parameters, "lr": recipe.motor_learning_rate, "name": "motor"},
+        {"params": body_parameters, "lr": recipe.body_learning_rate, "name": "body"},
+        {"params": dynamics_parameters, "lr": recipe.dynamics_learning_rate, "name": "dynamics"},
+        {"params": head_parameters, "lr": recipe.head_learning_rate, "name": "training-heads"},
+    ], weight_decay=recipe.weight_decay)
     corpus_manifest = arguments.corpus.resolve() / "corpus.json"
     identity = {
         "training_format": TRAINING_FORMAT,
@@ -406,6 +449,89 @@ def command_train(arguments: argparse.Namespace) -> None:
                       "after": after["overall"]}), flush=True)
 
 
+@torch.inference_mode()
+def motor_activity_diagnostic(
+    service: Path, episodes: list[Episode], device: torch.device
+) -> dict[str, Any]:
+    metadata, arrays = load_service(service)
+    model = AnatomicalCNS(arrays, device=device).eval()
+    weight = (F.softplus(model.motor_weight_raw) * model.motor_mask).detach()
+    r0 = model.effective()[0]
+    baseline_drive = (weight @ r0[model.motor_rows.long()] + model.motor_bias[:, None]).squeeze(1)
+    deviations, dynamic_drives, motors = [], [], []
+    for episode in episodes:
+        state = None
+        for tick in range(episode.delivered_motor.shape[0]):
+            optic = _tensor(episode.optic_rgb[tick].reshape(RESIDENTS, 1771, 3), device)
+            body = _tensor(episode.body[tick], device)
+            context = _tensor(episode.delivered_context[tick], device)
+            _, motor, state = model(optic, body, context, state)
+            deviation = state.rates[model.motor_rows.long()] - r0[model.motor_rows.long()]
+            deviations.append(deviation.T.cpu().numpy())
+            dynamic_drives.append((weight @ deviation).T.cpu().numpy())
+            motors.append(motor.cpu().numpy())
+    deviation = np.concatenate(deviations, axis=0).astype(np.float64)
+    dynamic = np.concatenate(dynamic_drives, axis=0).astype(np.float64)
+    motor = np.concatenate(motors, axis=0).astype(np.float64)
+    neuron_std = deviation.std(0)
+    channel_std = dynamic.std(0)
+    motor_std = motor.std(0)
+    baseline = baseline_drive.cpu().numpy().astype(np.float64)
+    bias = model.motor_bias.detach().cpu().numpy().astype(np.float64)
+    result = {
+        "service_sha256": sha256_file(service), "adapter_sha256": metadata["adapter_sha256"],
+        "training_status": metadata["training_status"], "worlds": len(episodes),
+        "resident_ticks": int(deviation.shape[0]),
+        "motor_neuron_rate_deviation": {
+            "rms": float(np.sqrt(np.mean(np.square(deviation)))),
+            "temporal_std_median": float(np.median(neuron_std)),
+            "temporal_std_p95": float(np.quantile(neuron_std, .95)),
+            "temporal_std_max": float(neuron_std.max()),
+            "count_std_above_1e-5": int(np.count_nonzero(neuron_std > 1e-5)),
+            "count_std_above_1e-4": int(np.count_nonzero(neuron_std > 1e-4)),
+            "count_std_above_1e-3": int(np.count_nonzero(neuron_std > 1e-3)),
+            "neurons": int(neuron_std.size),
+        },
+        "decoder": {
+            "bias_min": float(bias.min()), "bias_max": float(bias.max()),
+            "baseline_plus_bias_min": float(baseline.min()), "baseline_plus_bias_max": float(baseline.max()),
+            "dynamic_preactivation_rms": float(np.sqrt(np.mean(np.square(dynamic)))),
+            "dynamic_preactivation_std_mean": float(channel_std.mean()),
+            "dynamic_preactivation_std_max": float(channel_std.max()),
+            "dynamic_preactivation_abs_max": float(np.abs(dynamic).max()),
+            "dynamic_to_baseline_rms_ratio": float(
+                np.sqrt(np.mean(np.square(dynamic))) / max(1e-12, np.sqrt(np.mean(np.square(baseline))))
+            ),
+            "effective_weight_mean": float(weight.mean().cpu()),
+            "effective_weight_max": float(weight.max().cpu()),
+        },
+        "motor_output": {
+            "min": float(motor.min()), "max": float(motor.max()),
+            "channel_std_mean": float(motor_std.mean()), "channel_std_max": float(motor_std.max()),
+        },
+    }
+    del model
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+    return result
+
+
+def command_diagnose(arguments: argparse.Namespace) -> None:
+    train, heldout = load_corpus(arguments.corpus)
+    episodes = train if arguments.split == "train" else heldout
+    device = torch.device(arguments.device)
+    result = {
+        "format": "chreatures-anatomical-cns-motor-activity-diagnostic-v1",
+        "corpus_manifest_sha256": sha256_file(arguments.corpus.resolve() / "corpus.json"),
+        "split": arguments.split,
+        "services": [motor_activity_diagnostic(path.resolve(), episodes, device) for path in arguments.service],
+        "interpretation_limit": "Activity and decoder attribution only; no motor competence or tone association claim.",
+    }
+    atomic_json(arguments.output.resolve(), result)
+    print(json.dumps({"output": str(arguments.output.resolve()), "sha256": sha256_file(arguments.output.resolve()),
+                      "services": result["services"]}, indent=2))
+
+
 def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser(description=__doc__)
     sub = value.add_subparsers(dest="command", required=True)
@@ -413,12 +539,22 @@ def parser() -> argparse.ArgumentParser:
     pack.add_argument("source", type=Path); pack.add_argument("output", type=Path)
     inspect = sub.add_parser("inspect", help="authenticate a sealed corpus")
     inspect.add_argument("corpus", type=Path)
+    diagnose = sub.add_parser("diagnose-motor", help="attribute motor constancy to CNS activity and decoder drive")
+    diagnose.add_argument("--corpus", type=Path, required=True)
+    diagnose.add_argument("--service", type=Path, action="append", required=True)
+    diagnose.add_argument("--output", type=Path, required=True)
+    diagnose.add_argument("--device", default="cuda")
+    diagnose.add_argument("--split", choices=("train", "heldout"), default="heldout")
     train = sub.add_parser("train", help="fit V3 physical interfaces on ROCm")
     train.add_argument("--corpus", type=Path, required=True); train.add_argument("--service", type=Path, required=True)
     train.add_argument("--run", type=Path, required=True); train.add_argument("--device", default="cuda")
-    train.add_argument("--seed", type=int, default=20260907); train.add_argument("--updates", type=int, default=160)
+    train.add_argument("--seed", type=int, default=20260907); train.add_argument("--updates", type=int, default=320)
     train.add_argument("--sequence", type=int, default=4); train.add_argument("--burn-in", type=int, default=8)
-    train.add_argument("--learning-rate", type=float, default=8e-5); train.add_argument("--weight-decay", type=float, default=1e-5)
+    train.add_argument("--motor-learning-rate", type=float, default=3e-3)
+    train.add_argument("--body-learning-rate", type=float, default=1e-3)
+    train.add_argument("--dynamics-learning-rate", type=float, default=3e-4)
+    train.add_argument("--head-learning-rate", type=float, default=1e-3)
+    train.add_argument("--weight-decay", type=float, default=1e-5)
     train.add_argument("--max-grad-norm", type=float, default=1.0); train.add_argument("--checkpoint-every", type=int, default=40)
     train.add_argument("--motor-weight", type=float, default=1.0); train.add_argument("--sensory-weight", type=float, default=.20)
     train.add_argument("--pose-weight", type=float, default=.12); train.add_argument("--joint-target-weight", type=float, default=.18)
@@ -433,6 +569,8 @@ def main() -> None:
         train, heldout = load_corpus(arguments.corpus)
         print(json.dumps({"train": [episode.sha256 for episode in train],
                           "heldout": [episode.sha256 for episode in heldout]}, indent=2))
+    elif arguments.command == "diagnose-motor":
+        command_diagnose(arguments)
     else:
         command_train(arguments)
 

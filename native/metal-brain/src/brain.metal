@@ -29,11 +29,202 @@ inline float4 hold_inactive(float4 next, float4 old, constant Params &p, uint ti
     return next;
 }
 
-// Metal Shading Language does not expose expm1. All V2 exponents are negative
+// Metal Shading Language does not expose expm1. These exponents are negative
 // and bounded away from zero at resident tick scales, so this is the direct
 // single-precision spelling of -expm1(x).
 inline float negative_expm1(float x) {
     return 1.0f - exp(x);
+}
+
+inline float stable_sigmoid(float x) {
+    if (x >= 0.0f) return 1.0f / (1.0f + exp(-x));
+    float z = exp(x);
+    return z / (1.0f + z);
+}
+
+inline float stable_softplus(float x) {
+    return max(x, 0.0f) + log(1.0f + exp(-abs(x)));
+}
+
+// Anatomical CNS V3 uses separate entry points and buffer contracts. This keeps
+// a mismatched host from silently dispatching these dynamics.
+kernel void v3_project_body_masked(
+    device const float4 *body [[buffer(0)]],
+    device const float *mean [[buffer(1)]],
+    device const float *scale [[buffer(2)]],
+    device const float *weights [[buffer(3)]],
+    device const float *mask [[buffer(4)]],
+    device const float *bias [[buffer(5)]],
+    device const uint *body_rows [[buffer(6)]],
+    device float4 *drive [[buffer(7)]],
+    constant Params &p [[buffer(8)]],
+    uint gid [[thread_position_in_grid]]) {
+    constexpr uint body_channels = 110;
+    constexpr uint body_afferents = 11233;
+    if (p.tiles == 0) return;
+    uint afferent = gid / p.tiles, tile = gid % p.tiles;
+    if (afferent >= body_afferents || tile >= p.tiles) return;
+    uint target = body_rows[afferent];
+    if (target >= p.n) return;
+    float4 u = bias[afferent];
+    uint base = afferent * body_channels;
+    for (uint channel = 0; channel < body_channels; ++channel) {
+        float4 z = clamp((body[channel * p.tiles + tile] - mean[channel]) /
+                         scale[channel], -8.0f, 8.0f);
+        u += weights[base + channel] * mask[base + channel] * z;
+    }
+    float4 current;
+    for (uint lane = 0; lane < 4; ++lane) current[lane] = stable_sigmoid(u[lane]);
+    drive[target * p.tiles + tile] = mask_inactive(current, p, tile);
+}
+
+kernel void v3_project_context_zero_neutral(
+    device const float4 *context [[buffer(0)]],
+    device const float *weights [[buffer(1)]],
+    device const float *bias [[buffer(2)]],
+    device const uint *context_rows [[buffer(3)]],
+    device float4 *drive [[buffer(4)]],
+    constant Params &p [[buffer(8)]],
+    uint gid [[thread_position_in_grid]]) {
+    constexpr uint context_channels = 12;
+    constexpr uint context_afferents = 1314;
+    if (p.tiles == 0) return;
+    uint afferent = gid / p.tiles, tile = gid % p.tiles;
+    if (afferent >= context_afferents || tile >= p.tiles) return;
+    uint target = context_rows[afferent];
+    if (target >= p.n) return;
+    float4 u = bias[afferent];
+    uint base = afferent * context_channels;
+    for (uint channel = 0; channel < context_channels; ++channel) {
+        u += weights[base + channel] * context[channel * p.tiles + tile];
+    }
+    float4 current = 0.15f * (tanh(u) - tanh(bias[afferent]));
+    drive[target * p.tiles + tile] = mask_inactive(current, p, tile);
+}
+
+kernel void v3_csr_dynamics(
+    device const uint *rowptr [[buffer(0)]],
+    device const uint *columns [[buffer(1)]],
+    device const float *weights [[buffer(2)]],
+    device const uint *channel [[buffer(3)]],
+    device const float4 *rate_in [[buffer(4)]],
+    device float4 *rate_out [[buffer(5)]],
+    device const float4 *modulation_in [[buffer(6)]],
+    device float4 *modulation_out [[buffer(7)]],
+    constant Params &p [[buffer(8)]],
+    device const float4 *adaptation [[buffer(9)]],
+    device const float4 *support [[buffer(10)]],
+    device const float4 *release [[buffer(11)]],
+    device const float4 *drive [[buffer(12)]],
+    device const float *baseline [[buffer(13)]],
+    device const float *recurrent_gain [[buffer(14)]],
+    device const float *tau [[buffer(15)]],
+    device const float *adaptation_gain [[buffer(16)]],
+    device const uint *neuron_type [[buffer(17)]],
+    device const float *mod_gain_raw [[buffer(18)]],
+    device const float *mod_adaptation_raw [[buffer(19)]],
+    device const float *modulation_tau [[buffer(20)]],
+    device const float *neutral_drive [[buffer(21)]],
+    uint gid [[thread_position_in_grid]]) {
+    if (p.tiles == 0) return;
+    uint row = gid / p.tiles, tile = gid % p.tiles;
+    if (row >= p.n || tile >= p.tiles) return;
+    uint index = row * p.tiles + tile;
+    float4 fast = 0.0f;
+    float4 mod_input[3] = { float4(0.0f), float4(0.0f), float4(0.0f) };
+    uint begin = rowptr[row], end = rowptr[row + 1];
+    for (uint edge = begin; edge < end; ++edge) {
+        uint source = columns[edge];
+        if (source >= p.n) continue;
+        float4 x = rate_in[source * p.tiles + tile] - baseline[source];
+        uint family = channel[source];
+        if (family == 1u) {
+            fast += weights[edge] * x * release[source * p.tiles + tile];
+        } else if (family >= 2u && family <= 4u) {
+            mod_input[family - 2u] += weights[edge] * x;
+        }
+    }
+    float r0 = baseline[row];
+    float h = min(r0, 1.0f - r0);
+    constexpr uint neuron_types = 11752;
+    uint type = min(neuron_type[row], neuron_types - 1);
+    float4 mg = 0.0f, ma = 0.0f;
+    for (uint family = 0; family < 3; ++family) {
+        uint mi = (row * 3 + family) * p.tiles + tile;
+        float4 old_m = modulation_in[mi];
+        float alpha = negative_expm1(-p.dt / (2.0f * modulation_tau[family]));
+        float4 next_m = old_m + alpha * (mod_input[family] - old_m);
+        next_m = hold_inactive(next_m, old_m, p, tile);
+        modulation_out[mi] = next_m;
+        mg += 0.5f * tanh(mod_gain_raw[type * 3 + family]) * next_m / h;
+        ma += 0.5f * tanh(mod_adaptation_raw[type * 3 + family]) * next_m / h;
+    }
+    float4 old_rate = rate_in[index];
+    float4 u = drive[index] - neutral_drive[row]
+        + recurrent_gain[row] * exp(0.5f * tanh(mg)) * fast
+        - adaptation_gain[row] * (1.0f + 0.5f * tanh(ma)) * adaptation[index];
+    float4 target = r0 + support[index] * h * tanh(u / h);
+    float alpha = negative_expm1(-p.dt / (2.0f * tau[row]));
+    rate_out[index] = hold_inactive(old_rate + alpha * (target - old_rate),
+                                    old_rate, p, tile);
+}
+
+kernel void v3_finalize_private_state(
+    device const float4 *rate [[buffer(0)]],
+    device float4 *adaptation [[buffer(1)]],
+    device float4 *support [[buffer(2)]],
+    device float4 *release [[buffer(3)]],
+    device const float *baseline [[buffer(4)]],
+    device const float *adaptation_tau [[buffer(5)]],
+    device const float *release_tau [[buffer(6)]],
+    device const float *release_use [[buffer(7)]],
+    constant Params &p [[buffer(8)]],
+    uint gid [[thread_position_in_grid]]) {
+    if (p.tiles == 0) return;
+    uint row = gid / p.tiles, tile = gid % p.tiles;
+    if (row >= p.n || tile >= p.tiles) return;
+    uint index = row * p.tiles + tile;
+    float4 old_a = adaptation[index], old_s = support[index], old_q = release[index];
+    float r0 = baseline[row], h = min(r0, 1.0f - r0);
+    float4 x = rate[index] - r0;
+    float aa = negative_expm1(-p.dt / adaptation_tau[row]);
+    float4 next_a = old_a + aa * (x - old_a);
+    float4 next_s = clamp(old_s + p.dt *
+        (0.024f * (1.0f - old_s) - 0.003f * abs(x) / h), 0.65f, 1.0f);
+    float4 next_q = clamp(old_q + p.dt *
+        ((1.0f - old_q) / release_tau[row]
+         - release_use[row] * abs(x) / h * old_q), 0.2f, 1.0f);
+    adaptation[index] = hold_inactive(next_a, old_a, p, tile);
+    support[index] = hold_inactive(next_s, old_s, p, tile);
+    release[index] = hold_inactive(next_q, old_q, p, tile);
+}
+
+kernel void v3_motor34_masked_softplus(
+    device const float4 *rates [[buffer(0)]],
+    device const uint *motor_rows [[buffer(1)]],
+    device const float *weight_raw [[buffer(2)]],
+    device const float *mask [[buffer(3)]],
+    device const float *bias [[buffer(4)]],
+    device float4 *motor [[buffer(5)]],
+    constant Params &p [[buffer(8)]],
+    uint gid [[thread_position_in_grid]]) {
+    constexpr uint motor_outputs = 34;
+    constexpr uint motor_neurons = 815;
+    if (p.tiles == 0) return;
+    uint output = gid / p.tiles, tile = gid % p.tiles;
+    if (output >= motor_outputs || tile >= p.tiles) return;
+    float4 u = bias[output];
+    uint base = output * motor_neurons;
+    for (uint j = 0; j < motor_neurons; ++j) {
+        uint source = motor_rows[j];
+        if (source >= p.n) continue;
+        u += stable_softplus(weight_raw[base + j]) * mask[base + j]
+            * rates[source * p.tiles + tile];
+    }
+    float4 value;
+    for (uint lane = 0; lane < 4; ++lane) value[lane] = stable_sigmoid(u[lane]);
+    if (output == 24u || output == 25u) value = 2.0f * value - 1.0f;
+    motor[gid] = mask_inactive(value, p, tile);
 }
 
 kernel void clear_drive(device float4 *drive [[buffer(0)]],
@@ -85,144 +276,6 @@ kernel void project_optic(
         if (neutral) current[lane] = neutral_drive[receptor_rows[receptor]];
     }
     drive[receptor_rows[receptor] * p.tiles + tile] = mask_inactive(current, p, tile);
-}
-
-kernel void normalize_body(device const float4 *sensory [[buffer(0)]],
-                           device const float *mean [[buffer(1)]],
-                           device const float *scale [[buffer(2)]],
-                           device float4 *normalized [[buffer(3)]],
-                           constant Params &p [[buffer(8)]],
-                           uint gid [[thread_position_in_grid]]) {
-    uint row = gid / p.tiles, tile = gid % p.tiles;
-    if (row >= 43) return;
-    float4 x = (sensory[(5313 + row) * p.tiles + tile] - mean[row]) / scale[row];
-    normalized[gid] = mask_inactive(clamp(x, -8.0f, 8.0f), p, tile);
-}
-
-kernel void tanh_bias(device const float4 *input [[buffer(0)]],
-                      device const float *bias [[buffer(1)]],
-                      device float4 *output [[buffer(2)]],
-                      constant Params &p [[buffer(8)]],
-                      constant uint &rows [[buffer(9)]],
-                      uint gid [[thread_position_in_grid]]) {
-    uint row = gid / p.tiles, tile = gid % p.tiles;
-    if (row >= rows) return;
-    output[gid] = mask_inactive(tanh(input[gid] + bias[row]), p, tile);
-}
-
-kernel void sigmoid_bias_scatter_body(device const float4 *input [[buffer(0)]],
-                                      device const float *bias [[buffer(1)]],
-                                      device const uint *body_rows [[buffer(2)]],
-                                      device float4 *drive [[buffer(3)]],
-                                      device const float4 *normalized [[buffer(4)]],
-                                      device const float *neutral_drive [[buffer(5)]],
-                                      constant Params &p [[buffer(8)]],
-                                      uint gid [[thread_position_in_grid]]) {
-    uint row = gid / p.tiles, tile = gid % p.tiles;
-    if (row >= 11233) return;
-    float4 current = 1.0f / (1.0f + exp(-(input[gid] + bias[row])));
-    for (uint lane = 0; lane < 4; ++lane) {
-        bool neutral = true;
-        for (uint channel = 0; channel < 43; ++channel) {
-            neutral = neutral && normalized[channel * p.tiles + tile][lane] == 0.0f;
-        }
-        if (neutral) current[lane] = neutral_drive[body_rows[row]];
-    }
-    drive[body_rows[row] * p.tiles + tile] = mask_inactive(current, p, tile);
-}
-
-inline void rate_update(uint row,
-                        uint tile,
-                        float4 recurrent,
-                        device const float4 *rate_in,
-                        device float4 *rate_out,
-                        device float4 *adapt,
-                        device float4 *support,
-                        device const float4 *drive,
-                        device const float *baseline,
-                        device const float *recurrent_gain,
-                        device const float *tau,
-                        device const float *adaptation_gain,
-                        device const float *adaptation_tau,
-                        device const float *neutral_drive,
-                        constant Params &p) {
-    uint index = row * p.tiles + tile;
-    float4 old = rate_in[index], a = adapt[index], s = support[index];
-    float r0 = baseline[row], h = min(r0, 1.0f - r0);
-    float alpha = negative_expm1(-p.dt / (2.0f * tau[row]));
-    float4 u = (drive[index] - neutral_drive[row])
-        + recurrent_gain[row] * recurrent - adaptation_gain[row] * a;
-    float4 target = r0 + s * h * tanh(u / h);
-    float4 next = hold_inactive(old + alpha * (target - old), old, p, tile);
-    rate_out[index] = next;
-    if (p.final_step) {
-        float4 x = next - r0;
-        float adaptation_alpha = negative_expm1(-p.dt / adaptation_tau[row]);
-        float4 na = a + adaptation_alpha * (x - a);
-        float4 ns = clamp(s + p.dt * (0.024f * (1.0f - s) - 0.003f * abs(x) / h), 0.65f, 1.0f);
-        adapt[index] = hold_inactive(na, a, p, tile);
-        support[index] = hold_inactive(ns, s, p, tile);
-    }
-}
-
-kernel void csr_rate(device const uint *rowptr [[buffer(0)]],
-                     device const uint *columns [[buffer(1)]],
-                     device const float *weights [[buffer(2)]],
-                     device const float4 *rate_in [[buffer(3)]],
-                     device float4 *rate_out [[buffer(4)]],
-                     device float4 *adapt [[buffer(5)]],
-                     device float4 *support [[buffer(6)]],
-                     device const float4 *drive [[buffer(7)]],
-                     constant Params &p [[buffer(8)]],
-                     device const float *baseline [[buffer(9)]],
-                     device const float *recurrent_gain [[buffer(10)]],
-                     device const float *tau [[buffer(11)]],
-                     device const float *adaptation_gain [[buffer(12)]],
-                     device const float *adaptation_tau [[buffer(13)]],
-                     device const float *neutral_drive [[buffer(14)]],
-                     uint gid [[thread_position_in_grid]]) {
-    uint row = gid / p.tiles, tile = gid % p.tiles;
-    if (row >= p.n) return;
-    float4 recurrent = 0.0f;
-    for (uint edge = rowptr[row]; edge < rowptr[row + 1]; ++edge) {
-        uint source = columns[edge];
-        recurrent += weights[edge] * (rate_in[source * p.tiles + tile] - baseline[source]);
-    }
-    rate_update(row, tile, recurrent, rate_in, rate_out, adapt, support, drive,
-                baseline, recurrent_gain, tau, adaptation_gain, adaptation_tau,
-                neutral_drive, p);
-}
-
-kernel void csr_rate_simd(device const uint *rowptr [[buffer(0)]],
-                          device const uint *columns [[buffer(1)]],
-                          device const float *weights [[buffer(2)]],
-                          device const float4 *rate_in [[buffer(3)]],
-                          device float4 *rate_out [[buffer(4)]],
-                          device float4 *adapt [[buffer(5)]],
-                          device float4 *support [[buffer(6)]],
-                          device const float4 *drive [[buffer(7)]],
-                          constant Params &p [[buffer(8)]],
-                          device const float *baseline [[buffer(9)]],
-                          device const float *recurrent_gain [[buffer(10)]],
-                          device const float *tau [[buffer(11)]],
-                          device const float *adaptation_gain [[buffer(12)]],
-                          device const float *adaptation_tau [[buffer(13)]],
-                          device const float *neutral_drive [[buffer(14)]],
-                          uint gid [[thread_position_in_grid]],
-                          uint lane [[thread_index_in_simdgroup]]) {
-    uint row_tile = gid >> 5, row = row_tile / p.tiles, tile = row_tile % p.tiles;
-    if (row >= p.n) return;
-    float4 recurrent = 0.0f;
-    for (uint edge = rowptr[row] + lane; edge < rowptr[row + 1]; edge += 32) {
-        uint source = columns[edge];
-        recurrent += weights[edge] * (rate_in[source * p.tiles + tile] - baseline[source]);
-    }
-    recurrent = float4(simd_sum(recurrent.x), simd_sum(recurrent.y),
-                       simd_sum(recurrent.z), simd_sum(recurrent.w));
-    if (lane) return;
-    rate_update(row, tile, recurrent, rate_in, rate_out, adapt, support, drive,
-                baseline, recurrent_gain, tau, adaptation_gain, adaptation_tau,
-                neutral_drive, p);
 }
 
 kernel void gather_rates(device const float4 *rates [[buffer(0)]],

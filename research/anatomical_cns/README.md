@@ -154,7 +154,9 @@ while unsuccessful transitions remain in the corpus.
   --corpus /home/ember/chreatures-data/anatomical-cns-v3/physical-corpus \
   --service /home/ember/chreatures-data/anatomical-cns-v3/initialized-cns-v3.bin \
   --run /home/ember/chreatures-data/anatomical-cns-v3/bootstrap-run-01 \
-  --device cuda --updates 160 --sequence 4 --burn-in 8
+  --device cuda --updates 320 --sequence 4 --burn-in 8 \
+  --motor-learning-rate 3e-3 --body-learning-rate 1e-3 \
+  --dynamics-learning-rate 3e-4 --head-learning-rate 1e-3
 ```
 
 Optimizer snapshots are portable CPU tensors and include the complete model,
@@ -164,3 +166,10 @@ checkpoint. The resulting service is labeled a physical motor bootstrap. A
 separate actual learned closed-loop assay is required before claiming useful
 autonomous competence; an initialized context organ remains distinct from this
 zero-context motor curriculum.
+
+Motor and body interfaces use larger learning rates than the selected type-level
+dynamics because their initialized raw scales would otherwise barely move in a
+few hundred full-graph updates. Receipts report output saturation and held-out
+motor variation by skill. Fixed collection bout order confounds tone with body
+state and time, so those offline differences are not evidence of a learned tone
+mapping; the headless assay uses a separate counterbalanced intervention.
