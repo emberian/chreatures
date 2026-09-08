@@ -239,6 +239,7 @@ def load_episode(path: Path, expected_sha256: str | None = None) -> Episode:
         "motor_atlas_sha256", "cns_service_sha256", "cns_adapter_sha256", "motor_calibration_sha256",
         "retina_mapping_sha256", "scene_manifest_sha256", "world_instance_identity",
         "scene_layout_identity", "native_runtime_sha256",
+        "core_wasm_sha256",
         "initial_snapshot_sha256", "curriculum_plan_sha256",
     )
     if any(not HEX64.fullmatch(str(meta.get(name, ""))) for name in required_hashes):
@@ -269,6 +270,8 @@ def load_corpus(root: Path) -> Corpus:
         episode = load_episode(root / str(row["file"]), str(row["sha256"]))
         if int(episode.metadata["world_index"]) != expected_index:
             raise FlyLearningContractError("episode world index differs from manifest")
+        if row.get("core_wasm_sha256") != episode.metadata["core_wasm_sha256"]:
+            raise FlyLearningContractError("manifest core Wasm identity differs")
         episodes.append(episode)
     identity_keys = ("world_instance_identity", "initial_snapshot_sha256")
     for key in identity_keys:
@@ -318,6 +321,7 @@ def seal_corpus(source: Path, output: Path) -> dict[str, Any]:
                 "split": split_for_world(world_index),
                 "world_instance_identity": episode.metadata["world_instance_identity"],
                 "scene_layout_identity": episode.metadata["scene_layout_identity"],
+                "core_wasm_sha256": episode.metadata["core_wasm_sha256"],
                 "initial_snapshot_sha256": episode.metadata["initial_snapshot_sha256"],
             })
             episodes.append(episode)
@@ -335,12 +339,34 @@ def seal_corpus(source: Path, output: Path) -> dict[str, Any]:
         for key, expected in shared.items():
             if any(episode.metadata[key] != expected for episode in episodes[1:]):
                 raise FlyLearningContractError(f"mixed {key} across corpus")
+        core_hashes = [episode.metadata["core_wasm_sha256"] for episode in episodes]
+        unique_cores = list(dict.fromkeys(core_hashes))
+        amendment = None
+        if len(unique_cores) > 1:
+            amendment_path = source / "source-amendment.json"
+            amendment = json.loads(amendment_path.read_text())
+            if (
+                amendment.get("format") != "chreatures-fly-corpus-source-amendment-v1"
+                or amendment.get("compatible_semantic_contract") is not True
+                or amendment.get("before_core_wasm_sha256") != unique_cores[0]
+                or amendment.get("after_core_wasm_sha256") != unique_cores[1]
+                or amendment.get("first_after_world_index") != core_hashes.index(unique_cores[1])
+                or len(unique_cores) != 2
+            ):
+                raise FlyLearningContractError("mixed core Wasm lineage lacks exact bounded amendment")
+            amendment = {
+                "path": str(amendment_path.resolve()),
+                "sha256": sha256_file(amendment_path),
+                "value": amendment,
+            }
         manifest = {
             "format": FORMAT, "completed": True, "worlds": 12, "ticks": TICKS,
             "residents": RESIDENTS, "split": {"train": [0, 7], "validation-worlds": [8, 9],
                                                   "heldout-worlds": [10, 11]},
             "private_goal_horizon_seconds": 0.4,
             **shared, "episodes": rows,
+            "core_wasm_sha256_by_episode": core_hashes,
+            "source_amendment": amendment,
             "model_ingress": ["optic_rgb", "body_afferents", "delivered_context", "reset"],
             "artifact_bound_cache": ["collected_latent", "cns_motor"],
             "target_or_evaluator_only": [
