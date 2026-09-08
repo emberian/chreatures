@@ -28,7 +28,9 @@ export class LiveEngine {
     const motorSchemaBytes = await runtimeBytes('fixtures/fly-ecology/motor92.json');
     if (await digest(motorSchemaBytes) !== fixture.actuator_schema_sha256) throw new Error('Motor display schema differs from the physical/CNS interface');
     engine.motorSchema = JSON.parse(decoder.decode(motorSchemaBytes));
-    for (const [key, identityKey] of [['morphology_sha256','morphology'],['sensory_schema_sha256','sensorySchema'],['actuator_schema_sha256','actuatorSchema']]) {
+    // CNS morphology names the semantic body schema. The separately hashed
+    // mesh asset set is bound by the runtime fixture and its file manifest.
+    for (const [key, identityKey] of [['body_schema_sha256','morphology'],['sensory_schema_sha256','sensorySchema'],['actuator_schema_sha256','actuatorSchema']]) {
       if (fixture[key] !== cns.identity[identityKey]) throw new Error(`Physical/CNS ${key} differs`);
     }
     const assets = Object.fromEntries(await Promise.all(fixture.mesh_assets.map(async item => [item.path, new Uint8Array(await runtimeBytes(`fixtures/fly-ecology/${item.path}`))])));
