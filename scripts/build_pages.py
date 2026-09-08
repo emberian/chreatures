@@ -161,7 +161,7 @@ def _runtime_identity(revision: str) -> None:
              "pkg/resident_runtime.js", "pkg/resident_runtime_bg.wasm",
              "pkg/chreatures_browser_world.js", "pkg/chreatures_browser_world_bg.wasm",
              "vendor/mujoco/mujoco.js", "vendor/mujoco/mujoco.wasm",
-             "shaders/afferent.wgsl", "shaders/dynamics.wgsl", "shaders/readout.wgsl",
+             "shaders/afferent.wgsl", "shaders/dynamics.wgsl", "shaders/readout.wgsl", "shaders/motor.wgsl", "shaders/observe.wgsl",
              "fixtures/garden.json", "fixtures/garden.xml"]
     manifest = {"format": "chreatures-live-runtime-v1", "sourceRevision": revision, "files": {}}
     for name in names:

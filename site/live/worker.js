@@ -10,8 +10,8 @@ function exclusive(operation, requestId) {
 }
 function frame(value) {
   const transferable = [];
-  for (const field of ['positions', 'rotations', 'colors', 'bodyPositions', 'food', 'neuralRates', 'retinalRGB']) {
-    if (value[field]?.buffer) transferable.push(value[field].buffer);
+  for (const field of ['positions', 'rotations', 'colors', 'bodyPositions', 'food', 'neuralRates', 'neuralSignal', 'retinalRGB', 'motorActivation', 'deliveredContext']) {
+    if (value[field]?.buffer && !transferable.includes(value[field].buffer)) transferable.push(value[field].buffer);
   }
   post('frame', {...value, paused: !running}, transferable);
 }
@@ -51,6 +51,10 @@ self.onmessage = ({data: message}) => {
       case 'screen-frame': engine.screen(message.rgb, message.width, message.height, message.filmTime); break;
       case 'stimulus': engine.record('screen-mode', {kind: message.kind}); break;
       case 'greet': engine.greet(message.notes); break;
+      case 'neural-field':
+        if (!['rate','adaptation','support','release','dopamine','octopamine','serotonin'].includes(message.field)) throw new Error('Unknown neural observation field');
+        engine.neuralField = message.field; break;
+      case 'tone': engine.tone(message.frequency, message.duration, message.amplitude); break;
       case 'insert-toy': post('inserted', {requestId, object: await engine.insertToy()}); frame(engine.observe()); break;
       case 'shove': engine.shove(message.id, message.force); break;
       case 'select': {

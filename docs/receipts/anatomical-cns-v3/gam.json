@@ -1,0 +1,3266 @@
+{
+  "additive_formula": "response ~ s(release_tau,k=3)+s(release_use,k=3)+s(mod_gain,k=3)+s(mod_tau,k=3)",
+  "analysis_source_sha256": {
+    "/Users/ember/dev/chreatures/research/anatomical_cns/gam_dynamics.py": "d7d6cd8853258ff5126faf6fdd7956a484b85db013388e5c27999ea4835301b1",
+    "research/dynamics_v2/gam_fit.py": "11e4342ea7325f9b38d5ee108379aa8af233bc0c925977708e2768ead6d664fa"
+  },
+  "claim_limit": "parameter sensitivity of one frozen trained artifact on one eight-world corpus; no causal physical competence claim",
+  "confirmation": {
+    "format": "chreatures-anatomical-cns-gam-dynamics-v1",
+    "gam_model_sha256": "42c23fb1657af0ede3fe354958ad388c1a8b823bf1bf5f0949edef6a3375e699",
+    "predicted_inner_objective": 0.2680713219486146,
+    "provenance": {
+      "corpus_sha256": "e020317ae5f94d22c39af191d45b1934419d927d5e9d54492ed72a460d5f7367",
+      "cpu_threads": 4,
+      "device": "cuda:0",
+      "episode_sha256": [
+        "ec8a88daa756837129fc184b60dad20a066eece53487dd821ef97ef2f124913d",
+        "08735bccce9635543ec6a40d074a0600d5e43642d187459de9823269da11319c",
+        "cfea42a43797e0983aefc91a14a1ddd1e1aa0024609a50585a9671cb45bc9a18",
+        "b8e54205a1ae772b323c5fa9cdb01610633958882cafdf4ef6b006b38876a8d9",
+        "a44f9fd79a8e4445badaad5a4102bbb48afff177eaf5e312f0fcfcfc931ff550",
+        "d70ff1b82707c2152486189d173768afef39f6080cb6c2326bfcbb7de3ab449b",
+        "d9178a03599156db1709f49b3d47f757eb7d50e9479736d23ecb13de38fff0e2",
+        "5e8248ef1ef2d74e3b6df183fc1c0d52f5f80221c3ace508e2b6a3978a82ace8"
+      ],
+      "hip": "6.3.42134-a9a80e791",
+      "horizon_ticks": 4,
+      "input_contract": [
+        "optic_rgb",
+        "body110",
+        "delivered_context12"
+      ],
+      "ridge": 0.01,
+      "service": {
+        "adapter_sha256": "53765d4afb16ee084d9d0866066ac1ddc4f879a54af0d4693d97230509688996",
+        "anatomy_sha256": "33b51f574db7e14cefbb8dd3247b39e3d17c1169e4d2504ad40cd5b3d95fe386",
+        "atlas_sha256": "6a59c4282ffc912e1c0304498686819cdcc16c059f453fd5bc19c55938218482",
+        "context_dim": 12,
+        "format": "chreatures-cns-service-v3",
+        "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+        "latent_dim": 512,
+        "motor_dim": 34,
+        "readout_mask_sha256": "6a98c067652143edd1c6fd9bcb45462ec8dba7437cc1900796b0ce03cb9c4020",
+        "sensory_dim": 5423,
+        "service_artifact_sha256": "6e1acf46d18f5db0ff6e0096ed7439ebaf5df722ce34c1f0c56276ba271fccc3"
+      },
+      "source_sha256": {
+        "/tank/chreatures/runs/malecns-v3/gam/physical-ede2b03d/source/research/anatomical_cns/gam_dynamics.py": "ede2b03d4734c81219a2dbc6c84fca1158d85763e1b284ac8d5d8bf6fbd94a02",
+        "chreatures/cns_adapter_contract.py": "fb5035cf7f9a9cc0c0fa6543e68d955f79c319f11b32ce17bfc88757cc9e1bfa",
+        "research/anatomical_cns/data.py": "c7dfd36643047bd3074f9f5e85084058ed4d43fb73d7a118738da082bde91b29",
+        "research/anatomical_cns/model.py": "55fbdafd8fecf0ef5072cb29729d8e7278ab8241e84939a9c9d6f2e4291b76d5"
+      },
+      "teacher_labels_are_targets_only": true,
+      "torch": "2.9.1+rocm6.3",
+      "trim_ticks": 8,
+      "world_batch": 8
+    },
+    "selection": "minimum inner-world objective among 256 unmeasured interior points; heldout excluded",
+    "setting": {
+      "mod_gain": -0.25,
+      "mod_tau": -0.25,
+      "release_tau": 0.75,
+      "release_use": -0.75,
+      "setting_id": "confirmation"
+    }
+  },
+  "diagnostics": {
+    "motor_mse": {
+      "action": "no response rescaling, artificial jitter, or fitted surface",
+      "native_error": "Gaussian response 'response' is effectively constant (sample sd ~ 1.379e-11 <= 1e-10); the marginal REML log-likelihood \u2212n/2\u00b7log \u03c3\u00b2 diverges to +\u221e as \u03c3 \u2192 0. Fix: check the response column units (is it being read in the right scale?), centre/rescale the response, or drop the column if it carries no signal.",
+      "observed_max": 0.027462980225169364,
+      "observed_min": 0.027462980182324074,
+      "observed_sample_sd": 1.3786279204309444e-11,
+      "status": "native-rejected-effectively-constant"
+    },
+    "objective": {
+      "additive_leave_setting_out": {
+        "mae": 2.0104732610721765e-05,
+        "r_squared": 0.7466433844225087,
+        "rmse": 2.3064335545376134e-05
+      },
+      "additive_predictions": [
+        0.2681554077229038,
+        0.2681554037161613,
+        0.2681554104515539,
+        0.2681554373676003,
+        0.2681154731228858,
+        0.26811548470419455,
+        0.2681155624426663,
+        0.2681155748263467,
+        0.2680574808221086,
+        0.2680574910070399,
+        0.2680574989130637,
+        0.2680575174743681,
+        0.26803778605565315,
+        0.26803778658490474,
+        0.26803779831317054,
+        0.2680378256477881,
+        0.2681355367524729,
+        0.26804602120175064,
+        0.26812791491536303,
+        0.26809259416054,
+        0.26810966878134435,
+        0.26810971910380627,
+        0.26810970872070405,
+        0.26810971720976173,
+        0.26810972647117715
+      ],
+      "center_conditional_axis_slices": {
+        "mod_gain": [
+          {
+            "coordinate": -1.0,
+            "prediction": 0.26811415657707116
+          },
+          {
+            "coordinate": -0.75,
+            "prediction": 0.26811401570399146
+          },
+          {
+            "coordinate": -0.5,
+            "prediction": 0.26811388735565517
+          },
+          {
+            "coordinate": -0.25,
+            "prediction": 0.2681137840568056
+          },
+          {
+            "coordinate": 0.0,
+            "prediction": 0.2681137183321861
+          },
+          {
+            "coordinate": 0.25,
+            "prediction": 0.26811369853162575
+          },
+          {
+            "coordinate": 0.5,
+            "prediction": 0.26811371630529546
+          },
+          {
+            "coordinate": 0.75,
+            "prediction": 0.2681137591284519
+          },
+          {
+            "coordinate": 1.0,
+            "prediction": 0.26811381447635174
+          }
+        ],
+        "mod_tau": [
+          {
+            "coordinate": -1.0,
+            "prediction": 0.26811392223426206
+          },
+          {
+            "coordinate": -0.75,
+            "prediction": 0.2681138514517222
+          },
+          {
+            "coordinate": -0.5,
+            "prediction": 0.26811378859199064
+          },
+          {
+            "coordinate": -0.25,
+            "prediction": 0.2681137415778758
+          },
+          {
+            "coordinate": 0.0,
+            "prediction": 0.2681137183321861
+          },
+          {
+            "coordinate": 0.25,
+            "prediction": 0.2681137241367938
+          },
+          {
+            "coordinate": 0.5,
+            "prediction": 0.26811375370982654
+          },
+          {
+            "coordinate": 0.75,
+            "prediction": 0.26811379912847605
+          },
+          {
+            "coordinate": 1.0,
+            "prediction": 0.2681138524699339
+          }
+        ],
+        "release_tau": [
+          {
+            "coordinate": -1.0,
+            "prediction": 0.26813440965534746
+          },
+          {
+            "coordinate": -0.75,
+            "prediction": 0.26813141307961835
+          },
+          {
+            "coordinate": -0.5,
+            "prediction": 0.2681275460018648
+          },
+          {
+            "coordinate": -0.25,
+            "prediction": 0.26812193792006217
+          },
+          {
+            "coordinate": 0.0,
+            "prediction": 0.2681137183321861
+          },
+          {
+            "coordinate": 0.25,
+            "prediction": 0.26810230690355363
+          },
+          {
+            "coordinate": 0.5,
+            "prediction": 0.26808828396884765
+          },
+          {
+            "coordinate": 0.75,
+            "prediction": 0.2680725200300927
+          },
+          {
+            "coordinate": 1.0,
+            "prediction": 0.2680558855893132
+          }
+        ],
+        "release_use": [
+          {
+            "coordinate": -1.0,
+            "prediction": 0.26811838784023934
+          },
+          {
+            "coordinate": -0.75,
+            "prediction": 0.26811752919197795
+          },
+          {
+            "coordinate": -0.5,
+            "prediction": 0.26811654705221577
+          },
+          {
+            "coordinate": -0.25,
+            "prediction": 0.2681153179294521
+          },
+          {
+            "coordinate": 0.0,
+            "prediction": 0.2681137183321861
+          },
+          {
+            "coordinate": 0.25,
+            "prediction": 0.2681116659327507
+          },
+          {
+            "coordinate": 0.5,
+            "prediction": 0.268109243058813
+          },
+          {
+            "coordinate": 0.75,
+            "prediction": 0.26810657320187375
+          },
+          {
+            "coordinate": 1.0,
+            "prediction": 0.26810377985343375
+          }
+        ]
+      },
+      "center_conditional_pair_interactions": {
+        "mod_gain:mod_tau": [
+          {
+            "mod_gain": -0.75,
+            "mod_tau": -0.75,
+            "nonadditive_effect": -9.89190623074121e-06,
+            "prediction": 0.2681042569172968
+          },
+          {
+            "mod_gain": -0.75,
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26811401570399146
+          },
+          {
+            "mod_gain": -0.75,
+            "mod_tau": 0.75,
+            "nonadditive_effect": -9.886797145808313e-06,
+            "prediction": 0.2681042097031356
+          },
+          {
+            "mod_gain": 0.0,
+            "mod_tau": -0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681138514517222
+          },
+          {
+            "mod_gain": 0.0,
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681137183321861
+          },
+          {
+            "mod_gain": 0.0,
+            "mod_tau": 0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26811379912847605
+          },
+          {
+            "mod_gain": 0.75,
+            "mod_tau": -0.75,
+            "nonadditive_effect": -9.69864685435029e-06,
+            "prediction": 0.26810419360113363
+          },
+          {
+            "mod_gain": 0.75,
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681137591284519
+          },
+          {
+            "mod_gain": 0.75,
+            "mod_tau": 0.75,
+            "nonadditive_effect": -9.608576605035779e-06,
+            "prediction": 0.2681042313481368
+          }
+        ],
+        "release_tau:mod_gain": [
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": -3.7782096849625635e-05,
+            "prediction": 0.2680939283545741,
+            "release_tau": -0.75
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26813141307961835,
+            "release_tau": -0.75
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": -3.7308342905162384e-05,
+            "prediction": 0.268094145532979,
+            "release_tau": -0.75
+          },
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26811401570399146,
+            "release_tau": 0.0
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681137183321861,
+            "release_tau": 0.0
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681137591284519,
+            "release_tau": 0.0
+          },
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": 5.187111654086918e-05,
+            "prediction": 0.2681246885184389,
+            "release_tau": 0.75
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2680725200300927,
+            "release_tau": 0.75
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": 5.223829209721753e-05,
+            "prediction": 0.2681247991184557,
+            "release_tau": 0.75
+          }
+        ],
+        "release_tau:mod_tau": [
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": -3.7589979149155184e-05,
+            "prediction": 0.26809395622000526,
+            "release_tau": -0.75
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26813141307961835,
+            "release_tau": -0.75
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": -3.748465429975756e-05,
+            "prediction": 0.26809400922160853,
+            "release_tau": -0.75
+          },
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681138514517222,
+            "release_tau": 0.0
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681137183321861,
+            "release_tau": 0.0
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26811379912847605,
+            "release_tau": 0.0
+          },
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": 5.198225496888531e-05,
+            "prediction": 0.26812463540459763,
+            "release_tau": 0.75
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2680725200300927,
+            "release_tau": 0.75
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": 5.2114444182960185e-05,
+            "prediction": 0.2681247152705656,
+            "release_tau": 0.75
+          }
+        ],
+        "release_tau:release_use": [
+          {
+            "nonadditive_effect": 1.7598861367373875e-05,
+            "prediction": 0.26815282280077757,
+            "release_tau": -0.75,
+            "release_use": -0.75
+          },
+          {
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26813141307961835,
+            "release_tau": -0.75,
+            "release_use": 0.0
+          },
+          {
+            "nonadditive_effect": -1.5289929245432266e-05,
+            "prediction": 0.26810897802006056,
+            "release_tau": -0.75,
+            "release_use": 0.75
+          },
+          {
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26811752919197795,
+            "release_tau": 0.0,
+            "release_use": -0.75
+          },
+          {
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681137183321861,
+            "release_tau": 0.0,
+            "release_use": 0.0
+          },
+          {
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26810657320187375,
+            "release_tau": 0.0,
+            "release_use": 0.75
+          },
+          {
+            "nonadditive_effect": -1.6432886623729548e-05,
+            "prediction": 0.2680598980032608,
+            "release_tau": 0.75,
+            "release_use": -0.75
+          },
+          {
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2680725200300927,
+            "release_tau": 0.75,
+            "release_use": 0.0
+          },
+          {
+            "nonadditive_effect": 1.8930555186424947e-05,
+            "prediction": 0.26808430545496675,
+            "release_tau": 0.75,
+            "release_use": 0.75
+          }
+        ],
+        "release_use:mod_gain": [
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": -1.1606239063932655e-05,
+            "prediction": 0.26810622032471937,
+            "release_use": -0.75
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26811752919197795,
+            "release_use": -0.75
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": -1.1679508498230184e-05,
+            "prediction": 0.26810589047974553,
+            "release_use": -0.75
+          },
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26811401570399146,
+            "release_use": 0.0
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681137183321861,
+            "release_use": 0.0
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681137591284519,
+            "release_use": 0.0
+          },
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": 1.3666916233889825e-05,
+            "prediction": 0.268120537489913,
+            "release_use": 0.75
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26810657320187375,
+            "release_use": 0.75
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": 1.3794902236630158e-05,
+            "prediction": 0.2681204089003762,
+            "release_use": 0.75
+          }
+        ],
+        "release_use:mod_tau": [
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": -1.164133846498494e-05,
+            "prediction": 0.26810602097304903,
+            "release_use": -0.75
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26811752919197795,
+            "release_use": -0.75
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": -1.1637806276276752e-05,
+            "prediction": 0.2681059721819916,
+            "release_use": -0.75
+          },
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681138514517222,
+            "release_use": 0.0
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.2681137183321861,
+            "release_use": 0.0
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26811379912847605,
+            "release_use": 0.0
+          },
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": 1.3721746680461777e-05,
+            "prediction": 0.2681204280680903,
+            "release_use": 0.75
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.26810657320187375,
+            "release_use": 0.75
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": 1.3733668910775876e-05,
+            "prediction": 0.26812038766707447,
+            "release_use": 0.75
+          }
+        ]
+      },
+      "joint_leave_setting_out": {
+        "mae": 1.217541201893102e-05,
+        "r_squared": 0.8861386006011778,
+        "rmse": 1.5461907889599962e-05
+      },
+      "joint_predictions": [
+        0.26811371435504944,
+        0.2681135852848689,
+        0.26811358148166364,
+        0.268113622497282,
+        0.2681229576021713,
+        0.268123061535451,
+        0.26812278813749396,
+        0.26812261060176806,
+        0.2680740325178255,
+        0.268074106191435,
+        0.26807407897498386,
+        0.26807389215306326,
+        0.2680009853678799,
+        0.268000701461594,
+        0.268000619682383,
+        0.2680007428478186,
+        0.2681714410107016,
+        0.26809309037922135,
+        0.2681239731634898,
+        0.2681093799157111,
+        0.26811041078059694,
+        0.2681117598980317,
+        0.2681107878456907,
+        0.2681111952589189,
+        0.2680951333908424
+      ],
+      "mean_baseline_leave_setting_out": {
+        "mae": 3.830683911525856e-05,
+        "r_squared": -0.08506944444465137,
+        "rmse": 4.773133596604059e-05
+      },
+      "sensitivity_scope": "native GAM predictions conditional on other factors at zero; uncertainty governed by leave-setting-out evidence",
+      "status": "native-gam-fitted",
+      "training": {
+        "mae": 2.296888097941263e-08,
+        "r_squared": 0.9999992317694013,
+        "rmse": 4.0162489382502125e-08
+      }
+    },
+    "predicted_antagonist_effort": {
+      "status": "constant-no-identifiable-response",
+      "value": 0.028432879596948624
+    },
+    "temporal_ratio": {
+      "center_conditional_axis_slices": {
+        "mod_gain": [
+          {
+            "coordinate": -1.0,
+            "prediction": 0.9626047054380583
+          },
+          {
+            "coordinate": -0.75,
+            "prediction": 0.9626041419461555
+          },
+          {
+            "coordinate": -0.5,
+            "prediction": 0.9626036285530749
+          },
+          {
+            "coordinate": -0.25,
+            "prediction": 0.9626032153576385
+          },
+          {
+            "coordinate": 0.0,
+            "prediction": 0.9626029524586683
+          },
+          {
+            "coordinate": 0.25,
+            "prediction": 0.9626028732553793
+          },
+          {
+            "coordinate": 0.5,
+            "prediction": 0.9626029443485566
+          },
+          {
+            "coordinate": 0.75,
+            "prediction": 0.9626031156393782
+          },
+          {
+            "coordinate": 1.0,
+            "prediction": 0.9626033370290219
+          }
+        ],
+        "mod_tau": [
+          {
+            "coordinate": -1.0,
+            "prediction": 0.9626037680656581
+          },
+          {
+            "coordinate": -0.75,
+            "prediction": 0.962603484935996
+          },
+          {
+            "coordinate": -0.5,
+            "prediction": 0.9626032334974999
+          },
+          {
+            "coordinate": -0.25,
+            "prediction": 0.9626030454413353
+          },
+          {
+            "coordinate": 0.0,
+            "prediction": 0.9626029524586683
+          },
+          {
+            "coordinate": 0.25,
+            "prediction": 0.9626029756769428
+          },
+          {
+            "coordinate": 0.5,
+            "prediction": 0.9626030939687146
+          },
+          {
+            "coordinate": 0.75,
+            "prediction": 0.962603275642818
+          },
+          {
+            "coordinate": 1.0,
+            "prediction": 0.9626034890080873
+          }
+        ],
+        "release_tau": [
+          {
+            "coordinate": -1.0,
+            "prediction": 0.9626857177206682
+          },
+          {
+            "coordinate": -0.75,
+            "prediction": 0.9626737314245771
+          },
+          {
+            "coordinate": -0.5,
+            "prediction": 0.9626582631207226
+          },
+          {
+            "coordinate": -0.25,
+            "prediction": 0.9626358308013409
+          },
+          {
+            "coordinate": 0.0,
+            "prediction": 0.9626029524586683
+          },
+          {
+            "coordinate": 0.25,
+            "prediction": 0.9625573067541962
+          },
+          {
+            "coordinate": 0.5,
+            "prediction": 0.9625012150264333
+          },
+          {
+            "coordinate": 0.75,
+            "prediction": 0.9624381592831432
+          },
+          {
+            "coordinate": 1.0,
+            "prediction": 0.9623716215320897
+          }
+        ],
+        "release_use": [
+          {
+            "coordinate": -1.0,
+            "prediction": 0.9626216304690259
+          },
+          {
+            "coordinate": -0.75,
+            "prediction": 0.9626181958811219
+          },
+          {
+            "coordinate": -0.5,
+            "prediction": 0.9626142673273437
+          },
+          {
+            "coordinate": -0.25,
+            "prediction": 0.9626093508418172
+          },
+          {
+            "coordinate": 0.0,
+            "prediction": 0.9626029524586683
+          },
+          {
+            "coordinate": 0.25,
+            "prediction": 0.9625947428673144
+          },
+          {
+            "coordinate": 0.5,
+            "prediction": 0.9625850513783379
+          },
+          {
+            "coordinate": 0.75,
+            "prediction": 0.9625743719576133
+          },
+          {
+            "coordinate": 1.0,
+            "prediction": 0.9625631985710146
+          }
+        ]
+      },
+      "center_conditional_pair_interactions": {
+        "mod_gain:mod_tau": [
+          {
+            "mod_gain": -0.75,
+            "mod_tau": -0.75,
+            "nonadditive_effect": -3.956761348500315e-05,
+            "prediction": 0.9625651068099982
+          },
+          {
+            "mod_gain": -0.75,
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626041419461555
+          },
+          {
+            "mod_gain": -0.75,
+            "mod_tau": 0.75,
+            "nonadditive_effect": -3.954717919074646e-05,
+            "prediction": 0.9625649179511144
+          },
+          {
+            "mod_gain": 0.0,
+            "mod_tau": -0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.962603484935996
+          },
+          {
+            "mod_gain": 0.0,
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626029524586683
+          },
+          {
+            "mod_gain": 0.0,
+            "mod_tau": 0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.962603275642818
+          },
+          {
+            "mod_gain": 0.75,
+            "mod_tau": -0.75,
+            "nonadditive_effect": -3.8794573880673866e-05,
+            "prediction": 0.9625648535428252
+          },
+          {
+            "mod_gain": 0.75,
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626031156393782
+          },
+          {
+            "mod_gain": 0.75,
+            "mod_tau": 0.75,
+            "nonadditive_effect": -3.843429048577818e-05,
+            "prediction": 0.9625650045330421
+          }
+        ],
+        "release_tau:mod_gain": [
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": -0.0001511283522395157,
+            "prediction": 0.9625237925598248,
+            "release_tau": -0.75
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626737314245771,
+            "release_tau": -0.75
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": -0.00014923333174754472,
+            "prediction": 0.9625246612735394,
+            "release_tau": -0.75
+          },
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626041419461555,
+            "release_tau": 0.0
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626029524586683,
+            "release_tau": 0.0
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626031156393782,
+            "release_tau": 0.0
+          },
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": 0.00020748442189011396,
+            "prediction": 0.9626468331925205,
+            "release_tau": 0.75
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9624381592831432,
+            "release_tau": 0.75
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": 0.00020895312600155425,
+            "prediction": 0.9626472755898546,
+            "release_tau": 0.75
+          }
+        ],
+        "release_tau:mod_tau": [
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": -0.00015035987961653507,
+            "prediction": 0.9625239040222883,
+            "release_tau": -0.75
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626737314245771,
+            "release_tau": -0.75
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": -0.00014993857942724453,
+            "prediction": 0.9625241160292995,
+            "release_tau": -0.75
+          },
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.962603484935996,
+            "release_tau": 0.0
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626029524586683,
+            "release_tau": 0.0
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.962603275642818,
+            "release_tau": 0.0
+          },
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": 0.00020792897635013574,
+            "prediction": 0.9626466207368211,
+            "release_tau": 0.75
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9624381592831432,
+            "release_tau": 0.75
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": 0.00020845773382460742,
+            "prediction": 0.9626469402011175,
+            "release_tau": 0.75
+          }
+        ],
+        "release_tau:release_use": [
+          {
+            "nonadditive_effect": 7.039541412645622e-05,
+            "prediction": 0.9627593702611571,
+            "release_tau": -0.75,
+            "release_use": -0.75
+          },
+          {
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626737314245771,
+            "release_tau": -0.75,
+            "release_use": 0.0
+          },
+          {
+            "nonadditive_effect": -6.11596882302834e-05,
+            "prediction": 0.9625839912352918,
+            "release_tau": -0.75,
+            "release_use": 0.75
+          },
+          {
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626181958811219,
+            "release_tau": 0.0,
+            "release_use": -0.75
+          },
+          {
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626029524586683,
+            "release_tau": 0.0,
+            "release_use": 0.0
+          },
+          {
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9625743719576133,
+            "release_tau": 0.0,
+            "release_use": 0.75
+          },
+          {
+            "nonadditive_effect": -6.57315169120265e-05,
+            "prediction": 0.9623876711886847,
+            "release_tau": 0.75,
+            "release_use": -0.75
+          },
+          {
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9624381592831432,
+            "release_tau": 0.75,
+            "release_use": 0.0
+          },
+          {
+            "nonadditive_effect": 7.57221884060133e-05,
+            "prediction": 0.9624853009704942,
+            "release_tau": 0.75,
+            "release_use": 0.75
+          }
+        ],
+        "release_use:mod_gain": [
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": -4.642493081252752e-05,
+            "prediction": 0.9625729604377965,
+            "release_use": -0.75
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626181958811219,
+            "release_use": -0.75
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": -4.6718003809731456e-05,
+            "prediction": 0.962571641058022,
+            "release_use": -0.75
+          },
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626041419461555,
+            "release_use": 0.0
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626029524586683,
+            "release_use": 0.0
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626031156393782,
+            "release_use": 0.0
+          },
+          {
+            "mod_gain": -0.75,
+            "nonadditive_effect": 5.466763713535272e-05,
+            "prediction": 0.9626302290822358,
+            "release_use": 0.75
+          },
+          {
+            "mod_gain": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9625743719576133,
+            "release_use": 0.75
+          },
+          {
+            "mod_gain": 0.75,
+            "nonadditive_effect": 5.5179576763930704e-05,
+            "prediction": 0.9626297147150871,
+            "release_use": 0.75
+          }
+        ],
+        "release_use:mod_tau": [
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": -4.656532616520437e-05,
+            "prediction": 0.9625721630322843,
+            "release_use": -0.75
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626181958811219,
+            "release_use": -0.75
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": -4.6551197296129665e-05,
+            "prediction": 0.9625719678679754,
+            "release_use": -0.75
+          },
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.962603484935996,
+            "release_use": 0.0
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9626029524586683,
+            "release_use": 0.0
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.962603275642818,
+            "release_use": 0.0
+          },
+          {
+            "mod_tau": -0.75,
+            "nonadditive_effect": 5.488695681155065e-05,
+            "prediction": 0.9626297913917525,
+            "release_use": 0.75
+          },
+          {
+            "mod_tau": 0.0,
+            "nonadditive_effect": 0.0,
+            "prediction": 0.9625743719576133,
+            "release_use": 0.75
+          },
+          {
+            "mod_tau": 0.75,
+            "nonadditive_effect": 5.4934645690063455e-05,
+            "prediction": 0.962629629787453,
+            "release_use": 0.75
+          }
+        ]
+      },
+      "sensitivity_scope": "native GAM predictions conditional on other factors at zero; uncertainty governed by leave-setting-out evidence",
+      "status": "native-gam-fitted",
+      "training": {
+        "mae": 9.187553787537439e-08,
+        "r_squared": 0.9999992317692584,
+        "rmse": 1.6064992820148699e-07
+      }
+    }
+  },
+  "format": "chreatures-anatomical-cns-gam-dynamics-v1",
+  "formula": "response ~ te(release_tau,release_use,mod_gain,mod_tau,k=15)",
+  "gamfit_source_commit": "7c7eca8ac4826de95c8e743a20294bee132a9bcc",
+  "gamfit_version": "0.1.259",
+  "native_build": {
+    "abi3": "cp310+",
+    "available": true,
+    "capabilities": [
+      "fit",
+      "fit_array",
+      "load",
+      "extend_with_group",
+      "torch_from_fitted",
+      "predict",
+      "transformation_score",
+      "predict_array",
+      "predict_conformal",
+      "build_predict_payload_json",
+      "interpolate_rows",
+      "survival_chunk_defaults",
+      "survival_chunk_ranges",
+      "survival_should_chunk",
+      "survival_chunk_iter_collect",
+      "write_survival_csv",
+      "default_survival_time_grid",
+      "competing_risks_cif",
+      "competing_risks_cif_from_predictions",
+      "survival_prediction_payload_from_json",
+      "competing_risks_prediction_payload_from_json",
+      "sample",
+      "summary",
+      "summary_html",
+      "check",
+      "report",
+      "sklearn_fit_metadata",
+      "cross_fit_shared_precision_groups",
+      "save",
+      "validate_formula",
+      "formula_validation_repr",
+      "formula_validation_html",
+      "design_matrix_array",
+      "basis",
+      "basis_with_jet",
+      "duchon_function_norm_penalty",
+      "duchon_operator_penalties",
+      "thin_plate_penalty",
+      "gaussian_weighted_ridge_array",
+      "gaussian_weighted_ridge_batch",
+      "gaussian_weighted_ridge_batch_backward",
+      "gaussian_reml_score",
+      "gaussian_reml_fit",
+      "gaussian_reml_fit_backward",
+      "gaussian_reml_fit_batched",
+      "gaussian_reml_fit_batched_backward",
+      "gaussian_reml_fit_positions",
+      "gaussian_reml_fit_positions_backward",
+      "gaussian_reml_fit_positions_batched",
+      "gaussian_reml_fit_positions_batched_backward",
+      "gaussian_reml_fit_latent",
+      "gaussian_reml_fit_latent_backward",
+      "glm_reml_fit_latent",
+      "glm_reml_fit_latent_backward",
+      "equivariant_penalty_value",
+      "skip_transcoder_reml_metrics",
+      "_block_diag",
+      "tierney_kadane_normalized_score",
+      "gaussian_reml_fit_formula_table",
+      "gaussian_reml_fit_with_constraints_forward",
+      "gaussian_reml_fit_with_constraints_backward",
+      "sphere_frechet_mean",
+      "response_geometry_closure",
+      "response_geometry_clr",
+      "response_geometry_alr",
+      "response_geometry_inverse_alr",
+      "response_geometry_simplex_frechet_mean",
+      "response_geometry_simplex_log_map",
+      "response_geometry_simplex_exp_map",
+      "response_geometry_sphere_log_map",
+      "response_geometry_sphere_exp_map",
+      "response_geometry_ilr",
+      "response_geometry_inverse_ilr",
+      "response_geometry_aitchison_metric",
+      "response_geometry_clr_jet",
+      "response_geometry_simplex_log_map_jet",
+      "response_geometry_simplex_exp_map_jet",
+      "response_geometry_sphere_exp_map_jet",
+      "response_geometry_fit_curvature",
+      "response_geometry_normalize_fisher_rao",
+      "equivariant_rho_so2",
+      "equivariant_rho_so2_jvp",
+      "equivariant_rho_so3",
+      "equivariant_rho_so3_jvp",
+      "equivariant_gauge_companion_loss"
+    ],
+    "crate": "gam-pyffi",
+    "cuda_diagnostics": {
+      "conflicts": {},
+      "mapped": {},
+      "packaged_complete_stacks": [],
+      "packaged_cuda_library_dirs": [],
+      "packaged_nvidia_roots": [],
+      "platform": "darwin",
+      "system_complete_stacks": [],
+      "system_driver_libraries": []
+    },
+    "engine_crate": "gam",
+    "module": "gamfit._rust",
+    "python_module": "gam._rust",
+    "sae_row_block_penalties": [
+      "ard",
+      "top_k_activation",
+      "smooth_threshold",
+      "sparsity",
+      "row_precision_prior",
+      "parametric_row_precision_prior",
+      "scad_mcp",
+      "block_orthogonality",
+      "isometry"
+    ],
+    "supported_model_classes": [
+      "standard",
+      "transformation-normal",
+      "survival",
+      "competing-risks-survival",
+      "bernoulli-marginal-slope",
+      "survival-marginal-slope",
+      "survival-location-scale",
+      "latent-survival",
+      "latent-binary",
+      "gaussian-location-scale",
+      "binomial-location-scale"
+    ],
+    "version": "0.1.259"
+  },
+  "native_messages": [
+    "[29s] [OUTER] ARC cost-stall window filled at a strict-saddle incumbent (hessian_psd=NO at best-so-far, value=3.255106e1): refusing to certify the saddle and returning control to cubic regularization to exploit the negative curvature (escape 1/8).",
+    "[29s] [HGB] target_mse below mandatory floors; target_mse=1.521e-15 floors=3.000e-12"
+  ],
+  "observed_heldout": [
+    {
+      "metrics": {
+        "motor_mse": 0.030735295798474418,
+        "motor_mse_per_channel": [
+          0.015275032431884423,
+          0.01340571306772502,
+          0.017352483154463763,
+          0.02751523278511211,
+          0.018215962991560187,
+          0.01094962798405869,
+          0.013696482025499612,
+          0.033619243819890406,
+          0.02413163496363768,
+          0.011518226103456661,
+          0.010901723648544697,
+          0.043082315458888826,
+          0.013160739263072836,
+          0.04024766075905875,
+          0.184177762885919,
+          0.013078264147044813,
+          0.01127535829274842,
+          0.028977623594441216,
+          0.15375856796659,
+          0.009185470011461326,
+          0.10126853891163999,
+          0.0261617012160056,
+          0.13053678849224484,
+          0.006967110603394986,
+          0.003972525057142236,
+          0.005548618707559084,
+          0.03687282503618349,
+          0.0028159719578720417,
+          0.0028117829546374135,
+          0.0028255996642436026,
+          0.00036540438749536305,
+          0.030862206375771566,
+          0.0002985857800468659,
+          0.00016727264883720694
+        ],
+        "motor_mse_per_world": [
+          0.03383664694909957,
+          0.027633944647849268
+        ],
+        "motor_skill": -0.19983050389010315,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2685650831317666,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9513191493331687,
+          "body": {
+            "active_features": 96,
+            "mse": 0.4626447532992005,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010295091096427678,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015981648070447045,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08706661023723483,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": -1.0,
+        "mod_tau": -1.0,
+        "release_tau": -1.0,
+        "release_use": -1.0,
+        "setting_id": "setting-00"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295798784704,
+        "motor_mse_per_channel": [
+          0.015275032429716484,
+          0.01340571306515442,
+          0.017352483154463763,
+          0.02751523278585471,
+          0.018215962990624366,
+          0.01094962798413577,
+          0.013696482025499612,
+          0.03361924382304135,
+          0.02413163496363768,
+          0.011518226103284233,
+          0.010901723648544697,
+          0.04308231545886673,
+          0.013160739263072836,
+          0.04024766075979032,
+          0.184177762885919,
+          0.01307826414772348,
+          0.01127535829609525,
+          0.028977623593174927,
+          0.15375856796659,
+          0.009185470011769578,
+          0.10126853891163999,
+          0.02616170121452794,
+          0.13053678849224484,
+          0.006967110603394986,
+          0.003972525062151039,
+          0.005548618712800645,
+          0.03687282503618349,
+          0.0028159719578720417,
+          0.0028117829546374135,
+          0.0028255996641553616,
+          0.00036540438751891165,
+          0.030862206375771566,
+          0.0002985857798127144,
+          0.00016727264901246483
+        ],
+        "motor_mse_per_world": [
+          0.03383664694852155,
+          0.027633944649047858
+        ],
+        "motor_skill": -0.19983050390221613,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.268564980046954,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9513187369926772,
+          "body": {
+            "active_features": 96,
+            "mse": 0.462644721910261,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010295158244681968,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015981634809215056,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.0870673677699636,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": -1.0,
+        "mod_tau": 1.0,
+        "release_tau": -1.0,
+        "release_use": -1.0,
+        "setting_id": "setting-01"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.03073529579913488,
+        "motor_mse_per_channel": [
+          0.015275032432403125,
+          0.013405713068336647,
+          0.017352483154463763,
+          0.027515232789256706,
+          0.018215962991206914,
+          0.010949627980820763,
+          0.013696482025499612,
+          0.03361924382118359,
+          0.02413163496472312,
+          0.011518226101379404,
+          0.01090172364806796,
+          0.043082315460873086,
+          0.01316073926302151,
+          0.04024766075597252,
+          0.18417776288833348,
+          0.013078264147942996,
+          0.011275358292209615,
+          0.028977623587811373,
+          0.15375856796446744,
+          0.009185470011861832,
+          0.10126853891163999,
+          0.026161701207761547,
+          0.13053678849389622,
+          0.006967110603394991,
+          0.003972525071762959,
+          0.005548618725391632,
+          0.03687282503609909,
+          0.0028159719579582587,
+          0.0028117829545805505,
+          0.0028255996642436026,
+          0.00036540438740116974,
+          0.030862206375644612,
+          0.00029858578096217294,
+          0.00016727265001620034
+        ],
+        "motor_mse_per_world": [
+          0.03383664694796735,
+          0.027633944650302413
+        ],
+        "motor_skill": -0.19983050391588608,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2685649326915977,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9513185475698513,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46264481034702065,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.0102949690578501,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015981624865340346,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.0870679358024472,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 1.0,
+        "mod_tau": -1.0,
+        "release_tau": -1.0,
+        "release_use": -1.0,
+        "setting_id": "setting-02"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.03073529579983564,
+        "motor_mse_per_channel": [
+          0.015275032432403125,
+          0.01340571306771415,
+          0.017352483154463763,
+          0.02751523279024048,
+          0.018215962991417107,
+          0.010949627981583521,
+          0.013696482025499612,
+          0.0336192438228297,
+          0.024131634950400556,
+          0.011518226101471282,
+          0.010901723648513578,
+          0.04308231547189298,
+          0.01316073926302151,
+          0.04024766078400548,
+          0.18417776291529034,
+          0.013078264147493907,
+          0.011275358297920457,
+          0.02897762358624166,
+          0.15375856796446744,
+          0.00918547001195409,
+          0.10126853891163999,
+          0.026161701205767347,
+          0.13053678848770986,
+          0.006967110603394991,
+          0.003972525076853159,
+          0.005548618694098467,
+          0.03687282503609909,
+          0.0028159719579582587,
+          0.0028117829545805505,
+          0.0028255996642436026,
+          0.0003654043873776208,
+          0.030862206375619223,
+          0.00029858578055773827,
+          0.00016727264968959373
+        ],
+        "motor_mse_per_world": [
+          0.033836646949173925,
+          0.027633944650497358
+        ],
+        "motor_skill": -0.19983050394324198,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.26856457675456324,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9513171238189103,
+          "body": {
+            "active_features": 96,
+            "mse": 0.4626447266872769,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010295148025531997,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.001598157815045958,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08707060433664737,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 1.0,
+        "mod_tau": 1.0,
+        "release_tau": -1.0,
+        "release_use": -1.0,
+        "setting_id": "setting-03"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295775048084,
+        "motor_mse_per_channel": [
+          0.015275032446118117,
+          0.013405713113152189,
+          0.01735248315220282,
+          0.02751523308238363,
+          0.018215962931761254,
+          0.010949627786274984,
+          0.013696482020261663,
+          0.033619244207355195,
+          0.02413163480317157,
+          0.01151822614227903,
+          0.010901723672877952,
+          0.043082315626109556,
+          0.013160739264203285,
+          0.04024766070809579,
+          0.18417776287142934,
+          0.01307826414784048,
+          0.011275358323779579,
+          0.028977622770948803,
+          0.15375856717360262,
+          0.009185469997871057,
+          0.10126853885834076,
+          0.02616170147755877,
+          0.13053678872735347,
+          0.006967110599474681,
+          0.003972525178674989,
+          0.005548618472150801,
+          0.03687282503638044,
+          0.00281597196180927,
+          0.0028117829555756478,
+          0.0028255996684500993,
+          0.00036540438697728886,
+          0.030862206374933636,
+          0.0002985857735113385,
+          0.00016727263872736955
+        ],
+        "motor_mse_per_world": [
+          0.033836646885234044,
+          0.02763394466486213
+        ],
+        "motor_skill": -0.19983050297559668,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2686434104981072,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516324588922365,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46260399215333003,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.01038228868350255,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015994144017574623,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08635279353202463,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": -1.0,
+        "mod_tau": -1.0,
+        "release_tau": -1.0,
+        "release_use": 1.0,
+        "setting_id": "setting-04"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295774836448,
+        "motor_mse_per_channel": [
+          0.015275032448686734,
+          0.013405713114466223,
+          0.0173524831511365,
+          0.02751523308238363,
+          0.018215962931761254,
+          0.010949627785695248,
+          0.013696482020261663,
+          0.03361924421277069,
+          0.02413163480317157,
+          0.01151822614168981,
+          0.010901723672877952,
+          0.04308231562295809,
+          0.013160739264203285,
+          0.04024766071007448,
+          0.18417776287237927,
+          0.013078264147391386,
+          0.011275358323779579,
+          0.02897762276788846,
+          0.15375856717360262,
+          0.009185469997871057,
+          0.10126853885834076,
+          0.026161701475344575,
+          0.13053678872573612,
+          0.006967110599474681,
+          0.0039725251787563875,
+          0.005548618465186428,
+          0.03687282503638044,
+          0.0028159719619242256,
+          0.0028117829555756478,
+          0.0028255996683912714,
+          0.0003654043871656777,
+          0.03086220637488285,
+          0.00029858577342618543,
+          0.00016727263880703054
+        ],
+        "motor_mse_per_world": [
+          0.03383664688430816,
+          0.027633944665364736
+        ],
+        "motor_skill": -0.19983050296733484,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.26864332182775963,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516321042116926,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46260395537183074,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010382367367698486,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.001599413297705815,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08635342420891634,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": -1.0,
+        "mod_tau": 1.0,
+        "release_tau": -1.0,
+        "release_use": 1.0,
+        "setting_id": "setting-05"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.03073529577646634,
+        "motor_mse_per_channel": [
+          0.015275032446118117,
+          0.013405713112101158,
+          0.01735248315220282,
+          0.027515233082421865,
+          0.0182159629318031,
+          0.010949627786021864,
+          0.013696482020582079,
+          0.033619244218996716,
+          0.02413163480317157,
+          0.011518226137946397,
+          0.010901723672877952,
+          0.043082315639104085,
+          0.013160739266223562,
+          0.04024766070676678,
+          0.18417776287187845,
+          0.013078264147304038,
+          0.011275358323828517,
+          0.02897762278679186,
+          0.1537585671723825,
+          0.009185469996106557,
+          0.10126853885834076,
+          0.026161701498390845,
+          0.13053678873045105,
+          0.006967110599474681,
+          0.003972525193214355,
+          0.005548618448130319,
+          0.03687282503638044,
+          0.002815971961751792,
+          0.0028117829555756478,
+          0.00282559966853834,
+          0.00036540438711857987,
+          0.030862206374933643,
+          0.0002985857741286352,
+          0.0001672726387990341
+        ],
+        "motor_mse_per_world": [
+          0.033836646886719605,
+          0.02763394466621307
+        ],
+        "motor_skill": -0.19983050303096173,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.26864333220304104,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516321457062988,
+          "body": {
+            "active_features": 96,
+            "mse": 0.4626040305612825,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.01038220651994437,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015994131614080493,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08635350206745795,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 1.0,
+        "mod_tau": -1.0,
+        "release_tau": -1.0,
+        "release_use": 1.0,
+        "setting_id": "setting-06"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.03073529577413272,
+        "motor_mse_per_channel": [
+          0.015275032448686734,
+          0.013405713110690581,
+          0.01735248315220282,
+          0.02751523308093341,
+          0.0182159629314284,
+          0.010949627787650806,
+          0.013696482020261663,
+          0.03361924421294072,
+          0.02413163480474864,
+          0.011518226138457837,
+          0.010901723673221396,
+          0.04308231564431539,
+          0.013160739265259624,
+          0.04024766071044805,
+          0.18417776284448076,
+          0.013078264147304038,
+          0.011275358323779579,
+          0.028977622782325334,
+          0.15375856717360262,
+          0.009185469996106557,
+          0.10126853885834076,
+          0.026161701473019265,
+          0.13053678872846147,
+          0.006967110599474681,
+          0.003972525183034421,
+          0.005548618432485512,
+          0.03687282503646484,
+          0.002815971961751792,
+          0.0028117829555756478,
+          0.0028255996684500993,
+          0.0003654043869772891,
+          0.030862206375009815,
+          0.000298585773873192,
+          0.00016727263875124617
+        ],
+        "motor_mse_per_world": [
+          0.03383664688473077,
+          0.02763394466353467
+        ],
+        "motor_skill": -0.19983050293986304,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2686430368358507,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516309642468721,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46260396711530893,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010382342245662812,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.00159940926252372,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.0863557292605931,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 1.0,
+        "mod_tau": 1.0,
+        "release_tau": -1.0,
+        "release_use": 1.0,
+        "setting_id": "setting-07"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295774762826,
+        "motor_mse_per_channel": [
+          0.015275032445908417,
+          0.013405713118238292,
+          0.01735248315549043,
+          0.027515233076111346,
+          0.018215962948251264,
+          0.010949627798218847,
+          0.01369648202472539,
+          0.03361924409637776,
+          0.024131634861612537,
+          0.011518226121772505,
+          0.010901723682567555,
+          0.04308231561030126,
+          0.01316073926357478,
+          0.0402476606866219,
+          0.18417776284512918,
+          0.013078264151684586,
+          0.011275358323078669,
+          0.028977622869313244,
+          0.1537585672255135,
+          0.009185469995174087,
+          0.10126853887237397,
+          0.026161701451536824,
+          0.13053678872491598,
+          0.0069671105981291585,
+          0.003972525125202901,
+          0.0055486184721878044,
+          0.0368728250363523,
+          0.0028159719615793587,
+          0.002811782955177609,
+          0.002825599668185376,
+          0.0003654043874718137,
+          0.03086220637503521,
+          0.00029858577378815717,
+          0.00016727264033668393
+        ],
+        "motor_mse_per_world": [
+          0.03383664688876771,
+          0.027633944660757945
+        ],
+        "motor_skill": -0.19983050296446092,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.26864617514367406,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516435174756449,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46261305551591825,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010362900039449507,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015994191782604421,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08635006500926068,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": -1.0,
+        "mod_tau": -1.0,
+        "release_tau": 1.0,
+        "release_use": -1.0,
+        "setting_id": "setting-08"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295775910686,
+        "motor_mse_per_channel": [
+          0.015275032445908417,
+          0.013405713118238292,
+          0.017352483154979902,
+          0.027515233076111346,
+          0.01821596294754935,
+          0.010949627798218847,
+          0.01369648202472539,
+          0.03361924409401442,
+          0.024131634861612537,
+          0.01151822612219501,
+          0.010901723682567555,
+          0.043082315603626964,
+          0.013160739262429832,
+          0.0402476606866219,
+          0.18417776284555776,
+          0.013078264152177343,
+          0.011275358323078669,
+          0.02897762286836408,
+          0.1537585672255135,
+          0.009185469995174087,
+          0.10126853887471178,
+          0.02616170146913198,
+          0.13053678872491598,
+          0.0069671105981291585,
+          0.003972525125202923,
+          0.0055486185024284495,
+          0.0368728250363523,
+          0.002815971961521881,
+          0.002811782955177609,
+          0.002825599668185376,
+          0.00036540438740116784,
+          0.030862206374959032,
+          0.0002985857737030085,
+          0.00016727264048008481
+        ],
+        "motor_mse_per_world": [
+          0.03383664688960696,
+          0.027633944662214416
+        ],
+        "motor_skill": -0.1998305030092704,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2686460798012543,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516431361013746,
+          "body": {
+            "active_features": 96,
+            "mse": 0.4626130559629974,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010362899083043109,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015994178413322687,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08635082871420763,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": -1.0,
+        "mod_tau": 1.0,
+        "release_tau": 1.0,
+        "release_use": -1.0,
+        "setting_id": "setting-09"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.03073529577388817,
+        "motor_mse_per_channel": [
+          0.015275032447369575,
+          0.01340571311927,
+          0.017352483155140357,
+          0.02751523307491439,
+          0.018215962948507063,
+          0.010949627782905725,
+          0.01369648202472539,
+          0.03361924411324933,
+          0.024131634860034896,
+          0.011518226124896844,
+          0.010901723682567555,
+          0.04308231561119442,
+          0.013160739262429832,
+          0.04024766068110316,
+          0.18417776284512918,
+          0.013078264151148154,
+          0.011275358323285125,
+          0.028977622864683913,
+          0.1537585672255135,
+          0.009185469995959362,
+          0.10126853887237397,
+          0.026161701450201535,
+          0.13053678872491598,
+          0.006967110596313782,
+          0.003972525144589433,
+          0.005548618430116294,
+          0.036872825036267896,
+          0.0028159719615793587,
+          0.002811782955177609,
+          0.0028255996682736173,
+          0.0003654043873540692,
+          0.030862206375111383,
+          0.00029858577459705076,
+          0.00016727264130058522
+        ],
+        "motor_mse_per_world": [
+          0.03383664688820654,
+          0.027633944659569802
+        ],
+        "motor_skill": -0.19983050293031646,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2686459885642043,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516427711612646,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46261328256596457,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010362414326504976,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015994157150109598,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.0863520433509658,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 1.0,
+        "mod_tau": -1.0,
+        "release_tau": 1.0,
+        "release_use": -1.0,
+        "setting_id": "setting-10"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295775102252,
+        "motor_mse_per_channel": [
+          0.015275032447369575,
+          0.013405713119839322,
+          0.017352483155140357,
+          0.027515233073885235,
+          0.018215962948251264,
+          0.01094962778204235,
+          0.01369648202472539,
+          0.0336192441149522,
+          0.024131634860034896,
+          0.011518226117191036,
+          0.010901723682567555,
+          0.04308231564026676,
+          0.013160739262429832,
+          0.04024766068215759,
+          0.18417776284431653,
+          0.013078264151684586,
+          0.011275358323285125,
+          0.028977622880994598,
+          0.1537585672255135,
+          0.009185469995558852,
+          0.10126853887471178,
+          0.02616170145482413,
+          0.13053678872491598,
+          0.006967110596313782,
+          0.00397252514426439,
+          0.005548618426984925,
+          0.036872825036267896,
+          0.0028159719616655753,
+          0.002811782955177609,
+          0.0028255996682736173,
+          0.00036540438754245884,
+          0.030862206375111383,
+          0.000298585773830713,
+          0.0001672726413882286
+        ],
+        "motor_mse_per_world": [
+          0.03383664689095515,
+          0.02763394465924935
+        ],
+        "motor_skill": -0.1998305029777112,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2686456798851049,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516415364400106,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46261319080727104,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.01036261061972732,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015994117356766182,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.0863543165002515,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 1.0,
+        "mod_tau": 1.0,
+        "release_tau": 1.0,
+        "release_use": -1.0,
+        "setting_id": "setting-11"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295693650758,
+        "motor_mse_per_channel": [
+          0.015275032446541945,
+          0.013405713260297256,
+          0.017352483116696033,
+          0.027515234071080988,
+          0.018215962812851358,
+          0.010949627384726364,
+          0.013696482025993115,
+          0.03361924444165254,
+          0.024131634284482843,
+          0.01151822620136827,
+          0.010901723793458582,
+          0.04308231647321045,
+          0.013160739263854287,
+          0.0402476604840988,
+          0.18417776286190318,
+          0.013078264291184234,
+          0.011275358318274404,
+          0.028977620595185393,
+          0.1537585648691318,
+          0.009185469941415494,
+          0.1012685386518855,
+          0.026161702056323097,
+          0.13053678953507017,
+          0.006967110599303338,
+          0.003972525454933161,
+          0.005548617596183227,
+          0.03687282503632417,
+          0.0028159719636317495,
+          0.002811782957347679,
+          0.0028255996681552957,
+          0.0003654043869301792,
+          0.030862206373384743,
+          0.0002985857594396936,
+          0.00016727260780890948
+        ],
+        "motor_mse_per_world": [
+          0.033836646717598284,
+          0.027633944669703227
+        ],
+        "motor_skill": -0.1998304997980449,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2688148753711142,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9523183187098538,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46251004276035096,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010583268322322259,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0016021675408802543,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08478009425796995,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": -1.0,
+        "mod_tau": -1.0,
+        "release_tau": 1.0,
+        "release_use": 1.0,
+        "setting_id": "setting-12"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.0307352956917802,
+        "motor_mse_per_channel": [
+          0.015275032446241957,
+          0.013405713259249318,
+          0.017352483117870004,
+          0.0275152340728299,
+          0.01821596281275712,
+          0.01094962738472635,
+          0.013696482025993115,
+          0.03361924444277055,
+          0.024131634286007283,
+          0.011518226200723425,
+          0.010901723793458582,
+          0.043082316461941,
+          0.013160739263854287,
+          0.04024766048483059,
+          0.18417776286190318,
+          0.013078264291184234,
+          0.011275358318274404,
+          0.028977620588000363,
+          0.1537585648691318,
+          0.009185469941415494,
+          0.10126853862196963,
+          0.026161702056118428,
+          0.13053678951131567,
+          0.006967110599492595,
+          0.003972525459860718,
+          0.005548617595509754,
+          0.03687282503632417,
+          0.002815971963574272,
+          0.002811782957347679,
+          0.0028255996681552957,
+          0.00036540438695372747,
+          0.030862206373333964,
+          0.0002985857593545504,
+          0.00016727260805585805
+        ],
+        "motor_mse_per_world": [
+          0.03383664671373124,
+          0.027633944669829155
+        ],
+        "motor_skill": -0.19983049972502287,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.26881481782730365,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9523180885420939,
+          "body": {
+            "active_features": 96,
+            "mse": 0.4625100263793494,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010583303365100938,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0016021667963704142,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08478051955071131,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": -1.0,
+        "mod_tau": 1.0,
+        "release_tau": 1.0,
+        "release_use": 1.0,
+        "setting_id": "setting-13"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295693017833,
+        "motor_mse_per_channel": [
+          0.015275032454580955,
+          0.01340571325909664,
+          0.01735248311684895,
+          0.0275152340750276,
+          0.018215962813003223,
+          0.01094962738541449,
+          0.013696482025993115,
+          0.0336192444525044,
+          0.024131634286281352,
+          0.011518226198745658,
+          0.010901723793904198,
+          0.04308231647512624,
+          0.013160739264914395,
+          0.04024766048106229,
+          0.18417776283541173,
+          0.013078264290012812,
+          0.011275358318865043,
+          0.028977620597317254,
+          0.1537585648694932,
+          0.009185469941815998,
+          0.1012685386532936,
+          0.026161702042346306,
+          0.1305367895410848,
+          0.00696711059997343,
+          0.003972525474562333,
+          0.005548617561451687,
+          0.03687282503632417,
+          0.0028159719636317495,
+          0.002811782957461404,
+          0.0028255996679199856,
+          0.00036540438693017914,
+          0.03086220637348631,
+          0.0002985857598866986,
+          0.00016727260883654292
+        ],
+        "motor_mse_per_world": [
+          0.033836646716399695,
+          0.02763394466963597
+        ],
+        "motor_skill": -0.1998304997733371,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.26881468789155216,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9523175687941372,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46251031476318843,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010582686444884915,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.001602163896678067,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08478217596684068,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 1.0,
+        "mod_tau": -1.0,
+        "release_tau": 1.0,
+        "release_use": 1.0,
+        "setting_id": "setting-14"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295692573536,
+        "motor_mse_per_channel": [
+          0.015275032448359163,
+          0.013405713259126584,
+          0.01735248311684895,
+          0.027515234074291406,
+          0.018215962813515663,
+          0.010949627384367609,
+          0.013696482025993115,
+          0.033619244435450904,
+          0.02413163428549282,
+          0.011518226200226054,
+          0.010901723793458582,
+          0.04308231647251478,
+          0.013160739263854287,
+          0.04024766048146116,
+          0.18417776283541173,
+          0.013078264291184234,
+          0.011275358318865043,
+          0.028977620599134498,
+          0.1537585648694932,
+          0.009185469940239159,
+          0.1012685386532936,
+          0.026161702043923277,
+          0.13053678953583467,
+          0.006967110599486623,
+          0.003972525479734082,
+          0.005548617571858368,
+          0.03687282503632417,
+          0.002815971963574272,
+          0.0028117829573761103,
+          0.0028255996679199856,
+          0.00036540438702437354,
+          0.030862206373207003,
+          0.0002985857600357062,
+          0.0001672726086214473
+        ],
+        "motor_mse_per_world": [
+          0.03383664671706234,
+          0.027633944668084734
+        ],
+        "motor_skill": -0.19983049975599276,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2688143584149451,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9523162508894863,
+          "body": {
+            "active_features": 96,
+            "mse": 0.4625102228864359,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.0105828829906629,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0016021596265471216,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.0847846152303644,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 1.0,
+        "mod_tau": 1.0,
+        "release_tau": 1.0,
+        "release_use": 1.0,
+        "setting_id": "setting-15"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295787015383,
+        "motor_mse_per_channel": [
+          0.015275032419657652,
+          0.01340571308546074,
+          0.017352483147107748,
+          0.02751523289487223,
+          0.0182159629745407,
+          0.010949627882099225,
+          0.013696482024848291,
+          0.03361924393199323,
+          0.024131634866948994,
+          0.011518226093107228,
+          0.01090172366423534,
+          0.04308231552170792,
+          0.013160739265922362,
+          0.04024766075898343,
+          0.18417776290106874,
+          0.013078264148520974,
+          0.011275358313800147,
+          0.0289776232313441,
+          0.15375856764609327,
+          0.009185469999877453,
+          0.10126853890616178,
+          0.02616170127734911,
+          0.13053678865401377,
+          0.006967110611102478,
+          0.003972525128698721,
+          0.005548618602624506,
+          0.03687282503643671,
+          0.0028159719606597145,
+          0.0028117829548080014,
+          0.002825599665390738,
+          0.0003654043877308473,
+          0.030862206375111383,
+          0.0002985857781521317,
+          0.00016727264809609556
+        ],
+        "motor_mse_per_world": [
+          0.033836646917546474,
+          0.027633944656484298
+        ],
+        "motor_skill": -0.19983050344277054,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2685967524816714,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9514458267786241,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46262893489126633,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.01032893035618776,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015986675639703884,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08677941608656392,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 0.0,
+        "mod_tau": 0.0,
+        "release_tau": -1.0,
+        "release_use": 0.0,
+        "setting_id": "setting-16"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295743452722,
+        "motor_mse_per_channel": [
+          0.01527503245014208,
+          0.013405713199306224,
+          0.01735248312795935,
+          0.02751523344355985,
+          0.01821596290010111,
+          0.010949627652704567,
+          0.013696482026756093,
+          0.03361924429586968,
+          0.02413163458146852,
+          0.011518226182806708,
+          0.01090172373168222,
+          0.04308231592526523,
+          0.013160739267627964,
+          0.04024766067168602,
+          0.18417776281410667,
+          0.013078264196752098,
+          0.011275358322637014,
+          0.028977621899403023,
+          0.1537585663810779,
+          0.009185469981496216,
+          0.10126853876468273,
+          0.02616170169512918,
+          0.13053678893370568,
+          0.006967110595726692,
+          0.003972525297231482,
+          0.005548618159382115,
+          0.03687282503629603,
+          0.0028159719633324308,
+          0.0028117829550070197,
+          0.002825599667890906,
+          0.0003654043871892216,
+          0.03086220637465432,
+          0.0002985857677422314,
+          0.00016727262701646885
+        ],
+        "motor_mse_per_world": [
+          0.03383664681342306,
+          0.027633944673482378
+        ],
+        "motor_skill": -0.1998305017421913,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2687202431632849,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9519397896793287,
+          "body": {
+            "active_features": 96,
+            "mse": 0.4625739708772972,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.01044651118694484,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0016006028440393339,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08567390945439768,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 0.0,
+        "mod_tau": 0.0,
+        "release_tau": 1.0,
+        "release_use": 0.0,
+        "setting_id": "setting-17"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.03073529578909958,
+        "motor_mse_per_channel": [
+          0.015275032419946098,
+          0.013405713086756066,
+          0.01735248314760273,
+          0.02751523288392865,
+          0.018215962973737253,
+          0.010949627904923131,
+          0.013696482025282493,
+          0.03361924388123035,
+          0.024131634885745688,
+          0.011518226093088967,
+          0.010901723664001441,
+          0.043082315509160675,
+          0.013160739265450099,
+          0.04024766075731374,
+          0.18417776289728496,
+          0.013078264148885677,
+          0.011275358316366748,
+          0.02897762327899903,
+          0.15375856764522502,
+          0.009185470001005648,
+          0.10126853890688794,
+          0.02616170127052459,
+          0.13053678865007234,
+          0.006967110612511718,
+          0.003972525123852687,
+          0.0055486186733950185,
+          0.03687282503635231,
+          0.0028159719605734975,
+          0.002811782954751139,
+          0.002825599665273084,
+          0.00036540438780149323,
+          0.030862206375289126,
+          0.00029858577827987113,
+          0.0001672726478890259
+        ],
+        "motor_mse_per_world": [
+          0.033836646924111514,
+          0.027633944654087653
+        ],
+        "motor_skill": -0.19983050352413256,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2686004399168347,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9514605765109405,
+          "body": {
+            "active_features": 96,
+            "mse": 0.4626296347459846,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010327433203901282,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.001598716584315804,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08675141377421769,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 0.0,
+        "mod_tau": 0.0,
+        "release_tau": 0.0,
+        "release_use": -1.0,
+        "setting_id": "setting-18"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295742227615,
+        "motor_mse_per_channel": [
+          0.015275032445329685,
+          0.01340571320340879,
+          0.017352483124340876,
+          0.02751523346443203,
+          0.018215962893112954,
+          0.0109496276048201,
+          0.013696482017949598,
+          0.03361924444587527,
+          0.024131634561357022,
+          0.011518226173659359,
+          0.010901723733259516,
+          0.043082316079899624,
+          0.013160739268066119,
+          0.04024766068065605,
+          0.18417776283982343,
+          0.013078264190412069,
+          0.011275358326804498,
+          0.02897762171292075,
+          0.153758566248115,
+          0.009185469991190348,
+          0.10126853874236495,
+          0.026161701673929207,
+          0.13053678896486295,
+          0.006967110600646548,
+          0.0039725253309102655,
+          0.0055486181420033994,
+          0.03687282503612722,
+          0.002815971963361169,
+          0.0028117829550354505,
+          0.0028255996683026977,
+          0.0003654043872127695,
+          0.030862206373816408,
+          0.00029858576725255053,
+          0.00016727262448304632
+        ],
+        "motor_mse_per_world": [
+          0.03383664680555687,
+          0.027633944678898372
+        ],
+        "motor_skill": -0.19983050169436622,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2687269971720597,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9519668057193283,
+          "body": {
+            "active_features": 96,
+            "mse": 0.4625600666410859,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010476255587448025,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0016007495016425045,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08559013297389528,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 0.0,
+        "mod_tau": 0.0,
+        "release_tau": 0.0,
+        "release_use": 1.0,
+        "setting_id": "setting-19"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295774119976,
+        "motor_mse_per_channel": [
+          0.015275032448275461,
+          0.013405713114288094,
+          0.017352483149107305,
+          0.027515233087121272,
+          0.018215962927701505,
+          0.01094962777858094,
+          0.013696482023205687,
+          0.03361924415162313,
+          0.024131634814726802,
+          0.011518226139912944,
+          0.01090172367425453,
+          0.043082315636516925,
+          0.013160739263562805,
+          0.040247660682219626,
+          0.1841777628965239,
+          0.013078264146854954,
+          0.011275358324731137,
+          0.028977622743278544,
+          0.15375856717424916,
+          0.009185469997322745,
+          0.10126853884866893,
+          0.026161701475894205,
+          0.13053678877212213,
+          0.0069671105989247886,
+          0.003972525193295796,
+          0.005548618461325749,
+          0.0368728250363523,
+          0.0028159719620104422,
+          0.00281178295563251,
+          0.002825599668597168,
+          0.00036540438709503176,
+          0.03086220637480668,
+          0.0002985857734474773,
+          0.00016727263785108932
+        ],
+        "motor_mse_per_world": [
+          0.03383664688324643,
+          0.027633944664993516
+        ],
+        "motor_skill": -0.19983050293936566,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2686529602956389,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516706580860756,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46260295830905673,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.01038450031725624,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015995520150501106,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08627418351059246,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": -1.0,
+        "mod_tau": 0.0,
+        "release_tau": 0.0,
+        "release_use": 0.0,
+        "setting_id": "setting-20"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295772830462,
+        "motor_mse_per_channel": [
+          0.015275032448275461,
+          0.013405713115349913,
+          0.01735248314926776,
+          0.027515233092480405,
+          0.018215962926579198,
+          0.010949627780426175,
+          0.013696482022337293,
+          0.03361924414602528,
+          0.02413163481324421,
+          0.01151822613671081,
+          0.01090172367346116,
+          0.0430823156539469,
+          0.013160739274039606,
+          0.040247660683547015,
+          0.18417776284203263,
+          0.013078264148158564,
+          0.011275358324189437,
+          0.028977622751961186,
+          0.1537585671762636,
+          0.009185469997522993,
+          0.10126853884866893,
+          0.026161701477660827,
+          0.13053678877620417,
+          0.006967110599474685,
+          0.003972525193214614,
+          0.005548618428313563,
+          0.0368728250363523,
+          0.0028159719618954865,
+          0.00281178295563251,
+          0.002825599668597168,
+          0.00036540438676535146,
+          0.030862206374908246,
+          0.0002985857739157887,
+          0.00016727263881501667
+        ],
+        "motor_mse_per_world": [
+          0.03383664688448027,
+          0.02763394466118065
+        ],
+        "motor_skill": -0.19983050288902615,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2686527436614547,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516697915544969,
+          "body": {
+            "active_features": 96,
+            "mse": 0.4626029697567018,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010384475828076556,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015995489383105331,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08627594106292968,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 1.0,
+        "mod_tau": 0.0,
+        "release_tau": 0.0,
+        "release_use": 0.0,
+        "setting_id": "setting-21"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.03073529577266436,
+        "motor_mse_per_channel": [
+          0.015275032448275461,
+          0.013405713112881181,
+          0.01735248314926776,
+          0.027515233089374015,
+          0.018215962927701505,
+          0.010949627786837253,
+          0.013696482023205687,
+          0.03361924415291163,
+          0.024131634814726802,
+          0.011518226138298785,
+          0.01090172367346116,
+          0.04308231565723786,
+          0.013160739272955607,
+          0.04024766068220697,
+          0.1841777628426267,
+          0.013078264146854958,
+          0.011275358324189437,
+          0.02897762274563249,
+          0.1537585671762636,
+          0.009185469997322745,
+          0.10126853884866893,
+          0.026161701471914038,
+          0.13053678877620417,
+          0.006967110597054181,
+          0.00397252519345819,
+          0.0055486184245016725,
+          0.0368728250363523,
+          0.0028159719620104422,
+          0.00281178295563251,
+          0.002825599668597168,
+          0.0003654043869772885,
+          0.030862206374908246,
+          0.00029858577376678445,
+          0.00016727263831313674
+        ],
+        "motor_mse_per_world": [
+          0.033836646883648486,
+          0.02763394466168023
+        ],
+        "motor_skill": -0.19983050288254178,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.26865302078591935,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516709000530199,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46260296215922414,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010384492080851127,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015995528477975877,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08627370781310895,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 0.0,
+        "mod_tau": -1.0,
+        "release_tau": 0.0,
+        "release_use": 0.0,
+        "setting_id": "setting-22"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295772858457,
+        "motor_mse_per_channel": [
+          0.015275032449308867,
+          0.01340571311485743,
+          0.01735248314926776,
+          0.027515233089545385,
+          0.01821596292751353,
+          0.010949627787118946,
+          0.013696482023205687,
+          0.033619244149817686,
+          0.024131634814726802,
+          0.011518226139282535,
+          0.01090172367346116,
+          0.04308231565305449,
+          0.013160739272955607,
+          0.04024766068266959,
+          0.1841777628426267,
+          0.01307826414689863,
+          0.011275358324189437,
+          0.02897762274449137,
+          0.15375856717424916,
+          0.009185469997322745,
+          0.10126853884866893,
+          0.026161701476550538,
+          0.13053678877527733,
+          0.0069671105989247886,
+          0.003972525193295872,
+          0.005548618431763596,
+          0.0368728250363523,
+          0.0028159719620104422,
+          0.00281178295563251,
+          0.002825599668597168,
+          0.0003654043870479346,
+          0.03086220637483207,
+          0.00029858577351133677,
+          0.0001672726381617867
+        ],
+        "motor_mse_per_world": [
+          0.033836646884640484,
+          0.027633944661076434
+        ],
+        "motor_skill": -0.19983050289011905,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2686528364628807,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.951670162760089,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46260290602017196,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010384612175362462,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015995504766493395,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.08627506230445947,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 0.0,
+        "mod_tau": 1.0,
+        "release_tau": 0.0,
+        "release_use": 0.0,
+        "setting_id": "setting-23"
+      }
+    },
+    {
+      "metrics": {
+        "motor_mse": 0.030735295773617295,
+        "motor_mse_per_channel": [
+          0.015275032448275461,
+          0.013405713113718761,
+          0.01735248314926776,
+          0.027515233089545385,
+          0.018215962927701505,
+          0.010949627787118946,
+          0.013696482023205687,
+          0.03361924414855626,
+          0.024131634814726802,
+          0.011518226138435776,
+          0.01090172367470015,
+          0.04308231565305449,
+          0.013160739272955607,
+          0.0402476606833818,
+          0.1841777628426267,
+          0.01307826415622378,
+          0.011275358324189437,
+          0.028977622745894056,
+          0.15375856717424916,
+          0.009185469997322745,
+          0.10126853884866893,
+          0.026161701474295827,
+          0.130536788773049,
+          0.0069671105989247886,
+          0.003972525193214659,
+          0.005548618453314926,
+          0.0368728250363523,
+          0.0028159719620104422,
+          0.00281178295563251,
+          0.002825599668597168,
+          0.0003654043869537401,
+          0.030862206374908246,
+          0.00029858577359649337,
+          0.00016727263832110422
+        ],
+        "motor_mse_per_world": [
+          0.03383664688562285,
+          0.02763394466161173
+        ],
+        "motor_skill": -0.19983050291974225,
+        "motor_train_mean_mse": 0.02561636472720448,
+        "objective": 0.2686529289732296,
+        "predicted_antagonist_effort": 0.028432875871658325,
+        "predicted_cocontraction": 0.024867994710803032,
+        "teacher_antagonist_effort": 0.091127410531044,
+        "temporal": {
+          "balanced_persistence_ratio": 0.9516705327984493,
+          "body": {
+            "active_features": 96,
+            "mse": 0.46260293856380114,
+            "persistence_mse": 0.467457268461701,
+            "skill": 0.010384542556957976,
+            "train_mean_delta_mse": 0.46742144327480806
+          },
+          "optic": {
+            "active_features": 24,
+            "mse": 0.0015995516503416341,
+            "persistence_mse": 0.0017505820522787578,
+            "skill": 0.0862743918461435,
+            "train_mean_delta_mse": 0.001747981884503273
+          },
+          "scope": "linear Z512-to-future sensory delta; no actions or raw current senses as probe inputs"
+        }
+      },
+      "setting": {
+        "mod_gain": 0.0,
+        "mod_tau": 0.0,
+        "release_tau": 0.0,
+        "release_use": 0.0,
+        "setting_id": "setting-24"
+      }
+    }
+  ],
+  "provenance": {
+    "corpus_sha256": "e020317ae5f94d22c39af191d45b1934419d927d5e9d54492ed72a460d5f7367",
+    "cpu_threads": 4,
+    "device": "cuda:0",
+    "episode_sha256": [
+      "ec8a88daa756837129fc184b60dad20a066eece53487dd821ef97ef2f124913d",
+      "08735bccce9635543ec6a40d074a0600d5e43642d187459de9823269da11319c",
+      "cfea42a43797e0983aefc91a14a1ddd1e1aa0024609a50585a9671cb45bc9a18",
+      "b8e54205a1ae772b323c5fa9cdb01610633958882cafdf4ef6b006b38876a8d9",
+      "a44f9fd79a8e4445badaad5a4102bbb48afff177eaf5e312f0fcfcfc931ff550",
+      "d70ff1b82707c2152486189d173768afef39f6080cb6c2326bfcbb7de3ab449b",
+      "d9178a03599156db1709f49b3d47f757eb7d50e9479736d23ecb13de38fff0e2",
+      "5e8248ef1ef2d74e3b6df183fc1c0d52f5f80221c3ace508e2b6a3978a82ace8"
+    ],
+    "hip": "6.3.42134-a9a80e791",
+    "horizon_ticks": 4,
+    "input_contract": [
+      "optic_rgb",
+      "body110",
+      "delivered_context12"
+    ],
+    "ridge": 0.01,
+    "service": {
+      "adapter_sha256": "53765d4afb16ee084d9d0866066ac1ddc4f879a54af0d4693d97230509688996",
+      "anatomy_sha256": "33b51f574db7e14cefbb8dd3247b39e3d17c1169e4d2504ad40cd5b3d95fe386",
+      "atlas_sha256": "6a59c4282ffc912e1c0304498686819cdcc16c059f453fd5bc19c55938218482",
+      "context_dim": 12,
+      "format": "chreatures-cns-service-v3",
+      "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+      "latent_dim": 512,
+      "motor_dim": 34,
+      "readout_mask_sha256": "6a98c067652143edd1c6fd9bcb45462ec8dba7437cc1900796b0ce03cb9c4020",
+      "sensory_dim": 5423,
+      "service_artifact_sha256": "6e1acf46d18f5db0ff6e0096ed7439ebaf5df722ce34c1f0c56276ba271fccc3"
+    },
+    "source_sha256": {
+      "/tank/chreatures/runs/malecns-v3/gam/physical-ede2b03d/source/research/anatomical_cns/gam_dynamics.py": "ede2b03d4734c81219a2dbc6c84fca1158d85763e1b284ac8d5d8bf6fbd94a02",
+      "chreatures/cns_adapter_contract.py": "fb5035cf7f9a9cc0c0fa6543e68d955f79c319f11b32ce17bfc88757cc9e1bfa",
+      "research/anatomical_cns/data.py": "c7dfd36643047bd3074f9f5e85084058ed4d43fb73d7a118738da082bde91b29",
+      "research/anatomical_cns/model.py": "55fbdafd8fecf0ef5072cb29729d8e7278ab8241e84939a9c9d6f2e4291b76d5"
+    },
+    "teacher_labels_are_targets_only": true,
+    "torch": "2.9.1+rocm6.3",
+    "trim_ticks": 8,
+    "world_batch": 8
+  },
+  "records_sha256": {
+    "setting-00.json": "c7671e143c084cf71d387cf005149d7cf2a8b1dfe9730418ea052dc51f464843",
+    "setting-01.json": "1e4d2d55be904ad7206b64870954fe7e50d262d38ca17c83520341c3b7d794a0",
+    "setting-02.json": "caf730de6d4226e3c1e01cff36e456f6095225754d07ba9da6c0d2b43ebe3b2c",
+    "setting-03.json": "8fc4cc6167ecebcfb267e39826d797828e26c46e6d732abdc82a385d6413068e",
+    "setting-04.json": "5f776a712f90420d7635024306cfddcd0d73e708bc783f284376c7cadcd62fbe",
+    "setting-05.json": "0a63a3c7ba7b4d93c484310c0e2581f51fc1539c301c739b78544974650dbcc1",
+    "setting-06.json": "a19a8c113175bdb0aa9c44212eb012e65df6e65cff2f07ba4cc338b45abbbb56",
+    "setting-07.json": "feaa309273afe55cc1bdd78ee8a7db4a430f361f6559e0db2b4057139aef3dae",
+    "setting-08.json": "e500590a43c85199376a993487adde1111acfeacfcb87617cfc94233bd5d67aa",
+    "setting-09.json": "feb63e3261e188b7ee65505ea57ca34e5091c59be13031688a10abcc04f02796",
+    "setting-10.json": "2c7aab93a6215b26370c9145d47517d05288339bdef11475d5f3f33f27d97d43",
+    "setting-11.json": "e902aca052e50c29d3f382161fe7c0918e0d17acffedb9c7fbbf84a924f5b9e0",
+    "setting-12.json": "04f42a1f19b2f86daaec97597615af996227e7b76959142e726411b0603bffa6",
+    "setting-13.json": "02099e39bf947628a80c4407aeb01d96d84b309eab346c22ffc9275c0d9e959d",
+    "setting-14.json": "d4a29fbf6ac579975fd3dd8441fd1c451347ba4fde369cce4d7ba2636a195bb0",
+    "setting-15.json": "43d896b6980c9f27bc03343f7d404592f14dde9ea7114ab2f6c043185826e9b7",
+    "setting-16.json": "ebf2053e0bba83f02b249a88a1c767e8accfe380c9cafcf342d5c0bdfeb89c70",
+    "setting-17.json": "13a92b97d0c35f30a6f0c1aff7079895876b3a686d554b20319e53a5841fd317",
+    "setting-18.json": "91300a9aa2d578eb757b8277c9476169e0c37edeafb61a534efff42ea40edac6",
+    "setting-19.json": "141ddaec77b727ac83d3ee2277d41758bdaf159aa0f754277479d2a8416c7cda",
+    "setting-20.json": "b37cc53052ab50c8a3f30d365fcb21e229a761b307a69155d08a750d065588b4",
+    "setting-21.json": "97e510f6198189cf56551ee653f21504eb7cc6235104827f262bbb4ab6ba46ca",
+    "setting-22.json": "b8b622fda2106f140b505a35077d373bf30e519c82b3fde0da2eaca61b07dace",
+    "setting-23.json": "dee08fe3a5dba13f3f2c16a1916a14e948c3347b018f4a57fb629688e9820cc4",
+    "setting-24.json": "032f874fe8345c3bc2dda48fa1cce06cf61f2947939197ef6032bda76d112a52"
+  },
+  "status": "native-fit-complete-confirmation-pending"
+}

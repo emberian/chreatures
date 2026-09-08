@@ -1,11 +1,15 @@
 // GENERATED from native/browser-world/runtime.mjs; edit the canonical source.
 /** Thin host boundary over MuJoCo Wasm and Rust/Wasm. No browser/DOM dependency.
- * Policy clients receive only sample(): optic B*5313 and body B*43.
+ * Policy clients receive only sample(): optic B*5313 and body B*110.
  * observe()/snapshot() belong exclusively to the observer/checkpoint owner.
  */
 export const ACTION_NAMES = Object.freeze([
-  "thrust",
-  "yaw",
+  ...["lf", "lm", "lh", "rf", "rm", "rh"].flatMap((leg) =>
+    ["hip", "knee"].flatMap((joint) => [
+      `${leg}_${joint}_positive`,
+      `${leg}_${joint}_negative`,
+    ]),
+  ),
   "gaze_pitch",
   "posture",
   "grip",
@@ -17,7 +21,7 @@ export const ACTION_NAMES = Object.freeze([
   "secrete",
   "allocate",
 ]);
-export const ENGINE = "mujoco-3.12.0-wasm-browser-epoch-1";
+export const ENGINE = "mujoco-3.12.0-wasm-browser-epoch-2";
 const SITES = 1771,
   RAY_STRIDE = 3 + SITES * 3;
 const arr = (v) => Array.from(v);
@@ -127,7 +131,19 @@ class BrowserWorld {
       throw new Error(
         "World paused after incomplete physical mutation; restore coherent checkpoint",
       );
-    checkNumbers(actions, this.residents * 12, "CNS motor command");
+    checkNumbers(actions, this.residents * 34, "CNS motor command");
+    for (let row = 0; row < this.residents; row++) {
+      const offset = row * 34;
+      for (let k = 0; k < 34; k++) {
+        const value = actions[offset + k];
+        if (k === 24 || k === 25) {
+          if (value < -1 || value > 1)
+            throw new Error("Signed CNS motor command outside [-1,1]");
+        } else if (value < 0 || value > 1) {
+          throw new Error("Nonnegative CNS motor command outside [0,1]");
+        }
+      }
+    }
     if (dt !== 0.05)
       throw new Error("Browser control tick is fixed at 0.05 seconds");
     const commands = Float64Array.from(actions);
@@ -217,7 +233,11 @@ class BrowserWorld {
     this.#height = height;
   }
   #contacts() {
-    const out = new Float64Array(this.residents * 25);
+    const aggregate = new Float64Array(this.residents * 25);
+    const feet = new Float64Array(this.residents * 6);
+    const legIndex = new Map(
+      ["lf", "lm", "lh", "rf", "rm", "rh"].map((leg, i) => [leg, i]),
+    );
     const contacts = this.#data.contact;
     try {
       for (let i = 0; i < contacts.size(); i++) {
@@ -228,12 +248,17 @@ class BrowserWorld {
             const a = this.#model.body_rootid[this.#model.geom_bodyid[c.geom1]],
               b = this.#model.body_rootid[this.#model.geom_bodyid[c.geom2]];
             if (a !== root && b !== root) continue;
-            const count = out[row * 25];
+            const count = aggregate[row * 25];
             if (count >= 8) continue;
-            out[row * 25]++;
+            aggregate[row * 25]++;
             for (let k = 0; k < 3; k++)
-              out[row * 25 + 1 + count * 3 + k] =
+              aggregate[row * 25 + 1 + count * 3 + k] =
                 c.frame[k] * (a === root ? -1 : 1);
+            for (const geom of [c.geom1, c.geom2]) {
+              const name = this.#fixture.geoms[geom]?.name ?? "";
+              const match = name.match(/^resident:[^:]+:geom:(lf|lm|lh|rf|rm|rh):tarsus$/);
+              if (match) feet[row * 6 + legIndex.get(match[1])] = 1;
+            }
           }
         } finally {
           c?.delete();
@@ -242,7 +267,7 @@ class BrowserWorld {
     } finally {
       contacts.delete();
     }
-    return out;
+    return { aggregate, feet };
   }
   #colors() {
     const m = this.#model;
@@ -325,12 +350,23 @@ class BrowserWorld {
         this.#buffers.normals,
       );
     }
+    const contactState = this.#contacts();
+    const jointLoads = new Float64Array(this.residents * 12);
+    for (let row = 0; row < this.residents; row++)
+      for (let j = 0; j < 12; j++)
+        jointLoads[row * 12 + j] =
+          d.qfrc_applied[this.#fixture.bodies[row].dofs[j]] +
+          d.qfrc_constraint[this.#fixture.bodies[row].dofs[j]];
     const body = this.#core.afferents(
       d.xpos,
       d.xmat,
       this.#velocities(true),
-      this.#contacts(),
+      contactState.aggregate,
       shade,
+      d.qpos,
+      d.qvel,
+      jointLoads,
+      contactState.feet,
     );
     return { optic, body };
   }
@@ -373,7 +409,7 @@ class BrowserWorld {
       this.#mj.mjtState.mjSTATE_INTEGRATION.value,
     );
     return {
-      format: "chreatures-browser-physical-snapshot-v1",
+      format: "chreatures-browser-physical-snapshot-v2",
       engine: ENGINE,
       model: this.#fixture.source_mjcf_sha256,
       atlas: this.#fixture.atlas_sha256,
@@ -393,7 +429,7 @@ class BrowserWorld {
   restore(snapshot) {
     this.#assertOpen();
     if (
-      snapshot?.format !== "chreatures-browser-physical-snapshot-v1" ||
+      snapshot?.format !== "chreatures-browser-physical-snapshot-v2" ||
       snapshot.engine !== ENGINE ||
       snapshot.model !== this.#fixture.source_mjcf_sha256 ||
       snapshot.atlas !== this.#fixture.atlas_sha256
@@ -616,12 +652,12 @@ class BrowserWorld {
       throw error;
     }
   }
-  visitorSound(position, amplitude) {
+  visitorSound(position, frequencyHz, envelope = 1, duration = 0.15) {
     this.#assertOpen();
-    this.#core.visitor_sound(
-      Float64Array.from(position),
-      Float64Array.from(amplitude),
-    );
+    checkNumbers(position, 3, "Sound position");
+    if (![frequencyHz, envelope, duration].every(Number.isFinite))
+      throw new Error("Sound requires finite frequency, envelope and duration");
+    this.#core.visitor_sound(Float64Array.from(position), frequencyHz, envelope, duration);
   }
   /** Human force is queued into the next ordinary physical tick. */
   queueVisitorForce(entityId, force) {

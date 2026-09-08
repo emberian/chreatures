@@ -27,7 +27,7 @@ def file_sha(path):
 
 def read_service(path):
     with path.open('rb') as stream:
-        if stream.read(8) != MAGIC: raise ValueError('Current CHCNS2 artifact required')
+        if stream.read(8) != MAGIC: raise ValueError('Current CHCNS3 artifact required')
         size = struct.unpack('<I', stream.read(4))[0]
         if not 0 < size < 8 * 1024**2: raise ValueError('Invalid metadata length')
         meta = json.loads(stream.read(size))
@@ -70,8 +70,9 @@ def blob(directory, name, array, *, half=False):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--service', type=Path, required=True)
-    p.add_argument('--resident', type=Path, required=True)
-    p.add_argument('--soma-directory', type=Path, required=True)
+    p.add_argument('--resident', type=Path)
+    p.add_argument('--soma-directory', type=Path)
+    p.add_argument('--cns-only', action='store_true', help='pack only the CNS manifest and tensors for parity/integration')
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--revision', required=True)
     a=p.parse_args()
@@ -79,20 +80,33 @@ def main():
     if len(a.revision)!=40 or any(c not in '0123456789abcdef' for c in a.revision): raise ValueError('Full source revision required')
     meta, arrays, mask = read_service(a.service)
     service_hash = file_sha(a.service)
+    a.output.mkdir(parents=True)
+    entries={name:blob(a.output,name,arrays[name],half=name in HALF) for name,_,_ in ARRAY_SPECS}
+    entries['afferent.mask']=blob(a.output,'afferent.mask',mask.astype('<u4'))
+    manifest=dict(format='chreatures-cns-webgpu-v3', version=3,
+        counts=dict(neurons=165122,edges=25563197,types=11752,opticSites=1771,bodyChannels=110,
+                    contextChannels=12,contextTargets=1314,motor=34,motorTargets=815,afferents=16654,
+                    rank=64,latent=512,opticValues=5313,receptors=4107,receptorTypes=10,
+                    receptorSiteEdges=4669,bodyTargets=11233),
+        identity=dict(artifact=meta['adapter_sha256'],graph=meta['graph_sha256'],atlas=meta['atlas_sha256'],
+                      anatomy=meta['anatomy_sha256'],mask=meta['readout_mask_sha256']),
+        serviceArtifactSha256=service_hash,sourceRevision=a.revision,buffers=entries,
+        numericalExport='V3 one-way export; IEEE binary16 graph and rank projection weights; signed normalized channel-aware graph retained',
+        trainingStatus=meta['training_status'],trainingScope=meta.get('provenance',{}).get('scope','See source training receipt; no embodied competence inferred'))
+    (a.output/'cns-manifest.json').write_bytes(canonical(manifest)+b'\n')
+    if a.cns_only:
+        if a.resident or a.soma_directory: raise ValueError('--cns-only cannot include resident or soma inputs')
+        files={f.name:dict(bytes=f.stat().st_size,sha256=file_sha(f)) for f in sorted(a.output.iterdir())}
+        receipt=dict(format='chreatures-browser-cns-release-v3',sourceRevision=a.revision,
+                     serviceArtifactSha256=service_hash,files=files,totalBytes=sum(f['bytes'] for f in files.values()))
+        (a.output/'release.json').write_bytes(canonical(receipt)+b'\n')
+        print(json.dumps(dict(output=str(a.output),totalBytes=receipt['totalBytes'],serviceArtifactSha256=service_hash,files=len(files))))
+        return
+    if not a.resident or not a.soma_directory: raise ValueError('--resident and --soma-directory are required unless --cns-only')
     # Use the production immutable loader, including component/ancestor checks.
     from chreatures.sensorimotor_worker_native import _load_resident
     resident_meta, resident_arrays, control = _load_resident(a.resident)
     if resident_meta['cns_service']['service_artifact_sha256'] != service_hash: raise ValueError('Resident belongs to a different CNS artifact')
-    a.output.mkdir(parents=True)
-    entries={name:blob(a.output,name,arrays[name],half=name in HALF) for name,_,_ in ARRAY_SPECS}
-    entries['afferent.mask']=blob(a.output,'afferent.mask',mask.astype('<u4'))
-    manifest=dict(format='chreatures-cns-webgpu-v2', version=2,
-        counts=dict(neurons=165122,edges=25563197,types=11752,opticSites=1771,bodyChannels=43,afferents=15340,rank=64,latent=512,opticValues=5313,receptors=4107,receptorTypes=10,receptorSiteEdges=4669,bodyHidden=128,bodyTargets=11233),
-        identity=dict(artifact=meta['adapter_sha256'],graph=meta['graph_sha256'],atlas=meta['atlas_sha256'],mask=meta['readout_mask_sha256']),
-        serviceArtifactSha256=service_hash,sourceRevision=a.revision,buffers=entries,
-        numericalExport='IEEE binary16 graph and rank projection weights; all edges retained; all other arrays float32/uint32',
-        trainingStatus=meta['training_status'],trainingScope=meta.get('provenance',{}).get('scope','See source training receipt; no embodied competence inferred'))
-    (a.output/'cns-manifest.json').write_bytes(canonical(manifest)+b'\n')
     components=resident_meta['controller_components']
     packs={}
     for name,order in [('core',CORE_ORDER),('predictor',PREDICTOR_ORDER),('sequence',EMBEDDED_ORDER)]:
@@ -100,6 +114,7 @@ def main():
     resident=dict(format='chreatures-browser-resident-v1',sourceRevision=a.revision,
         cnsServiceArtifactSha256=service_hash,artifactSha256=resident_meta['artifact_sha256'],
         config=dict(batch=3,action_mode='sample',action_seed=314159,suffix_seed=271828,
+                    context_policy_version='signed-context12-v1',
                     core_sha256=components['core_packed_sha256'],predictor_sha256=components['predictor_packed_sha256'],
                     sequence_control_version=control.version,sequence_control_sha256=control.sha256,research_training=False),
         trainingStatus=resident_meta['initialization']['training_status'],buffers=packs)

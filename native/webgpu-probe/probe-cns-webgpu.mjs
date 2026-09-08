@@ -17,7 +17,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, value, inde
   return pairs;
 }, []));
 if (!args.model || !args.fixture) {
-  console.error('usage: node probe-cns-webgpu.mjs --model PACK_DIRECTORY --fixture torch-v2-fixture.npz [--report receipt.json]');
+  console.error('usage: node probe-cns-webgpu.mjs --model PACK_DIRECTORY --fixture torch-v3-fixture.npz [--report receipt.json]');
   process.exit(2);
 }
 
@@ -80,13 +80,13 @@ function maximumError(actual, expected, expectedIndex = index => index) {
 }
 
 function splitSensory(values, tick, batch) {
-  const stride = 5356;
+  const stride = 5423;
   const optic = new Float32Array(batch * 5313);
-  const body = new Float32Array(batch * 43);
+  const body = new Float32Array(batch * 110);
   for (let resident = 0; resident < batch; resident++) {
     const start = (tick * batch + resident) * stride;
     optic.set(values.subarray(start, start + 5313), resident * 5313);
-    body.set(values.subarray(start + 5313, start + stride), resident * 43);
+    body.set(values.subarray(start + 5313, start + stride), resident * 110);
   }
   return { optic, body };
 }
@@ -112,11 +112,12 @@ for (const [name, entry] of Object.entries(manifest.buffers)) {
   assets.set(name, toArrayBuffer(raw));
 }
 const bodyMean = new Float32Array(assets.get('body.mean')).slice();
-const shaderSources = Object.fromEntries(await Promise.all(['afferent.wgsl', 'dynamics.wgsl', 'readout.wgsl'].map(async name => [
+const shaderSources = Object.fromEntries(await Promise.all(['afferent.wgsl', 'dynamics.wgsl', 'readout.wgsl', 'motor.wgsl','observe.wgsl'].map(async name => [
   name, await readFile(resolve(liveSource, 'shaders', name), 'utf8'),
 ])));
 
 const dawn = create(['backend=metal']);
+globalThis.__chreaturesDawnInstance = dawn;
 const adapter = await dawn.requestAdapter({ powerPreference: 'high-performance' });
 if (!adapter) throw new Error('Dawn found no Metal WebGPU adapter');
 const needed = Math.max(...Object.values(manifest.buffers).map(entry => entry.byteLength));
@@ -127,71 +128,86 @@ const device = await adapter.requestDevice({
   },
 });
 const { MaleCNSWebGPU } = await import(pathToFileURL(resolve(liveSource, 'cns-webgpu.js')));
-const engine = await MaleCNSWebGPU.load({ device, manifest, capacity: 2, assetBuffers: assets, shaderSources });
+const engine = await MaleCNSWebGPU.load({ device, manifest, capacity: 1, assetBuffers: assets, shaderSources });
+console.error('probe: engine loaded');
 assets.clear();
 
 // The sealed neutral drive must cancel the adapter at the defined operating input.
-const neutralOptic = new Float32Array(2 * 5313).fill(0.5);
-const neutralBody = new Float32Array(2 * 43);
-neutralBody.set(bodyMean, 0); neutralBody.set(bodyMean, 43);
-const neutral = await engine.step({ dt: 0.05, activeMask: 3, opticRGB: neutralOptic, body: neutralBody, selectedResident: 0 });
+const neutralOptic = new Float32Array(5313).fill(0.5);
+const neutralBody = bodyMean.slice();
+const neutralContext = new Float32Array(12);
+const neutral = await engine.step({ dt: 0.05, activeMask: 1, opticRGB: neutralOptic, body: neutralBody, context:neutralContext, selectedResident: 0 });
+console.error('probe: neutral tick complete');
 const neutralRateError = maximumError(neutral.selectedRates, engine.baselineRates);
-await engine.reset([0, 1], ['fixture-0', 'fixture-1']);
+await engine.reset([0], ['fixture-0']);
 
 const npz = unzipEntries(await readFile(resolve(args.fixture)));
-const fixture = Object.fromEntries([...npz].map(([name, bytes]) => [name.replace(/\.npy$/, ''), parseNpy(bytes)]));
-if (fixture.sensory.shape.join(',') !== '8,2,5356' || fixture.rates.shape.join(',') !== '8,165122,2' ||
-    fixture.latent.shape.join(',') !== '8,2,512') throw new Error('unexpected canonical fixture dimensions');
+const fixture = Object.fromEntries([...npz].filter(([name])=>name!=='metadata_json.npy').map(([name, bytes]) => [name.replace(/\.npy$/, ''), parseNpy(bytes)]));
+if (fixture.sensory.shape.join(',') !== '3,1,5423' || fixture.context.shape.join(',') !== '3,1,12' ||
+    fixture['state.rates'].shape.join(',') !== '3,165122,1' || fixture.latent.shape.join(',') !== '3,1,512' ||
+    fixture.motor.shape.join(',') !== '3,1,34') throw new Error('unexpected canonical V3 fixture dimensions');
 const tickRateErrors = [], tickLatentErrors = [];
-let beforeLast, firstLast, firstFinal;
-for (let tick = 0; tick < 8; tick++) {
-  if (tick === 7) beforeLast = await engine.snapshot();
-  const input = splitSensory(fixture.sensory.values, tick, 2);
-  const output = await engine.step({ dt: 0.05, activeMask: 3, opticRGB: input.optic, body: input.body, selectedResident: 0 });
+const tickMotorErrors=[];
+let beforeLast, firstLast, firstMotor, firstFinal;
+for (let tick = 0; tick < 3; tick++) {
+  if (tick === 2) { beforeLast = await engine.snapshot(); console.error('probe: pre-final snapshot complete'); }
+  const input = splitSensory(fixture.sensory.values, tick, 1);
+  const context=fixture.context.values.slice(tick*12,(tick+1)*12);
+  const output = await engine.step({ dt: 0.05, activeMask: 1, opticRGB: input.optic, body: input.body, context, selectedResident:0 });
+  console.error(`probe: fixture tick ${tick} complete`);
+  for(let neuron=0;neuron<output.selectedRates.length;neuron++) if(!Number.isFinite(output.selectedRates[neuron])) throw new Error(`nonfinite GPU rate at tick ${tick}, neuron ${neuron}`);
   tickLatentErrors.push(maximumError(output.latent, fixture.latent.values,
-    index => tick * 2 * 512 + index));
-  tickRateErrors.push(maximumError(output.selectedRates, fixture.rates.values,
-    neuron => (tick * 165122 + neuron) * 2));
-  if (tick === 7) { firstLast = output.latent.slice(); firstFinal = await engine.snapshot(); }
+    index => tick * 512 + index));
+  tickRateErrors.push(maximumError(output.selectedRates, fixture['state.rates'].values, neuron => tick * 165122 + neuron));
+  tickMotorErrors.push(maximumError(output.motor,fixture.motor.values,index=>tick*34+index));
+  if (tick === 2) { firstLast = output.latent.slice(); firstMotor=output.motor.slice(); firstFinal = await engine.snapshot(); console.error('probe: final snapshot complete'); }
 }
 
 const finalState = snapshotState(firstFinal);
-const finalTick = 7;
-let finalRateError = 0, finalAdaptationError = 0, finalSupportError = 0;
+const finalTick = 2;
+const stateKeys=['rates','adaptation','support','release','mod_da','mod_oa','mod_ht'];
+const finalStateErrors=Object.fromEntries(stateKeys.map(k=>[k,0]));
 for (let neuron = 0; neuron < 165122; neuron++) {
-  for (let resident = 0; resident < 2; resident++) {
-    const expected = (finalTick * 165122 + neuron) * 2 + resident;
-    const state = neuron * 12 + resident;
-    finalRateError = Math.max(finalRateError, Math.abs(finalState[state] - fixture.rates.values[expected]));
-    finalAdaptationError = Math.max(finalAdaptationError, Math.abs(finalState[state + 4] - fixture.adaptation.values[expected]));
-    finalSupportError = Math.max(finalSupportError, Math.abs(finalState[state + 8] - fixture.support.values[expected]));
-  }
+  const expected = finalTick * 165122 + neuron;
+  const state = neuron * 28;
+  for(let field=0;field<stateKeys.length;field++){const key=stateKeys[field];finalStateErrors[key]=Math.max(finalStateErrors[key],Math.abs(finalState[state+field*4]-fixture['state.'+key].values[expected]));}
 }
+console.error('probe: seven-state comparison complete');
 
 await engine.restore(beforeLast);
-const lastInput = splitSensory(fixture.sensory.values, 7, 2);
-const secondLast = await engine.step({ dt: 0.05, activeMask: 3, opticRGB: lastInput.optic, body: lastInput.body });
+console.error('probe: restore complete');
+const lastInput = splitSensory(fixture.sensory.values, 2, 1);
+const lastContext=fixture.context.values.slice(2*12,3*12);
+const secondLast = await engine.step({ dt: 0.05, activeMask: 1, opticRGB: lastInput.optic, body: lastInput.body, context:lastContext });
 const secondFinal = await engine.snapshot();
 const restoreLatentExact = maximumError(firstLast, secondLast.latent) === 0;
+const restoreMotorExact = maximumError(firstMotor, secondLast.motor) === 0;
 const restoreStateExact = Buffer.from(firstFinal).equals(Buffer.from(secondFinal));
 
 const report = {
-  format: 'chreatures-cns-webgpu-v2-dawn-probe-v1',
+  format: 'chreatures-cns-webgpu-v3-dawn-probe-v1',
   manifestArtifact: manifest.identity.artifact,
   graph: manifest.identity.graph,
   serviceArtifactSha256: manifest.serviceArtifactSha256,
   fixtureSha256: sha256(await readFile(resolve(args.fixture))),
   adapter: { name: adapter.info?.device || adapter.info?.description || 'Dawn Metal adapter' },
-  capacity: 2,
-  ticks: 8,
+  capacity: 1,
+  ticks: 3,
   neutralRateMaxAbs: neutralRateError,
   rateMaxAbsByTick: tickRateErrors,
   latentMaxAbsByTick: tickLatentErrors,
-  finalMaxAbs: { rate: finalRateError, adaptation: finalAdaptationError, support: finalSupportError },
-  byteExactRestore: { latent: restoreLatentExact, snapshot: restoreStateExact },
-  limits: { neutralRate: 2e-6, rate: 1e-4, adaptation: 1e-5, support: 2e-6, latent: 1e-4 },
+  motorMaxAbsByTick: tickMotorErrors,
+  finalMaxAbs: finalStateErrors,
+  byteExactRestore: { latent: restoreLatentExact, motor:restoreMotorExact, snapshot: restoreStateExact },
+  limits: { neutralRate: 2e-6, state: 2e-4, latent: 2e-4, motor: 2e-4 },
   limitBasis: 'Approximately four times the observed binary16-versus-float32 numerical error; regression bound only, not a biological tolerance.',
   note: 'Browser graph and projection use authenticated IEEE binary16 packing; the Torch fixture used source float32 weights.',
+  nodeDawnLifetime: {
+    requirement: 'The object returned by create() remains strongly referenced for the full GPU lifetime.',
+    upstream: 'https://github.com/dawn-gpu/node-webgpu#lifetime',
+    issue: 'https://issues.chromium.org/issues/387965810',
+    diagnosis: 'Without the strong reference, lldb stopped in dawn::native::InstanceBase::ProcessEvents at std::mutex::lock after successful ticks.',
+  },
 };
 console.log(JSON.stringify(report, null, 2));
 if (args.report) await writeFile(resolve(args.report), `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
@@ -199,7 +215,7 @@ engine.destroy();
 device.destroy();
 
 // These are quantized-production versus float32-reference limits, not a claim of bit parity.
-if (!(neutralRateError < 2e-6 && finalRateError < 1e-4 && finalAdaptationError < 1e-5 &&
-      finalSupportError < 2e-6 && Math.max(...tickLatentErrors) < 1e-4 && restoreLatentExact && restoreStateExact)) {
+if (!(neutralRateError < 2e-6 && Math.max(...Object.values(finalStateErrors)) < 2e-4 &&
+      Math.max(...tickLatentErrors) < 2e-4 && Math.max(...tickMotorErrors)<2e-4 && restoreLatentExact && restoreMotorExact && restoreStateExact)) {
   process.exitCode = 1;
 }

@@ -24,6 +24,8 @@ const server = createServer(async (req, res) => {
 await new Promise(done => server.listen(0, '127.0.0.1', done));
 Object.assign(globalThis, globals);
 const dawn = create(['backend=metal']);
+// Dawn's native owner must outlive every WebGPU object.
+globalThis.__chreaturesDawnInstance = dawn;
 const adapter = await dawn.requestAdapter({powerPreference: 'high-performance'});
 assert(adapter, 'Actual GPU adapter required');
 const device = await adapter.requestDevice();
@@ -40,11 +42,37 @@ try {
   assert.equal(atlas.retinalSites.length, 1771 * 3);
   assert.equal(atlas.retinalSupported.reduce((sum, value) => sum + value, 0), 1486);
   const first = engine.observe(); const timings = [];
-  for (let tick = 0; tick < 16; tick++) {
+  const motorLow = new Float32Array(34).fill(Infinity), motorHigh = new Float32Array(34).fill(-Infinity);
+  let contextMagnitude = 0;
+  const observedFields = new Set(), fields = ['rate', 'adaptation', 'support', 'release', 'dopamine', 'octopamine', 'serotonin'];
+  for (let tick = 0; tick < 64; tick++) {
+    engine.neuralField = fields[Math.min(6, Math.floor(tick / 9))];
     if (tick === 4) engine.greet([0, 1, 2]);
+    if ([16, 28, 40, 52].includes(tick)) engine.tone([80, 200, 500, 1250][(tick - 16) / 12], .4);
     engine.screen(new Float32Array(12).fill(tick % 4 < 2 ? 1 : 0), 2, 2, null);
     const frame = await engine.advance(true); timings.push(frame.wallMilliseconds);
     assert(frame.positions.every(Number.isFinite));
+    assert.equal(frame.neuralField, engine.neuralField);
+    assert.equal(frame.neuralSignal.length, 165122);
+    assert(frame.neuralSignal.every(Number.isFinite));
+    if (!observedFields.has(frame.neuralField)) {
+      const snapshot = await engine.brain.snapshot();
+      const headerBytes = new DataView(snapshot).getUint32(8, true);
+      const state = new Float32Array(snapshot, 12 + Math.ceil(headerBytes / 4) * 4);
+      const field = fields.indexOf(frame.neuralField);
+      for (let neuron = 0; neuron < 165122; neuron++) {
+        assert.equal(frame.neuralSignal[neuron], state[neuron * 28 + field * 4 + engine.selected]);
+      }
+      observedFields.add(frame.neuralField);
+    }
+    assert.equal(frame.motorActivation.length, 34);
+    assert.equal(frame.deliveredContext.length, 12);
+    for (let i = 0; i < 34; i++) {
+      assert(Number.isFinite(frame.motorActivation[i]));
+      motorLow[i] = Math.min(motorLow[i], frame.motorActivation[i]);
+      motorHigh[i] = Math.max(motorHigh[i], frame.motorActivation[i]);
+    }
+    contextMagnitude = Math.max(contextMagnitude, ...frame.deliveredContext.map(Math.abs));
     if (frame.neuralRates) {
       assert(frame.neuralRates.every(Number.isFinite));
       assert.equal(frame.retinalRGB.length, 5313);
@@ -57,6 +85,8 @@ try {
   const replay = await engine.advance(true); const restoredFuture = await engine.save();
   assert(exact(next.positions.buffer, replay.positions.buffer), 'Physical continuation differs');
   assert(exact(next.neuralRates.buffer, replay.neuralRates.buffer), 'Full CNS continuation differs');
+  assert(exact(next.motorActivation.buffer, replay.motorActivation.buffer), 'Motor recruitment continuation differs');
+  assert(exact(next.deliveredContext.buffer, replay.deliveredContext.buffer), 'Context delivery continuation differs');
   assert(exact(future, restoredFuture), 'Complete life replay differs');
   const beforeInsert = engine.observe().geometry.length;
   const inserted = await engine.insertToy();
@@ -69,12 +99,17 @@ try {
     const index = resident.root * 3;
     maxTravel = Math.max(maxTravel, Math.hypot(...after.bodyPositions.slice(index, index + 3).map((x, i) => x - first.bodyPositions[index + i])));
   }
-  const report = {format: 'chreatures-live-joined-headless-v1', engineIdentity: engine.identity,
+  const report = {format: 'chreatures-anatomical-cns-v3-joined-headless-v1', engineIdentity: engine.identity,
+    serviceArtifactSha256: engine.brain.manifest.serviceArtifactSha256,
+    adapterSha256: engine.brain.manifest.identity.artifact,
     adapter: adapter.info?.device || adapter.info?.description || 'Dawn Metal', neurons: 165122, edges: 25563197,
-    residents: engine.batch, physicalStepCalls: 19, retainedModelTicks: engine.tick, checkpointReplayCalls: 1, modelSeconds: engine.world.time,
+    residents: engine.batch, physicalStepCalls: 67, retainedModelTicks: engine.tick, checkpointReplayCalls: 1, modelSeconds: engine.world.time,
     meanCompleteTickMs: timings.reduce((a,b) => a+b, 0) / timings.length, maxCompleteTickMs: Math.max(...timings),
     maxRootTravelMeters: maxTravel, snapshotBytes: checkpoint.byteLength, snapshotSHA256: sha(checkpoint),
     physicalReplayExact: true, fullNeuralReplayExact: true, wholeLifeReplayExact: true,
+    observedNeuralFields: [...observedFields], observerMatchesPrivateStateExactly: true,
+    contextOutputs: 12, anatomicalMotorOutputs: 34, physicalBodyInputs: 110, privateNeuralFields: 7,
+    motorDynamicRanges: Array.from(motorHigh, (x, i) => x - motorLow[i]), maximumDeliveredContextMagnitude: contextMagnitude,
     neuralCapture: 'every physical tick', retinalInputSites: 1771, supportedRetinalSites: 1486, capturedRetinalRGB: true,
     restoredGrownWorld: true, geometryCount: after.geometry.length, wallSeconds: (performance.now() - began) / 1000,
     modelStatus: engine.modelStatus, controllerStatus: engine.controllerStatus,

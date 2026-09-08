@@ -150,3 +150,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, .load-button:focus-w
 @media (prefers-reduced-motion: reduce) {
   .load-track.indeterminate i { animation: none; transform: none; }
 }
+
+.tone-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
+.tone-controls button { padding: 10px 2px; border: 1px solid var(--line); border-radius: 6px; background: #f6f1e4; color: var(--ink); font: 10px var(--mono); }
+.muscle-recruitment { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 12px; margin-top: 12px; }
+.muscle-recruitment > div { display: grid; grid-template-columns: 48px 1fr 1fr; align-items: center; gap: 4px; font: 8px var(--mono); color: var(--muted); }
+.muscle-recruitment meter { width: 100%; height: 9px; accent-color: var(--mint-dark); }
+
+.neural-field-control { display:grid; gap:.4rem; margin:.7rem 0; font-size:.8rem; }
+.neural-field-control select { width:100%; padding:.55rem; color:inherit; background:#edf1e5; border:1px solid #bac8af; border-radius:.4rem; font:inherit; }
