@@ -123,7 +123,8 @@ claim of biological muscle correspondence from side/neuromere alone. New release
 tr=.5,use=.1; mod gain/adaptation raw=.2 (small synthetic shared priors, fit later).
 
 Torch implements these same equations with differentiable sparse full-graph
-propagation. Teacher motors/pose/body are training targets only. Collect body110,
+propagation. Teacher motor/pose labels are target-only. Current body measurements
+are afferent inputs; future body measurements are prediction targets. Collect body110,
 retina1771x3, delivered context12 and motor34, reset/time, and T+1 observations.
 Use whole worlds for splits; retain unsuccessful transitions. Train sensory and
 motor interfaces plus selected dynamics on actual physical teacher/babbling
@@ -136,3 +137,21 @@ Runtime ownership: Rust native dynamics/body/cognition, WebGPU full-graph parall
 implementation and thinJS transport; Python remains Torch training/export/research.
 One integrated native/WebGPU/Torch parity plus actual physical training/response
 campaign follows the build batch. No repeated whole-suite microvalidation loop.
+
+## Executed learning boundary
+
+The first physical bootstrap fits shared interface and cell-type parameters; it
+does not rewrite anatomical edges or learn personal CNS synapses during a life.
+An individual retains its own seven neural state fields, physiology, private
+cognitive state, acquired context sequences and random state. Shared parameter
+training and lifetime acquisition are separate mechanisms. Structural evolution
+and local Hebbian changes to measured wiring remain subsequent implementation
+work, rather than being implied by the current parameter gradients.
+
+The 512-update ROCm bootstrap reduced whole-world-heldout motor imitation error
+from 0.07140 to 0.04997 in 92.3 seconds. Its motor output remains nearly constant
+across curriculum activities. The training-only future-sense and pose probes
+improved from random initialization but still slightly underperformed persistence.
+These results establish trainable anatomical interfaces, not learned tone poses
+or useful autonomous motor control. See the source-bound
+[training receipt](../receipts/anatomical-cns-v3/physical-bootstrap-training.json).
