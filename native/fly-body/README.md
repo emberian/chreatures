@@ -48,10 +48,12 @@ The actual haustellum mesh is contact-enabled for the native mouth-tip law.
 python tools/compose_ecology_scene.py \
   --output /path/to/scene.xml \
   --manifest /path/to/physics.json \
-  --residents 2 --grains 8 --startup-steps 100
+  --residents 4 --habitat-plan /path/to/habitat-plan.json --startup-steps 100
 ```
 
-The manifest is generated from the compiled MuJoCo model. It records numeric
+The current composer requires a deterministic `chreatures.fly-habitat-plan.v1`
+from `../fly-habitat`; the former fixed hand-placed environment is no longer a
+production path. The manifest is generated from the compiled MuJoCo model. It records numeric
 body, joint, DOF, actuator, geom, mesh, site, sensor, camera, and keyframe IDs;
 neutral controls; a piecewise normalized servo map; VFS mesh hashes; and the
 observer-only information boundary. The checked current output is
