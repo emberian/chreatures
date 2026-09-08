@@ -1,0 +1,80 @@
+{
+  "schema": "chreatures.fly-antenna-touch-source-ledger.v1",
+  "implementation": {
+    "derivation": "native/fly-body/tools/derive_antenna_contact_proxies.py",
+    "artifact": "native/fly-body/assets/antenna-contact-proxies-v1.json",
+    "compiler": "native/fly-body/tools/compose_ecology_scene.py",
+    "joined_check": "native/fly-body/tools/check_antenna_contact.py"
+  },
+  "sources": [
+    {
+      "id": "flygym-neuromechfly-2.1.0-ca65a510",
+      "kind": "author morphology and joint model",
+      "repository": "https://github.com/NeLy-EPFL/flygym",
+      "revision": "ca65a510c2afe6ac61c51df4f274c8d190c2f95f",
+      "license": "Apache-2.0",
+      "local_schema": "native/fly-body/assets/neuromechfly-2.1.0-ca65a510-ypr/schema.json",
+      "claims_used": [
+        "The imported morphology contains separate bilateral pedicel, funiculus and arista bodies.",
+        "Each pedicel-funiculus-arista chain has three-axis joints and author mass, inertia, stiffness and damping.",
+        "The simplified meshes retain the author model's left-to-right reflection convention."
+      ],
+      "implementation_effect": "Fits collision proxies in each actual segment's local coordinates and adds zero mass so author body mass and inertia remain authoritative."
+    },
+    {
+      "id": "wang-chen-et-al-2024-neuromechfly-2",
+      "title": "NeuroMechFly 2.0, a framework for simulating embodied sensorimotor control in adult Drosophila",
+      "kind": "author model paper",
+      "doi": "10.1038/s41592-024-02497-y",
+      "url": "https://doi.org/10.1038/s41592-024-02497-y",
+      "claims_used": [
+        "The pinned FlyGym body is an articulated adult Drosophila sensorimotor model.",
+        "Its body and mesh assets are the morphology authority for this import."
+      ],
+      "implementation_effect": "Uses the author's articulated antennal bodies and local mesh coordinates instead of adding antennae to a generic body."
+    },
+    {
+      "id": "lobato-rios-et-al-2022-neuromechfly",
+      "title": "NeuroMechFly, a neuromechanical model of adult Drosophila melanogaster",
+      "kind": "author model paper",
+      "doi": "10.1038/s41592-022-01466-7",
+      "url": "https://doi.org/10.1038/s41592-022-01466-7",
+      "claims_used": [
+        "The morphology originates in micro-CT anatomy of one adult female fly.",
+        "The model remains an engineered biomechanical reconstruction rather than a population anatomical distribution."
+      ],
+      "implementation_effect": "Preserves the imported segment mass and inertia and labels the proxy fit as a synthetic approximation."
+    },
+    {
+      "id": "yorozu-et-al-2009",
+      "title": "Distinct sensory representations of wind and near-field sound in the Drosophila brain",
+      "kind": "primary physiology and behavior experiment",
+      "doi": "10.1038/nature07843",
+      "pmid": 19279637,
+      "pmcid": "PMC2755041",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2755041/",
+      "claims_used": [
+        "Mechanical movement of the antennal receiver drives Johnston's-organ pathways.",
+        "Different Johnston's-organ populations distinguish oscillatory sound from sustained wind-like deflection."
+      ],
+      "implementation_effect": "Keeps actual antennal joint position, angular velocity and generalized load alongside contact force; it does not assign a measured cellular gain to synthetic solid contact."
+    },
+    {
+      "id": "malecns-body807-v4",
+      "kind": "project anatomical interface derived from MaleCNS annotations",
+      "artifact": "research/fly_embodiment/body807-channel-schema.json",
+      "sha256": "97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+      "claims_used": [
+        "BODY807 already has bilateral pedicel, funiculus and arista joint position, angular velocity, generalized load and segment-contact channels.",
+        "Segment contact is an engineered projection to anatomically matched tactile or mechanosensory afferent cohorts."
+      ],
+      "implementation_effect": "Uses the existing CNS-only sensory route without adding source identity, object labels or a parallel controller input."
+    }
+  ],
+  "limits": [
+    "The 95-percent mesh fits are synthetic collision approximations, not measured cuticle compliance, bristle placement or receptor geometry.",
+    "Triangle-record vertices weight the fit by mesh tessellation density.",
+    "MuJoCo contact force and author joint mechanics provide reciprocal physical coupling; they do not establish a biological receptor transfer function.",
+    "The 2 ms contact time constant is an engineered numerical compliance chosen to remain measurable by the current 1 kHz physical packet; it is not measured antennal stiffness or damping."
+  ]
+}

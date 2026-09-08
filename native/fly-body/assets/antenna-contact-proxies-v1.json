@@ -1,0 +1,200 @@
+{
+  "fit": {
+    "arista": "principal-axis capsule with radius equal to the 95th percentile distance from its axis",
+    "limit": "Triangle-record sampling weights tessellation density. Proxies are synthetic contact approximations, not measured cuticle or receptor geometry.",
+    "pedicel_funiculus": "axis-aligned ellipsoid inflated to contain 95% of triangle-record vertices"
+  },
+  "format": "chreatures-antenna-contact-proxies-v1",
+  "physics_contract": {
+    "contact_parameters": {
+      "evidence_grade": "ENGINEERED_COMPLIANT_CONTACT",
+      "friction": [
+        1.0,
+        1.0,
+        0.02
+      ],
+      "limit": "The 2 ms contact time constant is a stable numerical compliance and is not a measured antennal cuticle or Johnston-organ calibration.",
+      "margin_mm": 0.001,
+      "solimp": [
+        0.98,
+        0.99,
+        1e-05,
+        0.5,
+        3.0
+      ],
+      "solref_time_constant_s": 0.002
+    },
+    "controller_visibility": "only existing BODY807 joint position, velocity, generalized load and segment-contact channels",
+    "environment_and_conspecific_contact": "enabled",
+    "inertia_effect": "none; author segment mesh retains its original mass and inertia",
+    "mass_model_units": 0.0,
+    "same_resident_contact": "excluded by resident collision bits"
+  },
+  "proxies": [
+    {
+      "evidence_grade": "ENGINEERED_PROXY_FROM_AUTHOR_MESH",
+      "fit_quantile": 0.95,
+      "fit_vertex_coverage": 0.9508333333333333,
+      "id": "l_pedicel-contact-proxy",
+      "position_mm": [
+        0.0790817375673214,
+        0.0094355818873737,
+        -0.01732210148475133
+      ],
+      "segment": "l_pedicel",
+      "shape": "ellipsoid",
+      "size_mm": [
+        0.11814170020178515,
+        0.11021902803545562,
+        0.07670920535285966
+      ],
+      "source_mesh": "l_pedicel.stl",
+      "source_mesh_scale_to_model": [
+        1000.0,
+        1000.0,
+        1000.0
+      ],
+      "source_mesh_sha256": "6de0f06e57c78f8738f67c0c52b85e74cb105789497a4183944e90211d3a4bf4"
+    },
+    {
+      "evidence_grade": "ENGINEERED_PROXY_FROM_AUTHOR_MESH",
+      "fit_quantile": 0.95,
+      "fit_vertex_coverage": 0.9508333333333333,
+      "id": "r_pedicel-contact-proxy",
+      "position_mm": [
+        0.0790817375673214,
+        -0.0094355818873737,
+        -0.01732210148475133
+      ],
+      "segment": "r_pedicel",
+      "shape": "ellipsoid",
+      "size_mm": [
+        0.11814170020178515,
+        0.11021902803545562,
+        0.07670920535285966
+      ],
+      "source_mesh": "l_pedicel.stl",
+      "source_mesh_scale_to_model": [
+        1000.0,
+        -1000.0,
+        1000.0
+      ],
+      "source_mesh_sha256": "6de0f06e57c78f8738f67c0c52b85e74cb105789497a4183944e90211d3a4bf4"
+    },
+    {
+      "evidence_grade": "ENGINEERED_PROXY_FROM_AUTHOR_MESH",
+      "fit_quantile": 0.95,
+      "fit_vertex_coverage": 0.9522012578616352,
+      "id": "l_funiculus-contact-proxy",
+      "position_mm": [
+        0.008439299563178793,
+        -0.01285484540858306,
+        -0.10289700708199234
+      ],
+      "segment": "l_funiculus",
+      "shape": "ellipsoid",
+      "size_mm": [
+        0.06957580960410369,
+        0.07270196405753405,
+        0.11588193552101383
+      ],
+      "source_mesh": "l_funiculus.stl",
+      "source_mesh_scale_to_model": [
+        1000.0,
+        1000.0,
+        1000.0
+      ],
+      "source_mesh_sha256": "d2a6d35751922fb8b1ce07b269bc432f33d7f8f6d243b2dd1801e021b91d8156"
+    },
+    {
+      "evidence_grade": "ENGINEERED_PROXY_FROM_AUTHOR_MESH",
+      "fit_quantile": 0.95,
+      "fit_vertex_coverage": 0.9522012578616352,
+      "id": "r_funiculus-contact-proxy",
+      "position_mm": [
+        0.008439299563178793,
+        0.01285484540858306,
+        -0.10289700708199234
+      ],
+      "segment": "r_funiculus",
+      "shape": "ellipsoid",
+      "size_mm": [
+        0.06957580960410369,
+        0.07270196405753405,
+        0.11588193552101383
+      ],
+      "source_mesh": "l_funiculus.stl",
+      "source_mesh_scale_to_model": [
+        1000.0,
+        -1000.0,
+        1000.0
+      ],
+      "source_mesh_sha256": "d2a6d35751922fb8b1ce07b269bc432f33d7f8f6d243b2dd1801e021b91d8156"
+    },
+    {
+      "evidence_grade": "ENGINEERED_PROXY_FROM_AUTHOR_MESH",
+      "fit_quantile": 0.95,
+      "fit_vertex_coverage": 0.9503333333333334,
+      "fromto_mm": [
+        0.012167081985559693,
+        -0.012719314969216008,
+        0.029091652833389447,
+        0.02273083465751099,
+        0.24794096806134636,
+        -0.0032603177221810394
+      ],
+      "id": "l_arista-contact-proxy",
+      "segment": "l_arista",
+      "shape": "capsule",
+      "size_mm": [
+        0.045569664230098554
+      ],
+      "source_mesh": "l_arista.stl",
+      "source_mesh_scale_to_model": [
+        1000.0,
+        1000.0,
+        1000.0
+      ],
+      "source_mesh_sha256": "6201af1cbe213ee6e259a6d89df65080f9cb9d806e6526cbcc7c5f1ae793f97c"
+    },
+    {
+      "evidence_grade": "ENGINEERED_PROXY_FROM_AUTHOR_MESH",
+      "fit_quantile": 0.95,
+      "fit_vertex_coverage": 0.9503333333333334,
+      "fromto_mm": [
+        0.012167081985559693,
+        0.012719314969216008,
+        0.029091652833389447,
+        0.02273083465751099,
+        -0.24794096806134636,
+        -0.0032603177221810394
+      ],
+      "id": "r_arista-contact-proxy",
+      "segment": "r_arista",
+      "shape": "capsule",
+      "size_mm": [
+        0.045569664230098554
+      ],
+      "source_mesh": "l_arista.stl",
+      "source_mesh_scale_to_model": [
+        1000.0,
+        -1000.0,
+        1000.0
+      ],
+      "source_mesh_sha256": "6201af1cbe213ee6e259a6d89df65080f9cb9d806e6526cbcc7c5f1ae793f97c"
+    }
+  ],
+  "source": {
+    "license": "Apache-2.0",
+    "mesh_variant": "simplified_max2000faces with author left-to-right mirroring",
+    "model_xml_sha256": "67aeb93868ac0cbf27c6f2645148a04f3cc77f0b0105bd9fa4ea15fc8755aa06",
+    "morphology_basis": "micro-CT scan of one adult female Drosophila melanogaster; author-adjusted segments include antennae",
+    "project": "FlyGym / NeuroMechFly v2",
+    "repository": "https://github.com/NeLy-EPFL/flygym",
+    "revision": "ca65a510c2afe6ac61c51df4f274c8d190c2f95f",
+    "version": "2.1.0"
+  },
+  "units": {
+    "length": "model millimetre"
+  }
+}

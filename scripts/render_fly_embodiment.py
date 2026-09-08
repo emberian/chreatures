@@ -30,6 +30,7 @@ def main() -> None:
     parser.add_argument('--azimuth', type=float, default=135)
     parser.add_argument('--elevation', type=float, default=-24)
     parser.add_argument('--distance', type=float)
+    parser.add_argument('--cutaway', action='store_true', help='Render perimeter walls faintly; does not alter the saved life')
     args = parser.parse_args()
     if mujoco.__version__ != '3.12.0':
         raise RuntimeError('The observer requires the current MuJoCo3.12 pin')
@@ -60,6 +61,14 @@ def main() -> None:
         mujoco.mj_resetDataKeyframe(model, data, 0)
         scope = 'Author imported anatomical reference pose, not a learned behavior.'
     mujoco.mj_forward(model, data)
+    cutaway_geoms = []
+    if args.cutaway:
+        for geom in range(model.ngeom):
+            name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom) or ''
+            if name.startswith('ecology/boundary-'):
+                model.geom_matid[geom] = -1
+                model.geom_rgba[geom] = [.55, .44, .33, .08]
+                cutaway_geoms.append(name)
     model.vis.global_.offwidth = 1600
     model.vis.global_.offheight = 1000
     model.vis.headlight.ambient[:] = [.45, .46, .44]
@@ -84,6 +93,7 @@ def main() -> None:
                     '-frames:v', '1', '-quality', '92', '-y', str(args.output)],
                    input=pixels.tobytes(), check=True)
     receipt = {'format': 'chreatures-native-anatomical-observer-v1', 'scope': scope,
+               'observer_cutaway_geoms': cutaway_geoms,
                'mujoco': mujoco.__version__, 'width': 1600, 'height': 1000,
                'source_xml_sha256': hashlib.sha256(xml.encode()).hexdigest(),
                'source_snapshot_sha256': sha(args.snapshot) if args.snapshot else None,

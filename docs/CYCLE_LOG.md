@@ -1533,3 +1533,41 @@ research observations now carry current ordered entity IDs and positions;
 the evaluator joins persistent entities by identity rather than subtracting
 arrays by slot. The aborted run remains recorded and no failed episode was
 sealed. These IDs remain analyst targets, outside resident sensory input.
+
+
+### September 8, afternoon: connected habitat, outside contact and antennal touch
+
+The 229-entity layered habitat now joins the actual full MaleCNS recurrence,
+private resident context and articulated MuJoCo bodies. Grain placement rejects
+initial intersections with terrain and other movable objects; physical perimeter
+walls contain elevated falling material. The joined B2 run completed 128 ticks
+and reproduced the full neural, bodily and private state exactly after restore.
+A user object was inserted and pushed, then the changed world was restored. The
+receipt is `research/fly_embodiment/layered-habitat-joined-receipt.json`. The
+initialized model is still untrained; this demonstrates integrated execution,
+not autonomous locomotion. Its 555.6 ms mean complete tick was measured under
+concurrent M2 load and is not a controlled performance comparison.
+
+The live interface accepts a surface selected by the visitor for object
+placement. The obsolete 96-entity insertion cap is removed; the physical
+geometry budget and collision checks remain. Camera fitting uses the actual
+habitat bounds, and the observation view renders enclosure walls as a cutaway.
+This changes the observer display only; physical contacts and retinal occlusion
+continue to use the full world.
+
+Six massless collision proxies per fly now derive from the author's antennal
+meshes. They preserve author segment mass and inertia and allow reciprocal
+material/conspecific contact while excluding self-contact. Existing BODY807
+channels carry joint motion, load and contact through the anatomical CNS input
+interface. A native joined contact experiment measured passive arista
+deflection and lateral motion of a contacted grain, with exact snapshot replay.
+The 2 ms compliant contact is an engineered approximation, explicitly recorded
+in `docs/development/FLY_ANTENNA_TOUCH.md`; no learned tactile behavior is claimed.
+
+Twelve recovery worlds produced 49,152 resident transitions and were relayed
+intact to persvati. The new fit adds a cold-state neutral servo prior through
+the existing learned motor decoder. On hbox, a separate fresh support campaign
+interleaves neutral support, unmodified child probes and limited author-step
+acquisition. The initial support periods remain upright, while the child still
+falls during probes. Failed recovery is retained as failure data. These jobs
+run concurrently on the AMD nodes, with no replacement of established lives.
