@@ -1,0 +1,19 @@
+{
+  "analysis_source_sha256": "439e1337d396e22099c0b635ef357aeea3fdbc5eb92ce173f2c589b0808636b6",
+  "author_api_sha256": "1837110e9857e1acf936dcd09579d189e40f659512a5a6bf1664926a3c639ead",
+  "family": "gaussian",
+  "format": "chreatures-fly-ecology-atlas-analysis-recipe-v1",
+  "formulas": {
+    "additive": "response ~ s(branch_angle_rad,k=3)+s(lateral_probability,k=3)+s(phototropism,k=3)+s(contact_avoidance,k=3)",
+    "joint": "response ~ duchon(branch_angle_rad,lateral_probability,phototropism,contact_avoidance,centers=12)"
+  },
+  "minimum_training_rows_world_leaveout": 36,
+  "native_version": "0.1.259",
+  "native_world_leaveout_formula_validation": "passed on actual36-row whole-layout leaveout data",
+  "plan_sha256": "9339a0f5e7c3d1fdad178b61b704d24d64860f2927621ab4a824275dea996f57",
+  "reason": "Stopped the first native tensor fit for measured execution/memory cost before any saved model or model selection. Use the same native engine multivariate Duchon basis with12 centers. No physical design, gene setting, layout, holdout split or outcome was changed.",
+  "status": "analysis-recipe-sealed-before-revised-fit",
+  "stopped_attempt_sha256": "7edcbf47a94fb1b25ab5ee44a277035b251dd0d23ac1c3bd87217f55f2cea115",
+  "supersedes_recipe_sha256": "e85f7c596869db26ce41a6d6c0bd05222fe8e644186d6a209c7aa6a8950e9e1d",
+  "training_rows_full": 54
+}

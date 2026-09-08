@@ -1,0 +1,778 @@
+{
+  "analysis_recipe_sha256": "1ea34e1389f1997908832de08f1d32f67da18f7a5b78ade58224234129baa004",
+  "analysis_source_sha256": "439e1337d396e22099c0b635ef357aeea3fdbc5eb92ce173f2c589b0808636b6",
+  "base_fixture_sha256": "8045a6173cfc396a050bf7e3716c2cb1568a3f4f3ad45fc690eb9897cef67c7b",
+  "campaign_receipt_sha256": "756c7191449dc784e9960aa0e3a124549018a8bd1f9f815b2e2f9e8939b40719",
+  "campaign_wall_seconds": 1734.0866460420075,
+  "claim_limit": "Actual finite colony growth with diagnostic neutral flies. No CNS was evaluated or replaced. Constant targets, failed fits and physical failures remain visible. GAM proposals are not promoted genotypes; confirmation execution alone does not establish predictive accuracy or successful diversity.",
+  "confirmation_receipt_sha256": "ae5bd0b57c8d536a4cbaf7a055c37c53523e6c1eb0549e15e526af1f1b072117",
+  "control_dt_s": 0.01,
+  "diagnostic_motor": "all 92 outputs zero; first84 neutral servo targets,last8 adhesion/pump/saliva off; diagnostic only, no CNS",
+  "diagnostics": {
+    "blocked_rate": {
+      "heldout_rows": 18,
+      "models": {
+        "additive": {
+          "artifact_sha256": "fc1cf0c59c000b0224ef3f398632e0612ba6730dac8fc38d2ea456d201f345de",
+          "formula": "response ~ s(branch_angle_rad,k=3)+s(lateral_probability,k=3)+s(phototropism,k=3)+s(contact_avoidance,k=3)",
+          "heldout": {
+            "mae": 0.29799704412389083,
+            "max_abs": 0.7991966203525235,
+            "rmse": 0.4601634198553451
+          },
+          "heldout_mean": {
+            "mae": 0.3257929817521942,
+            "max_abs": 0.8922470971908463,
+            "rmse": 0.5174790240768046
+          },
+          "leave_setting_out": {
+            "mae": 0.061945612357036946,
+            "max_abs": 0.25220638242051185,
+            "rmse": 0.07773440082700454
+          },
+          "leave_setting_out_mean": {
+            "mae": 0.06801650423790569,
+            "max_abs": 0.32829127269369285,
+            "rmse": 0.08893395219183581
+          },
+          "leave_world_out": {
+            "mae": 0.07990547855180852,
+            "max_abs": 0.31457534757342476,
+            "rmse": 0.10025594939618303
+          },
+          "leave_world_out_mean": {
+            "mae": 0.08205523749804143,
+            "max_abs": 0.3542070888879866,
+            "rmse": 0.10214642679507784
+          },
+          "reload_max_abs": 0.0,
+          "status": "native-fit-serialized-reloaded",
+          "train": {
+            "mae": 0.06010541758123047,
+            "max_abs": 0.2260492988597783,
+            "rmse": 0.07440610800320609
+          }
+        },
+        "joint": {
+          "artifact_sha256": "2b1adf74fe8bc93331038a6cad7f3be08cca9fa3b982b8650f108a2a99eacfbb",
+          "formula": "response ~ duchon(branch_angle_rad,lateral_probability,phototropism,contact_avoidance,centers=12)",
+          "heldout": {
+            "mae": 0.31017138106571224,
+            "max_abs": 0.8352870326046237,
+            "rmse": 0.47994806786027666
+          },
+          "heldout_mean": {
+            "mae": 0.3257929817521942,
+            "max_abs": 0.8922470971908463,
+            "rmse": 0.5174790240768046
+          },
+          "leave_setting_out": {
+            "mae": 0.0632177563147291,
+            "max_abs": 0.2546834946114891,
+            "rmse": 0.07948730585434698
+          },
+          "leave_setting_out_mean": {
+            "mae": 0.06801650423790569,
+            "max_abs": 0.32829127269369285,
+            "rmse": 0.08893395219183581
+          },
+          "leave_world_out": {
+            "mae": 0.0777992290078874,
+            "max_abs": 0.3081258341497608,
+            "rmse": 0.10044453852766128
+          },
+          "leave_world_out_mean": {
+            "mae": 0.08205523749804143,
+            "max_abs": 0.3542070888879866,
+            "rmse": 0.10214642679507784
+          },
+          "reload_max_abs": 0.0,
+          "status": "native-fit-serialized-reloaded",
+          "train": {
+            "mae": 0.057939224196501944,
+            "max_abs": 0.22425997402031694,
+            "rmse": 0.07348245252540186
+          }
+        }
+      },
+      "sd_float64": 0.0871062651303316,
+      "training_rows": 54
+    },
+    "branch_count": {
+      "heldout_rows": 18,
+      "models": {
+        "additive": {
+          "artifact_sha256": "cfb7e9edb9de171efdd521b54a12a52a3f4585264d9b501ef45482477ad20f47",
+          "formula": "response ~ s(branch_angle_rad,k=3)+s(lateral_probability,k=3)+s(phototropism,k=3)+s(contact_avoidance,k=3)",
+          "heldout": {
+            "mae": 0.724500471113415,
+            "max_abs": 1.5797050586368186,
+            "rmse": 0.8932454524913434
+          },
+          "heldout_mean": {
+            "mae": 0.6872427983539097,
+            "max_abs": 2.037037037037037,
+            "rmse": 0.9522192690505513
+          },
+          "leave_setting_out": {
+            "mae": 0.678624918936268,
+            "max_abs": 1.9009416784850632,
+            "rmse": 0.8570561810419169
+          },
+          "leave_setting_out_mean": {
+            "mae": 0.6514161220043575,
+            "max_abs": 2.0588235294117645,
+            "rmse": 0.8709993337414311
+          },
+          "leave_world_out": {
+            "mae": 0.8888178649383206,
+            "max_abs": 2.226731825874028,
+            "rmse": 1.0519708084383912
+          },
+          "leave_world_out_mean": {
+            "mae": 0.8251028806584363,
+            "max_abs": 2.3888888888888893,
+            "rmse": 1.0353822776662494
+          },
+          "reload_max_abs": 0.0,
+          "status": "native-fit-serialized-reloaded",
+          "train": {
+            "mae": 0.6608972047980459,
+            "max_abs": 1.790108738422381,
+            "rmse": 0.8157862802673119
+          }
+        },
+        "joint": {
+          "artifact_sha256": "2a7cdabc99b732068ecef5acf2dcf586807391ce3d0726a1733be14fa6032d7e",
+          "formula": "response ~ duchon(branch_angle_rad,lateral_probability,phototropism,contact_avoidance,centers=12)",
+          "heldout": {
+            "mae": 0.7269592005544236,
+            "max_abs": 1.7387098243146575,
+            "rmse": 0.9040297820198256
+          },
+          "heldout_mean": {
+            "mae": 0.6872427983539097,
+            "max_abs": 2.037037037037037,
+            "rmse": 0.9522192690505513
+          },
+          "leave_setting_out": {
+            "mae": 0.7014997930400734,
+            "max_abs": 2.0965914178473755,
+            "rmse": 0.90767987536575
+          },
+          "leave_setting_out_mean": {
+            "mae": 0.6514161220043575,
+            "max_abs": 2.0588235294117645,
+            "rmse": 0.8709993337414311
+          },
+          "leave_world_out": {
+            "mae": 0.894327810578649,
+            "max_abs": 2.2862441454420432,
+            "rmse": 1.068285836393452
+          },
+          "leave_world_out_mean": {
+            "mae": 0.8251028806584363,
+            "max_abs": 2.3888888888888893,
+            "rmse": 1.0353822776662494
+          },
+          "reload_max_abs": 0.0,
+          "status": "native-fit-serialized-reloaded",
+          "train": {
+            "mae": 0.6557338605296671,
+            "max_abs": 1.8204651117542943,
+            "rmse": 0.8068443742595482
+          }
+        }
+      },
+      "sd_float64": 0.859865686388437,
+      "training_rows": 54
+    },
+    "canopy_span_mm": {
+      "heldout_rows": 18,
+      "models": {
+        "additive": {
+          "artifact_sha256": "4e365987b6da01fceca23e5ce93209cc088621bd5832937172c62dd016163129",
+          "formula": "response ~ s(branch_angle_rad,k=3)+s(lateral_probability,k=3)+s(phototropism,k=3)+s(contact_avoidance,k=3)",
+          "heldout": {
+            "mae": 0.4959074097604607,
+            "max_abs": 1.2798889037596548,
+            "rmse": 0.5756471663274715
+          },
+          "heldout_mean": {
+            "mae": 0.4165186233272635,
+            "max_abs": 1.4331142378427035,
+            "rmse": 0.5679165875674006
+          },
+          "leave_setting_out": {
+            "mae": 0.2656564661725862,
+            "max_abs": 1.4391142741027139,
+            "rmse": 0.3712610077489577
+          },
+          "leave_setting_out_mean": {
+            "mae": 0.4041459220963314,
+            "max_abs": 1.9964935208562435,
+            "rmse": 0.5236870611584705
+          },
+          "leave_world_out": {
+            "mae": 0.3207335681223559,
+            "max_abs": 1.6294702802850018,
+            "rmse": 0.4568753654870648
+          },
+          "leave_world_out_mean": {
+            "mae": 0.40112025394519996,
+            "max_abs": 2.046753126181457,
+            "rmse": 0.5436673750562262
+          },
+          "reload_max_abs": 0.0,
+          "status": "native-fit-serialized-reloaded",
+          "train": {
+            "mae": 0.2380315766650291,
+            "max_abs": 1.3433669444292988,
+            "rmse": 0.34318418154334146
+          }
+        },
+        "joint": {
+          "artifact_sha256": "131de27fbeead59e810377097d938757f20437404372cb451780470338e42230",
+          "formula": "response ~ duchon(branch_angle_rad,lateral_probability,phototropism,contact_avoidance,centers=12)",
+          "heldout": {
+            "mae": 0.41493423190169154,
+            "max_abs": 1.183307098942806,
+            "rmse": 0.5306683226943054
+          },
+          "heldout_mean": {
+            "mae": 0.4165186233272635,
+            "max_abs": 1.4331142378427035,
+            "rmse": 0.5679165875674006
+          },
+          "leave_setting_out": {
+            "mae": 0.2997608580973895,
+            "max_abs": 1.451694367834381,
+            "rmse": 0.4109595284719239
+          },
+          "leave_setting_out_mean": {
+            "mae": 0.4041459220963314,
+            "max_abs": 1.9964935208562435,
+            "rmse": 0.5236870611584705
+          },
+          "leave_world_out": {
+            "mae": 0.327161960686707,
+            "max_abs": 1.6484926887106202,
+            "rmse": 0.45368576244501146
+          },
+          "leave_world_out_mean": {
+            "mae": 0.40112025394519996,
+            "max_abs": 2.046753126181457,
+            "rmse": 0.5436673750562262
+          },
+          "reload_max_abs": 0.0,
+          "status": "native-fit-serialized-reloaded",
+          "train": {
+            "mae": 0.23787523292499219,
+            "max_abs": 1.183785263835082,
+            "rmse": 0.3372931942060678
+          }
+        }
+      },
+      "sd_float64": 0.5055166522619751,
+      "training_rows": 54
+    },
+    "height_mm": {
+      "heldout_rows": 18,
+      "models": {
+        "additive": {
+          "artifact_sha256": "a7d804051be9e84096e33e3cb48f6480ec5c0c13218c0467fc741b2eae03295b",
+          "formula": "response ~ s(branch_angle_rad,k=3)+s(lateral_probability,k=3)+s(phototropism,k=3)+s(contact_avoidance,k=3)",
+          "heldout": {
+            "mae": 0.4087877136392929,
+            "max_abs": 1.367824491246298,
+            "rmse": 0.574379001415354
+          },
+          "heldout_mean": {
+            "mae": 0.6212644928393679,
+            "max_abs": 1.5705563691548172,
+            "rmse": 0.7235524291413311
+          },
+          "leave_setting_out": {
+            "mae": 0.542015036061141,
+            "max_abs": 1.2381042242574312,
+            "rmse": 0.6116325582973985
+          },
+          "leave_setting_out_mean": {
+            "mae": 0.525059857734289,
+            "max_abs": 1.3958155050654617,
+            "rmse": 0.5990951254243277
+          },
+          "leave_world_out": {
+            "mae": 0.5514569233521316,
+            "max_abs": 1.2276192812315547,
+            "rmse": 0.629293392053384
+          },
+          "leave_world_out_mean": {
+            "mae": 0.5678730704990279,
+            "max_abs": 1.3720408580058976,
+            "rmse": 0.6388780980291707
+          },
+          "reload_max_abs": 0.0,
+          "status": "native-fit-serialized-reloaded",
+          "train": {
+            "mae": 0.44674769552599425,
+            "max_abs": 1.0168117054541184,
+            "rmse": 0.504429860039195
+          }
+        },
+        "joint": {
+          "artifact_sha256": "0552f6e1bbdc2a792581ce07b72f2da6be598be0fdd599197de949914da8c0ab",
+          "formula": "response ~ duchon(branch_angle_rad,lateral_probability,phototropism,contact_avoidance,centers=12)",
+          "heldout": {
+            "mae": 0.4734164371807446,
+            "max_abs": 1.380647568129779,
+            "rmse": 0.6209663182518539
+          },
+          "heldout_mean": {
+            "mae": 0.6212644928393679,
+            "max_abs": 1.5705563691548172,
+            "rmse": 0.7235524291413311
+          },
+          "leave_setting_out": {
+            "mae": 0.4860322423231659,
+            "max_abs": 1.2682170634385965,
+            "rmse": 0.5683540568719866
+          },
+          "leave_setting_out_mean": {
+            "mae": 0.525059857734289,
+            "max_abs": 1.3958155050654617,
+            "rmse": 0.5990951254243277
+          },
+          "leave_world_out": {
+            "mae": 0.5307868108881812,
+            "max_abs": 1.2433512088611818,
+            "rmse": 0.6163360935726137
+          },
+          "leave_world_out_mean": {
+            "mae": 0.5678730704990279,
+            "max_abs": 1.3720408580058976,
+            "rmse": 0.6388780980291707
+          },
+          "reload_max_abs": 0.0,
+          "status": "native-fit-serialized-reloaded",
+          "train": {
+            "mae": 0.4266505456176938,
+            "max_abs": 1.0089634647181134,
+            "rmse": 0.4868928412729602
+          }
+        }
+      },
+      "sd_float64": 0.5851802716488138,
+      "training_rows": 54
+    },
+    "route_permeability": {
+      "heldout_mean_baseline": {
+        "mae": 0.0,
+        "max_abs": 0.0,
+        "rmse": 0.0
+      },
+      "sd_float64": 0.0,
+      "status": "constant-target-not-fitted",
+      "value": 1.0
+    }
+  },
+  "failed_worlds": [],
+  "format": "chreatures-fly-ecology-development-study-receipt-v1",
+  "host_receipt_sha256": "05eb70013ec73661b98c3762651b4ecf5369371da28e0ac6c240d1c7db5daedc",
+  "native_artifacts": [
+    {
+      "model": "additive",
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/fit-duchon/blocked_rate-additive.gam",
+      "sha256": "fc1cf0c59c000b0224ef3f398632e0612ba6730dac8fc38d2ea456d201f345de",
+      "target": "blocked_rate"
+    },
+    {
+      "model": "joint",
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/fit-duchon/blocked_rate-joint.gam",
+      "sha256": "2b1adf74fe8bc93331038a6cad7f3be08cca9fa3b982b8650f108a2a99eacfbb",
+      "target": "blocked_rate"
+    },
+    {
+      "model": "additive",
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/fit-duchon/branch_count-additive.gam",
+      "sha256": "cfb7e9edb9de171efdd521b54a12a52a3f4585264d9b501ef45482477ad20f47",
+      "target": "branch_count"
+    },
+    {
+      "model": "joint",
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/fit-duchon/branch_count-joint.gam",
+      "sha256": "2a7cdabc99b732068ecef5acf2dcf586807391ce3d0726a1733be14fa6032d7e",
+      "target": "branch_count"
+    },
+    {
+      "model": "additive",
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/fit-duchon/canopy_span_mm-additive.gam",
+      "sha256": "4e365987b6da01fceca23e5ce93209cc088621bd5832937172c62dd016163129",
+      "target": "canopy_span_mm"
+    },
+    {
+      "model": "joint",
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/fit-duchon/canopy_span_mm-joint.gam",
+      "sha256": "131de27fbeead59e810377097d938757f20437404372cb451780470338e42230",
+      "target": "canopy_span_mm"
+    },
+    {
+      "model": "additive",
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/fit-duchon/height_mm-additive.gam",
+      "sha256": "a7d804051be9e84096e33e3cb48f6480ec5c0c13218c0467fc741b2eae03295b",
+      "target": "height_mm"
+    },
+    {
+      "model": "joint",
+      "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/fit-duchon/height_mm-joint.gam",
+      "sha256": "0552f6e1bbdc2a792581ce07b72f2da6be598be0fdd599197de949914da8c0ab",
+      "target": "height_mm"
+    }
+  ],
+  "native_gam_build": {
+    "abi3": "cp310+",
+    "available": true,
+    "capabilities": [
+      "fit",
+      "fit_array",
+      "load",
+      "extend_with_group",
+      "torch_from_fitted",
+      "predict",
+      "transformation_score",
+      "predict_array",
+      "predict_conformal",
+      "build_predict_payload_json",
+      "interpolate_rows",
+      "survival_chunk_defaults",
+      "survival_chunk_ranges",
+      "survival_should_chunk",
+      "survival_chunk_iter_collect",
+      "write_survival_csv",
+      "default_survival_time_grid",
+      "competing_risks_cif",
+      "competing_risks_cif_from_predictions",
+      "survival_prediction_payload_from_json",
+      "competing_risks_prediction_payload_from_json",
+      "sample",
+      "summary",
+      "summary_html",
+      "check",
+      "report",
+      "sklearn_fit_metadata",
+      "cross_fit_shared_precision_groups",
+      "save",
+      "validate_formula",
+      "formula_validation_repr",
+      "formula_validation_html",
+      "design_matrix_array",
+      "basis",
+      "basis_with_jet",
+      "duchon_function_norm_penalty",
+      "duchon_operator_penalties",
+      "thin_plate_penalty",
+      "gaussian_weighted_ridge_array",
+      "gaussian_weighted_ridge_batch",
+      "gaussian_weighted_ridge_batch_backward",
+      "gaussian_reml_score",
+      "gaussian_reml_fit",
+      "gaussian_reml_fit_backward",
+      "gaussian_reml_fit_batched",
+      "gaussian_reml_fit_batched_backward",
+      "gaussian_reml_fit_positions",
+      "gaussian_reml_fit_positions_backward",
+      "gaussian_reml_fit_positions_batched",
+      "gaussian_reml_fit_positions_batched_backward",
+      "gaussian_reml_fit_latent",
+      "gaussian_reml_fit_latent_backward",
+      "glm_reml_fit_latent",
+      "glm_reml_fit_latent_backward",
+      "equivariant_penalty_value",
+      "skip_transcoder_reml_metrics",
+      "_block_diag",
+      "tierney_kadane_normalized_score",
+      "gaussian_reml_fit_formula_table",
+      "gaussian_reml_fit_with_constraints_forward",
+      "gaussian_reml_fit_with_constraints_backward",
+      "sphere_frechet_mean",
+      "response_geometry_closure",
+      "response_geometry_clr",
+      "response_geometry_alr",
+      "response_geometry_inverse_alr",
+      "response_geometry_simplex_frechet_mean",
+      "response_geometry_simplex_log_map",
+      "response_geometry_simplex_exp_map",
+      "response_geometry_sphere_log_map",
+      "response_geometry_sphere_exp_map",
+      "response_geometry_ilr",
+      "response_geometry_inverse_ilr",
+      "response_geometry_aitchison_metric",
+      "response_geometry_clr_jet",
+      "response_geometry_simplex_log_map_jet",
+      "response_geometry_simplex_exp_map_jet",
+      "response_geometry_sphere_exp_map_jet",
+      "response_geometry_fit_curvature",
+      "response_geometry_normalize_fisher_rao",
+      "equivariant_rho_so2",
+      "equivariant_rho_so2_jvp",
+      "equivariant_rho_so3",
+      "equivariant_rho_so3_jvp",
+      "equivariant_gauge_companion_loss"
+    ],
+    "crate": "gam-pyffi",
+    "cuda_diagnostics": {
+      "conflicts": {},
+      "mapped": {},
+      "packaged_complete_stacks": [],
+      "packaged_cuda_library_dirs": [],
+      "packaged_nvidia_roots": [],
+      "platform": "darwin",
+      "system_complete_stacks": [],
+      "system_driver_libraries": []
+    },
+    "engine_crate": "gam",
+    "module": "gamfit._rust",
+    "python_module": "gam._rust",
+    "sae_row_block_penalties": [
+      "ard",
+      "top_k_activation",
+      "smooth_threshold",
+      "sparsity",
+      "row_precision_prior",
+      "parametric_row_precision_prior",
+      "scad_mcp",
+      "block_orthogonality",
+      "isometry"
+    ],
+    "supported_model_classes": [
+      "standard",
+      "transformation-normal",
+      "survival",
+      "competing-risks-survival",
+      "bernoulli-marginal-slope",
+      "survival-marginal-slope",
+      "survival-location-scale",
+      "latent-survival",
+      "latent-binary",
+      "gaussian-location-scale",
+      "binomial-location-scale"
+    ],
+    "version": "0.1.259"
+  },
+  "native_gam_module_sha256": "31e6052dbefee525ac5249ce7c9f146ac4f9a41861ca8c100adca7ada6e0fd8c",
+  "physical_confirmations": [
+    {
+      "absolute_error": {
+        "blocked_rate": 0.0075835525378292745,
+        "branch_count": 1.7292179109000019,
+        "canopy_span_mm": 1.4077579510358205,
+        "height_mm": 0.8976248206097481,
+        "route_permeability": 0.0
+      },
+      "checkpoint": {
+        "file_sha256": "826848f938bc456fcfa0c97931f374652a6457487f0145cf06a34bf158b10909",
+        "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/confirmation-results/confirmation-high-canopy--confirmation-layout.checkpoint.json",
+        "state_sha256": "034cee1aa8535d16ec1e4a44556c813715a0099ace842a487ff9fc25a43971e3"
+      },
+      "completed": true,
+      "error": null,
+      "intent": "high-canopy",
+      "observed": {
+        "active_branch_count": 7,
+        "blocked": 30,
+        "blocked_rate": 0.8108108108108109,
+        "branch_count": 7.0,
+        "canopy_span_mm": 3.66865313786743,
+        "captured_photon_energy": 0.11910356626727832,
+        "clearance_accepted": 7,
+        "construction_atp": 0.056,
+        "construction_material_by_pool": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.56,
+          0.0
+        ],
+        "habitat_canopy_span_mm": 16.283120507055745,
+        "height_mm": 3.0644503451138734,
+        "lateral_count": 0,
+        "maintenance_atp": 0.06399999999999825,
+        "maximum_absolute_route_advection_m3_s": 0.0,
+        "maximum_elemental_residual": 1.7124079931818414e-12,
+        "proposed": 37,
+        "regulation_atp": 0.004081504513263796,
+        "route_permeability": 1.0,
+        "sum_edge_conductance_m3_s_by_pool": [
+          1.0976000000000033e-07,
+          5.4880000000000165e-08,
+          4.115999999999988e-08,
+          1.3720000000000041e-08,
+          1.2348000000000009e-06,
+          8.231999999999983e-07,
+          1.372e-10,
+          1.5091999999999954e-06
+        ]
+      },
+      "predicted": {
+        "blocked_rate": 0.8183943633486401,
+        "branch_count": 5.270782089099998,
+        "canopy_span_mm": 2.2608951868316094,
+        "height_mm": 3.9620751657236215,
+        "route_permeability": 1.0
+      },
+      "proposal_sha256": "a54b65576da63eed4f570a2abe81d95c71cf83a3145ed1665661f4b162855ef2",
+      "run_sha256": "7ed379c40d052b940ab61f880747d962665b442784c2aa62c3019770a05687f0"
+    },
+    {
+      "absolute_error": {
+        "blocked_rate": 0.15225041952114748,
+        "branch_count": 1.639669589517255,
+        "canopy_span_mm": 0.021602911536562353,
+        "height_mm": 1.5121500826301206,
+        "route_permeability": 0.0
+      },
+      "checkpoint": {
+        "file_sha256": "01d97ff88b2fbe690dcb96c5c69b1e1c794fa0cc773986d8efc03cc41ca251fe",
+        "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/confirmation-results/confirmation-wide-canopy--confirmation-layout.checkpoint.json",
+        "state_sha256": "d028b3980049c6081edb0ad1188d889badb4427743de4dd20c879313fc396f19"
+      },
+      "completed": true,
+      "error": null,
+      "intent": "wide-canopy",
+      "observed": {
+        "active_branch_count": 7,
+        "blocked": 14,
+        "blocked_rate": 0.6666666666666666,
+        "branch_count": 7.0,
+        "canopy_span_mm": 2.4985124479366094,
+        "captured_photon_energy": 0.11910356626727832,
+        "clearance_accepted": 7,
+        "construction_atp": 0.056,
+        "construction_material_by_pool": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.56,
+          0.0
+        ],
+        "habitat_canopy_span_mm": 16.208146294875185,
+        "height_mm": 5.237973057031631,
+        "lateral_count": 0,
+        "maintenance_atp": 0.06399999999999825,
+        "maximum_absolute_route_advection_m3_s": 0.0,
+        "maximum_elemental_residual": 1.7124079931818414e-12,
+        "proposed": 21,
+        "regulation_atp": 0.004080732390659903,
+        "route_permeability": 1.0,
+        "sum_edge_conductance_m3_s_by_pool": [
+          1.0976000000000033e-07,
+          5.4880000000000165e-08,
+          4.115999999999988e-08,
+          1.3720000000000041e-08,
+          1.2348000000000009e-06,
+          8.231999999999983e-07,
+          1.372e-10,
+          1.5091999999999954e-06
+        ]
+      },
+      "predicted": {
+        "blocked_rate": 0.8189170861878141,
+        "branch_count": 5.360330410482745,
+        "canopy_span_mm": 2.476909536400047,
+        "height_mm": 3.7258229744015106,
+        "route_permeability": 1.0
+      },
+      "proposal_sha256": "cae1a271f992f1d8e62cca43d764afef7bf2079d38909b34c98553f127ddb160",
+      "run_sha256": "b9527bba6c773d031259dd2d3cc7783bb99ba8487121a264dc302e092e8c49b6"
+    },
+    {
+      "absolute_error": {
+        "blocked_rate": 0.156130349985936,
+        "branch_count": 0.3789296001156517,
+        "canopy_span_mm": 0.07983253623684439,
+        "height_mm": 0.7787246919068385,
+        "route_permeability": 0.0
+      },
+      "checkpoint": {
+        "file_sha256": "9b6087588687daa9d2f298def9e9a13a1989f89514c236a2a30b6a3c7984f0ff",
+        "path": "/Users/ember/paperbin/chreatures/integration/fly-ecology-atlas/photon-coupled-seed20260910/confirmation-results/confirmation-permeable-branches--confirmation-layout.checkpoint.json",
+        "state_sha256": "e33fe4a890dcb948e1fa4333b9aa096f066eaa8fe4a4ee46a70938095e3cb4c6"
+      },
+      "completed": true,
+      "error": null,
+      "intent": "permeable-branches",
+      "observed": {
+        "active_branch_count": 5,
+        "blocked": 10,
+        "blocked_rate": 0.6666666666666666,
+        "branch_count": 5.0,
+        "canopy_span_mm": 2.3868347285776275,
+        "captured_photon_energy": 0.11910356626727832,
+        "clearance_accepted": 5,
+        "construction_atp": 0.04,
+        "construction_material_by_pool": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.4,
+          0.0
+        ],
+        "habitat_canopy_span_mm": 15.654909361939414,
+        "height_mm": 3.7489206928014758,
+        "lateral_count": 1,
+        "maintenance_atp": 0.06399999999999825,
+        "maximum_absolute_route_advection_m3_s": 0.0,
+        "maximum_elemental_residual": 1.7124079931818414e-12,
+        "proposed": 15,
+        "regulation_atp": 0.004076106028158189,
+        "route_permeability": 1.0,
+        "sum_edge_conductance_m3_s_by_pool": [
+          1.0976000000000033e-07,
+          5.4880000000000165e-08,
+          4.115999999999988e-08,
+          1.3720000000000041e-08,
+          1.2348000000000009e-06,
+          8.231999999999983e-07,
+          1.372e-10,
+          1.5091999999999954e-06
+        ]
+      },
+      "predicted": {
+        "blocked_rate": 0.8227970166526026,
+        "branch_count": 5.378929600115652,
+        "canopy_span_mm": 2.466667264814472,
+        "height_mm": 2.9701960008946373,
+        "route_permeability": 1.0
+      },
+      "proposal_sha256": "76ef036c234979229033b0c17899ec43fa888c9e2b4d7bc9203358a1f6d3e0d2",
+      "run_sha256": "b63b4368287e92b792b6c62a83a55bcd6b7e668fdf178bc387c782e17b541bf6"
+    }
+  ],
+  "physical_core_wasm_sha256": "b8c3281c956626f5b16fb460d86cf37b7f437754e983d8143c5e37a61d30a6a0",
+  "physical_runtime_sha256": "43b0acd67f1575da780633539a41154e5ad1e3240fa40380d563e341add0f221",
+  "plan_sha256": "9339a0f5e7c3d1fdad178b61b704d24d64860f2927621ab4a824275dea996f57",
+  "raw_gam_report_sha256": "82b2cf113d3fc63c38cd9f6e832c5ae96a9e06dadfea3dd2271259fe9f7910b8",
+  "receipt_source_sha256": "dffbc711a1baccb3b45bc5481c61d5857d28cc83858bebf8fbf4afeabf93bd89",
+  "selected_models": {
+    "blocked_rate": "additive",
+    "branch_count": "additive",
+    "canopy_span_mm": "additive",
+    "height_mm": "joint",
+    "route_permeability": "observed-constant-mean-no-GAM"
+  },
+  "source_revision": "7a975af023cc4cdb316c9a771c8713f1109f5d3c",
+  "status": "actual-physical-campaign-and-native-gam-executed",
+  "ticks_per_completed_world": 800,
+  "workers": 4,
+  "worlds_completed": 72,
+  "worlds_requested": 72
+}

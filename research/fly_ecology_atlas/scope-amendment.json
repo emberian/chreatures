@@ -1,0 +1,15 @@
+{
+  "format": "chreatures-fly-ecology-atlas-scope-amendment-v1",
+  "receipt_sha256": "1b351c12a1811de8740f2905a3032f6ede7538cd45ae601dad0c8fb58de068db",
+  "status": "historical-route-observation-scope-corrected",
+  "finding": "The frozen browser host initialized route openness to1.0 and exposed manual setRouteMeasurements, but had no automatic physical route sampler.",
+  "affected_fields": [
+    "route_permeability",
+    "route_diffusive_conductance_m3_s",
+    "sum_edge_conductance_m3_s_by_pool",
+    "effective_route_advection_m3_s"
+  ],
+  "correct_interpretation": "These were supplied default transport inputs and derived nominal conductances, not measured physical clearance. The constant-target rejection remains valid; it demonstrates no permeability learning or obstruction response. Advection was zero.",
+  "unaffected_evidence": "Actual MuJoCo branch geometry, successful finite native construction, photon capture, material/ATP accounting, native GAM fits of geometric and blocked-growth outcomes, and physical confirmation/checkpoint receipts remain as recorded.",
+  "raw_receipts": "Preserved byte-for-byte. This amendment changes interpretation only. The subsequent shared Rust aperture sampler did not run in this historical campaign."
+}
