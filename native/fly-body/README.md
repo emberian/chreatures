@@ -43,6 +43,12 @@ curved-bark platforms, a segmented stem, climbable ramps, moist patches, and
 movable grains in model millimetres. Contact filtering allows fly-terrain,
 fly-grain, grain-grain, and inter-fly contact while suppressing self-collision.
 The actual haustellum mesh is contact-enabled for the native mouth-tip law.
+Six zero-mass collision proxies derived from the pinned pedicel, funiculus, and
+arista meshes make antennal contact reciprocal while preserving author segment
+mass and inertia. Same-resident antenna contact is excluded; material and
+conspecific contact enters only the existing BODY807 joint/load/contact path.
+Compiled movable entities carry their exact free-joint qpos/dof addresses for
+observer diagnostics; those IDs and coordinates are not controller inputs.
 
 ```sh
 python tools/compose_ecology_scene.py \

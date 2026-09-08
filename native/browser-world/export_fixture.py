@@ -36,6 +36,23 @@ def assemble(physics: dict, recipe: dict, habitat: dict, habitat_sha256: str) ->
         raise ValueError("compiled physics and habitat plan identities differ")
     if habitat.get("parameters", {}).get("residents") != len(physics.get("bodies", [])):
         raise ValueError("habitat plan and compiled resident counts differ")
+    tactile = physics.get("antenna_contact_proxies", {})
+    if tactile.get("format") != "chreatures-antenna-contact-proxies-v1":
+        raise ValueError("compiled physics lacks current antenna contact proxies")
+    if len(tactile.get("compiled", [])) != 6 * len(physics["bodies"]):
+        raise ValueError("compiled antenna contact proxy count differs")
+    if tactile.get("physics_contract", {}).get("mass_model_units") != 0.0:
+        raise ValueError("antenna contact proxies must preserve author mass and inertia")
+    compiled_proxy_geoms = {item["geom_id"] for item in tactile["compiled"]}
+    if len(compiled_proxy_geoms) != len(tactile["compiled"]):
+        raise ValueError("compiled antenna contact proxy IDs differ")
+    if any(item.get("solref") != [0.002, 1.0] for item in tactile["compiled"]):
+        raise ValueError("compiled antenna contact compliance differs")
+    planned_dynamic = {
+        item["id"]: bool(item["dynamic"]) for item in habitat["geometries"]
+    }
+    if any(entity.get("free") != planned_dynamic.get(entity["id"]) for entity in physics["entities"]):
+        raise ValueError("compiled habitat entity dynamics differ")
     fixture = copy.deepcopy(physics)
     fixture["wing_aerodynamics"] = load_wing_aerodynamics()
     for body, resident in zip(fixture["bodies"], fixture["residents"], strict=True):

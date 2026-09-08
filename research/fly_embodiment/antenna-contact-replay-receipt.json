@@ -1,0 +1,297 @@
+{
+  "format": "chreatures-fly-antenna-touch-receipt-v1",
+  "scope": "Joined native MuJoCo host, zero MOTOR92, vertical hold on an existing movable grain, actual distal antenna proxy contact, BODY807 transduction, and exact snapshot replay.",
+  "identity": {
+    "world_sha256": "ed0736e4be20473cd835eb246f697953220585f4c1d88a67349d4b60dbb06db0",
+    "scene_xml_sha256": "b57df1e6e7d0ecb996afdf95b0f65a69b7d091d52659b53d010fc73e7240dd2f",
+    "physics_manifest_sha256": "b1dbaae9ef249e3354cf173b2e035231a766f94314f1866577c8ee7af2c070fc",
+    "habitat_plan_sha256": "75b0de8957e28a4f5d4fb20a23d0877c1ca7313aec4362e20d8f5c9eaa5bb9ba",
+    "antenna_contact_proxy_artifact_sha256": "f72db19a3db97fdd37911ccbd546bfe0f3a270b02970530f29cfed13cf1c79e9",
+    "physical_sensory_schema_sha256": "3e3669c61bbe6bfd66f694e245ce8fd7ed7dcab677a23a7305a6e3301347d423",
+    "body807_schema_sha256": "97b48925c5580c883e1e06bac2d14ad458d84c8dec8ed8b25b143975dc0b1786",
+    "native_host_binary_sha256": "c6b0ce7299fbabdbb1dbbf5dd8063bf5c20e5fca141bba834f1c8cc094c824a0",
+    "initial_snapshot_sha256": "a76d1d422756b90dc05a72c0ac26080da0b175cc3eb230b52c64ca0eac77b22b"
+  },
+  "compiled_counts": {
+    "nq": 462,
+    "nv": 432,
+    "nu": 180,
+    "nbody": 370,
+    "njnt": 282,
+    "ngeom": 383,
+    "nmesh": 69,
+    "nsite": 138,
+    "nsensor": 12,
+    "nsensordata": 192
+  },
+  "control_dt_s": 0.01,
+  "physics_dt_s": 0.0001,
+  "motor92": "all_zero",
+  "visitor_force_model_units": [
+    0.0,
+    0.0,
+    0.01962
+  ],
+  "visitor_force_note": "Vertical force balances configured grain model weight; the model mass scale is inferred and this is not an SI-newton claim.",
+  "contact_dynamics": {
+    "evidence_grade": "ENGINEERED_COMPLIANT_CONTACT",
+    "friction": [
+      1.0,
+      1.0,
+      0.02
+    ],
+    "limit": "The 2 ms contact time constant is a stable numerical compliance and is not a measured antennal cuticle or Johnston-organ calibration.",
+    "margin_mm": 0.001,
+    "solimp": [
+      0.98,
+      0.99,
+      1e-05,
+      0.5,
+      3.0
+    ],
+    "solref_time_constant_s": 0.002
+  },
+  "compiled_indices": {
+    "antenna_body": 10,
+    "antenna_proxy_geom": 13,
+    "movable_body": 356,
+    "movable_geoms": [
+      369
+    ],
+    "movable_free_qpos_address": 364,
+    "movable_free_dof_address": 348
+  },
+  "body807_indices": {
+    "q": [
+      102,
+      103,
+      104
+    ],
+    "qdot": [
+      228,
+      229,
+      230
+    ],
+    "generalized_load": [
+      354,
+      355,
+      356
+    ],
+    "segment_contact_force": [
+      519,
+      520,
+      521
+    ]
+  },
+  "pre_contact": {
+    "time_s": 0.01,
+    "antenna_q": [
+      -1.864984824351268e-07,
+      -5.237799882706895e-07,
+      3.34048149852606e-06
+    ],
+    "antenna_qdot_rad_s": [
+      -0.005651225335896015,
+      0.0004759682051371783,
+      0.0029355385340750217
+    ],
+    "antenna_generalized_load_model_units": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "antenna_segment_contact_force_model_units": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "grain_position_mm": [
+      -13.9861026,
+      24.6031461,
+      1.11625336
+    ],
+    "grain_linear_velocity_mm_s": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "contact_tick": {
+    "time_s": 0.02,
+    "antenna_q": [
+      -2.000187487283256e-05,
+      5.621247055387357e-06,
+      -3.7195700315351132e-06
+    ],
+    "antenna_qdot_rad_s": [
+      -0.001088079996407032,
+      0.00024324518744833767,
+      -0.0005282287602312863
+    ],
+    "antenna_generalized_load_model_units": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "antenna_segment_contact_force_model_units": [
+      -0.003724216017872095,
+      -0.0012250094441697001,
+      0.0031574240420013666
+    ],
+    "antenna_segment_contact_force_norm_model_units": 0.005033861307891616,
+    "grain_position_mm": [
+      -13.92822349516633,
+      24.582159928071864,
+      1.0869967546809884
+    ],
+    "grain_linear_velocity_mm_s": [
+      8.13464979472788,
+      -2.9229693775901544,
+      -4.163091339093763
+    ]
+  },
+  "delta": {
+    "antenna_q": [
+      -1.9815376390397432e-05,
+      6.145027043658047e-06,
+      -7.060051530061173e-06
+    ],
+    "antenna_qdot_rad_s": [
+      0.004563145339488983,
+      -0.00023272301768884063,
+      -0.003463767294306308
+    ],
+    "grain_position_mm": [
+      0.057879104833670425,
+      -0.020986171928136343,
+      -0.02925660531901153
+    ],
+    "grain_linear_velocity_mm_s": [
+      8.13464979472788,
+      -2.9229693775901544,
+      -4.163091339093763
+    ]
+  },
+  "author_body_preservation": {
+    "all_exact": true,
+    "segments": [
+      {
+        "segment": "l_pedicel",
+        "author_mass_model_units": 1e-06,
+        "compiled_mass_model_units": 1e-06,
+        "author_inertia_model_units": [
+          1.802386272104761e-09,
+          1.644658648746922e-09,
+          1.4642641358490643e-09
+        ],
+        "compiled_inertia_model_units": [
+          1.802386272104761e-09,
+          1.644658648746922e-09,
+          1.4642641358490643e-09
+        ],
+        "exact": true
+      },
+      {
+        "segment": "l_funiculus",
+        "author_mass_model_units": 1.1e-06,
+        "compiled_mass_model_units": 1.1e-06,
+        "author_inertia_model_units": [
+          3.1763243304093275e-09,
+          2.802593100637184e-09,
+          1.5326253893542874e-09
+        ],
+        "compiled_inertia_model_units": [
+          3.1763243304093275e-09,
+          2.802593100637184e-09,
+          1.5326253893542874e-09
+        ],
+        "exact": true
+      },
+      {
+        "segment": "l_arista",
+        "author_mass_model_units": 1e-06,
+        "compiled_mass_model_units": 1e-06,
+        "author_inertia_model_units": [
+          4.757465064018096e-10,
+          4.450825832624669e-10,
+          4.0009761169291033e-11
+        ],
+        "compiled_inertia_model_units": [
+          4.757465064018096e-10,
+          4.450825832624669e-10,
+          4.0009761169291033e-11
+        ],
+        "exact": true
+      },
+      {
+        "segment": "r_pedicel",
+        "author_mass_model_units": 1e-06,
+        "compiled_mass_model_units": 1e-06,
+        "author_inertia_model_units": [
+          1.7940611623028912e-09,
+          1.6370620730021323e-09,
+          1.457500791110731e-09
+        ],
+        "compiled_inertia_model_units": [
+          1.7940611623028912e-09,
+          1.6370620730021323e-09,
+          1.457500791110731e-09
+        ],
+        "exact": true
+      },
+      {
+        "segment": "r_funiculus",
+        "author_mass_model_units": 1.1e-06,
+        "compiled_mass_model_units": 1.1e-06,
+        "author_inertia_model_units": [
+          3.1763243304093275e-09,
+          2.802593100637184e-09,
+          1.5326253893542874e-09
+        ],
+        "compiled_inertia_model_units": [
+          3.1763243304093275e-09,
+          2.802593100637184e-09,
+          1.5326253893542874e-09
+        ],
+        "exact": true
+      },
+      {
+        "segment": "r_arista",
+        "author_mass_model_units": 1e-06,
+        "compiled_mass_model_units": 1e-06,
+        "author_inertia_model_units": [
+          4.757465064018097e-10,
+          4.4508258326246697e-10,
+          4.0009761169291046e-11
+        ],
+        "compiled_inertia_model_units": [
+          4.757465064018097e-10,
+          4.4508258326246697e-10,
+          4.0009761169291046e-11
+        ],
+        "exact": true
+      }
+    ]
+  },
+  "replay": {
+    "exact": true,
+    "post_hashes": {
+      "body": "662957c15ed633c0e125011dca210703bc65bb1ffc459244fa3e2e2c2830b739",
+      "qpos": "bd40981c05f149f96179ce7379af8032907e0e0a771f61f9ca3edb3dda65ee75",
+      "qvel": "392bd27c2dce744cebeb742f3d95aab91fd322e35737e836a7efe7841e862f8f",
+      "sensordata": "157719f0d2908a98869141bc1e8ce68137e744edc9e28d7b31ef68df9fcf88ab"
+    },
+    "replay_hashes": {
+      "body": "662957c15ed633c0e125011dca210703bc65bb1ffc459244fa3e2e2c2830b739",
+      "qpos": "bd40981c05f149f96179ce7379af8032907e0e0a771f61f9ca3edb3dda65ee75",
+      "qvel": "392bd27c2dce744cebeb742f3d95aab91fd322e35737e836a7efe7841e862f8f",
+      "sensordata": "157719f0d2908a98869141bc1e8ce68137e744edc9e28d7b31ef68df9fcf88ab"
+    }
+  },
+  "claims": {
+    "contact": "Measured through the current BODY807 segment-contact path.",
+    "deflection": "Measured motion of the author's passive distal arista joints.",
+    "reciprocity": "The free grain gains lateral position and velocity under a vertical-only applied hold during resolved contact.",
+    "biology": "The proxy and compliance are engineered from author mesh geometry; no measured sensillum force calibration or behavioral-response claim."
+  }
+}

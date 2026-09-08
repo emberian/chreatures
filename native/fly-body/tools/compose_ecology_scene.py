@@ -143,13 +143,67 @@ def apply_collisions(
             geom.set("conaffinity", "0")
 
 
-def compose(base_xml: Path, output: Path, resident_count: int, habitat: dict) -> list[str]:
+def add_antenna_contact_proxies(
+    body: ET.Element,
+    prefix: str,
+    resident_index: int,
+    residents: int,
+    proxies: dict,
+) -> None:
+    own_bit = 1 << (resident_index + 1)
+    resident_mask = sum(1 << (i + 1) for i in range(residents))
+    affinity = 1 | (resident_mask ^ own_bit)
+    bodies = {item.get("name"): item for item in body.iter("body")}
+    contact = proxies["physics_contract"]["contact_parameters"]
+    tactile_dynamics = {
+        "margin": f"{contact['margin_mm']:.9g}",
+        "solref": f"{contact['solref_time_constant_s']:.9g}",
+        "solimp": fmt(contact["solimp"]),
+        "friction": fmt(contact["friction"]),
+    }
+    for proxy in proxies["proxies"]:
+        segment_name = f"{prefix}/{proxy['segment']}"
+        segment = bodies.get(segment_name)
+        if segment is None:
+            raise RuntimeError(f"antenna proxy segment is absent: {segment_name}")
+        attributes = {
+            **tactile_dynamics,
+            "name": f"{prefix}/tactile/{proxy['id']}",
+            "type": proxy["shape"],
+            "size": fmt(proxy["size_mm"]),
+            "mass": "0",
+            "rgba": "0 0 0 0",
+            "group": "3",
+            "contype": str(own_bit),
+            "conaffinity": str(affinity),
+        }
+        if "position_mm" in proxy:
+            attributes["pos"] = fmt(proxy["position_mm"])
+        if "fromto_mm" in proxy:
+            attributes["fromto"] = fmt(proxy["fromto_mm"])
+        ET.SubElement(segment, "geom", attributes)
+
+
+def compose(
+    base_xml: Path,
+    output: Path,
+    resident_count: int,
+    habitat: dict,
+    antenna_proxies: dict,
+) -> list[str]:
     if not 1 <= resident_count <= 16:
         raise SystemExit("--residents must be between 1 and 16")
     if habitat.get("format") != "chreatures.fly-habitat-plan.v1":
         raise SystemExit("--habitat-plan must use chreatures.fly-habitat-plan.v1")
     if habitat.get("parameters", {}).get("residents") != resident_count:
         raise SystemExit("habitat resident count differs from --residents")
+    if antenna_proxies.get("format") != "chreatures-antenna-contact-proxies-v1":
+        raise SystemExit("invalid antenna contact proxy artifact")
+    expected_proxy_segments = {
+        f"{side}_{segment}" for side in "lr" for segment in ("pedicel", "funiculus", "arista")
+    }
+    if {proxy.get("segment") for proxy in antenna_proxies.get("proxies", [])} != expected_proxy_segments:
+        raise SystemExit("antenna contact proxy segment set differs")
     tree = ET.parse(base_xml)
     root = tree.getroot()
     root.set("model", f"chreatures_ecology_{resident_count}x")
@@ -197,6 +251,7 @@ def compose(base_xml: Path, output: Path, resident_count: int, habitat: dict) ->
         clone.set("pos", fmt((x, y, z)))
         clone.set("quat", fmt(quat))
         apply_collisions(clone, prefix, index, resident_count, contactable_suffixes)
+        add_antenna_contact_proxies(clone, prefix, index, resident_count, antenna_proxies)
         worldbody.append(clone)
         ET.SubElement(worldbody, "site", name=f"{prefix}/spawn", pos=fmt((x, y, 0.0)))
         for source in source_actuators:
@@ -313,6 +368,8 @@ def compiled_manifest(
     optic_atlas: Path,
     habitat: dict,
     habitat_path: Path,
+    antenna_proxies: dict,
+    antenna_proxy_path: Path,
 ) -> dict:
     model = mj.MjModel.from_xml_path(str(xml_path))
     data = mj.MjData(model)
@@ -492,6 +549,38 @@ def compiled_manifest(
             }
         )
 
+    compiled_tactile_proxies = []
+    resident_mask = sum(1 << (i + 1) for i in range(len(prefixes)))
+    for resident_index, prefix in enumerate(prefixes):
+        own_bit = 1 << (resident_index + 1)
+        expected_affinity = 1 | (resident_mask ^ own_bit)
+        for proxy in antenna_proxies["proxies"]:
+            geom_name = f"{prefix}/tactile/{proxy['id']}"
+            geom_id = numeric_id(model, mj.mjtObj.mjOBJ_GEOM, geom_name)
+            body_id = numeric_id(model, mj.mjtObj.mjOBJ_BODY, f"{prefix}/{proxy['segment']}")
+            if int(model.geom_bodyid[geom_id]) != body_id:
+                raise RuntimeError(f"antenna proxy body differs: {geom_name}")
+            if int(model.geom_contype[geom_id]) != own_bit or int(model.geom_conaffinity[geom_id]) != expected_affinity:
+                raise RuntimeError(f"antenna proxy collision mask differs: {geom_name}")
+            compiled_tactile_proxies.append(
+                {
+                    "resident": prefix,
+                    "proxy_id": proxy["id"],
+                    "segment": proxy["segment"],
+                    "body_id": body_id,
+                    "geom_id": geom_id,
+                    "geom_name": geom_name,
+                    "shape": proxy["shape"],
+                    "evidence_grade": proxy["evidence_grade"],
+                    "contype": int(model.geom_contype[geom_id]),
+                    "conaffinity": int(model.geom_conaffinity[geom_id]),
+                    "margin_mm": float(model.geom_margin[geom_id]),
+                    "solref": floats(model.geom_solref[geom_id]),
+                    "solimp": floats(model.geom_solimp[geom_id]),
+                    "friction": floats(model.geom_friction[geom_id]),
+                }
+            )
+
     morphology_files = {k: v for k, v in schema["files"].items() if k.startswith("model/")}
     morphology_hash = hashlib.sha256(json.dumps(morphology_files, sort_keys=True).encode()).hexdigest()
     retina = engineered_retina(optic_atlas)
@@ -501,6 +590,8 @@ def compiled_manifest(
         "eye_anchors": [resident["eye_anchors2"] for resident in residents],
         "olfactory_anchors": [resident["olfactory_anchors4"] for resident in residents],
         "mouth": [resident["mouth"] for resident in residents],
+        "antenna_contact_proxy_artifact_sha256": sha256(antenna_proxy_path),
+        "antenna_contact_proxies": compiled_tactile_proxies,
         "retina_calibration": retina["calibration"],
     }
     compact_bodies = []
@@ -559,14 +650,25 @@ def compiled_manifest(
         if path.startswith("model/") and path.endswith(".stl")
     ]
     environment_geoms = [geom for geom in geoms if geom["name"].startswith("ecology/")]
-    entities = [
-        {
-            "id": geom["name"].removeprefix("ecology/").removesuffix("/geom"),
+    planned_dynamic = {
+        item["id"]: bool(item["dynamic"])
+        for item in habitat["geometries"]
+    }
+    entities = []
+    for geom in environment_geoms:
+        entity_id = geom["name"].removeprefix("ecology/").removesuffix("/geom")
+        dynamic = planned_dynamic[entity_id]
+        entity = {
+            "id": entity_id,
             "body": geom["body_id"],
             "geoms": [geom["geom_id"]],
+            "free": dynamic,
         }
-        for geom in environment_geoms
-    ]
+        if dynamic:
+            joint_id = numeric_id(model, mj.mjtObj.mjOBJ_JOINT, f"ecology/{entity_id}/free")
+            entity["free_qpos_address"] = int(model.jnt_qposadr[joint_id])
+            entity["free_dof_address"] = int(model.jnt_dofadr[joint_id])
+        entities.append(entity)
     actuator_payload = [resident["actuators90"] for resident in residents]
     actuator_hash = hashlib.sha256(json.dumps(actuator_payload, sort_keys=True).encode()).hexdigest()
     scene_hash = sha256(xml_path)
@@ -591,6 +693,15 @@ def compiled_manifest(
         "scene_xml": xml_path.name,
         "scene_xml_sha256": scene_hash,
         "source_revision": schema["source"]["revision"],
+        "antenna_contact_proxies": {
+            "format": antenna_proxies["format"],
+            "artifact": antenna_proxy_path.name,
+            "artifact_sha256": sha256(antenna_proxy_path),
+            "source": antenna_proxies["source"],
+            "fit": antenna_proxies["fit"],
+            "physics_contract": antenna_proxies["physics_contract"],
+            "compiled": compiled_tactile_proxies,
+        },
         "habitat_plan_sha256": sha256(habitat_path),
         "habitat": {
             "format": habitat["format"],
@@ -662,6 +773,11 @@ def main() -> None:
     parser.add_argument("--base-xml", type=Path, default=default_asset / "model" / "model.xml")
     parser.add_argument("--base-schema", type=Path, default=default_asset / "schema.json")
     parser.add_argument("--optic-atlas", type=Path, default=here.parents[1] / "data" / "ports" / "optic-anatomy-audit-v1.npz")
+    parser.add_argument(
+        "--antenna-contact-proxies",
+        type=Path,
+        default=here / "assets" / "antenna-contact-proxies-v1.json",
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--residents", type=int, default=2)
@@ -672,6 +788,8 @@ def main() -> None:
     output = args.output.resolve()
     habitat_path = args.habitat_plan.resolve()
     habitat = json.loads(habitat_path.read_text())
+    antenna_proxy_path = args.antenna_contact_proxies.resolve()
+    antenna_proxies = json.loads(antenna_proxy_path.read_text())
     if output.parent != base_xml.parent:
         output.parent.mkdir(parents=True, exist_ok=True)
         for mesh in base_xml.parent.glob("*.stl"):
@@ -688,7 +806,16 @@ def main() -> None:
                 license_destination.hardlink_to(license_path)
             except OSError:
                 shutil.copy2(license_path, license_destination)
-    prefixes = compose(base_xml, output, args.residents, habitat)
+        proxy_destination = output.parent / antenna_proxy_path.name
+        if proxy_destination.resolve() != antenna_proxy_path:
+            if proxy_destination.exists() and sha256(proxy_destination) != sha256(antenna_proxy_path):
+                proxy_destination.unlink()
+            if not proxy_destination.exists():
+                try:
+                    proxy_destination.hardlink_to(antenna_proxy_path)
+                except OSError:
+                    shutil.copy2(antenna_proxy_path, proxy_destination)
+    prefixes = compose(base_xml, output, args.residents, habitat, antenna_proxies)
     schema = json.loads(args.base_schema.read_text())
     manifest = compiled_manifest(
         output,
@@ -698,6 +825,8 @@ def main() -> None:
         args.optic_atlas.resolve(),
         habitat,
         habitat_path,
+        antenna_proxies,
+        antenna_proxy_path,
     )
     manifest_path = args.manifest.resolve() if args.manifest else output.with_suffix(".json")
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")

@@ -684,9 +684,9 @@ fn generate(
     let spawns = select_spawns(&mut b, residents, nx, ny, dx, dy)?;
     validate(&b, &spawns)?;
     let dynamic_count = b.geometries.iter().filter(|g| g.dynamic).count();
-    // The compiled fixture has 69 semantic mesh segments plus two adhesion
-    // helper geoms per resident.
-    let estimated = b.geometries.len() + residents * 71;
+    // The compiled fixture has 69 semantic mesh segments, two adhesion helper
+    // geoms and six massless antennal contact proxies per resident.
+    let estimated = b.geometries.len() + residents * 77;
     if !(300..=600).contains(&estimated) {
         return Err(format!(
             "estimated compiled geometry budget {estimated} outside 300..600"

@@ -17,8 +17,8 @@ branch networks, 32 elevated leaf surfaces, bark shelters with open cavities,
 ramps, moist niches, movable grains and elevated food pods, and four colony
 attachment leaves. Every material region names physical geometry and the route
 graph is validated as connected. The estimate includes the 69 imported author
-segment geoms plus two adhesion helper geoms per resident and must remain
-between 300 and 600.
+segment geoms, two adhesion helper geoms, and six massless mesh-derived
+antennal contact proxies per resident and must remain between 300 and 600.
 
 The planner does not compute paths, tasks, targets, or motor commands. Shelter
 means a physical cavity made from collision/occlusion geometry; it is not a
