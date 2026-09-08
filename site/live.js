@@ -1,5 +1,6 @@
 import {LiveView, NeuronInspector} from './live/view.js';
 import {PlasticityPanel} from './live/plasticity-panel.js';
+import {EncounterPanel} from './live/encounter-panel.js';
 
 const $ = selector => document.querySelector(selector);
 const stateLabel = $('#state-label');
@@ -29,6 +30,7 @@ let worker = null;
 let view = null;
 let inspector = null;
 let plasticityPanel = null;
+let encounterPanel = null;
 let ready = false;
 let paused = false;
 let selectedResident = null;
@@ -131,6 +133,7 @@ function createView() {
     onNeuron(row) { inspector?.select(row); },
     onToy(id) {
       selectedToy = id;
+      encounterPanel?.setSelectedToy(id);
       shoveToyButton.disabled = !ready;
       setNotice(`Selected physical object ${id}.`);
     },
@@ -265,6 +268,8 @@ function handleReady(message) {
   residentButtons(residents);
   ready = true; paused = false;
   plasticityPanel.setReady(true);
+  encounterPanel.setReady(true);
+  encounterPanel.updateStatus(message.interactionStatus);
   progress.parentElement.classList.remove('indeterminate'); progress.style.width = '100%';
   startLayer.hidden = true;
   setInteractive(true);
@@ -280,8 +285,10 @@ function handleReady(message) {
 
 function updateFrame(message) {
   view.applyFrame(message);
+  if (message.screenObservation) updateNativeScreen(message.screenObservation);
   modelTime.textContent = `${Number(message.time).toFixed(2)} s`;
   paused = Boolean(message.paused);
+  encounterPanel?.updateStatus(message.interactionStatus);
   pauseButton.textContent = paused ? 'Resume' : 'Pause';
   if (!noticeTimer) setNotice(paused ? 'paused' : 'running locally', paused ? 'paused' : 'ready');
   if (message.selectedResidentId === selectedResident) {
@@ -302,7 +309,26 @@ function updateFrame(message) {
   }
   if (selectedToy && !visitorIds.has(selectedToy)) selectedToy = null;
   if (!selectedToy && visitorIds.size) selectedToy = [...visitorIds].at(-1);
+  encounterPanel?.setSelectedToy(selectedToy);
   shoveToyButton.disabled = !selectedToy;
+}
+
+function updateNativeScreen(screen) {
+  const width = Number(screen.width), height = Number(screen.height), revision = Number(screen.revision);
+  if (!Number.isSafeInteger(revision) || revision < 0 || !Number.isInteger(width) || !Number.isInteger(height) ||
+      width <= 0 || height <= 0 || !(screen.rgb instanceof Float32Array) || screen.rgb.length !== width * height * 3 ||
+      !screen.rgb.every(value => Number.isFinite(value) && value >= 0 && value <= 1)) throw new Error('Native screen observation differs');
+  stimulusCanvas.width = width; stimulusCanvas.height = height;
+  const image = stimulusContext.createImageData(width, height);
+  for (let source = 0, target = 0; source < screen.rgb.length; source += 3, target += 4) {
+    image.data[target] = Math.round(screen.rgb[source] * 255);
+    image.data[target + 1] = Math.round(screen.rgb[source + 1] * 255);
+    image.data[target + 2] = Math.round(screen.rgb[source + 2] * 255);
+    image.data[target + 3] = 255;
+  }
+  stimulusContext.putImageData(image, 0, 0);
+  view.setScreenCanvas(stimulusCanvas);
+  if (stimulusMode === 'program' || stimulusMode === 'native') filmTime.textContent = `native screen r${revision} · model time`;
 }
 
 function downloadSnapshot(message) {
@@ -323,9 +349,12 @@ function workerMessage(event) {
     else if (message.type === 'frame') updateFrame(message);
     else if (message.type === 'saved') downloadSnapshot(message);
     else if (message.type === 'plasticity') plasticityPanel.accept(message, selectedResident);
+    else if (message.type === 'interaction-scheduled') encounterPanel.scheduled(message);
     else if (message.type === 'loaded') {
       resetInspector();
       plasticityPanel.clear(selectedResident);
+      encounterPanel.clear();
+      encounterPanel.updateStatus(message.interactionStatus);
       if (selectedResident) post('select', {residentId: selectedResident});
       setNotice('checkpoint loaded', message.paused ? 'paused' : 'ready');
     }
@@ -337,6 +366,7 @@ function workerMessage(event) {
       setNotice(selectedToy ? `placed ${selectedToy}` : 'physical object placed', paused ? 'paused' : 'ready');
     } else if (message.type === 'error') {
       plasticityPanel?.reject(message.requestId);
+      encounterPanel?.reject(message.requestId);
       if (pendingToyRequest && message.requestId === pendingToyRequest) {
         pendingToyRequest = null;
         addToyButton.disabled = !ready;
@@ -402,6 +432,7 @@ async function chooseStimulus(kind, button) {
     catch (error) { setNotice(`film could not start: ${error.message}`, 'paused'); return; }
   } else stimulusVideo.pause();
   stimulusMode = kind; stimulusStarted = performance.now();
+  startStimulusClock();
   for (const item of document.querySelectorAll('[data-stimulus]')) item.setAttribute('aria-pressed', String(item === button));
   post('stimulus', {kind});
   sendStimulusFrame();
@@ -414,6 +445,14 @@ startButton.addEventListener('click', () => {
     view = createView();
     inspector = new NeuronInspector($('#neuron-inspector'), row => view.selectNeuron(row));
     plasticityPanel = new PlasticityPanel($('#plasticity-panel'), residentId => request('inspect-plasticity', {residentId}));
+    encounterPanel = new EncounterPanel($('#encounter-panel'), {
+      submit: program => request('schedule-interaction', {program}),
+      onScreenProgram() {
+        stopStimulus(); stimulusMode = 'program';
+        for (const item of document.querySelectorAll('[data-stimulus]')) item.setAttribute('aria-pressed', 'false');
+        filmTime.textContent = 'static pattern · model time';
+      },
+    });
     loadDetail.textContent = 'Opening the isolated compute Worker…';
     worker = new Worker('./live/worker.js', {type: 'module'});
     worker.addEventListener('message', workerMessage);
@@ -473,14 +512,20 @@ saveButton.addEventListener('click', () => request('save'));
 loadInput.addEventListener('change', async () => {
   const file = loadInput.files?.[0]; if (!file || !ready) return;
   const snapshot = await file.arrayBuffer();
+  stopStimulus(); stimulusMode = 'native';
+  for (const item of document.querySelectorAll('[data-stimulus]')) item.setAttribute('aria-pressed', 'false');
+  filmTime.textContent = 'restoring native screen…';
   const requestId = `ui-${++requestCounter}`;
   worker.postMessage({type: 'load', requestId, snapshot}, [snapshot]);
   loadInput.value = '';
 });
-greetButton.addEventListener('click', () => post('greet', {notes: [0, 1, 2]}));
+greetButton.addEventListener('click', () => encounterPanel?.sendProgram([100, 250, 630].map((frequency_hz, index) => ({
+  offset_ticks: index * 30, event: {kind: 'tone', position_mm: [0, 0, 2], frequency_hz, amplitude: .65, duration_s: .2},
+}))));
 for (const button of document.querySelectorAll('[data-tone]')) button.addEventListener('click', () => {
-  post('tone', {frequency: Number(button.dataset.tone), duration: .8, amplitude: .65});
-  setNotice(`Sent ${button.dataset.tone} Hz into the garden`, 'ready');
+  const sent = encounterPanel?.sendProgram([{offset_ticks: 0, event: {kind: 'tone', position_mm: [0, 0, 2],
+    frequency_hz: Number(button.dataset.tone), duration_s: .8, amplitude: .65}}]);
+  if (sent) setNotice(`Scheduling ${button.dataset.tone} Hz in native model time`, 'ready');
 });
 addToyButton.addEventListener('click', () => {
   if (!ready || pendingToyRequest) return;
@@ -494,7 +539,7 @@ document.addEventListener('keydown', event => {
   }
 });
 shoveToyButton.addEventListener('click', () => {
-  if (selectedToy) post('shove', {id: selectedToy, force: [0, 4, 1]});
+  if (selectedToy) encounterPanel?.sendProgram([{offset_ticks: 0, event: {kind: 'toy_force', entity_id: selectedToy, force: [0, 4, 1]}}]);
 });
 stimulusVideo.addEventListener('error', () => {
   if (stimulusMode === 'bad-apple') {

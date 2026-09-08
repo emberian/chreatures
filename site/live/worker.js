@@ -1,6 +1,7 @@
 import { LiveEngine } from './engine.js';
 let engine, running = false, queue = Promise.resolve(), scheduled = false;
 let deliveredMeshRevision = null;
+let deliveredScreenRevision = null;
 const post = (type, detail = {}, transfer = []) => self.postMessage({type, ...detail}, transfer);
 function exclusive(operation, requestId) {
   queue = queue.then(operation).catch(error => {
@@ -15,10 +16,18 @@ function frame(value) {
   const revision = value.meshRevision ?? value.engine;
   if (deliveredMeshRevision === revision) delete value.meshes;
   else deliveredMeshRevision = revision;
+  const screenRevision = value.interactionStatus?.screen_revision;
+  if (Number.isSafeInteger(screenRevision) && screenRevision >= 0 && screenRevision !== deliveredScreenRevision) {
+    const screen = engine.screenObservation();
+    if (screen.revision !== screenRevision || !(screen.rgb instanceof Float32Array)) throw new Error('Native screen observer revision differs');
+    value.screenObservation = {...screen, rgb: screen.rgb.slice()};
+    deliveredScreenRevision = screenRevision;
+  }
   const transferable = [];
   for (const field of ['positions', 'rotations', 'colors', 'bodyPositions', 'bodyRotations', 'food', 'neuralRates', 'neuralSignal', 'retinalRGB', 'bodySense', 'motorActivation', 'deliveredContext']) {
     if (value[field]?.buffer && !transferable.includes(value[field].buffer)) transferable.push(value[field].buffer);
   }
+  if (value.screenObservation?.rgb.buffer) transferable.push(value.screenObservation.rgb.buffer);
   post('frame', {...value, paused: !running}, transferable);
 }
 function pump() {
@@ -56,11 +65,14 @@ self.onmessage = ({data: message}) => {
       case 'resume': if (engine.failed) throw new Error('Restore a coherent life before resuming'); running = true; pump(); break;
       case 'screen-frame': engine.screen(message.rgb, message.width, message.height, message.filmTime); break;
       case 'stimulus': engine.record('screen-mode', {kind: message.kind}); break;
-      case 'greet': engine.greet(message.notes); break;
       case 'neural-field':
         if (!['rate','adaptation','support','release','dopamine','octopamine','serotonin'].includes(message.field)) throw new Error('Unknown neural observation field');
         engine.neuralField = message.field; break;
-      case 'tone': engine.tone(message.frequency, message.duration, message.amplitude); break;
+      case 'schedule-interaction': {
+        const receipt = engine.scheduleInteraction(message.program);
+        post('interaction-scheduled', {requestId, receipt, status: engine.interactionStatus()});
+        break;
+      }
       case 'inspect-plasticity': {
         const detail = await engine.inspectPlasticity();
         post('plasticity', {requestId, ...detail},
@@ -68,13 +80,12 @@ self.onmessage = ({data: message}) => {
         break;
       }
       case 'insert-toy': post('inserted', {requestId, object: await engine.insertToy(message.position)}); frame(engine.observe()); break;
-      case 'shove': engine.shove(message.id, message.force); break;
       case 'select': {
         const index = engine.world.residentDescriptors.findIndex(r => r.id === message.residentId);
         if (index < 0) throw new Error('Unknown resident'); engine.selected = index; break;
       }
       case 'save': {running = false; const snapshot = await engine.save(); post('saved', {requestId, snapshot}, [snapshot]); frame(engine.observe()); break;}
-      case 'load': running = false; await engine.load(message.snapshot); post('loaded', {requestId}); frame(engine.observe()); break;
+      case 'load': running = false; await engine.load(message.snapshot); deliveredScreenRevision = null; post('loaded', {requestId, interactionStatus: engine.interactionStatus()}); frame(engine.observe()); break;
       default: throw new Error(`Unknown habitat operation: ${type}`);
     }
   }, message.requestId);
