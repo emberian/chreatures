@@ -15,6 +15,7 @@ on:
       - "web/vendor/three/LICENSE"
       - "web/vendor/three/VERSION"
       - "scripts/build_pages.py"
+      - "scripts/check_live_module_graph.mjs"
       - "scripts/pages_release_bundle.py"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
@@ -38,7 +39,7 @@ jobs:
           persist-credentials: false
       - name: Configure Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-      - name: Fetch authenticated V4 release inputs
+      - name: Fetch authenticated release inputs
         id: release
         run: >-
           python3 scripts/pages_release_bundle.py fetch
@@ -56,6 +57,8 @@ jobs:
           --expected-physics-manifest-sha256 "${{ steps.release.outputs.physics_manifest_sha256 }}"
           --model-training-status "${{ steps.release.outputs.training_status }}"
           --expected-model-release-sha256 "${{ steps.release.outputs.model_release_sha256 }}"
+      - name: Link the published browser entry modules headlessly
+        run: node --experimental-vm-modules scripts/check_live_module_graph.mjs dist/site
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
