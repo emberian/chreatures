@@ -28,3 +28,12 @@ target/
 # Local full connectome Metal buffers (derived from separately licensed data).
 /data/metal-brain/*
 !/data/metal-brain/metal-csr-v2.manifest.json
+
+# Generated live binaries and physical fixtures come from the selected release.
+/site/live/pkg/
+/site/live/vendor/mujoco/
+/site/live/fixtures/
+/site/live/physics-assets.json
+/site/live/world-runtime.mjs
+/site/live/runtime-manifest.json
+/site/live/model/

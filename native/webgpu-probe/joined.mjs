@@ -8,7 +8,17 @@ import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {create, globals} from 'webgpu';
 
-const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, item, index, values) => index % 2 ? pairs : [...pairs, [item.slice(2), values[index + 1]]], []));
+const argv = process.argv.slice(2);
+const permitted = new Set(['site', 'report', 'checkpoint', 'snapshot', 'insertion-position']);
+if (argv.length % 2) throw new Error('Joined probe arguments require --name value pairs');
+const args = {};
+for (let index = 0; index < argv.length; index += 2) {
+  const name = argv[index].slice(2);
+  if (!argv[index].startsWith('--') || !permitted.has(name) || name in args) {
+    throw new Error(`Unknown or duplicate joined probe argument: ${argv[index]}`);
+  }
+  args[name] = argv[index + 1];
+}
 const directory = resolve(args.site ?? '../../dist/site');
 const mime = {'.json': 'application/json', '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm', '.xml': 'application/xml', '.gz': 'application/octet-stream'};
 const server = createServer(async (req, res) => {

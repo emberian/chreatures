@@ -1,0 +1,34 @@
+{
+  "archive": {
+    "bytes": 177385612,
+    "root": "chreatures-pages-v4-initialized-b2",
+    "sha256": "41613c52e121ad277188d13e946a8ba369cc078c72eaafb78f003404c612aded",
+    "url": "https://github.com/emberian/chreatures/releases/download/live-cns-v4-initialized-20260908/chreatures-pages-v4-initialized-b2.tar.gz"
+  },
+  "competenceStatus": "initialized-untrained-no-competence-claim",
+  "components": {
+    "antennaContactProxyArtifactSha256": "f72db19a3db97fdd37911ccbd546bfe0f3a270b02970530f29cfed13cf1c79e9",
+    "antennaContactProxyCount": 12,
+    "browserCoreWasmSha256": "526ef3bacb1077c3664ccf2531020948a59514a08ac2b1d468f366c4fde1a7b3",
+    "fixtureSha256": "114638ae33d0bbbf15f85c1149dbb8a296e75e98ee3a84b1b85a93fbc07f4b65",
+    "modelComponentSourceRevision": "7a975af023cc4cdb316c9a771c8713f1109f5d3c",
+    "modelReleaseSha256": "cc9d2d012608a785b1e6cdc04e7226f126f272ba705341b8f0b81f3dfd15eafa",
+    "modelReleaseSourceRevision": "9825bef6daffd0ae22dc80a069ca58e40779d37b",
+    "physicsManifestSha256": "073ec24c05ab013acbd9e909bfacb35d4c84cd26405e62b850623851f737b90d",
+    "residentArtifactSha256": "9bdea07f91141b4c6fff30825d7bb5f83fd2c13237b76919d16ea92994cee03b",
+    "residentRuntimeWasmSha256": "c4906ff6598477c22430d12719df1079039108ccf62206ce62fa14431414b034",
+    "runtimeManifestSha256": "5e89d4121f92e98284f17f28dfd7518fc01e025070ddb9a96fe0599fe4d58842",
+    "runtimeSourceSha256": "13847357ccb3e044fb2a7cb93180f6fe5a7442ab22c57e141786dabe8dfaf2c6",
+    "sceneXmlSha256": "3a3ce4366ae92e0f9ad6a32ff937516aa86a22215c8d0c2ca59275db8e794fa3",
+    "serviceArtifactSha256": "8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
+    "sourceRuntimeManifestSha256": "e3b27809d055185401b3f999f52064617ebd9050b0423d15987d9559f7a19431"
+  },
+  "format": "chreatures-pages-release-selection-v1",
+  "layout": {
+    "model": "model",
+    "physical": "physical",
+    "runtime": "runtime"
+  },
+  "sourceRevision": "e71c52da318decba404cbb40c2c40c5217c6c1f1",
+  "trainingStatus": "initialized-untrained"
+}
