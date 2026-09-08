@@ -17,6 +17,7 @@ from .curriculum import CONTEXT, CONTROL_SOURCES, PHASES, RESIDENTS, TICKS, spli
 
 FORMAT: Final = "chreatures-actual-fly-cns-development-corpus-v1"
 EPISODE_FORMAT: Final = "chreatures-actual-fly-cns-development-episode-v1"
+NURSERY_FORMAT: Final = "chreatures-embodied-nursery-corpus-v1"
 OPTIC_SITES: Final = 1771
 LATENT: Final = 512
 BODY_AFFERENTS: Final = 807
@@ -282,6 +283,122 @@ def load_corpus(root: Path) -> Corpus:
         root, manifest, [episode.metadata["core_wasm_sha256"] for episode in episodes]
     )
     return Corpus(root, manifest, tuple(episodes[:8]), tuple(episodes[8:10]), tuple(episodes[10:]))
+
+
+def load_nursery_corpus(path: Path) -> Corpus:
+    """Load the separately sealed diverse-layout, physically stimulated corpus."""
+    path = path.resolve()
+    if path.is_dir():
+        path = path / "nursery-corpus.json"
+    manifest = json.loads(path.read_text())
+    if (
+        manifest.get("format") != NURSERY_FORMAT
+        or manifest.get("completed") is not True
+        or int(manifest.get("worlds", -1)) != 12
+        or int(manifest.get("ticks", -1)) != TICKS
+        or int(manifest.get("residents", -1)) != RESIDENTS
+    ):
+        raise FlyLearningContractError("sealed embodied nursery corpus required")
+    rows = manifest.get("episodes")
+    if not isinstance(rows, list) or len(rows) != 12:
+        raise FlyLearningContractError("nursery corpus must contain twelve whole worlds")
+    episodes: list[Episode] = []
+    for expected_index, row in enumerate(rows):
+        if (
+            int(row.get("world_index", -1)) != expected_index
+            or row.get("split") != split_for_world(expected_index)
+            or not HEX64.fullmatch(str(row.get("sha256", "")))
+        ):
+            raise FlyLearningContractError("nursery episode order or split differs")
+        episode = load_episode(path.parent / str(row["file"]), str(row["sha256"]))
+        metadata = episode.metadata
+        if (
+            int(metadata["world_index"]) != expected_index
+            or metadata.get("nursery_format") != NURSERY_FORMAT
+            or metadata.get("nursery_raw_stimulus_controller_access") is not False
+        ):
+            raise FlyLearningContractError("nursery episode contract differs")
+        for name in (
+            "scene_manifest_sha256", "scene_layout_identity", "nursery_layout_sha256",
+            "initial_snapshot_sha256", "nursery_stimulus_schedule_sha256",
+        ):
+            row_name = "stimulus_schedule_sha256" if name == "nursery_stimulus_schedule_sha256" else name
+            if (
+                row.get(row_name) != metadata.get(name)
+                or not HEX64.fullmatch(str(metadata.get(name, "")))
+            ):
+                raise FlyLearningContractError(f"nursery manifest {name} differs")
+        schedule = metadata.get("nursery_stimulus_schedule")
+        deliveries = metadata.get("nursery_stimulus_deliveries")
+        if (
+            not isinstance(schedule, list) or len(schedule) != 16
+            or not isinstance(deliveries, list) or len(deliveries) != 16
+            or [int(item.get("tick", -1)) for item in deliveries] != list(range(0, TICKS, 64))
+        ):
+            raise FlyLearningContractError("nursery episode lacks sixteen physical stimulus receipts")
+        schedule_sha = hashlib.sha256(
+            json.dumps(schedule, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        if schedule_sha != metadata["nursery_stimulus_schedule_sha256"]:
+            raise FlyLearningContractError("nursery stimulus schedule checksum differs")
+        for planned, delivered in zip(schedule, deliveries, strict=True):
+            if delivered.get("planned") != planned:
+                raise FlyLearningContractError("nursery planned and delivered stimulus differ")
+            sound = delivered.get("bridge_sound")
+            if (
+                delivered.get("bridge_screen_sha256") != planned.get("screen_frame_sha256")
+                or not isinstance(sound, dict)
+                or sound.get("position_mm") != planned.get("position_mm")
+                or sound.get("frequency_hz") != planned.get("frequency_hz")
+                or sound.get("envelope") != planned.get("envelope")
+                or sound.get("duration_s") != planned.get("duration_s")
+                or abs(float(delivered.get("acknowledged_world_time_s", -1)) - int(delivered["tick"]) * 0.01) > 1e-8
+            ):
+                raise FlyLearningContractError("nursery bridge acknowledgement differs from plan")
+        episodes.append(episode)
+    for name in (
+        "scene_manifest_sha256", "scene_layout_identity", "nursery_layout_sha256",
+        "initial_snapshot_sha256",
+    ):
+        values = [episode.metadata[name] for episode in episodes]
+        if len(set(values)) != 12:
+            raise FlyLearningContractError(f"nursery {name} values must be disjoint")
+    for name in ("native_runtime_sha256", "core_wasm_sha256", "collector_sha256"):
+        if len({episode.metadata[name] for episode in episodes}) != 1:
+            raise FlyLearningContractError(f"nursery mixes {name} without an amendment")
+    return Corpus(
+        path.parent, manifest,
+        tuple(episodes[:8]), tuple(episodes[8:10]), tuple(episodes[10:]),
+    )
+
+
+def combine_corpora(primary: Corpus, nursery: Corpus) -> Corpus:
+    """Combine identical CNS contracts while retaining whole-world splits."""
+    episodes = (
+        *primary.train, *primary.validation, *primary.heldout,
+        *nursery.train, *nursery.validation, *nursery.heldout,
+    )
+    contract_keys = (
+        "cns_service_sha256", "cns_adapter_sha256", "motor_calibration_sha256",
+        "body_schema_sha256", "morphology_sha256", "motor_atlas_sha256",
+        "retina_mapping_sha256", "body_afferent_dim", "motor_dim", "outcome_dim",
+        "sensory_dim", "body_afferent_rows", "motor_rows", "control_dt_s",
+    )
+    for name in contract_keys:
+        expected = episodes[0].metadata[name]
+        if any(episode.metadata[name] != expected for episode in episodes[1:]):
+            raise FlyLearningContractError(f"bootstrap/nursery {name} differs")
+    return Corpus(
+        primary.root,
+        {
+            "format": "chreatures-actual-fly-cns-combined-training-view-v1",
+            "completed": True,
+            "sources": [primary.manifest["format"], nursery.manifest["format"]],
+        },
+        primary.train + nursery.train,
+        primary.validation + nursery.validation,
+        primary.heldout + nursery.heldout,
+    )
 
 
 def _atomic_json(path: Path, value: Any) -> None:

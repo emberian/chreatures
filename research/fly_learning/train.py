@@ -37,7 +37,9 @@ from .data import (
     OUTCOMES,
     Corpus,
     Episode,
+    combine_corpora,
     load_corpus,
+    load_nursery_corpus,
     seal_corpus,
     sha256_file,
 )
@@ -460,18 +462,25 @@ def _save_stage_checkpoint(
 
 def _cache_latents(
     model: AnatomicalCNS, corpus: Corpus, device: torch.device, root: Path
-) -> dict[int, np.ndarray]:
+) -> dict[str, np.ndarray]:
     root.mkdir(parents=True, exist_ok=False)
-    result: dict[int, np.ndarray] = {}
-    for episode in (*corpus.train, *corpus.validation, *corpus.heldout):
+    result: dict[str, np.ndarray] = {}
+    episodes = (*corpus.train, *corpus.validation, *corpus.heldout)
+    world_counts: dict[int, int] = {}
+    for episode in episodes:
+        world = int(episode.metadata["world_index"])
+        world_counts[world] = world_counts.get(world, 0) + 1
+    for episode in episodes:
         latent, _ = replay_episode(model, episode, device)
-        path = root / f"world-{int(episode.metadata['world_index']):02d}.npy"
+        world = int(episode.metadata["world_index"])
+        suffix = "" if world_counts[world] == 1 else f"-{episode.sha256[:12]}"
+        path = root / f"world-{world:02d}{suffix}.npy"
         temporary = path.with_name(f".{path.name}.tmp")
         with temporary.open("wb") as stream:
             np.save(stream, latent, allow_pickle=False)
             stream.flush(); os.fsync(stream.fileno())
         os.replace(temporary, path)
-        result[int(episode.metadata["world_index"])] = np.load(path, mmap_mode="r")
+        result[episode.sha256] = np.load(path, mmap_mode="r")
     return result
 
 
@@ -504,7 +513,7 @@ def consequence_table(episodes: tuple[Episode, ...]) -> dict[tuple[int, int], Co
 def _resident_batch(
     sampler: BalancedWindowSampler,
     windows: tuple[Window, ...],
-    cache: dict[int, np.ndarray],
+    cache: dict[str, np.ndarray],
     consequence: dict[tuple[int, int], Consequence],
     device: torch.device,
 ) -> dict[str, torch.Tensor | int]:
@@ -512,9 +521,8 @@ def _resident_batch(
     count_rows, utility_rows, uncertainty_rows = [], [], []
     for window in windows:
         episode = sampler.episodes[window.episode_index]
-        world = int(episode.metadata["world_index"])
         start, stop, resident = window.history_start, window.stop, window.resident
-        latent_rows.append(np.asarray(cache[world][start : stop + 1, resident]))
+        latent_rows.append(np.asarray(cache[episode.sha256][start : stop + 1, resident]))
         context = episode.delivered_context[start:stop, resident]
         context_rows.append(context)
         reward_rows.append(episode.reward[start:stop, resident])
@@ -545,7 +553,7 @@ def _resident_batch(
 def evaluate_resident(
     model: CnsResidentModel,
     sampler: BalancedWindowSampler,
-    cache: dict[int, np.ndarray],
+    cache: dict[str, np.ndarray],
     consequence: dict[tuple[int, int], Consequence],
     device: torch.device,
     batch_size: int,
@@ -562,13 +570,48 @@ def evaluate_resident(
 def train(arguments: argparse.Namespace) -> None:
     run = arguments.run.expanduser().resolve()
     run.mkdir(parents=True, exist_ok=False)
-    corpus = load_corpus(arguments.corpus)
+    primary = load_corpus(arguments.corpus)
+    source_receipts = [{
+        "role": "shared-geometry-body-bootstrap",
+        "format": primary.manifest["format"],
+        "path": str((primary.root / "corpus.json").resolve()),
+        "sha256": sha256_file(primary.root / "corpus.json"),
+    }]
+    corpus = primary
+    if arguments.nursery_corpus is not None:
+        nursery_path = arguments.nursery_corpus.expanduser().resolve()
+        nursery = load_nursery_corpus(nursery_path)
+        manifest_path = nursery_path / "nursery-corpus.json" if nursery_path.is_dir() else nursery_path
+        source_receipts.append({
+            "role": "diverse-layout-physical-stimulus-nursery",
+            "format": nursery.manifest["format"],
+            "path": str(manifest_path),
+            "sha256": sha256_file(manifest_path),
+        })
+        corpus = combine_corpora(primary, nursery)
+    source_identities = [
+        {name: row[name] for name in ("role", "format", "sha256")}
+        for row in source_receipts
+    ]
+    if len(source_identities) == 1:
+        corpus_identity_sha = source_receipts[0]["sha256"]
+    else:
+        corpus_identity_sha = hashlib.sha256(
+            json.dumps(source_identities, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+    atomic_json(run / "corpus-sources.json", {
+        "format": "chreatures-actual-fly-training-corpus-set-v1",
+        "identity_sha256": corpus_identity_sha,
+        "sources": source_receipts,
+    })
     service_path = arguments.service.expanduser().resolve()
     parent_arrays, parent_metadata = load_service_artifact(service_path)
     parent_service_sha = sha256_file(service_path)
-    if (
-        corpus.manifest.get("cns_service_sha256") != parent_service_sha
-        or corpus.manifest.get("cns_adapter_sha256") != parent_metadata["adapter_sha256"]
+    all_episodes = (*corpus.train, *corpus.validation, *corpus.heldout)
+    if any(
+        episode.metadata["cns_service_sha256"] != parent_service_sha
+        or episode.metadata["cns_adapter_sha256"] != parent_metadata["adapter_sha256"]
+        for episode in all_episodes
     ):
         raise RuntimeError("corpus was not collected through the supplied parent CNS service")
     device = torch.device(arguments.device)
@@ -599,7 +642,8 @@ def train(arguments: argparse.Namespace) -> None:
         "trainer_sha256": sha256_file(Path(__file__).resolve()),
         "data_sha256": sha256_file(Path(__file__).with_name("data.py")),
         "resident_objective_sha256": sha256_file(Path(__file__).with_name("resident_objective.py")),
-        "corpus_manifest_sha256": sha256_file(corpus.root / "corpus.json"),
+        "corpus_manifest_sha256": corpus_identity_sha,
+        "corpus_sources": source_identities,
         "parent_service_sha256": parent_service_sha,
         "parent_adapter_sha256": parent_metadata["adapter_sha256"],
         "parent_resident_sha256": None if arguments.parent_resident is None else sha256_file(arguments.parent_resident),
@@ -704,7 +748,7 @@ def train(arguments: argparse.Namespace) -> None:
             "training_format": TRAINING_FORMAT,
             "parent_service_sha256": parent_service_sha,
             "corpus_manifest_sha256": identity["corpus_manifest_sha256"],
-            "world_split": "0..7 train, 8..9 validation, 10..11 untouched heldout",
+            "world_split": "per corpus: 0..7 train, 8..9 validation, 10..11 untouched heldout",
             "model_ingress": ["optic1771 RGB", "BODY807", "delivered context12"],
             "observer_values": "targets and sampling only",
             "training_only_heads_exported": False,
@@ -873,6 +917,7 @@ def parser() -> argparse.ArgumentParser:
     seal.add_argument("--output", type=Path, required=True)
     fit = sub.add_parser("train")
     fit.add_argument("--corpus", type=Path, required=True)
+    fit.add_argument("--nursery-corpus", type=Path)
     fit.add_argument("--service", type=Path, required=True)
     fit.add_argument("--parent-resident", type=Path)
     fit.add_argument("--run", type=Path, required=True)

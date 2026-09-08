@@ -1,4 +1,6 @@
-const PORTABLE_URL = 'assets/live-cns-evidence.json';
+const flyEmbodiment = new URLSearchParams(location.search).get('weave') === 'fly-v4';
+const PORTABLE_URL = flyEmbodiment ? 'assets/fly-embodiment-weave-v4.json' : 'assets/live-cns-evidence.json';
+const EXPECTED_ARTIFACT = flyEmbodiment ? 'fly-embodiment-evidence.weave.json' : 'live-cns-evidence.weave.json';
 const MAX_JSON_BYTES = 1024 * 1024;
 const $ = selector => document.querySelector(selector);
 
@@ -50,6 +52,7 @@ function stageOf(record) {
 
 function statusOf(record) {
   const fields = object(record.source.fields, 'record fields');
+  if (record.record_type.startsWith('proposed_') || String(fields.status || '').startsWith('proposed')) return {label: 'pending receipt', kind: 'mixed'};
   if (fields.reported_result?.within_loo_rmse === false) return {label: 'prediction missed', kind: 'mixed'};
   if (record.record_type.includes('failure')) return {label: 'recorded failure', kind: 'failed'};
   if (record.record_type === 'comparison_identity_diagnostic') return {label: 'refined diagnostic', kind: 'mixed'};
@@ -97,7 +100,7 @@ function validate(data) {
     if (record.parent_source_ids.some(id => !sourceIds.has(id))) throw new Error('record parent is absent');
   }
   hex(data.artifact_sha256, 'native serialization SHA-256');
-  if (data.artifact !== 'live-cns-evidence.weave.json' || !Number.isSafeInteger(data.bytes) || data.bytes < 1 || data.bytes > MAX_JSON_BYTES) throw new Error('native serialization reference differs');
+  if (data.artifact !== EXPECTED_ARTIFACT || !Number.isSafeInteger(data.bytes) || data.bytes < 1 || data.bytes > MAX_JSON_BYTES) throw new Error('native serialization reference differs');
   const library = object(data.library, 'library identity'); text(library.name, 'library name'); text(library.version, 'library version'); hex(library.source_commit, 'library source revision', 40);
   text(object(data.archive, 'archive metadata').description, 'archive description');
   return data.topological_order.map(id => byNode.get(id));
@@ -202,6 +205,11 @@ async function verifyArtifact() {
 
 async function start() {
   try {
+    if (flyEmbodiment) {
+      document.title = 'A fly in a growing world — Chreatures';
+      $('#page-label').textContent = 'Fly embodiment evidence';
+      $('#page-title').textContent = 'A fly in a growing world';
+    }
     graph = await fetchJSON(); records = validate(graph); bySource = new Map(records.map(record => [record.source_id, record]));
     incoming = new Map(records.map(record => [record.source_id, []])); outgoing = new Map(records.map(record => [record.source_id, []]));
     for (const edge of graph.edges) { incoming.get(edge.target).push(edge); outgoing.get(edge.source).push(edge); }
@@ -212,7 +220,7 @@ async function start() {
     buildList(); ui.filter.addEventListener('input', applyFilter);
     ui.loading.hidden = true; ui.shell.hidden = false; ui.footer.hidden = false;
     const requested = location.hash ? decodeURIComponent(location.hash.slice(1)) : '';
-    const currentContract = records.find(record => record.record_type === 'anatomical_cns_contract');
+    const currentContract = records.find(record => record.record_type === (flyEmbodiment ? 'anatomy_mask_join' : 'anatomical_cns_contract'));
     choose(bySource.has(requested) ? requested : (currentContract ?? records[0]).source_id);
     verifyArtifact();
   } catch (error) { fail(`The published evidence failed its reader boundary: ${error.message}`); }
