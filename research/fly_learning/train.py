@@ -306,7 +306,7 @@ def _stack_windows(
     rows = [slice_window(episodes[window.episode_index], window) for window in windows]
     result: dict[str, torch.Tensor] = {}
     for key in (
-        "optic_rgb", "body_afferents", "delivered_context", "teacher_motor",
+        "optic_rgb", "body_afferents", "delivered_context", "delivered_motor", "teacher_motor",
         "teacher_valid", "target_outcome", "target_reward",
     ):
         result[key] = _tensor(np.stack([row[key] for row in rows], axis=1), device)
@@ -363,7 +363,7 @@ def cns_window_loss(
     predicted_motor = torch.stack(motor[:-1])
     delivered_motor = arrays["teacher_motor"][burn_in:]
     delivered_context = arrays["delivered_context"][burn_in:]
-    physical_motor = arrays.get("delivered_motor", delivered_motor)[burn_in:]
+    physical_motor = arrays["delivered_motor"][burn_in:]
     body_delta, latent_delta, outcome, reward = heads(
         z[:-1].reshape(-1, LATENT),
         physical_motor.reshape(-1, MOTOR),
@@ -659,11 +659,9 @@ def train(arguments: argparse.Namespace) -> None:
     cns_history: list[dict[str, float]] = []
     for update in range(1, recipe.cns_updates + 1):
         windows = train_sampler.sample(recipe.batch_size)
+        # The shared stack includes the actually delivered physical cause for
+        # action-conditioned prediction in both training and validation.
         batch = _stack_windows(train_sampler.episodes, windows, device)
-        # Preserve actual physical cause for action-conditioned prediction.
-        batch["delivered_motor"] = _tensor(np.stack([
-            slice_window(train_sampler.episodes[w.episode_index], w)["delivered_motor"] for w in windows
-        ], axis=1), device)
         optimizer.zero_grad(set_to_none=True)
         total, terms = cns_window_loss(model, heads, batch, recipe.burn_in)
         if not torch.isfinite(total):
