@@ -5,6 +5,7 @@ import argparse
 import base64
 import json
 import os
+import re
 from pathlib import Path
 import time
 from types import SimpleNamespace
@@ -16,13 +17,50 @@ from .data import sha256_file
 from .native_host import NativeActualFlyWorld, TorchFullCNS
 from .recovery import _variant_scene, build_recovery_plan
 
-FORMAT = "chreatures-native-fly-zero-context-assessment-v1"
+FORMAT = "chreatures-native-fly-zero-context-assessment-v2"
+ARM_FORMAT = "chreatures-cns-v5-physical-assessment-arms-v1"
 TICKS = 512
-SERVICE_HASHES = {
-    "initialized": "8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951",
-    "parent": "14f38d59e3b9ed572c5ace0649de4e9fcd26d80e934482514f131e44bb70fb8d",
-    "recovery": "88c5ac64667322121c9141ec803dc5a11117d93430c373d5b3ad09c3b6bd5124",
-}
+STATE_FIELDS = (
+    "rates", "adaptation", "support", "release", "mod_da", "mod_oa", "mod_ht",
+    "efficacy_deviation", "eligibility",
+)
+
+
+def _load_arms(path):
+    manifest = json.loads(path.read_text())
+    if manifest.get("format") != ARM_FORMAT:
+        raise ValueError("assessment requires the current V5 arm manifest")
+    arms = manifest.get("arms", [])
+    if len(arms) < 2:
+        raise ValueError("matched assessment requires at least two arms")
+    names = set()
+    for arm in arms:
+        name = arm.get("name", "")
+        if not re.fullmatch(r"[a-z][a-z0-9-]{0,47}", name) or name in names:
+            raise ValueError("assessment arm names must be unique safe names")
+        names.add(name)
+        for key in ("service_sha256", "adapter_sha256"):
+            if not re.fullmatch(r"[0-9a-f]{64}", arm.get(key, "")):
+                raise ValueError("assessment arm lacks exact service identity")
+        service = (path.parent / arm["service"]).resolve()
+        if sha256_file(service) != arm["service_sha256"]:
+            raise ValueError("assessment service bytes differ before world allocation")
+        arm["service"] = str(service)
+    return arms
+
+
+def _save_cns_state(path, state):
+    if tuple(state.__dataclass_fields__) != STATE_FIELDS:
+        raise ValueError("assessment requires all nine V5 private state fields")
+    arrays = {name: getattr(state, name).detach().cpu().numpy() for name in STATE_FIELDS}
+    for name, value in arrays.items():
+        expected = (4184 if name in STATE_FIELDS[-2:] else 165122, 4)
+        if value.shape != expected or value.dtype != np.float32 or not np.isfinite(value).all():
+            raise ValueError(f"invalid private state {name}")
+    d, e = arrays["efficacy_deviation"], arrays["eligibility"]
+    if np.any(d < -.8) or np.any(d > 0) or np.any(e < 0) or np.any(e > 1):
+        raise ValueError("private plasticity state outside V5 contract")
+    return _save_trace(path, arrays)
 
 
 def _stimulus(world, tick):
@@ -82,10 +120,11 @@ def _summarize(trace):
     return rows
 
 
-def _sealed_prior(directory, identity):
+def _sealed_prior(directory, identity, arms):
     """Authenticate completed conditions; never recover an unsealed life."""
     results = []
-    for arm, service_sha in SERVICE_HASHES.items():
+    for spec in arms:
+        arm, service_sha = spec["name"], spec["service_sha256"]
         for index in (10, 11):
             path = directory / f"world{index:02d}-{arm}" / "receipt.json"
             if not path.exists():
@@ -95,7 +134,8 @@ def _sealed_prior(directory, identity):
                 if row.get(key) != identity[key]:
                     raise ValueError(f"prior sealed assessment changed {key}")
             if (not row.get("completed") or row.get("arm") != arm or row.get("world_index") != index
-                    or row.get("service_sha256") != service_sha):
+                    or row.get("service_sha256") != service_sha
+                    or row.get("adapter_sha256") != spec["adapter_sha256"]):
                 raise ValueError("prior assessment condition differs")
             trace_name = row["trace"]["file"]
             if Path(trace_name).name != trace_name or sha256_file(path.parent / trace_name) != row["trace"]["sha256"]:
@@ -105,13 +145,17 @@ def _sealed_prior(directory, identity):
             if (row["trace"]["shapes"].get("motor") != [TICKS, 4, 92]
                     or row["trace"]["shapes"].get("root_position") != [TICKS + 1, 4, 3]):
                 raise ValueError("prior assessment trace is incomplete")
+            for key in ("initial_cns_state", "final_cns_state"):
+                item = row[key]
+                if Path(item["file"]).name != item["file"] or sha256_file(path.parent / item["file"]) != item["sha256"]:
+                    raise ValueError("prior private CNS state differs")
             results.append({"receipt": str(path.resolve()), "sha256": sha256_file(path), **row})
     return results
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    for name in ("scenes", "native-binary", "native-manifest", "initialized-service", "parent-service", "recovery-service", "output"):
+    for name in ("scenes", "native-binary", "native-manifest", "arms", "output"):
         p.add_argument("--" + name, type=Path, required=True)
     p.add_argument("--source-revision", required=True)
     p.add_argument("--seed", type=int, default=20260908)
@@ -119,6 +163,7 @@ def main():
     p.add_argument("--sealed-prior", type=Path,
                    help="Authenticate completed conditions from a failed earlier run; fresh lives for missing conditions only")
     args = p.parse_args()
+    arms = _load_arms(args.arms)
     args.output.mkdir(parents=True, exist_ok=False)
     began = time.monotonic()
     identity = {"format": FORMAT, "source_revision": args.source_revision,
@@ -126,41 +171,45 @@ def main():
                 "transport_source_sha256": sha256_file(Path(__file__).with_name("native_host.py")),
                 "native_deployment_sha256": sha256_file(args.native_manifest),
                 "layouts_manifest_sha256": sha256_file(args.scenes / "nursery-layouts.json"),
-                "expected_services": SERVICE_HASHES, "ticks": TICKS, "control_dt_s": .01,
+                "arms_manifest_sha256": sha256_file(args.arms),
+                "expected_services": {a["name"]: a["service_sha256"] for a in arms}, "ticks": TICKS, "control_dt_s": .01,
                 "context": "exact zero12", "world_indices": [10, 11], "seed": args.seed,
                 "model_process_pid": os.getpid(),
-                "initialization": "fresh physical world and seven private CNS state fields for each arm/layout"}
+                "initialization": "fresh physical world and nine private CNS state fields for each arm/layout"}
     _write_receipt(args.output / "launch-receipt.json", identity)
     starts = {}; results = []; model = None; world = None
     phase = "model-load"; arm = None; index = None; completed_ticks = 0; trace = None
     try:
         if args.sealed_prior is not None:
-            results = _sealed_prior(args.sealed_prior, identity)
+            results = _sealed_prior(args.sealed_prior, identity, arms)
             for row in results:
                 previous = starts.setdefault(row["world_index"], row["initial_snapshot_sha256"])
                 if previous != row["initial_snapshot_sha256"]:
                     raise ValueError("prior arms have different wholeworld starts")
             _write_receipt(args.output / "sealed-prior-amendment.json", {
                 "format": "chreatures-native-assessment-writer-amendment-v1",
-                "reason": "Prior root filesystem filled while writing an unsealed trace; preserve completed conditions and collect only missing conditions in new physical lives.",
+                "reason": "Preserve authenticated completed conditions from the prior run; collect only missing conditions in new physical lives.",
                 "source_revision": args.source_revision,
                 "prior_directory": str(args.sealed_prior.resolve()),
                 "authenticated_conditions": [{"arm": r["arm"], "world_index": r["world_index"],
                                                "receipt": r["receipt"], "sha256": r["sha256"]} for r in results],
                 "unsealed_prior_worlds_reused": False,
             })
-        for arm, expected_sha in SERVICE_HASHES.items():
+        for spec in arms:
+            arm, expected_sha = spec["name"], spec["service_sha256"]
             missing_worlds = [index for index in (10, 11)
                               if not any(r["arm"] == arm and r["world_index"] == index for r in results)]
             if not missing_worlds:
                 continue
-            service = getattr(args, arm + "_service")
+            service = Path(spec["service"])
             if sha256_file(service) != expected_sha:
                 raise ValueError("assessment service checksum differs")
             phase = "model-load"
             load_start = time.monotonic()
             model = TorchFullCNS(service, args.device)
-            if model.metadata["cns_service_sha256"] != expected_sha:
+            if (model.metadata["cns_service_sha256"] != expected_sha
+                    or model.metadata.get("format") != "chreatures-cns-service-v5"
+                    or model.metadata["adapter_sha256"] != spec["adapter_sha256"]):
                 raise ValueError("service changed during model loading")
             load_seconds = time.monotonic() - load_start
             for index in missing_worlds:
@@ -183,12 +232,16 @@ def main():
                     starts[index] = snapshot_sha
                     if model.state is not None:
                         raise RuntimeError("private CNS state leaked across physical lives")
+                    model.state = model.model.initial_state(4)
+                    initial_cns = _save_cns_state(directory / "initial-cns.npz", model.state)
                     initial = world.sample()
                     trace = {"root_position": [initial.observer["thorax_position"].copy()],
                              "upright": [initial.observer["thorax_rotation"][:, 2, 2].copy()],
                              "feet_contact": [initial.ground_contact_raw[:, :, 0] > 0],
                              "body": [initial.body_afferents.copy()], "joint_position": [initial.joint_position.copy()],
-                             "motor": [], "latent": [], "mechanical_work": []}
+                             "motor": [], "latent": [], "mechanical_work": [],
+                             "efficacy_deviation_mean": [], "eligibility_mean": [],
+                             "efficacy_deviation_min": [], "eligibility_max": []}
                     cues = []; run_start = time.monotonic()
                     sample = initial
                     phase = "physical-loop"
@@ -213,6 +266,11 @@ def main():
                         trace["joint_position"].append(after.joint_position.copy())
                         trace["motor"].append(motor.copy()); trace["latent"].append(latent.copy())
                         trace["mechanical_work"].append([row["work"] for row in after.observer["actuator_state"]])
+                        for state_name in STATE_FIELDS[-2:]:
+                            values = getattr(model.state, state_name)
+                            trace[state_name + "_mean"].append(values.mean(0).cpu().numpy().copy())
+                            operation = "min" if state_name == "efficacy_deviation" else "max"
+                            trace[state_name + "_" + operation].append(getattr(values, operation)(0).values.cpu().numpy().copy())
                         completed_ticks = tick + 1
                         sample = after
                         if completed_ticks % 64 == 0:
@@ -223,7 +281,10 @@ def main():
                               "service_sha256": expected_sha, "adapter_sha256": model.metadata["adapter_sha256"],
                               **world.deployment_identity, "initial_snapshot_sha256": snapshot_sha,
                               "scene_sha256": world.ready["fixture_sha256"], "world_seed": build_recovery_plan(index, base_seed=args.seed).world_seed,
-                              "model_load_seconds": load_seconds, "physical_loop_seconds": time.monotonic() - run_start,
+                              "model_load_seconds": load_seconds,
+                              "service_training_status": model.metadata["training_status"],
+                              "initial_cns_state": initial_cns,
+                              "final_cns_state": _save_cns_state(directory / "final-cns.npz", model.state), "physical_loop_seconds": time.monotonic() - run_start,
                               "trace": _save_trace(directory / "trace.npz", trace), "stimulus_receipts": cues,
                               "residents": _summarize(trace), "native_stderr_sha256": sha256_file(log_path),
                               "native_warning_observation": "no stderr bytes, MUJOCO_LOG.TXT or invalid stdout protocol; numerical warning counters unavailable in frozen native binary",
