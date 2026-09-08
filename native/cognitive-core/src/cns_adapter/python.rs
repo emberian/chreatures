@@ -9,8 +9,24 @@ impl CnsAdapter {
     #[new]
     #[allow(clippy::too_many_arguments)]
     fn new(
+        format: &str,
+        graph_storage: &str,
+        graph_rounding: &str,
+        graph_compute: &str,
+        graph_sha256: &str,
+        atlas_sha256: &str,
+        anatomy_sha256: &str,
+        morphology_sha256: &str,
+        sensory_schema_sha256: &str,
+        actuator_schema_sha256: &str,
+        motor_calibration_sha256: &str,
+        graph_source_weight_sha256: &str,
         p: PyReadonlyArray1<'_, f32>,
         n: PyReadonlyArray1<'_, f32>,
+        crow: PyReadonlyArray1<'_, u32>,
+        col: PyReadonlyArray1<'_, u32>,
+        weight_bits: PyReadonlyArray1<'_, u16>,
+        channel: PyReadonlyArray1<'_, u32>,
         rr: PyReadonlyArray1<'_, u32>,
         rt: PyReadonlyArray1<'_, u32>,
         ptr: PyReadonlyArray1<'_, u32>,
@@ -24,8 +40,26 @@ impl CnsAdapter {
         nt: PyReadonlyArray1<'_, u32>,
     ) -> PyResult<Self> {
         Self::from_packed(
+            format,
+            graph_storage,
+            graph_rounding,
+            graph_compute,
+            [
+                graph_sha256,
+                atlas_sha256,
+                anatomy_sha256,
+                morphology_sha256,
+                sensory_schema_sha256,
+                actuator_schema_sha256,
+                motor_calibration_sha256,
+                graph_source_weight_sha256,
+            ],
             p.as_slice()?,
             n.as_slice()?,
+            crow.as_slice()?,
+            col.as_slice()?,
+            weight_bits.as_slice()?,
+            channel.as_slice()?,
             rr.as_slice()?,
             rt.as_slice()?,
             ptr.as_slice()?,
@@ -40,6 +74,10 @@ impl CnsAdapter {
         )
         .map_err(PyValueError::new_err)
     }
+    #[getter]
+    fn source_identities(&self) -> [String; 8] {
+        self.identities().clone()
+    }
     fn encode_drive<'py>(
         &self,
         py: Python<'py>,
@@ -53,7 +91,7 @@ impl CnsAdapter {
             || !(1..=32).contains(&sh[0])
         {
             return Err(PyValueError::new_err(
-                "V3 sensory [B,5423], context [B,12] required",
+                "V4 sensory [B,6120], context [B,12] required",
             ));
         }
         let b = sh[0];
@@ -69,7 +107,7 @@ impl CnsAdapter {
     ) -> PyResult<(Bound<'py, PyArray2<f32>>, Bound<'py, PyArray2<f32>>)> {
         let sh = r.shape();
         if sh.len() != 2 || sh[1] != N {
-            return Err(PyValueError::new_err("V3 rates must be [B,165122]"));
+            return Err(PyValueError::new_err("V4 rates must be [B,165122]"));
         }
         let b = sh[0];
         let (m, l) = self

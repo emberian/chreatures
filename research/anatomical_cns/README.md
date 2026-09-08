@@ -1,4 +1,10 @@
-# MaleCNS V3 anatomical interface export
+# MaleCNS embodiment-driven CNS V4
+
+The current trainable/runtime artifact is CHCNS4. It binds the fixed
+NeuroMechFly-derived morphology, BODY807 channel schema, all 11,798 annotated
+nonvisual sensory rows, M92 actuator schema, centered motor calibration, and the
+quantized graph identity. The V3 material below records the completed synthetic
+twelve-hinge research epoch; it is not a loader or compatibility path.
 
 `anatomy.py` produces the immutable anatomical supports for the V3 coupled CNS
 wave. It reads the canonical MaleCNS v1.0 CSR and row-aligned neuron metadata;
@@ -65,27 +71,37 @@ requires a typed afferent.
 
 ## Torch recurrence and service export
 
-`model.py` is the differentiable full-graph V3 reference used for ROCm training.
-It accepts retina `[B,1771,3]`, body `[B,110]`, and the context actually delivered
-to the CNS `[B,12]`. A step returns latent `[B,512]`, motor `[B,34]`, and seven
+`model.py` is the differentiable full-graph V4 reference used for ROCm training.
+It accepts retina `[B,1771,3]`, BODY807, and the context actually delivered
+to the CNS `[B,12]`. A 10 ms step performs two 5 ms Jacobi substeps and returns
+latent `[B,512]`, MOTOR92, and seven
 private `[165122,B]` fields: rate, adaptation, support, release availability, and
 the dopamine, octopamine, and serotonin target traces. The body and motor weights
 are multiplied by the exported structural masks on every forward pass. Context is
 injected only at the 1,314 descending rows, and both latent and motor values are
 computed after recurrent activity. Raw observations are training targets only.
 
-`export.py` is the sole V2 bridge. It reads a sealed CHCNS2 artifact as an offline
-seed, combines it with the current `anatomy.py` output, and writes a fresh CHCNS3
-artifact. It copies only optic tuning, the five shared V2 type dynamics, and the
-masked latent readout. Its receipt records full source identities and labels the
-body110, context12, motor34, release, and family-modulation interfaces untrained.
-The V3 runtime has no V2 loader and no private neural state is migrated.
+The motor decoder operates on actual post-recurrence motor-neuron state:
+`z=(rate-reference_rate)/rate_scale`, followed by a signed masked `92×815`
+linear map. Outputs 0:84 use tanh and outputs 84:92 use sigmoid. Reference and
+scale remain explicit frozen float32 tensors; they are never folded into a large
+bias. This preserves below-reference activity and avoids the numerical
+cancellation that rejected the earlier V3 centered-decoder candidate.
+
+`export.py` is the sole offline bridge. It reads a sealed CHCNS3 research seed,
+the final fly neural atlas and schemas, plus the measured normalized R2 graph.
+It rounds that measured graph once to canonical IEEE binary16 bits and writes a
+fresh CHCNS4 artifact. Torch, Rust/Metal, and WebGPU decode those same bits to
+float32. No V3 runtime loader or private neural state migration remains.
 
 ```sh
 python -m research.anatomical_cns.export \
-  --v2-service /path/to/sealed-v2.bin \
-  --anatomy /tank/chreatures/data/malecns/v3/anatomical-cns-v3.npz \
-  --output /tank/chreatures/data/malecns/v3/initialized-cns-v3.bin
+  --v3-service /path/to/sealed-v3.bin \
+  --anatomy-v3 /tank/chreatures/data/malecns/v3/anatomical-cns-v3-r2.npz \
+  --fly-atlas research/fly_embodiment/fly-body-neural-atlas-v1.npz \
+  --morphology-schema native/fly-body/assets/neuromechfly-2.1.0-ca65a510-ypr/schema.json \
+  --sensory-schema research/fly_embodiment/body807-channel-schema.json \
+  --output /tank/chreatures/runs/malecns-v4/seed/initialized-cns-v4.bin
 ```
 
 The anatomy file must be the corrected current export for the epoch. Its SHA is

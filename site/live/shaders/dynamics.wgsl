@@ -1,4 +1,4 @@
-// AGPL-3.0-or-later -- exact V3 seven-state recurrence.
+// AGPL-3.0-or-later -- exact V4 seven-state recurrence.
 const N: u32 = 165122u;
 const T: u32 = 11752u;
 
@@ -33,7 +33,7 @@ struct Recur {
 @group(0) @binding(0) var<uniform> cfg: Config;
 @group(0) @binding(1) var<storage, read> crow: array<u32>;
 @group(0) @binding(2) var<storage, read> col: array<u32>;
-@group(0) @binding(3) var<storage, read> weight: array<u32>;
+@group(0) @binding(3) var<storage, read> weight: array<f32>;
 @group(0) @binding(4) var<storage, read> index: array<u32>;
 @group(0) @binding(5) var<storage, read> raws: array<f32>;
 @group(0) @binding(6) var<storage, read> src: array<State>;
@@ -67,11 +67,6 @@ fn lane_mask(bits: u32) -> vec4<bool> {
     );
 }
 
-fn unpack_weight(edge: u32) -> f32 {
-    let pair = unpack2x16float(weight[edge >> 1u]);
-    return select(pair.x, pair.y, (edge & 1u) != 0u);
-}
-
 @compute @workgroup_size(256)
 fn reset_state(@builtin(global_invocation_id) invocation: vec3<u32>) {
     let neuron = invocation.x;
@@ -102,7 +97,7 @@ fn recurrent_sum(@builtin(global_invocation_id) invocation: vec3<u32>) {
     );
     for (var edge = crow[neuron]; edge < crow[neuron + 1u]; edge++) {
         let source = col[edge];
-        let value = unpack_weight(edge)
+        let value = weight[edge]
             * (src[source].rate - vec4<f32>(raws[source]));
         switch index[source] {
             case 1u: { sum.fast += value * src[source].release; }

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Pack an authenticated current CNS service + resident for headless/WebGPU delivery.
 
-This is an explicit numerical export: only graph and rank projection weights
-are rounded to IEEE binary16. Anatomy, row ordering and all edges are retained.
+Canonical graph binary16 bits and all float32 parameters are copied exactly.
+Anatomy, row ordering and all edges are retained; no backend rounding occurs.
 Large blobs belong in a release/Pages build artifact, not the source checkout.
 """
 from __future__ import annotations
@@ -17,17 +17,16 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from chreatures.cns_adapter_contract import ARRAY_SPECS, MAGIC, FORMAT, DIMENSIONS, canonical, adapter_identity_payload, validate_arrays
+from chreatures.cns_adapter_contract import ARRAY_SPECS, MAGIC, FORMAT, DIMENSIONS, canonical, adapter_identity_payload, validate_arrays, service_identity
 from chreatures.sequence_control import CORE_ORDER, PREDICTOR_ORDER, EMBEDDED_ORDER, packed_sha256
 
-HALF = {"graph.weight", "readout.projection.weight"}
 def sha(data): return hashlib.sha256(data).hexdigest()
 def file_sha(path):
     with Path(path).open('rb') as stream: return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 def read_service(path):
     with path.open('rb') as stream:
-        if stream.read(8) != MAGIC: raise ValueError('Current CHCNS3 artifact required')
+        if stream.read(8) != MAGIC: raise ValueError('Current CHCNS4 artifact required')
         size = struct.unpack('<I', stream.read(4))[0]
         if not 0 < size < 8 * 1024**2: raise ValueError('Invalid metadata length')
         meta = json.loads(stream.read(size))
@@ -42,30 +41,19 @@ def read_service(path):
         offset += a.nbytes
     if path.stat().st_size != offset: raise ValueError('CNS file length differs')
     mask = validate_arrays(arrays)
+    if sha(mask.tobytes()) != meta['readout_mask_sha256']: raise ValueError('CNS injected readout mask identity differs')
     return meta, arrays, mask
 
-def blob(directory, name, array, *, half=False):
+def blob(directory, name, array):
     source = np.asarray(array)
-    if half:
-        rounded = source.astype('<f2').reshape(-1)
-        if not np.isfinite(rounded).all(): raise ValueError(f'Half overflow: {name}')
-        if rounded.size % 2: rounded = np.pad(rounded, (0, 1))
-        raw = rounded.tobytes()
-        dtype = 'packed-f16'
-    else:
-        raw = source.tobytes(order='C')
-        dtype = {'f': 'f32', 'u': 'u32' if source.itemsize == 4 else 'u8'}[source.dtype.kind]
+    raw = source.tobytes(order='C')
+    dtype = {('f', 4): 'f32', ('u', 4): 'u32', ('u', 2): 'u16', ('u', 1): 'u8'}[(source.dtype.kind, source.itemsize)]
     compressed = gzip.compress(raw, compresslevel=6, mtime=0)
     filename = name.replace('.', '-') + '.bin.gz'
     (directory / filename).write_bytes(compressed)
-    entry = dict(url=filename, byteLength=len(raw), sha256=sha(raw), dtype=dtype,
-                 shape=list(source.shape), encoding='gzip', transportByteLength=len(compressed),
-                 transportSha256=sha(compressed))
-    if half:
-        error = source.astype(np.float64) - source.astype('<f2').astype(np.float64)
-        entry['quantization'] = dict(maxAbsoluteError=float(np.abs(error).max()),
-                                     rmsError=float(np.sqrt(np.mean(error**2))), sourceSha256=sha(source.tobytes()))
-    return entry
+    return dict(url=filename, byteLength=len(raw), sha256=sha(raw), dtype=dtype,
+                shape=list(source.shape), encoding='gzip', transportByteLength=len(compressed),
+                transportSha256=sha(compressed))
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
@@ -80,24 +68,29 @@ def main():
     if len(a.revision)!=40 or any(c not in '0123456789abcdef' for c in a.revision): raise ValueError('Full source revision required')
     meta, arrays, mask = read_service(a.service)
     service_hash = file_sha(a.service)
+    service_identity(meta, service_hash)
     a.output.mkdir(parents=True)
-    entries={name:blob(a.output,name,arrays[name],half=name in HALF) for name,_,_ in ARRAY_SPECS}
+    entries={name:blob(a.output,name,arrays[name]) for name,_,_ in ARRAY_SPECS}
     entries['afferent.mask']=blob(a.output,'afferent.mask',mask.astype('<u4'))
-    manifest=dict(format='chreatures-cns-webgpu-v3', version=3,
-        counts=dict(neurons=165122,edges=25563197,types=11752,opticSites=1771,bodyChannels=110,
-                    contextChannels=12,contextTargets=1314,motor=34,motorTargets=815,afferents=16654,
+    manifest=dict(format='chreatures-cns-webgpu-v4', version=4,
+        counts=dict(neurons=165122,edges=25563197,types=11752,opticSites=1771,bodyChannels=807,
+                    contextChannels=12,contextTargets=1314,motor=92,motorTargets=815,afferents=int(np.count_nonzero(mask == 0)),
                     rank=64,latent=512,opticValues=5313,receptors=4107,receptorTypes=10,
-                    receptorSiteEdges=4669,bodyTargets=11233),
+                    receptorSiteEdges=4669,bodyTargets=11798),
         identity=dict(artifact=meta['adapter_sha256'],graph=meta['graph_sha256'],atlas=meta['atlas_sha256'],
-                      anatomy=meta['anatomy_sha256'],mask=meta['readout_mask_sha256']),
+                      anatomy=meta['anatomy_sha256'],mask=meta['readout_mask_sha256'],
+                      morphology=meta['morphology_sha256'],sensorySchema=meta['sensory_schema_sha256'],
+                      actuatorSchema=meta['actuator_schema_sha256'],motorCalibration=meta['motor_calibration_sha256'],
+                      graphSourceWeight=meta['graph_source_weight_sha256']),
+        graphQuantization=meta['graph_quantization'], controlDt=0.01, substeps=2,
         serviceArtifactSha256=service_hash,sourceRevision=a.revision,buffers=entries,
-        numericalExport='V3 one-way export; IEEE binary16 graph and rank projection weights; signed normalized channel-aware graph retained',
+        numericalExport='V4 canonical graph binary16 bits decoded once to float32; all other tensors remain float32; no backend rounding',
         trainingStatus=meta['training_status'],trainingScope=meta.get('provenance',{}).get('scope','See source training receipt; no embodied competence inferred'))
     (a.output/'cns-manifest.json').write_bytes(canonical(manifest)+b'\n')
     if a.cns_only:
         if a.resident or a.soma_directory: raise ValueError('--cns-only cannot include resident or soma inputs')
         files={f.name:dict(bytes=f.stat().st_size,sha256=file_sha(f)) for f in sorted(a.output.iterdir())}
-        receipt=dict(format='chreatures-browser-cns-release-v3',sourceRevision=a.revision,
+        receipt=dict(format='chreatures-browser-cns-release-v4',sourceRevision=a.revision,
                      serviceArtifactSha256=service_hash,files=files,totalBytes=sum(f['bytes'] for f in files.values()))
         (a.output/'release.json').write_bytes(canonical(receipt)+b'\n')
         print(json.dumps(dict(output=str(a.output),totalBytes=receipt['totalBytes'],serviceArtifactSha256=service_hash,files=len(files))))
@@ -113,7 +106,7 @@ def main():
         packs[name]=blob(a.output,'resident-'+name,np.concatenate([resident_arrays[k].reshape(-1) for k in order]).astype('<f4'))
     resident=dict(format='chreatures-browser-resident-v1',sourceRevision=a.revision,
         cnsServiceArtifactSha256=service_hash,artifactSha256=resident_meta['artifact_sha256'],
-        config=dict(batch=3,action_mode='sample',action_seed=314159,suffix_seed=271828,
+        config=dict(batch=3,action_mode='sample',action_seed=314159,suffix_seed=271828,tick_seconds=0.01,
                     context_policy_version='signed-context12-v1',
                     core_sha256=components['core_packed_sha256'],predictor_sha256=components['predictor_packed_sha256'],
                     sequence_control_version=control.version,sequence_control_sha256=control.sha256,research_training=False),

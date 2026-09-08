@@ -1,0 +1,1623 @@
+{
+  "schema": "chreatures.motor-output-channels.v1",
+  "identity": "MOTOR92",
+  "length": 92,
+  "body_identity": "neuromechfly-2.1.0-ca65a510-ypr",
+  "body_schema_sha256": "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
+  "blocks": [
+    {
+      "range": [
+        0,
+        84
+      ],
+      "name": "position_target",
+      "activation": "tanh",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ]
+    },
+    {
+      "range": [
+        84,
+        90
+      ],
+      "name": "adhesion",
+      "activation": "sigmoid",
+      "normalized_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "range": [
+        90,
+        91
+      ],
+      "name": "pharyngeal_pump",
+      "activation": "sigmoid",
+      "normalized_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "range": [
+        91,
+        92
+      ],
+      "name": "salivary_drive",
+      "activation": "sigmoid",
+      "normalized_range": [
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "channels": [
+    {
+      "index": 0,
+      "id": "c_thorax-lf_coxa-yaw-position",
+      "target": "c_thorax-lf_coxa-yaw",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 1,
+      "id": "c_thorax-lf_coxa-pitch-position",
+      "target": "c_thorax-lf_coxa-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 2,
+      "id": "c_thorax-lf_coxa-roll-position",
+      "target": "c_thorax-lf_coxa-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 3,
+      "id": "lf_coxa-lf_trochanterfemur-pitch-position",
+      "target": "lf_coxa-lf_trochanterfemur-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 4,
+      "id": "lf_coxa-lf_trochanterfemur-roll-position",
+      "target": "lf_coxa-lf_trochanterfemur-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 5,
+      "id": "lf_trochanterfemur-lf_tibia-pitch-position",
+      "target": "lf_trochanterfemur-lf_tibia-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 6,
+      "id": "lf_tibia-lf_tarsus1-pitch-position",
+      "target": "lf_tibia-lf_tarsus1-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 7,
+      "id": "c_thorax-lm_coxa-yaw-position",
+      "target": "c_thorax-lm_coxa-yaw",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 8,
+      "id": "c_thorax-lm_coxa-pitch-position",
+      "target": "c_thorax-lm_coxa-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 9,
+      "id": "c_thorax-lm_coxa-roll-position",
+      "target": "c_thorax-lm_coxa-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 10,
+      "id": "lm_coxa-lm_trochanterfemur-pitch-position",
+      "target": "lm_coxa-lm_trochanterfemur-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 11,
+      "id": "lm_coxa-lm_trochanterfemur-roll-position",
+      "target": "lm_coxa-lm_trochanterfemur-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 12,
+      "id": "lm_trochanterfemur-lm_tibia-pitch-position",
+      "target": "lm_trochanterfemur-lm_tibia-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 13,
+      "id": "lm_tibia-lm_tarsus1-pitch-position",
+      "target": "lm_tibia-lm_tarsus1-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 14,
+      "id": "c_thorax-lh_coxa-yaw-position",
+      "target": "c_thorax-lh_coxa-yaw",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 15,
+      "id": "c_thorax-lh_coxa-pitch-position",
+      "target": "c_thorax-lh_coxa-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 16,
+      "id": "c_thorax-lh_coxa-roll-position",
+      "target": "c_thorax-lh_coxa-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 17,
+      "id": "lh_coxa-lh_trochanterfemur-pitch-position",
+      "target": "lh_coxa-lh_trochanterfemur-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 18,
+      "id": "lh_coxa-lh_trochanterfemur-roll-position",
+      "target": "lh_coxa-lh_trochanterfemur-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 19,
+      "id": "lh_trochanterfemur-lh_tibia-pitch-position",
+      "target": "lh_trochanterfemur-lh_tibia-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 20,
+      "id": "lh_tibia-lh_tarsus1-pitch-position",
+      "target": "lh_tibia-lh_tarsus1-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 21,
+      "id": "c_thorax-rf_coxa-yaw-position",
+      "target": "c_thorax-rf_coxa-yaw",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 22,
+      "id": "c_thorax-rf_coxa-pitch-position",
+      "target": "c_thorax-rf_coxa-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 23,
+      "id": "c_thorax-rf_coxa-roll-position",
+      "target": "c_thorax-rf_coxa-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 24,
+      "id": "rf_coxa-rf_trochanterfemur-pitch-position",
+      "target": "rf_coxa-rf_trochanterfemur-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 25,
+      "id": "rf_coxa-rf_trochanterfemur-roll-position",
+      "target": "rf_coxa-rf_trochanterfemur-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 26,
+      "id": "rf_trochanterfemur-rf_tibia-pitch-position",
+      "target": "rf_trochanterfemur-rf_tibia-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 27,
+      "id": "rf_tibia-rf_tarsus1-pitch-position",
+      "target": "rf_tibia-rf_tarsus1-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 28,
+      "id": "c_thorax-rm_coxa-yaw-position",
+      "target": "c_thorax-rm_coxa-yaw",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 29,
+      "id": "c_thorax-rm_coxa-pitch-position",
+      "target": "c_thorax-rm_coxa-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 30,
+      "id": "c_thorax-rm_coxa-roll-position",
+      "target": "c_thorax-rm_coxa-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 31,
+      "id": "rm_coxa-rm_trochanterfemur-pitch-position",
+      "target": "rm_coxa-rm_trochanterfemur-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 32,
+      "id": "rm_coxa-rm_trochanterfemur-roll-position",
+      "target": "rm_coxa-rm_trochanterfemur-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 33,
+      "id": "rm_trochanterfemur-rm_tibia-pitch-position",
+      "target": "rm_trochanterfemur-rm_tibia-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 34,
+      "id": "rm_tibia-rm_tarsus1-pitch-position",
+      "target": "rm_tibia-rm_tarsus1-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 35,
+      "id": "c_thorax-rh_coxa-yaw-position",
+      "target": "c_thorax-rh_coxa-yaw",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 36,
+      "id": "c_thorax-rh_coxa-pitch-position",
+      "target": "c_thorax-rh_coxa-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 37,
+      "id": "c_thorax-rh_coxa-roll-position",
+      "target": "c_thorax-rh_coxa-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 38,
+      "id": "rh_coxa-rh_trochanterfemur-pitch-position",
+      "target": "rh_coxa-rh_trochanterfemur-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 39,
+      "id": "rh_coxa-rh_trochanterfemur-roll-position",
+      "target": "rh_coxa-rh_trochanterfemur-roll",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 40,
+      "id": "rh_trochanterfemur-rh_tibia-pitch-position",
+      "target": "rh_trochanterfemur-rh_tibia-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 41,
+      "id": "rh_tibia-rh_tarsus1-pitch-position",
+      "target": "rh_tibia-rh_tarsus1-pitch",
+      "group": "walking",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 42,
+      "id": "c_thorax-c_head-yaw-position",
+      "target": "c_thorax-c_head-yaw",
+      "group": "head",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 43,
+      "id": "c_thorax-c_head-pitch-position",
+      "target": "c_thorax-c_head-pitch",
+      "group": "head",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 44,
+      "id": "c_thorax-c_head-roll-position",
+      "target": "c_thorax-c_head-roll",
+      "group": "head",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 45,
+      "id": "c_head-l_pedicel-yaw-position",
+      "target": "c_head-l_pedicel-yaw",
+      "group": "pedicels",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 46,
+      "id": "c_head-l_pedicel-pitch-position",
+      "target": "c_head-l_pedicel-pitch",
+      "group": "pedicels",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 47,
+      "id": "c_head-l_pedicel-roll-position",
+      "target": "c_head-l_pedicel-roll",
+      "group": "pedicels",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 48,
+      "id": "c_head-r_pedicel-yaw-position",
+      "target": "c_head-r_pedicel-yaw",
+      "group": "pedicels",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 49,
+      "id": "c_head-r_pedicel-pitch-position",
+      "target": "c_head-r_pedicel-pitch",
+      "group": "pedicels",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 50,
+      "id": "c_head-r_pedicel-roll-position",
+      "target": "c_head-r_pedicel-roll",
+      "group": "pedicels",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 51,
+      "id": "c_head-c_rostrum-yaw-position",
+      "target": "c_head-c_rostrum-yaw",
+      "group": "proboscis",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 52,
+      "id": "c_head-c_rostrum-pitch-position",
+      "target": "c_head-c_rostrum-pitch",
+      "group": "proboscis",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 53,
+      "id": "c_head-c_rostrum-roll-position",
+      "target": "c_head-c_rostrum-roll",
+      "group": "proboscis",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 54,
+      "id": "c_rostrum-c_haustellum-yaw-position",
+      "target": "c_rostrum-c_haustellum-yaw",
+      "group": "proboscis",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 55,
+      "id": "c_rostrum-c_haustellum-pitch-position",
+      "target": "c_rostrum-c_haustellum-pitch",
+      "group": "proboscis",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 56,
+      "id": "c_rostrum-c_haustellum-roll-position",
+      "target": "c_rostrum-c_haustellum-roll",
+      "group": "proboscis",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 57,
+      "id": "c_thorax-c_abdomen12-yaw-position",
+      "target": "c_thorax-c_abdomen12-yaw",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 58,
+      "id": "c_thorax-c_abdomen12-pitch-position",
+      "target": "c_thorax-c_abdomen12-pitch",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 59,
+      "id": "c_thorax-c_abdomen12-roll-position",
+      "target": "c_thorax-c_abdomen12-roll",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 60,
+      "id": "c_abdomen12-c_abdomen3-yaw-position",
+      "target": "c_abdomen12-c_abdomen3-yaw",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 61,
+      "id": "c_abdomen12-c_abdomen3-pitch-position",
+      "target": "c_abdomen12-c_abdomen3-pitch",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 62,
+      "id": "c_abdomen12-c_abdomen3-roll-position",
+      "target": "c_abdomen12-c_abdomen3-roll",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 63,
+      "id": "c_abdomen3-c_abdomen4-yaw-position",
+      "target": "c_abdomen3-c_abdomen4-yaw",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 64,
+      "id": "c_abdomen3-c_abdomen4-pitch-position",
+      "target": "c_abdomen3-c_abdomen4-pitch",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 65,
+      "id": "c_abdomen3-c_abdomen4-roll-position",
+      "target": "c_abdomen3-c_abdomen4-roll",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 66,
+      "id": "c_abdomen4-c_abdomen5-yaw-position",
+      "target": "c_abdomen4-c_abdomen5-yaw",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 67,
+      "id": "c_abdomen4-c_abdomen5-pitch-position",
+      "target": "c_abdomen4-c_abdomen5-pitch",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 68,
+      "id": "c_abdomen4-c_abdomen5-roll-position",
+      "target": "c_abdomen4-c_abdomen5-roll",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 69,
+      "id": "c_abdomen5-c_abdomen6-yaw-position",
+      "target": "c_abdomen5-c_abdomen6-yaw",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 70,
+      "id": "c_abdomen5-c_abdomen6-pitch-position",
+      "target": "c_abdomen5-c_abdomen6-pitch",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 71,
+      "id": "c_abdomen5-c_abdomen6-roll-position",
+      "target": "c_abdomen5-c_abdomen6-roll",
+      "group": "abdomen",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 72,
+      "id": "c_thorax-l_wing-yaw-position",
+      "target": "c_thorax-l_wing-yaw",
+      "group": "wings",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 73,
+      "id": "c_thorax-l_wing-pitch-position",
+      "target": "c_thorax-l_wing-pitch",
+      "group": "wings",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 74,
+      "id": "c_thorax-l_wing-roll-position",
+      "target": "c_thorax-l_wing-roll",
+      "group": "wings",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 75,
+      "id": "c_thorax-r_wing-yaw-position",
+      "target": "c_thorax-r_wing-yaw",
+      "group": "wings",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 76,
+      "id": "c_thorax-r_wing-pitch-position",
+      "target": "c_thorax-r_wing-pitch",
+      "group": "wings",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 77,
+      "id": "c_thorax-r_wing-roll-position",
+      "target": "c_thorax-r_wing-roll",
+      "group": "wings",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 78,
+      "id": "c_thorax-l_haltere-yaw-position",
+      "target": "c_thorax-l_haltere-yaw",
+      "group": "halteres",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 79,
+      "id": "c_thorax-l_haltere-pitch-position",
+      "target": "c_thorax-l_haltere-pitch",
+      "group": "halteres",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 80,
+      "id": "c_thorax-l_haltere-roll-position",
+      "target": "c_thorax-l_haltere-roll",
+      "group": "halteres",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 81,
+      "id": "c_thorax-r_haltere-yaw-position",
+      "target": "c_thorax-r_haltere-yaw",
+      "group": "halteres",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 82,
+      "id": "c_thorax-r_haltere-pitch-position",
+      "target": "c_thorax-r_haltere-pitch",
+      "group": "halteres",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 83,
+      "id": "c_thorax-r_haltere-roll-position",
+      "target": "c_thorax-r_haltere-roll",
+      "group": "halteres",
+      "kind": "position_target",
+      "normalized_range": [
+        -1.0,
+        1.0
+      ],
+      "physical_range": [
+        -3.14,
+        3.14
+      ],
+      "activation": "tanh",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 84,
+      "id": "lf_tarsus5-adhesion",
+      "target": "lf_tarsus5",
+      "group": "adhesion",
+      "kind": "adhesion",
+      "normalized_range": [
+        0.0,
+        1.0
+      ],
+      "physical_range": [
+        0.0,
+        1.0
+      ],
+      "activation": "sigmoid",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 85,
+      "id": "lm_tarsus5-adhesion",
+      "target": "lm_tarsus5",
+      "group": "adhesion",
+      "kind": "adhesion",
+      "normalized_range": [
+        0.0,
+        1.0
+      ],
+      "physical_range": [
+        0.0,
+        1.0
+      ],
+      "activation": "sigmoid",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 86,
+      "id": "lh_tarsus5-adhesion",
+      "target": "lh_tarsus5",
+      "group": "adhesion",
+      "kind": "adhesion",
+      "normalized_range": [
+        0.0,
+        1.0
+      ],
+      "physical_range": [
+        0.0,
+        1.0
+      ],
+      "activation": "sigmoid",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 87,
+      "id": "rf_tarsus5-adhesion",
+      "target": "rf_tarsus5",
+      "group": "adhesion",
+      "kind": "adhesion",
+      "normalized_range": [
+        0.0,
+        1.0
+      ],
+      "physical_range": [
+        0.0,
+        1.0
+      ],
+      "activation": "sigmoid",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 88,
+      "id": "rm_tarsus5-adhesion",
+      "target": "rm_tarsus5",
+      "group": "adhesion",
+      "kind": "adhesion",
+      "normalized_range": [
+        0.0,
+        1.0
+      ],
+      "physical_range": [
+        0.0,
+        1.0
+      ],
+      "activation": "sigmoid",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 89,
+      "id": "rh_tarsus5-adhesion",
+      "target": "rh_tarsus5",
+      "group": "adhesion",
+      "kind": "adhesion",
+      "normalized_range": [
+        0.0,
+        1.0
+      ],
+      "physical_range": [
+        0.0,
+        1.0
+      ],
+      "activation": "sigmoid",
+      "physical_boundary": "MJCF"
+    },
+    {
+      "index": 90,
+      "id": "pharyngeal-pump-drive",
+      "target": "pharyngeal_pump",
+      "group": "pharyngeal_pump",
+      "kind": "physiology_drive",
+      "normalized_range": [
+        0.0,
+        1.0
+      ],
+      "physical_range": [
+        0.0,
+        1.0
+      ],
+      "activation": "sigmoid",
+      "physical_boundary": "native_physiology"
+    },
+    {
+      "index": 91,
+      "id": "salivary-drive",
+      "target": "salivary_gland",
+      "group": "salivary_drive",
+      "kind": "physiology_drive",
+      "normalized_range": [
+        0.0,
+        1.0
+      ],
+      "physical_range": [
+        0.0,
+        1.0
+      ],
+      "activation": "sigmoid",
+      "physical_boundary": "native_physiology"
+    }
+  ]
+}

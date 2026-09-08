@@ -232,6 +232,7 @@ def main() -> int:
             "training_status": "initialized-untrained",
             "competence_claim": None,
             "context_policy_version": "signed-context12-v1",
+            "private_learning_version": "context-consequence-v1",
             "source_policy": None,
             "seed": args.seed,
             "algorithm": (

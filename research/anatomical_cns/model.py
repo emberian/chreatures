@@ -1,4 +1,4 @@
-"""Differentiable full-graph implementation of Anatomical CNS V3."""
+"""Differentiable full-graph implementation of embodiment-driven CNS V4."""
 from __future__ import annotations
 from dataclasses import dataclass
 import math
@@ -11,15 +11,15 @@ N = 165122
 E = 25563197
 SITES = 1771
 RECEPTORS = 4107
-BODY = 110
-BODY_ROWS = 11233
+BODY = 807
+BODY_ROWS = 11798
 CONTEXT = 12
 CONTEXT_ROWS = 1314
-MOTOR = 34
+MOTOR = 92
 MOTOR_ROWS = 815
 TYPES = 11752
 LATENT = 512
-DT = 0.05
+DT = 0.01
 
 
 def _inv_sigmoid(x):
@@ -132,8 +132,20 @@ class AnatomicalCNS(nn.Module):
         with torch.no_grad():
             self.readout_output.weight.copy_(p("readout.output.weight"))
             self.readout_output.bias.copy_(p("readout.output.bias"))
-        self.motor_weight_raw = p("motor.weight_raw")
-        self.motor_bias = p("motor.bias")
+        self.register_buffer(
+            "motor_reference_rate",
+            torch.as_tensor(
+                np.array(arrays["motor.reference_rate"], copy=True), device=device
+            ),
+        )
+        self.register_buffer(
+            "motor_rate_scale",
+            torch.as_tensor(
+                np.array(arrays["motor.rate_scale"], copy=True), device=device
+            ),
+        )
+        self.motor_weight = p("motor.weight")
+        self.motor_intercept = p("motor.intercept")
 
         def buf(name, value):
             tensor = (
@@ -145,7 +157,7 @@ class AnatomicalCNS(nn.Module):
 
         crow = np.asarray(arrays["graph.crow"])
         col = np.asarray(arrays["graph.col"])
-        weight = np.asarray(arrays["graph.weight"])
+        weight = np.asarray(arrays["graph.weight_bits"]).view("<f2").astype("<f4")
         channels = np.asarray(arrays["graph.channel"])
         source_channel = channels[col]
         from scipy import sparse
@@ -249,6 +261,53 @@ class AnatomicalCNS(nn.Module):
             z.clone(),
         )
 
+    def set_motor_normalization(self, reference_rate, rate_scale):
+        """Install train-world motor-neuron moments before fitting the decoder."""
+        if (
+            reference_rate.shape != (MOTOR_ROWS,)
+            or rate_scale.shape != (MOTOR_ROWS,)
+            or reference_rate.dtype != torch.float32
+            or rate_scale.dtype != torch.float32
+            or reference_rate.device != self.device
+            or rate_scale.device != self.device
+            or not torch.all(torch.isfinite(reference_rate))
+            or not torch.all(torch.isfinite(rate_scale))
+            or torch.any(rate_scale <= 0)
+        ):
+            raise ValueError(
+                "motor normalization must be finite float32 [815] with positive scale"
+            )
+        with torch.no_grad():
+            self.motor_reference_rate.copy_(reference_rate)
+            self.motor_rate_scale.copy_(rate_scale)
+
+    def set_body_normalization(self, mean, scale):
+        """Install BODY807 train-world moments before fitting afferent tuning."""
+        if (
+            mean.shape != (BODY,)
+            or scale.shape != (BODY,)
+            or mean.dtype != torch.float32
+            or scale.dtype != torch.float32
+            or mean.device != self.device
+            or scale.device != self.device
+            or not torch.all(torch.isfinite(mean))
+            or not torch.all(torch.isfinite(scale))
+            or torch.any(scale <= 0)
+        ):
+            raise ValueError(
+                "body normalization must be finite float32 [807] with positive scale"
+            )
+        with torch.no_grad():
+            self.body_mean.copy_(mean)
+            self.body_scale_value.copy_(scale)
+
+    def selected_activity(self, state):
+        """CNS-derived activity exposed to training diagnostics, never raw senses."""
+        return {
+            "motor": state.rates[self.motor_rows.long()].T,
+            "descending": state.rates[self.context_rows.long()].T,
+        }
+
     def afferent_current(self, optic, body, context):
         if (
             optic.ndim != 3
@@ -262,17 +321,17 @@ class AnatomicalCNS(nn.Module):
             or body.device != self.device
             or context.device != self.device
         ):
-            raise ValueError("invalid V3 optic, body, or delivered context tensor")
+            raise ValueError("invalid V4 optic, body, or delivered context tensor")
         if (
             not torch.all(torch.isfinite(optic))
             or not torch.all(torch.isfinite(body))
             or not torch.all(torch.isfinite(context))
         ):
-            raise ValueError("V3 inputs must be finite")
+            raise ValueError("V4 inputs must be finite")
         if torch.any((optic < 0) | (optic > 1)) or torch.any(
             (context < -1) | (context > 1)
         ):
-            raise ValueError("V3 optic/context input outside contract bounds")
+            raise ValueError("V4 optic/context input outside contract bounds")
         b = optic.shape[0]
         rgb = (
             torch.sparse.mm(
@@ -390,11 +449,14 @@ class AnatomicalCNS(nn.Module):
                 F.linear((dev * self.readout_mask[:, None]).T, self.readout_projection)
             )
         )
-        pre = (F.softplus(self.motor_weight_raw) * self.motor_mask) @ state.rates[
-            self.motor_rows.long()
-        ] + self.motor_bias[:, None]
-        motor = torch.sigmoid(pre).T
-        motor = torch.cat((motor[:, :24], 2 * motor[:, 24:26] - 1, motor[:, 26:]), -1)
+        motor_rates = state.rates[self.motor_rows.long()]
+        centered = (
+            motor_rates - self.motor_reference_rate[:, None]
+        ) / self.motor_rate_scale[:, None]
+        pre = (self.motor_weight * self.motor_mask) @ centered + self.motor_intercept[
+            :, None
+        ]
+        motor = torch.cat((torch.tanh(pre[:84]), torch.sigmoid(pre[84:])), dim=0).T
         return latent, motor
 
     def forward(self, optic, body, context, state=None, dt=DT):
@@ -404,7 +466,7 @@ class AnatomicalCNS(nn.Module):
             or body.shape != (optic.shape[0], BODY)
             or context.shape != (optic.shape[0], CONTEXT)
         ):
-            raise ValueError("expected optic[B,1771,3], body[B,110], context[B,12]")
+            raise ValueError("expected optic[B,1771,3], body[B,807], context[B,12]")
         state = self.initial_state(optic.shape[0]) if state is None else state
         state = self.step_from_current(
             self.afferent_current(optic, body, context), state, dt
@@ -414,7 +476,7 @@ class AnatomicalCNS(nn.Module):
 
 
 def initialized_arrays(static, seed=20260907):
-    """Create explicit untrained V3 interfaces around supplied immutable anatomy."""
+    """Create explicit untrained V4 interfaces around supplied immutable anatomy."""
     from chreatures.cns_adapter_contract import ARRAY_SPECS, neutral_afferent_drive
 
     rng = np.random.default_rng(seed)
@@ -452,20 +514,24 @@ def initialized_arrays(static, seed=20260907):
     a["readout.output.weight"][:] = rng.normal(
         0, 0.02, a["readout.output.weight"].shape
     )
-    a["motor.weight_raw"].fill(_inv_softplus(0.01))
-    type_index = a["atlas.neuron_type"][a["atlas.motor_rows"]]
-    motor_baseline = 0.05 + 0.4 / (1 + np.exp(-a["dynamics.baseline_raw"][type_index]))
-    tonic = (0.01 * a["atlas.motor_mask"]) @ motor_baseline
-    targets = np.full(MOTOR, 0.05, np.float32)
-    targets[:24] = 0.1
-    targets[24:26] = 0.5
-    a["motor.bias"][:] = np.log(targets / (1 - targets)) - tonic
+    a["motor.reference_rate"][:] = 0.05 + 0.4 / (
+        1
+        + np.exp(
+            -a["dynamics.baseline_raw"][a["atlas.neuron_type"][a["atlas.motor_rows"]]]
+        )
+    )
+    a["motor.rate_scale"].fill(0.05)
+    a["motor.weight"][:] = (
+        rng.normal(0, 0.002, a["motor.weight"].shape) * a["atlas.motor_mask"]
+    )
+    a["motor.intercept"][:84] = 0
+    a["motor.intercept"][84:] = math.log(0.02 / 0.98)
     a["afferent.neutral_drive"] = neutral_afferent_drive(a)
     return a
 
 
 def export_arrays(model, static):
-    """Return a complete service tensor mapping from a trained V3 module."""
+    """Return a complete service tensor mapping from a trained V4 module."""
     result = {k: np.ascontiguousarray(v) for k, v in static.items()}
     mapping = {
         "optic.spectral_logits": model.optic_spectral_logits,
@@ -480,8 +546,10 @@ def export_arrays(model, static):
         "readout.projection.weight": model.readout_projection,
         "readout.output.weight": model.readout_output.weight,
         "readout.output.bias": model.readout_output.bias,
-        "motor.weight_raw": model.motor_weight_raw,
-        "motor.bias": model.motor_bias,
+        "motor.reference_rate": model.motor_reference_rate,
+        "motor.rate_scale": model.motor_rate_scale,
+        "motor.weight": model.motor_weight,
+        "motor.intercept": model.motor_intercept,
     }
     for key in (
         "baseline_raw",

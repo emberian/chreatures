@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! CNS-only resident controller. The physical world never enters this module as features.
 
+use crate::context_suffix::{
+    CancellationReason, ContextSuffixMemory, ACTIONS, CONTEXT, MAX_HORIZON,
+};
 use crate::learned_sequence_control::{
     ControlDecision, LearnedSequenceControl, CANDIDATES, CHOICE, STATE as CONTROL_STATE,
 };
-use crate::context_suffix::{CancellationReason, ContextSuffixMemory, ACTIONS, CONTEXT, MAX_HORIZON};
 use crate::{gemm_into, gru, linear, tanh_all, Gru, Linear};
 use serde::{Deserialize, Serialize};
 
-const FORMAT: &str = "chreatures-cns-context-resident-native-v11";
+const FORMAT: &str = "chreatures-cns-context-resident-native-v12";
 pub const CONTEXT_POLICY_VERSION: &str = "signed-context12-v1";
+pub const PRIVATE_LEARNING_VERSION: &str = "context-consequence-v1";
 const Z: usize = 512;
 const HIDDEN: usize = 256;
 const GOAL: usize = 128;
@@ -22,7 +25,7 @@ const RECALLED: usize = CANDIDATES - LOCAL;
 const CANONICAL_CONTEXT: usize = Z + HIDDEN + GOAL + ACTIONS;
 const PREDICTOR_MEMBERS: usize = 3;
 const GOAL_SLOTS: usize = 128;
-const GOAL_HORIZON: u64 = MAX_HORIZON as u64;
+const GOAL_HORIZON_SECONDS: f32 = 0.4;
 const GOAL_MEMORY_FORMAT: &str = "chreatures-private-cns-goal-memory-v1";
 
 #[derive(Clone)]
@@ -78,6 +81,7 @@ impl CnsGoalMemory {
         &mut self,
         row: usize,
         query: &[f32],
+        reachable_hint: Option<&[f32]>,
         sample: bool,
     ) -> Option<(usize, u64, u64, Vec<f32>)> {
         let available = (0..GOAL_SLOTS)
@@ -90,11 +94,16 @@ impl CnsGoalMemory {
             .iter()
             .map(|slot| {
                 let i = row * GOAL_SLOTS + *slot;
-                self.keys[i * GOAL..(i + 1) * GOAL]
-                    .iter()
-                    .zip(query)
-                    .map(|(a, b)| a * b)
-                    .sum::<f32>()
+                let key = &self.keys[i * GOAL..(i + 1) * GOAL];
+                let local = key.iter().zip(query).map(|(a, b)| a * b).sum::<f32>();
+                if let Some(hint) = reachable_hint {
+                    let reachable = key.iter().zip(hint).map(|(a, b)| a * b).sum::<f32>();
+                    0.35 * local + 0.65 * reachable
+                } else {
+                    // Prefer a distinct but still related achieved state over
+                    // repeatedly selecting the current key as its own goal.
+                    0.7 * local - 0.2 * (local - 0.85).abs()
+                }
             })
             .collect::<Vec<_>>();
         let chosen = if sample {
@@ -205,9 +214,11 @@ struct PredictorMember {
 struct PrivateSnapshot {
     format: String,
     context_policy_version: String,
+    private_learning_version: String,
     batch: usize,
     sample: bool,
     research_training: bool,
+    tick_seconds: f32,
     core_sha256: String,
     predictor_sha256: String,
     state: Vec<f32>,
@@ -238,6 +249,8 @@ pub struct DevelopmentalResidentCohort {
     batch: usize,
     sample: bool,
     research_training: bool,
+    tick_seconds: f32,
+    goal_horizon_ticks: u64,
     core_sha256: String,
     predictor_sha256: String,
     core: Core,
@@ -298,6 +311,10 @@ fn contexts_valid(values: &[f32]) -> bool {
     values
         .iter()
         .all(|value| value.is_finite() && (-1.0..=1.0).contains(value))
+}
+
+fn normalized_duration(ticks: usize, tick_seconds: f32) -> f32 {
+    (ticks as f32 * tick_seconds / GOAL_HORIZON_SECONDS).clamp(0.0, 1.0)
 }
 
 fn normalize_rows(values: &mut [f32], width: usize) {
@@ -461,11 +478,15 @@ impl DevelopmentalResidentCohort {
             let refresh = reset[row]
                 || self.goal_origin_slot[row] < 0
                 || elapsed.is_none()
-                || elapsed.is_some_and(|age| age >= GOAL_HORIZON);
+                || elapsed.is_some_and(|age| age >= self.goal_horizon_ticks);
             if refresh {
+                let reachable_hint = self
+                    .suffixes
+                    .reachable_goal(row, &self.current_key[row * GOAL..(row + 1) * GOAL]);
                 if let Some((slot, generation, tick, key)) = self.goal_memory.select(
                     row,
                     &self.current_key[row * GOAL..(row + 1) * GOAL],
+                    reachable_hint.as_deref(),
                     self.sample,
                 ) {
                     self.goal[row * GOAL..(row + 1) * GOAL].copy_from_slice(&key);
@@ -528,6 +549,7 @@ impl DevelopmentalResidentCohort {
                 self.acknowledged_tick[row],
                 &self.acknowledged_context[row * CONTEXT..(row + 1) * CONTEXT],
                 action,
+                current,
                 &[outcome],
             )?;
             self.acknowledged_valid[row] = false;
@@ -703,6 +725,7 @@ impl DevelopmentalResidentCohort {
             let recalled = self.suffixes.recall(
                 row,
                 &self.current_key[row * GOAL..(row + 1) * GOAL],
+                &self.goal[row * GOAL..(row + 1) * GOAL],
                 RECALLED,
             );
             for (extra, suffix) in recalled.iter().enumerate() {
@@ -739,11 +762,13 @@ impl DevelopmentalResidentCohort {
                 self.active_remaining[row] = remaining as u8;
                 self.control_active[base..base + remaining * ACTIONS]
                     .copy_from_slice(&active.actions[..remaining * ACTIONS]);
-                self.control_active[base + 96] = remaining as f32 / 8.0;
-                self.control_active[base + 97] = active.phase as f32 / 8.0;
-                self.control_active[base + 98] = active.length as f32 / 8.0;
+                self.control_active[base + 96] = normalized_duration(remaining, self.tick_seconds);
+                self.control_active[base + 97] =
+                    normalized_duration(active.phase, self.tick_seconds);
+                self.control_active[base + 98] =
+                    normalized_duration(active.length, self.tick_seconds);
                 self.control_active[base + 99] = 1.0;
-                self.control_active[base + 100] = (active.support as f32).ln_1p();
+                self.control_active[base + 100] = (active.consequence_count as f32).ln_1p();
                 self.control_active[base + 101] = active.recall_score;
                 self.control_active[base + 102] = active.empirical_utility;
                 let mut forecast_actions = vec![0.0; MAX_HORIZON * ACTIONS];
@@ -754,12 +779,24 @@ impl DevelopmentalResidentCohort {
                     let dst = h * ACTIONS;
                     forecast_actions.copy_within(last..last + ACTIONS, dst);
                 }
-                let (pred, progress, disagreement, valid) =
+                let (_pred, _progress, disagreement, valid) =
                     self.forecast(row, &forecast_actions, remaining);
                 self.control_active[base + 103] = valid as u8 as f32;
-                self.control_active[base + 104] = progress;
-                self.control_active[base + 105] = disagreement;
-                self.control_active[base + 106..base + 234].copy_from_slice(&pred);
+                self.control_active[base + 104] = active
+                    .endpoint_context
+                    .iter()
+                    .zip(&self.goal[row * GOAL..(row + 1) * GOAL])
+                    .map(|(a, b)| a * b)
+                    .sum::<f32>()
+                    - self.current_key[row * GOAL..(row + 1) * GOAL]
+                        .iter()
+                        .zip(&self.goal[row * GOAL..(row + 1) * GOAL])
+                        .map(|(a, b)| a * b)
+                        .sum::<f32>();
+                self.control_active[base + 105] =
+                    disagreement.hypot(active.consequence_uncertainty);
+                self.control_active[base + 106..base + 234]
+                    .copy_from_slice(&active.endpoint_context);
             }
         }
         for row in 0..self.batch {
@@ -779,10 +816,18 @@ impl DevelopmentalResidentCohort {
                         &self.candidate_actions[index * ACTIONS..(index + 1) * ACTIONS],
                     );
                 }
-                self.control_proposal[base + 96] = duration as f32 / 8.0;
-                self.control_proposal[base + 98] = duration as f32 / 8.0;
+                self.control_proposal[base + 96] = normalized_duration(duration, self.tick_seconds);
+                self.control_proposal[base + 98] = normalized_duration(duration, self.tick_seconds);
                 self.control_proposal[base + 99] = self.candidate_recalled[index] as u8 as f32;
-                self.control_proposal[base + 100] = (self.candidate_support[index] as f32).ln_1p();
+                self.control_proposal[base + 100] = if self.candidate_recalled[index] {
+                    let suffix = recalled_rows[row]
+                        .iter()
+                        .find(|suffix| suffix.slot as i32 == self.candidate_slot[index])
+                        .ok_or("recalled context suffix vanished")?;
+                    (suffix.consequence_count as f32).ln_1p()
+                } else {
+                    0.0
+                };
                 self.control_proposal[base + 101] = self.candidate_recall[index].clamp(-8.0, 1.0);
                 self.control_proposal[base + 102] = self.candidate_empirical[index];
                 let (pred, progress, disagreement, valid) = self.forecast(
@@ -795,9 +840,44 @@ impl DevelopmentalResidentCohort {
                     },
                 );
                 self.control_proposal[base + 103] = valid as u8 as f32;
-                self.control_proposal[base + 104] = progress;
-                self.control_proposal[base + 105] = disagreement;
-                self.control_proposal[base + 106..base + 234].copy_from_slice(&pred);
+                self.control_proposal[base + 104] = if self.candidate_recalled[index] {
+                    let endpoint = recalled_rows[row]
+                        .iter()
+                        .find(|suffix| suffix.slot as i32 == self.candidate_slot[index])
+                        .ok_or("recalled context consequence vanished")?;
+                    endpoint
+                        .endpoint_context
+                        .iter()
+                        .zip(&self.goal[row * GOAL..(row + 1) * GOAL])
+                        .map(|(a, b)| a * b)
+                        .sum::<f32>()
+                        - self.current_key[row * GOAL..(row + 1) * GOAL]
+                            .iter()
+                            .zip(&self.goal[row * GOAL..(row + 1) * GOAL])
+                            .map(|(a, b)| a * b)
+                            .sum::<f32>()
+                } else {
+                    progress
+                };
+                let consequence_uncertainty = if self.candidate_recalled[index] {
+                    recalled_rows[row]
+                        .iter()
+                        .find(|suffix| suffix.slot as i32 == self.candidate_slot[index])
+                        .map_or(0.0, |suffix| suffix.consequence_uncertainty)
+                } else {
+                    0.0
+                };
+                self.control_proposal[base + 105] = disagreement.hypot(consequence_uncertainty);
+                if self.candidate_recalled[index] {
+                    let endpoint = recalled_rows[row]
+                        .iter()
+                        .find(|suffix| suffix.slot as i32 == self.candidate_slot[index])
+                        .ok_or("recalled context endpoint vanished")?;
+                    self.control_proposal[base + 106..base + 234]
+                        .copy_from_slice(&endpoint.endpoint_context);
+                } else {
+                    self.control_proposal[base + 106..base + 234].copy_from_slice(&pred);
+                }
             }
         }
         for row in 0..self.batch {
@@ -864,9 +944,11 @@ impl DevelopmentalResidentCohort {
         PrivateSnapshot {
             format: FORMAT.into(),
             context_policy_version: CONTEXT_POLICY_VERSION.into(),
+            private_learning_version: PRIVATE_LEARNING_VERSION.into(),
             batch: self.batch,
             sample: self.sample,
             research_training: self.research_training,
+            tick_seconds: self.tick_seconds,
             core_sha256: self.core_sha256.clone(),
             predictor_sha256: self.predictor_sha256.clone(),
             state: self.state.clone(),
@@ -896,13 +978,14 @@ impl DevelopmentalResidentCohort {
 #[cfg(feature = "python")]
 mod python;
 
-/// Existing v10 snapshot envelope, encoded as UTF-8 JSON for portable byte hosts.
+/// V12 context-consequence snapshot envelope, encoded as UTF-8 JSON for portable byte hosts.
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ResidentSnapshot {
     pub format: String,
     pub version: u8,
     pub context_policy_version: String,
+    pub private_learning_version: String,
     pub private: String,
     pub context_suffix_memory: String,
     pub goal_memory: String,
@@ -915,7 +998,9 @@ impl DevelopmentalResidentCohort {
         action_mode: &str,
         action_seed: u64,
         suffix_seed: u64,
+        tick_seconds: f32,
         context_policy_version: &str,
+        private_learning_version: &str,
         core_packed: &[f32],
         core_sha256: String,
         predictor_packed: &[f32],
@@ -928,7 +1013,10 @@ impl DevelopmentalResidentCohort {
         if batch == 0
             || batch > 4096
             || !matches!(action_mode, "sample" | "map")
+            || !tick_seconds.is_finite()
+            || !(0.001..=1.0).contains(&tick_seconds)
             || context_policy_version != CONTEXT_POLICY_VERSION
+            || private_learning_version != PRIVATE_LEARNING_VERSION
             || !valid_hash(&core_sha256)
             || !valid_hash(&predictor_sha256)
         {
@@ -971,10 +1059,13 @@ impl DevelopmentalResidentCohort {
             sequence_control_sha256,
             action_seed ^ 0x5345_515f_4354_524c,
         )?;
+        let goal_horizon_ticks = (GOAL_HORIZON_SECONDS / tick_seconds).round().max(1.0) as u64;
         Ok(Self {
             batch,
             sample: action_mode == "sample",
             research_training,
+            tick_seconds,
+            goal_horizon_ticks,
             core_sha256,
             predictor_sha256,
             core,
@@ -1104,8 +1195,9 @@ impl DevelopmentalResidentCohort {
     pub fn snapshot_data(&self) -> Result<ResidentSnapshot, String> {
         Ok(ResidentSnapshot {
             format: FORMAT.into(),
-            version: 11,
+            version: 12,
             context_policy_version: CONTEXT_POLICY_VERSION.into(),
+            private_learning_version: PRIVATE_LEARNING_VERSION.into(),
             private: serde_json::to_string(&self.private_snapshot()).map_err(|e| e.to_string())?,
             context_suffix_memory: self.suffixes.snapshot_json()?,
             goal_memory: serde_json::to_string(&self.goal_memory).map_err(|e| e.to_string())?,
@@ -1121,8 +1213,9 @@ impl DevelopmentalResidentCohort {
     }
     pub fn restore_snapshot(&mut self, value: &ResidentSnapshot) -> Result<(), String> {
         if value.format != FORMAT
-            || value.version != 11
+            || value.version != 12
             || value.context_policy_version != CONTEXT_POLICY_VERSION
+            || value.private_learning_version != PRIVATE_LEARNING_VERSION
         {
             return Err("CNS snapshot identity differs".into());
         }
@@ -1130,9 +1223,11 @@ impl DevelopmentalResidentCohort {
         let expected = self.private_snapshot();
         if p.format != FORMAT
             || p.context_policy_version != CONTEXT_POLICY_VERSION
+            || p.private_learning_version != PRIVATE_LEARNING_VERSION
             || p.batch != self.batch
             || p.sample != self.sample
             || p.research_training != self.research_training
+            || p.tick_seconds != self.tick_seconds
             || p.core_sha256 != self.core_sha256
             || p.predictor_sha256 != self.predictor_sha256
             || p.state.len() != expected.state.len()
@@ -1243,6 +1338,10 @@ impl DevelopmentalResidentCohort {
             "goal_selected_tick": self.goal_selected_tick, "memory_inserted_slot": self.memory_inserted_slot,
             "memory_count": self.goal_memory.count, "context_pending": self.context_pending,
             "context_policy_version": CONTEXT_POLICY_VERSION,
+            "private_learning_version": PRIVATE_LEARNING_VERSION,
+            "tick_seconds": self.tick_seconds, "goal_horizon_seconds": GOAL_HORIZON_SECONDS,
+            "goal_horizon_ticks": self.goal_horizon_ticks,
+            "context_suffix_horizon_seconds": MAX_HORIZON as f32 * self.tick_seconds,
             "cns_outcome_pending": self.acknowledged_valid,
             "sequence_control_policy_version": self.sequence_control.policy_version,
             "sequence_control_policy_sha256": self.sequence_control.policy_sha256,
@@ -1255,6 +1354,8 @@ impl DevelopmentalResidentCohort {
             "active_source_slot": self.active_source_slot, "active_phase": self.active_phase,
             "active_remaining": self.active_remaining,
             "context_suffix_cancellation_totals": (0..self.batch).map(|row| self.suffixes.cancellation_counts(row)).collect::<Vec<_>>()
+            ,"context_suffix_memory_counts": (0..self.batch).map(|row| self.suffixes.counts(row)).collect::<Vec<_>>()
+            ,"context_consequence_evidence": (0..self.batch).map(|row| self.suffixes.consequence_evidence(row)).collect::<Vec<_>>()
         })).map_err(|e| e.to_string())
     }
 }

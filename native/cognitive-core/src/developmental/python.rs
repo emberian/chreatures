@@ -222,7 +222,9 @@ impl DevelopmentalResidentCohort {
         action_mode: &str,
         action_seed: u64,
         suffix_seed: u64,
+        tick_seconds: f32,
         context_policy_version: &str,
+        private_learning_version: &str,
         core_packed: PyReadonlyArray1<'_, f32>,
         core_sha256: String,
         predictor_packed: PyReadonlyArray1<'_, f32>,
@@ -237,7 +239,9 @@ impl DevelopmentalResidentCohort {
             action_mode,
             action_seed,
             suffix_seed,
+            tick_seconds,
             context_policy_version,
+            private_learning_version,
             core_packed.as_slice()?,
             core_sha256,
             predictor_packed.as_slice()?,
@@ -443,6 +447,7 @@ impl DevelopmentalResidentCohort {
         out.set_item("format", value.format)?;
         out.set_item("version", value.version)?;
         out.set_item("context_policy_version", value.context_policy_version)?;
+        out.set_item("private_learning_version", value.private_learning_version)?;
         out.set_item("private", value.private)?;
         out.set_item("context_suffix_memory", value.context_suffix_memory)?;
         out.set_item("goal_memory", value.goal_memory)?;
@@ -451,7 +456,7 @@ impl DevelopmentalResidentCohort {
     }
 
     fn restore(&mut self, value: &Bound<'_, PyDict>) -> PyResult<()> {
-        if value.len() != 7 {
+        if value.len() != 8 {
             return Err(PyValueError::new_err("CNS snapshot fields differ"));
         }
         let get = |name: &str| {
@@ -460,8 +465,9 @@ impl DevelopmentalResidentCohort {
                 .ok_or_else(|| PyValueError::new_err(format!("CNS snapshot lacks {name}")))
         };
         if get("format")?.extract::<String>()? != FORMAT
-            || get("version")?.extract::<u8>()? != 11
+            || get("version")?.extract::<u8>()? != 12
             || get("context_policy_version")?.extract::<String>()? != CONTEXT_POLICY_VERSION
+            || get("private_learning_version")?.extract::<String>()? != PRIVATE_LEARNING_VERSION
         {
             return Err(PyValueError::new_err("CNS snapshot identity differs"));
         }
@@ -469,6 +475,7 @@ impl DevelopmentalResidentCohort {
             format: get("format")?.extract()?,
             version: get("version")?.extract()?,
             context_policy_version: get("context_policy_version")?.extract()?,
+            private_learning_version: get("private_learning_version")?.extract()?,
             private: get("private")?.extract()?,
             context_suffix_memory: get("context_suffix_memory")?.extract()?,
             goal_memory: get("goal_memory")?.extract()?,

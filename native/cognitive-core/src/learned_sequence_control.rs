@@ -619,11 +619,14 @@ mod tests {
                     tick,
                     &[0.0; CONTEXT],
                     &[tick as f32 / 10.0; ACTIONS],
+                    &[0.0; CONTEXT],
                     &[0.2],
                 )
                 .unwrap();
         }
-        let suffix = memory.recall(0, &[0.0; CONTEXT], 1).remove(0);
+        let suffix = memory
+            .recall(0, &[0.0; CONTEXT], &[0.0; CONTEXT], 1)
+            .remove(0);
         memory.start(0, &suffix).unwrap();
         let mut control =
             LearnedSequenceControl::from_flat(1, &zeros(), 0, "b".repeat(64), 41).unwrap();

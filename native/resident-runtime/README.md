@@ -24,7 +24,9 @@ import init, { ResidentRuntime } from './pkg/resident_runtime.js';
 await init();
 const resident = new ResidentRuntime(JSON.stringify({
   batch: 3, action_mode: 'sample', action_seed: 314, suffix_seed: 271,
+  tick_seconds: 0.01,
   context_policy_version: 'signed-context12-v1',
+  private_learning_version: 'context-consequence-v1',
   core_sha256, predictor_sha256,
   sequence_control_version: 1, sequence_control_sha256,
   research_training: false,
@@ -58,8 +60,10 @@ memory counts, sampled control decision/value/log probability, recalled suffix
 flags, execution phase, cancellation counters, and receipt status. Observer
 data must never be routed back to the policy as a parallel sensory input.
 
-The v11 signed-context checkpoint preserves private RNG,
-memory and pending receipt boundaries. It does not contain browser world or
+The v12 context-consequence checkpoint preserves private RNG, the declared
+tick duration, 0.4-second goal horizon, achieved endpoints, and per-phase
+consequence moments/counts alongside memory and pending receipt boundaries. It
+does not contain browser world or
 neural graph state: the orchestrator must checkpoint all three together.
 
 Reproduce the joined native/Node Wasm verification without browser automation:

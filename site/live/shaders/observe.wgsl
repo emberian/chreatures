@@ -1,4 +1,4 @@
-// AGPL-3.0-or-later -- compact selected-resident V3 observer readback.
+// AGPL-3.0-or-later -- compact selected-resident V4 observer readback.
 const N:u32=165122u;
 struct Config{capacity:u32,active_mask:u32,reset_mask:u32,selected_resident:u32,dt:f32,neuron_count:u32,edge_count:u32,selected_field:u32};
 struct State{rate:vec4<f32>,adapt:vec4<f32>,support:vec4<f32>,release:vec4<f32>,da:vec4<f32>,oa:vec4<f32>,ht:vec4<f32>};

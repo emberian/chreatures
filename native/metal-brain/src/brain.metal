@@ -42,13 +42,8 @@ inline float stable_sigmoid(float x) {
     return z / (1.0f + z);
 }
 
-inline float stable_softplus(float x) {
-    return max(x, 0.0f) + log(1.0f + exp(-abs(x)));
-}
-
-// Anatomical CNS V3 uses separate entry points and buffer contracts. This keeps
-// a mismatched host from silently dispatching these dynamics.
-kernel void v3_project_body_masked(
+// Embodiment-driven CNS V4 entry points use only the current CHCNS4 contract.
+kernel void v4_project_body_masked(
     device const float4 *body [[buffer(0)]],
     device const float *mean [[buffer(1)]],
     device const float *scale [[buffer(2)]],
@@ -59,8 +54,8 @@ kernel void v3_project_body_masked(
     device float4 *drive [[buffer(7)]],
     constant Params &p [[buffer(8)]],
     uint gid [[thread_position_in_grid]]) {
-    constexpr uint body_channels = 110;
-    constexpr uint body_afferents = 11233;
+    constexpr uint body_channels = 807;
+    constexpr uint body_afferents = 11798;
     if (p.tiles == 0) return;
     uint afferent = gid / p.tiles, tile = gid % p.tiles;
     if (afferent >= body_afferents || tile >= p.tiles) return;
@@ -78,7 +73,7 @@ kernel void v3_project_body_masked(
     drive[target * p.tiles + tile] = mask_inactive(current, p, tile);
 }
 
-kernel void v3_project_context_zero_neutral(
+kernel void v4_project_context_zero_neutral(
     device const float4 *context [[buffer(0)]],
     device const float *weights [[buffer(1)]],
     device const float *bias [[buffer(2)]],
@@ -102,7 +97,7 @@ kernel void v3_project_context_zero_neutral(
     drive[target * p.tiles + tile] = mask_inactive(current, p, tile);
 }
 
-kernel void v3_csr_dynamics(
+kernel void v4_csr_dynamics_f16(
     device const uint *rowptr [[buffer(0)]],
     device const uint *columns [[buffer(1)]],
     device const float *weights [[buffer(2)]],
@@ -169,7 +164,7 @@ kernel void v3_csr_dynamics(
                                     old_rate, p, tile);
 }
 
-kernel void v3_finalize_private_state(
+kernel void v4_finalize_private_state(
     device const float4 *rate [[buffer(0)]],
     device float4 *adaptation [[buffer(1)]],
     device float4 *support [[buffer(2)]],
@@ -199,31 +194,35 @@ kernel void v3_finalize_private_state(
     release[index] = hold_inactive(next_q, old_q, p, tile);
 }
 
-kernel void v3_motor34_masked_softplus(
+kernel void v4_motor92_centered(
     device const float4 *rates [[buffer(0)]],
     device const uint *motor_rows [[buffer(1)]],
-    device const float *weight_raw [[buffer(2)]],
-    device const float *mask [[buffer(3)]],
-    device const float *bias [[buffer(4)]],
-    device float4 *motor [[buffer(5)]],
+    device const float *reference_rate [[buffer(2)]],
+    device const float *rate_scale [[buffer(3)]],
+    device const float *weight [[buffer(4)]],
+    device const float *mask [[buffer(5)]],
+    device const float *intercept [[buffer(6)]],
+    device float4 *motor [[buffer(7)]],
     constant Params &p [[buffer(8)]],
     uint gid [[thread_position_in_grid]]) {
-    constexpr uint motor_outputs = 34;
+    constexpr uint motor_outputs = 92;
     constexpr uint motor_neurons = 815;
     if (p.tiles == 0) return;
     uint output = gid / p.tiles, tile = gid % p.tiles;
     if (output >= motor_outputs || tile >= p.tiles) return;
-    float4 u = bias[output];
+    float4 u = intercept[output];
     uint base = output * motor_neurons;
     for (uint j = 0; j < motor_neurons; ++j) {
         uint source = motor_rows[j];
         if (source >= p.n) continue;
-        u += stable_softplus(weight_raw[base + j]) * mask[base + j]
-            * rates[source * p.tiles + tile];
+        float4 centered = (rates[source * p.tiles + tile] - reference_rate[j]) /
+                          rate_scale[j];
+        u += weight[base + j] * mask[base + j] * centered;
     }
     float4 value;
-    for (uint lane = 0; lane < 4; ++lane) value[lane] = stable_sigmoid(u[lane]);
-    if (output == 24u || output == 25u) value = 2.0f * value - 1.0f;
+    for (uint lane = 0; lane < 4; ++lane) {
+        value[lane] = output < 84u ? tanh(u[lane]) : stable_sigmoid(u[lane]);
+    }
     motor[gid] = mask_inactive(value, p, tile);
 }
 
