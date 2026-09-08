@@ -174,6 +174,7 @@ struct Snapshot {
     base_gain: Vec<f64>,
     visitor_forces: Vec<(usize, [f64; 3])>,
     visitor_counter: u64,
+    visitor_insertions: Vec<Value>,
     last_aero: AeroStats,
 }
 
@@ -189,6 +190,10 @@ pub struct ResearchSample {
     pub body_positions: Vec<f64>,
     pub body_quaternions: Vec<f64>,
     pub body_rotations: Vec<f64>,
+    pub geom_positions: Vec<f64>,
+    pub geom_rotations: Vec<f64>,
+    pub geom_sizes: Vec<f64>,
+    pub geom_colors: Vec<f64>,
     pub sensor_data: Vec<f64>,
     pub controls: Vec<f64>,
     pub entity_ids: Vec<String>,
@@ -197,6 +202,29 @@ pub struct ResearchSample {
     pub ecology: Value,
     pub actuator_state: Value,
     pub time: f64,
+}
+pub struct GeometrySample {
+    pub topology_revision: u64,
+    pub model_sha256: String,
+    pub metadata: Value,
+    pub geom_body_id: Vec<i32>,
+    pub geom_type: Vec<i32>,
+    pub geom_material_id: Vec<i32>,
+    pub geom_data_id: Vec<i32>,
+    pub geom_size: Vec<f64>,
+    pub geom_position: Vec<f64>,
+    pub geom_quaternion: Vec<f64>,
+    pub geom_rgba: Vec<f64>,
+    pub material_rgba: Vec<f64>,
+    pub mesh_vertex_address: Vec<i32>,
+    pub mesh_vertex_count: Vec<i32>,
+    pub mesh_normal_address: Vec<i32>,
+    pub mesh_normal_count: Vec<i32>,
+    pub mesh_face_address: Vec<i32>,
+    pub mesh_face_count: Vec<i32>,
+    pub mesh_vertices: Vec<f64>,
+    pub mesh_normals: Vec<f64>,
+    pub mesh_faces: Vec<i32>,
 }
 struct PhysicsPacket {
     positions: Vec<f64>,
@@ -245,6 +273,7 @@ pub struct NativeFlyWorld {
     clearance_scratch: Option<Physics>,
     visitor_forces: Vec<(usize, [f64; 3])>,
     visitor_counter: u64,
+    visitor_insertions: Vec<Value>,
     aero_world: AeroWorld,
     unit_scale: ModelUnitScale,
     aero_positions: Vec<f64>,
@@ -519,6 +548,7 @@ impl NativeFlyWorld {
             clearance_scratch: None,
             visitor_forces: Vec::new(),
             visitor_counter: 0,
+            visitor_insertions: Vec::new(),
             aero_world,
             unit_scale,
             aero_positions: vec![0.0; nbody * 3],
@@ -573,6 +603,9 @@ impl NativeFlyWorld {
     }
     pub fn time(&self) -> f64 {
         self.core.time()
+    }
+    pub fn topology_revision(&self) -> u64 {
+        self.topology_revision
     }
     pub fn fixture_sha256(&self) -> String {
         sha256(&self.fixture_bytes)
@@ -631,6 +664,164 @@ impl NativeFlyWorld {
         self.visitor_counter += 1;
         Ok(())
     }
+    pub fn insert_visitor_object(
+        &mut self,
+        position: [f64; 3],
+        size: [f64; 3],
+        shape: &str,
+        rgba: [f64; 4],
+        food: f64,
+        odor: i32,
+    ) -> Result<Value, String> {
+        if self.paused {
+            return Err("cannot change incoherent native topology".into());
+        }
+        let maximum_geoms = usize::try_from(
+            self.host.ecology_capacity["max_geoms"]
+                .as_u64()
+                .ok_or("physical geometry capacity missing")?,
+        )
+        .map_err(|_| "physical geometry capacity exceeds host address space")?;
+        if self.physics.dimensions().ngeom >= maximum_geoms {
+            return Err("configured physical geometry capacity is full".into());
+        }
+        if !finite(&position)
+            || !finite(&size)
+            || !finite(&rgba)
+            || !["box", "sphere", "capsule", "cylinder", "ellipsoid"].contains(&shape)
+            || size.iter().any(|value| *value <= 0.0 || *value > 0.5)
+            || position.iter().any(|value| value.abs() > 100.0)
+            || rgba.iter().any(|value| !(0.0..=1.0).contains(value))
+            || !food.is_finite()
+            || !(0.0..=1.0).contains(&food)
+            || ![-1, 0, 1, 2].contains(&odor)
+        {
+            return Err("invalid bounded material insertion".into());
+        }
+        let counter = self
+            .visitor_counter
+            .checked_add(1)
+            .ok_or("visitor identity space exhausted")?;
+        let topology_revision = self
+            .topology_revision
+            .checked_add(1)
+            .ok_or("topology revision space exhausted")?;
+        let id = format!("visitor-{counter}");
+        let fragment = format!(
+            "<body name=\"entity:{id}\" pos=\"{} {} {}\"><freejoint name=\"entity:{id}:free\"/><geom name=\"entity:{id}:geom:0\" type=\"{shape}\" size=\"{} {} {}\" rgba=\"{} {} {} {}\" density=\"35\" friction=\"0.9 0.02 0.004\"/></body>",
+            position[0], position[1], position[2], size[0], size[1], size[2],
+            rgba[0], rgba[1], rgba[2], rgba[3]
+        );
+        let xml = self
+            .xml
+            .replacen("</worldbody>", &format!("{fragment}</worldbody>"), 1);
+        if xml == self.xml {
+            return Err("worldbody terminator missing".into());
+        }
+        let model_sha256 = sha256(xml.as_bytes());
+        let mut fixture = self.fixture_value.clone();
+        fixture["source_mjcf_sha256"] = Value::String(model_sha256.clone());
+        let old = self.physics.dimensions();
+        let mut candidate = self.load_xml_text(&xml, "visitor")?;
+        let new = candidate.dimensions();
+        let body = candidate.body_name_to_id(&format!("entity:{id}"))?;
+        let geom = candidate.geom_name_to_id(&format!("entity:{id}:geom:0"))?;
+        if new.nq != old.nq + 7
+            || new.nv != old.nv + 6
+            || new.nbody != old.nbody + 1
+            || new.ngeom != old.ngeom + 1
+            || body != old.nbody
+            || geom != old.ngeom
+        {
+            return Err("visitor append changed prior model addresses".into());
+        }
+        candidate.copy_prefix_from(&self.physics)?;
+        let live_state = candidate.state()?;
+        candidate.set_const()?;
+        candidate.set_state(&live_state)?;
+        candidate.forward()?;
+        let (contacts, distances) = candidate.contacts_with_distances()?;
+        if let Some((other, distance)) = contacts
+            .chunks_exact(CONTACT_STRIDE)
+            .zip(distances)
+            .find_map(|(contact, distance)| {
+                if distance < -0.003 && (contact[0] as usize == geom || contact[1] as usize == geom)
+                {
+                    Some((
+                        if contact[0] as usize == geom {
+                            contact[1] as usize
+                        } else {
+                            contact[0] as usize
+                        },
+                        distance,
+                    ))
+                } else {
+                    None
+                }
+            })
+        {
+            return Err(format!(
+                "visitor insertion penetrates geom {other} by {distance} model units"
+            ));
+        }
+        fixture["geoms"]
+            .as_array_mut()
+            .ok_or("fixture geoms missing")?
+            .push(json!({
+                "id": geom, "name": format!("entity:{id}:geom:0"),
+                "type": candidate.int(crate::ffi::IntField::GeomType)?[geom],
+                "size": size, "rgba": rgba, "body": body,
+            }));
+        fixture["entities"]
+            .as_array_mut()
+            .ok_or("fixture entities missing")?
+            .push(json!({
+                "id": id, "body": body, "free": true, "food": food,
+                "nutrition": 1, "odor": odor,
+                "strength": if odor >= 0 { 1 } else { 0 },
+                "growth": if food > 0.0 { 0.002 } else { 0.0 }, "geoms": [geom],
+            }));
+        fixture["compiled_counts"] = json!({
+            "nq":new.nq,"nv":new.nv,"nu":new.nu,"nbody":new.nbody,
+            "njnt":new.njnt,"ngeom":new.ngeom,"nmesh":new.nmesh,
+            "nsite":new.nsite,"nsensor":new.nsensor,"nsensordata":new.nsensordata,
+        });
+        let host: HostFields = serde_json::from_value(fixture.clone())
+            .map_err(|error| format!("visitor host fixture: {error}"))?;
+        let config: FlyWorldConfig = serde_json::from_value(fixture.clone())
+            .map_err(|error| format!("visitor core fixture: {error}"))?;
+        let mut core = WorldCore::new(&self.fixture_value.to_string(), 1)?;
+        core.restore(&self.core.snapshot()?)?;
+        core.rebind_physics(&fixture.to_string())?;
+        let aero_world = AeroWorld::new(&fixture.to_string())?;
+        if new.nu != old.nu {
+            return Err("visitor insertion changed actuator count".into());
+        }
+        let base_force_range = self.base_force_range.clone();
+        let base_gain = self.base_gain.clone();
+        let receipt = json!({
+            "id": id, "body": body, "geom": geom, "model": model_sha256,
+            "position": position, "size": size, "shape": shape, "rgba": rgba,
+            "food": food, "odor": odor, "time": self.time(),
+        });
+
+        self.physics = candidate;
+        self.core = core;
+        self.aero_world = aero_world;
+        self.fixture_value = fixture;
+        self.host = host;
+        self.config = config;
+        self.xml = xml;
+        self.base_force_range = base_force_range;
+        self.base_gain = base_gain;
+        self.clearance_scratch = None;
+        self.resize_aero_buffers();
+        self.topology_revision = topology_revision;
+        self.physics_sensed = false;
+        self.visitor_counter = counter;
+        self.visitor_insertions.push(receipt.clone());
+        Ok(receipt)
+    }
     pub fn set_routes(&mut self, open: &[f64], flow: &[f64]) -> Result<(), String> {
         if open.len() != self.route_open.len()
             || flow.len() != open.len()
@@ -644,6 +835,68 @@ impl NativeFlyWorld {
         self.route_open = open.to_vec();
         self.route_flow = flow.to_vec();
         Ok(())
+    }
+    pub fn geometry_sample(&self) -> Result<GeometrySample, String> {
+        let mut geom_names = vec![String::new(); self.physics.dimensions().ngeom];
+        if let Some(entries) = self.fixture_value["geom_map"].as_array() {
+            for entry in entries {
+                if let (Some(index), Some(name)) =
+                    (entry["geom_id"].as_u64(), entry["name"].as_str())
+                {
+                    if let Some(slot) = geom_names.get_mut(index as usize) {
+                        *slot = name.to_owned();
+                    }
+                }
+            }
+        }
+        if let Some(entries) = self.fixture_value["geoms"].as_array() {
+            for entry in entries {
+                if let (Some(index), Some(name)) = (entry["id"].as_u64(), entry["name"].as_str()) {
+                    if let Some(slot) = geom_names.get_mut(index as usize) {
+                        *slot = name.to_owned();
+                    }
+                }
+            }
+        }
+        for (index, name) in geom_names.iter_mut().enumerate() {
+            if name.is_empty() {
+                *name = format!("geom:{index}");
+            }
+        }
+        Ok(GeometrySample {
+            topology_revision: self.topology_revision,
+            model_sha256: self.host.source_mjcf_sha256.clone(),
+            metadata: json!({
+                "format": "chreatures-fly-world-geometry-v1",
+                "entities": self.fixture_value["entities"],
+                "geoms": self.fixture_value["geoms"],
+                "meshes": self.fixture_value["meshes"],
+                "geom_names": geom_names,
+                "bodies": self.fixture_value["bodies"],
+                "residents": self.fixture_value["residents"],
+                "screen_geom": self.fixture_value["screen_geom"],
+                "world_size": self.fixture_value["world_size"],
+                "visitor_insertions": self.visitor_insertions,
+            }),
+            geom_body_id: self.physics.int(crate::ffi::IntField::GeomBodyId)?,
+            geom_type: self.physics.int(crate::ffi::IntField::GeomType)?,
+            geom_material_id: self.physics.int(crate::ffi::IntField::GeomMatId)?,
+            geom_data_id: self.physics.int(crate::ffi::IntField::GeomDataId)?,
+            geom_size: self.physics.num(crate::ffi::NumField::GeomSize)?,
+            geom_position: self.physics.num(crate::ffi::NumField::GeomPos)?,
+            geom_quaternion: self.physics.num(crate::ffi::NumField::GeomQuat)?,
+            geom_rgba: self.physics.num(crate::ffi::NumField::GeomRgba)?,
+            material_rgba: self.physics.num(crate::ffi::NumField::MatRgba)?,
+            mesh_vertex_address: self.physics.int(crate::ffi::IntField::MeshVertAdr)?,
+            mesh_vertex_count: self.physics.int(crate::ffi::IntField::MeshVertNum)?,
+            mesh_normal_address: self.physics.int(crate::ffi::IntField::MeshNormalAdr)?,
+            mesh_normal_count: self.physics.int(crate::ffi::IntField::MeshNormalNum)?,
+            mesh_face_address: self.physics.int(crate::ffi::IntField::MeshFaceAdr)?,
+            mesh_face_count: self.physics.int(crate::ffi::IntField::MeshFaceNum)?,
+            mesh_vertices: self.physics.num(crate::ffi::NumField::MeshVert)?,
+            mesh_normals: self.physics.num(crate::ffi::NumField::MeshNormal)?,
+            mesh_faces: self.physics.int(crate::ffi::IntField::MeshFace)?,
+        })
     }
 
     fn geom_normal(&self, geom: usize, point: [f64; 3]) -> Result<Option<[f64; 3]>, String> {
@@ -1419,6 +1672,7 @@ impl NativeFlyWorld {
             return Err("research BODY cache differs".into());
         }
         let geom_positions = self.physics.num(crate::ffi::NumField::GeomXpos)?;
+        let geom_rotations = self.physics.num(crate::ffi::NumField::GeomXmat)?;
         let entity_ids = self
             .host
             .entities
@@ -1444,6 +1698,10 @@ impl NativeFlyWorld {
             body_positions: self.physics.num(crate::ffi::NumField::BodyXpos)?,
             body_quaternions: self.physics.num(crate::ffi::NumField::BodyXquat)?,
             body_rotations: self.physics.num(crate::ffi::NumField::BodyXmat)?,
+            geom_positions,
+            geom_rotations,
+            geom_sizes: self.physics.num(crate::ffi::NumField::GeomSize)?,
+            geom_colors: self.physics.num(crate::ffi::NumField::GeomRgba)?,
             sensor_data: self.physics.num(crate::ffi::NumField::SensorData)?,
             controls: self.physics.num(crate::ffi::NumField::Ctrl)?,
             entity_ids,
@@ -1895,6 +2153,7 @@ impl NativeFlyWorld {
             base_gain: self.base_gain.clone(),
             visitor_forces: self.visitor_forces.clone(),
             visitor_counter: self.visitor_counter,
+            visitor_insertions: self.visitor_insertions.clone(),
             last_aero: self.last_aero.clone(),
         };
         serde_json::to_vec(&value).map_err(|e| e.to_string())
@@ -1967,6 +2226,7 @@ impl NativeFlyWorld {
         self.clearance_scratch = None;
         self.visitor_forces = saved.visitor_forces;
         self.visitor_counter = saved.visitor_counter;
+        self.visitor_insertions = saved.visitor_insertions;
         self.last_aero = saved.last_aero;
         self.paused = false;
         Ok(())

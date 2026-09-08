@@ -225,6 +225,39 @@ pub fn serve_stdio(world: &mut NativeFlyWorld) -> Result<(), String> {
                 world.queue_visitor_force(entity, force)?;
                 Ok(json!({"id":id,"ok":true}))
             })(),
+            Some("insert_object") => (|| {
+                let position: [f64; 3] = serde_json::from_value(
+                    request
+                        .get("position")
+                        .cloned()
+                        .ok_or("object position missing")?,
+                )
+                .map_err(|_| "object position differs")?;
+                let size: [f64; 3] = serde_json::from_value(
+                    request.get("size").cloned().ok_or("object size missing")?,
+                )
+                .map_err(|_| "object size differs")?;
+                let rgba: [f64; 4] = serde_json::from_value(
+                    request.get("rgba").cloned().ok_or("object color missing")?,
+                )
+                .map_err(|_| "object color differs")?;
+                let shape = request
+                    .get("shape")
+                    .and_then(Value::as_str)
+                    .ok_or("object shape missing")?;
+                let food = request
+                    .get("food")
+                    .and_then(Value::as_f64)
+                    .ok_or("object food missing")?;
+                let odor = request
+                    .get("odor")
+                    .and_then(Value::as_i64)
+                    .and_then(|value| i32::try_from(value).ok())
+                    .ok_or("object odor differs")?;
+                world
+                    .insert_visitor_object(position, size, shape, rgba, food, odor)
+                    .map(|receipt| json!({"id":id,"ok":true,"receipt":receipt}))
+            })(),
             Some("snapshot") => world
                 .snapshot()
                 .map(|value| json!({"id":id,"ok":true,"snapshot_base64":base64_encode(&value)})),

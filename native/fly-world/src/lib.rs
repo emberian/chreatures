@@ -4,6 +4,8 @@
 mod ffi;
 mod host;
 mod protocol;
+#[cfg(target_os = "emscripten")]
+mod wasm_abi;
 
-pub use host::{NativeFlyWorld, ResearchSample, SensorySample};
+pub use host::{GeometrySample, NativeFlyWorld, ResearchSample, SensorySample};
 pub use protocol::serve_stdio;

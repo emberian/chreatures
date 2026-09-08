@@ -12,7 +12,7 @@ use chreatures_fly_aerodynamics::{
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashSet;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 use wasm_bindgen::prelude::*;
 
 pub const WINGS_PER_RESIDENT: usize = 2;
@@ -42,7 +42,7 @@ struct Fixture {
     bodies: Vec<FixtureBody>,
 }
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(all(target_arch = "wasm32", target_os = "unknown"), wasm_bindgen)]
 pub struct AeroWorld {
     prepared: [PreparedWing; WINGS_PER_RESIDENT],
     meters_per_model_length: f64,
@@ -84,9 +84,9 @@ fn same_json_values(a: &Value, b: &Value) -> bool {
     }
 }
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(all(target_arch = "wasm32", target_os = "unknown"), wasm_bindgen)]
 impl AeroWorld {
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(constructor))]
+    #[cfg_attr(all(target_arch = "wasm32", target_os = "unknown"), wasm_bindgen(constructor))]
     pub fn new(fixture_json: &str) -> Result<Self, String> {
         let fixture: Fixture =
             serde_json::from_str(fixture_json).map_err(|e| error(format!("aero fixture: {e}")))?;

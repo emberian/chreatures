@@ -1,0 +1,66 @@
+{
+  "array_sha256": {
+    "plasticity.dan_rows": "de23033714ef5e8ae9e8e38d0e36a6058b662fad38a468445954564b3ab89820",
+    "plasticity.edge_positions": "d25c75dff2296a95e4320138f1340bf8ec3358fd31aff113c6a161a1060970fd",
+    "plasticity.rule": "2f73a958926a1846d8023034c2f4b61b00708708f06c1dac292ae74e1ae552c9",
+    "plasticity.target_ptr": "9d8f39e01dd4d5acfa7ddad3ae14724bb3aab9771a8544b13bf03d413e4f5f92",
+    "plasticity.target_rows": "f0ef7efafabc730deb7e604ff00c9ba737869e02704d35e6bd50945f3b5207c6"
+  },
+  "artifact": "gamma1pedc-v5-plasticity-selector-v1.npz",
+  "artifact_bytes": 6860,
+  "artifact_sha256": "93e6b4e6f01b1fad1190714ca5e8b029db7de12916f30906dc18ae0ea6bb8ffa",
+  "format": "chreatures-cns-v5-lifetime-plasticity-selector-v1-receipt",
+  "provenance": {
+    "engineered": "bilateral gamma1pedc subset, side-paired PPL101 gate, and fixed rule rows",
+    "excluded": "Historical gamma1pedc-fullgraph-bridge-v1 float32 coefficients are not read.",
+    "measured": "CSR positions/endpoints, synapse counts, cell annotations, and canonical deployed half coefficients",
+    "numeric_rule": "The artifact contains no copied weight array; runtime derives source rows and exact baseline coefficients from graph.col/graph.weight_bits at validated positions."
+  },
+  "selector_sha256": "ff44f4bc71b2ca6401c71d0ebfdcce7913cefe59a4dbc733bdef8e14e9de0e5f",
+  "source": {
+    "candidate_artifact_sha256": "aaa8f1c8c6476e4b528e7b3d11b1b3b00af36da8d84b109bd623479cd17f7081",
+    "graph_channel_sha256": "b2a82fc61a4fe078f37d273be11e3e7d611cb24f4a2b8662532d28ddf849d32f",
+    "graph_col_sha256": "5aa11513caf221ea75140ea8e704644eb046d754149ddeb732e08c737afc8e4f",
+    "graph_crow_sha256": "a0a39250b424c31ea7e1bd8decdc4af49cf61e72fea7513162cd42434b3e5f98",
+    "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "graph_weight_bits_sha256": "04e5c0e26301882849b333df7b72174a3b792337ab77208575a4c7ef056f5bde",
+    "old_anatomical_selector_sha256": "27bbc1adde8efe26d9f62e8e5674d4a3c9e787ab200b498f89ddc19c9101bdff",
+    "parent_service_format": "chreatures-cns-service-v4",
+    "parent_service_sha256": "70e3511784354c5c54a90fb9b30268cc297ffc37d75e1f189f7dd9231a91543e"
+  },
+  "validated": {
+    "all_sources_fast_channel": true,
+    "canonical_half_coefficient_max": 0.002979278564453125,
+    "canonical_half_coefficient_min": 3.606081008911133e-05,
+    "canonical_selected_decoded_f32_sha256": "41407bc131208c5742670990c193d3880afe8e52bcb360e78230ce05748488ce",
+    "canonical_selected_weight_bits_sha256": "e73cc13701ed91acf05abc07c33291efed6ed250031fc32d335e8b3fa38b1761",
+    "connected_kc_rows": 3623,
+    "csr_targets_match": true,
+    "dan_body_ids": [
+      11900,
+      11327
+    ],
+    "dan_rows": [
+      1774,
+      1235
+    ],
+    "edge_count": 4184,
+    "edge_positions_match_candidate": true,
+    "endpoints_match_old_selector": true,
+    "synapse_count": 41460,
+    "target_body_ids": [
+      10704,
+      11402
+    ],
+    "target_ptr": [
+      0,
+      2048,
+      4184
+    ],
+    "target_rows": [
+      655,
+      1306
+    ]
+  },
+  "version": 1
+}

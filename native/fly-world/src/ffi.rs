@@ -112,6 +112,7 @@ pub enum IntField {
     MeshFaceAdr = 11,
     MeshFaceNum = 12,
     MeshFace = 13,
+    GeomDataId = 14,
 }
 unsafe extern "C" {
     fn fly_world_version_compatible() -> c_int;
@@ -718,6 +719,7 @@ impl Physics {
             NumField::MocapPos,
             NumField::MocapQuat,
             NumField::UserData,
+            NumField::Time,
             NumField::GeomSize,
             NumField::GeomPos,
             NumField::GeomQuat,
@@ -739,13 +741,13 @@ impl Physics {
                 self.write_int(field, &all)?
             }
         }
-        let mut state = self.state()?;
+        let state = self.state()?;
         let prior = source.state()?;
-        if state.len() < prior.len() {
+        if state.len() == prior.len() {
+            self.set_state(&prior)?;
+        } else if state.len() < prior.len() {
             return Err("appended model integration state shrank".into());
         }
-        state[..prior.len()].copy_from_slice(&prior);
-        self.set_state(&state)?;
         self.forward()
     }
 }

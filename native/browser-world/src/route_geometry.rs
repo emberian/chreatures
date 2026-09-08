@@ -1,18 +1,18 @@
 //! Thin Wasm/native boundary over the shared ecological aperture mechanism.
 use chreatures_ecology_core::{EcologyConfig, RouteGeometryPlan, RouteGeometryState};
 use serde::Deserialize;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(all(target_arch = "wasm32", target_os = "unknown"), wasm_bindgen)]
 pub struct RouteGeometry {
     plan: RouteGeometryPlan,
     state: RouteGeometryState,
 }
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(all(target_arch = "wasm32", target_os = "unknown"), wasm_bindgen)]
 impl RouteGeometry {
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(constructor))]
+    #[cfg_attr(all(target_arch = "wasm32", target_os = "unknown"), wasm_bindgen(constructor))]
     pub fn new(fixture: &str) -> Result<Self, String> {
         #[derive(Deserialize)]
         struct Config {
