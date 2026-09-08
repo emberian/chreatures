@@ -234,6 +234,7 @@ python -m research.fly_learning.train train \
   --reset-prefix-fraction .35 --reset-sequence 40 \
   --viability-weighted-motor --motor-slew-weight .2 \
   --counterfactual-stability-weight .03 --motor-decoder-norm-weight .01 \
+  --cold-neutral-weight .5 \
   --cns-motor-lr 5e-4 --source-revision FULL_GIT_SHA --run NEW_RUN
 ```
 
@@ -242,6 +243,13 @@ changes without adding an action integrator or a controller bypass. Reset
 prefixes are drawn from the recovery corpus when it is present, because those
 worlds deliberately begin with a stopping/stance counterfactual target rather
 than an arbitrary locomotor phase.
+
+The cold-neutral term is an explicit physical safety prior on the existing
+centered decoder, not a learned locomotor skill. It asks only the first 84
+position servos to emit the authored normalized neutral value at the exact CNS
+cold state. It leaves adhesion and oral drives alone. Actual sensory reset
+prefixes and ordinary history-conditioned transitions still determine the
+state-dependent motor repertoire through the CNS.
 
 The action-conditioned stability auxiliary starts from heads bound to the
 exact parent service. A completed older run can export them without replaying
