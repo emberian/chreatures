@@ -9,6 +9,7 @@ import math
 import os
 from pathlib import Path
 import random
+import struct
 import time
 from dataclasses import asdict, dataclass
 from typing import Any, Iterable
@@ -50,11 +51,11 @@ from .data import (
     sha256_file,
 )
 from .resident_objective import training_loss as resident_training_loss
-from .sampling import BalancedWindowSampler, MixedCausalSampler, Window, slice_window
+from .sampling import BalancedWindowSampler, MixedCausalSampler, Window
 
 
-TRAINING_FORMAT = "chreatures-actual-fly-cns-development-fit-v1"
-CHECKPOINT_FORMAT = "chreatures-actual-fly-cns-development-optimizer-v1"
+TRAINING_FORMAT = "chreatures-actual-fly-cns-development-fit-v2"
+CHECKPOINT_FORMAT = "chreatures-actual-fly-cns-development-optimizer-v2"
 PREDICTION_HEAD_FORMAT = "chreatures-actual-fly-physical-prediction-heads-v1"
 
 
@@ -95,7 +96,6 @@ def extract_prediction_heads(
     if (
         checkpoint.get("format") != CHECKPOINT_FORMAT
         or checkpoint.get("stage") != "cns"
-        or int(checkpoint.get("update", -1)) != int(checkpoint.get("recipe", {}).get("cns_updates", -2))
         or result.get("completed") is not True
         or int(result.get("cns", {}).get("updates", -1)) != int(checkpoint["update"])
         or not isinstance(checkpoint.get("heads"), dict)
@@ -153,12 +153,49 @@ def _tensor(value: np.ndarray, device: torch.device) -> torch.Tensor:
     return torch.as_tensor(np.ascontiguousarray(value), device=device)
 
 
+def _collection_service_identity(path: Path) -> tuple[str, str, str]:
+    """Authenticate collection-time V4/V5 bytes without loading their tensors.
+
+    Recorded latents are excluded from V5 fitting.  The historical service is
+    therefore needed only to bind each physical chronology to its exact file
+    and adapter identities; constructing a V4 model under the V5 ABI would be
+    both unnecessary and invalid.
+    """
+    path = path.expanduser().resolve()
+    file_sha = sha256_file(path)
+    with path.open("rb") as stream:
+        magic = stream.read(8)
+        if magic not in (b"CHCNS4\0\0", b"CHCNS5\0\0"):
+            raise ValueError("collection service must be a CHCNS4 or CHCNS5 artifact")
+        length_bytes = stream.read(4)
+        if len(length_bytes) != 4:
+            raise ValueError("truncated collection service metadata")
+        length = struct.unpack("<I", length_bytes)[0]
+        if not 2 <= length <= 16 * 1024 * 1024 or path.stat().st_size <= 12 + length:
+            raise ValueError("collection service metadata length differs")
+        payload = stream.read(length)
+        if len(payload) != length:
+            raise ValueError("truncated collection service metadata")
+        metadata = json.loads(payload)
+    expected_format = (
+        "chreatures-cns-service-v4"
+        if magic[5:6] == b"4" else "chreatures-cns-service-v5"
+    )
+    adapter = metadata.get("adapter_sha256")
+    if metadata.get("format") != expected_format or not isinstance(adapter, str):
+        raise ValueError("collection service metadata differs")
+    if len(adapter) != 64 or any(c not in "0123456789abcdef" for c in adapter):
+        raise ValueError("collection service adapter identity differs")
+    return file_sha, adapter, expected_format
+
+
 def _cns_control_step(
     model: AnatomicalCNS, optic: torch.Tensor, body: torch.Tensor,
-    context: torch.Tensor, state: CNSState | None,
+    context: torch.Tensor, state: CNSState | None, *,
+    reset: torch.Tensor | None = None, active: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, CNSState]:
     """Advance one control tick with two internal dt/2 rate integrations."""
-    return model(optic, body, context, state, dt=0.01)
+    return model(optic, body, context, state, dt=0.01, reset=reset, active=active)
 
 
 def body_statistics(episodes: Iterable[Episode]) -> tuple[np.ndarray, np.ndarray]:
@@ -187,17 +224,22 @@ def replay_episode(
     collect_motor_rates: bool = False,
 ) -> tuple[np.ndarray, np.ndarray | None]:
     state: CNSState | None = None
-    latents = np.empty((TICKS + 1, RESIDENTS, LATENT), np.float32)
+    ticks = int(episode.delivered_context.shape[0])
+    latents = np.empty((ticks + 1, RESIDENTS, LATENT), np.float32)
     rates = (
-        np.empty((TICKS + 1, RESIDENTS, model.motor_rows.numel()), np.float32)
+        np.empty((ticks + 1, RESIDENTS, model.motor_rows.numel()), np.float32)
         if collect_motor_rates else None
     )
-    for tick in range(TICKS + 1):
-        context_tick = min(tick, TICKS - 1)
+    for tick in range(ticks + 1):
+        context_tick = min(tick, ticks - 1)
         optic = _tensor(episode.optic_rgb[tick], device)
         body = _tensor(episode.body_afferents[tick], device)
         context = _tensor(episode.delivered_context[context_tick], device)
-        z, _, state = _cns_control_step(model, optic, body, context, state)
+        z, _, state = _cns_control_step(
+            model, optic, body, context, state,
+            reset=_tensor(episode.reset[tick], device).bool(),
+            active=_tensor(episode.active[tick], device).bool(),
+        )
         latents[tick] = z.cpu().numpy()
         if rates is not None:
             rates[tick] = model.selected_activity(state)["motor"].cpu().numpy()
@@ -285,44 +327,6 @@ def preserve_parent_normalization(
     }
 
 
-@torch.inference_mode()
-def validate_collected_parent_cache(
-    model: AnatomicalCNS, episodes: tuple[Episode, ...], device: torch.device,
-    ticks: int = 16,
-) -> dict[str, Any]:
-    """Confirm collection timing/service before changing trainable interfaces."""
-    maxima: list[float] = []
-    for episode in episodes:
-        state: CNSState | None = None
-        error = 0.0
-        for tick in range(min(ticks, TICKS + 1)):
-            context_tick = min(tick, TICKS - 1)
-            z, _, state = _cns_control_step(
-                model,
-                _tensor(episode.optic_rgb[tick], device),
-                _tensor(episode.body_afferents[tick], device),
-                _tensor(episode.delivered_context[context_tick], device),
-                state,
-            )
-            error = max(
-                error,
-                float(np.max(np.abs(z.cpu().numpy() - episode.collected_latent[tick]))),
-            )
-        maxima.append(error)
-    maximum = max(maxima, default=0.0)
-    if maximum > 5e-5:
-        raise RuntimeError(
-            f"collected parent latent/timing replay differs (max {maximum:.9g})"
-        )
-    return {
-        "ticks_per_world": ticks,
-        "world_max_abs_error": maxima,
-        "max_abs_error": maximum,
-        "tolerance": 5e-5,
-        "cadence": "one dt=.01 forward with two internal dt/2 rate integrations",
-    }
-
-
 class PhysicalPredictionHeads(nn.Module):
     """Training-only action-conditioned consequences from CNS latent state."""
 
@@ -354,7 +358,9 @@ class PhysicalPredictionHeads(nn.Module):
 @dataclass(frozen=True)
 class Recipe:
     seed: int
-    cns_updates: int
+    cns_epochs: int
+    tbptt_steps: int
+    worlds_per_batch: int
     resident_updates: int
     batch_size: int
     burn_in: int
@@ -369,6 +375,7 @@ class Recipe:
     max_grad_norm: float
     checkpoint_every: int
     gradient_checkpoint_steps: bool
+    latent_cache_worlds: int
     reset_prefix_fraction: float
     reset_sequence: int
     viability_weighted_motor: bool
@@ -405,23 +412,70 @@ def configure_cns(model: AnatomicalCNS) -> dict[str, list[nn.Parameter]]:
     return groups
 
 
-def _stack_windows(
-    episodes: tuple[Episode, ...], windows: tuple[Window, ...], device: torch.device
+def _stack_episode_segment(
+    episodes: tuple[Episode, ...], start: int, stop: int, device: torch.device,
 ) -> dict[str, torch.Tensor | int | bool]:
-    burn_ins = {window.burn_in for window in windows}
-    if len(burn_ins) != 1:
-        raise ValueError("a recurrent batch must use one causal burn-in length")
-    rows = [slice_window(episodes[window.episode_index], window) for window in windows]
+    """Stack a contiguous segment without breaking any world's private state."""
+    lengths = {int(episode.delivered_context.shape[0]) for episode in episodes}
+    if not episodes or len(lengths) != 1 or not 0 <= start < stop <= next(iter(lengths)):
+        raise ValueError("invalid chronological whole-world segment")
     result: dict[str, torch.Tensor | int | bool] = {
-        "burn_in": windows[0].burn_in,
-        "reset_prefix": all(window.start == 0 and window.burn_in == 0 for window in windows),
+        "burn_in": 0,
+        "reset_prefix": start == 0,
     }
-    for key in (
-        "optic_rgb", "body_afferents", "delivered_context", "delivered_motor", "teacher_motor",
-        "teacher_valid", "target_outcome", "target_reward", "target_success", "target_failure",
-    ):
-        result[key] = _tensor(np.stack([row[key] for row in rows], axis=1), device)
+    state_members = ("optic_rgb", "body_afferents", "reset", "active")
+    transition_members = (
+        "delivered_context", "delivered_motor", "teacher_motor", "teacher_valid",
+        "outcome", "reward", "success", "failure",
+    )
+    for key in state_members:
+        value = np.concatenate(
+            [getattr(episode, key)[start : stop + 1] for episode in episodes], axis=1
+        )
+        result[key] = _tensor(value, device)
+    for key in transition_members:
+        value = np.concatenate(
+            [getattr(episode, key)[start:stop] for episode in episodes], axis=1
+        )
+        target = {
+            "outcome": "target_outcome", "reward": "target_reward",
+            "success": "target_success", "failure": "target_failure",
+        }.get(key, key)
+        result[target] = _tensor(value, device)
+    # The terminal observation is a one-step target for the preceding
+    # transition.  When another transition exists, condition that lookahead on
+    # its actual recorded context.  At world end the final delivered context is
+    # the only causal value available.
+    context_rows = []
+    for episode in episodes:
+        ticks = int(episode.delivered_context.shape[0])
+        values = episode.delivered_context[start : min(stop + 1, ticks)]
+        if values.shape[0] == stop - start:
+            values = np.concatenate((values, values[-1:]), axis=0)
+        context_rows.append(values)
+    result["cns_context"] = _tensor(np.concatenate(context_rows, axis=1), device)
+    result["reset"] = result["reset"].bool()
+    result["active"] = result["active"].bool()
     return result
+
+
+def _chronological_cohorts(
+    episodes: tuple[Episode, ...], width: int, rng: np.random.Generator | None = None,
+) -> tuple[tuple[Episode, ...], ...]:
+    """Group complete equal-length worlds; never pad or fabricate transitions."""
+    by_length: dict[int, list[Episode]] = {}
+    for episode in episodes:
+        by_length.setdefault(int(episode.delivered_context.shape[0]), []).append(episode)
+    cohorts: list[tuple[Episode, ...]] = []
+    length_order = sorted(by_length)
+    if rng is not None:
+        rng.shuffle(length_order)
+    for ticks in length_order:
+        rows = by_length[ticks]
+        if rng is not None:
+            rows = [rows[int(index)] for index in rng.permutation(len(rows))]
+        cohorts.extend(tuple(rows[offset : offset + width]) for offset in range(0, len(rows), width))
+    return tuple(cohorts)
 
 
 def _motor_loss(
@@ -501,37 +555,49 @@ def cns_window_loss(
     counterfactual_stability_weight: float = 0.0,
     motor_decoder_norm_weight: float = 0.0,
     cold_neutral_weight: float = 0.0,
-) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    initial_state: CNSState | None = None,
+) -> tuple[torch.Tensor, dict[str, torch.Tensor], CNSState]:
     tensor_arrays = {key: value for key, value in arrays.items() if isinstance(value, torch.Tensor)}
-    state: CNSState | None = None
+    state: CNSState | None = initial_state
     with torch.no_grad():
         for tick in range(burn_in):
             _, _, state = _cns_control_step(model,
                 tensor_arrays["optic_rgb"][tick], tensor_arrays["body_afferents"][tick],
                 tensor_arrays["delivered_context"][tick], state,
+                reset=tensor_arrays["reset"][tick], active=tensor_arrays["active"][tick],
             )
     state = None if state is None else state.detach()
     sequence = tensor_arrays["delivered_context"].shape[0] - burn_in
     latent, motor, decoder_only_motor = [], [], []
+    carry_state: CNSState | None = None
     for tick in range(burn_in, burn_in + sequence + 1):
-        context_tick = min(tick, burn_in + sequence - 1)
+        context_tick = tick - burn_in
         optic_tick = tensor_arrays["optic_rgb"][tick]
         body_tick = tensor_arrays["body_afferents"][tick]
-        context_value = tensor_arrays["delivered_context"][context_tick]
+        context_value = tensor_arrays["cns_context"][context_tick]
+        if tick == burn_in + sequence:
+            # The lookahead produces z[t+1] for the final prediction target.
+            # Carry the pre-lookahead state so the adjacent TBPTT segment
+            # processes this boundary observation exactly once.
+            carry_state = state
         if torch.is_grad_enabled() and state is not None:
-            def recurrent_step(optic, body, context, *fields):
+            def recurrent_step(optic, body, context, reset, active, *fields):
                 next_z, next_motor, next_state = _cns_control_step(model,
-                    optic, body, context, CNSState(*fields)
+                    optic, body, context, CNSState(*fields), reset=reset, active=active,
                 )
                 return (next_z, next_motor, *next_state.fields())
 
             output = checkpoint(
                 recurrent_step, optic_tick, body_tick, context_value,
+                tensor_arrays["reset"][tick], tensor_arrays["active"][tick],
                 *state.fields(), use_reentrant=False,
             )
             z, m, state = output[0], output[1], CNSState(*output[2:])
         else:
-            z, m, state = _cns_control_step(model, optic_tick, body_tick, context_value, state)
+            z, m, state = _cns_control_step(
+                model, optic_tick, body_tick, context_value, state,
+                reset=tensor_arrays["reset"][tick], active=tensor_arrays["active"][tick],
+            )
         latent.append(z)
         motor.append(m)
         decoder_only_motor.append(_decoder_only_motor(model, state))
@@ -642,7 +708,7 @@ def cns_window_loss(
         + motor_decoder_norm_weight * terms["motor_decoder_penalty"]
         + cold_neutral_weight * terms["cold_neutral"]
     )
-    return total, terms
+    return total, terms, state if carry_state is None else carry_state
 
 
 @torch.inference_mode()
@@ -654,38 +720,36 @@ def evaluate_cns(
     recipe: Recipe,
     device: torch.device,
 ) -> dict[str, float]:
-    sampler = _cns_sampler(corpus, recipe, seed=17, split=split)
+    if split == "train":
+        episodes = corpus.train
+    elif split == "validation-worlds":
+        episodes = corpus.validation
+    else:
+        raise ValueError("heldout worlds are evaluated through a validation-only view")
     rows: list[dict[str, float]] = []
     model.eval(); heads.eval()
-    for windows in (sampler.sample(recipe.batch_size) for _ in range(8)):
-        arrays = _stack_windows(sampler.episodes, windows, device)
-        total, terms = cns_window_loss(
-            model, heads, arrays, int(arrays["burn_in"]),
-            viability_weighted_motor=recipe.viability_weighted_motor,
-            motor_slew_weight=recipe.motor_slew_weight,
-            counterfactual_stability_weight=recipe.counterfactual_stability_weight,
-            motor_decoder_norm_weight=recipe.motor_decoder_norm_weight,
-            cold_neutral_weight=recipe.cold_neutral_weight,
-        )
-        rows.append({"total": float(total), **{key: float(value) for key, value in terms.items()}})
+    for cohort in _chronological_cohorts(episodes, recipe.worlds_per_batch):
+        state: CNSState | None = None
+        ticks = int(cohort[0].delivered_context.shape[0])
+        for start in range(0, ticks, recipe.tbptt_steps):
+            stop = min(start + recipe.tbptt_steps, ticks)
+            arrays = _stack_episode_segment(cohort, start, stop, device)
+            total, terms, state = cns_window_loss(
+                model, heads, arrays, 0,
+                viability_weighted_motor=recipe.viability_weighted_motor,
+                motor_slew_weight=recipe.motor_slew_weight,
+                counterfactual_stability_weight=recipe.counterfactual_stability_weight,
+                motor_decoder_norm_weight=recipe.motor_decoder_norm_weight,
+                cold_neutral_weight=recipe.cold_neutral_weight,
+                initial_state=state,
+            )
+            state = state.detach()
+            rows.append({
+                "total": float(total),
+                **{key: float(value) for key, value in terms.items()},
+            })
     model.train(); heads.train()
     return {name: float(np.mean([row[name] for row in rows])) for name in rows[0]}
-
-
-def _cns_sampler(
-    corpus: Corpus, recipe: Recipe, *, seed: int, split: str,
-) -> BalancedWindowSampler | MixedCausalSampler:
-    if recipe.reset_prefix_fraction <= 0:
-        return BalancedWindowSampler(
-            corpus, burn_in=recipe.burn_in, optimize=recipe.sequence,
-            seed=seed, split=split,
-        )
-    return MixedCausalSampler(
-        corpus, burn_in=recipe.burn_in, optimize=recipe.sequence,
-        reset_optimize=recipe.reset_sequence,
-        reset_fraction=recipe.reset_prefix_fraction,
-        seed=seed, split=split,
-    )
 
 
 def _service_kwargs(parent: dict[str, Any], calibration_sha: str, provenance: dict[str, Any]) -> dict[str, Any]:
@@ -722,9 +786,57 @@ def _save_stage_checkpoint(
     })
 
 
+def _rotate_stage_checkpoint(
+    run: Path, pointer_name: str, path: Path, stage: str, update: int,
+    recipe: Recipe, identity: dict[str, Any], model: nn.Module,
+    optimizer: torch.optim.Optimizer, heads: nn.Module | None = None,
+) -> dict[str, Any]:
+    """Publish one recoverable optimizer state, then remove its predecessor."""
+    pointer_path = run / pointer_name
+    previous = None
+    if pointer_path.exists():
+        previous = json.loads(pointer_path.read_text()).get("path")
+    _save_stage_checkpoint(path, stage, update, recipe, identity, model, optimizer, heads)
+    receipt = {"update": update, "path": path.name, "sha256": sha256_file(path)}
+    atomic_json(pointer_path, receipt)
+    if isinstance(previous, str) and previous != path.name:
+        (run / previous).unlink(missing_ok=True)
+    return receipt
+
+
+@torch.no_grad()
+def _plastic_state_metrics(model: AnatomicalCNS, state: CNSState) -> dict[str, float | int]:
+    """Compact evidence that private V5 synapses survive each TBPTT boundary."""
+    efficacy = state.efficacy_deviation.detach()
+    eligibility = state.eligibility.detach()
+    values = torch.stack((
+        efficacy.min(), efficacy.max(), eligibility.min(), eligibility.max(),
+        (efficacy != 0).sum().to(efficacy.dtype),
+        (eligibility != 0).sum().to(efficacy.dtype),
+    )).cpu().tolist()
+    result: dict[str, float | int] = {
+        "efficacy_deviation_min": float(values[0]),
+        "efficacy_deviation_max": float(values[1]),
+        "eligibility_min": float(values[2]),
+        "eligibility_max": float(values[3]),
+        "efficacy_nonzero": int(values[4]),
+        "eligibility_nonzero": int(values[5]),
+    }
+    ptr = model.plastic_target_ptr.detach().cpu().tolist()
+    for target in range(len(ptr) - 1):
+        section = efficacy[int(ptr[target]) : int(ptr[target + 1])]
+        result[f"efficacy_target_{target}_mean"] = float(section.mean().cpu())
+        result[f"efficacy_target_{target}_sum"] = float(section.sum().cpu())
+    return result
+
+
+@torch.inference_mode()
 def _cache_latents(
-    model: AnatomicalCNS, corpus: Corpus, device: torch.device, root: Path
+    model: AnatomicalCNS, corpus: Corpus, device: torch.device, root: Path,
+    *, worlds_per_batch: int,
 ) -> dict[str, np.ndarray]:
+    if worlds_per_batch not in (1, 2, 4):
+        raise ValueError("latent replay supports one, two, or four whole B4 worlds")
     root.mkdir(parents=True, exist_ok=False)
     result: dict[str, np.ndarray] = {}
     episodes = (*corpus.train, *corpus.validation, *corpus.heldout)
@@ -732,17 +844,62 @@ def _cache_latents(
     for episode in episodes:
         world = int(episode.metadata["world_index"])
         world_counts[world] = world_counts.get(world, 0) + 1
-    for episode in episodes:
-        latent, _ = replay_episode(model, episode, device)
-        world = int(episode.metadata["world_index"])
-        suffix = "" if world_counts[world] == 1 else f"-{episode.sha256[:12]}"
-        path = root / f"world-{world:02d}{suffix}.npy"
-        temporary = path.with_name(f".{path.name}.tmp")
-        with temporary.open("wb") as stream:
-            np.save(stream, latent, allow_pickle=False)
-            stream.flush(); os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        result[episode.sha256] = np.load(path, mmap_mode="r")
+    began = time.monotonic()
+    rows: list[dict[str, Any]] = []
+    for batch_index, cohort in enumerate(_chronological_cohorts(episodes, worlds_per_batch)):
+        # State remains private to each stable world-major/resident-major row;
+        # batching changes only GPU occupancy, not the recurrent chronology.
+        state: CNSState | None = None
+        ticks = int(cohort[0].delivered_context.shape[0])
+        latent = np.empty((len(cohort), ticks + 1, RESIDENTS, LATENT), np.float32)
+        for tick in range(ticks + 1):
+            context_tick = min(tick, ticks - 1)
+            optic = _tensor(np.concatenate(
+                [episode.optic_rgb[tick] for episode in cohort], axis=0
+            ), device)
+            body = _tensor(np.concatenate(
+                [episode.body_afferents[tick] for episode in cohort], axis=0
+            ), device)
+            context = _tensor(np.concatenate(
+                [episode.delivered_context[context_tick] for episode in cohort], axis=0
+            ), device)
+            reset = _tensor(np.concatenate(
+                [episode.reset[tick] for episode in cohort], axis=0
+            ), device).bool()
+            active = _tensor(np.concatenate(
+                [episode.active[tick] for episode in cohort], axis=0
+            ), device).bool()
+            z, _, state = _cns_control_step(
+                model, optic, body, context, state, reset=reset, active=active,
+            )
+            latent[:, tick] = z.reshape(len(cohort), RESIDENTS, LATENT).cpu().numpy()
+        for cohort_index, episode in enumerate(cohort):
+            world = int(episode.metadata["world_index"])
+            suffix = "" if world_counts[world] == 1 else f"-{episode.sha256[:12]}"
+            path = root / f"world-{world:02d}{suffix}.npy"
+            temporary = path.with_name(f".{path.name}.tmp")
+            with temporary.open("wb") as stream:
+                np.save(stream, latent[cohort_index], allow_pickle=False)
+                stream.flush(); os.fsync(stream.fileno())
+            os.replace(temporary, path)
+            result[episode.sha256] = np.load(path, mmap_mode="r")
+            rows.append({
+                "episode_sha256": episode.sha256,
+                "file": path.name,
+                "sha256": sha256_file(path),
+                "batch_index": batch_index,
+                "batch_row": cohort_index,
+            })
+    atomic_json(root.parent / "latent-cache-replay.json", {
+        "format": "chreatures-actual-fly-final-latent-replay-v1",
+        "worlds_per_batch": worlds_per_batch,
+        "residents_per_world": RESIDENTS,
+        "maximum_recurrent_batch": worlds_per_batch * RESIDENTS,
+        "episodes": rows,
+        "elapsed_seconds": time.monotonic() - began,
+        "cadence": "one dt=.01 forward with two internal dt/2 rate integrations",
+        "row_order": "stable world-major then resident-major; private nine-field CNS state",
+    })
     return result
 
 
@@ -925,18 +1082,16 @@ def train(arguments: argparse.Namespace) -> None:
         [service_path] if arguments.collection_service is None
         else [path.expanduser().resolve() for path in arguments.collection_service]
     )
-    collection_services: dict[str, tuple[dict[str, np.ndarray], dict[str, Any], Path]] = {}
+    collection_services: dict[str, tuple[str, str, Path]] = {}
     for path in collection_service_paths:
-        sha = sha256_file(path)
+        sha, adapter, service_format = _collection_service_identity(path)
         if sha in collection_services:
             raise RuntimeError("collection CNS service was supplied more than once")
-        if sha == parent_service_sha:
-            arrays, metadata = parent_arrays, parent_metadata
-        else:
-            arrays, metadata = load_service_artifact(path)
-        collection_services[sha] = (arrays, metadata, path)
-    continuing = set(collection_services) != {parent_service_sha}
-    if continuing and not arguments.preserve_parent_normalization:
+        if sha == parent_service_sha and adapter != parent_metadata["adapter_sha256"]:
+            raise RuntimeError("train-start service adapter identity differs")
+        collection_services[sha] = (adapter, service_format, path)
+    collection_service_differs = set(collection_services) != {parent_service_sha}
+    if collection_service_differs and not arguments.preserve_parent_normalization:
         raise RuntimeError(
             "continuation from a service other than the collection service requires "
             "--preserve-parent-normalization"
@@ -945,7 +1100,7 @@ def train(arguments: argparse.Namespace) -> None:
     for episode in all_episodes:
         service_sha = episode.metadata["cns_service_sha256"]
         record = collection_services.get(service_sha)
-        if record is None or episode.metadata["cns_adapter_sha256"] != record[1]["adapter_sha256"]:
+        if record is None or episode.metadata["cns_adapter_sha256"] != record[0]:
             raise RuntimeError("corpus was not collected through a supplied collection CNS service")
     used_collection_services = {
         episode.metadata["cns_service_sha256"] for episode in all_episodes
@@ -958,7 +1113,9 @@ def train(arguments: argparse.Namespace) -> None:
     random.seed(arguments.seed); np.random.seed(arguments.seed); torch.manual_seed(arguments.seed)
     recipe = Recipe(
         seed=arguments.seed,
-        cns_updates=arguments.cns_updates,
+        cns_epochs=arguments.cns_epochs,
+        tbptt_steps=arguments.tbptt_steps,
+        worlds_per_batch=arguments.worlds_per_batch,
         resident_updates=arguments.resident_updates,
         batch_size=arguments.batch_size,
         burn_in=arguments.burn_in,
@@ -973,6 +1130,7 @@ def train(arguments: argparse.Namespace) -> None:
         max_grad_norm=arguments.max_grad_norm,
         checkpoint_every=arguments.checkpoint_every,
         gradient_checkpoint_steps=True,
+        latent_cache_worlds=arguments.latent_cache_worlds,
         reset_prefix_fraction=arguments.reset_prefix_fraction,
         reset_sequence=arguments.reset_sequence,
         viability_weighted_motor=arguments.viability_weighted_motor,
@@ -992,10 +1150,10 @@ def train(arguments: argparse.Namespace) -> None:
         "parent_service_sha256": parent_service_sha,
         "parent_adapter_sha256": parent_metadata["adapter_sha256"],
         "collection_services": [
-            {"file_sha256": sha, "adapter_sha256": metadata["adapter_sha256"]}
-            for sha, (_, metadata, _) in sorted(collection_services.items())
+            {"file_sha256": sha, "adapter_sha256": adapter, "format": service_format}
+            for sha, (adapter, service_format, _) in sorted(collection_services.items())
         ],
-        "continuation_from_trained_parent": continuing,
+        "collection_service_differs_from_train_start": collection_service_differs,
         "normalization_mode": (
             "inherited-from-train-start-service"
             if arguments.preserve_parent_normalization else "estimated-from-current-train-worlds"
@@ -1004,6 +1162,21 @@ def train(arguments: argparse.Namespace) -> None:
         "parent_prediction_heads_sha256": (
             None if arguments.prediction_heads is None else sha256_file(arguments.prediction_heads)
         ),
+        "cns_state_training": {
+            "chronology": "whole worlds in contiguous TBPTT segments",
+            "private_state_fields": [
+                "rates", "adaptation", "support", "release", "mod_da", "mod_oa",
+                "mod_ht", "efficacy_deviation", "eligibility",
+            ],
+            "reset": "all nine fields only at recorded episode birth",
+            "boundary": "all nine fields detached and carried between adjacent segments",
+            "optimizer_boundary_assumption": (
+                "each carried boundary state was produced by the immediately preceding "
+                "parameter version and is treated as fixed after that optimizer step"
+            ),
+            "newborn_each_epoch": True,
+            "v4_state_migration": False,
+        },
     }
     progress: dict[str, Any] = {
         "format": TRAINING_FORMAT, "status": "normalization", "stage": "cns",
@@ -1011,22 +1184,22 @@ def train(arguments: argparse.Namespace) -> None:
     }
     atomic_json(run / "progress.json", progress)
 
-    collection_cache_check = {"services": []}
-    for service_sha, (collection_arrays, collection_metadata, _) in sorted(collection_services.items()):
+    collection_cache_check = {
+        "services": [],
+        "recorded_latent_use": "identity/timing audit only; V4 collected latents are not V5 training inputs",
+    }
+    for service_sha, (collection_adapter, collection_format, _) in sorted(collection_services.items()):
         episodes = tuple(
             episode for episode in all_episodes
             if episode.metadata["cns_service_sha256"] == service_sha
         )
-        collection_model = AnatomicalCNS(collection_arrays, device=device).eval()
-        check = validate_collected_parent_cache(collection_model, episodes, device)
         collection_cache_check["services"].append({
             "file_sha256": service_sha,
-            "adapter_sha256": collection_metadata["adapter_sha256"],
+            "adapter_sha256": collection_adapter,
             "worlds": len(episodes),
-            **check,
+            "format": collection_format,
+            "cache_status": "authenticated recorded V4 history; excluded from V5 model inputs",
         })
-        del collection_model
-        torch.cuda.empty_cache()
     atomic_json(run / "collection-cache-check.json", collection_cache_check)
 
     mutable_arrays = {name: np.asarray(value) for name, value in parent_arrays.items()}
@@ -1066,52 +1239,81 @@ def train(arguments: argparse.Namespace) -> None:
         weight_decay=recipe.weight_decay,
     )
     parameters = [parameter for group in optimizer.param_groups for parameter in group["params"]]
-    train_sampler = _cns_sampler(corpus, recipe, seed=recipe.seed, split="train")
+    if recipe.cns_epochs < 1 or recipe.tbptt_steps < 1:
+        raise ValueError("chronological CNS training requires positive epochs and TBPTT length")
+    if recipe.worlds_per_batch not in (1, 2, 4):
+        raise ValueError("chronological CNS training supports W1, W2, or W4")
+    base_cohorts = _chronological_cohorts(corpus.train, recipe.worlds_per_batch)
+    planned_cns_segments = recipe.cns_epochs * sum(
+        math.ceil(int(cohort[0].delivered_context.shape[0]) / recipe.tbptt_steps)
+        for cohort in base_cohorts
+    )
     validation_before = evaluate_cns(
         model, heads, corpus, "validation-worlds", recipe, device
     )
     progress.update(
         status="running", normalization=normalization,
         collection_cache_check=collection_cache_check, validation_before=validation_before,
+        planned_cns_segments=planned_cns_segments,
     )
     atomic_json(run / "progress.json", progress)
     began = time.monotonic()
     cns_history: list[dict[str, float]] = []
-    for update in range(1, recipe.cns_updates + 1):
-        windows = train_sampler.sample(recipe.batch_size)
-        # The shared stack includes the actually delivered physical cause for
-        # action-conditioned prediction in both training and validation.
-        batch = _stack_windows(train_sampler.episodes, windows, device)
-        optimizer.zero_grad(set_to_none=True)
-        total, terms = cns_window_loss(
-            model, heads, batch, int(batch["burn_in"]),
-            viability_weighted_motor=recipe.viability_weighted_motor,
-            motor_slew_weight=recipe.motor_slew_weight,
-            counterfactual_stability_weight=recipe.counterfactual_stability_weight,
-            motor_decoder_norm_weight=recipe.motor_decoder_norm_weight,
-            cold_neutral_weight=recipe.cold_neutral_weight,
-        )
-        if not torch.isfinite(total):
-            raise RuntimeError("non-finite full-CNS physical loss")
-        total.backward()
-        gradient = float(torch.nn.utils.clip_grad_norm_(parameters, recipe.max_grad_norm))
-        if not math.isfinite(gradient):
-            raise RuntimeError("non-finite full-CNS gradient")
-        optimizer.step()
-        row = {"update": update, "total": float(total.detach()), "gradient_norm": gradient}
-        row.update({name: float(value.detach()) for name, value in terms.items()})
-        cns_history.append(row)
-        append_jsonl(run / "cns-history.jsonl", row)
-        progress.update(update=update, elapsed_seconds=time.monotonic() - began, last=row)
-        atomic_json(run / "progress.json", progress)
-        if update % recipe.checkpoint_every == 0 or update == recipe.cns_updates:
-            checkpoint = run / f"cns-checkpoint-{update:06d}.pt"
-            _save_stage_checkpoint(checkpoint, "cns", update, recipe, identity, model, optimizer, heads)
-            atomic_json(run / "last-cns-checkpoint.json", {
-                "update": update, "path": checkpoint.name, "sha256": sha256_file(checkpoint)
-            })
-        if update <= 4 or update % 16 == 0:
-            print(json.dumps({"stage": "cns", **row}), flush=True)
+    update = 0
+    order_rng = np.random.default_rng(recipe.seed)
+    for epoch in range(recipe.cns_epochs):
+        for cohort_index, cohort in enumerate(_chronological_cohorts(
+            corpus.train, recipe.worlds_per_batch, order_rng
+        )):
+            state: CNSState | None = None
+            ticks = int(cohort[0].delivered_context.shape[0])
+            for start in range(0, ticks, recipe.tbptt_steps):
+                stop = min(start + recipe.tbptt_steps, ticks)
+                batch = _stack_episode_segment(cohort, start, stop, device)
+                optimizer.zero_grad(set_to_none=True)
+                total, terms, state = cns_window_loss(
+                    model, heads, batch, 0,
+                    viability_weighted_motor=recipe.viability_weighted_motor,
+                    motor_slew_weight=recipe.motor_slew_weight,
+                    counterfactual_stability_weight=recipe.counterfactual_stability_weight,
+                    motor_decoder_norm_weight=recipe.motor_decoder_norm_weight,
+                    cold_neutral_weight=recipe.cold_neutral_weight,
+                    initial_state=state,
+                )
+                if not torch.isfinite(total):
+                    raise RuntimeError("non-finite full-CNS physical loss")
+                total.backward()
+                gradient = float(torch.nn.utils.clip_grad_norm_(parameters, recipe.max_grad_norm))
+                if not math.isfinite(gradient):
+                    raise RuntimeError("non-finite full-CNS gradient")
+                optimizer.step()
+                # This is explicit chronological TBPTT: all nine private fields
+                # continue, while the boundary state was produced by the
+                # immediately preceding parameter version.
+                state = state.detach()
+                update += 1
+                row = {
+                    "update": update, "epoch": epoch + 1,
+                    "cohort": cohort_index,
+                    "start_tick": start, "stop_tick": stop,
+                    "total": float(total.detach()), "gradient_norm": gradient,
+                }
+                row.update({name: float(value.detach()) for name, value in terms.items()})
+                row.update(_plastic_state_metrics(model, state))
+                cns_history.append(row)
+                append_jsonl(run / "cns-history.jsonl", row)
+                progress.update(update=update, elapsed_seconds=time.monotonic() - began, last=row)
+                atomic_json(run / "progress.json", progress)
+                if update % recipe.checkpoint_every == 0 or update == planned_cns_segments:
+                    checkpoint = run / f"cns-checkpoint-{update:06d}.pt"
+                    _rotate_stage_checkpoint(
+                        run, "last-cns-checkpoint.json", checkpoint, "cns", update,
+                        recipe, identity, model, optimizer, heads,
+                    )
+                if update <= 4 or update % 16 == 0:
+                    print(json.dumps({"stage": "cns", **row}), flush=True)
+    if update != planned_cns_segments:
+        raise RuntimeError("chronological CNS segment count differs from frozen recipe")
     validation_after = evaluate_cns(model, heads, corpus, "validation-worlds", recipe, device)
 
     exported = export_arrays(model, mutable_arrays)
@@ -1151,7 +1353,7 @@ def train(arguments: argparse.Namespace) -> None:
         "format": PREDICTION_HEAD_FORMAT,
         "child_service_sha256": service_receipt["file_sha256"],
         "child_adapter_sha256": service_receipt["metadata"]["adapter_sha256"],
-        "source_checkpoint_sha256": sha256_file(run / f"cns-checkpoint-{recipe.cns_updates:06d}.pt"),
+        "source_checkpoint_sha256": sha256_file(run / f"cns-checkpoint-{planned_cns_segments:06d}.pt"),
         "source_revision": identity["source_revision"],
         "parent_prediction_heads": prediction_heads_parent,
         "state": heads.state_dict(),
@@ -1167,7 +1369,10 @@ def train(arguments: argparse.Namespace) -> None:
     # Recompute every latent from the final service before private-context
     # fitting.  This avoids training the resident against a stale parent cache.
     model.eval()
-    latent_cache = _cache_latents(model, corpus, device, run / "latent-cache")
+    latent_cache = _cache_latents(
+        model, corpus, device, run / "latent-cache",
+        worlds_per_batch=recipe.latent_cache_worlds,
+    )
     resident_receipt = None
     resident_history: list[dict[str, float]] = []
     resident_validation_before = resident_validation_after = resident_heldout = None
@@ -1228,13 +1433,10 @@ def train(arguments: argparse.Namespace) -> None:
             atomic_json(run / "progress.json", progress)
             if update % recipe.checkpoint_every == 0 or update == recipe.resident_updates:
                 checkpoint = run / f"resident-checkpoint-{update:06d}.pt"
-                _save_stage_checkpoint(
-                    checkpoint, "resident", update, recipe, identity,
-                    resident, resident_optimizer,
+                _rotate_stage_checkpoint(
+                    run, "last-resident-checkpoint.json", checkpoint, "resident", update,
+                    recipe, identity, resident, resident_optimizer,
                 )
-                atomic_json(run / "last-resident-checkpoint.json", {
-                    "update": update, "path": checkpoint.name, "sha256": sha256_file(checkpoint)
-                })
             if update <= 4 or update % 16 == 0:
                 print(json.dumps({"stage": "resident", **row}), flush=True)
         resident_validation_after = evaluate_resident(
@@ -1302,6 +1504,27 @@ def train(arguments: argparse.Namespace) -> None:
             "service": service_receipt,
             "updates": len(cns_history),
             "physical_prediction_heads": prediction_heads_receipt,
+            "private_plasticity": {
+                "state_fields": ["efficacy_deviation", "eligibility"],
+                "efficacy_bounds": [-0.8, 0.0],
+                "eligibility_bounds": [0.0, 1.0],
+                "minimum_observed_efficacy": min(
+                    row["efficacy_deviation_min"] for row in cns_history
+                ),
+                "maximum_observed_efficacy": max(
+                    row["efficacy_deviation_max"] for row in cns_history
+                ),
+                "minimum_observed_eligibility": min(
+                    row["eligibility_min"] for row in cns_history
+                ),
+                "maximum_observed_eligibility": max(
+                    row["eligibility_max"] for row in cns_history
+                ),
+                "final_segment": {
+                    key: value for key, value in cns_history[-1].items()
+                    if key.startswith("efficacy_") or key.startswith("eligibility_")
+                },
+            },
         },
         "resident": {
             "trained": resident_receipt is not None,
@@ -1362,7 +1585,9 @@ def parser() -> argparse.ArgumentParser:
     fit.add_argument("--source-revision", required=True)
     fit.add_argument("--device", default="cuda")
     fit.add_argument("--seed", type=int, default=20260908)
-    fit.add_argument("--cns-updates", type=int, default=512)
+    fit.add_argument("--cns-epochs", type=int, default=1)
+    fit.add_argument("--tbptt-steps", type=int, default=16)
+    fit.add_argument("--worlds-per-batch", type=int, choices=(1, 2, 4), default=4)
     fit.add_argument("--resident-updates", type=int, default=512)
     fit.add_argument("--batch-size", type=int, default=2)
     fit.add_argument("--burn-in", type=int, default=40)
@@ -1376,6 +1601,7 @@ def parser() -> argparse.ArgumentParser:
     fit.add_argument("--weight-decay", type=float, default=1e-5)
     fit.add_argument("--max-grad-norm", type=float, default=1.0)
     fit.add_argument("--checkpoint-every", type=int, default=64)
+    fit.add_argument("--latent-cache-worlds", type=int, choices=(1, 2, 4), default=4)
     fit.add_argument("--reset-prefix-fraction", type=float, default=0.0)
     fit.add_argument("--reset-sequence", type=int, default=40)
     fit.add_argument("--viability-weighted-motor", action="store_true")

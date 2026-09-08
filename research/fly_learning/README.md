@@ -60,10 +60,15 @@ actual author-body values: 84 position targets in radians and six adhesion
 values. This makes output scaling auditable without turning physical servo state
 into another controller input.
 
-Full-CNS training replays each chronology from its exact baseline. Recurrent
-state is cached by world and resident; sampled windows burn 40 preceding ticks
-before optimizing 64 ticks with checkpointed short segments. Sampling is
-balanced across curriculum phase, success/failure and teacher/CNS control source.
+V5 full-CNS training replays complete world chronologies from newborn state.
+Four physical worlds form one GPU cohort (sixteen residents), and checkpointed
+16-tick TBPTT segments carry all seven cellular fields plus private efficacy
+deviation and eligibility forward in stable world/resident order. Recorded
+reset and active masks apply on every tick; all nine fields reset only at an
+episode birth. A TBPTT boundary detaches the carried state after an optimizer
+step, so the receipt explicitly records that the next boundary state came from
+the immediately preceding parameter version. A new epoch begins new lives.
+No collected V4 latent is used as a V5 model input.
 The current motor boundary is MOTOR92: 84 named author joint-position targets,
 six adhesion outputs, pharyngeal pump and salivary drive, decoded only from all 815 motor neurons through
 body-part and side structural masks. It does not treat the 156 specifically
@@ -237,6 +242,41 @@ python -m research.fly_learning.train train \
   --cold-neutral-weight .5 \
   --cns-motor-lr 5e-4 --source-revision FULL_GIT_SHA --run NEW_RUN
 ```
+
+## V5 chronological developmental fit
+
+The first V5 fit starts from the initialized CNS whose physical neutral posture
+was stable, with newborn private synaptic state. It consumes complete train
+worlds from the bootstrap, nursery, short support-acquisition, and long
+supported-continuation corpora. Failed transitions remain prediction and
+consequence targets. The cold-neutral term is an explicit decoder prior on the
+first 84 normalized position outputs; it is not evidence of learned walking.
+
+```sh
+python -m research.fly_learning.train train \
+  --corpus BODY_BOOTSTRAP/corpus.json \
+  --nursery-corpus NURSERY/nursery-corpus.json \
+  --support-corpus SUPPORT/support-acquisition-corpus.json \
+  --supported-continuation-corpus CONTINUATION/supported-continuation-corpus.json \
+  --service CNS_V5/cns-service-v5-initialized.bin \
+  --collection-service CNS_V4/initialized-cns-v4.bin \
+  --collection-service CNS_V4/nursery-child.bin \
+  --parent-resident INITIALIZED_V5/browser-resident.npz \
+  --preserve-parent-normalization \
+  --cns-epochs 1 --worlds-per-batch 4 --tbptt-steps 16 \
+  --viability-weighted-motor --motor-slew-weight .2 \
+  --counterfactual-stability-weight .03 --motor-decoder-norm-weight .01 \
+  --cold-neutral-weight .5 --cns-motor-lr 5e-4 \
+  --resident-updates 512 --latent-cache-worlds 4 \
+  --source-revision FULL_GIT_SHA --run NEW_RUN
+```
+
+The trainer computes optimizer segment counts from the actual episode lengths,
+exports only the final and latest optimizer artifacts needed for recovery, then
+replays every split through the frozen child in W4 batches before fitting the
+private resident. Receipts report efficacy and eligibility bounds, nonzero
+counts, and per-target efficacy totals. Physical promotion still requires
+matched initialized, trained-zero-context, and trained-private-context worlds.
 
 M92 remains an absolute actuator target. Slew supervision shapes its temporal
 changes without adding an action integrator or a controller bypass. Reset
