@@ -74,6 +74,7 @@ def add_environment_assets(asset: ET.Element) -> None:
         "ecology/bark": "0.31 0.16 0.07 1",
         "ecology/moist": "0.07 0.25 0.31 0.72",
         "ecology/grain": "0.72 0.56 0.25 1",
+        "ecology/pod": "0.58 0.24 0.16 1",
     }
     for name, rgba in materials.items():
         ET.SubElement(asset, "material", name=name, rgba=rgba)
@@ -87,113 +88,38 @@ def collision_geom(parent: ET.Element, **attributes: str) -> ET.Element:
     return ET.SubElement(parent, "geom", attributes)
 
 
-def add_environment(worldbody: ET.Element, grains: int) -> list[tuple[str, list[float]]]:
-    collision_geom(
-        worldbody,
-        name="ecology/ground",
-        type="plane",
-        size="25 20 1",
-        material="ecology/soil",
-    )
-    collision_geom(
-        worldbody,
-        name="ecology/leaf-west",
-        type="ellipsoid",
-        pos="-8 -6 0.28",
-        size="4.2 2.2 0.22",
-        euler="0.03 -0.08 -0.25",
-        material="ecology/leaf",
-    )
-    collision_geom(
-        worldbody,
-        name="ecology/leaf-east",
-        type="ellipsoid",
-        pos="8 5 0.38",
-        size="4.8 2.0 0.24",
-        euler="-0.04 0.12 0.35",
-        material="ecology/leaf",
-    )
-    stem_points = [(-12.0, -4.0, 0.0), (-11.2, -3.4, 2.8), (-9.8, -2.0, 5.2), (-7.8, 0.0, 6.7)]
-    for index, (start, end) in enumerate(zip(stem_points, stem_points[1:])):
-        collision_geom(
-            worldbody,
-            name=f"ecology/stem-{index:02d}",
-            type="capsule",
-            fromto=fmt((*start, *end)),
-            size="0.46",
-            material="ecology/stem",
-        )
-    for index, angle in enumerate(np.linspace(-0.72, 0.72, 7)):
-        x = 7.0 * math.sin(float(angle))
-        y = 10.0 - 7.0 * math.cos(float(angle))
-        collision_geom(
-            worldbody,
-            name=f"ecology/curved-bark-{index:02d}",
-            type="box",
-            pos=fmt((x, y, 1.0 + 0.10 * index)),
-            size="1.35 0.75 0.22",
-            euler=fmt((0.0, 0.0, -float(angle))),
-            material="ecology/bark",
-        )
-    for name, pos, angle in (
-        ("ramp-west", (-4.5, 3.0, 0.78), -0.25),
-        ("ramp-east", (4.8, -3.3, 0.94), 0.31),
-    ):
-        collision_geom(
-            worldbody,
-            name=f"ecology/{name}",
-            type="box",
-            pos=fmt(pos),
-            size="3.0 1.35 0.16",
-            euler=fmt((0.0, angle, 0.0)),
-            material="ecology/bark",
-        )
-    for index, pos in enumerate(((-2.0, -6.0, 0.045), (6.0, 0.5, 0.045))):
-        collision_geom(
-            worldbody,
-            name=f"ecology/moist-patch-{index:02d}",
-            type="cylinder",
-            pos=fmt(pos),
-            size="1.8 0.045",
-            material="ecology/moist",
-        )
-    collision_geom(
-        worldbody,
-        name="ecology/visual-screen",
-        type="box",
-        pos="18 0 4",
-        size="0.02 8 4",
-        material="ecology/leaf",
-    )
-
-    grain_poses: list[tuple[str, list[float]]] = []
-    for index in range(grains):
-        angle = 2.399963229728653 * index
-        radius = 2.2 + 0.55 * (index % 3)
-        position = [radius * math.cos(angle), radius * math.sin(angle), 0.42 + 0.06 * (index % 2)]
-        name = f"ecology/grain-{index:02d}"
-        body = ET.SubElement(worldbody, "body", name=name, pos=fmt(position))
-        ET.SubElement(body, "freejoint", name=f"{name}/free")
-        collision_geom(
-            body,
-            name=f"{name}/geom",
-            type="ellipsoid",
-            size="0.34 0.25 0.22",
-            mass="0.000002",
-            material="ecology/grain",
-        )
-        grain_poses.append((name, position))
-    return grain_poses
-
-
-def default_spawns(count: int) -> list[tuple[float, float, float, float]]:
-    if count == 1:
-        return [(0.0, -2.5, 2.1, 0.0)]
-    result = []
-    for index in range(count):
-        angle = 2 * math.pi * index / count
-        result.append((5.5 * math.cos(angle), 5.5 * math.sin(angle), 2.1, angle + math.pi))
-    return result
+def add_environment_from_plan(
+    worldbody: ET.Element, plan: dict
+) -> list[tuple[str, list[float], list[float]]]:
+    dynamic_poses = []
+    for spec in plan["geometries"]:
+        name = f"ecology/{spec['id']}"
+        attributes = {
+            "name": name,
+            "type": spec["shape"],
+            "size": fmt(spec["size_mm"]),
+            "material": f"ecology/{spec['material']}",
+        }
+        if spec["fromto_mm"] is not None:
+            attributes["fromto"] = fmt(spec["fromto_mm"])
+        if spec["position_mm"] is not None:
+            attributes["pos"] = fmt(spec["position_mm"])
+        if spec["euler_rad"] is not None:
+            attributes["euler"] = fmt(spec["euler_rad"])
+        if spec["dynamic"]:
+            position = spec["position_mm"]
+            quaternion = spec["quaternion_wxyz"]
+            body = ET.SubElement(worldbody, "body", name=name, pos=fmt(position), quat=fmt(quaternion))
+            ET.SubElement(body, "freejoint", name=f"{name}/free")
+            attributes["name"] = f"{name}/geom"
+            attributes.pop("pos", None)
+            attributes.pop("euler", None)
+            attributes["mass"] = f"{spec['mass_model_units']:.9g}"
+            collision_geom(body, **attributes)
+            dynamic_poses.append((name, position, quaternion))
+        else:
+            collision_geom(worldbody, **attributes)
+    return dynamic_poses
 
 
 def apply_collisions(
@@ -217,11 +143,13 @@ def apply_collisions(
             geom.set("conaffinity", "0")
 
 
-def compose(base_xml: Path, output: Path, resident_count: int, grains: int) -> list[str]:
+def compose(base_xml: Path, output: Path, resident_count: int, habitat: dict) -> list[str]:
     if not 1 <= resident_count <= 16:
         raise SystemExit("--residents must be between 1 and 16")
-    if not 0 <= grains <= 64:
-        raise SystemExit("--grains must be between 0 and 64")
+    if habitat.get("format") != "chreatures.fly-habitat-plan.v1":
+        raise SystemExit("--habitat-plan must use chreatures.fly-habitat-plan.v1")
+    if habitat.get("parameters", {}).get("residents") != resident_count:
+        raise SystemExit("habitat resident count differs from --residents")
     tree = ET.parse(base_xml)
     root = tree.getroot()
     root.set("model", f"chreatures_ecology_{resident_count}x")
@@ -258,8 +186,12 @@ def compose(base_xml: Path, output: Path, resident_count: int, grains: int) -> l
     prefixes = [f"resident{index:02d}" for index in range(resident_count)]
     qpos: list[float] = []
     ctrl: list[float] = []
-    for index, (prefix, spawn) in enumerate(zip(prefixes, default_spawns(resident_count))):
-        x, y, z, yaw = spawn
+    spawns = sorted(habitat["spawns"], key=lambda spawn: spawn["resident"])
+    if [spawn["resident"] for spawn in spawns] != list(range(resident_count)):
+        raise SystemExit("habitat plan has incomplete resident spawn order")
+    for index, (prefix, spawn) in enumerate(zip(prefixes, spawns)):
+        x, y, z = spawn["position_mm"]
+        yaw = spawn["yaw_rad"]
         clone = clone_named_tree(source_body, prefix)
         quat = [math.cos(yaw / 2), 0.0, 0.0, math.sin(yaw / 2)]
         clone.set("pos", fmt((x, y, z)))
@@ -277,9 +209,9 @@ def compose(base_xml: Path, output: Path, resident_count: int, grains: int) -> l
         qpos.extend([x, y, z, *quat, *source_qpos[7:]])
         ctrl.extend(source_ctrl)
 
-    grain_poses = add_environment(worldbody, grains)
-    for _, position in grain_poses:
-        qpos.extend([*position, 1.0, 0.0, 0.0, 0.0])
+    dynamic_poses = add_environment_from_plan(worldbody, habitat)
+    for _, position, quaternion in dynamic_poses:
+        qpos.extend([*position, *quaternion])
     ET.SubElement(keyframe, "key", name="neutral", qpos=fmt(qpos), ctrl=fmt(ctrl))
 
     resident_mask = sum(1 << (i + 1) for i in range(resident_count))
@@ -374,7 +306,13 @@ def engineered_retina(optic_atlas: Path) -> dict:
 
 
 def compiled_manifest(
-    xml_path: Path, schema: dict, prefixes: list[str], steps: int, optic_atlas: Path
+    xml_path: Path,
+    schema: dict,
+    prefixes: list[str],
+    steps: int,
+    optic_atlas: Path,
+    habitat: dict,
+    habitat_path: Path,
 ) -> dict:
     model = mj.MjModel.from_xml_path(str(xml_path))
     data = mj.MjData(model)
@@ -632,6 +570,16 @@ def compiled_manifest(
     actuator_payload = [resident["actuators90"] for resident in residents]
     actuator_hash = hashlib.sha256(json.dumps(actuator_payload, sort_keys=True).encode()).hexdigest()
     scene_hash = sha256(xml_path)
+    planned_names = {
+        f"ecology/{item['id']}/geom" if item["dynamic"] else f"ecology/{item['id']}"
+        for item in habitat["geometries"]
+    }
+    compiled_names = {geom["name"] for geom in environment_geoms}
+    if planned_names != compiled_names:
+        raise RuntimeError(
+            f"habitat geometry compilation differs: missing={sorted(planned_names-compiled_names)}, "
+            f"extra={sorted(compiled_names-planned_names)}"
+        )
     screen_geom = numeric_id(model, mj.mjtObj.mjOBJ_GEOM, "ecology/visual-screen")
     return {
         "format": "chreatures-fly-ecology-compiled-v1",
@@ -643,6 +591,16 @@ def compiled_manifest(
         "scene_xml": xml_path.name,
         "scene_xml_sha256": scene_hash,
         "source_revision": schema["source"]["revision"],
+        "habitat_plan_sha256": sha256(habitat_path),
+        "habitat": {
+            "format": habitat["format"],
+            "generator": habitat["generator"],
+            "seed": habitat["seed"],
+            "bounds_mm": habitat["bounds_mm"],
+            "parameters": habitat["parameters"],
+            "validation": habitat["validation"],
+            "information_boundary": habitat["information_boundary"],
+        },
         "source_body_mjcf_sha256": schema["files"]["model/model.xml"],
         "body_schema_sha256": "d8c3ff3d22b7f68ec8fb752ba210689ce6531820df57edc96c3bd305766a2d5a",
         "morphology_sha256": morphology_hash,
@@ -707,20 +665,40 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--residents", type=int, default=2)
-    parser.add_argument("--grains", type=int, default=8)
+    parser.add_argument("--habitat-plan", type=Path, required=True)
     parser.add_argument("--startup-steps", type=int, default=10)
     args = parser.parse_args()
     base_xml = args.base_xml.resolve()
     output = args.output.resolve()
+    habitat_path = args.habitat_plan.resolve()
+    habitat = json.loads(habitat_path.read_text())
     if output.parent != base_xml.parent:
         output.parent.mkdir(parents=True, exist_ok=True)
         for mesh in base_xml.parent.glob("*.stl"):
-            shutil.copy2(mesh, output.parent / mesh.name)
+            destination = output.parent / mesh.name
+            if not destination.exists():
+                try:
+                    destination.hardlink_to(mesh)
+                except OSError:
+                    shutil.copy2(mesh, destination)
         license_path = args.base_schema.parent / "author-source" / "FlyGym-LICENSE"
-        shutil.copy2(license_path, output.parent / license_path.name)
-    prefixes = compose(base_xml, output, args.residents, args.grains)
+        license_destination = output.parent / license_path.name
+        if not license_destination.exists():
+            try:
+                license_destination.hardlink_to(license_path)
+            except OSError:
+                shutil.copy2(license_path, license_destination)
+    prefixes = compose(base_xml, output, args.residents, habitat)
     schema = json.loads(args.base_schema.read_text())
-    manifest = compiled_manifest(output, schema, prefixes, args.startup_steps, args.optic_atlas.resolve())
+    manifest = compiled_manifest(
+        output,
+        schema,
+        prefixes,
+        args.startup_steps,
+        args.optic_atlas.resolve(),
+        habitat,
+        habitat_path,
+    )
     manifest_path = args.manifest.resolve() if args.manifest else output.with_suffix(".json")
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     print(json.dumps({"xml": str(output), "manifest": str(manifest_path), **manifest["compiled_counts"], "finite": True}, indent=2))

@@ -1,0 +1,15 @@
+[package]
+name = "chreatures-fly-habitat"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Deterministic physical/material habitat plans at Drosophila scale"
+
+[[bin]]
+name = "fly-habitat"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+
