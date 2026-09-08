@@ -87,6 +87,18 @@ def _tensor(value: np.ndarray, device: torch.device) -> torch.Tensor:
     return torch.as_tensor(np.ascontiguousarray(value), device=device)
 
 
+def _cns_control_step(
+    model: AnatomicalCNS, optic: torch.Tensor, body: torch.Tensor,
+    context: torch.Tensor, state: CNSState | None,
+) -> tuple[torch.Tensor, torch.Tensor, CNSState]:
+    """Advance the 200 Hz CNS twice for one 100 Hz physical control tick."""
+    latent = motor = None
+    for _ in range(2):
+        latent, motor, state = model(optic, body, context, state, dt=0.005)
+    assert latent is not None and motor is not None
+    return latent, motor, state
+
+
 def body_statistics(episodes: Iterable[Episode]) -> tuple[np.ndarray, np.ndarray]:
     total = np.zeros(BODY_AFFERENTS, np.float64)
     square = np.zeros(BODY_AFFERENTS, np.float64)
@@ -123,7 +135,7 @@ def replay_episode(
         optic = _tensor(episode.optic_rgb[tick], device)
         body = _tensor(episode.body_afferents[tick], device)
         context = _tensor(episode.delivered_context[context_tick], device)
-        z, _, state = model(optic, body, context, state)
+        z, _, state = _cns_control_step(model, optic, body, context, state)
         latents[tick] = z.cpu().numpy()
         if rates is not None:
             rates[tick] = model.selected_activity(state)["motor"].cpu().numpy()
@@ -285,7 +297,7 @@ def cns_window_loss(
     state: CNSState | None = None
     with torch.no_grad():
         for tick in range(burn_in):
-            _, _, state = model(
+            _, _, state = _cns_control_step(model,
                 arrays["optic_rgb"][tick], arrays["body_afferents"][tick],
                 arrays["delivered_context"][tick], state,
             )
@@ -299,7 +311,7 @@ def cns_window_loss(
         context_value = arrays["delivered_context"][context_tick]
         if torch.is_grad_enabled() and state is not None:
             def recurrent_step(optic, body, context, *fields):
-                next_z, next_motor, next_state = model(
+                next_z, next_motor, next_state = _cns_control_step(model,
                     optic, body, context, CNSState(*fields)
                 )
                 return (next_z, next_motor, *next_state.fields())
@@ -310,7 +322,7 @@ def cns_window_loss(
             )
             z, m, state = output[0], output[1], CNSState(*output[2:])
         else:
-            z, m, state = model(optic_tick, body_tick, context_value, state)
+            z, m, state = _cns_control_step(model, optic_tick, body_tick, context_value, state)
         latent.append(z)
         motor.append(m)
     z = torch.stack(latent)

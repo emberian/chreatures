@@ -372,8 +372,8 @@ class ActualOutcomeEvaluator:
                 "movable-material-push": 10 * out[row, 11],
             }.get(name, out[row, 13])
             reward[row] = float(progress - 0.08 * out[row, 14])
-            success[row] = bool(progress > 0.45 and out[row, 0] > 0)
             failure[row] = bool(out[row, 0] < -0.15 or (name == "stopping" and out[row, 4] > 1.0))
+            success[row] = bool(progress > 0.45 and out[row, 0] > 0 and not failure[row])
         return out, reward, success, failure
 
 
