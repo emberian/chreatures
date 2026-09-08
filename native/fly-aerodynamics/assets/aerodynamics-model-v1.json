@@ -1,0 +1,51 @@
+{
+  "format": "chreatures.fly-aerodynamics.v1",
+  "model_id": "DICKINSON_TRANSLATIONAL_QS_24_STRIPS_V1",
+  "aerodynamic_schema_sha256": "88893421111b6339091cb2c97368704f1ee51fcbf4cbdcbf3a793f16cf78d9fd",
+  "geometry": {
+    "asset": "neuromechfly-v2.1.0-ca65a510-wing-planform.json",
+    "derivation_sha256": "f98f204b928ac86efab5113ef8be32281705cb1954315c769e8d1ca67feba303",
+    "source_stl_sha256": "142f77f15008fd75e1490b546bb859cf98c056121f1abd65acea2052c4e7764c",
+    "elements_per_wing": 24,
+    "planform_area_m2": 1.8936348363713165e-06
+  },
+  "coefficient_model": {
+    "angle_unit": "radian",
+    "angle_domain": "wrapped_to_[0,pi)",
+    "lift": "0.225 + 1.58*sin(2.13*alpha - 0.14)",
+    "drag": "max(0, 1.92 - 1.55*cos(2.04*alpha - 0.17))",
+    "citation_doi": "10.1098/rsos.201552",
+    "experimental_basis_doi": "10.1126/science.284.5422.1954"
+  },
+  "default_config": {
+    "air_density_kg_m3": 1.225,
+    "kinematic_viscosity_m2_s": 1.48e-05,
+    "lift_scale": 1.0,
+    "drag_scale": 1.0,
+    "minimum_speed_m_s": 1e-06
+  },
+  "model_unit_scale": {
+    "meters_per_length_unit": 0.001,
+    "kilograms_per_mass_unit": 0.001,
+    "seconds_per_time_unit": 1.0,
+    "mass_evidence": "INFERRED_GRAM_CONFIGURABLE",
+    "author_total_mass_model_units": 0.0010253099999999993,
+    "interpreted_total_mass_kg": 1.02531e-06
+  },
+  "execution": {
+    "required_physics_dt_s": 0.0001,
+    "force_application": "24_WORLD_POINT_FORCES_PER_WING_PER_SUBSTEP",
+    "snapshot_state": "NONE_STATELESS"
+  },
+  "controller_boundary": "PHYSICAL_EFFECTS_ONLY_NO_DIRECT_CNS_INPUT",
+  "limitations": [
+    "UNCALIBRATED_FOR_THIS_MICRO_CT_INDIVIDUAL",
+    "CONVEX_PLANFORM",
+    "NO_ROTATIONAL_CIRCULATION",
+    "NO_ADDED_MASS",
+    "NO_WAKE_CAPTURE_OR_LEV_HISTORY",
+    "NO_FLEXIBILITY",
+    "NO_WING_WING_BODY_OR_GROUND_INTERACTION",
+    "NO_FLIGHT_OR_HOVER_CLAIM"
+  ]
+}

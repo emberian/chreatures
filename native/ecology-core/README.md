@@ -109,9 +109,11 @@ host-measured route openness controls actual diffusion/advection.
 
 Repeated identical proposal input is idempotent. Different input requires
 `discard_growth(token)` or completion of the current tick. Pending proposals,
-tentative RNG and prepared ecology transactions survive snapshots. Only an
-actually funded and committed creation installs developmental RNG/cursor changes;
-rejected geometry and material/ATP shortfall do not. Aborting a step restores the
+tentative RNG and prepared ecology transactions survive snapshots. A committed
+world step records the attempted developmental draw even when geometry or
+resources prevent construction. This prevents a blocked stochastic choice from
+being repeated indefinitely. Only funded creation updates structural pointers
+and spends construction material. Aborting a step restores the
 exact pre-prepare state and retains the known proposal. A rejected capsule's
 measured obstruction can be supplied in the next tick's clearance rays to steer
 subsequent growth, without adding hidden controller observations.

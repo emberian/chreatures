@@ -12,10 +12,27 @@ import math
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+AERODYNAMICS_MODEL = ROOT / "native/fly-aerodynamics/assets/aerodynamics-model-v1.json"
+
+
+def load_wing_aerodynamics() -> dict:
+    payload = json.loads(AERODYNAMICS_MODEL.read_text())
+    expected = payload.get("aerodynamic_schema_sha256")
+    hashed = copy.deepcopy(payload)
+    hashed.pop("aerodynamic_schema_sha256", None)
+    actual = hashlib.sha256(
+        json.dumps(hashed, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    if expected != actual:
+        raise ValueError(
+            f"wing aerodynamics identity mismatch: expected {expected}, derived {actual}"
+        )
+    return payload
 
 
 def assemble(physics: dict, recipe: dict, seed: int) -> dict:
     fixture = copy.deepcopy(physics)
+    fixture["wing_aerodynamics"] = load_wing_aerodynamics()
     for body, resident in zip(fixture["bodies"], fixture["residents"], strict=True):
         segments = {s["semantic_id"]: s["body_id"] for s in resident["segments69"]}
         body["wings"] = [segments["l_wing"], segments["r_wing"]]
@@ -97,6 +114,7 @@ def assemble(physics: dict, recipe: dict, seed: int) -> dict:
             bindings.append(dict(body=entity["body"],geoms=entity["geoms"],store={"kind":"organism","id":f"colony-{index}"},exposed=True))
     chemistry["packets"] = packets
     fixture.update(ecology=chemistry,material_bindings=bindings,interoception=recipe["fly_interoception"],
+                   ecology_capacity=dict(max_colonies=64,max_geoms=2048),
                    illumination=dict(sky_direction_world=[0.0,0.0,1.0],sky_intensity=0.8,
                                      screen_intensity=0.2,photon_energy_per_second=0.3),
                    airflow_mm_s=[0.8,0.2,0.0],volatile_fraction=[0.01,0,0,0,1,1,0,1],

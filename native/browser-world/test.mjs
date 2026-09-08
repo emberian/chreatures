@@ -39,10 +39,6 @@ try {
   assert.equal(research.bodyAfferents.length, 2 * 807);
   assert.equal(research.bodyMap.residents[1].contact_sensors6x16[5].data_address, 176);
 
-  world.setRouteMeasurements(
-    Float64Array.from(fixture.ecology.routes, (route) => route.base_open_fraction),
-    new Float64Array(fixture.ecology.routes.length),
-  );
   const visualCheckpoint = world.snapshot();
   const screenFacing = structuredClone(visualCheckpoint);
   // mjSTATE_INTEGRATION starts with time then qpos. Rotate resident00's free
@@ -81,6 +77,9 @@ try {
   }
   assert(constructionTick >= 199 && constructionTick <= 500, "Autonomous resource-funded growth must realize within five seconds");
   const constructed = world.observe();
+  assert.equal(constructed.routeMeasurements.source, "native-aperture-quadrature-v1");
+  assert(constructed.routeMeasurements.open.some(x => x < 1) && constructed.routeMeasurements.open.some(x => x > 0));
+  assert(constructed.routeMeasurements.flowsM3S.every(x => x === 0));
   const realizedGrowth = constructed.geometry.length - initial.geometry.length;
   assert(realizedGrowth > 0);
   assert(constructed.geometry.some((g) => g.name.startsWith("ecology:growth-") && g.name.endsWith(":geom")));
@@ -128,6 +127,9 @@ try {
     construction_tick: constructionTick,
     realized_growth: realizedGrowth,
     growth_at_construction: constructed.growth,
+    routes_at_construction: {...constructed.routeMeasurements,
+      open: Array.from(constructed.routeMeasurements.open),
+      flowsM3S: Array.from(constructed.routeMeasurements.flowsM3S)},
     illumination: constructed.illumination,
     captured_photon_energy: world.observe().ecology.accounting.captured_photon_energy,
     topology_geoms: world.observe().geometry.length,

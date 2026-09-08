@@ -22,14 +22,6 @@ const SITES = 1771,
   CONTACT_SAMPLES = 10,
   CONTACT_STRIDE = 20;
 const arr = (v) => Array.from(v);
-const GROWTH_RAYS = Object.freeze([
-  [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
-  [1, 1, 0], [1, -1, 0], [-1, 1, 0], [-1, -1, 0],
-  [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
-].map((v) => {
-  const n = Math.hypot(...v);
-  return Object.freeze(v.map((x) => x / n));
-}));
 function normalize3(v, fallback = [0, 0, 1]) {
   const n = Math.hypot(...v);
   return n > 1e-12 ? v.map((x) => x / n) : Array.from(fallback);
@@ -81,11 +73,12 @@ function compileModel(mj, xml, fixture, assets) {
 function xmlAttribute(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
 }
-function capsuleXml({ physics_binding, position_m, orientation_xyzw, radius_m, length_m }) {
+function capsuleXml({ physics_binding, position_m, orientation_xyzw, radius_m, length_m, kind }) {
   const id = xmlAttribute(physics_binding), p = position_m.map((v) => v * 1000);
   const [x, y, z, w] = orientation_xyzw;
   const size = [radius_m * 1000, length_m * 500];
-  return `<body name="ecology:${id}" pos="${p.join(" ")}" quat="${[w, x, y, z].join(" ")}"><geom name="ecology:${id}:geom" type="capsule" size="${size.join(" ")}" rgba="0.42 0.31 0.16 1" friction="0.9 0.02 0.004"/></body>`;
+  const color = kind === "offspring_body" ? "0.24 0.52 0.31 1" : "0.42 0.31 0.16 1";
+  return `<body name="ecology:${id}" pos="${p.join(" ")}" quat="${[w, x, y, z].join(" ")}"><geom name="ecology:${id}:geom" type="capsule" size="${size.join(" ")}" rgba="${color}" friction="0.9 0.02 0.004"/></body>`;
 }
 export async function createBrowserWorld({
   fixture,
@@ -110,7 +103,7 @@ export async function createBrowserWorld({
   await coreModule.default(coreWasm ? { module_or_path: coreWasm } : undefined);
   const mj = await mujocoFactory(mujocoOptions);
   const model = compileModel(mj, xml, fixture, assets);
-  return new BrowserWorld(mj, coreModule.WorldCore, fixture, xml, assets, model, seed);
+  return new BrowserWorld(mj, coreModule.WorldCore, coreModule.RouteGeometry, fixture, xml, assets, model, seed);
 }
 class BrowserWorld {
   #mj;
@@ -142,14 +135,24 @@ class BrowserWorld {
   #clearanceChecks = 0;
   #lastIllumination = [];
   #growthClearanceMemory = new Map();
+  #growthProbeDirections;
   #growthStats = {
     proposed: 0,
     clearanceAccepted: 0,
     blocked: 0,
     offspringRejected: 0,
+    birthsProposed: 0,
+    birthClearanceAccepted: 0,
   };
   #routeMeasurements;
-  constructor(mj, Core, fixture, xml, assets, model, seed) {
+  #routeGeometry;
+  #routePlan;
+  #routeTopologyRevision = 0;
+  #routeDistances;
+  #routeInside;
+  #routeEndpointsMm;
+  #routeTrace = {rayQueries: 0, containmentQueries: 0};
+  constructor(mj, Core, RouteCore, fixture, xml, assets, model, seed) {
     if (mj.mj_versionString() !== "3.12.0")
       throw new Error("MuJoCo engine pin differs");
     this.#mj = mj;
@@ -164,6 +167,12 @@ class BrowserWorld {
       throw new Error("Compiled fly neutral keyframe differs");
     mj.mj_resetDataKeyframe(this.#model, this.#data, neutralKey);
     this.#core = new Core(JSON.stringify(fixture), seed);
+    this.#routeGeometry = new RouteCore(JSON.stringify(fixture));
+    this.#routePlan = JSON.parse(this.#routeGeometry.plan());
+    this.#routeDistances = new Float64Array(this.#routePlan.rays.length);
+    this.#routeInside = new Uint8Array(this.#routePlan.endpoints_m.length);
+    this.#routeEndpointsMm = this.#routePlan.endpoints_m.map(point => point.map(x => x * 1000));
+    this.#growthProbeDirections = Object.freeze(JSON.parse(this.#core.growth_probe_directions()).map(Object.freeze));
     mj.mj_forward(this.#model, this.#data);
     this.#validateCompiledFixture();
     this.#baseActuatorForceRange = Float64Array.from(this.#model.actuator_forcerange);
@@ -185,9 +194,10 @@ class BrowserWorld {
       throw new Error("Retinal atlas supported-site count differs");
     const retinalRays = Math.max(...this.#retinalSiteIndices.map((indices) => indices.length));
     this.#routeMeasurements = {
-      open: Float64Array.from(this.#fixture.ecology.routes, (route) => route.base_open_fraction),
+      open: new Float64Array(this.#fixture.ecology.routes.length),
       flows: new Float64Array(this.#fixture.ecology.routes.length),
     };
+    this.#core.set_route_measurements(this.#routeMeasurements.open, this.#routeMeasurements.flows);
     this.#frame = new Float32Array(12);
     this.#buffers = {
       velocity: new mj.DoubleBuffer(6),
@@ -214,6 +224,10 @@ class BrowserWorld {
       [["nq", m.nq], ["nv", m.nv], ["nu", m.nu], ["nbody", m.nbody], ["njnt", m.njnt], ["ngeom", m.ngeom], ["nmesh", m.nmesh], ["nsite", m.nsite], ["nsensor", m.nsensor], ["nsensordata", m.nsensordata]].some(([name, value]) => counts[name] !== value) ||
       !Array.isArray(f.geoms) || f.geoms.length !== m.ngeom || f.geoms.some((g, i) => g.id !== i || g.body !== m.geom_bodyid[i]))
       throw new Error("Compiled fly timing or resident fixture differs");
+    const capacity = f.ecology_capacity;
+    if (!capacity || !Number.isSafeInteger(capacity.max_colonies) || capacity.max_colonies < 1 || capacity.max_colonies > 4096 ||
+      !Number.isSafeInteger(capacity.max_geoms) || capacity.max_geoms < m.ngeom || capacity.max_geoms > 16384)
+      throw new Error("Physical ecology capacity contract differs");
     const illumination = f.illumination;
     checkNumbers(illumination?.sky_direction_world, 3, "Physical sky direction");
     if (![f.ray_distance_mm, illumination.sky_intensity, illumination.screen_intensity, illumination.photon_energy_per_second]
@@ -473,22 +487,27 @@ class BrowserWorld {
       if (!support?.normal) throw new Error(`Anchored colony support geometry unsupported: ${organism.physics_binding}`);
       const positionM = support.point.map((x) => x * 0.001);
       const originM = support.point.map((x, i) => (x + support.normal[i] * 0.002) * 0.001);
-      const clearance_samples = [], nearby = new Map();
-      for (const direction of GROWTH_RAYS) {
-        const hit = this.#growthRay(originM, direction, entity.body);
+      const clearance_samples = [], nearby = [];
+      const probeReach = Math.max(0.006, organism.genotype.reproduction?.dispersal_distance_m ?? 0);
+      for (const [probe, direction] of this.#growthProbeDirections.entries()) {
+        const hit = this.#growthRay(originM, direction, entity.body, probeReach);
         clearance_samples.push({ origin_m: originM, direction, free_distance_m: hit.distanceM });
-        if (hit.geom < 0 || nearby.has(hit.geom)) continue;
+        if (hit.geom < 0) continue;
         const pointMm = originM.map((x, i) => (x + direction[i] * hit.distanceM) * 1000);
         let normal = this.#geomNormalAt(hit.geom, pointMm);
         if (!normal) continue;
         if (normal.reduce((s, x, i) => s - x * direction[i], 0) < 0) normal = normal.map((x) => -x);
         const point_m = pointMm.map((x) => x * 0.001);
-        nearby.set(hit.geom, {
-          surface_id: `surface-${hit.geom}`,
+        nearby.push({
+          surface_id: `surface-${hit.geom}-probe-${probe}`,
           region_id: this.#nearestRegion(point_m),
           point_m,
           normal,
-          attachable: false,
+          // Attachment is a physical affordance of fixed collidable surfaces.
+          // Movable objects and articulated animal parts cannot anchor colonies.
+          attachable: !this.#fixture.bodies.some(body => body.segments.includes(this.#model.geom_bodyid[hit.geom])) &&
+            !this.#fixture.entities.some(item => item.body === this.#model.geom_bodyid[hit.geom] && item.free) &&
+            (this.#model.geom_contype[hit.geom] !== 0 || this.#model.geom_conaffinity[hit.geom] !== 0),
         });
       }
       clearance_samples.push(...(this.#growthClearanceMemory.get(organism.id) ?? []));
@@ -500,10 +519,10 @@ class BrowserWorld {
         surface_normal: support.normal,
         light_direction: measuredLight.direction,
         light_intensity: measuredLight.intensity,
-        nearby_surfaces: [...nearby.values()],
+        nearby_surfaces: nearby,
         clearance_samples: clearance_samples.slice(0, 256),
         host_template_id: "fiber-capsule",
-        child_template_id: null,
+        child_template_id: "anchored-colony",
       });
       photon_exposures.push({
         organism_id: organism.id,
@@ -526,11 +545,12 @@ class BrowserWorld {
     const proxies = [0, 1].map((i) =>
       `<body name="clearance-proxy-${i}" pos="0 0 0"><geom name="clearance-proxy-${i}:geom" type="capsule" size="0.001 0.001" contype="0" conaffinity="0"/></body>`,
     ).join("");
-    const xml = this.#xml.replace("</worldbody>", proxies + "</worldbody>");
+    const endpointProbe = `<body name="route-endpoint-probe" pos="0 0 0"><geom name="route-endpoint-probe:geom" type="sphere" size="${this.#routePlan.endpoint_probe_radius_m * 1000}" pos="1000000 1000000 1000000" contype="0" conaffinity="0"/></body>`;
+    const xml = this.#xml.replace("</worldbody>", proxies + endpointProbe + "</worldbody>");
     const model = compileModel(this.#mj, xml, this.#fixture, this.#assets);
     const data = new this.#mj.MjData(model);
     if (model.nq !== this.#model.nq || model.nv !== this.#model.nv ||
-      model.nbody !== this.#model.nbody + 2 || model.ngeom !== this.#model.ngeom + 2) {
+      model.nbody !== this.#model.nbody + 3 || model.ngeom !== this.#model.ngeom + 3) {
       data.delete(); model.delete();
       throw new Error("Clearance scratch proxies changed prior compiled addresses");
     }
@@ -539,7 +559,9 @@ class BrowserWorld {
       if (id !== this.#model.ngeom + i) throw new Error("Clearance scratch proxy address differs");
       return id;
     });
-    this.#clearanceScratch = { revision: this.#fixture.source_mjcf_sha256, model, data, proxyGeoms };
+    const endpointGeom = this.#mj.mj_name2id(model, this.#mj.mjtObj.mjOBJ_GEOM.value, "route-endpoint-probe:geom");
+    if (endpointGeom !== this.#model.ngeom + 2) throw new Error("Route endpoint proxy address differs");
+    this.#clearanceScratch = { revision: this.#fixture.source_mjcf_sha256, model, data, proxyGeoms, endpointGeom };
     this.#clearanceScratchBuilds++;
     return this.#clearanceScratch;
   }
@@ -554,6 +576,72 @@ class BrowserWorld {
     model.geom_conaffinity.set(sourceModel.geom_conaffinity.subarray(0, sourceModel.ngeom), 0);
     model.actuator_forcerange.set(sourceModel.actuator_forcerange);
     model.actuator_gainprm.set(sourceModel.actuator_gainprm);
+  }
+  #refreshMaterialRoutes() {
+    const tick = Math.round(this.time / CONTROL_DT), revision = this.#routeTopologyRevision;
+    if (!Number.isSafeInteger(tick) || tick < 0 || tick > 0xffffffff)
+      throw new Error("Route sampling clock exceeds the current native host extent");
+    if (!this.#routeGeometry.refresh_due(tick, revision)) return;
+    const m = this.#model, d = this.#data, mj = this.#mj;
+    const scratch = this.#ensureClearanceScratch();
+    this.#syncClearanceScratch(scratch);
+    mj.mj_forward(scratch.model, scratch.data);
+    const solid = Uint8Array.from(m.geom_contype, (mask, geom) =>
+      (mask !== 0 || m.geom_conaffinity[geom] !== 0) ? 1 : 0);
+    for (let pair = 0; pair < m.npair; pair++) {
+      if (!m.pair_geom1 || !m.pair_geom2) throw new Error("Explicit collision pairs cannot be sampled by this host");
+      solid[m.pair_geom1[pair]] = 1;
+      solid[m.pair_geom2[pair]] = 1;
+    }
+    const radiusMm = this.#routePlan.endpoint_probe_radius_m * 1000;
+    this.#routeInside.fill(0);
+    let containmentQueries = 0, rayQueries = 0;
+    for (let endpoint = 0; endpoint < this.#routeEndpointsMm.length; endpoint++) {
+      const point = this.#routeEndpointsMm[endpoint];
+      // The probe shape/orientation and all derived bounds remain constant.
+      // Only its scratch world position changes; no resident data are modified.
+      scratch.data.geom_xpos.set(point, scratch.endpointGeom * 3);
+      for (let geom = 0; geom < m.ngeom; geom++) {
+        if (!solid[geom]) continue;
+        if (m.geom_type[geom] !== mj.mjtGeom.mjGEOM_PLANE.value) {
+          const bound = m.geom_rbound[geom] + radiusMm;
+          const offset = geom * 3;
+          const squared = (point[0] - d.geom_xpos[offset]) ** 2 +
+            (point[1] - d.geom_xpos[offset + 1]) ** 2 + (point[2] - d.geom_xpos[offset + 2]) ** 2;
+          if (squared > bound * bound) continue;
+        }
+        containmentQueries++;
+        if (mj.mj_geomDistance(scratch.model, scratch.data, scratch.endpointGeom, geom,
+          1000, this.#buffers.geomDistance) < 0) {
+          this.#routeInside[endpoint] = 1;
+          break;
+        }
+      }
+    }
+    const groups = Uint8Array.from(m.geom_group);
+    try {
+      for (let geom = 0; geom < m.ngeom; geom++) m.geom_group[geom] = solid[geom] ? 0 : 5;
+      const mask = [1, 0, 0, 0, 0, 0];
+      for (let ray = 0; ray < this.#routePlan.rays.length; ray++) {
+        const query = this.#routePlan.rays[ray];
+        if (this.#routeInside[query.origin_endpoint] || this.#routeInside[query.destination_endpoint]) {
+          this.#routeDistances[ray] = 0; // Proven blocked endpoints need no redundant ray.
+          continue;
+        }
+        const measured = mj.mj_ray(m, d, this.#routeEndpointsMm[query.origin_endpoint],
+          query.direction, mask, true, -1, this.#buffers.hits, this.#buffers.normals);
+        rayQueries++;
+        this.#routeDistances[ray] = measured < 0 ? query.max_distance_m : Math.min(query.max_distance_m, measured * .001);
+      }
+    } finally {
+      m.geom_group.set(groups);
+    }
+    const open = this.#routeGeometry.measure(tick, revision, this.#routePlan.sha256,
+      this.#routeDistances, this.#routeInside);
+    const flows = new Float64Array(open.length); // No resolved airflow/advection solver.
+    this.#core.set_route_measurements(open, flows);
+    this.#routeMeasurements = {open: Float64Array.from(open), flows};
+    this.#routeTrace = {rayQueries, containmentQueries};
   }
   #placeClearanceProxies(scratch, entries) {
     const { model, data, proxyGeoms } = scratch;
@@ -581,13 +669,21 @@ class BrowserWorld {
   #verifyGrowthProposal(proposal) {
     if (proposal?.format !== "chreatures-ecology-growth-v2" || typeof proposal.token !== "string")
       throw new Error("Native growth proposal contract differs");
-    this.#growthStats.offspringRejected += proposal.birth_sites?.length ?? 0;
-    const sites = proposal.construction_sites ?? [];
-    if (!sites.length) return [];
+    const birthSites = proposal.birth_sites ?? [];
+    this.#growthStats.birthsProposed += birthSites.length;
+    const ecology = JSON.parse(this.#core.ecology_observe());
+    const colonyRoom = Math.max(0, this.#fixture.ecology_capacity.max_colonies - ecology.organisms.filter(o => o.anchored_region).length);
+    const geometryRoom = Math.max(0, this.#fixture.ecology_capacity.max_geoms - this.#model.ngeom);
+    const allowedBirths = birthSites.filter(site => site.anchored_region && site.host_template_id === "anchored-colony").slice(0, colonyRoom);
+    const sites = [...(proposal.construction_sites ?? []), ...allowedBirths].slice(0, geometryRoom);
+    const selectedIds = new Set(sites.map(site => site.site_id));
+    this.#growthStats.offspringRejected += birthSites.filter(site => !selectedIds.has(site.site_id)).length;
+    if (!sites.length) return {construction_sites: [], birth_sites: []};
     const queries = new Map((proposal.clearance_queries ?? []).map((query) => [query.site_id, query]));
     const entries = sites.map((site) => {
       const query = queries.get(site.site_id);
-      if (!query || query.kind === "colony_birth") throw new Error("Growth construction clearance query differs");
+      if (!query || (query.kind === "colony_birth") !== birthSites.some(birth => birth.site_id === site.site_id))
+        throw new Error("Growth or anchored-colony clearance query differs");
       const length_m = Math.hypot(...query.to_m.map((x, i) => x - query.from_m[i]));
       return { site, query, length_m };
     });
@@ -646,15 +742,22 @@ class BrowserWorld {
       const failure = rejected.get(entry.site.site_id);
       if (failure) {
         this.#growthStats.blocked++;
+        if (entry.query.kind === "colony_birth") this.#growthStats.offspringRejected++;
         const prior = this.#growthClearanceMemory.get(entry.query.organism_id) ?? [];
-        this.#growthClearanceMemory.set(entry.query.organism_id, [...prior, failure].slice(-32));
+        const fresh = prior.filter(sample => Math.hypot(...sample.origin_m.map((v, i) => v - failure.origin_m[i])) > 1e-9);
+        this.#growthClearanceMemory.set(entry.query.organism_id, [...fresh, failure].slice(-32));
       } else {
         this.#growthStats.clearanceAccepted++;
+        if (entry.query.kind === "colony_birth") this.#growthStats.birthClearanceAccepted++;
         this.#growthClearanceMemory.delete(entry.query.organism_id);
         accepted.push(entry.site);
       }
     }
-    return accepted;
+    const birthIds = new Set(birthSites.map(site => site.site_id));
+    return {
+      construction_sites: accepted.filter(site => !birthIds.has(site.site_id)),
+      birth_sites: accepted.filter(site => birthIds.has(site.site_id)),
+    };
   }
   #prepareAutonomousGrowth(dt) {
     if (typeof this.#core.propose_growth !== "function" || typeof this.#core.discard_growth !== "function")
@@ -663,11 +766,10 @@ class BrowserWorld {
     const proposal = JSON.parse(this.#core.propose_growth(JSON.stringify(measured.input)));
     this.#growthStats.proposed += proposal.construction_sites?.length ?? 0;
     try {
-      const construction_sites = this.#verifyGrowthProposal(proposal);
+      const selection = this.#verifyGrowthProposal(proposal);
       this.#core.set_ecology_sites(JSON.stringify({
         growth_token: proposal.token,
-        construction_sites,
-        birth_sites: [],
+        ...selection,
         photon_exposures: measured.photon_exposures,
       }));
       this.#lastIllumination = measured.illumination;
@@ -680,9 +782,9 @@ class BrowserWorld {
   async #appendConstructions(items) {
     if (!items.length) return null;
     for (const item of items) {
-      if (item.kind === "offspring_body")
-        throw new Error("Offspring creation requires an authored complete fly template");
-      if (item.kind !== "constructed_geometry" || item.host_template_id !== "fiber-capsule")
+      const branch = item.kind === "constructed_geometry" && item.host_template_id === "fiber-capsule";
+      const colony = item.kind === "offspring_body" && item.host_template_id === "anchored-colony" && item.material_store?.kind === "organism";
+      if (!branch && !colony)
         throw new Error(`Unsupported physical construction template: ${item.host_template_id}`);
       checkNumbers(item.position_m, 3, "Construction position");
       checkNumbers(item.orientation_xyzw, 4, "Construction orientation");
@@ -746,6 +848,7 @@ class BrowserWorld {
       this.#buffers.state = stateBuffer; this.#meshes = meshes;
       return {
         commit: () => {
+          this.#routeTopologyRevision++;
           this.#disposeClearanceScratch();
           old.state.delete(); old.data.delete(); old.model.delete();
         },
@@ -793,7 +896,11 @@ class BrowserWorld {
       this.#mj.mj_forward(m, this.#data);
       return {
         applied_geoms: [...saved.keys()],
-        commit: () => topology?.commit(),
+        commit: () => {
+          topology?.commit();
+          if (removals.length || changes.some(change => change.contype !== undefined || change.conaffinity !== undefined))
+            this.#routeTopologyRevision++;
+        },
         rollback: () => {
           for (const [geom, old] of saved) {
             m.geom_size.set(old.size, geom * 3); m.geom_pos.set(old.pos, geom * 3);
@@ -840,6 +947,7 @@ class BrowserWorld {
     const m = this.#model,
       d = this.#data;
     try {
+      this.#refreshMaterialRoutes();
       this.#prepareAutonomousGrowth(dt);
       const controls = this.#core.actuation(commands);
       checkNumbers(controls, this.residents * PHYSICAL_CONTROL, "Physical fly control");
@@ -1106,6 +1214,10 @@ class BrowserWorld {
       routeMeasurements: {
         open: Float32Array.from(this.#routeMeasurements.open),
         flowsM3S: Float32Array.from(this.#routeMeasurements.flows),
+        source: "native-aperture-quadrature-v1",
+        advectionSource: "zero-no-airflow-solver",
+        state: JSON.parse(this.#routeGeometry.snapshot()),
+        ...this.#routeTrace,
       },
     };
   }
@@ -1132,20 +1244,6 @@ class BrowserWorld {
   setMemoryCheckpoint(opaqueCnsMemory) {
     this.#core.set_memory(String(opaqueCnsMemory));
   }
-  setRouteMeasurements(openFraction, advectionM3S) {
-    this.#assertOpen();
-    checkNumbers(openFraction, this.#fixture.ecology.routes.length, "Route openness");
-    checkNumbers(advectionM3S, openFraction.length, "Route advection");
-    this.#core.set_route_measurements(Float64Array.from(openFraction), Float64Array.from(advectionM3S));
-    this.#routeMeasurements = {
-      open: Float64Array.from(openFraction),
-      flows: Float64Array.from(advectionM3S),
-    };
-  }
-  setEcologySites({ construction_sites = [], birth_sites = [], photon_exposures = [] } = {}) {
-    this.#assertOpen();
-    this.#core.set_ecology_sites(JSON.stringify({ growth_token: null, construction_sites, birth_sites, photon_exposures }));
-  }
   snapshot() {
     this.#assertOpen();
     if (this.#paused) throw new Error("Cannot checkpoint incoherent world");
@@ -1156,7 +1254,7 @@ class BrowserWorld {
       this.#mj.mjtState.mjSTATE_INTEGRATION.value,
     );
     return {
-      format: "chreatures-browser-fly-physical-snapshot-v3",
+      format: "chreatures-browser-fly-physical-snapshot-v4",
       engine: ENGINE,
       model: this.#fixture.source_mjcf_sha256,
       atlas: this.#fixture.atlas_sha256,
@@ -1183,6 +1281,8 @@ class BrowserWorld {
         open: arr(this.#routeMeasurements.open),
         flows: arr(this.#routeMeasurements.flows),
       },
+      routeGeometry: this.#routeGeometry.snapshot(),
+      routeTopologyRevision: this.#routeTopologyRevision,
       fixture: structuredClone(this.#fixture),
       xml: this.#xml,
     };
@@ -1190,7 +1290,7 @@ class BrowserWorld {
   restore(snapshot) {
     this.#assertOpen();
     if (
-      snapshot?.format !== "chreatures-browser-fly-physical-snapshot-v3" ||
+      snapshot?.format !== "chreatures-browser-fly-physical-snapshot-v4" ||
       snapshot.engine !== ENGINE ||
       snapshot.model !== this.#fixture.source_mjcf_sha256 ||
       snapshot.atlas !== this.#fixture.atlas_sha256
@@ -1247,6 +1347,14 @@ class BrowserWorld {
     const routeCount = this.#fixture.ecology.routes.length;
     checkNumbers(snapshot.routeMeasurements?.open, routeCount, "Saved route openness");
     checkNumbers(snapshot.routeMeasurements?.flows, routeCount, "Saved route flows");
+    if (!Number.isSafeInteger(snapshot.routeTopologyRevision) || snapshot.routeTopologyRevision < 0 || snapshot.routeTopologyRevision > 0xffffffff)
+      throw new Error("Saved route topology revision differs");
+    const routeState = JSON.parse(snapshot.routeGeometry);
+    this.#routeGeometry.validate_snapshot(snapshot.routeGeometry);
+    if (routeState.plan_sha256 !== this.#routePlan.sha256 ||
+      JSON.stringify(routeState.route_open_fraction) !== JSON.stringify(snapshot.routeMeasurements.open) ||
+      snapshot.routeMeasurements.flows.some(x => x !== 0))
+      throw new Error("Saved route measurement and native cache differ");
     if (!Array.isArray(snapshot.growthClearanceMemory) || snapshot.growthClearanceMemory.some(([id, samples]) =>
       typeof id !== "string" || !Array.isArray(samples) || samples.some((sample) => {
         try {
@@ -1255,16 +1363,21 @@ class BrowserWorld {
           return !Number.isFinite(sample.free_distance_m) || sample.free_distance_m < 0;
         } catch { return true; }
       }))) throw new Error("Saved growth clearance memory differs");
-    const growthKeys = ["proposed", "clearanceAccepted", "blocked", "offspringRejected"];
+    const growthKeys = ["proposed", "clearanceAccepted", "blocked", "offspringRejected", "birthsProposed", "birthClearanceAccepted"];
     if (!snapshot.growthStats || growthKeys.some((key) =>
       !Number.isSafeInteger(snapshot.growthStats[key]) || snapshot.growthStats[key] < 0))
       throw new Error("Saved growth observer counters differ");
     const core = JSON.parse(snapshot.core);
+    if (JSON.stringify(core.host?.route_open_fraction) !== JSON.stringify(snapshot.routeMeasurements.open) ||
+      JSON.stringify(core.host?.route_advection_m3_s) !== JSON.stringify(snapshot.routeMeasurements.flows))
+      throw new Error("Saved native material routes differ from measured physical state");
     if (Math.abs(core.state?.time - snapshot.physical[0]) > 1e-8)
       throw new Error("Saved physical and ecological clocks differ");
     this.#disposeClearanceScratch();
     this.#core.restore(snapshot.core);
     try {
+      this.#routeGeometry.restore(snapshot.routeGeometry);
+      this.#routeTopologyRevision = snapshot.routeTopologyRevision;
       this.#mj.mj_setState(
         this.#model,
         this.#data,
@@ -1310,6 +1423,8 @@ class BrowserWorld {
   } = {}) {
     this.#assertOpen();
     if (this.#paused) throw new Error("Cannot change incoherent topology");
+    if (this.#model.ngeom >= this.#fixture.ecology_capacity.max_geoms)
+      throw new Error("The configured physical geometry capacity is full");
     checkNumbers(position, 3, "Object position");
     checkNumbers(size, 3, "Object half-size");
     checkNumbers(rgba, 4, "Object color");
@@ -1458,6 +1573,7 @@ class BrowserWorld {
       this.#fixture = fixture;
       this.#xml = xml;
       this.#meshes = meshes;
+      this.#routeTopologyRevision++;
       this.#disposeClearanceScratch();
       this.#physicsSensed = false;
       this.#visitorCounter++;
@@ -1501,6 +1617,7 @@ class BrowserWorld {
     this.#disposeClearanceScratch();
     for (const b of Object.values(this.#buffers)) b.delete();
     this.#core.free();
+    this.#routeGeometry.free();
     this.#data.delete();
     this.#model.delete();
   }

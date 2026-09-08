@@ -1,0 +1,252 @@
+{
+  "format": "chreatures-physical-lineage-route-integration-v1",
+  "date_utc": "2026-09-08",
+  "lineage": {
+    "source_receipt_sha256": "4a24083c9a5b84aa1f453ad90f84fe5f6adf84591c13e6afb67179f51ed82138",
+    "completed_ticks": 3200,
+    "elapsed_s": 318.034720209,
+    "births": [
+      {
+        "observed_tick": 1650,
+        "time": 16.49999999999978,
+        "organism": {
+          "id": "growth-53f04444c6cf3cfe-1632-1433-colony",
+          "physics_binding": "growth-53f04444c6cf3cfe-1632-1433-anchor",
+          "anchored_region": "region-2-2-0",
+          "internal_volume_m3": 4e-09,
+          "capacity": [
+            3,
+            2,
+            3,
+            2,
+            4,
+            3,
+            2,
+            2
+          ],
+          "material": {
+            "quantity": [
+              0.07992586287040748,
+              0.05173174413804507,
+              0.029929712972646138,
+              0.009992943448221665,
+              0.022203745557852077,
+              0.017796890612232434,
+              0.08007005745642869,
+              0.01040062180455992
+            ]
+          },
+          "atp": 0.05984019532201928,
+          "atp_capacity": 1,
+          "genotype": {
+            "lineage_id": "colony-founder-1-g1-4f9e0341",
+            "enzyme_baseline": [
+              0.3002228548865568,
+              0.7093198933922362,
+              0.08209433205440084,
+              1.337762627795847,
+              0.2929549589938119,
+              0.1661201479014359
+            ],
+            "enzyme_substrate_response": [
+              0.15,
+              0.2,
+              0.15,
+              0.2,
+              0.2,
+              0.1
+            ],
+            "enzyme_atp_response": [
+              -0.1,
+              0.2,
+              -0.1,
+              -0.1,
+              0,
+              0
+            ],
+            "enzyme_time_constant_s": 1.3796414539912267,
+            "enzyme_change_atp_cost": 0.004412454897922984,
+            "enzyme_maximum": 1.6,
+            "enzyme_total_budget": 4,
+            "membrane_permeability": [
+              0.7816965254574293,
+              0.8541911589700008,
+              0.9102095057151227,
+              0.6636474870424505,
+              0.4039091160404833,
+              0.04772309942361087,
+              0.8726110580785325,
+              0.6717854620266286
+            ],
+            "maintenance_atp_s": 0.0019782103926615758,
+            "development": {
+              "branch_angle_rad": 0.7344294738834907,
+              "lateral_probability": 0.40147834222534695,
+              "phototropism": 0.44179507642813104,
+              "contact_avoidance": 1.1381203797172392,
+              "directional_persistence": 0.7040053123171535,
+              "interval_s": 2,
+              "material_cost": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.08,
+                0
+              ],
+              "decay_return": [
+                0.08,
+                0.08,
+                0.08,
+                0.008,
+                0,
+                0,
+                0,
+                0
+              ],
+              "atp_cost": 0.008,
+              "maximum_structures": 24,
+              "nominal_radius_m": 0.00018,
+              "nominal_length_m": 0.0014,
+              "nominal_volume_m3": 1.4e-10,
+              "decay_time_constant_s": 40
+            },
+            "reproduction": {
+              "dispersal_distance_m": 0.002703836289638878,
+              "interval_s": 16,
+              "material_endowment": [
+                0.08,
+                0.05,
+                0.03,
+                0.01,
+                0.02,
+                0.02,
+                0.08,
+                0.01
+              ],
+              "atp_cost": 0.03,
+              "atp_endowment": 0.06,
+              "maximum_descendants": 4,
+              "mutation_fraction": 0.12
+            }
+          },
+          "enzyme_activity": [
+            0.3026307592272155,
+            0.6921588541118096,
+            0.09009625916336261,
+            1.3387143305018114,
+            0.2943396709551498,
+            0.16267761626220345
+          ],
+          "development_credit_s": 0.17,
+          "development_state": {
+            "rng": 10517360176852877000,
+            "attempt_index": 0,
+            "apical_binding": null,
+            "lateral_cursor": 0
+          },
+          "reproduction_credit_s": 0.17,
+          "descendant_count": 0,
+          "maintenance_shortfall": 0,
+          "last_acclimation_atp_fraction": 8.156466594594357e-06,
+          "generation": 1,
+          "rng": 18157613457239378000
+        },
+        "geometry": {
+          "id": 173,
+          "body": 172,
+          "size": [
+            0.18000000000000002,
+            0.7,
+            0
+          ],
+          "name": "ecology:growth-53f04444c6cf3cfe-1632-1433-anchor:geom",
+          "type": 3,
+          "resident_id": null,
+          "mesh_id": -1,
+          "position": {
+            "0": 4.175239562988281,
+            "1": 2.3049166202545166,
+            "2": 0.8799999952316284
+          },
+          "rotation": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 1,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 1
+          }
+        }
+      }
+    ],
+    "final_accounting": {
+      "initial_elements": [
+        53.31691194474,
+        14.099999999999998,
+        62.80000000000008,
+        4.8199999999999985,
+        382.4199999999999
+      ],
+      "last_elements": [
+        53.31691194470931,
+        14.100000000000003,
+        62.80000000000001,
+        4.819999999999999,
+        382.4199999999999
+      ],
+      "last_residual": [
+        0,
+        -1.7763568394002505e-15,
+        1.4210854715202004e-14,
+        0,
+        -5.684341886080802e-14
+      ],
+      "maximum_absolute_residual": 1.7053025658242404e-12,
+      "captured_photon_energy": 0.5681972404112157,
+      "dissipated_energy": 1.237780981429607,
+      "maintenance_atp_spent": 0.2869985568530103,
+      "regulation_atp_spent": 0.006555717985518272,
+      "physical_work_atp_spent": 0.277452733892477
+    },
+    "whole_world_replay_exact": true,
+    "fixture_sha256": "fa05c8b5cc240c1fdf4ef66eda14394fa863db73df9fcf6f65890e77a63decdf",
+    "core_wasm_sha256": "c72fbba6b5f37b613297d70e659a1e077acbcf31333154fade189282e82ec423",
+    "host_sha256": "927ec943495dc91774a0b9cebb13202f99632582de60311b75dca56b76af4e3b",
+    "scope": "32-second actual MuJoCo colony development, before the new physical route sampler. Constant zero MOTOR92; no CNS or fly reproduction claim."
+  },
+  "joined_routes": {
+    "command": "node test.mjs",
+    "cwd": "native/browser-world",
+    "exit_code": 0,
+    "source_mjcf_sha256": "71e2a0c59f7f6407d2c0c62627ba91005c25078022fbb7899d9afe4ada0da3fe",
+    "plan_sha256": "3a9e2540a28f492d13abcf2c062f24f67f270ffb32ec902df1be4a0e30614730",
+    "residents": 2,
+    "route_count": 133,
+    "construction_tick": 200,
+    "realized_growth_at_tick": 1,
+    "minimum_route_open_fraction": 0.03125,
+    "maximum_route_open_fraction": 1.0,
+    "all_advection_zero": true,
+    "latest_ray_queries": 7814,
+    "latest_containment_queries": 6331,
+    "screen_affected_optic_scalars": 141,
+    "mean_advance_ms": 173.0226920594059,
+    "mean_sample_ms": 10.03923949999978,
+    "elapsed_ms": 36675,
+    "whole_world_replay_exact": true,
+    "scope": "Joined actual MuJoCo geometry, route measurement, conservative transport, light, construction, visitor object/force/sound, and snapshot continuation. Numerical summary transcribed from successful tool stdout; no learned behavior or matched performance comparison."
+  },
+  "source_hashes": {
+    "native/browser-world/runtime.mjs": "28eae8ef11959427496a81133e4079c4698723df3416bd98a3981c5d8c62a3d7",
+    "native/browser-world/test.mjs": "b54b42502380c9981483d7d4c6b8d42307a3f1a9af0f2103ff7383267c2d09f5",
+    "native/browser-world/src/route_geometry.rs": "d1b7a92147c039dc9518d8448474218f802719961760e09a402086218ea154e0",
+    "native/ecology-core/src/transport_geometry.rs": "8d228434bcc6f3d135cd32772b9629c58d7c2b88f75e835c6b40a83d203d17b7",
+    "native/browser-world/pkg/chreatures_browser_world_bg.wasm": "d5330fda92b08ea418f8b0a77ff941dd09562b7ce21e7ba77083fd414a03340d"
+  }
+}
