@@ -455,7 +455,7 @@ def _version_live_publication() -> dict[str, object]:
         raise FileNotFoundError("authenticated live runtime manifest is required")
     runtime = json.loads((live / "runtime-manifest.json").read_text())
     inputs = {"runtime": runtime["files"], "files": {}}
-    for relative in ("live.js", "live.css", "live/view.js", "live/neuron-inspector.js", "live/neuron-annotations.js",
+    for relative in ("live.js", "live.css", "live/view.js", "live/neuron-inspector.js", "live/neuron-annotations.js", "live/plasticity-panel.js",
                      "live/assets/observer/male-cns-observer-annotations-v1.manifest.json",
                      "live/assets/observer/male-cns-observer-annotations-v1.json.gz", "live/model/cns-manifest.json",
                      "live/model/resident-manifest.json", "live/model/observer-manifest.json"):
@@ -468,6 +468,7 @@ def _version_live_publication() -> dict[str, object]:
     shutil.copytree(live, OUTPUT / prefix)
     entry = (OUTPUT / "live.js").read_text()
     for old, new in (("'./live/view.js'", f"'./{prefix}/view.js'"),
+                     ("'./live/plasticity-panel.js'", f"'./{prefix}/plasticity-panel.js'"),
                      ("'./live/worker.js'", f"'./{prefix}/worker.js'")):
         if entry.count(old) != 1:
             raise ValueError(f"live entry reference changed: {old}")

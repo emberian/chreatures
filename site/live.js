@@ -1,4 +1,5 @@
 import {LiveView, NeuronInspector} from './live/view.js';
+import {PlasticityPanel} from './live/plasticity-panel.js';
 
 const $ = selector => document.querySelector(selector);
 const stateLabel = $('#state-label');
@@ -27,6 +28,7 @@ const interactive = [...document.querySelectorAll('.instrument-panel button, .in
 let worker = null;
 let view = null;
 let inspector = null;
+let plasticityPanel = null;
 let ready = false;
 let paused = false;
 let selectedResident = null;
@@ -214,6 +216,7 @@ function selectResident(id) {
   view.clearNeural();
   view.clearRetina();
   resetInspector();
+  plasticityPanel?.clear(id);
   $('#neural-rms').textContent = '—'; $('#neural-peak').textContent = '—';
   $('#sense-time').textContent = '—';
   for (const {fill} of acousticBars) fill.style.height = '0%';
@@ -261,6 +264,7 @@ function handleReady(message) {
   view.setResidents(residents);
   residentButtons(residents);
   ready = true; paused = false;
+  plasticityPanel.setReady(true);
   progress.parentElement.classList.remove('indeterminate'); progress.style.width = '100%';
   startLayer.hidden = true;
   setInteractive(true);
@@ -318,8 +322,10 @@ function workerMessage(event) {
     else if (message.type === 'ready') handleReady(message);
     else if (message.type === 'frame') updateFrame(message);
     else if (message.type === 'saved') downloadSnapshot(message);
+    else if (message.type === 'plasticity') plasticityPanel.accept(message, selectedResident);
     else if (message.type === 'loaded') {
       resetInspector();
+      plasticityPanel.clear(selectedResident);
       if (selectedResident) post('select', {residentId: selectedResident});
       setNotice('checkpoint loaded', message.paused ? 'paused' : 'ready');
     }
@@ -330,6 +336,7 @@ function workerMessage(event) {
       shoveToyButton.disabled = !selectedToy;
       setNotice(selectedToy ? `placed ${selectedToy}` : 'physical object placed', paused ? 'paused' : 'ready');
     } else if (message.type === 'error') {
+      plasticityPanel?.reject(message.requestId);
       if (pendingToyRequest && message.requestId === pendingToyRequest) {
         pendingToyRequest = null;
         addToyButton.disabled = !ready;
@@ -406,6 +413,7 @@ startButton.addEventListener('click', () => {
   try {
     view = createView();
     inspector = new NeuronInspector($('#neuron-inspector'), row => view.selectNeuron(row));
+    plasticityPanel = new PlasticityPanel($('#plasticity-panel'), residentId => request('inspect-plasticity', {residentId}));
     loadDetail.textContent = 'Opening the isolated compute Worker…';
     worker = new Worker('./live/worker.js', {type: 'module'});
     worker.addEventListener('message', workerMessage);

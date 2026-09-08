@@ -130,6 +130,19 @@
         <p>84 signed joint targets, six foot adhesion channels and two oral drives, decoded from motor-neuron activity. Zero is each joint’s imported neutral pose. These are effective servos, not identified muscles.</p>
       </section>
 
+      <section id="plasticity-panel" class="control-card plasticity-card" aria-labelledby="plasticity-title">
+        <div class="section-head"><div><small>selected resident · private state</small><h2 id="plasticity-title">Private synapses</h2></div><output data-plasticity-time>—</output></div>
+        <div class="plasticity-action"><button type="button" data-plasticity-refresh>Refresh readback</button><span data-plasticity-status>select a resident</span></div>
+        <figure class="plasticity-map"><figcaption><span>Efficacy deviation</span><span>−0.8 to 0 · multiplier 0.2 to 1</span></figcaption><canvas data-plasticity-efficacy aria-label="All 4,184 modeled private efficacy deviations in measured-edge order"></canvas></figure>
+        <figure class="plasticity-map"><figcaption><span>Eligibility</span><span>0 to 1</span></figcaption><canvas data-plasticity-eligibility aria-label="All 4,184 modeled private eligibility values in measured-edge order"></canvas></figure>
+        <div class="plasticity-targets">
+          <p data-plasticity-target><strong>MBON11 target row 655</strong><small>2,048 measured edges</small><output>—</output></p>
+          <p data-plasticity-target><strong>MBON11 target row 1,306</strong><small>2,136 measured edges</small><output>—</output></p>
+        </div>
+        <p class="plasticity-identity" data-plasticity-identity>Rule identity appears after a read.</p>
+        <p>The two maps show modeled private synaptic state for the selected resident. The fixed rule can only depress these measured connections. This readback does not establish learned behavior, preference or valence, and observer data never enters control.</p>
+      </section>
+
       <section class="checkpoint-card">
         <button id="pause" type="button">Pause</button>
         <button id="save" type="button">Save life</button>
