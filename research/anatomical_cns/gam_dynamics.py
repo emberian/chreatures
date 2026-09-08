@@ -252,8 +252,8 @@ def run(args):
                   "zero_edge": bool(args.zero_edge), "metrics": metrics,
                   "elapsed_seconds": time.monotonic() - started,
                   "scope": "frozen fullgraph open-loop physical-sequence replay, no physical rollout or CNS fit",
-                  "latent_per_channel_std_mean": float(z.std(axis=(0, 1, 2)).mean()),
-                  "motor_per_channel_std_mean": float(motors.std(axis=(0, 1, 2)).mean())}
+                  "latent_per_channel_std_mean": float(z.std(axis=(0, 1, 2), dtype=np.float64).mean()),
+                  "motor_per_channel_std_mean": float(motors.std(axis=(0, 1, 2), dtype=np.float64).mean())}
         write(path, record)
         print(json.dumps({"setting": point["setting_id"], "seconds": record["elapsed_seconds"],
                           "inner": metrics["inner"]["objective"], "heldout": metrics["heldout"]["objective"]}), flush=True)
@@ -288,7 +288,17 @@ def fit(args):
             diagnostics[target] = {"status": "constant-no-identifiable-response", "value": float(observed[0])}
             continue
         rows = rows_for(records, target)
-        gam.validate_formula(rows, JOINT, family="gaussian")
+        try:
+            gam.validate_formula(rows, JOINT, family="gaussian")
+        except Exception as exc:
+            if "effectively constant" not in str(exc):
+                raise
+            diagnostics[target] = {"status": "native-rejected-effectively-constant",
+                "native_error": str(exc), "observed_min": float(observed.min()),
+                "observed_max": float(observed.max()),
+                "observed_sample_sd": float(observed.std(ddof=1)),
+                "action": "no response rescaling, artificial jitter, or fitted surface"}
+            continue
         model, msgs = _capture_native_stderr(lambda: gam.fit(rows, JOINT, family="gaussian"))
         warnings.extend(msgs)
         model.save(args.output / (target + ".gam"))
@@ -367,12 +377,19 @@ def confirm(args):
     error = abs(actual - proposal["predicted_inner_objective"])
     zero = json.loads((args.results / "zero-edge.json").read_text())
     center = json.loads((args.results / "setting-24.json").read_text())
-    if zero["provenance"] != record["provenance"] or zero.get("zero_edge") is not True:
-        raise ValueError("requires a matched center zero-edge replay")
+    if (zero["provenance"] != record["provenance"] or zero.get("zero_edge") is not True
+            or center["provenance"] != record["provenance"] or center.get("zero_edge")
+            or center["setting"] != design()[-1]):
+        raise ValueError("requires matched center and zero-edge replays")
     write(args.fit / "confirmation-report.json", {"format": FORMAT, "status": "actual-fullgraph-confirmed",
+          "provenance": record["provenance"], "setting": record["setting"],
+          "gam_report_sha256": sha(args.fit / "report.json"),
+          "zero_edge_replay_sha256": sha(args.results / "zero-edge.json"),
+          "center_replay_sha256": sha(args.results / "setting-24.json"),
           "center_metrics": center["metrics"], "zero_edge_metrics": zero["metrics"],
           "zero_edge_latent_std": zero["latent_per_channel_std_mean"],
           "zero_edge_motor_std": zero["motor_per_channel_std_mean"],
+          "zero_edge_std_scope": "diagnostic only; inspect sealed replay source for aggregation precision; float32 accumulation can report nonzero std for repeated constants; decoder losses use float64",
           "zero_edge_scope": "all fast and modulatory graph values zero; same nontrivial baseline, afferents and frozen motor decoder; temporal probe refit on ablated training Z",
           "predicted_inner_objective": proposal["predicted_inner_objective"], "observed_inner_objective": actual,
           "absolute_error": error, "within_loo_rmse": error <= loo,
@@ -393,7 +410,7 @@ def main():
     q.add_argument("--output", type=Path, required=True)
     q.add_argument("--start", type=int, default=0)
     q.add_argument("--stop", type=int, default=25)
-    q.add_argument("--world-batch", type=int, default=2, choices=range(1, 9))
+    q.add_argument("--world-batch", type=int, default=8, choices=range(1, 9))
     q.add_argument("--cpu-threads", type=int, default=4)
     q.add_argument("--device", default="cuda")
     group = q.add_mutually_exclusive_group()

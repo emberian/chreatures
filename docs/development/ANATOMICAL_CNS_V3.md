@@ -138,6 +138,15 @@ implementation and thinJS transport; Python remains Torch training/export/resear
 One integrated native/WebGPU/Torch parity plus actual physical training/response
 campaign follows the build batch. No repeated whole-suite microvalidation loop.
 
+Headless Node/Dawn owners must strongly retain the object returned by `create()`
+for the entire GPU lifetime, as required by the upstream
+[node-webgpu lifetime contract](https://github.com/dawn-gpu/node-webgpu#lifetime)
+and tracked in [Chromium issue 387965810](https://issues.chromium.org/issues/387965810).
+An lldb diagnosis on Node 26/Dawn 0.6 reached
+`dawn::native::InstanceBase::ProcessEvents` at `std::mutex::lock` after successful
+ticks when that owner was collected. This is a headless-host lifetime rule, not
+a browser CNS mechanism.
+
 ## Executed learning boundary
 
 The first physical bootstrap fits shared interface and cell-type parameters; it

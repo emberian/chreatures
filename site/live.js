@@ -15,18 +15,21 @@ const pauseButton = $('#pause');
 const saveButton = $('#save');
 const loadInput = $('#load');
 const greetButton = $('#greet');
+const muscleDisplay = $('#muscle-recruitment');
+const muscleBars = [];
 const addToyButton = $('#add-toy');
 const shoveToyButton = $('#shove-toy');
 const stimulusVideo = $('#stimulus-video');
 const stimulusCanvas = $('#stimulus-canvas');
 const stimulusContext = stimulusCanvas.getContext('2d', {willReadFrequently: true});
-const interactive = [...document.querySelectorAll('.instrument-panel button, .instrument-panel input, .camera-bar button')];
+const interactive = [...document.querySelectorAll('.instrument-panel button, .instrument-panel input, .instrument-panel select, .camera-bar button')];
 
 let worker = null;
 let view = null;
 let ready = false;
 let paused = false;
 let selectedResident = null;
+let neuralField = 'rate', loadedRateBaseline = null;
 let selectedToy = null;
 let requestCounter = 0;
 const requestedStimulus = new URLSearchParams(location.search).get('stimulus');
@@ -35,6 +38,19 @@ let stimulusMode = 'blank';
 let stimulusTimer = null;
 let stimulusStarted = performance.now();
 let noticeTimer = null;
+
+const legNames = ['LF', 'LM', 'LH', 'RF', 'RM', 'RH'];
+for (let joint = 0; joint < 12; joint++) {
+  const row = document.createElement('div');
+  const label = document.createElement('span'); label.textContent = `${legNames[Math.floor(joint/2)]} ${joint % 2 ? 'knee' : 'hip'}`;
+  row.append(label);
+  for (let direction = 0; direction < 2; direction++) {
+    const meter = document.createElement('meter'); meter.min = 0; meter.max = 1; meter.value = 0;
+    meter.setAttribute('aria-label', `${label.textContent}, ${direction ? 'negative' : 'positive'} direction`);
+    row.append(meter); muscleBars.push(meter);
+  }
+  muscleDisplay.append(row);
+}
 
 function createView() {
   return new LiveView({
@@ -141,6 +157,7 @@ function handleReady(message) {
     throw new Error('Worker did not provide the pinned MaleCNS atlas and baseline');
   }
   const visible = view.initializeBrain(message.brainPositions, message.brainValid, message.neuralBaseline);
+  loadedRateBaseline = message.neuralBaseline.slice();
   if (message.neurons !== 165122 || message.validSoma !== visible || visible !== 140024) throw new Error('Worker MaleCNS extent differs from the pinned observer atlas');
   const retina = view.initializeRetina(message.retinalSites, message.retinalSupported);
   if (retina.sites !== 1771 || retina.supported !== 1486) throw new Error('Worker retinal atlas extent differs from the pinned observer atlas');
@@ -170,12 +187,13 @@ function updateFrame(message) {
   pauseButton.textContent = paused ? 'Resume' : 'Pause';
   if (!noticeTimer) setNotice(paused ? 'paused' : 'running locally', paused ? 'paused' : 'ready');
   if (message.selectedResidentId === selectedResident) {
-    if (message.neuralRates) {
-      const activity = view.updateNeural(message.neuralRates);
+    if (message.neuralSignal && message.neuralField === neuralField) {
+      const activity = view.updateNeural(message.neuralSignal);
       $('#neural-rms').textContent = activity.rms.toExponential(2);
       $('#neural-peak').textContent = activity.peak.toExponential(2);
     }
     if (message.retinalRGB) view.updateRetina(message.retinalRGB);
+    if (message.motorActivation?.length === 34) for (let i = 0; i < 24; i++) muscleBars[i].value = message.motorActivation[i];
   }
   const visitorIds = new Set();
   for (const item of message.geometry) {
@@ -307,6 +325,28 @@ for (const button of document.querySelectorAll('[data-neural-panel]')) button.ad
   if (panel === 'eyes') requestAnimationFrame(() => view?.renderRetina());
 });
 
+$('#neural-field').addEventListener('change', event => {
+  if (!view || !ready) return;
+  neuralField = event.target.value;
+  $('#brain-canvas').setAttribute('aria-label', `Actual MaleCNS soma point cloud: ${event.target.selectedOptions[0].textContent}`);
+  const reservoir = neuralField === 'support' || neuralField === 'release';
+  const baseline = neuralField === 'rate' ? loadedRateBaseline : new Float32Array(165122).fill(reservoir ? 1 : 0);
+  view.setNeuralField(neuralField, baseline);
+  $('#neural-reference').textContent = neuralField === 'rate' ? 'change from loaded rate baseline' : reservoir ? 'change from full resource (1)' : 'signed deviation from zero';
+  const descriptions = {
+    rate: 'Model activity relative to its loaded baseline, not measured firing rate or Hz.',
+    adaptation: 'Slow, activity-dependent neural adaptation. Signed model state; not a measurement of fatigue or feeling.',
+    support: 'Local activity-dependent support relative to its fully replenished value. An engineered regulatory mechanism.',
+    release: 'Neuron-shared effective release resource relative to full recovery. This approximates resource use; individual boutons are not modeled.',
+    dopamine: 'Target-local effective modulation carried by dopamine-annotated connections. A signed deviation from tonic state, not a chemical concentration or reward score.',
+    octopamine: 'Target-local effective modulation carried by octopamine-annotated connections. A signed deviation from tonic state, not a chemical concentration.',
+    serotonin: 'Target-local effective modulation carried by serotonin-annotated connections. A signed deviation from tonic state, not a chemical concentration.'
+  };
+  $('#neural-description').textContent = descriptions[neuralField] + ' Color limits stay fixed until you change them.';
+  $('#neural-rms').textContent = '—'; $('#neural-peak').textContent = '—';
+  post('neural-field', {field: neuralField});
+});
+
 $('#neural-scale').addEventListener('input', event => {
   if (!view || !ready) return;
   const value = 10 ** Number(event.target.value);
@@ -322,6 +362,10 @@ loadInput.addEventListener('change', async () => {
   loadInput.value = '';
 });
 greetButton.addEventListener('click', () => post('greet', {notes: [0, 1, 2]}));
+for (const button of document.querySelectorAll('[data-tone]')) button.addEventListener('click', () => {
+  post('tone', {frequency: Number(button.dataset.tone), duration: .8, amplitude: .65});
+  setNotice(`Sent ${button.dataset.tone} Hz into the garden`, 'ready');
+});
 addToyButton.addEventListener('click', () => request('insert-toy'));
 shoveToyButton.addEventListener('click', () => {
   if (selectedToy) post('shove', {id: selectedToy, force: [0, 4, 1]});

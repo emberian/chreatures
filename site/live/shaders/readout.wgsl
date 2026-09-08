@@ -24,6 +24,10 @@ struct NeuronState {
   rate: vec4<f32>,
   adaptation: vec4<f32>,
   support: vec4<f32>,
+  release: vec4<f32>,
+  m_da: vec4<f32>,
+  m_oa: vec4<f32>,
+  m_ht: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> config: Config;
@@ -43,6 +47,7 @@ var<workgroup> reduction: array<vec4<f32>, 256>;
 fn sigmoid(value: f32) -> f32 {
   return 1.0 / (1.0 + exp(-value));
 }
+
 
 fn baseline(type_index: u32) -> f32 {
   return 0.05 + 0.4 * sigmoid(dynamics_raw[type_index]);

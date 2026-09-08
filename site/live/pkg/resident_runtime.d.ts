@@ -4,7 +4,7 @@
 export class ResidentRuntime {
     free(): void;
     [Symbol.dispose](): void;
-    acknowledge(ticks: BigUint64Array, delivered_command: Float32Array): Uint8Array;
+    acknowledge(ticks: BigUint64Array, delivered_context: Float32Array): Uint8Array;
     diagnosticsJson(): string;
     expanded(additions: number, action_seed: bigint, suffix_seed: bigint): ResidentRuntime;
     /**
@@ -20,8 +20,9 @@ export class ResidentRuntime {
     saveBytes(): Uint8Array;
     /**
      * Inputs are resident-major B×512 and B×12; ticks are BigUint64Array,
-     * resets Uint8Array containing exactly 0 or 1. The command needs a receipt
-     * after physics execution, before another decision is allowed.
+     * resets Uint8Array containing exactly 0 or 1. The proposed context needs
+     * a receipt after it actually enters CNS recurrence; until then no next
+     * decision is allowed.
      */
     stepFlat(z: Float32Array, previous: Float32Array, ticks: BigUint64Array, reset: Uint8Array): ResidentStep;
     readonly batch: number;
@@ -35,7 +36,7 @@ export class ResidentStep {
     free(): void;
     [Symbol.dispose](): void;
     readonly diagnosticsJson: string;
-    readonly proposedCommand: Float32Array;
+    readonly proposedContext: Float32Array;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -53,7 +54,7 @@ export interface InitOutput {
     readonly residentruntime_saveBytes: (a: number) => [number, number, number, number];
     readonly residentruntime_stepFlat: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => [number, number, number];
     readonly residentstep_diagnosticsJson: (a: number) => [number, number];
-    readonly residentstep_proposedCommand: (a: number) => [number, number];
+    readonly residentstep_proposedContext: (a: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __externref_table_dealloc: (a: number) => void;

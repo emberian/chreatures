@@ -19,13 +19,13 @@ export class ResidentRuntime {
     }
     /**
      * @param {BigUint64Array} ticks
-     * @param {Float32Array} delivered_command
+     * @param {Float32Array} delivered_context
      * @returns {Uint8Array}
      */
-    acknowledge(ticks, delivered_command) {
+    acknowledge(ticks, delivered_context) {
         const ptr0 = passArray64ToWasm0(ticks, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passArrayF32ToWasm0(delivered_command, wasm.__wbindgen_malloc);
+        const ptr1 = passArrayF32ToWasm0(delivered_context, wasm.__wbindgen_malloc);
         const len1 = WASM_VECTOR_LEN;
         const ret = wasm.residentruntime_acknowledge(this.__wbg_ptr, ptr0, len0, ptr1, len1);
         if (ret[3]) {
@@ -128,8 +128,9 @@ export class ResidentRuntime {
     }
     /**
      * Inputs are resident-major B×512 and B×12; ticks are BigUint64Array,
-     * resets Uint8Array containing exactly 0 or 1. The command needs a receipt
-     * after physics execution, before another decision is allowed.
+     * resets Uint8Array containing exactly 0 or 1. The proposed context needs
+     * a receipt after it actually enters CNS recurrence; until then no next
+     * decision is allowed.
      * @param {Float32Array} z
      * @param {Float32Array} previous
      * @param {BigUint64Array} ticks
@@ -192,8 +193,8 @@ export class ResidentStep {
     /**
      * @returns {Float32Array}
      */
-    get proposedCommand() {
-        const ret = wasm.residentstep_proposedCommand(this.__wbg_ptr);
+    get proposedContext() {
+        const ret = wasm.residentstep_proposedContext(this.__wbg_ptr);
         var v1 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
         wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
         return v1;

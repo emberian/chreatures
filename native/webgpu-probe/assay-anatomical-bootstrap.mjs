@@ -102,7 +102,7 @@ const [{ MaleCNSWebGPU }, { createBrowserWorld }] = await Promise.all([
   import(pathToFileURL(resolve(here, '../../site/live/cns-webgpu.js'))),
   import(pathToFileURL(resolve(worldDirectory, 'runtime.mjs'))),
 ]);
-const shaderSources = Object.fromEntries(await Promise.all(['afferent.wgsl', 'dynamics.wgsl', 'readout.wgsl', 'motor.wgsl'].map(async name =>
+const shaderSources = Object.fromEntries(await Promise.all(['afferent.wgsl', 'dynamics.wgsl', 'readout.wgsl', 'motor.wgsl', 'observe.wgsl'].map(async name =>
   [name, await readFile(resolve(here, '../../site/live/shaders', name), 'utf8')])));
 const backend = args.backend ?? (process.platform === 'darwin' ? 'metal' : 'vulkan');
 const dawn = create([`backend=${backend}`]); globalThis.__chreaturesAnatomicalAssayDawn = dawn;

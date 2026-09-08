@@ -1,0 +1,50 @@
+{
+  "format": "chreatures-cns-webgpu-v3-dawn-probe-v1",
+  "manifestArtifact": "136e875da21428798065db8f971055f528144d0b3dbf394f7e91af1aaf729f08",
+  "graph": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "serviceArtifactSha256": "f5ce3919868af04a9bd95d2acb3865bf4537405d899d24c253ec628177ae0a6c",
+  "fixtureSha256": "d59e1185cd8310c6c75df857eb85d2dcb75f709f63655e9d3ca657a4597b390e",
+  "adapter": {
+    "name": "apple-m2-max"
+  },
+  "capacity": 1,
+  "ticks": 3,
+  "neutralRateMaxAbs": 4.470348358154297e-8,
+  "rateMaxAbsByTick": [
+    0.0000018775463104248047,
+    0.000007286667823791504,
+    0.000009238719940185547
+  ],
+  "latentMaxAbsByTick": [
+    0.0000011585652828216553,
+    0.0000048317015171051025,
+    0.000008648261427879333
+  ],
+  "motorMaxAbsByTick": [
+    9.08970832824707e-7,
+    0.0000010207295417785645,
+    5.960464477539062e-7
+  ],
+  "finalMaxAbs": {
+    "rates": 0.000009238719940185547,
+    "adaptation": 5.883630365133286e-7,
+    "support": 1.1920928955078125e-7,
+    "release": 3.5762786865234375e-7,
+    "mod_da": 6.563253052149776e-9,
+    "mod_oa": 2.780143404379487e-8,
+    "mod_ht": 1.4289980754256248e-8
+  },
+  "byteExactRestore": {
+    "latent": true,
+    "motor": true,
+    "snapshot": true
+  },
+  "limits": {
+    "neutralRate": 0.000002,
+    "state": 0.0002,
+    "latent": 0.0002,
+    "motor": 0.0002
+  },
+  "limitBasis": "Approximately four times the observed binary16-versus-float32 numerical error; regression bound only, not a biological tolerance.",
+  "note": "Browser graph and projection use authenticated IEEE binary16 packing; the Torch fixture used source float32 weights."
+}

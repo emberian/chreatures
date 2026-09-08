@@ -251,6 +251,11 @@ export class LiveView {
     if (this.brainRates) this.updateNeural(this.brainRates);
   }
 
+  setNeuralField(field, baseline) {
+    this.neuralField = field;
+    this.setNeuralBaseline(baseline);
+  }
+
   setNeuralBaseline(baseline) {
     finiteArray(baseline, NEURONS, 'Selected MaleCNS rate baseline');
     this.brainBaseline = Float32Array.from(baseline);
@@ -271,7 +276,7 @@ export class LiveView {
   updateNeural(rates) {
     if (!this.brainRows || !this.brainColors || !this.brainBaseline) throw new Error('MaleCNS atlas and selected baseline are not ready');
     finiteArray(rates, NEURONS, 'MaleCNS rate state');
-    if (rates.some(value => value < 0)) throw new Error('MaleCNS rate state contains a negative value');
+    if ((!this.neuralField || this.neuralField === 'rate') && rates.some(value => value < 0)) throw new Error('MaleCNS rate state contains a negative value');
     this.brainRates = rates;
     const colors = this.brainColors;
     for (let index = 0; index < this.brainRows.length; index += 1) {

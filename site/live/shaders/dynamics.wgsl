@@ -1,144 +1,171 @@
-// AGPL-3.0-or-later
-// Exact operating-point-relative CNS Dynamics V2. The two Jacobi updates are
-// dispatched separately by the host so afferent drive/adaptation/support stay
-// fixed while every recurrent source comes from the previous substep.
-
-const NEURONS: u32 = 165122u;
-const TYPES: u32 = 11752u;
+// AGPL-3.0-or-later -- exact V3 seven-state recurrence.
+const N: u32 = 165122u;
+const T: u32 = 11752u;
 
 struct Config {
-  capacity: u32,
-  active_mask: u32,
-  reset_mask: u32,
-  selected_resident: u32,
-  dt: f32,
-  neuron_count: u32,
-  edge_count: u32,
-  _pad: u32,
+    capacity: u32,
+    active_mask: u32,
+    reset_mask: u32,
+    selected_resident: u32,
+    dt: f32,
+    neuron_count: u32,
+    edge_count: u32,
+    _pad: u32,
 };
 
-struct NeuronState {
-  rate: vec4<f32>,
-  adaptation: vec4<f32>,
-  support: vec4<f32>,
+struct State {
+    rate: vec4<f32>,
+    adapt: vec4<f32>,
+    support: vec4<f32>,
+    release: vec4<f32>,
+    da: vec4<f32>,
+    oa: vec4<f32>,
+    ht: vec4<f32>,
 };
 
-@group(0) @binding(0) var<uniform> config: Config;
+struct Recur {
+    fast: vec4<f32>,
+    da: vec4<f32>,
+    oa: vec4<f32>,
+    ht: vec4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> cfg: Config;
 @group(0) @binding(1) var<storage, read> crow: array<u32>;
 @group(0) @binding(2) var<storage, read> col: array<u32>;
-@group(0) @binding(3) var<storage, read> packed_weight: array<u32>;
-@group(0) @binding(4) var<storage, read> neuron_type: array<u32>;
-// Five type-major arrays in order: baseline, recurrent gain, tau,
-// adaptation gain, adaptation tau.
-@group(0) @binding(5) var<storage, read> dynamics_raw: array<f32>;
-@group(0) @binding(6) var<storage, read> state_in: array<NeuronState>;
-@group(0) @binding(7) var<storage, read_write> state_out: array<NeuronState>;
-@group(0) @binding(8) var<storage, read_write> deviation: array<vec4<f32>>;
-@group(0) @binding(9) var<storage, read_write> recurrence: array<vec4<f32>>;
-@group(0) @binding(10) var<storage, read> drive: array<vec4<f32>>;
-@group(0) @binding(11) var<storage, read> neutral_drive: array<f32>;
+@group(0) @binding(3) var<storage, read> weight: array<u32>;
+@group(0) @binding(4) var<storage, read> index: array<u32>;
+@group(0) @binding(5) var<storage, read> raws: array<f32>;
+@group(0) @binding(6) var<storage, read> src: array<State>;
+@group(0) @binding(7) var<storage, read_write> dst: array<State>;
+@group(0) @binding(8) var<storage, read_write> recur: array<Recur>;
+@group(0) @binding(9) var<storage, read> drive: array<vec4<f32>>;
+@group(0) @binding(10) var<storage, read> neutral: array<f32>;
 
-fn sigmoid(value: f32) -> f32 {
-  return 1.0 / (1.0 + exp(-value));
+fn sigmoid(x: f32) -> f32 {
+    return 1.0 / (1.0 + exp(-x));
 }
 
-fn half_at(index: u32) -> f32 {
-  let pair = unpack2x16float(packed_weight[index >> 1u]);
-  return select(pair.x, pair.y, (index & 1u) != 0u);
+fn raw_value(family: u32, neuron_type: u32) -> f32 {
+    return raws[family * T + neuron_type];
+}
+
+fn baseline(neuron_type: u32) -> f32 {
+    return 0.05 + 0.4 * sigmoid(raw_value(0u, neuron_type));
+}
+
+fn decay_alpha(x: f32) -> f32 {
+    return 1.0 - exp(-x);
 }
 
 fn lane_mask(bits: u32) -> vec4<bool> {
-  return vec4<bool>(
-    (bits & 1u) != 0u,
-    (bits & 2u) != 0u,
-    (bits & 4u) != 0u,
-    (bits & 8u) != 0u,
-  );
+    return vec4<bool>(
+        (bits & 1u) != 0u,
+        (bits & 2u) != 0u,
+        (bits & 4u) != 0u,
+        (bits & 8u) != 0u,
+    );
 }
 
-fn raw(field: u32, type_index: u32) -> f32 {
-  return dynamics_raw[field * TYPES + type_index];
-}
-
-fn baseline(type_index: u32) -> f32 {
-  return 0.05 + 0.4 * sigmoid(raw(0u, type_index));
-}
-
-fn one_minus_exp_neg(value: f32) -> f32 {
-  return 1.0 - exp(-value);
+fn unpack_weight(edge: u32) -> f32 {
+    let pair = unpack2x16float(weight[edge >> 1u]);
+    return select(pair.x, pair.y, (edge & 1u) != 0u);
 }
 
 @compute @workgroup_size(256)
-fn reset_state(@builtin(global_invocation_id) id: vec3<u32>) {
-  let neuron = id.x;
-  if (neuron >= NEURONS) { return; }
-  let old = state_out[neuron];
-  let reset = lane_mask(config.reset_mask);
-  let r0 = baseline(neuron_type[neuron]);
-  state_out[neuron].rate = select(old.rate, vec4<f32>(r0), reset);
-  state_out[neuron].adaptation = select(old.adaptation, vec4<f32>(0.0), reset);
-  state_out[neuron].support = select(old.support, vec4<f32>(1.0), reset);
+fn reset_state(@builtin(global_invocation_id) invocation: vec3<u32>) {
+    let neuron = invocation.x;
+    if (neuron >= N) {
+        return;
+    }
+    let reset = lane_mask(cfg.reset_mask);
+    let old = dst[neuron];
+    let resting_rate = vec4<f32>(baseline(index[neuron]));
+    dst[neuron].rate = select(old.rate, resting_rate, reset);
+    dst[neuron].adapt = select(old.adapt, vec4<f32>(0), reset);
+    dst[neuron].support = select(old.support, vec4<f32>(1), reset);
+    dst[neuron].release = select(old.release, vec4<f32>(1), reset);
+    dst[neuron].da = select(old.da, vec4<f32>(0), reset);
+    dst[neuron].oa = select(old.oa, vec4<f32>(0), reset);
+    dst[neuron].ht = select(old.ht, vec4<f32>(0), reset);
+}
+
+// index=graph.channel, raws=baseline_by_neuron for this pass.
+@compute @workgroup_size(256)
+fn recurrent_sum(@builtin(global_invocation_id) invocation: vec3<u32>) {
+    let neuron = invocation.x;
+    if (neuron >= N) {
+        return;
+    }
+    var sum = Recur(
+        vec4<f32>(0), vec4<f32>(0), vec4<f32>(0), vec4<f32>(0)
+    );
+    for (var edge = crow[neuron]; edge < crow[neuron + 1u]; edge++) {
+        let source = col[edge];
+        let value = unpack_weight(edge)
+            * (src[source].rate - vec4<f32>(raws[source]));
+        switch index[source] {
+            case 1u: { sum.fast += value * src[source].release; }
+            case 2u: { sum.da += value; }
+            case 3u: { sum.oa += value; }
+            case 4u: { sum.ht += value; }
+            default: {}
+        }
+    }
+    recur[neuron] = sum;
+}
+
+// index=neuron_type, raws=13 type arrays followed by modulation_tau_raw[3].
+@compute @workgroup_size(256)
+fn jacobi_update(@builtin(global_invocation_id) invocation: vec3<u32>) {
+    let neuron = invocation.x;
+    if (neuron >= N) {
+        return;
+    }
+    let neuron_type = index[neuron];
+    let resting_rate = baseline(neuron_type);
+    let half_range = min(resting_rate, 1.0 - resting_rate);
+    let old = src[neuron];
+    let input = recur[neuron];
+    let modulation_offset = 13u * T;
+    let da = old.da + decay_alpha(cfg.dt / (2.0 * (0.1 + 4.9 * sigmoid(raws[modulation_offset])))) * (input.da - old.da);
+    let oa = old.oa + decay_alpha(cfg.dt / (2.0 * (0.1 + 4.9 * sigmoid(raws[modulation_offset + 1u])))) * (input.oa - old.oa);
+    let ht = old.ht + decay_alpha(cfg.dt / (2.0 * (0.1 + 4.9 * sigmoid(raws[modulation_offset + 2u])))) * (input.ht - old.ht);
+    let gain_modulation = (0.5 * tanh(raw_value(7u, neuron_type)) * da + 0.5 * tanh(raw_value(8u, neuron_type)) * oa + 0.5 * tanh(raw_value(9u, neuron_type)) * ht) / half_range;
+    let adaptation_modulation = (0.5 * tanh(raw_value(10u, neuron_type)) * da + 0.5 * tanh(raw_value(11u, neuron_type)) * oa + 0.5 * tanh(raw_value(12u, neuron_type)) * ht) / half_range;
+    let gain = (0.5 + 1.5 * sigmoid(raw_value(1u, neuron_type))) * exp(0.5 * tanh(gain_modulation));
+    let adaptation_gain = 0.5 * sigmoid(raw_value(3u, neuron_type)) * (1.0 + 0.5 * tanh(adaptation_modulation));
+    let current = drive[neuron] - vec4<f32>(neutral[neuron]) + gain * input.fast - adaptation_gain * old.adapt;
+    let desired = vec4<f32>(resting_rate) + old.support * half_range * tanh(current / half_range);
+    let rate = old.rate + decay_alpha(cfg.dt / (2.0 * (0.02 + 0.23 * sigmoid(raw_value(2u, neuron_type))))) * (desired - old.rate);
+    let enabled = lane_mask(cfg.active_mask);
+    dst[neuron].rate = select(old.rate, rate, enabled);
+    dst[neuron].adapt = old.adapt;
+    dst[neuron].support = old.support;
+    dst[neuron].release = old.release;
+    dst[neuron].da = select(old.da, da, enabled);
+    dst[neuron].oa = select(old.oa, oa, enabled);
+    dst[neuron].ht = select(old.ht, ht, enabled);
 }
 
 @compute @workgroup_size(256)
-fn derive_deviation(@builtin(global_invocation_id) id: vec3<u32>) {
-  let neuron = id.x;
-  if (neuron >= NEURONS) { return; }
-  deviation[neuron] = state_in[neuron].rate - vec4<f32>(baseline(neuron_type[neuron]));
-}
-
-@compute @workgroup_size(256)
-fn recurrent_sum(@builtin(global_invocation_id) id: vec3<u32>) {
-  let neuron = id.x;
-  if (neuron >= NEURONS) { return; }
-  var total = vec4<f32>(0.0);
-  let start = crow[neuron];
-  let stop = crow[neuron + 1u];
-  for (var edge = start; edge < stop; edge++) {
-    total += half_at(edge) * deviation[col[edge]];
-  }
-  recurrence[neuron] = total;
-}
-
-@compute @workgroup_size(256)
-fn jacobi_update(@builtin(global_invocation_id) id: vec3<u32>) {
-  let neuron = id.x;
-  if (neuron >= NEURONS) { return; }
-  let type_index = neuron_type[neuron];
-  let r0 = baseline(type_index);
-  let h = min(r0, 1.0 - r0);
-  let gain = 0.5 + 1.5 * sigmoid(raw(1u, type_index));
-  let tau = 0.02 + 0.23 * sigmoid(raw(2u, type_index));
-  let adaptation_gain = 0.5 * sigmoid(raw(3u, type_index));
-  let alpha = one_minus_exp_neg(config.dt / (2.0 * tau));
-  let old = state_in[neuron];
-  let u = drive[neuron] - vec4<f32>(neutral_drive[neuron])
-    + gain * recurrence[neuron] - adaptation_gain * old.adaptation;
-  let desired_rate = vec4<f32>(r0) + old.support * h * tanh(u / h);
-  let next_rate = old.rate + alpha * (desired_rate - old.rate);
-  state_out[neuron].rate = select(old.rate, next_rate, lane_mask(config.active_mask));
-  state_out[neuron].adaptation = old.adaptation;
-  state_out[neuron].support = old.support;
-}
-
-@compute @workgroup_size(256)
-fn finalize_tick(@builtin(global_invocation_id) id: vec3<u32>) {
-  let neuron = id.x;
-  if (neuron >= NEURONS) { return; }
-  let type_index = neuron_type[neuron];
-  let r0 = baseline(type_index);
-  let h = min(r0, 1.0 - r0);
-  let adaptation_tau = 0.25 + 4.75 * sigmoid(raw(4u, type_index));
-  let alpha = one_minus_exp_neg(config.dt / adaptation_tau);
-  let old = state_out[neuron];
-  let x = old.rate - vec4<f32>(r0);
-  let next_adaptation = old.adaptation + alpha * (x - old.adaptation);
-  let next_support = clamp(
-    old.support + config.dt * (0.024 * (vec4<f32>(1.0) - old.support) - 0.003 * abs(x) / h),
-    vec4<f32>(0.65),
-    vec4<f32>(1.0),
-  );
-  let enabled_lanes = lane_mask(config.active_mask);
-  state_out[neuron].adaptation = select(old.adaptation, next_adaptation, enabled_lanes);
-  state_out[neuron].support = select(old.support, next_support, enabled_lanes);
+fn finalize_tick(@builtin(global_invocation_id) invocation: vec3<u32>) {
+    let neuron = invocation.x;
+    if (neuron >= N) {
+        return;
+    }
+    let neuron_type = index[neuron];
+    let old = dst[neuron];
+    let resting_rate = baseline(neuron_type);
+    let half_range = min(resting_rate, 1.0 - resting_rate);
+    let deviation = old.rate - vec4<f32>(resting_rate);
+    let adaptation = old.adapt + decay_alpha(cfg.dt / (0.25 + 4.75 * sigmoid(raw_value(4u, neuron_type)))) * (deviation - old.adapt);
+    let support = clamp(old.support + cfg.dt * (0.024 * (vec4<f32>(1) - old.support) - 0.003 * abs(deviation) / half_range), vec4<f32>(0.65), vec4<f32>(1));
+    let release_tau = 0.05 + 1.95 * sigmoid(raw_value(5u, neuron_type));
+    let release_use = 0.01 + 0.49 * sigmoid(raw_value(6u, neuron_type));
+    let release = clamp(old.release + cfg.dt * ((vec4<f32>(1) - old.release) / release_tau - release_use * abs(deviation) / half_range * old.release), vec4<f32>(0.2), vec4<f32>(1));
+    let enabled = lane_mask(cfg.active_mask);
+    dst[neuron].adapt = select(old.adapt, adaptation, enabled);
+    dst[neuron].support = select(old.support, support, enabled);
+    dst[neuron].release = select(old.release, release, enabled);
 }

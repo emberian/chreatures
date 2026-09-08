@@ -8,55 +8,86 @@ Inspired by *Creatures* and the changing societies and environments of *Children
 
 ## The current build
 
-**Anatomical CNS V3 is being integrated.** The new code gives the measured
-network stateful synaptic release and three slower transmitter pathways, routes
-body110 feedback into annotated sensory groups, and decodes physical muscle
-activation from 815 annotated motor neurons. Private memory sends twelve signed
-context currents back through descending neurons; it no longer supplies physical
-commands. The Rust body has independent antagonist actuators and frequency-sensitive
-hearing. Full-graph fitting uses actual MuJoCo sensory/action sequences, with
-anatomically masked trainable interfaces. Native GAM models the consequences of
-changing release and modulation parameters. [Current equations and scope](docs/development/ANATOMICAL_CNS_V3.md).
-The published experiment described below remains pinned V2 until the coupled V3
-artifacts and execution have been completed; V2 measurements are not V3 evidence.
+**Anatomical CNS V3 connects sensation, memory and muscles through the measured
+brain and cord.** The full MaleCNS v1.0 graph has 165,122 neurons and 25,563,197
+directed edges representing 124,025,046 synapses. We advance a dynamical model on
+that graph; fitted response curves do not replace its recurrence.
 
-**A live habitat now runs inside the tab.** [Start three new research lives](https://emberian.github.io/chreatures/live.html): actual MuJoCo articulated physics, Rust/Wasm sensation and private cognition, and WebGPU recurrence over the complete MaleCNS. Put Bad Apple on the physical screen, make a three-note signal, add a movable object, or save the entire interacting world. Inspect the actual bilateral retinal facets and signed whole-CNS activity with a fixed display scale. The model download is about 124 MB; a WebGPU-capable browser is required. The movie remains a separate historical recording.
+Each neuron now has activity, adaptation, local support, release availability and
+three slower modulatory fields. Dopamine-, octopamine- and serotonin-annotated
+connections carry those signals through the measured topology. Their kinetics
+and effects are explicit modeling assumptions. Unknown-transmitter connections
+remain unresolved, rather than acquiring invented chemical identities.
 
-The new V2 model has a positive operating point, signed adaptation and a learned rank-64 CNS readout. In a controlled held-out temporal experiment, its visual-change prediction achieved skills of .973/.919 against persistence; removing the graph edges reduced those values to approximately zero. These are sensory-processing results, not trained movement or fly physiology. Actual native GAM fits characterize a 27-setting gain/timing/adaptation sweep, including a subsequently executed parameter prediction. [Equations, training and controls](docs/development/CNS_DYNAMICS_V2.md) · [Navigate the native Weave evidence](https://emberian.github.io/chreatures/evidence.html).
+The body supplies 110 sensory channels, including joint angles, velocities,
+loads, foot contact, fatigue and sixteen acoustic frequency bands. Learned
+interfaces respect annotated sensory groups. The retina samples 1,771 bilateral
+column sites: measured connections anchor 3,936 of 4,107 photoreceptors to 1,486
+sites. The angular eye model is engineered; unsupported cells remain explicit.
+Physical screens, occlusion and body movement change the input.
 
-A new matched **30-second V2 film-versus-blank experiment** begins with identical physical, CNS and private controller states. Physical-screen input reached 1,370 supported retinal sites over the episode and changed 140,200 of 149,782 non-afferent rows above a 10⁻⁶ threshold at some point in the run. Actions and physical paths diverged at 1.50 model seconds. These are graded-model responses through the complete sensory-to-body loop, not recognition or recovered fly physiology. [Screen experiment evidence](https://emberian.github.io/chreatures/evidence.html#physical-screen-response-v2).
+**The motor boundary has changed.** Only the post-recurrence activity of 815
+annotated motor neurons supplies the 34 actuator commands. Twelve hip/knee joints
+have paired antagonist activations, activation dynamics and fatigue; there is no
+supplied gait oscillator. The synthetic body's muscle assignments are constrained
+by anatomical annotations, not a reconstructed fly neuromuscular junction map.
+Private Rust memory reads CNS activity and sends twelve signed context currents
+back through 1,314 descending neurons. It cannot directly command the body.
 
-The complete three-body Wasm/WebGPU loop ran headlessly through Dawn/Metal on M2 Max at about 64 ms per physical tick after a four-output Rust SIMD tile, now capturing the selected CNS and retina every tick. A matched before/after run measured a 32% reduction in complete tick time. A full-life snapshot reproduced neural activity, physical motion and private memory exactly, including restored added geometry. That is an execution measurement, not a browser UI benchmark. The deployed motor controller is still initialized and untrained. The first actual-body CNS-only training run reduced held-out action loss by 27% and achieved-key memory loss by 12%; matched physical rollouts changed movement, but stopping did not improve and predictor/value losses worsened. Eight independently initialized 512-tick physical teacher episodes and the richer controller fit have now completed. Held-out action error fell 51% and memory loss 19%, but broader autonomous comparisons still showed worse resource and effort outcomes than the initialized parent; the learned candidates remain research artifacts. [Completed wave and next frontier](docs/development/LIVE_WAVE_HANDOFF.md) · [Download the research corpus and corrected controller](https://github.com/emberian/chreatures/releases/tag/embodied-learning-v2-research-20260907). [Live architecture](docs/development/LIVE_CNS_WAVE.md) · [Browser physics and limits](docs/development/IN_TAB_PHYSICS.md).
+[Open the live garden](https://emberian.github.io/chreatures/live.html) ·
+[Put Bad Apple on its physical screen](https://emberian.github.io/chreatures/live.html?stimulus=bad-apple) ·
+[Equations, interfaces and limits](docs/development/ANATOMICAL_CNS_V3.md) ·
+[Browser physics](docs/development/IN_TAB_PHYSICS.md)
 
+The current in-tab generation uses MuJoCo articulated physics, Rust/Wasm body and
+private cognition, and WebGPU full-graph recurrence. Its inspector exposes all
+seven neural fields, actual retinal facets and paired muscle activations. Visitors
+can send four physical tones or a greeting, insert a movable object, and save the
+whole interacting life. All private neural fields, learned context memories,
+physiology, RNG state and pending inputs belong to that checkpoint.
 
-**September 7: the CNS is now the required sensory-to-control route.**
-The previous full graph really ran, but its controller also received raw vision
-and physiology. Those direct paths are removed from the current native resident.
-Bilateral body-attached rays feed trainable afferents; the complete 165,122-neuron
-MaleCNS graph advances; a learned 512-dimensional readout alone supplies perception,
-goal memory, recurrent control and acquired motor sequences. Afferent neurons are
-masked out of that readout, so inputs must traverse actual measured connections.
-[Architecture and executed limits](docs/development/CNS_ONLY_CONTROLLER.md).
+### What the new training has established
 
-The retina samples 1,771 side-specific anatomical column sites. Measured edges
-anchor 3,936 of 4,107 photoreceptors to 1,486 sites; unsupported cells stay explicit.
-The angular layout is an engineered eye model, not measured receptive fields.
-Physical screens, occlusion and head movement change the actual retinal input.
-[Anatomy audit](docs/development/OPTIC_INPUT_ANATOMY_AUDIT.md) ·
-[Physical screen implementation](docs/development/BILATERAL_OPTIC_SCREEN.md).
+Eight fresh physical worlds supplied 12,288 resident transitions, retaining
+actual delivered muscle commands and resulting sensory histories. Six worlds
+train the shared interfaces; two are held out. A 512-update full-graph ROCm fit
+on the RX 6750 XT took 92.3 seconds and reduced held-out motor imitation error
+from 0.07140 to 0.04997. In a subsequent matched physical comparison, joint-target
+error fell about 20%, but effort increased and stopping decreased. Motor outputs
+were nearly constant across the counterbalanced tones. This is not learned tone
+posing, autonomous foraging or a successful developmental curriculum.
 
-The preceding V1 full-graph ROCm training run completed 128 updates and 32,768 resident
-steps. Optical latent responses increased, but held-out visual prediction error
-slightly worsened. Motor and memory controller weights remain initialized and
-untrained. This is working infrastructure for learning, not demonstrated visual
-understanding or useful behavior. Actual Torch/Metal recurrence agrees within
-2.1e-7; a tiled Metal readout reduced the measured two-resident neural step from
-about 420 ms to 7.25–8.35 ms. Eight physical residents now execute the joined
-CNS-only loop with private memory and complete checkpoints. The [30-second Bad Apple recording](https://emberian.github.io/chreatures/bad-apple.html)
-shows the actual stimulus, full CNS rate changes and recorded body response. A
-matched blank-screen run begins identically, then diverges in neural activity,
-actions and physical trajectories. This is stimulus dependence, not learned
-recognition. [Paired measurements](site/assets/bad-apple-comparison.json).
+Native **GAM** completed a 25-setting release/modulation sweep, followed by a
+zero-edge control and an actual replay of its predicted setting. Its temporal
+response surface outperformed additive and mean predictors under whole-setting
+holdout. It correctly rejected motor performance as effectively constant. The
+new setting missed its prediction-accuracy target and barely changed held-out
+performance; those failed predictions remain in the record. GAM analyzes and
+proposes mechanisms; every confirmation still runs the complete CNS.
+
+[Training and physical receipts](docs/receipts/anatomical-cns-v3/) ·
+[GAM experiment](research/anatomical_cns/GAM_DYNAMICS.md) ·
+[Native Universal Weave evidence](https://emberian.github.io/chreatures/evidence.html)
+
+These are shared offline parameter updates and private stateful mechanisms.
+Lifetime Hebbian changes to anatomical synapses and structural evolution have
+not yet been implemented in this generation. The new private context controller
+is initialized; learned competence must not be inferred from its architecture.
+
+### Earlier generations remain distinct
+
+The previous V2 model demonstrated held-out visual-change prediction and an
+actual 30-second film-versus-blank response through the physical loop. In that
+experiment, 140,200 of 149,782 non-afferent rows changed above 1e-6 at some point;
+actions and body trajectories also diverged. Those measurements describe V2,
+whose private controller still supplied physical commands, not the new V3 body.
+[Earlier screen evidence](https://emberian.github.io/chreatures/evidence.html#physical-screen-response-v2) ·
+[V2 equations and controls](docs/development/CNS_DYNAMICS_V2.md) ·
+[Archived learning artifacts](https://github.com/emberian/chreatures/releases/tag/embodied-learning-v2-research-20260907)
+
+The older ecological v8 world below remains a recorded, separately identified
+baseline. Its direct sensory routes and physical action interface are not a
+compatibility path in the current CNS-only runtime.
 
 ## The completed ecological v8 baseline
 

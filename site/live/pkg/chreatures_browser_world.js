@@ -12,7 +12,7 @@ export class WorldCore {
         wasm.__wbg_worldcore_free(ptr, 0);
     }
     /**
-     * Physics transport: 12 joint torques + world posture torque + grip entity and force.
+     * CNS motor head -> engineered antagonist muscles -> 12 physical hinge torques.
      * @param {Float64Array} commands
      * @param {Float64Array} qpos
      * @param {Float64Array} qvel
@@ -67,9 +67,13 @@ export class WorldCore {
      * @param {Float64Array} local_velocities
      * @param {Float64Array} contacts
      * @param {Float64Array} shade_distances
+     * @param {Float64Array} qpos
+     * @param {Float64Array} qvel
+     * @param {Float64Array} joint_loads
+     * @param {Float64Array} foot_contacts
      * @returns {Float32Array}
      */
-    afferents(positions, rotations, local_velocities, contacts, shade_distances) {
+    afferents(positions, rotations, local_velocities, contacts, shade_distances, qpos, qvel, joint_loads, foot_contacts) {
         const ptr0 = passArrayF64ToWasm0(positions, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passArrayF64ToWasm0(rotations, wasm.__wbindgen_malloc);
@@ -80,13 +84,21 @@ export class WorldCore {
         const len3 = WASM_VECTOR_LEN;
         const ptr4 = passArrayF64ToWasm0(shade_distances, wasm.__wbindgen_malloc);
         const len4 = WASM_VECTOR_LEN;
-        const ret = wasm.worldcore_afferents(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4);
+        const ptr5 = passArrayF64ToWasm0(qpos, wasm.__wbindgen_malloc);
+        const len5 = WASM_VECTOR_LEN;
+        const ptr6 = passArrayF64ToWasm0(qvel, wasm.__wbindgen_malloc);
+        const len6 = WASM_VECTOR_LEN;
+        const ptr7 = passArrayF64ToWasm0(joint_loads, wasm.__wbindgen_malloc);
+        const len7 = WASM_VECTOR_LEN;
+        const ptr8 = passArrayF64ToWasm0(foot_contacts, wasm.__wbindgen_malloc);
+        const len8 = WASM_VECTOR_LEN;
+        const ret = wasm.worldcore_afferents(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8);
         if (ret[3]) {
             throw takeFromExternrefTable0(ret[2]);
         }
-        var v6 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
+        var v10 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
         wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
-        return v6;
+        return v10;
     }
     /**
      * Explicit append-only physical topology transaction; personal state is preserved.
@@ -238,14 +250,14 @@ export class WorldCore {
     /**
      * Owner-created acoustic source at an actual 3D world location.
      * @param {Float64Array} position
-     * @param {Float64Array} amplitude
+     * @param {number} frequency_hz
+     * @param {number} envelope
+     * @param {number} duration
      */
-    visitor_sound(position, amplitude) {
+    visitor_sound(position, frequency_hz, envelope, duration) {
         const ptr0 = passArrayF64ToWasm0(position, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passArrayF64ToWasm0(amplitude, wasm.__wbindgen_malloc);
-        const len1 = WASM_VECTOR_LEN;
-        const ret = wasm.worldcore_visitor_sound(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        const ret = wasm.worldcore_visitor_sound(this.__wbg_ptr, ptr0, len0, frequency_hz, envelope, duration);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
