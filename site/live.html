@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#e9f0df">
   <title>Live garden — Chreatures</title>
   <meta name="description" content="Run a full MaleCNS Chreature locally in an actual MuJoCo and Rust physical garden.">
+  <script type="importmap">{"imports":{"three":"./vendor/three/three.module.min.js"}}</script>
   <link rel="stylesheet" href="live.css">
 </head>
 <body>
@@ -122,6 +123,17 @@
           <button type="button" data-tone="1250">1,250 Hz</button>
         </div>
         <p>Place a toy on a surface you choose, then select and shove it. Send a tone and watch the response through the moving antennae and MaleCNS.</p>
+      </section>
+
+      <section id="encounter-panel" class="control-card encounter-card" aria-labelledby="encounter-title">
+        <div class="section-head"><div><small>external events · native model time</small><h2 id="encounter-title">Compose an encounter</h2></div></div>
+        <p>Arrange physical stimuli and interventions. Each wait advances only while the life advances.</p>
+        <div data-encounter-steps class="encounter-steps"></div>
+        <div class="encounter-add"><select data-encounter-kind aria-label="Kind of encounter step"><option value="tone">Tone</option><option value="screen">Static screen</option><option value="push">Push selected toy</option></select><button type="button" data-encounter-add>Add step</button></div>
+        <button type="button" class="encounter-send" data-encounter-send>Send whole program</button>
+        <output data-encounter-status class="encounter-status">Compose external events; native model time schedules delivery.</output>
+        <output data-encounter-native-status class="encounter-native-status">native status appears after start</output>
+        <p>Delivery means the native world applied an event. It does not imply recognition, teaching, preference or learning. These observer records never enter the controller.</p>
       </section>
 
       <section class="control-card motor-card">
