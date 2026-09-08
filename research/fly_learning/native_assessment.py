@@ -6,6 +6,7 @@ import base64
 import json
 import os
 import re
+from contextlib import ExitStack
 from pathlib import Path
 import time
 from types import SimpleNamespace
@@ -16,8 +17,9 @@ from .batch_collection import _write_receipt
 from .data import sha256_file
 from .native_host import NativeActualFlyWorld, TorchFullCNS
 from .recovery import _variant_scene, build_recovery_plan
+from .resident_bridge import ProductionResident, prepare_pack
 
-FORMAT = "chreatures-native-fly-zero-context-assessment-v2"
+FORMAT = "chreatures-native-fly-context-assessment-v1"
 ARM_FORMAT = "chreatures-cns-v5-physical-assessment-arms-v1"
 TICKS = 512
 STATE_FIELDS = (
@@ -31,14 +33,24 @@ def _load_arms(path):
     if manifest.get("format") != ARM_FORMAT:
         raise ValueError("assessment requires the current V5 arm manifest")
     arms = manifest.get("arms", [])
-    if len(arms) < 2:
-        raise ValueError("matched assessment requires at least two arms")
+    if not arms:
+        raise ValueError("assessment requires an authenticated arm")
     names = set()
     for arm in arms:
         name = arm.get("name", "")
         if not re.fullmatch(r"[a-z][a-z0-9-]{0,47}", name) or name in names:
             raise ValueError("assessment arm names must be unique safe names")
         names.add(name)
+        if arm.get("context_mode") not in ("zero", "private"):
+            raise ValueError("Every arm must declare zero or production private context")
+        if arm["context_mode"] == "private":
+            resident = arm["resident"]
+            if not re.fullmatch(r"[0-9a-f]{64}", resident.get("sha256", "")):
+                raise ValueError("Private arm requires exact resident artifact bytes")
+            resident_path = (path.parent / resident["file"]).resolve()
+            if sha256_file(resident_path) != resident["sha256"]:
+                raise ValueError("Private resident artifact bytes differ")
+            resident["file"] = str(resident_path)
         for key in ("service_sha256", "adapter_sha256"):
             if not re.fullmatch(r"[0-9a-f]{64}", arm.get(key, "")):
                 raise ValueError("assessment arm lacks exact service identity")
@@ -57,6 +69,10 @@ def _save_cns_state(path, state):
         expected = (4184 if name in STATE_FIELDS[-2:] else 165122, 4)
         if value.shape != expected or value.dtype != np.float32 or not np.isfinite(value).all():
             raise ValueError(f"invalid private state {name}")
+    for name, low, high in (("rates", 0., 1.), ("adaptation", -1., 1.),
+                             ("support", .65, 1.), ("release", .2, 1.)):
+        if np.any(arrays[name] < low) or np.any(arrays[name] > high):
+            raise ValueError(f"Private CNS field {name} violates production snapshot bounds")
     d, e = arrays["efficacy_deviation"], arrays["eligibility"]
     if np.any(d < -.8) or np.any(d > 0) or np.any(e < 0) or np.any(e > 1):
         raise ValueError("private plasticity state outside V5 contract")
@@ -130,12 +146,15 @@ def _sealed_prior(directory, identity, arms):
             if not path.exists():
                 continue
             row = json.loads(path.read_text())
-            for key in ("format", "ticks", "control_dt_s", "context", "seed", "native_deployment_sha256", "layouts_manifest_sha256"):
+            for key in ("format", "ticks", "control_dt_s", "seed", "native_deployment_sha256", "layouts_manifest_sha256",
+                        "source_revision", "assessment_source_sha256", "transport_source_sha256",
+                        "resident_bridge_source_sha256", "resident_node_source_sha256"):
                 if row.get(key) != identity[key]:
                     raise ValueError(f"prior sealed assessment changed {key}")
             if (not row.get("completed") or row.get("arm") != arm or row.get("world_index") != index
                     or row.get("service_sha256") != service_sha
-                    or row.get("adapter_sha256") != spec["adapter_sha256"]):
+                    or row.get("adapter_sha256") != spec["adapter_sha256"]
+                    or row.get("context_mode") != spec["context_mode"]):
                 raise ValueError("prior assessment condition differs")
             trace_name = row["trace"]["file"]
             if Path(trace_name).name != trace_name or sha256_file(path.parent / trace_name) != row["trace"]["sha256"]:
@@ -145,10 +164,19 @@ def _sealed_prior(directory, identity, arms):
             if (row["trace"]["shapes"].get("motor") != [TICKS, 4, 92]
                     or row["trace"]["shapes"].get("root_position") != [TICKS + 1, 4, 3]):
                 raise ValueError("prior assessment trace is incomplete")
-            for key in ("initial_cns_state", "final_cns_state"):
+            for key in ("initial_cns_state", "final_cns_state", "final_world_state"):
                 item = row[key]
                 if Path(item["file"]).name != item["file"] or sha256_file(path.parent / item["file"]) != item["sha256"]:
                     raise ValueError("prior private CNS state differs")
+            if spec["context_mode"] == "private":
+                if row["resident"]["resident_file_sha256"] != spec["resident"]["sha256"]:
+                    raise ValueError("Prior private controller differs")
+                if row["resident_runtime_manifest_sha256"] != identity["resident_runtime_manifest_sha256"]:
+                    raise ValueError("Prior private runtime differs")
+                for key in ("initial_resident_state", "final_resident_state"):
+                    item = row[key]
+                    if Path(item["file"]).name != item["file"] or sha256_file(path.parent / item["file"]) != item["sha256"]:
+                        raise ValueError("Prior private resident snapshot differs")
             results.append({"receipt": str(path.resolve()), "sha256": sha256_file(path), **row})
     return results
 
@@ -158,26 +186,47 @@ def main():
     for name in ("scenes", "native-binary", "native-manifest", "arms", "output"):
         p.add_argument("--" + name, type=Path, required=True)
     p.add_argument("--source-revision", required=True)
+    p.add_argument("--resident-node", type=Path, help="Explicit real Node executable for production Rust resident")
+    p.add_argument("--resident-runtime", type=Path,
+                   help="Authenticated production ResidentRuntime JS/Wasm manifest; required for private arms")
+    p.add_argument("--baseline-only", action="store_true",
+                   help="Seal only initialized-zero worlds10/11 for the later exact-source matched comparison")
     p.add_argument("--seed", type=int, default=20260908)
     p.add_argument("--device", default="cuda")
     p.add_argument("--sealed-prior", type=Path,
                    help="Authenticate completed conditions from a failed earlier run; fresh lives for missing conditions only")
     args = p.parse_args()
     arms = _load_arms(args.arms)
+    by_name = {a["name"]: a for a in arms}
+    expected_roles = {"initialized-zero": "zero"} if args.baseline_only else {
+        "initialized-zero": "zero", "trained-zero": "zero", "trained-private": "private"}
+    if set(by_name) != set(expected_roles) or any(by_name[name]["context_mode"] != mode for name, mode in expected_roles.items()):
+        raise ValueError("Declared arms do not match baseline-only or complete three-arm comparison")
+    if not args.baseline_only:
+        for key in ("service_sha256", "adapter_sha256"):
+            if by_name["trained-zero"][key] != by_name["trained-private"][key]:
+                raise ValueError("Trained zero/private arms must share the exact CNS artifact")
+    if any(a["context_mode"] == "private" for a in arms) and (args.resident_runtime is None or args.resident_node is None):
+        raise ValueError("Private arms require the production resident runtime")
     args.output.mkdir(parents=True, exist_ok=False)
     began = time.monotonic()
     identity = {"format": FORMAT, "source_revision": args.source_revision,
+                "requested_scope": "initialized-baseline-only" if args.baseline_only else "complete-three-arm-comparison",
                 "assessment_source_sha256": sha256_file(Path(__file__)),
                 "transport_source_sha256": sha256_file(Path(__file__).with_name("native_host.py")),
                 "native_deployment_sha256": sha256_file(args.native_manifest),
                 "layouts_manifest_sha256": sha256_file(args.scenes / "nursery-layouts.json"),
                 "arms_manifest_sha256": sha256_file(args.arms),
                 "expected_services": {a["name"]: a["service_sha256"] for a in arms}, "ticks": TICKS, "control_dt_s": .01,
-                "context": "exact zero12", "world_indices": [10, 11], "seed": args.seed,
+                "context": "per-arm zero12 or production ResidentRuntime context12",
+                "resident_node_sha256": None if args.resident_node is None else sha256_file(args.resident_node),
+                "resident_runtime_manifest_sha256": None if args.resident_runtime is None else sha256_file(args.resident_runtime),
+                "resident_bridge_source_sha256": sha256_file(Path(__file__).with_name("resident_bridge.py")),
+                "resident_node_source_sha256": sha256_file(Path(__file__).with_name("resident_bridge.mjs")), "world_indices": [10, 11], "seed": args.seed,
                 "model_process_pid": os.getpid(),
                 "initialization": "fresh physical world and nine private CNS state fields for each arm/layout"}
     _write_receipt(args.output / "launch-receipt.json", identity)
-    starts = {}; results = []; model = None; world = None
+    starts = {}; results = []; model = None; world = None; resident = None
     phase = "model-load"; arm = None; index = None; completed_ticks = 0; trace = None
     try:
         if args.sealed_prior is not None:
@@ -206,18 +255,38 @@ def main():
                 raise ValueError("assessment service checksum differs")
             phase = "model-load"
             load_start = time.monotonic()
-            model = TorchFullCNS(service, args.device)
+            reused_weights = model is not None and model.metadata["cns_service_sha256"] == expected_sha
+            if not reused_weights:
+                if model is not None:
+                    model.close(); model.model = None
+                model = TorchFullCNS(service, args.device)
             if (model.metadata["cns_service_sha256"] != expected_sha
                     or model.metadata.get("format") != "chreatures-cns-service-v5"
                     or model.metadata["adapter_sha256"] != spec["adapter_sha256"]):
                 raise ValueError("service changed during model loading")
+            expected_status = "initialized-untrained" if arm == "initialized-zero" else "trained"
+            if model.metadata["training_status"] != expected_status:
+                raise ValueError("Assessment arm training status differs from its label")
             load_seconds = time.monotonic() - load_start
+            pack_path = None; resident_pack = None
+            if spec["context_mode"] == "private":
+                pack_path, resident_pack = prepare_pack(Path(spec["resident"]["file"]), spec["resident"]["sha256"],
+                                                       expected_sha, args.output / (arm + "-resident-pack"))
             for index in missing_worlds:
                 completed_ticks = 0; trace = None; phase = "world-start"
                 directory = args.output / f"world{index:02d}-{arm}"
                 directory.mkdir()
                 log_path = directory / "native-stderr.log"
-                with log_path.open("xb") as log:
+                with ExitStack() as stack:
+                    log = stack.enter_context(log_path.open("xb"))
+                    resident_log_path = directory / "resident-stderr.log"
+                    initial_resident = None
+                    if pack_path is not None:
+                        resident_log = stack.enter_context(resident_log_path.open("xb"))
+                        resident = ProductionResident(args.resident_node, args.resident_runtime, pack_path, resident_log)
+                        initial_resident = resident.snapshot(directory / "initial-resident.bin")
+                    pending_context = np.zeros((4, 12), np.float32)
+                    pending_tick = None
                     local = SimpleNamespace(**vars(args), scene=_variant_scene(args.scenes, index),
                                             native_stderr=log, native_working_directory=directory.resolve())
                     world = NativeActualFlyWorld(local, build_recovery_plan(index, base_seed=args.seed))
@@ -241,24 +310,38 @@ def main():
                              "body": [initial.body_afferents.copy()], "joint_position": [initial.joint_position.copy()],
                              "motor": [], "latent": [], "mechanical_work": [],
                              "efficacy_deviation_mean": [], "eligibility_mean": [],
-                             "efficacy_deviation_min": [], "eligibility_max": []}
+                             "efficacy_deviation_min": [], "eligibility_max": [],
+                             "delivered_context": [], "proposed_context": []}
                     cues = []; run_start = time.monotonic()
                     sample = initial
                     phase = "physical-loop"
                     for tick in range(TICKS):
+                        phase = "physical-loop"
                         if tick % 64 == 0:
                             cues.append(_stimulus(world, tick))
                             sample = world.sample()
                         if log_path.stat().st_size or (directory / "MUJOCO_LOG.TXT").exists():
                             raise RuntimeError("native stderr output: warning/error is fatal")
-                        latent, motor = model.step(sample.optic_rgb, sample.body_afferents, np.zeros((4, 12), np.float32))
+                        delivered_context = pending_context.copy()
+                        latent, motor = model.step(sample.optic_rgb, sample.body_afferents, delivered_context)
+                        if resident is not None and pending_tick is not None:
+                            resident.acknowledge(pending_tick, delivered_context)
                         if (not np.isfinite(latent).all() or not np.isfinite(motor).all() or np.any(np.abs(motor[:, :84]) > 1)
                                 or np.any(motor[:, 84:] < 0) or np.any(motor[:, 84:] > 1)):
                             raise RuntimeError("invalid full-CNS motor output")
                         world.advance(motor, .01)
+                        completed_ticks = tick + 1
                         after = world.sample()
                         if log_path.stat().st_size or (directory / "MUJOCO_LOG.TXT").exists():
                             raise RuntimeError("native stderr output after mutation: no retry")
+                        if resident is not None:
+                            phase = "resident-decision"
+                            pending_context, diagnostics = resident.step(tick, latent, delivered_context)
+                            pending_tick = tick
+                            if resident_log_path.stat().st_size:
+                                raise RuntimeError("Resident stderr output is fatal")
+                        trace["delivered_context"].append(delivered_context)
+                        trace["proposed_context"].append(pending_context.copy())
                         trace["root_position"].append(after.observer["thorax_position"].copy())
                         trace["upright"].append(after.observer["thorax_rotation"][:, 2, 2].copy())
                         trace["feet_contact"].append(after.ground_contact_raw[:, :, 0] > 0)
@@ -277,7 +360,22 @@ def main():
                             print(json.dumps({"event": "assessment-progress", "arm": arm, "world": index,
                                               "ticks": completed_ticks, "elapsed_seconds": time.monotonic() - run_start}), flush=True)
                     phase = "world-seal"
+                    final_world = base64.b64decode(world._rpc("snapshot")["snapshot_base64"], validate=True)
+                    final_world_path = directory / "final-world.bin"
+                    with final_world_path.open("xb") as stream:
+                        stream.write(final_world); stream.flush(); os.fsync(stream.fileno())
                     result = {**identity, "completed": True, "arm": arm, "world_index": index,
+                              "context_mode": spec["context_mode"],
+                              "final_world_state": {"file": final_world_path.name, "sha256": sha256_file(final_world_path)},
+                              "checkpoint_tick": TICKS,
+                              "resident_diagnostics": None if resident is None else diagnostics,
+                              "resident": resident_pack,
+                              "resident_ready": None if resident is None else resident.ready,
+                              "initial_resident_state": initial_resident,
+                              "final_resident_state": None if resident is None else resident.snapshot(directory / "final-resident.bin", verify=True),
+                              "pending_context": pending_context.tolist(), "pending_tick": pending_tick,
+                              "delivered_context": delivered_context.tolist(),
+                              "reused_immutable_cns_weights": reused_weights,
                               "service_sha256": expected_sha, "adapter_sha256": model.metadata["adapter_sha256"],
                               **world.deployment_identity, "initial_snapshot_sha256": snapshot_sha,
                               "scene_sha256": world.ready["fixture_sha256"], "world_seed": build_recovery_plan(index, base_seed=args.seed).world_seed,
@@ -288,13 +386,18 @@ def main():
                               "trace": _save_trace(directory / "trace.npz", trace), "stimulus_receipts": cues,
                               "residents": _summarize(trace), "native_stderr_sha256": sha256_file(log_path),
                               "native_warning_observation": "no stderr bytes, MUJOCO_LOG.TXT or invalid stdout protocol; numerical warning counters unavailable in frozen native binary",
-                              "claim_limit": "Matched native physical zero-context comparison; no private-context control or general competence claim."}
+                              "claim_limit": "Matched native physical context comparison; private control uses production Rust memory/RNG and acknowledged CNS context. No general competence claim."}
                     world.close(); world = None
+                    if resident is not None:
+                        resident.close(); resident = None
                     model.close()
                     _write_receipt(directory / "receipt.json", result)
                     results.append({"receipt": str(directory / "receipt.json"), "sha256": sha256_file(directory / "receipt.json"), **result})
-            model.model = None; model = None
-        result = {**identity, "completed": True, "conditions": results, "elapsed_seconds": time.monotonic() - began}
+        comparison_complete = not args.baseline_only and {
+            (r["arm"], r["world_index"]) for r in results
+        } == {(name, index) for name in expected_roles for index in (10, 11)}
+        result = {**identity, "completed": True, "comparison_complete": comparison_complete,
+                  "conditions": results, "elapsed_seconds": time.monotonic() - began}
         _write_receipt(args.output / "assessment.json", result)
         print(json.dumps({"event": "assessment-sealed", "path": str(args.output / "assessment.json"),
                           "sha256": sha256_file(args.output / "assessment.json"), "elapsed_seconds": result["elapsed_seconds"]}), flush=True)
@@ -309,6 +412,8 @@ def main():
                        "elapsed_seconds": time.monotonic() - began, "mutation_retry_performed": False})
         raise
     finally:
+        if resident is not None:
+            resident.close()
         if world is not None:
             world.close()
         if model is not None:
