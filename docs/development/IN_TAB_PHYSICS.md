@@ -1,7 +1,7 @@
 # In-tab articulated physical world
 
 Implemented 2026-09-07 in `native/browser-world/`. The current browser epoch is
-`mujoco-3.12.0-wasm-browser-epoch-1`. This is a newly authored life, not a restore
+`mujoco-3.12.0-wasm-browser-epoch-2`. This is a newly authored life, not a restore
 or reinterpretation of a frozen native resident.
 
 ## Decision and author implementation
@@ -48,20 +48,24 @@ construction boxes and a physical video screen. Source MJCF and optic atlas
 SHA256 values are explicit. `export_fixture.py` creates fresh initial state and
 never advances/restores a resident or connects to the live native world.
 
-Rust receives the existing 12 motor axes in order:
+Rust receives 34 commands decoded exclusively from annotated MaleCNS motor
+neurons. The first 24 are positive/negative antagonist activations for twelve
+hinges, in LF, LM, LH, RF, RM, RH order, hip then knee. The last ten are gaze,
+posture, grip, three acoustic emissions, ingestion, release, secretion and
+allocation. Gaze and posture are signed; the other activations are in [0,1].
 
-```
-thrust yaw gaze_pitch posture grip
-signal_low signal_mid signal_high eat release secrete allocate
-```
+Each hinge has a 40 ms activation response, a bounded force–length/velocity
+law, passive damping, and local fatigue. There is no supplied tripod phase or
+thrust/yaw-to-gait transformation in this epoch. MuJoCo feet/terrain contact
+converts joint torques into locomotion. These are synthetic antagonist actuators,
+not a reconstructed fly muscle or neuromuscular-junction map. The offline
+bootstrap teacher can supply pose targets and PD commands during collection;
+that teacher is not part of the resident runtime.
 
-Thrust/yaw drive the existing tripod stance/return equations and bounded joint
-PD torques; locomotion comes from MuJoCo feet/terrain contacts. No trunk position
-or resource-seeking controller is supplied. A bounded posture reflex, optical
-gaze axis, local-reach grip spring with equal/opposite body forces, ingestion,
-three-band emission, secretion and developmental allocation are explicit body
-mechanisms. The grip spring and simplified physiological coefficients are part of
-this new browser epoch and are not asserted to exactly reproduce native lives.
+A CNS-driven bounded posture reflex, gaze axis, local-reach grip spring with
+equal/opposite body forces, ingestion, sound emission, secretion and developmental
+allocation remain explicit body mechanisms. The current decoder and body mapping
+are described in [Anatomical CNS V3](ANATOMICAL_CNS_V3.md).
 
 The current browser ingestion rule uses an explicit **0.28 m root-centre radius**
 and an oral-action threshold, drawing from finite resource stores into the gut.
@@ -78,7 +82,7 @@ The policy boundary is only `sample()`:
 | Array | Resident-major layout | Meaning |
 | --- | --- | --- |
 | `optic` | `Float32Array[B*1771*3]` | Anatomical-order sampled RGB |
-| `body` | `Float32Array[B*43]` | Body-local nonvisual afferents |
+| `body` | `Float32Array[B*110]` | Body-local nonvisual afferents |
 
 The imported atlas contains 879 left and 892 right sites. Actual atlas membership
 and supported-site masks are preserved. Viewing angles remain the explicitly
@@ -90,13 +94,18 @@ head/body movement, range and screen sidedness therefore change retinal activity
 No screen frame is passed to the CNS directly. Unsupported anatomical sites stay
 zero. Range is 3.2 m.
 
-The 43-channel order matches the current nonvisual transduction contract:
-odor6; signed linear-velocity opponents6; angular-velocity opponents6; contact
-normal opponents6; contact count1; coarse touch2; sound3; overhead shade1;
-interoception12. Velocities and contact normals are body-local. The two coarse
-touch channels currently share whole-body contact presence; they are not claimed
-to be separate measured antennal touch transducers. Shade uses a real overhead
-physics ray. Interoception order is unchanged, including signed speed and turn.
+The 110-channel order is odor6; body-local linear velocity opponents6;
+angular velocity opponents6; contact normal opponents6; contact count1; coarse
+touch2; sixteen logarithmic acoustic bins; shade1; interoception12; joint angles12;
+joint velocities12; joint loads12; foot contacts6; joint fatigue12. The joint
+families use the same LF, LM, LH, RF, RM, RH order as the actuators. Coarse touch
+still shares whole-body contact presence. Shade uses an overhead physics ray.
+
+Acoustic bins span 40–1600 Hz with explicit finite-width tuning. Their coupling
+to the shared annotated auditory-neuron pool is trainable; we do not claim to
+know the frequency preference of every fly auditory cell. Joint angle, motion,
+load, fatigue and foot contact return through anatomically masked sensory inputs.
+Raw body arrays do not reach the private cognitive controller.
 
 Rust owns each resident's physiology, grip, gaze and pending work; resource
 quantities and finite growth reservoirs; bounded delayed acoustic wave emissions;
@@ -114,7 +123,7 @@ competence.
 `queueVisitorForce(entityId, force3)` applies a bounded world-space force during
 the next normal 0.05-second tick; it never advances physics on its own. These
 forces, like ordinary contacts, reach neural control only through the sensory
-path. `visitorSound(position3, amplitude3)` creates a physical sound emitter with
+path. `visitorSound(position3, frequencyHz, amplitude, durationSeconds)` creates a physical sound emitter with
 finite propagation. `setScreenFrame(rgb, width, height)` changes an emitting
 surface, not policy information.
 
@@ -141,7 +150,7 @@ local -Y is screen right and local +Z is up. Its UV mapping is
 const world = await createBrowserWorld({fixture, xml, seed: 7});
 world.setScreenFrame(rgbFloat32, width, height);
 const {optic, body} = world.sample(); // send only these to CNS afferent injection
-world.advance(cnsDerivedMotorCommands, 0.05);
+world.advance(motorNeuronDecodedActivations34, 0.05);
 const display = world.observe();    // observer only
 const saved = world.snapshot();
 ```
@@ -174,9 +183,9 @@ The staged runtime resolves MuJoCo by relative local import. Source remains in
 `native/browser-world/`; do not edit the generated copy.
 
 Executed `node native/browser-world/test.mjs` exercises real official MuJoCo Wasm
-and Rust Wasm without a browser or server. The joined scenario passes:
+and Rust Wasm without a browser or server. The physical scenario passes (this does not execute the neural controller):
 
-- Three physical residents, 112 initial geometries, 15939 optical and 129 body
+- Three physical residents, 112 initial geometries, 15939 optical and 330 body
   scalars; finite articulated motion through actual contacts.
 - A physical black/white screen changes 240 retinal scalars. An inserted blocker
   changes that screen contrast to zero for Mica's retina.

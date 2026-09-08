@@ -14,7 +14,7 @@ from torch import nn
 from chreatures.sequence_control import CORE_ORDER, PREDICTOR_ORDER
 from research.sensorimotor_skills.sequence_control import SequenceControlHeads
 
-Z, ACTIONS, HIDDEN, GOAL = 512, 12, 256, 128
+Z, ACTIONS, HIDDEN, GOAL = 512, 12, 256, 128  # ACTIONS is legacy tensor-axis naming: context12.
 LOCAL, CANDIDATES, MAX_HORIZON = 4, 8, 8
 CONTEXT, STATE, CHOICE = 908, 909, 234
 
@@ -70,7 +70,8 @@ class CnsResidentModel(nn.Module):
 
     @staticmethod
     def bounded_actions(raw: torch.Tensor) -> torch.Tensor:
-        return torch.cat((raw[..., :4].tanh(), raw[..., 4:].sigmoid()), dim=-1)
+        """Bound every neural context-current axis symmetrically."""
+        return raw.tanh()
 
     def observe(
         self,
@@ -98,7 +99,7 @@ class CnsResidentModel(nn.Module):
         initial_state: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         if latent.ndim != 3 or latent.shape[-1] != Z or previous.shape != (*latent.shape[:-1], ACTIONS):
-            raise ValueError("resident unroll requires [time,batch,Z512] and previous action12")
+            raise ValueError("resident unroll requires [time,batch,Z512] and previous context12")
         state = latent.new_zeros((latent.shape[1], HIDDEN)) if initial_state is None else initial_state
         if state.shape != (latent.shape[1], HIDDEN):
             raise ValueError("resident initial recurrent state differs")
@@ -193,8 +194,8 @@ class LossTerms:
 
 
 def training_loss(model: CnsResidentModel, batch: Mapping[str, torch.Tensor], discount: float = 0.97) -> LossTerms:
-    latent, previous, reset = batch["cns_latent"], batch["previous_delivered_command"], batch["reset"]
-    delivered, reward = batch["delivered_command"], batch["physical_reward"]
+    latent, previous, reset = batch["cns_latent"], batch["previous_delivered_context"], batch["reset"]
+    delivered, reward = batch["delivered_context"], batch["physical_reward"]
     burn_in = int(batch.get("burn_in", 0))
     if burn_in < 0 or burn_in >= delivered.shape[0]:
         raise ValueError("resident burn-in leaves no optimized transitions")
@@ -299,7 +300,7 @@ def training_loss(model: CnsResidentModel, batch: Mapping[str, torch.Tensor], di
     # Positive active examples replay the suffix that was actually useful in
     # this context.  Rolled examples represent recall of an experienced suffix
     # in another resident/time context; disagreement with the current teacher
-    # command is the termination target.  This supplies both sides of the
+    # delivered context current is the termination target. This supplies both sides of the
     # hazard decision instead of the old self-comparison, which was always zero.
     rolled_suffix = torch.roll(suffix, shifts=max(1, b), dims=0)
     _, rolled_proposals, rolled_mask, rolled_active, rolled_active_mask = model.control_features(

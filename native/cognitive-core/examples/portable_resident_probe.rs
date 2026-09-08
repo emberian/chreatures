@@ -48,6 +48,7 @@ fn main() {
         727,
     );
     let config = json!({"batch":2,"action_mode":"sample","action_seed":314,"suffix_seed":271,
+        "context_policy_version":"signed-context12-v1",
         "core_sha256":"a".repeat(64),"predictor_sha256":"b".repeat(64),
         "sequence_control_version":1,"sequence_control_sha256":"c".repeat(64),"research_training":false});
     fs::write(out.join("config.json"), config.to_string()).unwrap();
@@ -60,6 +61,7 @@ fn main() {
             "sample",
             314,
             271,
+            "signed-context12-v1",
             &core,
             "a".repeat(64),
             &predictor,
@@ -77,7 +79,7 @@ fn main() {
     for tick in 0..14 {
         let z = latent(tick, 2);
         let reset = [tick == 0, tick == 0];
-        let action = resident
+        let context = resident
             .step_flat(&z, &previous, &[tick; 2], &reset)
             .unwrap();
         if tick == 4 {
@@ -87,14 +89,14 @@ fn main() {
             fork.load_bytes(&pending).unwrap();
             assert!(fork.step_flat(&z, &previous, &[tick; 2], &reset).is_err());
             assert_eq!(pending, fork.save_bytes().unwrap());
-            assert!(fork.acknowledge_flat(&[tick + 1; 2], &action).is_err());
+            assert!(fork.acknowledge_flat(&[tick + 1; 2], &context).is_err());
             assert_eq!(pending, fork.save_bytes().unwrap());
-            fork.acknowledge_flat(&[tick; 2], &action).unwrap();
+            fork.acknowledge_flat(&[tick; 2], &context).unwrap();
         }
-        resident.acknowledge_flat(&[tick; 2], &action).unwrap();
-        steps.push(json!({"tick":tick,"z":z,"previous":previous,"reset":reset,"action":action,
+        resident.acknowledge_flat(&[tick; 2], &context).unwrap();
+        steps.push(json!({"tick":tick,"z":z,"previous":previous,"reset":reset,"context":context,
             "diagnostics":serde_json::from_str::<serde_json::Value>(&resident.diagnostics_json().unwrap()).unwrap()}));
-        previous = action;
+        previous = context;
         if tick == 6 {
             let saved = resident.save_bytes().unwrap();
             fs::write(out.join("native-checkpoint.json"), &saved).unwrap();

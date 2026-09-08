@@ -24,12 +24,16 @@ from .cns_adapter_contract import (
     FORMAT as CNS_SERVICE_FORMAT,
     LATENT_DIM as SERVICE_LATENT_DIM,
     SENSORY_DIM,
+    MOTOR_DIM as SERVICE_MOTOR_DIM,
+    CONTEXT_DIM as SERVICE_CONTEXT_DIM,
 )
 
-FORMAT = "chreatures-cns-sequence-control-v1"
+FORMAT = "chreatures-cns-context-sequence-control-v1"
 CONTRACT_VERSION = 1
 CNS_LATENT_DIM = 512
-ACTION_DIM = 12
+ACTION_DIM = 12  # Abstract signed CNS context; never physical actuator commands.
+CONTEXT_POLICY_VERSION = "signed-context12-v1"
+CONTEXT_NAMES = tuple(f"cns.context.{i}" for i in range(ACTION_DIM))
 CORE_HIDDEN_DIM = 256
 GOAL_DIM = 128
 CONTEXT_DIM = CNS_LATENT_DIM + CORE_HIDDEN_DIM + GOAL_DIM + ACTION_DIM
@@ -94,9 +98,12 @@ CNS_DEPENDENCY_KEYS = (
     "service_artifact_sha256",
     "graph_sha256",
     "atlas_sha256",
+    "anatomy_sha256",
     "readout_mask_sha256",
     "sensory_dim",
     "latent_dim",
+    "context_dim",
+    "motor_dim",
 )
 CONTROL_DEPENDENCY_KEYS = CNS_DEPENDENCY_KEYS + (
     "controller_input",
@@ -107,12 +114,12 @@ CONTROL_DEPENDENCY_KEYS = CNS_DEPENDENCY_KEYS + (
 )
 
 CONTRACT = {
-    "format": "chreatures-cns-sequence-control-contract-v1",
+    "format": "chreatures-cns-context-sequence-control-contract-v1",
     "version": CONTRACT_VERSION,
     "controller_input": CONTROLLER_FORMAT,
     "ingress": {
         "cns_latent": [CNS_LATENT_DIM, "float32"],
-        "previous_delivered_command": [ACTION_DIM, "float32"],
+        "previous_delivered_context": [ACTION_DIM, "float32"],
         "ticks": [1, "uint64"],
         "reset": [1, "bool"],
     },
@@ -121,16 +128,17 @@ CONTRACT = {
         "gru_hidden": CORE_HIDDEN_DIM,
         "goal": GOAL_DIM,
         "goal_formula": "l2_normalize(tanh(linear(concat(cns_latent,hidden))),eps=1e-8)",
-        "context": ["cns_latent512", "hidden256", "goal128", "previous_delivered_command12"],
+        "context": ["cns_latent512", "hidden256", "goal128", "previous_delivered_context12"],
         "context_dim": CONTEXT_DIM,
     },
     "proposal": {
         "local_candidates": 4,
         "local_duration_ticks": 1,
         "maximum_acquired_ticks": 8,
-        "action_dim": ACTION_DIM,
-        "signed_output": "tanh axes0:4",
-        "rectified_output": "sigmoid axes4:12",
+        "context_dim": ACTION_DIM,
+        "context_policy_version": CONTEXT_POLICY_VERSION,
+        "signed_output": "tanh all12",
+        "physical_actuation": False,
     },
     "predictor": {"members": 3, "target": "cns_latent_delta512"},
     "sequence_control": {
@@ -142,13 +150,32 @@ CONTRACT = {
     },
     "weight_orientation": "torch-out-in",
     "hidden_activation": "tanh",
-    "receipt": "explicit acknowledged delivered command and tick only",
+    "receipt": "explicit acknowledged context delivered into CNS recurrence and tick only",
     "forbidden_ingress": [
         "raw_visual", "raw_sensory", "raw_physiology", "neural_readouts384",
         "world_position", "object_kind", "reward", "outcome",
     ],
     "service_format": CNS_SERVICE_FORMAT,
 }
+
+
+def controller_interface() -> dict[str, Any]:
+    return {
+        "format": "chreatures-cns-context-organism-interface-v1",
+        "controller_input": CONTROLLER_FORMAT,
+        "context_policy_version": CONTEXT_POLICY_VERSION,
+        "cns_latent": {"dtype": "float32", "dimension": CNS_LATENT_DIM},
+        "previous_delivered_context": {
+            "dtype": "float32", "dimension": ACTION_DIM, "order": list(CONTEXT_NAMES), "bounds": [-1, 1],
+        },
+        "ticks": "uint64", "reset": "bool",
+        "output_context": {
+            "dtype": "float32", "dimension": ACTION_DIM, "order": list(CONTEXT_NAMES), "bounds": [-1, 1],
+        },
+        "receipt": ["ticks", "delivered_context"],
+        "delivery_boundary": "context entered CNS recurrence",
+        "physical_actuation": False,
+    }
 
 
 def canonical(value: Any) -> bytes:
@@ -199,6 +226,12 @@ def validate_dependencies(
         elif name == "latent_dim":
             if result[name] != SERVICE_LATENT_DIM:
                 raise ValueError("CNS service latent dimension differs")
+        elif name == "context_dim":
+            if result[name] != SERVICE_CONTEXT_DIM:
+                raise ValueError("CNS service context dimension differs")
+        elif name == "motor_dim":
+            if result[name] != SERVICE_MOTOR_DIM:
+                raise ValueError("CNS service motor dimension differs")
         elif not valid_sha256(result[name]):
             raise ValueError(f"controller dependency requires SHA-256: {name}")
     return result
@@ -411,9 +444,6 @@ def initialize_controller_arrays(
             arrays[name] = np.float32(0.3) * _xavier(generator, shape)
         else:
             arrays[name] = _xavier(generator, shape)
-    for candidate in range(4):
-        start = candidate * ACTION_DIM
-        arrays["proposal_out.bias"][start + 4:start + ACTION_DIM] = np.float32(-2.0)
     arrays["hazard_out.bias"][0] = np.float32(-math.log(7.0))
     return (
         {name: arrays[name] for name in CORE_ORDER},

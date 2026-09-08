@@ -90,3 +90,77 @@ python -m research.anatomical_cns.export \
 
 The anatomy file must be the corrected current export for the epoch. Its SHA is
 bound into the service metadata; a prior selector draft must not be substituted.
+
+## Actual physical bootstrap curriculum
+
+`native/webgpu-probe/collect-anatomical.mjs` runs the epoch-2 MuJoCo/Wasm world
+directly. Each fresh process records one 512-transition, three-resident world.
+Episodes 0–5 are training worlds and 6–7 are held-out worlds with distinct world,
+variation and layout identities. The curriculum covers pose hold, turning,
+stopping, reaching and bounded antagonist babbling. Four actual acoustic sources
+at 80, 200, 500 and 1250 Hz accompany the first four physical bouts. The sound
+reaches the CNS only through BODY110 acoustic afferents.
+
+Each strict NPZ contains actual pre-action `optic_rgb[513,3,5313]` and
+`body[513,3,110]`, exact zero bootstrap `delivered_context[512,3,12]`, and the
+physically delivered `delivered_motor[512,3,34]`. The target-only members are
+`teacher_joint_target[512,3,12]`, `root_pose[513,3,12]` (XYZ plus a 3×3 root
+rotation), and `skill_id[512,3]`. Reset and terminal arrays preserve chronology.
+No world geometry is retained. Privileged bout time, joint targets and root pose
+may select demonstrations or measure results, but never enter the recurrent CNS.
+Old abstract 12-axis action records are not context values.
+
+Run every episode in a fresh Node process; MuJoCo's Emscripten factory is not
+reinitialized in a long-lived process:
+
+```sh
+for episode in 0 1 2 3 4 5 6 7; do
+  node native/webgpu-probe/collect-anatomical.mjs \
+    --world native/browser-world \
+    --output /tank/chreatures/runs/anatomical-cns-v3/physical-source \
+    --episode "$episode"
+done
+
+python -m research.anatomical_cns.train seal-corpus \
+  /tank/chreatures/runs/anatomical-cns-v3/physical-source \
+  /tank/chreatures/runs/anatomical-cns-v3/physical-corpus
+```
+
+`data.py` authenticates exact members, shapes, bounds, source identities and the
+six/two whole-world split. It rejects nonzero bootstrap context, renamed old
+actions, gaps in teacher bouts, and any declaration that privileged fields are
+model inputs.
+
+## ROCm training
+
+`train.py` loads one current CHCNS3 service and runs the full 165,122-neuron
+sparse recurrence. Training updates the structurally masked BODY110 and MOTOR34
+interfaces plus recurrent, release and family-modulation gains. Retina, context,
+latent readout, baseline and other type kinetics stay pinned for this bootstrap.
+Body normalization is fit on the six training worlds only and exported with the
+body interface.
+
+The primary demonstration loss fits the physically delivered MOTOR34 command.
+Training-only heads also predict the next actual BODY110 and fixed regional
+retinal changes, root-pose change, and the teacher joint target from the current
+CNS latent and actually delivered teacher motor. These heads force temporal physical information through
+the full graph and are omitted from the service artifact. Future senses and pose
+are targets only; they are never recurrent inputs. Short actual preceding
+history initializes each truncated sequence. Five skills are sampled evenly,
+while unsuccessful transitions remain in the corpus.
+
+```sh
+/home/ember/kaxsim/.venv7/bin/python -m research.anatomical_cns.train train \
+  --corpus /home/ember/chreatures-data/anatomical-cns-v3/physical-corpus \
+  --service /home/ember/chreatures-data/anatomical-cns-v3/initialized-cns-v3.bin \
+  --run /home/ember/chreatures-data/anatomical-cns-v3/bootstrap-run-01 \
+  --device cuda --updates 160 --sequence 4 --burn-in 8
+```
+
+Optimizer snapshots are portable CPU tensors and include the complete model,
+training-only heads, optimizer, RNG states, recipe and immutable input hashes.
+Held-out worlds are evaluated before and after training and never select a
+checkpoint. The resulting service is labeled a physical motor bootstrap. A
+separate actual learned closed-loop assay is required before claiming useful
+autonomous competence; an initialized context organ remains distinct from this
+zero-context motor curriculum.

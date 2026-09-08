@@ -12,7 +12,7 @@ impl DevelopmentalResidentCohort {
         let out = PyDict::new(py);
         out.set_item("format", FORMAT)?;
         out.set_item(
-            "proposed_command",
+            "proposed_context",
             Array2::from_shape_vec((self.batch, ACTIONS), proposed)
                 .unwrap()
                 .into_pyarray(py),
@@ -194,20 +194,20 @@ impl DevelopmentalResidentCohort {
             .flat_map(|row| self.suffixes.cancellation_counts(row))
             .collect();
         out.set_item(
-            "motor_suffix_cancellation_totals",
+            "context_suffix_cancellation_totals",
             Array2::from_shape_vec((self.batch, 5), cancellation)
                 .unwrap()
                 .into_pyarray(py),
         )?;
         out.set_item(
-            "motor_suffix_cancellation_reason",
+            "context_suffix_cancellation_reason",
             (0..self.batch)
                 .map(|row| self.suffixes.cancellation_reason(row))
                 .collect::<Vec<_>>(),
         )?;
         out.set_item(
-            "command_pending",
-            Array1::from_vec(self.command_pending.clone()).into_pyarray(py),
+            "context_pending",
+            Array1::from_vec(self.context_pending.clone()).into_pyarray(py),
         )?;
         Ok(out)
     }
@@ -222,6 +222,7 @@ impl DevelopmentalResidentCohort {
         action_mode: &str,
         action_seed: u64,
         suffix_seed: u64,
+        context_policy_version: &str,
         core_packed: PyReadonlyArray1<'_, f32>,
         core_sha256: String,
         predictor_packed: PyReadonlyArray1<'_, f32>,
@@ -236,6 +237,7 @@ impl DevelopmentalResidentCohort {
             action_mode,
             action_seed,
             suffix_seed,
+            context_policy_version,
             core_packed.as_slice()?,
             core_sha256,
             predictor_packed.as_slice()?,
@@ -257,12 +259,12 @@ impl DevelopmentalResidentCohort {
         &mut self,
         py: Python<'py>,
         cns_latent: PyReadonlyArray2<'_, f32>,
-        previous_command: PyReadonlyArray2<'_, f32>,
+        previous_context: PyReadonlyArray2<'_, f32>,
         ticks: PyReadonlyArray1<'_, u64>,
         reset: PyReadonlyArray1<'_, bool>,
     ) -> PyResult<Bound<'py, PyDict>> {
         if cns_latent.shape() != [self.batch, Z]
-            || previous_command.shape() != [self.batch, ACTIONS]
+            || previous_context.shape() != [self.batch, ACTIONS]
             || ticks.shape() != [self.batch]
             || reset.shape() != [self.batch]
         {
@@ -271,7 +273,7 @@ impl DevelopmentalResidentCohort {
         let proposed = self
             .step_flat(
                 cns_latent.as_slice()?,
-                previous_command.as_slice()?,
+                previous_context.as_slice()?,
                 ticks.as_slice()?,
                 reset.as_slice()?,
             )
@@ -283,25 +285,25 @@ impl DevelopmentalResidentCohort {
         &self,
         py: Python<'py>,
         cns_latent: PyReadonlyArray2<'_, f32>,
-        previous_command: PyReadonlyArray2<'_, f32>,
+        previous_context: PyReadonlyArray2<'_, f32>,
         ticks: PyReadonlyArray1<'_, u64>,
         reset: PyReadonlyArray1<'_, bool>,
     ) -> PyResult<Bound<'py, PyDict>> {
         let mut fork = self.clone();
-        fork.step(py, cns_latent, previous_command, ticks, reset)
+        fork.step(py, cns_latent, previous_context, ticks, reset)
     }
 
     fn acknowledge<'py>(
         &mut self,
         py: Python<'py>,
         ticks: PyReadonlyArray1<'_, u64>,
-        delivered_command: PyReadonlyArray2<'_, f32>,
+        delivered_context: PyReadonlyArray2<'_, f32>,
     ) -> PyResult<Bound<'py, PyDict>> {
-        if ticks.shape() != [self.batch] || delivered_command.shape() != [self.batch, ACTIONS] {
-            return Err(PyValueError::new_err("command receipt shapes differ"));
+        if ticks.shape() != [self.batch] || delivered_context.shape() != [self.batch, ACTIONS] {
+            return Err(PyValueError::new_err("context receipt shapes differ"));
         }
         let exact = self
-            .acknowledge_flat(ticks.as_slice()?, delivered_command.as_slice()?)
+            .acknowledge_flat(ticks.as_slice()?, delivered_context.as_slice()?)
             .map_err(PyValueError::new_err)?;
         let out = PyDict::new(py);
         out.set_item("format", FORMAT)?;
@@ -317,10 +319,10 @@ impl DevelopmentalResidentCohort {
             "acknowledged",
             Array1::from_vec(vec![true; self.batch]).into_pyarray(py),
         )?;
-        out.set_item("command_exact", Array1::from_vec(exact).into_pyarray(py))?;
+        out.set_item("context_exact", Array1::from_vec(exact).into_pyarray(py))?;
         out.set_item(
-            "command_pending",
-            Array1::from_vec(self.command_pending.clone()).into_pyarray(py),
+            "context_pending",
+            Array1::from_vec(self.context_pending.clone()).into_pyarray(py),
         )?;
         out.set_item(
             "cns_outcome_pending",
@@ -330,13 +332,13 @@ impl DevelopmentalResidentCohort {
             .flat_map(|row| self.suffixes.cancellation_counts(row))
             .collect();
         out.set_item(
-            "motor_suffix_cancellation_totals",
+            "context_suffix_cancellation_totals",
             Array2::from_shape_vec((self.batch, 5), cancellation)
                 .unwrap()
                 .into_pyarray(py),
         )?;
         out.set_item(
-            "motor_suffix_cancellation_reason",
+            "context_suffix_cancellation_reason",
             (0..self.batch)
                 .map(|row| self.suffixes.cancellation_reason(row))
                 .collect::<Vec<_>>(),
@@ -440,15 +442,16 @@ impl DevelopmentalResidentCohort {
         let out = PyDict::new(py);
         out.set_item("format", value.format)?;
         out.set_item("version", value.version)?;
+        out.set_item("context_policy_version", value.context_policy_version)?;
         out.set_item("private", value.private)?;
-        out.set_item("motor_suffix_memory", value.motor_suffix_memory)?;
+        out.set_item("context_suffix_memory", value.context_suffix_memory)?;
         out.set_item("goal_memory", value.goal_memory)?;
         out.set_item("sequence_control", value.sequence_control)?;
         Ok(out)
     }
 
     fn restore(&mut self, value: &Bound<'_, PyDict>) -> PyResult<()> {
-        if value.len() != 6 {
+        if value.len() != 7 {
             return Err(PyValueError::new_err("CNS snapshot fields differ"));
         }
         let get = |name: &str| {
@@ -456,14 +459,18 @@ impl DevelopmentalResidentCohort {
                 .get_item(name)?
                 .ok_or_else(|| PyValueError::new_err(format!("CNS snapshot lacks {name}")))
         };
-        if get("format")?.extract::<String>()? != FORMAT || get("version")?.extract::<u8>()? != 10 {
+        if get("format")?.extract::<String>()? != FORMAT
+            || get("version")?.extract::<u8>()? != 11
+            || get("context_policy_version")?.extract::<String>()? != CONTEXT_POLICY_VERSION
+        {
             return Err(PyValueError::new_err("CNS snapshot identity differs"));
         }
         self.restore_snapshot(&ResidentSnapshot {
             format: get("format")?.extract()?,
             version: get("version")?.extract()?,
+            context_policy_version: get("context_policy_version")?.extract()?,
             private: get("private")?.extract()?,
-            motor_suffix_memory: get("motor_suffix_memory")?.extract()?,
+            context_suffix_memory: get("context_suffix_memory")?.extract()?,
             goal_memory: get("goal_memory")?.extract()?,
             sequence_control: get("sequence_control")?.extract()?,
         })
@@ -484,7 +491,7 @@ impl DevelopmentalResidentCohort {
                 "sequence-control replacement is restricted to research cohorts",
             ));
         }
-        if self.command_pending.iter().any(|x| *x) || self.acknowledged_valid.iter().any(|x| *x) {
+        if self.context_pending.iter().any(|x| *x) || self.acknowledged_valid.iter().any(|x| *x) {
             return Err(PyValueError::new_err(
                 "sequence-control replacement requires a fully coherent boundary",
             ));

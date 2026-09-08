@@ -265,6 +265,7 @@ def handler_type(state):
                             "seq": seq,
                             "graph_sha256": state.brain.graph_hash,
                             "feature_names": state.brain.readout_names,
+                            "motor_names": state.brain.motor_names,
                             "residents": residents,
                         }
                         if q.get("compact") is True:
@@ -273,6 +274,7 @@ def handler_type(state):
                                 "cns_adapter_sha256",
                                 "time",
                                 "features",
+                                "motor",
                                 "activity",
                                 "activity_peak",
                                 "support",
@@ -281,6 +283,7 @@ def handler_type(state):
                                 {k: x[k] for k in keys} for x in residents
                             ]
                             result.pop("feature_names")
+                            result.pop("motor_names")
                         return result
 
                     answer = state.mutate(seq, supplied_hash, step)

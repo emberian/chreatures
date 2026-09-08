@@ -4,10 +4,12 @@ from __future__ import annotations
 import hashlib
 import http.client
 import json
+import math
 import time
 from urllib.parse import urlencode, urlsplit
 
-from .metal_circuit import IDENTITY_KEYS, input_names
+from .metal_circuit import (IDENTITY_KEYS, input_names, context_names, motor_names, validate_entries,
+                            SERVICE_FORMAT, INPUT_COUNT, LATENT_COUNT, CONTEXT_DIM, MOTOR_DIM)
 
 
 class NeuralServiceError(RuntimeError):
@@ -39,13 +41,18 @@ class NeuralClient:
         self.graph = self.metadata["brain"]["graph"]
         self.input_names = self.metadata["brain"]["inputs"]
         self.output_names = self.metadata["brain"]["readouts"]
+        self.context_names = self.metadata["brain"].get("contexts")
+        self.motor_names = self.metadata["brain"].get("motors")
         self.cns_identity = self.metadata["brain"].get("cns_adapter")
         if (self.input_names != input_names()
                 or self.output_names != [f"cns.latent.{i}" for i in range(512)]
+                or self.context_names != context_names() or self.motor_names != motor_names()
                 or not isinstance(self.cns_identity, dict)
-                or self.cns_identity.get("format") != "chreatures-cns-service-v2"
-                or self.cns_identity.get("sensory_dim") != 5356
-                or self.cns_identity.get("latent_dim") != 512):
+                or self.cns_identity.get("format") != SERVICE_FORMAT
+                or self.cns_identity.get("sensory_dim") != INPUT_COUNT
+                or self.cns_identity.get("latent_dim") != LATENT_COUNT
+                or self.cns_identity.get("context_dim") != CONTEXT_DIM
+                or self.cns_identity.get("motor_dim") != MOTOR_DIM):
             raise ValueError("Neural service does not implement the current CNS-only interface")
         for key in (*IDENTITY_KEYS, "service_artifact_sha256"):
             value = self.cns_identity.get(key)
@@ -180,6 +187,9 @@ class NeuralClient:
         return self.mutate("/v1/residents/create", residents=residents)
 
     def step(self, entries, dt):
+        validate_entries(entries)
+        if not math.isfinite(dt) or not 0 < dt <= 0.1:
+            raise ValueError("CNS step duration must be in (0,.1]")
         return self.mutate("/v1/step", residents=entries, dt=dt, compact=True)["residents"]
 
     def capture_rates(self, name, resident_id):

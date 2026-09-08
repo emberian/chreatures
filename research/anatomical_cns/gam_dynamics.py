@@ -179,6 +179,8 @@ def run(args):
     import torch
     from research.anatomical_cns.data import load_corpus
     from research.anatomical_cns.model import AnatomicalCNS
+    if not 0 <= args.start < args.stop <= 25:
+        raise ValueError("setting range must satisfy 0 <= start < stop <= 25")
     torch.set_num_threads(args.cpu_threads)
     if args.device != "cpu" and not torch.cuda.is_available():
         raise RuntimeError("requested GPU is unavailable")
@@ -294,7 +296,27 @@ def fit(args):
         if not np.allclose(model.predict(rows), restored.predict(rows), atol=1e-10, rtol=0):
             raise ValueError("native GAM reload prediction differs")
         models[target] = restored
-        diagnostics[target] = {"status": "native-gam-fitted", "training": _metrics(np.asarray(model.predict(rows)).reshape(-1), observed)}
+        center = dict.fromkeys(FEATURES, 0.)
+        center_prediction = float(np.asarray(restored.predict([center])).reshape(-1)[0])
+        axis_slices = {}
+        for name in FEATURES:
+            points = [{**center, name: float(x)} for x in np.linspace(-1, 1, 9)]
+            axis_slices[name] = [{"coordinate": point[name], "prediction": float(value)}
+                for point, value in zip(points, np.asarray(restored.predict(points)).reshape(-1))]
+        pair_interactions = {}
+        for left, right in itertools.combinations(FEATURES, 2):
+            interaction = []
+            for a, b in itertools.product((-.75, 0., .75), repeat=2):
+                points = [{**center, left: a, right: b}, {**center, left: a}, {**center, right: b}]
+                values = np.asarray(restored.predict(points)).reshape(-1)
+                interaction.append({left: a, right: b, "prediction": float(values[0]),
+                    "nonadditive_effect": float(values[0] - values[1] - values[2] + center_prediction)})
+            pair_interactions[left + ":" + right] = interaction
+        diagnostics[target] = {"status": "native-gam-fitted",
+            "training": _metrics(np.asarray(model.predict(rows)).reshape(-1), observed),
+            "center_conditional_axis_slices": axis_slices,
+            "center_conditional_pair_interactions": pair_interactions,
+            "sensitivity_scope": "native GAM predictions conditional on other factors at zero; uncertainty governed by leave-setting-out evidence"}
         if target == "objective":
             for label, formula in (("joint", JOINT), ("additive", ADDITIVE)):
                 prediction, baseline = [], []

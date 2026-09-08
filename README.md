@@ -8,6 +8,18 @@ Inspired by *Creatures* and the changing societies and environments of *Children
 
 ## The current build
 
+**Anatomical CNS V3 is being integrated.** The new code gives the measured
+network stateful synaptic release and three slower transmitter pathways, routes
+body110 feedback into annotated sensory groups, and decodes physical muscle
+activation from 815 annotated motor neurons. Private memory sends twelve signed
+context currents back through descending neurons; it no longer supplies physical
+commands. The Rust body has independent antagonist actuators and frequency-sensitive
+hearing. Full-graph fitting uses actual MuJoCo sensory/action sequences, with
+anatomically masked trainable interfaces. Native GAM models the consequences of
+changing release and modulation parameters. [Current equations and scope](docs/development/ANATOMICAL_CNS_V3.md).
+The published experiment described below remains pinned V2 until the coupled V3
+artifacts and execution have been completed; V2 measurements are not V3 evidence.
+
 **A live habitat now runs inside the tab.** [Start three new research lives](https://emberian.github.io/chreatures/live.html): actual MuJoCo articulated physics, Rust/Wasm sensation and private cognition, and WebGPU recurrence over the complete MaleCNS. Put Bad Apple on the physical screen, make a three-note signal, add a movable object, or save the entire interacting world. Inspect the actual bilateral retinal facets and signed whole-CNS activity with a fixed display scale. The model download is about 124 MB; a WebGPU-capable browser is required. The movie remains a separate historical recording.
 
 The new V2 model has a positive operating point, signed adaptation and a learned rank-64 CNS readout. In a controlled held-out temporal experiment, its visual-change prediction achieved skills of .973/.919 against persistence; removing the graph edges reduced those values to approximately zero. These are sensory-processing results, not trained movement or fly physiology. Actual native GAM fits characterize a 27-setting gain/timing/adaptation sweep, including a subsequently executed parameter prediction. [Equations, training and controls](docs/development/CNS_DYNAMICS_V2.md) · [Navigate the native Weave evidence](https://emberian.github.io/chreatures/evidence.html).

@@ -554,7 +554,7 @@ impl LearnedSequenceControl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::motor_suffix::{MotorSuffixMemory, ACTIONS, CONTEXT, OUTCOMES};
+    use crate::context_suffix::{ContextSuffixMemory, ACTIONS, CONTEXT, OUTCOMES};
     fn zeros() -> Vec<f32> {
         let n = STATE_CODE * STATE
             + STATE_CODE
@@ -611,7 +611,7 @@ mod tests {
 
     #[test]
     fn joined_control_lifecycle_likelihood_and_restore() {
-        let mut memory = MotorSuffixMemory::new(1, 31).unwrap();
+        let mut memory = ContextSuffixMemory::new(1, 31).unwrap();
         for tick in 1..=8 {
             memory
                 .record_executed(
@@ -640,7 +640,7 @@ mod tests {
         let memory_snapshot = memory.snapshot_json().unwrap();
         let control_snapshot = control.snapshot_json().unwrap();
         memory.note_executed(0, 9, &[0.1; ACTIONS], &[0.3; OUTCOMES]);
-        let restored_memory = MotorSuffixMemory::restore_json(&memory_snapshot, 1).unwrap();
+        let restored_memory = ContextSuffixMemory::restore_json(&memory_snapshot, 1).unwrap();
         let mut restored_control =
             LearnedSequenceControl::from_flat(1, &zeros(), 0, "b".repeat(64), 99).unwrap();
         restored_control.restore_checked(&control_snapshot).unwrap();

@@ -8,7 +8,7 @@ vision, world coordinates, and object labels cannot enter this controller.
 
 The engine owns the GRU256 state, 128-dimensional achieved goal keys, private
 128-slot goal reservoir, eight-tick goal selection, three recurrent predictors,
-32-slot acquired motor suffix memory, and learned sequence termination and
+32-slot acquired neural-context suffix memory, and learned sequence termination and
 selection. Candidate rollouts read the resident's own CNS-derived state. A step
 returns proposed commands; the host acknowledges delivered commands before the
 next step can proceed. Learning uses the next actual CNS outcome, not imagined
