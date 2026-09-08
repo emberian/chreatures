@@ -15,6 +15,7 @@ import inspect
 import json
 import os
 from pathlib import Path
+import time
 from typing import Any, Mapping, Protocol
 
 import numpy as np
@@ -173,6 +174,7 @@ async def collect_episode(bundle: CollectionBundle, plan: Plan, output: Path) ->
     current_context = plan.context[0]
     latent, cns_motor = bundle.cns.step(sample.optic_rgb, sample.body_afferents, current_context)
     arrays["collected_latent"][0] = _require(latent, (RESIDENTS, LATENT), np.dtype("<f4"), "CNS latent")
+    began = time.monotonic()
 
     for tick in range(TICKS):
         contexts = plan.context[tick]
@@ -226,6 +228,14 @@ async def collect_episode(bundle: CollectionBundle, plan: Plan, output: Path) ->
         arrays["reward"][tick] = _require(reward, (RESIDENTS,), np.dtype("<f4"), "reward")
         arrays["success"][tick] = _require(success, (RESIDENTS,), np.dtype("|b1"), "success")
         arrays["failure"][tick] = _require(failure, (RESIDENTS,), np.dtype("|b1"), "failure")
+        if (tick + 1) % 64 == 0:
+            print(json.dumps({
+                "event": "collection-progress", "world_index": plan.world_index,
+                "completed_ticks": tick + 1, "ticks": TICKS,
+                "elapsed_seconds": time.monotonic() - began,
+                "success_ticks": int(arrays["success"][: tick + 1].sum()),
+                "failure_ticks": int(arrays["failure"][: tick + 1].sum()),
+            }, sort_keys=True), flush=True)
 
     # One final CNS observation binds the T+1 cache. It repeats the last
     # acknowledged context without causing another physical transition.
