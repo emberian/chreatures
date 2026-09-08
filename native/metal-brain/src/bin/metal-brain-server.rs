@@ -21,10 +21,10 @@ use std::{
 };
 
 const SHADER: &str = include_str!("../brain.metal");
-const ARTIFACT_MAGIC: &[u8; 8] = b"CHCNS4\0\0";
-const SNAPSHOT_MAGIC: &[u8; 9] = b"CNSSTATE4";
-const FORMAT: &str = "chreatures-cns-service-v4";
-const SNAPSHOT_FORMAT: &str = "chreatures-cns-state-v4";
+const ARTIFACT_MAGIC: &[u8; 8] = b"CHCNS5\0\0";
+const SNAPSHOT_MAGIC: &[u8; 9] = b"CNSSTATE5";
+const FORMAT: &str = "chreatures-cns-service-v5";
+const SNAPSHOT_FORMAT: &str = "chreatures-cns-state-v5";
 const N: usize = 165_122;
 const E: usize = 25_563_197;
 const SITES: usize = 1_771;
@@ -43,6 +43,9 @@ const LATENT: usize = 512;
 const READOUT_RANK: usize = 64;
 const MAX_CAPACITY: usize = 32;
 const MODULATOR_FAMILIES: usize = 3;
+const PLASTIC_EDGES: usize = 4_184;
+const PLASTIC_TARGETS: usize = 2;
+const PLASTICITY_CONTRACT: &str = "gamma1pedc-cue-before-ppl-v1";
 const PARAMETER_ORDER: [&str; 26] = [
     "optic.spectral_logits",
     "optic.gain_raw",
@@ -71,7 +74,7 @@ const PARAMETER_ORDER: [&str; 26] = [
     "motor.weight",
     "motor.intercept",
 ];
-const ARRAY_NAMES: [&str; 42] = [
+const ARRAY_NAMES: [&str; 47] = [
     "graph.crow",
     "graph.col",
     "graph.weight_bits",
@@ -114,6 +117,11 @@ const ARRAY_NAMES: [&str; 42] = [
     "motor.rate_scale",
     "motor.weight",
     "motor.intercept",
+    "plasticity.edge_positions",
+    "plasticity.target_ptr",
+    "plasticity.target_rows",
+    "plasticity.dan_rows",
+    "plasticity.rule",
 ];
 
 #[repr(C)]
@@ -146,6 +154,8 @@ struct Dimensions {
     latent: usize,
     readout_rank: usize,
     modulator_families: usize,
+    plastic_edges: usize,
+    plastic_targets: usize,
 }
 
 fn dimensions() -> Dimensions {
@@ -166,6 +176,8 @@ fn dimensions() -> Dimensions {
         latent: LATENT,
         readout_rank: READOUT_RANK,
         modulator_families: MODULATOR_FAMILIES,
+        plastic_edges: PLASTIC_EDGES,
+        plastic_targets: PLASTIC_TARGETS,
     }
 }
 
@@ -181,6 +193,8 @@ struct ArtifactMetadata {
     motor_calibration_sha256: String,
     graph_source_weight_sha256: String,
     graph_quantization: Value,
+    plasticity_sha256: String,
+    plasticity_contract: String,
     readout_mask_sha256: String,
     adapter_sha256: String,
     dimensions: Dimensions,
@@ -217,6 +231,7 @@ impl ArtifactMetadata {
             &self.actuator_schema_sha256,
             &self.motor_calibration_sha256,
             &self.graph_source_weight_sha256,
+            &self.plasticity_sha256,
             &self.readout_mask_sha256,
             &self.adapter_sha256,
         ] {
@@ -230,6 +245,9 @@ impl ArtifactMetadata {
             })
         {
             return Err("artifact graph_quantization differs from the V4 contract".into());
+        }
+        if self.plasticity_contract != PLASTICITY_CONTRACT {
+            return Err("artifact plasticity_contract differs from CNS V5".into());
         }
         let expected: BTreeSet<_> = ARRAY_NAMES.iter().map(|x| x.to_string()).collect();
         if self.array_sha256.keys().cloned().collect::<BTreeSet<_>>() != expected {
@@ -253,6 +271,8 @@ impl ArtifactMetadata {
             "motor_calibration_sha256",
             "graph_source_weight_sha256",
             "graph_quantization",
+            "plasticity_sha256",
+            "plasticity_contract",
             "readout_mask_sha256",
             "dimensions",
             "parameter_order",
@@ -485,6 +505,8 @@ struct SnapshotHeader {
     motor_calibration_sha256: String,
     graph_source_weight_sha256: String,
     graph_quantization: Value,
+    plasticity_sha256: String,
+    plasticity_contract: String,
     readout_mask_sha256: String,
     adapter_sha256: String,
     metadata: String,
@@ -493,7 +515,8 @@ struct SnapshotHeader {
 struct SnapshotData {
     header: SnapshotHeader,
     times: Vec<f64>,
-    state: Option<[Vec<[f32; 4]>; 7]>,
+    neuronal_state: Option<[Vec<[f32; 4]>; 7]>,
+    plastic_state: Option<[Vec<[f32; 4]>; 2]>,
 }
 
 fn validate_physical_state(
@@ -515,6 +538,27 @@ fn validate_physical_state(
                 || !modulation2[index][lane].is_finite()
             {
                 return Err("snapshot CNS state is nonfinite or outside physical bounds".into());
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_plastic_state(
+    state: &[Vec<[f32; 4]>; 2],
+    maximum_depression: &[f32; 2],
+    capacity: usize,
+    tiles: usize,
+) -> Result<(), String> {
+    for edge in 0..PLASTIC_EDGES {
+        let target = usize::from(edge >= 2_048);
+        for slot in 0..capacity {
+            let index = edge * tiles + slot / 4;
+            let lane = slot % 4;
+            if !(-maximum_depression[target]..=0.0).contains(&state[0][index][lane])
+                || !(0.0..=1.0).contains(&state[1][index][lane])
+            {
+                return Err("snapshot plastic state is nonfinite or outside V5 bounds".into());
             }
         }
     }
@@ -556,6 +600,13 @@ struct Engine {
     motor_reference_rate: Buffer,
     motor_rate_scale: Buffer,
     motor_intercept: Buffer,
+    plastic_source_rows: Buffer,
+    plastic_baseline_weight: Buffer,
+    plastic_target_ptr: Buffer,
+    plastic_target_rows: Buffer,
+    plastic_dan_rows: Buffer,
+    plastic_rule: Buffer,
+    maximum_depression: [f32; 2],
     sensory: Buffer,
     context: Buffer,
     rate: [Buffer; 2],
@@ -563,6 +614,8 @@ struct Engine {
     support: Buffer,
     release: Buffer,
     modulation: [Buffer; 2],
+    efficacy: Buffer,
+    eligibility: Buffer,
     drive: Buffer,
     readout_hidden: Buffer,
     latent: Buffer,
@@ -577,6 +630,7 @@ struct Engine {
     k_context_scatter: ComputePipelineState,
     k_rec: ComputePipelineState,
     k_finalize: ComputePipelineState,
+    k_plasticity: ComputePipelineState,
     k_motor: ComputePipelineState,
     k_gather: ComputePipelineState,
     k_projection: ComputePipelineState,
@@ -595,7 +649,7 @@ impl Engine {
         let mut magic = [0u8; 8];
         reader.read_exact(&mut magic)?;
         if &magic != ARTIFACT_MAGIC {
-            return Err("artifact header differs; only CHCNS4 is accepted".into());
+            return Err("artifact header differs; only CHCNS5 is accepted".into());
         }
         let mut length = [0u8; 4];
         reader.read_exact(&mut length)?;
@@ -678,6 +732,16 @@ impl Engine {
         let motor_weight =
             reader.array::<f32>(&metadata, "motor.weight", MOTOR_OUTPUTS * MOTOR_TARGETS)?;
         let motor_intercept = reader.array::<f32>(&metadata, "motor.intercept", MOTOR_OUTPUTS)?;
+        let plastic_edge_positions =
+            reader.array::<u32>(&metadata, "plasticity.edge_positions", PLASTIC_EDGES)?;
+        let plastic_target_ptr =
+            reader.array::<u32>(&metadata, "plasticity.target_ptr", PLASTIC_TARGETS + 1)?;
+        let plastic_target_rows =
+            reader.array::<u32>(&metadata, "plasticity.target_rows", PLASTIC_TARGETS)?;
+        let plastic_dan_rows =
+            reader.array::<u32>(&metadata, "plasticity.dan_rows", PLASTIC_TARGETS)?;
+        let plastic_rule =
+            reader.array::<f32>(&metadata, "plasticity.rule", PLASTIC_TARGETS * 3)?;
         let artifact_sha256 = reader.finish()?;
 
         if graph_crow.first() != Some(&0)
@@ -814,6 +878,78 @@ impl Engine {
         }
         if motor_rate_scale.iter().any(|x| *x <= 0.0) {
             return Err("motor.rate_scale must be positive".into());
+        }
+        if motor_reference_rate
+            .iter()
+            .any(|x| !(0.0..=1.0).contains(x))
+        {
+            return Err("motor.reference_rate must be in [0,1]".into());
+        }
+        let plastic_hashes: BTreeMap<String, String> = ARRAY_NAMES[42..]
+            .iter()
+            .map(|&name| (name.to_string(), metadata.array_sha256[name].clone()))
+            .collect();
+        let plasticity_sha256 = sha256_hex(
+            &serde_json::to_vec(&plastic_hashes)
+                .map_err(|e| format!("serialize plasticity identity: {e}"))?,
+        );
+        if plasticity_sha256 != metadata.plasticity_sha256 {
+            return Err("plasticity_sha256 differs from its canonical tensor identity".into());
+        }
+        if plastic_target_ptr != [0, 2_048, PLASTIC_EDGES as u32]
+            || plastic_target_rows != [655, 1_306]
+            || plastic_dan_rows != [1_774, 1_235]
+            || plastic_rule.len() != 6
+            || plastic_rule.iter().any(|x| !x.is_finite())
+        {
+            return Err(
+                "plasticity selector, targets, DAN rows or rules differ from CNS V5".into(),
+            );
+        }
+        for rule in plastic_rule.chunks_exact(3) {
+            if !(0.05..=5.0).contains(&rule[0])
+                || !(0.0..=1.0).contains(&rule[1])
+                || !(0.0..=0.95).contains(&rule[2])
+            {
+                return Err("plasticity.rule values are outside CNS V5 bounds".into());
+            }
+        }
+        if plastic_edge_positions.windows(2).any(|x| x[0] >= x[1]) {
+            return Err("plasticity.edge_positions must preserve unique canonical order".into());
+        }
+        let mut plastic_source_rows = Vec::with_capacity(PLASTIC_EDGES);
+        let mut plastic_baseline_weight = Vec::with_capacity(PLASTIC_EDGES);
+        for target in 0..PLASTIC_TARGETS {
+            let row = plastic_target_rows[target] as usize;
+            let row_start = graph_crow[row] as usize;
+            let row_stop = graph_crow[row + 1] as usize;
+            for &position in &plastic_edge_positions
+                [plastic_target_ptr[target] as usize..plastic_target_ptr[target + 1] as usize]
+            {
+                let position = position as usize;
+                if position < row_start || position >= row_stop {
+                    return Err("plasticity edge position does not target its declared MBON".into());
+                }
+                let source = graph_col[position];
+                if graph_channel[source as usize] != 1 {
+                    return Err("plasticity edge source does not use the fast channel".into());
+                }
+                plastic_source_rows.push(source);
+                let weight = graph_weight[position];
+                if weight == 0.0 {
+                    return Err("plasticity baseline weights must be nonzero".into());
+                }
+                plastic_baseline_weight.push(weight);
+            }
+        }
+        if plastic_source_rows
+            .iter()
+            .copied()
+            .collect::<BTreeSet<_>>()
+            .len()
+            != 3_623
+        {
+            return Err("plasticity KC source count differs from the audited selector".into());
         }
         if body_mask
             .iter()
@@ -963,6 +1099,12 @@ impl Engine {
         let motor_reference_rate_buffer = buf(&device, &motor_reference_rate);
         let motor_rate_scale_buffer = buf(&device, &motor_rate_scale);
         let motor_intercept_buffer = buf(&device, &motor_intercept);
+        let plastic_source_rows_buffer = buf(&device, &plastic_source_rows);
+        let plastic_baseline_weight_buffer = buf(&device, &plastic_baseline_weight);
+        let plastic_target_ptr_buffer = buf(&device, &plastic_target_ptr);
+        let plastic_target_rows_buffer = buf(&device, &plastic_target_rows);
+        let plastic_dan_rows_buffer = buf(&device, &plastic_dan_rows);
+        let plastic_rule_buffer = buf(&device, &plastic_rule);
         let sensory = zeros(&device, INPUTS * tiles);
         let context = zeros(&device, CONTEXT_INPUTS * tiles);
         let rate = [buf(&device, &initial_rate), buf(&device, &initial_rate)];
@@ -973,6 +1115,9 @@ impl Engine {
             buf(&device, &vec![[0f32; 4]; N * tiles * 3]),
             buf(&device, &vec![[0f32; 4]; N * tiles * 3]),
         ];
+        let plastic_zero = vec![[0f32; 4]; PLASTIC_EDGES * tiles];
+        let efficacy = buf(&device, &plastic_zero);
+        let eligibility = buf(&device, &plastic_zero);
         let drive = zeros(&device, N * tiles);
         let readout_hidden = zeros(&device, READOUT_RANK * tiles);
         let latent = zeros(&device, LATENT * tiles);
@@ -1013,6 +1158,13 @@ impl Engine {
             motor_reference_rate: motor_reference_rate_buffer,
             motor_rate_scale: motor_rate_scale_buffer,
             motor_intercept: motor_intercept_buffer,
+            plastic_source_rows: plastic_source_rows_buffer,
+            plastic_baseline_weight: plastic_baseline_weight_buffer,
+            plastic_target_ptr: plastic_target_ptr_buffer,
+            plastic_target_rows: plastic_target_rows_buffer,
+            plastic_dan_rows: plastic_dan_rows_buffer,
+            plastic_rule: plastic_rule_buffer,
+            maximum_depression: [plastic_rule[2], plastic_rule[5]],
             sensory,
             context,
             rate,
@@ -1020,6 +1172,8 @@ impl Engine {
             support,
             release,
             modulation,
+            efficacy,
+            eligibility,
             drive,
             readout_hidden,
             latent,
@@ -1030,11 +1184,12 @@ impl Engine {
             poisoned: None,
             k_clear: pipeline("clear_drive")?,
             k_optic: pipeline("project_optic")?,
-            k_body_scatter: pipeline("v4_project_body_masked")?,
-            k_context_scatter: pipeline("v4_project_context_zero_neutral")?,
-            k_rec: pipeline("v4_csr_dynamics_f16")?,
-            k_finalize: pipeline("v4_finalize_private_state")?,
-            k_motor: pipeline("v4_motor92_centered")?,
+            k_body_scatter: pipeline("v5_project_body_masked")?,
+            k_context_scatter: pipeline("v5_project_context_zero_neutral")?,
+            k_rec: pipeline("v5_csr_dynamics_f16")?,
+            k_finalize: pipeline("v5_finalize_private_state")?,
+            k_plasticity: pipeline("v5_advance_plasticity")?,
+            k_motor: pipeline("v5_motor92_centered")?,
             k_gather: pipeline("gather_rates")?,
             k_projection: pipeline("dense_projection")?,
             k_readout_output: pipeline("dense_readout_output")?,
@@ -1296,6 +1451,11 @@ impl Engine {
                 enc.set_buffer(11 + i as u64, Some(&self.dynamics[i]), 0);
             }
             enc.set_buffer(21, Some(&self.neutral_drive), 0);
+            enc.set_buffer(22, Some(&self.plastic_source_rows), 0);
+            enc.set_buffer(23, Some(&self.plastic_baseline_weight), 0);
+            enc.set_buffer(24, Some(&self.plastic_target_ptr), 0);
+            enc.set_buffer(25, Some(&self.plastic_target_rows), 0);
+            enc.set_buffer(26, Some(&self.efficacy), 0);
             Self::grid(enc, &self.k_rec, N * self.tiles);
             enc.end_encoding();
         }
@@ -1315,6 +1475,27 @@ impl Engine {
             &p1,
             N * self.tiles,
         );
+        {
+            let enc = cb_recurrence.new_compute_command_encoder();
+            bind(
+                enc,
+                &self.k_plasticity,
+                &[
+                    &self.rate[0],
+                    &self.release,
+                    &self.dynamics[0],
+                    &self.plastic_source_rows,
+                    &self.plastic_target_ptr,
+                    &self.plastic_dan_rows,
+                    &self.plastic_rule,
+                    &self.efficacy,
+                ],
+            );
+            enc.set_buffer(8, Some(&p1), 0);
+            enc.set_buffer(9, Some(&self.eligibility), 0);
+            Self::grid(enc, &self.k_plasticity, PLASTIC_EDGES * self.tiles);
+            enc.end_encoding();
+        }
         let cb_readout = self.queue.new_command_buffer();
         {
             let enc = cb_readout.new_compute_command_encoder();
@@ -1488,6 +1669,17 @@ impl Engine {
                     }
                 }
             }
+            let efficacy = self.efficacy.contents() as *mut [f32; 4];
+            let eligibility = self.eligibility.contents() as *mut [f32; 4];
+            for edge in 0..PLASTIC_EDGES {
+                for slot in 0..self.capacity {
+                    if mask & (1u32 << slot) != 0 {
+                        let index = edge * self.tiles + slot / 4;
+                        (*efficacy.add(index))[slot % 4] = 0.0;
+                        (*eligibility.add(index))[slot % 4] = 0.0;
+                    }
+                }
+            }
         }
         for slot in 0..self.capacity {
             if mask & (1u32 << slot) != 0 {
@@ -1512,6 +1704,8 @@ impl Engine {
             "motor_calibration_sha256": self.metadata.motor_calibration_sha256,
             "graph_source_weight_sha256": self.metadata.graph_source_weight_sha256,
             "graph_quantization": self.metadata.graph_quantization,
+            "plasticity_sha256": self.metadata.plasticity_sha256,
+            "plasticity_contract": self.metadata.plasticity_contract,
             "readout_mask_sha256": self.metadata.readout_mask_sha256,
             "adapter_sha256": self.metadata.adapter_sha256,
             "service_artifact_sha256": self.artifact_sha256,
@@ -1534,7 +1728,7 @@ impl Engine {
             "requested_kernel": if self.simd_rows { "simd" } else { "row" },
             "capacity": self.capacity,
             "storage_tiles": self.tiles,
-            "dynamics": "typed-release-modulation-v4-two-0.005s-substeps",
+            "dynamics": "private-gamma1pedc-plasticity-v5-two-0.005s-substeps",
             "readout_rank": READOUT_RANK,
             "snapshot_format": SNAPSHOT_FORMAT,
             "sensory_order": "channel-major optic_site_rgb_then_body807",
@@ -1560,6 +1754,8 @@ impl Engine {
             motor_calibration_sha256: self.metadata.motor_calibration_sha256.clone(),
             graph_source_weight_sha256: self.metadata.graph_source_weight_sha256.clone(),
             graph_quantization: self.metadata.graph_quantization.clone(),
+            plasticity_sha256: self.metadata.plasticity_sha256.clone(),
+            plasticity_contract: self.metadata.plasticity_contract.clone(),
             readout_mask_sha256: self.metadata.readout_mask_sha256.clone(),
             adapter_sha256: self.metadata.adapter_sha256.clone(),
             metadata,
@@ -1581,6 +1777,8 @@ impl Engine {
             || header.motor_calibration_sha256 != self.metadata.motor_calibration_sha256
             || header.graph_source_weight_sha256 != self.metadata.graph_source_weight_sha256
             || header.graph_quantization != self.metadata.graph_quantization
+            || header.plasticity_sha256 != self.metadata.plasticity_sha256
+            || header.plasticity_contract != self.metadata.plasticity_contract
             || header.readout_mask_sha256 != self.metadata.readout_mask_sha256
             || header.adapter_sha256 != self.metadata.adapter_sha256
         {
@@ -1625,13 +1823,31 @@ impl Engine {
             modulation_family(1),
             modulation_family(2),
         ];
+        let plastic_state = [
+            copy::<[f32; 4]>(&self.efficacy, PLASTIC_EDGES * self.tiles),
+            copy::<[f32; 4]>(&self.eligibility, PLASTIC_EDGES * self.tiles),
+        ];
         validate_physical_state(&state, self.capacity, self.tiles)?;
+        validate_plastic_state(
+            &plastic_state,
+            &self.maximum_depression,
+            self.capacity,
+            self.tiles,
+        )?;
         exclusive_atomic_write(path, |file| {
             file.write_all(SNAPSHOT_MAGIC)?;
             file.write_all(&(header_bytes.len() as u64).to_le_bytes())?;
             file.write_all(&header_bytes)?;
             file.write_all(times)?;
             for values in &state {
+                file.write_all(unsafe {
+                    std::slice::from_raw_parts(
+                        values.as_ptr() as *const u8,
+                        std::mem::size_of_val(values.as_slice()),
+                    )
+                })?;
+            }
+            for values in &plastic_state {
                 file.write_all(unsafe {
                     std::slice::from_raw_parts(
                         values.as_ptr() as *const u8,
@@ -1649,7 +1865,7 @@ impl Engine {
         file.read_exact(&mut magic)
             .map_err(|e| format!("read snapshot header: {e}"))?;
         if &magic != SNAPSHOT_MAGIC {
-            return Err("snapshot header differs; only CNSSTATE4 is accepted".into());
+            return Err("snapshot header differs; only CNSSTATE5 is accepted".into());
         }
         let mut length = [0u8; 8];
         file.read_exact(&mut length)
@@ -1676,13 +1892,14 @@ impl Engine {
         if times.iter().any(|x| !x.is_finite() || *x < 0.0) {
             return Err("snapshot times are invalid".into());
         }
-        let state_bytes = N * self.tiles * size_of::<[f32; 4]>();
-        let state = if load_state {
+        let neuronal_bytes = N * self.tiles * size_of::<[f32; 4]>();
+        let plastic_bytes = PLASTIC_EDGES * self.tiles * size_of::<[f32; 4]>();
+        let neuronal_state = if load_state {
             let mut arrays: [Vec<[f32; 4]>; 7] = std::array::from_fn(|_| Vec::new());
             for values in &mut arrays {
                 values.resize(N * self.tiles, [0f32; 4]);
                 file.read_exact(unsafe {
-                    std::slice::from_raw_parts_mut(values.as_mut_ptr() as *mut u8, state_bytes)
+                    std::slice::from_raw_parts_mut(values.as_mut_ptr() as *mut u8, neuronal_bytes)
                 })
                 .map_err(|e| format!("read snapshot CNS state: {e}"))?;
                 if values.iter().flatten().any(|x| !x.is_finite()) {
@@ -1691,18 +1908,34 @@ impl Engine {
             }
             Some(arrays)
         } else {
-            file.seek(SeekFrom::Current((7 * state_bytes) as i64))
+            file.seek(SeekFrom::Current((7 * neuronal_bytes) as i64))
                 .map_err(|e| format!("inspect snapshot state length: {e}"))?;
             None
         };
-        if let Some(values) = &state {
+        if let Some(values) = &neuronal_state {
             validate_physical_state(values, self.capacity, self.tiles)?;
         }
+        let plastic_state = if load_state {
+            let mut arrays: [Vec<[f32; 4]>; 2] = std::array::from_fn(|_| Vec::new());
+            for values in &mut arrays {
+                values.resize(PLASTIC_EDGES * self.tiles, [0f32; 4]);
+                file.read_exact(unsafe {
+                    std::slice::from_raw_parts_mut(values.as_mut_ptr() as *mut u8, plastic_bytes)
+                })
+                .map_err(|e| format!("read snapshot plastic state: {e}"))?;
+            }
+            validate_plastic_state(&arrays, &self.maximum_depression, self.capacity, self.tiles)?;
+            Some(arrays)
+        } else {
+            file.seek(SeekFrom::Current((2 * plastic_bytes) as i64))
+                .map_err(|e| format!("inspect snapshot plastic state length: {e}"))?;
+            None
+        };
         let expected_end = 9
             + 8
             + header_len as u64
             + (self.capacity * size_of::<f64>()) as u64
-            + (7 * state_bytes) as u64;
+            + (7 * neuronal_bytes + 2 * plastic_bytes) as u64;
         if file
             .stream_position()
             .map_err(|e| format!("inspect snapshot position: {e}"))?
@@ -1718,7 +1951,8 @@ impl Engine {
         Ok(SnapshotData {
             header,
             times,
-            state,
+            neuronal_state,
+            plastic_state,
         })
     }
 
@@ -1727,7 +1961,7 @@ impl Engine {
             return Err("restore mask must select slots within capacity".into());
         }
         let loaded = self.read_snapshot(path, true)?;
-        let state = loaded.state.unwrap();
+        let state = loaded.neuronal_state.as_ref().unwrap();
         for (buffer, values) in [&self.rate[0], &self.adapt, &self.support, &self.release]
             .into_iter()
             .zip(state[..4].iter())
@@ -1756,6 +1990,21 @@ impl Engine {
                                 (*target.add(target_index))[slot % 4] =
                                     state[4 + family][source_index][slot % 4];
                             }
+                        }
+                    }
+                }
+            }
+            let plastic = loaded.plastic_state.as_ref().unwrap();
+            for (buffer, values) in [
+                (&self.efficacy, &plastic[0]),
+                (&self.eligibility, &plastic[1]),
+            ] {
+                let target = buffer.contents() as *mut [f32; 4];
+                for edge in 0..PLASTIC_EDGES {
+                    for slot in 0..self.capacity {
+                        if mask & (1u32 << slot) != 0 {
+                            let index = edge * self.tiles + slot / 4;
+                            (*target.add(index))[slot % 4] = values[index][slot % 4];
                         }
                     }
                 }

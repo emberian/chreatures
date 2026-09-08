@@ -191,8 +191,8 @@ function buildSearchLists(columns) {
 export async function loadRetinalNeuronRows({modelManifest, baseURL} = {}) {
   if (
     !modelManifest
-    || modelManifest.format !== 'chreatures-cns-webgpu-v4'
-    || modelManifest.version !== 4
+    || modelManifest.format !== 'chreatures-cns-webgpu-v5'
+    || modelManifest.version !== 5
   ) fail('selected CNS model manifest differs');
   if (baseURL === undefined || baseURL === null) fail('retinal row baseURL is required');
   const neuronCount = modelManifest.counts?.neurons;

@@ -9,7 +9,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import struct
 import subprocess
 import sys
 from typing import Any, Mapping
@@ -22,12 +21,7 @@ sys.path.insert(0, str(ROOT))
 
 from chreatures.cns_adapter_contract import (
     CONTROLLER_FORMAT,
-    DIMENSIONS as CNS_DIMENSIONS,
-    ARRAY_SPECS as CNS_ARRAY_SPECS,
-    FORMAT as CNS_SERVICE_FORMAT,
-    MAGIC as CNS_MAGIC,
-    adapter_identity_payload,
-    canonical as cns_canonical,
+    load_service_artifact,
     service_identity,
 )
 from chreatures.resident_contract import (
@@ -78,48 +72,10 @@ def current_revision() -> str:
 
 def read_cns_service_identity(path: Path) -> dict[str, Any]:
     source = path.expanduser().resolve()
-    with source.open("rb") as stream:
-        if stream.read(len(CNS_MAGIC)) != CNS_MAGIC:
-            raise ValueError("CNS service artifact magic differs")
-        length_bytes = stream.read(4)
-        if len(length_bytes) != 4:
-            raise ValueError("CNS service metadata length is missing")
-        length = struct.unpack("<I", length_bytes)[0]
-        if not 1 <= length <= 8 * 1024 * 1024:
-            raise ValueError("CNS service metadata length differs")
-        encoded = stream.read(length)
-        if len(encoded) != length:
-            raise ValueError("CNS service metadata is truncated")
-    expected_bytes = len(CNS_MAGIC) + 4 + length + sum(
-        int(np.prod(shape, dtype=np.int64)) * np.dtype(dtype).itemsize
-        for _, dtype, shape in CNS_ARRAY_SPECS
-    )
-    if source.stat().st_size != expected_bytes:
-        raise ValueError("CNS service artifact byte length differs")
-    metadata = json.loads(encoded)
-    required = {
-        "format", "graph_sha256", "atlas_sha256", "anatomy_sha256",
-        "morphology_sha256", "sensory_schema_sha256", "actuator_schema_sha256",
-        "motor_calibration_sha256", "graph_source_weight_sha256",
-        "graph_quantization", "readout_mask_sha256", "dimensions",
-        "parameter_order", "training_status", "provenance", "array_sha256",
-        "adapter_sha256",
-    }
-    if not isinstance(metadata, dict) or set(metadata) != required:
-        raise ValueError("CNS service metadata fields differ")
-    declared = metadata["adapter_sha256"]
-    if (
-        metadata["format"] != CNS_SERVICE_FORMAT
-        or metadata["dimensions"] != CNS_DIMENSIONS
-        or not valid_sha256(declared)
-        or hashlib.sha256(cns_canonical(adapter_identity_payload(metadata))).hexdigest()
-        != declared
-        or metadata["training_status"] not in {"initialized-untrained", "trained"}
-    ):
-        raise ValueError("CNS service artifact identity differs")
-    for name in ("graph_sha256", "atlas_sha256", "anatomy_sha256", "readout_mask_sha256"):
-        if not valid_sha256(metadata[name]):
-            raise ValueError(f"CNS service metadata requires SHA-256: {name}")
+    arrays, metadata = load_service_artifact(source)
+    del arrays
+    if metadata["training_status"] not in {"initialized-untrained", "trained"}:
+        raise ValueError("CNS service training status differs")
     return {
         "identity": service_identity(metadata, file_sha256(source)),
         "training_status": metadata["training_status"],
@@ -178,10 +134,10 @@ def main() -> int:
     core, predictor, heads = initialize_controller_arrays(args.seed)
     core_hash = packed_sha256(core, CORE_ORDER)
     predictor_hash = packed_sha256(predictor, PREDICTOR_ORDER)
-    # The V4 service identity also carries embodiment source fields.  The
+    # The V5 service identity also carries embodiment and plasticity fields. The
     # resident/control ABI deliberately stores the exact dependency subset
     # accepted by sequence_control; service_artifact_sha256 and adapter_sha256
-    # transitively bind the full V4 metadata, including those source fields.
+    # transitively bind the full V5 metadata, including those source fields.
     cns_identity = {
         name: service["identity"][name] for name in CNS_DEPENDENCY_KEYS
     }

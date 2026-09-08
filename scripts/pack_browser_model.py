@@ -26,7 +26,7 @@ def file_sha(path):
 
 def read_service(path):
     with path.open('rb') as stream:
-        if stream.read(8) != MAGIC: raise ValueError('Current CHCNS4 artifact required')
+        if stream.read(8) != MAGIC: raise ValueError('Current CHCNS5 artifact required')
         size = struct.unpack('<I', stream.read(4))[0]
         if not 0 < size < 8 * 1024**2: raise ValueError('Invalid metadata length')
         meta = json.loads(stream.read(size))
@@ -73,25 +73,26 @@ def main():
     a.output.mkdir(parents=True)
     entries={name:blob(a.output,name,arrays[name]) for name,_,_ in ARRAY_SPECS}
     entries['afferent.mask']=blob(a.output,'afferent.mask',mask.astype('<u4'))
-    manifest=dict(format='chreatures-cns-webgpu-v4', version=4,
+    manifest=dict(format='chreatures-cns-webgpu-v5', version=5,
         counts=dict(neurons=165122,edges=25563197,types=11752,opticSites=1771,bodyChannels=807,
                     contextChannels=12,contextTargets=1314,motor=92,motorTargets=815,afferents=int(np.count_nonzero(mask == 0)),
                     rank=64,latent=512,opticValues=5313,receptors=4107,receptorTypes=10,
-                    receptorSiteEdges=4669,bodyTargets=11798),
+                    receptorSiteEdges=4669,bodyTargets=11798,plasticEdges=4184,plasticTargets=2),
         identity=dict(artifact=meta['adapter_sha256'],graph=meta['graph_sha256'],atlas=meta['atlas_sha256'],
                       anatomy=meta['anatomy_sha256'],mask=meta['readout_mask_sha256'],
                       morphology=meta['morphology_sha256'],sensorySchema=meta['sensory_schema_sha256'],
                       actuatorSchema=meta['actuator_schema_sha256'],motorCalibration=meta['motor_calibration_sha256'],
-                      graphSourceWeight=meta['graph_source_weight_sha256']),
+                      graphSourceWeight=meta['graph_source_weight_sha256'],plasticity=meta['plasticity_sha256']),
         graphQuantization=meta['graph_quantization'], controlDt=0.01, substeps=2,
+        plasticityRule=meta['plasticity_contract'],
         serviceArtifactSha256=service_hash,sourceRevision=a.revision,buffers=entries,
-        numericalExport='V4 canonical graph binary16 bits decoded once to float32; all other tensors remain float32; no backend rounding',
+        numericalExport='V5 canonical graph binary16 bits decoded once to float32; private plasticity derives exact selected baselines from those bits; all other tensors remain float32',
         trainingStatus=meta['training_status'],trainingScope=meta.get('provenance',{}).get('scope','See source training receipt; no embodied competence inferred'))
     (a.output/'cns-manifest.json').write_bytes(canonical(manifest)+b'\n')
     if a.cns_only:
         if a.resident or a.soma_directory or a.batch is not None: raise ValueError('--cns-only cannot include resident, soma or batch inputs')
         files={f.name:dict(bytes=f.stat().st_size,sha256=file_sha(f)) for f in sorted(a.output.iterdir())}
-        receipt=dict(format='chreatures-browser-cns-release-v4',sourceRevision=a.revision,
+        receipt=dict(format='chreatures-browser-cns-release-v5',sourceRevision=a.revision,
                      serviceArtifactSha256=service_hash,files=files,totalBytes=sum(f['bytes'] for f in files.values()))
         (a.output/'release.json').write_bytes(canonical(receipt)+b'\n')
         print(json.dumps(dict(output=str(a.output),totalBytes=receipt['totalBytes'],serviceArtifactSha256=service_hash,files=len(files))))

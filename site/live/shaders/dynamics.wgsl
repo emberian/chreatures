@@ -1,4 +1,4 @@
-// AGPL-3.0-or-later -- exact V4 seven-state recurrence.
+// AGPL-3.0-or-later -- V5 seven-state recurrence inherited exactly from V4.
 const N: u32 = 165122u;
 const T: u32 = 11752u;
 

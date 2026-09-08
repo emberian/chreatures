@@ -9,8 +9,8 @@ archive contains exactly three directories:
 - `runtime/`: the resident JavaScript/Wasm pair exercised by the selected joined
   run and a reduced manifest that authenticates those two files;
 - `physical/`: one output from `native/browser-world/stage_site.py`, including the
-  actual fly fixture, 39 body meshes, MuJoCo runtime, shared WorldCore Wasm and its
-  physical manifest.
+  actual fly fixture, XML, 39 body meshes and the unified Rust + MuJoCo fly-world
+  Wasm module with its physical manifest.
 
 The current selection is `initialized-untrained`. This describes initialization
 state only and makes no claim of motor, feeding, recovery or ecological competence.
@@ -21,23 +21,35 @@ and reviewed selection manifest. Do not relabel an existing archive.
 
 First stage the root-selected physical release into an empty directory. Supply all
 identities from the successful joined receipt; the command rejects a different
-fixture, scene, source runtime or WorldCore Wasm:
+fixture, scene, source runtime or unified fly-world module:
 
 ```console
 python3 native/browser-world/stage_site.py \
   --fixture-directory /path/to/selected-fixture \
-  --runtime native/browser-world/runtime.mjs \
+  --runtime native/fly-world/runtime.mjs \
+  --module-directory /path/to/unified-fly-world-build \
   --output /path/to/physical-stage \
   --source-revision FULL_SOURCE_REVISION \
   --expected-fixture-sha256 FIXTURE_SHA256 \
   --expected-scene-sha256 SCENE_SHA256 \
   --expected-runtime-sha256 RUNTIME_SHA256 \
-  --expected-core-wasm-sha256 WORLDCORE_WASM_SHA256
+  --expected-module-mjs-sha256 UNIFIED_MODULE_MJS_SHA256 \
+  --expected-module-wasm-sha256 UNIFIED_MODULE_WASM_SHA256
 ```
 
-The stage command replaces only its physical-runtime namespace and hardlinks the
-39 authenticated mesh files. It rejects the former generic-garden engine, a mixed
-body/actuator schema, and a MuJoCo or WorldCore mismatch.
+The stage command replaces the complete physical-runtime namespace and hardlinks
+the 39 authenticated mesh files where possible. The staged module contains the
+current MuJoCo physics and Rust world mechanisms behind one typed boundary. The
+artifact contains no second browser-world Wasm or separately loaded MuJoCo runtime.
+It rejects a mixed body/actuator schema or any fixture, XML, host, module or mesh
+identity mismatch.
+
+For a joined V5 review tree, use `research/fly_learning/stage_joined_v5.py`
+with the same fixture and unified-module identities, an exact B2 or B4 full model
+pack, and a scoped resident-runtime Cargo target. The command requires a V5 CNS
+manifest, verifies the CNS/resident/observer/release relationship, builds the
+resident Wasm, and authenticates `physical-world.js` and the plasticity shader in
+the resulting runtime manifest. A CNS-only pack cannot be staged as a joined life.
 
 Create the deterministic archive and its small tracked selection file from the
 selected model, joined resident runtime and physical stage:
@@ -108,8 +120,8 @@ files and the superseded model lock from the output. It does not scan `runs/`,
 model storage, checkpoints or other research datasets.
 
 `build-info.json`, `live/runtime-manifest.json`, `live/model-selection.json` and
-`live-publication.json` preserve the separate source, physical engine, scene,
-WorldCore, resident runtime, model release and component revision boundaries. Site
+`live-publication.json` preserve the separate source, unified physical engine,
+scene, resident runtime, model release and component revision boundaries. Site
 links must remain relative so the same artifact works below
 `https://emberian.github.io/chreatures/` and from a local static server:
 
