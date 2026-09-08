@@ -44,6 +44,7 @@ from .data import (
     load_corpus,
     load_nursery_corpus,
     load_recovery_corpus,
+    load_support_acquisition_corpus,
     seal_corpus,
     sha256_file,
 )
@@ -871,6 +872,20 @@ def train(arguments: argparse.Namespace) -> None:
             "sha256": sha256_file(manifest_path),
         })
         additional_corpora.append(recovery)
+    if arguments.support_corpus is not None:
+        support_path = arguments.support_corpus.expanduser().resolve()
+        support = load_support_acquisition_corpus(support_path)
+        manifest_path = (
+            support_path / "support-acquisition-corpus.json"
+            if support_path.is_dir() else support_path
+        )
+        source_receipts.append({
+            "role": "fresh-life-neutral-support-short-probe-acquisition",
+            "format": support.manifest["format"],
+            "path": str(manifest_path),
+            "sha256": sha256_file(manifest_path),
+        })
+        additional_corpora.append(support)
     if additional_corpora:
         corpus = combine_corpora(primary, *additional_corpora)
     source_identities = [
@@ -1315,6 +1330,7 @@ def parser() -> argparse.ArgumentParser:
     fit.add_argument("--corpus", type=Path, required=True)
     fit.add_argument("--nursery-corpus", type=Path)
     fit.add_argument("--recovery-corpus", type=Path)
+    fit.add_argument("--support-corpus", type=Path)
     fit.add_argument("--service", type=Path, required=True)
     fit.add_argument(
         "--collection-service", type=Path, action="append",
