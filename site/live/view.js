@@ -15,6 +15,7 @@ function finiteArray(value, length, label) {
 
 function materialFor(item, rgba) {
   const resident = Boolean(item.resident_id) || /^resident(?:\d+\/|:)/.test(item.name);
+  const boundary = /(?:^|\/)boundary-(?:west|east|north|south)$/.test(item.name);
   const color = new THREE.Color(rgba[0], rgba[1], rgba[2]);
   return new THREE.MeshPhysicalMaterial({
     color,
@@ -22,9 +23,9 @@ function materialFor(item, rgba) {
     metalness: .02,
     emissive: resident ? color.clone().multiplyScalar(.025) : new THREE.Color(0x000000),
     emissiveIntensity: resident ? .35 : 0,
-    transparent: rgba[3] < .999,
-    opacity: rgba[3],
-    depthWrite: rgba[3] >= .999,
+    transparent: boundary || rgba[3] < .999,
+    opacity: rgba[3] * (boundary ? .08 : 1),
+    depthWrite: !boundary && rgba[3] >= .999,
     side: item.type === 0 || /wing/.test(item.name) ? THREE.DoubleSide : THREE.FrontSide,
   });
 }
@@ -74,13 +75,16 @@ function scaleMesh(mesh, item) {
 }
 
 export class LiveView {
-  constructor({worldCanvas, brainCanvas, retinaCanvases, onResident, onToy}) {
+  constructor({worldCanvas, brainCanvas, retinaCanvases, onResident, onToy, onPlacement}) {
     this.worldCanvas = worldCanvas;
     this.brainCanvas = brainCanvas;
     if (!Array.isArray(retinaCanvases) || retinaCanvases.length !== 2) throw new Error('Retinal canvases are absent');
     this.retinaCanvases = retinaCanvases;
     this.onResident = onResident;
     this.onToy = onToy;
+    this.onPlacement = onPlacement;
+    this.placingToy = false;
+    this.pointerDown = null;
     this.meshes = new Map();
     this.geometrySignature = '';
     this.screenGeom = -1;
@@ -88,6 +92,7 @@ export class LiveView {
     this.selectedResident = null;
     this.cameraMode = 'orbit';
     this.lastFrame = null;
+    this.habitatBounds = null;
     this.running = true;
 
     this.worldScene = new THREE.Scene();
@@ -138,6 +143,10 @@ export class LiveView {
 
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
+    worldCanvas.addEventListener('pointerdown', event => {
+      this.pointerDown = {x: event.clientX, y: event.clientY, id: event.pointerId};
+    });
+    worldCanvas.addEventListener('pointercancel', () => { this.pointerDown = null; });
     worldCanvas.addEventListener('pointerup', event => this.#pick(event));
     this.boundFrame = this.#loop.bind(this);
     requestAnimationFrame(this.boundFrame);
@@ -148,6 +157,19 @@ export class LiveView {
     this.cameraMode = mode;
     this.worldControls.enabled = mode !== 'body';
     if (mode !== 'body') this.worldCamera.up.set(0, 0, 1);
+    if (mode === 'orbit') this.#frameHabitat();
+    if (mode === 'follow') {
+      const pose = this.#selectedPose();
+      if (pose) {
+        this.worldControls.target.copy(pose.position);
+        this.worldCamera.position.copy(pose.position).add(new THREE.Vector3(6, -9, 6));
+      }
+    }
+  }
+
+  setToyPlacement(active) {
+    this.placingToy = Boolean(active);
+    this.worldCanvas.style.cursor = this.placingToy ? 'crosshair' : '';
   }
 
   setResidents(residents) {
@@ -352,12 +374,18 @@ export class LiveView {
       scaleMesh(mesh, item);
       const rgba = [frame.colors[c], frame.colors[c + 1], frame.colors[c + 2], frame.colors[c + 3]];
       mesh.material.color.setRGB(rgba[0], rgba[1], rgba[2]);
-      mesh.material.opacity = rgba[3];
+      mesh.material.opacity = rgba[3] * (mesh.userData.boundary ? .08 : 1);
       mesh.visible = rgba[3] > 0;
     }
     if (this.selectedResident && this.residents.some(item => item.id === this.selectedResident)) this.selectResident(this.selectedResident);
     else if (this.residents.length) this.selectResident(this.residents[0].id);
     this.lastFrame = frame;
+    if (!this.habitatBounds) {
+      this.worldScene.updateMatrixWorld(true);
+      this.habitatBounds = new THREE.Box3();
+      for (const mesh of this.meshes.values()) if (mesh.visible) this.habitatBounds.expandByObject(mesh);
+      this.#frameHabitat();
+    }
   }
 
   stop() { this.running = false; }
@@ -375,7 +403,8 @@ export class LiveView {
       const mesh = new THREE.Mesh(geometryFor(item, anatomicalMeshes), materialFor(item, rgba));
       const resident = /^resident:([^:]+):/.exec(item.name) || /^(resident\d+)\//.exec(item.name);
       const visitor = /^entity:(visitor-[^:]+):/.exec(item.name);
-      mesh.userData = {residentId: item.resident_id ?? resident?.[1] ?? null, toyId: visitor?.[1] ?? null, body: item.body};
+      mesh.userData = {residentId: item.resident_id ?? resident?.[1] ?? null, toyId: visitor?.[1] ?? null, body: item.body,
+        boundary: /(?:^|\/)boundary-(?:west|east|north|south)$/.test(item.name)};
       scaleMesh(mesh, item);
       this.meshes.set(item.id, mesh); this.worldScene.add(mesh);
     }
@@ -397,6 +426,21 @@ export class LiveView {
       head.quaternion.setFromRotationMatrix(matrix);
     }
     return {position, head};
+  }
+
+  #frameHabitat() {
+    if (!this.habitatBounds || this.habitatBounds.isEmpty()) return;
+    const center = this.habitatBounds.getCenter(new THREE.Vector3());
+    const radius = this.habitatBounds.getSize(new THREE.Vector3()).length() * .5;
+    const vertical = this.worldCamera.fov * Math.PI / 360;
+    const horizontal = Math.atan(Math.tan(vertical) * Math.max(.5, this.worldCamera.aspect));
+    const distance = radius / Math.sin(Math.min(vertical, horizontal)) * 1.1;
+    this.worldControls.target.copy(center);
+    this.worldCamera.position.copy(center).addScaledVector(new THREE.Vector3(1, -1.3, 1).normalize(), distance);
+    this.worldCamera.far = Math.max(300, distance + radius * 3);
+    this.worldControls.maxDistance = Math.max(160, distance * 2);
+    this.worldCamera.updateProjectionMatrix();
+    this.worldCamera.lookAt(center);
   }
 
   #drawRetina(canvas, eye) {
@@ -454,12 +498,28 @@ export class LiveView {
   }
 
   #pick(event) {
+    const down = this.pointerDown;
+    this.pointerDown = null;
+    if (!down || down.id !== event.pointerId || event.button !== 0 ||
+        Math.hypot(event.clientX - down.x, event.clientY - down.y) > 5) return;
     const bounds = this.worldCanvas.getBoundingClientRect();
+    if (bounds.width <= 0 || bounds.height <= 0) return;
     this.pointer.set((event.clientX - bounds.left) / bounds.width * 2 - 1, -(event.clientY - bounds.top) / bounds.height * 2 + 1);
+    this.worldScene.updateMatrixWorld(true);
     this.raycaster.setFromCamera(this.pointer, this.worldCamera);
-    const hit = this.raycaster.intersectObjects([...this.meshes.values()], false)[0]?.object;
-    if (hit?.userData.residentId) this.onResident(hit.userData.residentId);
-    if (hit?.userData.toyId) this.onToy(hit.userData.toyId);
+    const hit = this.raycaster.intersectObjects([...this.meshes.values()].filter(mesh => mesh.visible && !mesh.userData.boundary), false)[0];
+    if (this.placingToy) {
+      if (!hit?.face || hit.object.userData.residentId) return;
+      const normal = hit.face.normal.clone().applyMatrix3(new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld)).normalize();
+      if (normal.dot(this.raycaster.ray.direction) > 0) normal.negate();
+      // Visitor-chosen world geometry is an external intervention. The physical
+      // host still rejects penetration against the current world at commit.
+      const position = hit.point.clone().addScaledVector(normal, .37);
+      this.onPlacement?.(position.toArray());
+      return;
+    }
+    if (hit?.object.userData.residentId) this.onResident(hit.object.userData.residentId);
+    if (hit?.object.userData.toyId) this.onToy(hit.object.userData.toyId);
   }
 
   #resize(renderer, camera, canvas) {

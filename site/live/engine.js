@@ -149,9 +149,9 @@ export class LiveEngine {
     this.externalEvents.sort((a, b) => a.tick - b.tick);
     this.record('visitor-sound', {notes, frequencies: notes.map(n => frequencies[n])});
   }
-  async insertToy() {
-    const result = await this.world.insertObject({position: [0, -2, 1], size: [.35, .35, .35], shape: 'sphere', rgba: [.83, .37, .16, 1]});
-    this.lastToy = result.id ?? result; this.record('insert-object', {id: this.lastToy}); return result;
+  async insertToy(position) {
+    const result = await this.world.insertObject({position, size: [.35, .35, .35], shape: 'sphere', rgba: [.83, .37, .16, 1]});
+    this.lastToy = result.id ?? result; this.record('insert-object', {id: this.lastToy, position: Array.from(position)}); return result;
   }
   shove(id, force = [.03, .01, 0]) {
     this.world.queueVisitorForce(id ?? this.lastToy, force); this.record('visitor-force', {id: id ?? this.lastToy, force});

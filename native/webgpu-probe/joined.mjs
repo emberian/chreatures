@@ -92,6 +92,8 @@ try {
     }
   }
   const checkpoint = await engine.save();
+  if (args.checkpoint) await writeFile(args.checkpoint, new Uint8Array(checkpoint), {flag: 'wx'});
+  if (args.snapshot) await writeFile(args.snapshot, JSON.stringify(engine.world.snapshot()), {flag: 'wx'});
   const next = await engine.advance(true); const future = await engine.save();
   await engine.load(checkpoint);
   const replay = await engine.advance(true); const restoredFuture = await engine.save();
@@ -103,7 +105,8 @@ try {
   assert.equal(next.bodySenseTime, replay.bodySenseTime, 'BODY807 sample time differs');
   assert(exact(future, restoredFuture), 'Complete life replay differs');
   const beforeInsert = engine.observe().geometry.length;
-  const inserted = await engine.insertToy();
+  const insertionPosition = (args['insertion-position'] ?? '12,-12,8').split(',').map(Number);
+  const inserted = await engine.insertToy(insertionPosition);
   engine.shove(inserted.id, [.1, 0, 0]);
   const grown = await engine.save(); await engine.advance(); await engine.load(grown);
   assert.equal(engine.observe().geometry.length, beforeInsert + 1);
