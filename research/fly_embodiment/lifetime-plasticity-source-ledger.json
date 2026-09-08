@@ -1,0 +1,77 @@
+{
+  "format": "chreatures-lifetime-plasticity-source-ledger-v1",
+  "generated_date": "2026-09-08",
+  "sources": [
+    {
+      "title": "The neuronal architecture of the mushroom body provides a logic for associative learning",
+      "authors": "Aso et al.",
+      "year": 2014,
+      "doi": "10.7554/eLife.04577",
+      "url": "https://elifesciences.org/articles/04577",
+      "source_kind": "primary anatomy",
+      "used_for": "15-compartment KC/MBON/DAN organization",
+      "not_used_for": "MaleCNS synapse-coordinate assignment or receptor sign"
+    },
+    {
+      "title": "Heterosynaptic Plasticity Underlies Aversive Olfactory Learning in Drosophila",
+      "authors": "Hige et al.",
+      "year": 2015,
+      "doi": "10.1016/j.neuron.2015.11.003",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4674068/",
+      "source_kind": "primary physiology",
+      "used_for": "gamma1pedc first-subset choice and cue-before-DAN timing prior",
+      "not_used_for": "runtime valence, reward labels, or fitted learning constants"
+    },
+    {
+      "title": "A connectome of a learning and memory center in the adult Drosophila brain",
+      "authors": "Takemura et al.",
+      "year": 2017,
+      "doi": "10.7554/eLife.26975",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5550281/",
+      "source_kind": "primary connectomics",
+      "used_for": "KC-MBON-DAN motif and limitation of direct DAN-edge intersection",
+      "not_used_for": "cross-dataset neuron-ID transfer"
+    },
+    {
+      "title": "The connectome of the adult Drosophila mushroom body provides insights into function",
+      "authors": "Li et al.",
+      "year": 2020,
+      "doi": "10.7554/eLife.62576",
+      "url": "https://elifesciences.org/articles/62576",
+      "source_kind": "primary connectomics",
+      "used_for": "all-compartment expansion context and cell-type/cotransmitter cautions",
+      "not_used_for": "automatic hemibrain-to-MaleCNS identity equivalence"
+    },
+    {
+      "title": "Dopamine-Dependent Plasticity Is Heterogeneously Expressed by Presynaptic Calcium Activity across Individual Boutons of the Drosophila Mushroom Body",
+      "authors": "Bilz et al.",
+      "year": 2023,
+      "doi": "10.1523/JNEUROSCI.0375-23.2023",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10616905/",
+      "source_kind": "primary physiology",
+      "used_for": "edge-private efficacy and heterogeneity caution",
+      "not_used_for": "per-edge parameters in MaleCNS"
+    },
+    {
+      "title": "2020hemibrain_examples",
+      "authors": "flyconnectome",
+      "year": 2020,
+      "url": "https://github.com/flyconnectome/2020hemibrain_examples",
+      "source_kind": "author analysis implementation",
+      "license": "GPL-3.0",
+      "used_for": "inspection of endpoint connectivity-query methodology",
+      "not_used_for": "copied code, inferred compartment mapping, or imported data"
+    }
+  ],
+  "local_data": {
+    "dataset": "MaleCNS connectome v1.0",
+    "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+    "neurons_sha256": "0e6706229b93cbdcab48905504bd3b8f6075534488c65ad2c8f844668036ea9a",
+    "candidate_artifact_sha256": "aaa8f1c8c6476e4b528e7b3d11b1b3b00af36da8d84b109bd623479cd17f7081"
+  },
+  "claim_boundary": {
+    "measured": "canonical directed endpoints, synapse counts, and exact neuron annotations",
+    "inferred": "parenthetical instance text retained as a compartment hint only",
+    "engineered": "candidate selection and every future plasticity equation, parameter, sign, bound, eligibility trace, and valence interpretation"
+  }
+}
