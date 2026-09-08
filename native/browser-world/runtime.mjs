@@ -149,6 +149,7 @@ class BrowserWorld {
   #lastIllumination = [];
   #growthClearanceMemory = new Map();
   #growthProbeDirections;
+  #growthProbeDirectionsFlat;
   #growthStats = {
     proposed: 0,
     clearanceAccepted: 0,
@@ -197,6 +198,7 @@ class BrowserWorld {
     this.#routeInside = new Uint8Array(this.#routePlan.endpoints_m.length);
     this.#routeEndpointsMm = this.#routePlan.endpoints_m.map(point => point.map(x => x * 1000));
     this.#growthProbeDirections = Object.freeze(JSON.parse(this.#core.growth_probe_directions()).map(Object.freeze));
+    this.#growthProbeDirectionsFlat = Float64Array.from(this.#growthProbeDirections.flat());
     mj.mj_forward(this.#model, this.#data);
     this.#validateCompiledFixture();
     this.#baseActuatorForceRange = Float64Array.from(this.#model.actuator_forcerange);
@@ -228,6 +230,9 @@ class BrowserWorld {
       hits: new mj.IntBuffer(retinalRays),
       distances: new mj.DoubleBuffer(retinalRays),
       normals: new mj.DoubleBuffer(retinalRays * 3),
+      growthHits: new mj.IntBuffer(this.#growthProbeDirections.length),
+      growthDistances: new mj.DoubleBuffer(this.#growthProbeDirections.length),
+      growthNormals: new mj.DoubleBuffer(this.#growthProbeDirections.length * 3),
       retinalHits0: new mj.IntBuffer(this.#retinalSiteIndices[0].length),
       retinalHits1: new mj.IntBuffer(this.#retinalSiteIndices[1].length),
       retinalDistances0: new mj.DoubleBuffer(this.#retinalSiteIndices[0].length),
@@ -466,6 +471,27 @@ class BrowserWorld {
     const distanceM = measuredMm >= 0 ? Math.min(maxDistanceM, measuredMm * 0.001) : maxDistanceM;
     return { geom: measuredMm >= 0 && measuredMm * 0.001 <= maxDistanceM ? geom : -1, distanceM };
   }
+  #growthRays(originM, excludedBody, maxDistanceM) {
+    const count = this.#growthProbeDirections.length;
+    this.#mj.mj_multiRay(
+      this.#model,
+      this.#data,
+      originM.map((x) => x * 1000),
+      this.#growthProbeDirectionsFlat,
+      [1, 1, 1, 1, 1, 1],
+      true,
+      excludedBody,
+      this.#buffers.growthHits,
+      this.#buffers.growthDistances,
+      this.#buffers.growthNormals,
+      count,
+      maxDistanceM * 1000,
+    );
+    return {
+      hits: this.#buffers.growthHits.GetView(),
+      distances: this.#buffers.growthDistances.GetView(),
+    };
+  }
   #measureIllumination(positionM, surfaceNormal, excludedBody, geomGroup) {
     const light = this.#fixture.illumination;
     const normal = normalize3(surfaceNormal);
@@ -515,25 +541,32 @@ class BrowserWorld {
       const originM = support.point.map((x, i) => (x + support.normal[i] * 0.002) * 0.001);
       const clearance_samples = [], nearby = [];
       const probeReach = Math.max(0.006, organism.genotype.reproduction?.dispersal_distance_m ?? 0);
+      const measuredProbes = this.#growthRays(originM, entity.body, probeReach);
       for (const [probe, direction] of this.#growthProbeDirections.entries()) {
-        const hit = this.#growthRay(originM, direction, entity.body, probeReach);
-        clearance_samples.push({ origin_m: originM, direction, free_distance_m: hit.distanceM });
-        if (hit.geom < 0) continue;
-        const pointMm = originM.map((x, i) => (x + direction[i] * hit.distanceM) * 1000);
-        let normal = this.#geomNormalAt(hit.geom, pointMm);
+        const measuredMm = measuredProbes.distances[probe];
+        const distanceM = measuredProbes.hits[probe] >= 0
+          ? Math.min(probeReach, measuredMm * 0.001)
+          : probeReach;
+        const geom = measuredProbes.hits[probe] >= 0 && measuredMm * 0.001 <= probeReach
+          ? measuredProbes.hits[probe]
+          : -1;
+        clearance_samples.push({ origin_m: originM, direction, free_distance_m: distanceM });
+        if (geom < 0) continue;
+        const pointMm = originM.map((x, i) => (x + direction[i] * distanceM) * 1000);
+        let normal = this.#geomNormalAt(geom, pointMm);
         if (!normal) continue;
         if (normal.reduce((s, x, i) => s - x * direction[i], 0) < 0) normal = normal.map((x) => -x);
         const point_m = pointMm.map((x) => x * 0.001);
         nearby.push({
-          surface_id: `surface-${hit.geom}-probe-${probe}`,
+          surface_id: `surface-${geom}-probe-${probe}`,
           region_id: this.#nearestRegion(point_m),
           point_m,
           normal,
           // Attachment is a physical affordance of fixed collidable surfaces.
           // Movable objects and articulated animal parts cannot anchor colonies.
-          attachable: !this.#fixture.bodies.some(body => body.segments.includes(this.#model.geom_bodyid[hit.geom])) &&
-            !this.#fixture.entities.some(item => item.body === this.#model.geom_bodyid[hit.geom] && item.free) &&
-            (this.#model.geom_contype[hit.geom] !== 0 || this.#model.geom_conaffinity[hit.geom] !== 0),
+          attachable: !this.#fixture.bodies.some(body => body.segments.includes(this.#model.geom_bodyid[geom])) &&
+            !this.#fixture.entities.some(item => item.body === this.#model.geom_bodyid[geom] && item.free) &&
+            (this.#model.geom_contype[geom] !== 0 || this.#model.geom_conaffinity[geom] !== 0),
         });
       }
       clearance_samples.push(...(this.#growthClearanceMemory.get(organism.id) ?? []));
@@ -1013,11 +1046,21 @@ class BrowserWorld {
         if ((step + 1) % (SUBSTEPS / CONTACT_SAMPLES) === 0) samples.push(this.#capturePhysics());
       }
       this.#mj.mj_forward(m, d);
-      if (
-        !Array.from(d.qpos).every(Number.isFinite) ||
-        Math.abs(d.time - this.#core.time() - dt) > 1e-8
-      )
-        throw new Error("Physical clock/finite-state violation");
+      const expectedPhysicalTime = this.#core.time() + dt;
+      const qposFinite = Array.from(d.qpos).every(Number.isFinite);
+      if (!qposFinite || Math.abs(d.time - expectedPhysicalTime) > 1e-8) {
+        const qposValues = Array.from(d.qpos), qvelValues = Array.from(d.qvel);
+        const finiteQpos = qposValues.filter(Number.isFinite).length;
+        const finiteQvelValues = qvelValues.filter(Number.isFinite);
+        const maxAbsFiniteQvel = finiteQvelValues.reduce((maximum, value) =>
+          Math.max(maximum, Math.abs(value)), 0);
+        throw new Error(
+          `Physical clock/finite-state violation: mujoco_time=${d.time}, ` +
+          `expected_time=${expectedPhysicalTime}, finite_qpos=${finiteQpos}/${qposValues.length}, ` +
+          `finite_qvel=${finiteQvelValues.length}/${qvelValues.length}, ` +
+          `max_abs_finite_qvel=${maxAbsFiniteQvel}`,
+        );
+      }
       const packet = this.#sampledPhysics(samples);
       const proposalText = this.#core.prepare_advance(
         commands, d.qpos, d.qvel, this.#jointLoads(), packet.positions, packet.rotations,
@@ -1298,6 +1341,13 @@ class BrowserWorld {
     const d = this.#data;
     const bodyAfferents = this.#core.afferents();
     checkNumbers(bodyAfferents, this.residents * BODY_CHANNELS, "CNS BODY807 research trace");
+    const entityIds = this.#fixture.entities.map(entity => entity.id);
+    const entityPositions = new Float32Array(entityIds.length * 3);
+    for (let i = 0; i < entityIds.length; i++) {
+      const geom = this.#fixture.entities[i].geoms[0];
+      if (geom !== undefined)
+        entityPositions.set(d.geom_xpos.subarray(geom * 3, geom * 3 + 3), i * 3);
+    }
     return {
       qpos: Float64Array.from(d.qpos),
       qvel: Float64Array.from(d.qvel),
@@ -1307,6 +1357,8 @@ class BrowserWorld {
       sensordata: Float64Array.from(d.sensordata),
       ctrl: Float64Array.from(d.ctrl),
       bodyAfferents: Float32Array.from(bodyAfferents),
+      entityIds,
+      entityPositions,
       bodyMap: this.#researchBodyMap,
       ecology: JSON.parse(this.#core.ecology_observe()),
       actuatorState: JSON.parse(this.#core.actuator_state()),

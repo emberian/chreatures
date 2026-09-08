@@ -3,14 +3,12 @@ use pyo3::{exceptions::PyValueError, prelude::*};
 
 pub mod cns_adapter;
 mod context_suffix;
-mod contextual_episodic;
 pub mod developmental;
 pub mod gam_law;
 mod learned_sequence_control;
 pub mod personal_consequences;
 pub mod personal_goals;
 pub mod population_response;
-mod sequence_memory;
 
 #[derive(Clone)]
 pub(crate) struct Linear {

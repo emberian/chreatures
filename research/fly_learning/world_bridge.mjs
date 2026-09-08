@@ -63,19 +63,14 @@ function researchPacket() {
     throw new Error('research observer BODY807 cache differs from policy sample');
   for (let i = 0; i < sensory.body.length; i++)
     if (raw.bodyAfferents[i] !== sensory.body[i]) throw new Error('research observer BODY807 values differ');
-  const entityPosition = new Float32Array(fixture.entities.length * 3);
-  for (let i = 0; i < fixture.entities.length; i++) {
-    const entity = fixture.entities[i];
-    const geometry = observer.geometry.find(item => entity.geoms.includes(item.id));
-    if (geometry) entityPosition.set(geometry.position, i * 3);
-  }
   return {
     optic: encode(sensory.optic), body: encode(sensory.body),
     qpos: encode(raw.qpos), qvel: encode(raw.qvel),
     bodyPositions: encode(raw.bodyPositions), bodyQuaternions: encode(raw.bodyQuaternions),
     bodyRotations: encode(raw.bodyRotations),
     sensordata: encode(raw.sensordata), ctrl: encode(raw.ctrl),
-    entityPosition: encode(entityPosition),
+    entityPosition: encode(raw.entityPositions),
+    entityIds: raw.entityIds,
     bodyMap: raw.bodyMap, ecology: raw.ecology, actuatorState: raw.actuatorState,
     time: observer.time,
   };

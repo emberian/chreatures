@@ -1507,3 +1507,29 @@ in `research/fly_embodiment/native-host-comparison.json`. The previously staged
 initialized full-CNS/body/private
 resident join separately completed 128 ticks, captured all seven neural fields,
 and restored the complete life exactly, including an inserted physical object.
+
+
+### September 8, midday: disk recovery and topology continuity
+
+Removed 45.8 GiB of stale local output: 4.0 GiB of rebuildable caches and
+41.8 GiB across 5,642 redundant autosaves from five stopped runs. Kept explicit
+referenced snapshots, named checkpoints, early/recent saves and hourly history.
+Deletion receipts remain in ignored `runs/cleanup-*-20260908.json`; project
+size fell from about 51 GiB to 5.7 GiB. Current code, models and biological data
+were preserved. Separately removed 1,063 lines of unused cognition mechanisms
+and helpers; the current private memory/control path remains. Release build
+and test compilation passed without the former 31 dead-code warnings.
+
+The remaining native/Wasm construction discrepancy is resolved by issuing the
+browser growth rays as the same batched query used by the native host. The
+actual 200-tick chronology now meets the declared tolerance across every
+reported field, including exact retinal outputs and exact restoration within
+each host. The source-bound r4 receipt retains its measured runtime hash; later
+error diagnostics and observer-only entity fields are recorded separately.
+
+Recovery collection exposed a changing-topology observer bug at 192 completed
+ticks: a new branch changed the entity array length. Native and browser
+research observations now carry current ordered entity IDs and positions;
+the evaluator joins persistent entities by identity rather than subtracting
+arrays by slot. The aborted run remains recorded and no failed episode was
+sealed. These IDs remain analyst targets, outside resident sensory input.
