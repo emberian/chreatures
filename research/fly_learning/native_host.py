@@ -283,14 +283,12 @@ class TorchFullCNS:
         optic = torch.as_tensor(np.ascontiguousarray(optic_rgb), device=self.device)
         body = torch.as_tensor(np.ascontiguousarray(body_afferents), device=self.device)
         context = torch.as_tensor(np.ascontiguousarray(delivered_context), device=self.device)
-        # Physical control is 100 Hz while the frozen CNS cadence is 200 Hz.
-        # Both recurrent advances see the committed sensory sample/context.
-        latent = motor = None
-        for _ in range(2):
-            latent, motor, self.state = self.model(
-                optic, body, context, self.state, dt=0.005
-            )
-        assert latent is not None and motor is not None
+        # One public .01 step performs the frozen pair of internal dt/2 rate
+        # integrations and one .01 slow-state update. Calling twice would
+        # incorrectly advance adaptation/support/release twice.
+        latent, motor, self.state = self.model(
+            optic, body, context, self.state, dt=0.01
+        )
         return (
             np.ascontiguousarray(latent.cpu().numpy(), dtype="<f4"),
             np.ascontiguousarray(motor.cpu().numpy(), dtype="<f4"),
