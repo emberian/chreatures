@@ -8,12 +8,18 @@ Inspired by *Creatures* and the changing societies and environments of *Children
 
 ## The current build
 
-**MaleCNS V4 runs in articulated fly bodies inside a layered physical habitat.**
+**MaleCNS V5 runs in articulated fly bodies, with private synaptic learning inside the measured graph.**
 The full MaleCNS v1.0 graph supplies 165,122 neurons and 25,563,197 directed edges
 representing 124,025,046 synapses. We advance neural activity, adaptation, local
 support, release availability and three modulatory fields on that graph. Their
 dynamics are explicit modeling assumptions; fitted response curves do not replace
 its recurrence.
+
+Each resident now keeps its own efficacy and eligibility on 4,184 measured
+KC→MBON11 connections. A bounded, engineered cue-before-PPL101 rule changes those
+connections inside both recurrent halfsteps. The anatomical selector is measured;
+the update law is a modeling choice. This does not yet establish an acquired
+association or useful behavior. [Learning contract](docs/development/CNS_LIFETIME_LEARNING_WAVE.md).
 
 The body starts from the author’s micro-CT-derived NeuroMechFly morphology:
 69 segments, 126 articulated axes, legs, antennae, proboscis, wings and halteres.
@@ -36,19 +42,22 @@ routes, bark shelters, stems, elevated leaves, ramps and movable resource packet
 Material-funded branching creates physical geometry; light and clearance affect
 where it can grow. Visitors can place a movable object on a chosen surface, push
 it, send tones or put Bad Apple on a physical screen. The inspector shows actual
-retinal inputs, all seven neural fields, body signals and motor outputs.
+retinal inputs, all seven neural fields, body signals, motor outputs and the actual
+private synaptic state. One SIMD-enabled Rust/MuJoCo Wasm module now advances the
+physical substeps, sensations and ecology; JavaScript orders whole ticks.
 
 [Open the live garden](https://emberian.github.io/chreatures/live.html) ·
 [Try Bad Apple live](https://emberian.github.io/chreatures/live.html?stimulus=bad-apple) ·
 [Fly morphology and mechanics](docs/development/FLY_BODY_ANATOMY.md) ·
 [Antennal touch](docs/development/FLY_ANTENNA_TOUCH.md) ·
-[Download the selected initialized V4 artifacts](https://github.com/emberian/chreatures/releases/tag/live-cns-v4-initialized-20260908)
+[Download the selected initialized V5 artifacts](https://github.com/emberian/chreatures/releases/tag/v5-candidate-77a221d)
 
-The complete antenna-enabled CNS/body/private-memory run passed 128 physical
-ticks, exact whole-life restoration and insertion/pushing of an object into the
-changing world. Its M2 mean complete tick was 337.7 ms for 10 ms of model time
-under concurrent load. This is an execution measurement, not a real-time or
-browser UI performance claim. [Joined receipt](research/fly_embodiment/antenna-habitat-joined-receipt.json).
+The complete V5 CNS/body/private-memory run passed 128 physical ticks, exact
+whole-life restoration and insertion/pushing of an object into the changing world.
+Its physical sensory history produced small private changes on all selected edges
+in both residents. The M2 mean complete tick was 151.0 ms for 10 ms of model time;
+this is an execution measurement, not a real-time or browser UI performance claim.
+[Joined receipt](data/development/cns-v5-unified-live-joined.receipt.json).
 
 ### What training has established
 
@@ -58,12 +67,14 @@ rollouts toppled sooner and used more effort. The disagreement is recorded rathe
 than hidden by promoting the trained model. Torch and WebGPU agree numerically;
 this is a learned-control problem, not merely a deployment discrepancy.
 
-Twelve recovery worlds supplied 49,152 resident transitions. A new fit on
-persvati adds a neutral cold-state prior through the existing learned motor
-decoder; hbox concurrently collects supported author-step histories and unchanged
-child probes. Failed recovery and useful supported transitions remain distinct.
-The imported walking references presume a supported fly and do not supply
-self-righting. [Training implementation and evidence](research/fly_learning/README.md).
+The latest recovery fit reduced motor amplitude and effort but all eight assessed
+flies still fell. A new twelve-world, 49,152-transition corpus instead contains
+long supported walking, stopping, turning and antenna demonstrations: 99.10% of
+transitions stayed upright under supplied teacher control. Those are research
+demonstrations, not a resident policy. V5 training carries all nine private neural
+fields through whole-world histories, with bounded gradient windows; resetting
+the plastic state at every sampled window would erase the history being learned.
+[Training implementation and evidence](research/fly_learning/README.md).
 
 Native **GAM** fits physical and neural mechanisms and proposes experiments that
 are replayed in the actual simulator. Earlier proposals missed their held-out
@@ -72,10 +83,10 @@ campaign varies inherited branching parameters across physical layouts and uses
 measured route apertures. **Universal Weave** connects the actual episodes, fits,
 controls and contradictory outcomes; its archive is separate from private memory.
 
-Lifetime learning currently changes private context memories and bounded
-consequence estimates. Lifetime plasticity of the anatomical synapses, structural
-connectome evolution, reliable locomotion and durable social competence remain
-work ahead. The [Pages release process](docs/PAGES.md) pins source, body, native
+Lifetime learning changes private context memories, bounded consequence estimates
+and the selected anatomical synaptic efficacies. Useful associative learning,
+structural connectome evolution, reliable locomotion and durable social competence
+remain work ahead. The [Pages release process](docs/PAGES.md) pins source, body, native
 runtime and model independently. Old lives retain their frozen engines and state.
 
 ### Earlier generations remain distinct
@@ -87,7 +98,7 @@ simpler body. Its training and GAM experiments remain in
 
 The earlier V2 film-versus-blank experiment changed neural activity and body
 trajectories over 30 model seconds. Those measurements belong to its older body
-and controller, not the current V4 life.
+and controller, not the current V5 life.
 [Earlier screen evidence](https://emberian.github.io/chreatures/evidence.html#physical-screen-response-v2).
 The ecological v8 world below likewise remains an explicitly recorded baseline;
 its direct sensory routes are not a compatibility mechanism in the current runtime.

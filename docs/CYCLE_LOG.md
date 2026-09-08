@@ -1634,3 +1634,47 @@ inside both recurrent halfsteps, with a bounded cue-before-PPL101 learning rule
 and complete private persistence. The rules are engineered, not fitted fly
 physiology. This is in development; the public V4 release and active V4 training
 jobs retain their frozen models and do not acquire new learning semantics.
+
+### September 8, evening: V5 joined execution and the supported-motion corpus
+
+After the quota interruption, the remote jobs were found completed and sealed;
+none was restarted. The supported-continuation campaign recorded 49,152 resident
+transitions in twelve worlds: 48,710 upright and 48,443 supported, with no first
+falls before the final CNS probes at tick 1006. The supplied author controller
+reached approximately 0.45 trajectory amplitude during long supported bouts.
+These are physical teaching histories, not autonomous competence. All files
+remain under `/tank` on hbox, with a hash-verified read-only relay on persvati.
+The new recovery child reduced mean motor amplitude and effort, but all eight
+physical assessment residents still fell; the initialized baseline stayed upright
+for the full 5.12-second assay. Neither trained V4 child was promoted.
+
+CNS V5 is implemented at `a9d6537`, with the live synaptic observer at `77a221d`.
+The new service `7753f6da…` preserves all 42 tensors from the exact initialized
+V4 parent `8982ecc4…` and adds the five authenticated plasticity tensors. Its
+fresh private resident uses the same seeded core, predictor and sequence weights;
+new artifact identities bind the V5 dependency. No adult state was migrated.
+
+Actual ROCm, Metal and WebGPU assays exercised the nine private neural fields.
+The controlled ROCm–Metal comparison had maximum discrepancy 6.497e-6 across
+states and outputs, with efficacy discrepancy 3.49e-10 and an unchanged inactive
+lane. Torch uses a deterministic parallel reduction for the two selected-target
+sums; the Metal/WGSL implementations accumulate sequentially. Cross-backend
+agreement is numerical, not bitwise. The exact-cell cue-before-PPL tests are
+research interventions and do not establish sensory learning.
+
+The complete B2 live engine then ran actual physical screen/tone history through
+all 165,122 CNS neurons and the articulated bodies. All 4,184 selected edges in
+each resident developed endogenous eligibility and small efficacy changes
+(maximum depression about 1.55e-5). Neural, physical and complete-life checkpoint
+continuation were exact, including inserted geometry and delayed controls.
+Synaptic inspection did not change the saved life. The joined receipt is
+`data/development/cns-v5-unified-live-joined.receipt.json`; mean complete tick was
+151.0 ms on the M2 Max for 10 ms of model time. This is not evidence of learned
+walking, associative preference or real-time browser performance.
+
+The physical backend now contains Rust world mechanisms and MuJoCo in one
+SIMD-enabled Wasm module. Actual native/Wasm physical comparison covered geometry
+changes and exact same-runtime restores; no JavaScript per-substep physics loop
+remains in the current release. The selected V5 public archive keeps the model
+initialized and untrained and uses the same richer antenna-enabled B2 habitat.
+New saves use CHLIVE5; older lives retain their archived engine.

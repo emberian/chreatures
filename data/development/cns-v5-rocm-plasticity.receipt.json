@@ -1,0 +1,51 @@
+{
+  "chronology": {
+    "inactive_lane_bit_exact": true,
+    "reset_plasticity_zero": true,
+    "tick1_efficacy_abs_max": 0.0,
+    "tick1_eligibility_positive_lane0": 4184,
+    "tick2_depressed_edges_lane0": 4184,
+    "tick2_efficacy_min": -0.00014494273636955768
+  },
+  "device": {
+    "hip": "7.0.51831",
+    "name": "AMD Radeon 890M",
+    "torch": "2.10.0+rocm7.0"
+  },
+  "dimensions": {
+    "batch": 4,
+    "edges": 25563197,
+    "neurons": 165122,
+    "plastic_edges": 4184,
+    "plastic_targets": 2
+  },
+  "format": "chreatures-cns-v5-torch-rocm-chronology-v1",
+  "gradient": {
+    "efficacy_gradient_nonzero": 8368,
+    "efficacy_gradient_norm": 1.5690966392867267e-05,
+    "loss": 0.04245499521493912
+  },
+  "intervention_scope": "Research-only direct current at exact selected KC/PPL rows establishes cue-before-gate chronology; it is not a controller input or behavioral learning claim.",
+  "numeric_scope": "Torch sparse full-graph recurrence; selected edges remain canonical. torch.sum uses a deterministic backend tree reduction, not a sequential float32 canonical accumulation; cross-backend comparison therefore requires measured tolerance rather than a bitwise claim.",
+  "performance": {
+    "construct_seconds": 0.9954965310171247,
+    "elapsed_seconds": 0.737459977157414,
+    "gpu_peak_allocated_bytes": 2773136384,
+    "gpu_reserved_bytes": 2883584000,
+    "resident_ticks": 32,
+    "resident_ticks_per_second": 43.392185326919055,
+    "timed_ticks": 8
+  },
+  "recurrent_effect": {
+    "all_rate_max_abs": 5.513429641723633e-07,
+    "target_rate_max_abs": 5.513429641723633e-07
+  },
+  "service": {
+    "adapter_sha256": "a15207e48c1ed67944f4e1a1bf1eae1b7517227d4b0c13520cd48dfb2579b13c",
+    "file_sha256": "7753f6dad93dc8b4e817bec902af9a11c84740e2828d12c9e5c43e6138efabd6",
+    "path": "/home/ember/chreatures-runs/cns-v5/artifacts/parent-8982ecc4/cns-service-v5-initialized.bin",
+    "plasticity_contract": "gamma1pedc-cue-before-ppl-v1",
+    "plasticity_sha256": "1eb37790b406573b191e4493a5d1ddb0e5ece8bb5edd2a377f2921adab971b87",
+    "source_v4_file_sha256": "8982ecc47d2badecc253e44e777dc389000dab375ee300b24abc11d0680fa951"
+  }
+}

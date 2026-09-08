@@ -129,7 +129,8 @@ def create(arguments: argparse.Namespace) -> None:
     cns = json.loads((model / "cns-manifest.json").read_text())
     resident = json.loads((model / "resident-manifest.json").read_text())
     if (
-        cns.get("trainingStatus") != arguments.training_status
+        cns.get("format") != "chreatures-cns-webgpu-v5"
+        or cns.get("trainingStatus") != arguments.training_status
         or resident.get("trainingStatus") != arguments.training_status
     ):
         raise ValueError("Model training status differs")

@@ -164,10 +164,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, .load-button:focus-w
 .motor-track i[data-negative="true"] { background: #e5aa89; }
 
 .plasticity-card { background: #eef0e3; }
-.plasticity-action { display: flex; align-items: center; gap: 9px; margin-top: 13px; }
+.plasticity-action { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 7px 9px; margin-top: 13px; }
 .plasticity-action button { padding: 8px 10px; border-radius: 5px; background: var(--ink); color: white; font-size: 10px; }
 .plasticity-action button:disabled { opacity: .45; cursor: not-allowed; }
-.plasticity-action span { color: var(--muted); font: 9px/1.35 var(--mono); }
+.plasticity-action label { display: flex; align-items: center; justify-content: end; gap: 5px; color: var(--muted); font: 8px var(--mono); }
+.plasticity-action select { min-width: 0; padding: 6px 4px; border: 1px solid var(--line); border-radius: 4px; background: #f7f3e8; color: var(--ink); font: 8px var(--mono); }
+.plasticity-action span { grid-column: 1 / -1; color: var(--muted); font: 9px/1.35 var(--mono); }
 .plasticity-map { margin: 13px 0 0; }
 .plasticity-map figcaption { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 5px; color: var(--muted); font: 8px var(--mono); }
 .plasticity-map canvas { display: block; width: 100%; height: 34px; border-radius: 4px; background: #132f28; image-rendering: pixelated; }

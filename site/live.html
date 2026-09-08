@@ -132,9 +132,9 @@
 
       <section id="plasticity-panel" class="control-card plasticity-card" aria-labelledby="plasticity-title">
         <div class="section-head"><div><small>selected resident · private state</small><h2 id="plasticity-title">Private synapses</h2></div><output data-plasticity-time>—</output></div>
-        <div class="plasticity-action"><button type="button" data-plasticity-refresh>Refresh readback</button><span data-plasticity-status>select a resident</span></div>
-        <figure class="plasticity-map"><figcaption><span>Efficacy deviation</span><span>−0.8 to 0 · multiplier 0.2 to 1</span></figcaption><canvas data-plasticity-efficacy aria-label="All 4,184 modeled private efficacy deviations in measured-edge order"></canvas></figure>
-        <figure class="plasticity-map"><figcaption><span>Eligibility</span><span>0 to 1</span></figcaption><canvas data-plasticity-eligibility aria-label="All 4,184 modeled private eligibility values in measured-edge order"></canvas></figure>
+        <div class="plasticity-action"><button type="button" data-plasticity-refresh>Refresh readback</button><label>Map scale <select data-plasticity-scale><option value="log" selected>Log · early change</option><option value="linear">Linear · full range</option></select></label><span data-plasticity-status>select a resident</span></div>
+        <figure class="plasticity-map"><figcaption><span>Efficacy deviation</span><span data-plasticity-efficacy-scale>|d| log 10⁻⁸ to 0.8 · zero separate</span></figcaption><canvas data-plasticity-efficacy aria-label="All 4,184 modeled private efficacy deviations in measured-edge order"></canvas></figure>
+        <figure class="plasticity-map"><figcaption><span>Eligibility</span><span data-plasticity-eligibility-scale>log 10⁻⁶ to 1 · zero separate</span></figcaption><canvas data-plasticity-eligibility aria-label="All 4,184 modeled private eligibility values in measured-edge order"></canvas></figure>
         <div class="plasticity-targets">
           <p data-plasticity-target><strong>MBON11 target row 655</strong><small>2,048 measured edges</small><output>—</output></p>
           <p data-plasticity-target><strong>MBON11 target row 1,306</strong><small>2,136 measured edges</small><output>—</output></p>
