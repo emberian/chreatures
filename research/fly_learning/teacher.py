@@ -69,6 +69,13 @@ class FlyCurriculumTeacher:
             )
         if self.groups.get("walking", np.empty(0)).size != 42:
             raise ValueError("author walking bank must contain exactly 42 ordered servos")
+        self.last_delivered = np.zeros((4, MOTOR), np.float32)
+
+    def acknowledge(self, delivered: np.ndarray) -> None:
+        """Track only commands whose actual physical advance has succeeded."""
+        if delivered.shape != (4, MOTOR) or not np.isfinite(delivered).all():
+            raise ValueError("teacher acknowledgment requires finite delivered B4 M92")
+        self.last_delivered[:] = delivered
 
     def _normalized(self, position: np.ndarray) -> np.ndarray:
         negative = np.maximum(self.neutral - self.low, 1e-6)
@@ -106,6 +113,8 @@ class FlyCurriculumTeacher:
         tick_in_bout: int,
         observation: TeacherObservation,
         rng: np.random.Generator,
+        *,
+        resident: int,
     ) -> TeacherCommand:
         if observation.active_joint_position.shape != (84,):
             raise ValueError("teacher observer active joint position must be [84]")
