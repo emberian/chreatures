@@ -113,13 +113,13 @@ class NodeActualFlyWorld:
         ]
         self._start(command, plan)
 
-    def _start(self, command: list[str], plan: Plan) -> None:
+    def _start(self, command: list[str], plan: Plan, *, stderr=None, cwd=None) -> None:
         self._read_buffer = b""
         self._rpc_failed = False
         self.transport_statistics: dict[str, dict[str, float | int]] = {}
         self.process = subprocess.Popen(
             command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=None, text=True, bufsize=1,
+            stderr=stderr, cwd=cwd, text=True, bufsize=1,
         )
         if self.process.stdin is None or self.process.stdout is None:
             raise RuntimeError("failed to create native world pipes")
@@ -392,7 +392,8 @@ class NativeActualFlyWorld(NodeActualFlyWorld):
                 self.mujoco_library = path
         self._start([
             str(self.binary), "--scene", str(self.scene), "--seed", str(plan.world_seed)
-        ], plan)
+        ], plan, stderr=getattr(arguments, "native_stderr", None),
+            cwd=getattr(arguments, "native_working_directory", None))
         try:
             if self.ready.get("native_host") != "chreatures-native-fly-world-v1":
                 raise ValueError("requires the current native fly-world host")
