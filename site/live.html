@@ -57,6 +57,20 @@
           <label class="scale-control"><span>Fixed display scale <output id="scale-output">±0.010</output></span><input id="neural-scale" type="range" min="-7" max="-0.3" step="0.05" value="-2" aria-label="Logarithmic display scale"></label>
           <div class="activity-numbers"><span>All-row RMS Δ <output id="neural-rms">—</output></span><span>Largest |Δ| <output id="neural-peak">—</output></span></div>
           <p class="rate-note" id="neural-description">Model activity relative to its loaded baseline, not measured firing rate or Hz. Color limits stay fixed until you change them. Points use supplied atlas coordinates; missing somata are absent.</p>
+          <details id="neuron-inspector" class="neuron-inspector">
+            <summary>Inspect a neuron</summary>
+            <form class="neuron-search" role="search">
+              <label for="neuron-query">Body ID, cell type or class</label>
+              <div><input id="neuron-query" type="search" placeholder="e.g. MBON11" autocomplete="off"><button type="submit">Find</button></div>
+            </form>
+            <p data-cell-status class="rate-note" aria-live="polite">Click a CNS point, or search its anatomical annotations.</p>
+            <div data-cell-results class="neuron-results"></div>
+            <div data-cell-details></div>
+            <output data-cell-value class="neuron-value">No cell selected</output>
+            <canvas class="neuron-trace" aria-label="Selected neuron state change over sampled model time"></canvas>
+            <p data-cell-trace-caption class="rate-note">Selected field Δ · fixed display scale</p>
+            <p class="rate-note">Annotations describe the reconstructed anatomy; port membership describes this model’s interface. Transmitter predictions do not identify receptor effects. This observer information never enters the organism’s controller.</p>
+          </details>
         </div>
         <div id="eyes-panel" role="tabpanel" aria-labelledby="eyes-tab" hidden>
           <div class="retina-grid">

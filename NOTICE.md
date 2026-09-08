@@ -22,6 +22,9 @@ This notice does not replace the licenses of third-party components or data:
 - Vendored Three.js retains its [MIT license](web/vendor/three/LICENSE).
 - MaleCNS data retain their CC BY 4.0 license and attribution; see
   [the data manifest](data/malecns/manifest.json).
+  The public [neuron annotation sidecar](research/fly_embodiment/OBSERVER_ANNOTATIONS.md)
+  compresses and reorders those annotations into canonical graph order and adds
+  explicitly engineered model-port memberships; the underlying data remain CC BY 4.0.
 - The compact female FlyWire subset retains the separately documented
   CC BY-NC 4.0 restriction; see [CONNECTOME.md](docs/CONNECTOME.md).
 - Pretrained model weights, other scientific data, and derived artifacts retain
@@ -36,8 +39,8 @@ ZUN. The visual excerpt is not relicensed under AGPL. Source hashes, processing
 and credits are recorded in [the public provenance](site/assets/bad-apple-provenance.json).
 
 The live tab vendors the official Google DeepMind MuJoCo 3.12.0 JavaScript/Wasm
-runtime under [Apache-2.0](site/live/vendor/mujoco/LICENSE). Its version and file
-hashes are recorded in [the physics asset manifest](site/live/physics-assets.json).
+runtime under [Apache-2.0](native/browser-world/licenses/MuJoCo-LICENSE). Its version and file
+hashes are recorded in the physical manifest inside [the selected release bundle](site/live/release-selection.json).
 The live physical screen uses the same attributed silent Bad Apple excerpt;
 placing it on an interactive surface does not relicense the animation.
 

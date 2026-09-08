@@ -179,3 +179,21 @@ button:focus-visible, a:focus-visible, input:focus-visible, .load-button:focus-w
 .body-readouts > div { display: flex; justify-content: space-between; gap: 8px; margin: 8px 0; }
 .body-readouts dt { color: var(--muted); }
 .body-readouts dd { margin: 0; text-align: right; }
+
+.neuron-inspector { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 12px; }
+.neuron-inspector > summary { cursor: pointer; font-size: 13px; }
+.neuron-search { margin-top: 12px; font-size: 11px; }
+.neuron-search > div { display: flex; gap: 6px; margin-top: 5px; }
+.neuron-search input { width: 100%; min-width: 0; padding: 8px; border: 1px solid var(--line); background: #faf7ef; border-radius: 4px; font: 11px var(--mono); }
+.neuron-search button { border: 1px solid var(--line); border-radius: 4px; background: #dfebd8; padding: 6px 12px; color: var(--ink); }
+.neuron-results { display: grid; gap: 4px; max-height: 175px; overflow-y: auto; }
+.neuron-results button { text-align: left; border: 0; border-bottom: 1px solid var(--line); padding: 6px 0; background: transparent; color: var(--ink); font: 10px var(--mono); overflow-wrap: anywhere; cursor: pointer; }
+.neuron-inspector h3 { margin: 16px 0 8px; font-size: 17px; }
+.neuron-inspector dl { display: grid; grid-template-columns: 98px minmax(0, 1fr); gap: 7px 10px; font: 10px/1.5 var(--mono); }
+.neuron-inspector dt { color: var(--muted); }
+.neuron-inspector dd { margin: 0; overflow-wrap: anywhere; }
+.neuron-inspector details details { margin: 6px 0; }
+.neuron-inspector [data-cell-details] > details { font: 10px/1.5 var(--mono); margin: 6px 0; }
+.neuron-inspector ul { padding-left: 16px; overflow-wrap: anywhere; }
+.neuron-value { display: block; margin: 12px 0 6px; font: 9px/1.6 var(--mono); overflow-wrap: anywhere; }
+.neuron-trace { display: block; width: 100%; height: 100px; border-radius: 5px; }

@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three/three.module.min.js';
 import {OrbitControls} from '../vendor/three/OrbitControls.js';
+export {NeuronInspector} from './neuron-inspector.js';
 
 const NEURONS = 165122;
 const RETINAL_SITES = 1771;
@@ -75,7 +76,7 @@ function scaleMesh(mesh, item) {
 }
 
 export class LiveView {
-  constructor({worldCanvas, brainCanvas, retinaCanvases, onResident, onToy, onPlacement}) {
+  constructor({worldCanvas, brainCanvas, retinaCanvases, onResident, onToy, onPlacement, onNeuron}) {
     this.worldCanvas = worldCanvas;
     this.brainCanvas = brainCanvas;
     if (!Array.isArray(retinaCanvases) || retinaCanvases.length !== 2) throw new Error('Retinal canvases are absent');
@@ -83,6 +84,7 @@ export class LiveView {
     this.onResident = onResident;
     this.onToy = onToy;
     this.onPlacement = onPlacement;
+    this.onNeuron = onNeuron;
     this.placingToy = false;
     this.pointerDown = null;
     this.meshes = new Map();
@@ -137,6 +139,11 @@ export class LiveView {
     this.brainRates = null;
     this.brainBaseline = null;
     this.brainPoints = null;
+    this.selectedNeuron = null;
+    this.neuronMarker = new THREE.Mesh(new THREE.SphereGeometry(.018, 12, 8), new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true, depthTest: false}));
+    this.neuronMarker.visible = false;
+    this.neuronMarker.renderOrder = 2;
+    this.brainScene.add(this.neuronMarker);
     this.neuralScale = .01;
     this.retinalEyes = null;
     this.retinalRGB = null;
@@ -148,6 +155,11 @@ export class LiveView {
     });
     worldCanvas.addEventListener('pointercancel', () => { this.pointerDown = null; });
     worldCanvas.addEventListener('pointerup', event => this.#pick(event));
+    brainCanvas.addEventListener('pointerdown', event => {
+      this.brainPointerDown = {x: event.clientX, y: event.clientY, id: event.pointerId};
+    });
+    brainCanvas.addEventListener('pointercancel', () => { this.brainPointerDown = null; });
+    brainCanvas.addEventListener('pointerup', event => this.#pickNeuron(event));
     this.boundFrame = this.#loop.bind(this);
     requestAnimationFrame(this.boundFrame);
   }
@@ -226,6 +238,8 @@ export class LiveView {
     for (const row of rows) radius = Math.max(radius, Math.hypot(positions[row * 3] - center.x, positions[row * 3 + 1] - center.y, positions[row * 3 + 2] - center.z));
     if (!(radius > 0)) throw new Error('MaleCNS soma extent is degenerate');
     this.brainRows = Int32Array.from(rows);
+    this.brainDisplayIndex = new Int32Array(NEURONS).fill(-1);
+    rows.forEach((row, index) => { this.brainDisplayIndex[row] = index; });
     this.brainBaseline = Float32Array.from(baseline);
     const display = new Float32Array(rows.length * 3);
     this.brainColors = new Float32Array(rows.length * 3);
@@ -242,6 +256,30 @@ export class LiveView {
     this.brainPoints = new THREE.Points(geometry, material);
     this.brainScene.add(this.brainPoints);
     return rows.length;
+  }
+
+  selectNeuron(row) {
+    this.selectedNeuron = row;
+    const index = this.brainDisplayIndex?.[row] ?? -1;
+    this.neuronMarker.visible = index >= 0;
+    if (index >= 0) this.neuronMarker.position.fromBufferAttribute(this.brainPoints.geometry.attributes.position, index);
+    return index >= 0;
+  }
+
+  #pickNeuron(event) {
+    const down = this.brainPointerDown;
+    this.brainPointerDown = null;
+    if (!this.brainPoints || !down || event.button !== 0 || down.id !== event.pointerId ||
+        Math.hypot(event.clientX - down.x, event.clientY - down.y) > 5) return;
+    const bounds = this.brainCanvas.getBoundingClientRect();
+    if (bounds.width <= 0 || bounds.height <= 0) return;
+    const pointer = new THREE.Vector2((event.clientX - bounds.left) / bounds.width * 2 - 1, -(event.clientY - bounds.top) / bounds.height * 2 + 1);
+    const ray = new THREE.Raycaster();
+    ray.params.Points.threshold = .012;
+    this.brainScene.updateMatrixWorld(true); this.brainCamera.updateMatrixWorld(true);
+    ray.setFromCamera(pointer, this.brainCamera);
+    const hit = ray.intersectObject(this.brainPoints, false)[0];
+    if (hit) this.onNeuron?.(this.brainRows[hit.index]);
   }
 
   initializeRetina(sites, supported) {

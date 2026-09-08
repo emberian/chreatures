@@ -1,0 +1,42 @@
+{
+  "artifact": {
+    "encoding": "gzip JSON; deterministic mtime=0",
+    "filename": "male-cns-observer-annotations-v1.json.gz",
+    "transport_bytes": 1676030,
+    "transport_sha256": "3bc86cbce47ae000749a964dfcc2580f6a3b0b3dcd5a18e6491fc98c43443ff3",
+    "uncompressed_bytes": 9690017
+  },
+  "counts": {
+    "body807_routed_rows": 10609,
+    "body807_unsupported_sensory_rows": 1189,
+    "descending_context_rows": 1314,
+    "motor92_routed_rows": 802,
+    "motor92_unsupported_rows": 13,
+    "motor_annotation": 815,
+    "motor_output_memberships": 7010,
+    "sensory_annotation": 15912,
+    "sensory_atlas_rows": 11798,
+    "sensory_port_memberships": 11310
+  },
+  "format": "chreatures-male-cns-observer-annotations-v1-manifest",
+  "graph_sha256": "48ce8c8f643b8b533172a84814da2a08e8b5fbf060e1cb6b4f8beaca5073d625",
+  "rows": 165122,
+  "semantics": {
+    "annotations": "exact dataset strings; empty remains missing",
+    "coordinates": "absent; this sidecar makes no coordinate claim",
+    "information_boundary": "observer-only annotations; forbidden as controller, trainer, predictor, memory, or action-scoring input",
+    "predicted_nt": "dataset prediction, not receptor effect or physiological sign",
+    "routing": "membership copied from the hash-bound actual-fly atlas; engineered mappings retain its evidence labels"
+  },
+  "sources": {
+    "fly_body_neural_atlas": {
+      "schema": "chreatures.fly-body-neural-atlas.v1",
+      "sha256": "066136815c53fd7855e12246a60ce05702f44f4ea01ee547f01734418b0bc873"
+    },
+    "neurons_npz": {
+      "row_order": "ascending exact bodyId",
+      "sha256": "0e6706229b93cbdcab48905504bd3b8f6075534488c65ad2c8f844668036ea9a"
+    }
+  },
+  "version": 1
+}

@@ -1,4 +1,4 @@
-import {LiveView} from './live/view.js';
+import {LiveView, NeuronInspector} from './live/view.js';
 
 const $ = selector => document.querySelector(selector);
 const stateLabel = $('#state-label');
@@ -26,6 +26,7 @@ const interactive = [...document.querySelectorAll('.instrument-panel button, .in
 
 let worker = null;
 let view = null;
+let inspector = null;
 let ready = false;
 let paused = false;
 let selectedResident = null;
@@ -125,6 +126,7 @@ function createView() {
     brainCanvas: $('#brain-canvas'),
     retinaCanvases: [$('#retina-side-1'), $('#retina-side-2')],
     onResident: selectResident,
+    onNeuron(row) { inspector?.select(row); },
     onToy(id) {
       selectedToy = id;
       shoveToyButton.disabled = !ready;
@@ -211,6 +213,7 @@ function selectResident(id) {
   view.selectResident(id);
   view.clearNeural();
   view.clearRetina();
+  resetInspector();
   $('#neural-rms').textContent = '—'; $('#neural-peak').textContent = '—';
   $('#sense-time').textContent = '—';
   for (const {fill} of acousticBars) fill.style.height = '0%';
@@ -218,6 +221,10 @@ function selectResident(id) {
   for (const id of ['mouth-contact', 'antenna-flow', 'joint-speed', 'body-reserves']) $(`#${id}`).textContent = '—';
   for (const button of residentList.querySelectorAll('button')) button.setAttribute('aria-pressed', String(button.dataset.resident === id));
   if (worker) post('select', {residentId: id});
+}
+
+function resetInspector() {
+  if (view) inspector?.reset({resident: selectedResident, field: neuralField, reference: view.brainBaseline, scale: view.neuralScale});
 }
 
 function updateProgress(message) {
@@ -258,6 +265,7 @@ function handleReady(message) {
   startLayer.hidden = true;
   setInteractive(true);
   selectResident(residents[0].id);
+  void inspector.load();
   setNotice('running locally', 'ready');
   startStimulusClock();
   if (initialStimulus !== 'blank') {
@@ -277,6 +285,7 @@ function updateFrame(message) {
       const activity = view.updateNeural(message.neuralSignal);
       $('#neural-rms').textContent = activity.rms.toExponential(2);
       $('#neural-peak').textContent = activity.peak.toExponential(2);
+      inspector?.update(Number(message.time), message.neuralSignal);
     }
     if (message.retinalRGB) view.updateRetina(message.retinalRGB);
     if (message.motorActivation) updateMotorDisplay(message.motorActivation);
@@ -310,6 +319,7 @@ function workerMessage(event) {
     else if (message.type === 'frame') updateFrame(message);
     else if (message.type === 'saved') downloadSnapshot(message);
     else if (message.type === 'loaded') {
+      resetInspector();
       if (selectedResident) post('select', {residentId: selectedResident});
       setNotice('checkpoint loaded', message.paused ? 'paused' : 'ready');
     }
@@ -395,6 +405,7 @@ startButton.addEventListener('click', () => {
   startButton.disabled = true;
   try {
     view = createView();
+    inspector = new NeuronInspector($('#neuron-inspector'), row => view.selectNeuron(row));
     loadDetail.textContent = 'Opening the isolated compute Worker…';
     worker = new Worker('./live/worker.js', {type: 'module'});
     worker.addEventListener('message', workerMessage);
@@ -427,6 +438,7 @@ $('#neural-field').addEventListener('change', event => {
   const reservoir = neuralField === 'support' || neuralField === 'release';
   const baseline = neuralField === 'rate' ? loadedRateBaseline : new Float32Array(165122).fill(reservoir ? 1 : 0);
   view.setNeuralField(neuralField, baseline);
+  resetInspector();
   $('#neural-reference').textContent = neuralField === 'rate' ? 'change from loaded rate baseline' : reservoir ? 'change from full resource (1)' : 'signed deviation from zero';
   const descriptions = {
     rate: 'Model activity relative to its loaded baseline, not measured firing rate or Hz.',
@@ -446,6 +458,7 @@ $('#neural-scale').addEventListener('input', event => {
   if (!view || !ready) return;
   const value = 10 ** Number(event.target.value);
   view.setNeuralScale(value); $('#scale-output').textContent = `±${value.toPrecision(2)}`;
+  inspector?.setScale(value);
 });
 pauseButton.addEventListener('click', () => post(paused ? 'resume' : 'pause'));
 saveButton.addEventListener('click', () => request('save'));
