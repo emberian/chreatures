@@ -42,9 +42,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, .load-button:focus-w
 .live-state.failed i { background: #c75842; }
 
 .live-shell { height: calc(100vh - 58px); display: grid; grid-template-columns: minmax(0, 1fr) 390px; }
-.world-panel { position: relative; min-width: 0; overflow: hidden; background: radial-gradient(circle at 50% 28%, #fff9eb 0, #dbead8 52%, #b9d2c3 100%); }
-#world-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-.world-wash { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.2), transparent 23%, transparent 78%, rgba(30,74,57,.11)); }
+.world-panel { position: relative; min-width: 0; overflow: hidden; background: radial-gradient(circle at 52% 28%, #d9e3cf 0, #aebfac 58%, #799889 100%); }
+#world-canvas { display: block; width: 100%; height: 100%; touch-action: none; background: #aebdab; }
+.world-wash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 43%, transparent 52%, rgba(21,48,39,.15) 100%), linear-gradient(180deg, rgba(255,244,213,.035), transparent 30%, transparent 76%, rgba(17,45,35,.1)); }
 .clock-card, .world-title, .camera-bar, .resident-list { position: absolute; z-index: 2; }
 .clock-card { top: 18px; left: 20px; display: flex; gap: 18px; padding: 9px 12px; border: 1px solid rgba(255,255,255,.72); border-radius: 8px; background: rgba(246,241,224,.77); backdrop-filter: blur(12px); color: var(--muted); font: 10px var(--mono); text-transform: uppercase; }
 .clock-card strong { margin-left: 5px; color: var(--ink); font-weight: 500; }
@@ -99,6 +99,22 @@ button:focus-visible, a:focus-visible, input:focus-visible, .load-button:focus-w
 .action-grid button { min-height: 42px; padding: 8px; border-radius: 6px; background: #dce9dc; color: var(--ink); font-size: 10px; }
 .action-grid button:first-child { grid-column: 1 / -1; background: #edd4ba; }
 .action-grid button:disabled { opacity: .42; cursor: not-allowed; }
+.encounter-card { background: #f0eadc; }
+.encounter-steps { display: grid; gap: 8px; margin-top: 13px; }
+.encounter-step { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: 6px; }
+.encounter-step legend { width: 100%; padding: 0; color: var(--ink); font: 10px var(--mono); }
+.encounter-step legend button { float: right; padding: 0; background: transparent; color: var(--copper); font: 8px var(--mono); }
+.encounter-step label { display: grid; gap: 3px; color: var(--muted); font: 8px var(--mono); }
+.encounter-step label:first-of-type, .encounter-target { grid-column: 1 / -1; }
+.encounter-step input, .encounter-step select, .encounter-add select { min-width: 0; width: 100%; padding: 6px; border: 1px solid var(--line); border-radius: 4px; background: #faf7ef; color: var(--ink); font: 9px var(--mono); }
+.encounter-step input[type=color] { height: 29px; padding: 2px; }
+.encounter-target { margin: 0; color: var(--muted); font: 9px var(--mono); overflow-wrap: anywhere; }
+.encounter-add { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 8px; }
+.encounter-add button, .encounter-send { padding: 8px 10px; border-radius: 5px; background: #dce9dc; color: var(--ink); font-size: 9px; }
+.encounter-send { width: 100%; margin-top: 7px; background: var(--ink); color: white; }
+.encounter-add button:disabled, .encounter-send:disabled { opacity: .43; cursor: not-allowed; }
+.encounter-status, .encounter-native-status { display: block; margin-top: 8px; color: var(--muted); font: 9px/1.45 var(--mono); }
+.encounter-native-status { color: var(--mint-dark); }
 .checkpoint-card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .checkpoint-card button, .load-button { padding: 10px 5px; border-radius: 6px; background: var(--ink); color: white; text-align: center; font-size: 10px; }
 .load-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

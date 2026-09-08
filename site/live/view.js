@@ -7,6 +7,16 @@ const RETINAL_SITES = 1771;
 const MUJOCO_SHAPES = new Set([0, 2, 3, 4, 5, 6, 7]);
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
+function worldColor(rgba, target = new THREE.Color()) {
+  // MuJoCo RGBA is authored for display. Three's numeric RGB setters otherwise
+  // treat these values as linear and brighten them again on sRGB output.
+  return target.setRGB(rgba[0], rgba[1], rgba[2], THREE.SRGBColorSpace);
+}
+
+function worldAlpha(item, rgba) {
+  return rgba[3] * (/(?:^|\/)boundary-(?:west|east|north|south)$/.test(item.name) ? .055 : 1);
+}
+
 function finiteArray(value, length, label) {
   if (!ArrayBuffer.isView(value) || value.length !== length) throw new Error(`${label} has the wrong extent`);
   for (let index = 0; index < value.length; index += 1) {
@@ -17,17 +27,22 @@ function finiteArray(value, length, label) {
 function materialFor(item, rgba) {
   const resident = Boolean(item.resident_id) || /^resident(?:\d+\/|:)/.test(item.name);
   const boundary = /(?:^|\/)boundary-(?:west|east|north|south)$/.test(item.name);
-  const color = new THREE.Color(rgba[0], rgba[1], rgba[2]);
+  const wing = /\/[lr]_wing$/.test(item.name);
+  const wet = /(?:moist|water)/.test(item.name);
+  const color = worldColor(rgba);
+  const opacity = worldAlpha(item, rgba);
   return new THREE.MeshPhysicalMaterial({
     color,
-    roughness: resident ? .46 : .82,
-    metalness: .02,
-    emissive: resident ? color.clone().multiplyScalar(.025) : new THREE.Color(0x000000),
-    emissiveIntensity: resident ? .35 : 0,
-    transparent: boundary || rgba[3] < .999,
-    opacity: rgba[3] * (boundary ? .08 : 1),
-    depthWrite: !boundary && rgba[3] >= .999,
-    side: item.type === 0 || /wing/.test(item.name) ? THREE.DoubleSide : THREE.FrontSide,
+    roughness: wing ? .34 : wet ? .26 : resident ? .57 : .88,
+    metalness: 0,
+    clearcoat: wet ? .32 : 0,
+    clearcoatRoughness: .38,
+    emissive: resident ? color.clone() : new THREE.Color(0x000000),
+    emissiveIntensity: resident ? .018 : 0,
+    transparent: boundary || opacity < .999,
+    opacity,
+    depthWrite: !boundary && opacity >= .999,
+    side: item.type === 0 || wing ? THREE.DoubleSide : THREE.FrontSide,
   });
 }
 
@@ -98,36 +113,48 @@ export class LiveView {
     this.running = true;
 
     this.worldScene = new THREE.Scene();
-    this.worldScene.background = new THREE.Color(0xf3eee0);
-    this.worldScene.fog = new THREE.FogExp2(0xe8f0df, .008);
-    this.worldCamera = new THREE.PerspectiveCamera(42, 1, .015, 300);
-    this.worldCamera.position.set(18, -25, 18);
+    this.worldScene.background = new THREE.Color(0xaebdab);
+    this.worldScene.fog = new THREE.Fog(0xaebdab, 48, 118);
+    this.worldCamera = new THREE.PerspectiveCamera(39, 1, .035, 180);
+    this.worldCamera.position.set(11, -16, 10);
     this.worldCamera.up.set(0, 0, 1);
     this.worldRenderer = new THREE.WebGLRenderer({canvas: worldCanvas, antialias: true, alpha: false});
+    this.worldRenderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
     this.worldRenderer.outputColorSpace = THREE.SRGBColorSpace;
     this.worldRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.worldRenderer.toneMappingExposure = 1.12;
+    this.worldRenderer.toneMappingExposure = .82;
+    this.worldRenderer.shadowMap.enabled = true;
+    this.worldRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.worldControls = new OrbitControls(this.worldCamera, worldCanvas);
     this.worldControls.target.set(0, 0, 1);
     this.worldControls.enableDamping = true;
-    this.worldControls.minDistance = .4;
-    this.worldControls.maxDistance = 160;
-    this.worldControls.maxPolarAngle = Math.PI * .495;
-    const sky = new THREE.HemisphereLight(0xfff6dc, 0x6e9f86, 2.15);
+    this.worldControls.dampingFactor = .075;
+    this.worldControls.minDistance = 2.2;
+    this.worldControls.maxDistance = 72;
+    this.worldControls.maxPolarAngle = Math.PI * .47;
+    const sky = new THREE.HemisphereLight(0xdde7d4, 0x34271d, .72);
     sky.position.set(0, 0, 1);
     this.worldScene.add(sky);
-    const sun = new THREE.DirectionalLight(0xffd5ae, 3.1);
-    sun.position.set(-6, -4, 10);
-    this.worldScene.add(sun);
-    const mint = new THREE.DirectionalLight(0xa8f2cf, 1.35);
-    mint.position.set(8, 4, 4);
-    this.worldScene.add(mint);
+    const sun = new THREE.DirectionalLight(0xffe1bd, 2.05);
+    sun.position.set(-28, -18, 42);
+    sun.target.position.set(0, 0, 1.5);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, {left: -31, right: 31, top: 27, bottom: -27, near: 1, far: 90});
+    sun.shadow.camera.updateProjectionMatrix();
+    sun.shadow.bias = -.00035;
+    sun.shadow.normalBias = .025;
+    this.worldScene.add(sun, sun.target);
+    const fill = new THREE.DirectionalLight(0xa7c9bd, .34);
+    fill.position.set(18, 13, 12);
+    this.worldScene.add(fill);
 
     this.brainScene = new THREE.Scene();
     this.brainScene.background = new THREE.Color(0x091713);
     this.brainCamera = new THREE.PerspectiveCamera(34, 1, .01, 20);
     this.brainCamera.position.set(0, 0, 3.1);
     this.brainRenderer = new THREE.WebGLRenderer({canvas: brainCanvas, antialias: true, alpha: false});
+    this.brainRenderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
     this.brainRenderer.outputColorSpace = THREE.SRGBColorSpace;
     this.brainControls = new OrbitControls(this.brainCamera, brainCanvas);
     this.brainControls.enableDamping = true;
@@ -168,13 +195,17 @@ export class LiveView {
     if (!['orbit', 'follow', 'body'].includes(mode)) throw new Error('Unknown camera mode');
     this.cameraMode = mode;
     this.worldControls.enabled = mode !== 'body';
+    this.worldCamera.fov = mode === 'body' ? 72 : 39;
+    this.worldCamera.near = mode === 'body' ? .012 : .035;
+    this.worldCamera.updateProjectionMatrix();
     if (mode !== 'body') this.worldCamera.up.set(0, 0, 1);
     if (mode === 'orbit') this.#frameHabitat();
     if (mode === 'follow') {
       const pose = this.#selectedPose();
       if (pose) {
-        this.worldControls.target.copy(pose.position);
-        this.worldCamera.position.copy(pose.position).add(new THREE.Vector3(6, -9, 6));
+        this.worldControls.target.copy(pose.position).add(new THREE.Vector3(0, 0, .28));
+        this.worldCamera.position.copy(this.worldControls.target)
+          .addScaledVector(this.#openingDirection(this.worldControls.target, 10), 10);
       }
     }
   }
@@ -195,11 +226,13 @@ export class LiveView {
 
   selectResident(id) {
     if (!this.residents.some(item => item.id === id)) throw new Error('Selected resident is absent');
+    const changed = this.selectedResident !== id;
     this.selectedResident = id;
     for (const mesh of this.meshes.values()) {
       if (!mesh.userData.residentId) continue;
-      mesh.material.emissiveIntensity = mesh.userData.residentId === id ? 1.2 : .35;
+      mesh.material.emissiveIntensity = mesh.userData.residentId === id ? .13 : .018;
     }
+    if (changed && this.lastFrame && this.cameraMode === 'orbit') this.#frameHabitat();
   }
 
   setScreenCanvas(canvas) {
@@ -411,8 +444,9 @@ export class LiveView {
       mesh.quaternion.setFromRotationMatrix(matrix);
       scaleMesh(mesh, item);
       const rgba = [frame.colors[c], frame.colors[c + 1], frame.colors[c + 2], frame.colors[c + 3]];
-      mesh.material.color.setRGB(rgba[0], rgba[1], rgba[2]);
-      mesh.material.opacity = rgba[3] * (mesh.userData.boundary ? .08 : 1);
+      worldColor(rgba, mesh.material.color);
+      if (mesh.userData.residentId) mesh.material.emissive.copy(mesh.material.color);
+      mesh.material.opacity = worldAlpha(item, rgba);
       mesh.visible = rgba[3] > 0;
     }
     if (this.selectedResident && this.residents.some(item => item.id === this.selectedResident)) this.selectResident(this.selectedResident);
@@ -443,6 +477,9 @@ export class LiveView {
       const visitor = /^entity:(visitor-[^:]+):/.exec(item.name);
       mesh.userData = {residentId: item.resident_id ?? resident?.[1] ?? null, toyId: visitor?.[1] ?? null, body: item.body,
         boundary: /(?:^|\/)boundary-(?:west|east|north|south)$/.test(item.name)};
+      const translucent = mesh.material.opacity < .999;
+      mesh.castShadow = !mesh.userData.boundary && !translucent && item.type !== 0;
+      mesh.receiveShadow = !mesh.userData.boundary && !translucent;
       scaleMesh(mesh, item);
       this.meshes.set(item.id, mesh); this.worldScene.add(mesh);
     }
@@ -470,15 +507,44 @@ export class LiveView {
     if (!this.habitatBounds || this.habitatBounds.isEmpty()) return;
     const center = this.habitatBounds.getCenter(new THREE.Vector3());
     const radius = this.habitatBounds.getSize(new THREE.Vector3()).length() * .5;
+    const pose = this.#selectedPose();
+    const focus = pose ? pose.position.clone().lerp(center, .17).add(new THREE.Vector3(0, 0, .32)) : center;
     const vertical = this.worldCamera.fov * Math.PI / 360;
     const horizontal = Math.atan(Math.tan(vertical) * Math.max(.5, this.worldCamera.aspect));
-    const distance = radius / Math.sin(Math.min(vertical, horizontal)) * 1.1;
-    this.worldControls.target.copy(center);
-    this.worldCamera.position.copy(center).addScaledVector(new THREE.Vector3(1, -1.3, 1).normalize(), distance);
-    this.worldCamera.far = Math.max(300, distance + radius * 3);
-    this.worldControls.maxDistance = Math.max(160, distance * 2);
+    const distance = pose
+      ? clamp(33 / Math.max(.94, Math.sqrt(this.worldCamera.aspect)), 28, 36)
+      : radius / Math.sin(Math.min(vertical, horizontal)) * 1.06;
+    this.worldControls.target.copy(focus);
+    this.worldCamera.position.copy(focus).addScaledVector(this.#openingDirection(focus, distance), distance);
+    this.worldCamera.far = Math.max(180, distance + radius * 3);
+    this.worldControls.maxDistance = Math.max(72, radius * 2.2);
     this.worldCamera.updateProjectionMatrix();
-    this.worldCamera.lookAt(center);
+    this.worldCamera.lookAt(focus);
+  }
+
+  #openingDirection(focus, distance) {
+    const center = this.habitatBounds?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3();
+    const radial = focus.clone().sub(center); radial.z = 0;
+    if (radial.lengthSq() < .01) radial.set(1, -1, 0);
+    radial.normalize();
+    const tangent = new THREE.Vector3(-radial.y, radial.x, 0);
+    const candidates = [
+      radial.clone().multiplyScalar(.17).add(new THREE.Vector3(0, 0, 1.3)).normalize(),
+      tangent.clone().multiplyScalar(.4).addScaledVector(radial, .18).add(new THREE.Vector3(0, 0, 1.16)).normalize(),
+      tangent.clone().multiplyScalar(-.4).addScaledVector(radial, .18).add(new THREE.Vector3(0, 0, 1.16)).normalize(),
+      new THREE.Vector3(0, 0, 1),
+    ];
+    const obstacles = [...this.meshes.values()].filter(mesh => mesh.visible && !mesh.userData.residentId && !mesh.userData.boundary && mesh.geometry.type !== 'PlaneGeometry');
+    const ray = new THREE.Raycaster();
+    ray.near = .75; ray.far = Math.max(.75, distance - 1);
+    let choice = candidates[0], clearance = -1;
+    for (const direction of candidates) {
+      ray.set(focus, direction);
+      const hit = ray.intersectObjects(obstacles, false)[0];
+      const available = hit?.distance ?? Infinity;
+      if (available > clearance) { choice = direction; clearance = available; }
+    }
+    return choice;
   }
 
   #drawRetina(canvas, eye) {
@@ -524,7 +590,10 @@ export class LiveView {
     const pose = this.#selectedPose();
     if (!pose || this.cameraMode === 'orbit') return;
     if (this.cameraMode === 'follow') {
-      this.worldControls.target.lerp(pose.position, .12);
+      const oldTarget = this.worldControls.target.clone();
+      const desired = pose.position.clone().add(new THREE.Vector3(0, 0, .28));
+      this.worldControls.target.lerp(desired, .16);
+      this.worldCamera.position.add(this.worldControls.target.clone().sub(oldTarget));
       return;
     }
     if (!pose.head) return;
@@ -563,7 +632,8 @@ export class LiveView {
   #resize(renderer, camera, canvas) {
     const width = Math.max(1, Math.floor(canvas.clientWidth));
     const height = Math.max(1, Math.floor(canvas.clientHeight));
-    const ratio = Math.min(devicePixelRatio || 1, 2);
+    const ratio = Math.min(globalThis.devicePixelRatio || 1, 2);
+    if (renderer.getPixelRatio() !== ratio) renderer.setPixelRatio(ratio);
     if (canvas.width !== Math.floor(width * ratio) || canvas.height !== Math.floor(height * ratio)) renderer.setSize(width, height, false);
     camera.aspect = width / height; camera.updateProjectionMatrix();
   }
