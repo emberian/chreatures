@@ -169,3 +169,21 @@ The nursery loader verifies every episode hash, twelve distinct physical
 layouts and initial snapshots, and all sixteen screen/sound bridge
 acknowledgements. Stimulus plans and acknowledgements remain corpus provenance;
 model ingress is still optic1771, BODY807, delivered context12 and reset only.
+
+To continue from a body-bootstrap child while authenticating caches collected
+through its initialized ancestor, name both services explicitly. Continuation
+preserves the child's BODY807 and centered motor-neuron normalization so the
+existing signed decoder keeps its numerical meaning; every raw nursery and
+bootstrap chronology is then replayed through the child during optimization.
+
+```sh
+python -m research.fly_learning.train train \
+  --corpus /tank/chreatures/runs/fly-learning/body-bootstrap \
+  --nursery-corpus /tank/chreatures/runs/fly-learning/nursery/nursery-corpus.json \
+  --collection-service /tank/chreatures/runs/malecns-v4/seed/initialized-cns-v4.bin \
+  --service /tank/chreatures/runs/fly-learning/training/body-bootstrap/actual-fly-cns-development.bin \
+  --parent-resident /tank/chreatures/runs/fly-learning/training/body-bootstrap/fly-context-resident.npz \
+  --preserve-parent-normalization \
+  --source-revision FULL_GIT_SHA \
+  --run /tank/chreatures/runs/fly-learning/training/nursery-continuation-v1
+```

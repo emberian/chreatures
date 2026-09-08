@@ -127,5 +127,8 @@ and recurrent credit are separate and reported in seconds. Acquired endpoints
 and per-phase consequence distributions come only from delivered experience.
 
 Root integrates substantial batches before joined physical/GPU evaluation.
-Publish a coherent model-bound release and morning handoff by 10:00 AM EDT;
-do not substitute isolated checks or visual promises for integrated outcomes.
+The user extended this wave through 10:00 PM EDT September 8 (02:00 UTC
+September 9), and is now present to collaborate. Publish coherent model-bound
+increments while continuing substantial implementation and training cycles;
+the original 10 AM wind-down is superseded. Do not substitute isolated checks
+or visual promises for integrated outcomes.

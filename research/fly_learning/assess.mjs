@@ -160,9 +160,28 @@ async function assessCondition(layout, arm) {
         engine.screen(Float32Array.from(event.screen_rgb_2x2), 2, 2, tick * .01);
         engine.tone(event.frequency_hz, event.duration_s, event.amplitude);
       }
-      if (arm.zeroContext) engine.pendingContext.fill(0);
-      await engine.advance(false);
-      if (arm.zeroContext) engine.pendingContext.fill(0);
+      if (arm.zeroContext) {
+        while (engine.externalEvents.length && engine.externalEvents[0].tick <= engine.tick) {
+          const sound = engine.externalEvents.shift();
+          engine.world.visitorSound(sound.position, sound.frequency, sound.amplitude, sound.duration);
+        }
+        const {optic, body: bodyInput} = engine.world.sample();
+        const context = new Float32Array(4 * 12);
+        const neural = await engine.brain.step({dt: .01, activeMask: 0b1111,
+          opticRGB: optic, body: bodyInput, context});
+        if (neural.motor.length !== 4 * 92 || !neural.motor.every(Number.isFinite))
+          throw new Error('zero-context CNS motor output differs');
+        await engine.world.advance(neural.motor, .01);
+        engine.lastMotor = neural.motor.slice();
+        engine.deliveredContext = context;
+        engine.pendingContext.fill(0);
+        // Keep the life envelope clock coherent. This receipt is never sent to
+        // the private resident in the zero-context arm.
+        engine.pendingTick = engine.tick;
+        engine.tick++;
+      } else {
+        await engine.advance(false);
+      }
       const raw = engine.world.researchObserve();
       const byId = new Map(raw.ecology.organisms.map(item => [item.id, item]));
       for (let row = 0; row < 4; row++) {

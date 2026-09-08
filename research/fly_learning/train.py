@@ -192,6 +192,38 @@ def install_train_world_normalization(
     }
 
 
+def preserve_parent_normalization(
+    model: AnatomicalCNS,
+    output: Path,
+    parent_service_sha256: str,
+) -> dict[str, Any]:
+    """Snapshot an inherited normalization without changing decoder semantics."""
+    arrays = {
+        "body_mean": model.body_mean.detach().cpu().numpy().astype("<f4"),
+        "body_scale": model.body_scale.detach().cpu().numpy().astype("<f4"),
+        "reference_rate": model.motor_reference_rate.detach().cpu().numpy().astype("<f4"),
+        "rate_scale": model.motor_rate_scale.detach().cpu().numpy().astype("<f4"),
+    }
+    temporary = output.with_name(f".{output.name}.{os.getpid()}.tmp")
+    with temporary.open("wb") as stream:
+        np.savez_compressed(stream, **arrays)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, output)
+    return {
+        "mode": "inherited-from-train-start-service",
+        "parent_service_sha256": parent_service_sha256,
+        "reason": "preserve the centered motor decoder and BODY807 coordinate system during continuation",
+        "body_scale_min": float(arrays["body_scale"].min()),
+        "body_scale_max": float(arrays["body_scale"].max()),
+        "reference_min": float(arrays["reference_rate"].min()),
+        "reference_max": float(arrays["reference_rate"].max()),
+        "rate_scale_min": float(arrays["rate_scale"].min()),
+        "rate_scale_max": float(arrays["rate_scale"].max()),
+        "arrays_sha256": sha256_file(output),
+    }
+
+
 @torch.inference_mode()
 def validate_collected_parent_cache(
     model: AnatomicalCNS, episodes: tuple[Episode, ...], device: torch.device,
@@ -610,13 +642,25 @@ def train(arguments: argparse.Namespace) -> None:
     service_path = arguments.service.expanduser().resolve()
     parent_arrays, parent_metadata = load_service_artifact(service_path)
     parent_service_sha = sha256_file(service_path)
+    collection_service_path = (
+        service_path if arguments.collection_service is None
+        else arguments.collection_service.expanduser().resolve()
+    )
+    collection_arrays, collection_metadata = load_service_artifact(collection_service_path)
+    collection_service_sha = sha256_file(collection_service_path)
+    continuing = collection_service_sha != parent_service_sha
+    if continuing and not arguments.preserve_parent_normalization:
+        raise RuntimeError(
+            "continuation from a service other than the collection service requires "
+            "--preserve-parent-normalization"
+        )
     all_episodes = (*corpus.train, *corpus.validation, *corpus.heldout)
     if any(
-        episode.metadata["cns_service_sha256"] != parent_service_sha
-        or episode.metadata["cns_adapter_sha256"] != parent_metadata["adapter_sha256"]
+        episode.metadata["cns_service_sha256"] != collection_service_sha
+        or episode.metadata["cns_adapter_sha256"] != collection_metadata["adapter_sha256"]
         for episode in all_episodes
     ):
-        raise RuntimeError("corpus was not collected through the supplied parent CNS service")
+        raise RuntimeError("corpus was not collected through the supplied collection CNS service")
     device = torch.device(arguments.device)
     if device.type != "cuda" or not torch.cuda.is_available():
         raise RuntimeError("actual full-CNS training requires the isolated ROCm CUDA interface")
@@ -649,6 +693,13 @@ def train(arguments: argparse.Namespace) -> None:
         "corpus_sources": source_identities,
         "parent_service_sha256": parent_service_sha,
         "parent_adapter_sha256": parent_metadata["adapter_sha256"],
+        "collection_service_sha256": collection_service_sha,
+        "collection_adapter_sha256": collection_metadata["adapter_sha256"],
+        "continuation_from_trained_parent": continuing,
+        "normalization_mode": (
+            "inherited-from-train-start-service"
+            if arguments.preserve_parent_normalization else "estimated-from-current-train-worlds"
+        ),
         "parent_resident_sha256": None if arguments.parent_resident is None else sha256_file(arguments.parent_resident),
     }
     progress: dict[str, Any] = {
@@ -657,25 +708,31 @@ def train(arguments: argparse.Namespace) -> None:
     }
     atomic_json(run / "progress.json", progress)
 
-    parent_model = AnatomicalCNS(parent_arrays, device=device).eval()
-    parent_cache_check = validate_collected_parent_cache(
-        parent_model, (*corpus.train, *corpus.validation, *corpus.heldout), device
+    collection_model = AnatomicalCNS(collection_arrays, device=device).eval()
+    collection_cache_check = validate_collected_parent_cache(
+        collection_model, (*corpus.train, *corpus.validation, *corpus.heldout), device
     )
-    del parent_model
+    del collection_model, collection_arrays
     torch.cuda.empty_cache()
-    atomic_json(run / "parent-cache-check.json", parent_cache_check)
+    atomic_json(run / "collection-cache-check.json", collection_cache_check)
 
     mutable_arrays = {name: np.asarray(value) for name, value in parent_arrays.items()}
-    mean, scale = body_statistics(corpus.train)
-    mutable_arrays["body.mean"] = mean
-    mutable_arrays["body.scale"] = scale
-    model = AnatomicalCNS(mutable_arrays, device=device)
-    model.set_body_normalization(
-        torch.as_tensor(mean, device=device), torch.as_tensor(scale, device=device)
-    )
-    normalization = install_train_world_normalization(
-        model, corpus.train, device, run / "train-world-normalization.npz"
-    )
+    if arguments.preserve_parent_normalization:
+        model = AnatomicalCNS(mutable_arrays, device=device)
+        normalization = preserve_parent_normalization(
+            model, run / "train-world-normalization.npz", parent_service_sha
+        )
+    else:
+        mean, scale = body_statistics(corpus.train)
+        mutable_arrays["body.mean"] = mean
+        mutable_arrays["body.scale"] = scale
+        model = AnatomicalCNS(mutable_arrays, device=device)
+        model.set_body_normalization(
+            torch.as_tensor(mean, device=device), torch.as_tensor(scale, device=device)
+        )
+        normalization = install_train_world_normalization(
+            model, corpus.train, device, run / "train-world-normalization.npz"
+        )
     atomic_json(run / "normalization.json", normalization)
     groups = configure_cns(model)
     heads = PhysicalPredictionHeads().to(device)
@@ -699,7 +756,7 @@ def train(arguments: argparse.Namespace) -> None:
     )
     progress.update(
         status="running", normalization=normalization,
-        parent_cache_check=parent_cache_check, validation_before=validation_before,
+        collection_cache_check=collection_cache_check, validation_before=validation_before,
     )
     atomic_json(run / "progress.json", progress)
     began = time.monotonic()
@@ -750,6 +807,7 @@ def train(arguments: argparse.Namespace) -> None:
         **_service_kwargs(parent_metadata, calibration_sha, {
             "training_format": TRAINING_FORMAT,
             "parent_service_sha256": parent_service_sha,
+            "collection_service_sha256": collection_service_sha,
             "corpus_manifest_sha256": identity["corpus_manifest_sha256"],
             "world_split": "per corpus: 0..7 train, 8..9 validation, 10..11 untouched heldout",
             "model_ingress": ["optic1771 RGB", "BODY807", "delivered context12"],
@@ -882,7 +940,7 @@ def train(arguments: argparse.Namespace) -> None:
         "identity": identity,
         "elapsed_seconds": time.monotonic() - began,
         "normalization": normalization,
-        "parent_cache_check": parent_cache_check,
+        "collection_cache_check": collection_cache_check,
         "cns": {
             "validation_before": validation_before,
             "validation_after": validation_after,
@@ -928,6 +986,14 @@ def parser() -> argparse.ArgumentParser:
     fit.add_argument("--corpus", type=Path, required=True)
     fit.add_argument("--nursery-corpus", type=Path)
     fit.add_argument("--service", type=Path, required=True)
+    fit.add_argument(
+        "--collection-service", type=Path,
+        help="service used to generate collected_latent; defaults to --service",
+    )
+    fit.add_argument(
+        "--preserve-parent-normalization", action="store_true",
+        help="retain BODY807 and centered-MN normalization from --service",
+    )
     fit.add_argument("--parent-resident", type=Path)
     fit.add_argument("--run", type=Path, required=True)
     fit.add_argument("--source-revision", required=True)
