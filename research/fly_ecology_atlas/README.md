@@ -1,5 +1,29 @@
 # Physical developmental response atlas
 
+## Current measured-aperture native campaign
+
+`prepare_native.py`, `native_run.py`, and `native_campaign.py` run the current
+native MuJoCo host for 32 seconds per world. The design contains 24 genotypes
+across three layouts, with six whole-genotype validation groups. Every response
+row records sampled route apertures, colony material/ATP history and clearance
+counters. `native_fit.py` uses the installed Rust-backed GAM engine and reports
+genotype validation plus cross-validation within the fitting groups. Candidates are tested only on
+the untouched fourth layout by `native_confirm.py`; a failed gate remains a
+result and cannot be promoted. `seal_native.py` writes the compact tracked
+receipt while raw worlds and native GAM artifacts stay in paperbin.
+
+The amended evidence in `native-aperture-receipt.json` excludes the host's
+`growth.accepted` and `growth.blocked` counters: they describe clearance-approved
+construction/birth sites and clearance events before ecology commit. The frozen
+runner also looked for `owner` instead of the actual `owner_id` structure field,
+so committed branch counts cannot be reconstructed from these compact traces.
+Both preserved proposals passed the aperture/resource response checks on the
+fourth layout, but neither is promoted because committed branching was not
+observed. This establishes measured geometry and resource-response evidence,
+not a selected genotype or fly sensorimotor skill.
+
+## Historical browser/Wasm campaign
+
 This research lane runs the current MuJoCo fly habitat and native ecological
 growth at 100 Hz for eight simulated seconds per world. Two flies remain present
 under explicitly diagnostic zero MOTOR92 commands. No CNS is evaluated or replaced

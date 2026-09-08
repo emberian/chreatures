@@ -1587,3 +1587,50 @@ authenticated release archive. Obsolete generated generic-garden fixtures and
 checked-in binary/runtime copies are removed from the source tree. Fresh builds
 materialize the selected current artifacts; older engines remain in Git and
 immutable releases.
+
+### September 8, afternoon: public anatomy, supported training and private CNS learning
+
+Public source `55cf03d` adds a searchable observer for all 165,122 canonical
+MaleCNS rows. Exact body IDs, annotation strings, transmitter evidence and
+anatomical input/output memberships accompany a selected-cell model-state
+trace. The observer independently authenticates the selected model's retinal
+mapping: 3,936 of its 4,107 receptor rows have supported input sites; 171 do
+not. Annotations never enter the resident controller. The headless model/data
+integration and complete Pages build passed; no interactive browser session
+was used. Pages deployment 34260793455 succeeded and its public source/model/
+physical identities were verified by HTTP.
+
+The supplied author trajectory helper now fits its entry phase and amplitude
+to an actually supported body. A new collection has long walking, stopping,
+turning and antenna bouts, with gradual amplitude changes and rare final CNS
+probes. The teacher uses privileged physical observations only in research;
+resident control remains CNS-only. Collection and training acceptance were
+committed together at `2ed09ce`. One loaded GPU model serves successive fresh
+cohorts. Already-sealed failed-body histories remain available as failure data.
+
+The recovery fit finished its full-CNS stage and continues replay/private-memory
+fitting on persvati. Hbox's matched physical comparison exhausted root storage
+while writing one result after completing the two initialized-model conditions.
+Those sealed conditions were retained; the unsealed trace is an explicit failed
+result. Hash-verified project corpora moved to `/tank`, and an authenticated
+continuation collects only missing conditions in fresh worlds. The protected
+live service and unrelated jobs were not changed.
+
+The native ecology atlas completed 72 fitting/validation worlds and two final
+layout trials, each 32 model seconds. Root review found that `growth.accepted`
+counts clearance-approved construction/birth sites before commit, and that the
+runner used `owner` instead of `owner_id`. Consequently the initially reported
+construction counts and their response fits were withdrawn, with the original
+analysis preserved. The amended Rust-backed GAM fits retain actual route
+aperture, aperture change and resource retention. Both final proposals fell
+within those response-error limits, but neither is promoted: committed
+branching was not recoverable from the compact trace. The amended receipt is
+`research/fly_ecology_atlas/native-aperture-receipt.json`.
+
+CNS V5 now has an implementation contract for private efficacy and eligibility
+on the 4,184 measured KC→MBON11 edges of the audited bilateral γ1pedc subset.
+Torch, Metal and WebGPU lanes are implementing the same current correction
+inside both recurrent halfsteps, with a bounded cue-before-PPL101 learning rule
+and complete private persistence. The rules are engineered, not fitted fly
+physiology. This is in development; the public V4 release and active V4 training
+jobs retain their frozen models and do not acquire new learning semantics.
