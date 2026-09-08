@@ -59,6 +59,7 @@ enum FlyWorldIntField {
   FLY_WORLD_INT_MESH_FACEADR = 11,
   FLY_WORLD_INT_MESH_FACENUM = 12,
   FLY_WORLD_INT_MESH_FACE = 13,
+  FLY_WORLD_INT_GEOM_DATAID = 14,
 };
 
 typedef struct FlyWorldDimensions {
@@ -389,7 +390,8 @@ static int64_t int_length(const mjModel *model, int field) {
     case FLY_WORLD_INT_GEOM_MATID:
     case FLY_WORLD_INT_GEOM_CONTYPE:
     case FLY_WORLD_INT_GEOM_CONAFFINITY:
-    case FLY_WORLD_INT_GEOM_GROUP: return model->ngeom;
+    case FLY_WORLD_INT_GEOM_GROUP:
+    case FLY_WORLD_INT_GEOM_DATAID: return model->ngeom;
     case FLY_WORLD_INT_MESH_VERTADR:
     case FLY_WORLD_INT_MESH_VERTNUM:
     case FLY_WORLD_INT_MESH_NORMALADR:
@@ -417,6 +419,7 @@ int fly_world_int_read(const void *model_address, int field, size_t offset,
     READ_INT_CASE(FLY_WORLD_INT_GEOM_BODYID, model->geom_bodyid);
     READ_INT_CASE(FLY_WORLD_INT_GEOM_TYPE, model->geom_type);
     READ_INT_CASE(FLY_WORLD_INT_GEOM_MATID, model->geom_matid);
+    READ_INT_CASE(FLY_WORLD_INT_GEOM_DATAID, model->geom_dataid);
     READ_INT_CASE(FLY_WORLD_INT_GEOM_CONTYPE, model->geom_contype);
     READ_INT_CASE(FLY_WORLD_INT_GEOM_CONAFFINITY, model->geom_conaffinity);
     READ_INT_CASE(FLY_WORLD_INT_GEOM_GROUP, model->geom_group);

@@ -8,6 +8,7 @@ description = "Native MuJoCo host for the current Chreatures fly world"
 [lib]
 name = "chreatures_fly_world"
 path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]
 
 [[bin]]
 name = "chreatures-fly-world"

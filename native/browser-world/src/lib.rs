@@ -12,7 +12,7 @@ pub use fly_types::Config as FlyWorldConfig;
 use fly_types::*;
 pub use route_geometry::RouteGeometry;
 use serde::{Deserialize, Serialize};
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 use wasm_bindgen::prelude::*;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -39,7 +39,7 @@ struct Pending {
     acoustics: fly_acoustics::FlyAcoustics,
 }
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(all(target_arch = "wasm32", target_os = "unknown"), wasm_bindgen)]
 pub struct WorldCore {
     config: Config,
     state: Saved,
@@ -91,9 +91,9 @@ fn mix_wing_afferents(out: &mut [f32], frame: &fly_acoustics::AcousticFrame) -> 
     Ok(())
 }
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(all(target_arch = "wasm32", target_os = "unknown"), wasm_bindgen)]
 impl WorldCore {
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen(constructor))]
+    #[cfg_attr(all(target_arch = "wasm32", target_os = "unknown"), wasm_bindgen(constructor))]
     pub fn new(config: &str, seed: u32) -> Result<WorldCore, String> {
         let c: Config =
             serde_json::from_str(config).map_err(|e| err(format!("fly fixture: {e}")))?;
