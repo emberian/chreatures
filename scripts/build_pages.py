@@ -104,14 +104,38 @@ def _overlay_physics(
     ):
         raise ValueError("Selected physical release manifest SHA-256 differs")
     manifest = json.loads(manifest_path.read_text())
-    if manifest.get("format") != "chreatures-browser-physics-assets-v5":
-        raise ValueError("Stage the selected V4 anatomical fly release before building Pages")
+    if manifest.get("format") != "chreatures-browser-physics-assets-v6":
+        raise ValueError("Stage the selected unified fly-world release before building Pages")
     assets = manifest.get("assets")
     _validated_assets(source, assets, "physical release")
+    required = {
+        "world-runtime.mjs",
+        "pkg/chreatures-fly-world.mjs",
+        "pkg/chreatures-fly-world.wasm",
+        "pkg/chreatures-fly-world-build.json",
+    }
+    if not required.issubset(assets):
+        raise ValueError("Unified physical release is incomplete")
+    if any(name.startswith("vendor/mujoco/") or "chreatures_browser_world" in name
+           for name in assets):
+        raise ValueError("Physical release retains a superseded runtime")
+    selection = manifest.get("selection", {})
+    if (assets["world-runtime.mjs"].get("sha256") != selection.get("runtimeSourceSha256")
+            or assets["pkg/chreatures-fly-world.mjs"].get("sha256")
+            != selection.get("unifiedModuleMjsSha256")
+            or assets["pkg/chreatures-fly-world.wasm"].get("sha256")
+            != selection.get("unifiedModuleWasmSha256")):
+        raise ValueError("Unified physical selection differs from its files")
     live = OUTPUT / "live"
     # Never retain a second, generic-body production mechanism in the artifact.
-    for stale in (live / "fixtures" / "garden.json", live / "fixtures" / "garden.xml"):
+    for stale in (
+        live / "fixtures" / "garden.json",
+        live / "fixtures" / "garden.xml",
+        live / "pkg" / "chreatures_browser_world.js",
+        live / "pkg" / "chreatures_browser_world_bg.wasm",
+    ):
         stale.unlink(missing_ok=True)
+    shutil.rmtree(live / "vendor" / "mujoco", ignore_errors=True)
     shutil.rmtree(live / "fixtures" / "fly-ecology", ignore_errors=True)
     for name in assets:
         target = live / name
@@ -271,13 +295,13 @@ def _runtime_identity(
     live = OUTPUT / "live"
     if not (live / "engine.js").exists():
         raise FileNotFoundError("live engine entry is required")
-    names = ["engine.js", "worker.js", "assets.js", "cns-webgpu.js", "world-runtime.mjs",
+    names = ["engine.js", "worker.js", "assets.js", "cns-webgpu.js", "physical-world.js",
+             "world-runtime.mjs",
              "pkg/resident_runtime.js", "pkg/resident_runtime_bg.wasm",
-             "pkg/chreatures_browser_world.js", "pkg/chreatures_browser_world_bg.wasm",
-             "vendor/mujoco/mujoco.js", "vendor/mujoco/mujoco.wasm",
-             "shaders/afferent.wgsl", "shaders/dynamics.wgsl", "shaders/readout.wgsl", "shaders/motor.wgsl", "shaders/observe.wgsl"]
+             "shaders/afferent.wgsl", "shaders/dynamics.wgsl", "shaders/readout.wgsl",
+             "shaders/motor.wgsl", "shaders/observe.wgsl", "shaders/plasticity.wgsl"]
     physics = json.loads((live / "physics-assets.json").read_text())
-    if physics["format"] != "chreatures-browser-physics-assets-v5":
+    if physics["format"] != "chreatures-browser-physics-assets-v6":
         raise ValueError("Selected physical release contract differs")
     _validated_assets(live, physics["assets"], "staged physical release")
     names.extend(physics["assets"])
@@ -544,7 +568,7 @@ def main() -> None:
     parser.add_argument("--model-directory", type=Path, required=True, help="Selected local browser model release")
     parser.add_argument("--runtime-directory", type=Path, required=True, help="Live directory containing the resident Wasm used by the selected successful joined run")
     parser.add_argument("--expected-runtime-manifest-sha256", required=True)
-    parser.add_argument("--physics-directory", type=Path, required=True, help="Authenticated output from native/browser-world/stage_site.py")
+    parser.add_argument("--physics-directory", type=Path, required=True, help="Authenticated unified fly-world output from native/browser-world/stage_site.py")
     parser.add_argument("--expected-physics-manifest-sha256", required=True)
     parser.add_argument("--model-training-status", choices=("initialized-untrained", "trained"), default="initialized-untrained")
     parser.add_argument("--expected-model-release-sha256", required=True)

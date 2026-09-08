@@ -1,12 +1,13 @@
-"""Authoritative immutable embodiment-driven MaleCNS V4 service contract."""
+"""Authoritative immutable embodiment-driven MaleCNS V5 service contract."""
 from __future__ import annotations
 import hashlib, json, os, struct
 from pathlib import Path
 import numpy as np
 
-FORMAT = "chreatures-cns-service-v4"
+FORMAT = "chreatures-cns-service-v5"
 CONTROLLER_FORMAT = "chreatures-cns-context-controller-v1"
-MAGIC = b"CHCNS4\0\0"
+MAGIC = b"CHCNS5\0\0"
+PLASTICITY_CONTRACT = "gamma1pedc-cue-before-ppl-v1"
 DIMENSIONS = dict(
     neurons=165122,
     edges=25563197,
@@ -24,6 +25,8 @@ DIMENSIONS = dict(
     latent=512,
     readout_rank=64,
     modulator_families=3,
+    plastic_edges=4184,
+    plastic_targets=2,
 )
 ARRAY_SPECS = (
     ("graph.crow", "<u4", (165123,)),
@@ -68,11 +71,19 @@ ARRAY_SPECS = (
     ("motor.rate_scale", "<f4", (815,)),
     ("motor.weight", "<f4", (92, 815)),
     ("motor.intercept", "<f4", (92,)),
+    ("plasticity.edge_positions", "<u4", (4184,)),
+    ("plasticity.target_ptr", "<u4", (3,)),
+    ("plasticity.target_rows", "<u4", (2,)),
+    ("plasticity.dan_rows", "<u4", (2,)),
+    ("plasticity.rule", "<f4", (2, 3)),
 )
-STATIC_NAMES = {n for n, _, _ in ARRAY_SPECS[:15]}
+PLASTICITY_NAMES = tuple(n for n, _, _ in ARRAY_SPECS[-5:])
 PARAMETER_ORDER = tuple(
-    n for n, _, _ in ARRAY_SPECS[15:] if n != "afferent.neutral_drive"
+    n
+    for n, _, _ in ARRAY_SPECS[15:-5]
+    if n != "afferent.neutral_drive"
 )
+STATIC_NAMES = {n for n, _, _ in ARRAY_SPECS if n not in PARAMETER_ORDER}
 PARAMETER_COUNT = sum(
     int(np.prod(s)) for n, _, s in ARRAY_SPECS if n in PARAMETER_ORDER
 )
@@ -120,6 +131,8 @@ def adapter_identity_payload(m):
             "dimensions",
             "parameter_order",
             "array_sha256",
+            "plasticity_sha256",
+            "plasticity_contract",
         )
     }
 
@@ -130,6 +143,8 @@ def service_identity(m, file_hash):
         raise ValueError("CNS service metadata differs")
     if m.get("graph_quantization") != GRAPH_QUANTIZATION:
         raise ValueError("CNS graph quantization differs")
+    if m.get("plasticity_contract") != PLASTICITY_CONTRACT:
+        raise ValueError("CNS plasticity contract differs")
     for k in (
         "graph_sha256",
         "atlas_sha256",
@@ -141,8 +156,16 @@ def service_identity(m, file_hash):
         "graph_source_weight_sha256",
         "readout_mask_sha256",
         "adapter_sha256",
+        "plasticity_sha256",
     ):
         _hash(m[k])
+    expected_plasticity = hashlib.sha256(
+        canonical({name: m["array_sha256"][name] for name in PLASTICITY_NAMES})
+    ).hexdigest()
+    if m["plasticity_sha256"] != expected_plasticity:
+        raise ValueError("CNS plasticity identity differs")
+    if hashlib.sha256(canonical(adapter_identity_payload(m))).hexdigest() != m["adapter_sha256"]:
+        raise ValueError("CNS adapter identity differs")
     return dict(
         format=FORMAT,
         graph_sha256=m["graph_sha256"],
@@ -156,6 +179,8 @@ def service_identity(m, file_hash):
         graph_quantization=m["graph_quantization"],
         readout_mask_sha256=m["readout_mask_sha256"],
         adapter_sha256=m["adapter_sha256"],
+        plasticity_sha256=m["plasticity_sha256"],
+        plasticity_contract=m["plasticity_contract"],
         service_artifact_sha256=file_hash,
         sensory_dim=SENSORY_DIM,
         latent_dim=LATENT_DIM,
@@ -176,7 +201,7 @@ def neutral_afferent_drive(a):
 
 def validate_arrays(a):
     if set(a) != {x[0] for x in ARRAY_SPECS}:
-        raise ValueError("CNS service arrays differ from V4 contract")
+        raise ValueError("CNS service arrays differ from V5 contract")
     for n, d, s in ARRAY_SPECS:
         x = a[n]
         if not isinstance(x, np.ndarray) or x.shape != s or x.dtype != np.dtype(d):
@@ -246,6 +271,40 @@ def validate_arrays(a):
         raise ValueError("motor rate scale must be positive")
     if np.any((a["motor.reference_rate"] < 0) | (a["motor.reference_rate"] > 1)):
         raise ValueError("motor reference rates must be in [0,1]")
+    edge_positions = a["plasticity.edge_positions"]
+    target_ptr = a["plasticity.target_ptr"]
+    target_rows = a["plasticity.target_rows"]
+    dan_rows = a["plasticity.dan_rows"]
+    rule = a["plasticity.rule"]
+    if not np.array_equal(target_ptr, np.asarray((0, 2048, 4184), dtype="<u4")):
+        raise ValueError("plasticity target pointer differs")
+    if not np.array_equal(target_rows, np.asarray((655, 1306), dtype="<u4")):
+        raise ValueError("plasticity target rows differ")
+    if not np.array_equal(dan_rows, np.asarray((1774, 1235), dtype="<u4")):
+        raise ValueError("plasticity PPL101 rows differ")
+    if np.any(edge_positions[1:] <= edge_positions[:-1]):
+        raise ValueError("plasticity edge positions must be canonical and unique")
+    if np.any(edge_positions >= DIMENSIONS["edges"]):
+        raise ValueError("plasticity edge position is outside the canonical graph")
+    for target, start, stop in zip(target_rows, target_ptr[:-1], target_ptr[1:], strict=True):
+        lo, hi = int(a["graph.crow"][target]), int(a["graph.crow"][target + 1])
+        selected = edge_positions[start:stop]
+        if np.any((selected < lo) | (selected >= hi)):
+            raise ValueError("plasticity edge is not incoming to its declared target")
+    source_rows = a["graph.col"][edge_positions]
+    if np.unique(source_rows).size != 3623:
+        raise ValueError("plasticity KC source count differs")
+    if np.any(a["graph.channel"][source_rows] != 1):
+        raise ValueError("plasticity sources must use the fast transmitter channel")
+    baseline = a["graph.weight_bits"][edge_positions].view("<f2").astype("<f4")
+    if not np.isfinite(baseline).all() or np.any(baseline == 0):
+        raise ValueError("plasticity baseline weights must be finite and nonzero")
+    if (
+        np.any((rule[:, 0] < 0.05) | (rule[:, 0] > 5))
+        or np.any((rule[:, 1] < 0) | (rule[:, 1] > 1))
+        or np.any((rule[:, 2] < 0) | (rule[:, 2] > 0.95))
+    ):
+        raise ValueError("plasticity rule lies outside the V5 bounds")
     mask = np.ones(165122, np.uint8)
     mask[
         np.concatenate(
@@ -308,6 +367,10 @@ def metadata_for(
             for n, _, _ in ARRAY_SPECS
         },
     )
+    m["plasticity_sha256"] = hashlib.sha256(
+        canonical({name: m["array_sha256"][name] for name in PLASTICITY_NAMES})
+    ).hexdigest()
+    m["plasticity_contract"] = PLASTICITY_CONTRACT
     m["adapter_sha256"] = hashlib.sha256(
         canonical(adapter_identity_payload(m))
     ).hexdigest()
@@ -321,9 +384,11 @@ def write_service_artifact(path, arrays, **kwargs):
     meta = metadata_for(arrays, **kwargs)
     payload = canonical(meta)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    created = False
     try:
         with tmp.open("xb") as f:
+            created = True
             f.write(MAGIC)
             f.write(struct.pack("<I", len(payload)))
             f.write(payload)
@@ -333,7 +398,8 @@ def write_service_artifact(path, arrays, **kwargs):
             os.fsync(f.fileno())
         os.link(tmp, path)
     finally:
-        tmp.unlink(missing_ok=True)
+        if created:
+            tmp.unlink(missing_ok=True)
     h = hashlib.sha256()
     with path.open("rb") as f:
         for block in iter(lambda: f.read(8 << 20), b""):
@@ -347,20 +413,22 @@ def write_service_artifact(path, arrays, **kwargs):
 
 
 def load_service_artifact(path):
-    """Memory-map and authenticate one current CHCNS3 artifact."""
+    """Memory-map and authenticate one current CHCNS5 artifact."""
     path = Path(path)
     with path.open("rb") as stream:
         if stream.read(8) != MAGIC:
-            raise ValueError("requires a CHCNS4 service artifact")
+            raise ValueError("requires a CHCNS5 service artifact")
         metadata_bytes = stream.read(4)
         if len(metadata_bytes) != 4:
-            raise ValueError("truncated CHCNS4 metadata length")
+            raise ValueError("truncated CHCNS5 metadata length")
         metadata_length = struct.unpack("<I", metadata_bytes)[0]
         metadata = json.loads(stream.read(metadata_length))
     if metadata.get("format") != FORMAT or metadata.get("dimensions") != DIMENSIONS:
-        raise ValueError("CHCNS4 metadata contract differs")
+        raise ValueError("CHCNS5 metadata contract differs")
     if metadata.get("graph_quantization") != GRAPH_QUANTIZATION:
-        raise ValueError("CHCNS4 graph quantization differs")
+        raise ValueError("CHCNS5 graph quantization differs")
+    if metadata.get("plasticity_contract") != PLASTICITY_CONTRACT:
+        raise ValueError("CHCNS5 plasticity contract differs")
     for name in (
         "graph_sha256",
         "atlas_sha256",
@@ -372,6 +440,7 @@ def load_service_artifact(path):
         "graph_source_weight_sha256",
         "readout_mask_sha256",
         "adapter_sha256",
+        "plasticity_sha256",
     ):
         _hash(metadata.get(name))
     offset = 12 + metadata_length
@@ -380,10 +449,17 @@ def load_service_artifact(path):
         value = np.memmap(path, mode="r", offset=offset, dtype=dtype, shape=shape)
         expected = metadata.get("array_sha256", {}).get(name)
         if expected is None or hashlib.sha256(value).hexdigest() != expected:
-            raise ValueError(f"CHCNS4 tensor receipt differs: {name}")
+            raise ValueError(f"CHCNS5 tensor receipt differs: {name}")
         arrays[name] = value
         offset += value.nbytes
     if path.stat().st_size != offset:
-        raise ValueError("CHCNS4 artifact has trailing or missing bytes")
+        raise ValueError("CHCNS5 artifact has trailing or missing bytes")
     validate_arrays(arrays)
+    expected_plasticity = hashlib.sha256(
+        canonical({name: metadata["array_sha256"][name] for name in PLASTICITY_NAMES})
+    ).hexdigest()
+    if metadata["plasticity_sha256"] != expected_plasticity:
+        raise ValueError("CHCNS5 plasticity identity differs")
+    if hashlib.sha256(canonical(adapter_identity_payload(metadata))).hexdigest() != metadata["adapter_sha256"]:
+        raise ValueError("CHCNS5 adapter identity differs")
     return arrays, metadata

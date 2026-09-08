@@ -1,4 +1,4 @@
-"""Differentiable full-graph implementation of embodiment-driven CNS V4."""
+"""Differentiable full-graph implementation of embodiment-driven CNS V5."""
 from __future__ import annotations
 from dataclasses import dataclass
 import math
@@ -19,6 +19,8 @@ MOTOR = 92
 MOTOR_ROWS = 815
 TYPES = 11752
 LATENT = 512
+PLASTIC_EDGES = 4184
+PLASTIC_TARGETS = 2
 DT = 0.01
 
 
@@ -104,6 +106,8 @@ class CNSState:
     mod_da: torch.Tensor
     mod_oa: torch.Tensor
     mod_ht: torch.Tensor
+    efficacy_deviation: torch.Tensor
+    eligibility: torch.Tensor
 
     def detach(self):
         return CNSState(*(x.detach() for x in self.fields()))
@@ -117,11 +121,13 @@ class CNSState:
             self.mod_da,
             self.mod_oa,
             self.mod_ht,
+            self.efficacy_deviation,
+            self.eligibility,
         )
 
 
 class AnatomicalCNS(nn.Module):
-    """Raw retina, body and delivered context enter only structurally masked currents."""
+    """Raw senses enter masked currents; private plasticity alters measured edges."""
 
     def __init__(self, arrays, *, device=torch.device("cpu")):
         super().__init__()
@@ -200,25 +206,16 @@ class AnatomicalCNS(nn.Module):
         weight = np.asarray(arrays["graph.weight_bits"]).view("<f2").astype("<f4")
         channels = np.asarray(arrays["graph.channel"])
         source_channel = channels[col]
-        from scipy import sparse
-
         for k, name in ((1, "fast"), (2, "da"), (3, "oa"), (4, "ht")):
             keep = source_channel == k
             edge_prefix = np.empty(E + 1, dtype=np.int64)
             edge_prefix[0] = 0
             np.cumsum(keep, out=edge_prefix[1:])
-            compact = sparse.csr_matrix(
-                (weight[keep], col[keep], edge_prefix[crow]), shape=(N, N)
+            compact = _csr(
+                edge_prefix[crow], col[keep], weight[keep], device
             )
-            transpose = compact.transpose().tocsr()
-            buf(
-                name + "_graph",
-                _csr(compact.indptr, compact.indices, compact.data, device),
-            )
-            buf(
-                name + "_graph_transpose",
-                _csr(transpose.indptr, transpose.indices, transpose.data, device),
-            )
+            buf(name + "_graph", compact)
+            buf(name + "_graph_transpose", compact.transpose(0, 1).to_sparse_csr())
         for name, key in (
             ("receptor_rows", "atlas.receptor_rows"),
             ("receptor_type", "atlas.receptor_type"),
@@ -254,6 +251,27 @@ class AnatomicalCNS(nn.Module):
             )
         ] = 0
         buf("readout_mask", mask)
+        edge_positions = np.asarray(arrays["plasticity.edge_positions"])
+        target_ptr = np.asarray(arrays["plasticity.target_ptr"])
+        buf("plastic_edge_positions", edge_positions)
+        buf("plastic_target_ptr", target_ptr)
+        buf("plastic_target_rows", arrays["plasticity.target_rows"])
+        buf("plastic_dan_rows", arrays["plasticity.dan_rows"])
+        buf("plastic_rule", arrays["plasticity.rule"])
+        buf("plastic_source_rows", col[edge_positions])
+        buf(
+            "plastic_baseline_weight",
+            np.asarray(arrays["graph.weight_bits"])[edge_positions]
+            .view("<f2")
+            .astype("<f4"),
+        )
+        buf(
+            "plastic_target_index",
+            np.repeat(
+                np.arange(PLASTIC_TARGETS, dtype=np.int64),
+                np.diff(target_ptr.astype(np.int64)),
+            ),
+        )
         # receptor-by-site mapping
         buf(
             "optic_matrix",
@@ -308,7 +326,45 @@ class AnatomicalCNS(nn.Module):
             z.clone(),
             z.clone(),
             z.clone(),
+            torch.zeros((PLASTIC_EDGES, batch), dtype=r0.dtype, device=r0.device),
+            torch.zeros((PLASTIC_EDGES, batch), dtype=r0.dtype, device=r0.device),
         )
+
+    def reset_state(self, state, reset):
+        """Clear all private fields for reset lanes before their next CNS tick."""
+        if not isinstance(state, CNSState):
+            raise ValueError("state must be CNSState")
+        self._validate_state(state, state.rates.shape[1])
+        if (
+            reset.shape != (state.rates.shape[1],)
+            or reset.dtype != torch.bool
+            or reset.device != self.device
+        ):
+            raise ValueError("reset must be bool [B] on the CNS device")
+        initial = self.initial_state(state.rates.shape[1])
+        return CNSState(
+            *(
+                torch.where(reset[None], fresh, old)
+                for old, fresh in zip(state.fields(), initial.fields(), strict=True)
+            )
+        )
+
+    def _validate_state(self, state, batch):
+        if not isinstance(state, CNSState):
+            raise ValueError("state must be CNSState")
+        expected = ((N, batch),) * 7 + ((PLASTIC_EDGES, batch),) * 2
+        for name, value, shape in zip(
+            CNSState.__dataclass_fields__, state.fields(), expected, strict=True
+        ):
+            if (
+                value.shape != shape
+                or value.dtype != torch.float32
+                or value.device != self.device
+                or not value.is_contiguous()
+            ):
+                raise ValueError(
+                    f"CNS state {name} must be contiguous float32 {shape} on the CNS device"
+                )
 
     def set_motor_normalization(self, reference_rate, rate_scale):
         """Install train-world motor-neuron moments before fitting the decoder."""
@@ -429,7 +485,18 @@ class AnatomicalCNS(nn.Module):
             torch.zeros((batch, CONTEXT), device=self.device),
         )
 
-    def step_from_current(self, current, state, dt=DT, neutral=None):
+    def step_from_current(self, current, state, dt=DT, neutral=None, active=None):
+        if (
+            current.ndim != 2
+            or current.shape[0] != N
+            or current.dtype != torch.float32
+            or current.device != self.device
+            or not current.is_contiguous()
+        ):
+            raise ValueError("current must be contiguous float32 [165122,B] on the CNS device")
+        self._validate_state(state, current.shape[1])
+        if not math.isfinite(dt) or dt <= 0:
+            raise ValueError("CNS dt must be finite and positive")
         r0, g, tau, k, ta, tr, use = self.effective()
         h = torch.minimum(r0, 1 - r0)
         r = state.rates
@@ -437,10 +504,33 @@ class AnatomicalCNS(nn.Module):
         delta = dt / 2
         tm = 0.1 + 4.9 * torch.sigmoid(self.dynamics_modulation_tau_raw)
         neutral = self.neutral_current(current.shape[1]) if neutral is None else neutral
+        if active is not None and (
+            active.shape != (current.shape[1],)
+            or active.dtype != torch.bool
+            or active.device != self.device
+        ):
+            raise ValueError("active must be bool [B] on the CNS device")
+        plastic_source = self.plastic_source_rows.long()
+        plastic_target = self.plastic_target_rows.long()
         for _ in range(2):
             x = r - r0
             fast = fixed_sparse_mm(
                 self.fast_graph, self.fast_graph_transpose, x * state.release
+            )
+            edge_current = (
+                self.plastic_baseline_weight[:, None]
+                * state.efficacy_deviation
+                * x[plastic_source]
+                * state.release[plastic_source]
+            )
+            correction = torch.stack(
+                (
+                    edge_current[:2048].sum(dim=0),
+                    edge_current[2048:].sum(dim=0),
+                )
+            )
+            fast = fast.index_copy(
+                0, plastic_target, fast[plastic_target] + correction
             )
             mn = []
             for graph, transpose, old, t in zip(
@@ -494,7 +584,46 @@ class AnatomicalCNS(nn.Module):
             0.2,
             1,
         )
-        return CNSState(r, a, s, q, *m)
+        edge_target = self.plastic_target_index.long()
+        source_h = h[plastic_source]
+        cue = torch.clamp(
+            torch.relu((r[plastic_source] - r0[plastic_source]) / source_h)
+            * q[plastic_source],
+            0,
+            1,
+        )
+        dan_h = h[self.plastic_dan_rows.long()]
+        gate = torch.clamp(
+            torch.relu((r[self.plastic_dan_rows.long()] - r0[self.plastic_dan_rows.long()]) / dan_h)
+            * q[self.plastic_dan_rows.long()],
+            0,
+            1,
+        )
+        rule = self.plastic_rule[edge_target]
+        decayed_eligibility = state.eligibility * torch.exp(
+            -current.new_tensor(dt) / rule[:, 0, None]
+        )
+        efficacy_candidate = (
+            state.efficacy_deviation
+            - rule[:, 1, None]
+            * current.new_tensor(dt)
+            * decayed_eligibility
+            * gate[edge_target]
+        )
+        efficacy = torch.maximum(
+            torch.minimum(efficacy_candidate, torch.zeros_like(efficacy_candidate)),
+            -rule[:, 2, None],
+        )
+        eligibility = torch.maximum(decayed_eligibility, cue)
+        result = CNSState(r, a, s, q, *m, efficacy, eligibility)
+        if active is not None:
+            result = CNSState(
+                *(
+                    torch.where(active[None], new, old)
+                    for old, new in zip(state.fields(), result.fields(), strict=True)
+                )
+            )
+        return result
 
     def outputs(self, state):
         r0 = self.effective()[0]
@@ -514,7 +643,7 @@ class AnatomicalCNS(nn.Module):
         motor = torch.cat((torch.tanh(pre[:84]), torch.sigmoid(pre[84:])), dim=0).T
         return latent, motor
 
-    def forward(self, optic, body, context, state=None, dt=DT):
+    def forward(self, optic, body, context, state=None, dt=DT, reset=None, active=None):
         if (
             optic.ndim != 3
             or optic.shape[1:] != (SITES, 3)
@@ -523,18 +652,27 @@ class AnatomicalCNS(nn.Module):
         ):
             raise ValueError("expected optic[B,1771,3], body[B,807], context[B,12]")
         state = self.initial_state(optic.shape[0]) if state is None else state
+        if reset is not None:
+            state = self.reset_state(state, reset)
         state = self.step_from_current(
-            self.afferent_current(optic, body, context), state, dt
+            self.afferent_current(optic, body, context), state, dt, active=active
         )
         latent, motor = self.outputs(state)
         return latent, motor, state
 
 
 def initialized_arrays(static, seed=20260907):
-    """Create explicit untrained V4 interfaces around supplied immutable anatomy."""
-    from chreatures.cns_adapter_contract import ARRAY_SPECS, neutral_afferent_drive
+    """Create explicit untrained V5 interfaces around supplied immutable anatomy."""
+    from chreatures.cns_adapter_contract import (
+        ARRAY_SPECS,
+        STATIC_NAMES,
+        neutral_afferent_drive,
+    )
 
     rng = np.random.default_rng(seed)
+    required_static = STATIC_NAMES - {"afferent.neutral_drive"}
+    if set(static) != required_static:
+        raise ValueError("V5 initialization requires the exact immutable substrate")
     a = {
         k: np.ascontiguousarray(static[k], dtype=d)
         for k, d, _ in ARRAY_SPECS
@@ -586,7 +724,7 @@ def initialized_arrays(static, seed=20260907):
 
 
 def export_arrays(model, static):
-    """Return a complete service tensor mapping from a trained V4 module."""
+    """Return a complete service tensor mapping from a trained V5 module."""
     result = {k: np.ascontiguousarray(v) for k, v in static.items()}
     mapping = {
         "optic.spectral_logits": model.optic_spectral_logits,

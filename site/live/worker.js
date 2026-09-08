@@ -64,7 +64,7 @@ self.onmessage = ({data: message}) => {
       case 'insert-toy': post('inserted', {requestId, object: await engine.insertToy(message.position)}); frame(engine.observe()); break;
       case 'shove': engine.shove(message.id, message.force); break;
       case 'select': {
-        const index = engine.world.observe().residents.findIndex(r => r.id === message.residentId);
+        const index = engine.world.residentDescriptors.findIndex(r => r.id === message.residentId);
         if (index < 0) throw new Error('Unknown resident'); engine.selected = index; break;
       }
       case 'save': {running = false; const snapshot = await engine.save(); post('saved', {requestId, snapshot}, [snapshot]); frame(engine.observe()); break;}

@@ -42,8 +42,8 @@ inline float stable_sigmoid(float x) {
     return z / (1.0f + z);
 }
 
-// Embodiment-driven CNS V4 entry points use only the current CHCNS4 contract.
-kernel void v4_project_body_masked(
+// Lifetime-learning CNS V5 entry points use only the current CHCNS5 contract.
+kernel void v5_project_body_masked(
     device const float4 *body [[buffer(0)]],
     device const float *mean [[buffer(1)]],
     device const float *scale [[buffer(2)]],
@@ -73,7 +73,7 @@ kernel void v4_project_body_masked(
     drive[target * p.tiles + tile] = mask_inactive(current, p, tile);
 }
 
-kernel void v4_project_context_zero_neutral(
+kernel void v5_project_context_zero_neutral(
     device const float4 *context [[buffer(0)]],
     device const float *weights [[buffer(1)]],
     device const float *bias [[buffer(2)]],
@@ -97,7 +97,7 @@ kernel void v4_project_context_zero_neutral(
     drive[target * p.tiles + tile] = mask_inactive(current, p, tile);
 }
 
-kernel void v4_csr_dynamics_f16(
+kernel void v5_csr_dynamics_f16(
     device const uint *rowptr [[buffer(0)]],
     device const uint *columns [[buffer(1)]],
     device const float *weights [[buffer(2)]],
@@ -120,6 +120,11 @@ kernel void v4_csr_dynamics_f16(
     device const float *mod_adaptation_raw [[buffer(19)]],
     device const float *modulation_tau [[buffer(20)]],
     device const float *neutral_drive [[buffer(21)]],
+    device const uint *plastic_source_rows [[buffer(22)]],
+    device const float *plastic_baseline_weight [[buffer(23)]],
+    device const uint *plastic_target_ptr [[buffer(24)]],
+    device const uint *plastic_target_rows [[buffer(25)]],
+    device const float4 *plastic_efficacy [[buffer(26)]],
     uint gid [[thread_position_in_grid]]) {
     if (p.tiles == 0) return;
     uint row = gid / p.tiles, tile = gid % p.tiles;
@@ -137,6 +142,20 @@ kernel void v4_csr_dynamics_f16(
             fast += weights[edge] * x * release[source * p.tiles + tile];
         } else if (family >= 2u && family <= 4u) {
             mod_input[family - 2u] += weights[edge] * x;
+        }
+    }
+    // The selector is grouped by its two MBON targets. Canonical serial
+    // accumulation avoids atomics and preserves the exact artifact order.
+    for (uint target = 0; target < 2; ++target) {
+        if (row == plastic_target_rows[target]) {
+            for (uint selected = plastic_target_ptr[target];
+                 selected < plastic_target_ptr[target + 1]; ++selected) {
+                uint source = plastic_source_rows[selected];
+                float4 x = rate_in[source * p.tiles + tile] - baseline[source];
+                fast += plastic_baseline_weight[selected]
+                    * plastic_efficacy[selected * p.tiles + tile] * x
+                    * release[source * p.tiles + tile];
+            }
         }
     }
     float r0 = baseline[row];
@@ -164,7 +183,7 @@ kernel void v4_csr_dynamics_f16(
                                     old_rate, p, tile);
 }
 
-kernel void v4_finalize_private_state(
+kernel void v5_finalize_private_state(
     device const float4 *rate [[buffer(0)]],
     device float4 *adaptation [[buffer(1)]],
     device float4 *support [[buffer(2)]],
@@ -194,7 +213,43 @@ kernel void v4_finalize_private_state(
     release[index] = hold_inactive(next_q, old_q, p, tile);
 }
 
-kernel void v4_motor92_centered(
+kernel void v5_advance_plasticity(
+    device const float4 *rates [[buffer(0)]],
+    device const float4 *release [[buffer(1)]],
+    device const float *baseline [[buffer(2)]],
+    device const uint *source_rows [[buffer(3)]],
+    device const uint *target_ptr [[buffer(4)]],
+    device const uint *dan_rows [[buffer(5)]],
+    device const float *rule [[buffer(6)]],
+    device float4 *efficacy [[buffer(7)]],
+    constant Params &p [[buffer(8)]],
+    device float4 *eligibility [[buffer(9)]],
+    uint gid [[thread_position_in_grid]]) {
+    constexpr uint plastic_edges = 4184;
+    if (p.tiles == 0) return;
+    uint selected = gid / p.tiles, tile = gid % p.tiles;
+    if (selected >= plastic_edges || tile >= p.tiles) return;
+    uint target = selected < target_ptr[1] ? 0u : 1u;
+    uint source = source_rows[selected], dan = dan_rows[target];
+    uint index = selected * p.tiles + tile;
+    float hs = min(baseline[source], 1.0f - baseline[source]);
+    float hd = min(baseline[dan], 1.0f - baseline[dan]);
+    float4 cue = clamp(max(float4(0.0f),
+        (rates[source * p.tiles + tile] - baseline[source]) / hs)
+        * release[source * p.tiles + tile], 0.0f, 1.0f);
+    float4 gate = clamp(max(float4(0.0f),
+        (rates[dan * p.tiles + tile] - baseline[dan]) / hd)
+        * release[dan * p.tiles + tile], 0.0f, 1.0f);
+    float4 old_d = efficacy[index], old_e = eligibility[index];
+    float4 decayed = old_e * exp(-p.dt / rule[target * 3]);
+    float4 next_d = clamp(old_d - rule[target * 3 + 1] * p.dt * decayed * gate,
+                          -rule[target * 3 + 2], 0.0f);
+    float4 next_e = max(decayed, cue);
+    efficacy[index] = hold_inactive(next_d, old_d, p, tile);
+    eligibility[index] = hold_inactive(next_e, old_e, p, tile);
+}
+
+kernel void v5_motor92_centered(
     device const float4 *rates [[buffer(0)]],
     device const uint *motor_rows [[buffer(1)]],
     device const float *reference_rate [[buffer(2)]],

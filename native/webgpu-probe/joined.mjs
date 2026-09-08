@@ -49,8 +49,7 @@ try {
   ]);
   const residentWasm = await readFile(resolve(directory, 'live/pkg/resident_runtime_bg.wasm'));
   engine = await LiveEngine.create({baseURL: `http://127.0.0.1:${server.address().port}/live/`, device,
-    modules: {worldWasm: await readFile(resolve(directory, 'live/pkg/chreatures_browser_world_bg.wasm')),
-      initResident: () => initResident({module_or_path: residentWasm})}});
+    modules: {initResident: () => initResident({module_or_path: residentWasm})}});
   const atlas = engine.describe();
   assert.equal(atlas.retinalSites.length, 1771 * 3);
   assert(atlas.retinalSupported.reduce((sum, value) => sum + value, 0) > 0);
@@ -103,7 +102,24 @@ try {
   }
   const checkpoint = await engine.save();
   if (args.checkpoint) await writeFile(args.checkpoint, new Uint8Array(checkpoint), {flag: 'wx'});
-  if (args.snapshot) await writeFile(args.snapshot, JSON.stringify(engine.world.snapshot()), {flag: 'wx'});
+  if (args.snapshot) await writeFile(args.snapshot, engine.world.snapshot(), {flag: 'wx'});
+  const neuralSnapshot = await engine.brain.snapshot();
+  const neuralHeaderBytes = new DataView(neuralSnapshot).getUint32(8, true);
+  const neuralHeader = JSON.parse(new TextDecoder().decode(new Uint8Array(neuralSnapshot, 12, neuralHeaderBytes)));
+  const plasticOffset = 12 + Math.ceil(neuralHeaderBytes / 4) * 4 + neuralHeader.stateBytes;
+  const efficacy = new Float32Array(neuralSnapshot, plasticOffset, neuralHeader.efficacyBytes / 4);
+  const eligibility = new Float32Array(neuralSnapshot, plasticOffset + neuralHeader.efficacyBytes, neuralHeader.eligibilityBytes / 4);
+  const plasticity = Array.from({length: engine.batch}, (_, lane) => {
+    let changedEdges = 0, eligibleEdges = 0, maximumDepression = 0, maximumEligibility = 0;
+    for (let edge = 0; edge < 4184; edge++) {
+      const d = efficacy[edge * 4 + lane], e = eligibility[edge * 4 + lane];
+      assert(Number.isFinite(d) && d <= 0 && d >= -.800001);
+      assert(Number.isFinite(e) && e >= 0 && e <= 1);
+      changedEdges += Number(d < 0); eligibleEdges += Number(e > 0);
+      maximumDepression = Math.max(maximumDepression, -d); maximumEligibility = Math.max(maximumEligibility, e);
+    }
+    return {lane, changedEdges, eligibleEdges, maximumDepression, maximumEligibility};
+  });
   const next = await engine.advance(true); const future = await engine.save();
   await engine.load(checkpoint);
   const replay = await engine.advance(true); const restoredFuture = await engine.save();
@@ -126,7 +142,7 @@ try {
     const index = resident.root * 3;
     maxTravel = Math.max(maxTravel, Math.hypot(...after.bodyPositions.slice(index, index + 3).map((x, i) => x - first.bodyPositions[index + i])));
   }
-  const report = {format: 'chreatures-fly-cns-v4-joined-headless-v1', engineIdentity: engine.identity,
+  const report = {format: 'chreatures-fly-cns-v5-joined-headless-v1', engineIdentity: engine.identity,
     serviceArtifactSha256: engine.brain.manifest.serviceArtifactSha256,
     adapterSha256: engine.brain.manifest.identity.artifact,
     adapter: adapter.info?.device || adapter.info?.description || 'Dawn Metal', neurons: 165122, edges: 25563197,
@@ -136,6 +152,7 @@ try {
     physicalReplayExact: true, fullNeuralReplayExact: true, wholeLifeReplayExact: true,
     observedNeuralFields: [...observedFields], observerMatchesPrivateStateExactly: true,
     contextOutputs: 12, anatomicalMotorOutputs: 92, physicalBodyInputs: 807, privateNeuralFields: 7,
+    privatePlasticEdges: 4184, privatePlasticFields: ['efficacy-deviation', 'eligibility'], plasticity,
     motorDynamicRanges: Array.from(motorHigh, (x, i) => x - motorLow[i]), maximumDeliveredContextMagnitude: contextMagnitude,
     neuralCapture: 'every physical tick', retinalInputSites: 1771,
     supportedRetinalSites: atlas.retinalSupported.reduce((sum, value) => sum + value, 0),
@@ -143,7 +160,7 @@ try {
     restoredGrownWorld: true, geometryCount: after.geometry.length, wallSeconds: (performance.now() - began) / 1000,
     modelStatus: engine.modelStatus, controllerStatus: engine.controllerStatus,
     externalPhysicalInputs: ['screen photon field', 'analytic point tones'],
-    scope: 'Actual Node Dawn Metal + same browser Wasm/WGSL; initialized private resident and CNS, no browser UI performance or learned competence claim'};
+    scope: 'Actual Node Dawn Metal + unified Rust/MuJoCo Wasm + full CNS V5/private resident; endogenous plastic state from physical senses, no browser UI performance or learned competence claim'};
   console.log(JSON.stringify(report, null, 2));
   if (args.report) await writeFile(args.report, JSON.stringify(report, null, 2) + '\n', {flag: 'wx'});
 } finally {

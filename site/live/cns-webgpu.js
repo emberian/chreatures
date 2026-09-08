@@ -1,4 +1,4 @@
-// Chreatures full MaleCNS WebGPU V4 engine.
+// Chreatures full MaleCNS WebGPU V5 engine.
 // Copyright (C) 2026 Chreatures contributors. AGPL-3.0-or-later.
 //
 // The only deployed information path is:
@@ -6,8 +6,8 @@
 
 import { digest, loadBlob, loadJSON } from './assets.js';
 
-export const CNS_WEBGPU_FORMAT = 'chreatures-cns-webgpu-v4';
-export const CNS_WEBGPU_VERSION = 4;
+export const CNS_WEBGPU_FORMAT = 'chreatures-cns-webgpu-v5';
+export const CNS_WEBGPU_VERSION = 5;
 export const CNS_COUNTS = Object.freeze({
   neurons: 165122,
   edges: 25563197,
@@ -23,6 +23,8 @@ export const CNS_COUNTS = Object.freeze({
   motor: 92,
   motorTargets: 815,
   bodyTargets: 11798,
+  plasticEdges: 4184,
+  plasticTargets: 2,
   rank: 64,
   latent: 512,
 });
@@ -35,7 +37,10 @@ const VECTOR_BYTES = CNS_COUNTS.neurons * 4 * 4;
 const LATENT_BYTES = CNS_COUNTS.latent * 4 * 4;
 const PROJECTION_BLOCKS = Math.ceil(CNS_COUNTS.neurons / 256);
 const MOTOR_BYTES = CNS_COUNTS.motor * 4 * 4;
-const SNAPSHOT_MAGIC = new Uint8Array([67, 72, 87, 71, 52, 83, 84, 0]); // CHWG4ST\0
+const PLASTIC_VECTOR_BYTES = CNS_COUNTS.plasticEdges * 4 * 4;
+const PRIVATE_STATE_BYTES = PLASTIC_VECTOR_BYTES * 2;
+const SNAPSHOT_STATE_BYTES = STATE_BYTES + PRIVATE_STATE_BYTES;
+const SNAPSHOT_MAGIC = new Uint8Array([67, 72, 87, 71, 53, 83, 84, 0]); // CHWG5ST\0
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 const STATE_FIELDS = Object.freeze({rate:0,adaptation:1,support:2,release:3,dopamine:4,octopamine:5,serotonin:6});
@@ -84,9 +89,14 @@ const SPECS = Object.freeze({
   'motor.rate_scale': ['f32', [815]],
   'motor.weight': ['f32', [92, 815]],
   'motor.intercept': ['f32', [92]],
+  'plasticity.edge_positions': ['u32', [4184]],
+  'plasticity.target_ptr': ['u32', [3]],
+  'plasticity.target_rows': ['u32', [2]],
+  'plasticity.dan_rows': ['u32', [2]],
+  'plasticity.rule': ['f32', [2, 3]],
 });
 
-const SHADER_FILES = Object.freeze(['afferent.wgsl', 'dynamics.wgsl', 'readout.wgsl', 'motor.wgsl','observe.wgsl']);
+const SHADER_FILES = Object.freeze(['afferent.wgsl', 'dynamics.wgsl', 'plasticity.wgsl', 'readout.wgsl', 'motor.wgsl','observe.wgsl']);
 
 function product(shape) {
   return shape.reduce((total, value) => total * value, 1);
@@ -108,6 +118,12 @@ function sameShape(left, right) {
   return Array.isArray(left) && left.length === right.length && left.every((v, i) => v === right[i]);
 }
 
+function plasticityIdentityBytes(manifest) {
+  const names = Object.keys(SPECS).filter(name => name.startsWith('plasticity.')).sort();
+  const hashes = Object.fromEntries(names.map(name => [name, manifest.buffers[name].sha256]));
+  return encoder.encode(JSON.stringify(hashes));
+}
+
 function validateManifest(manifest) {
   if (!manifest || manifest.format !== CNS_WEBGPU_FORMAT || manifest.version !== CNS_WEBGPU_VERSION) {
     throw new Error(`CNS manifest must be ${CNS_WEBGPU_FORMAT} version ${CNS_WEBGPU_VERSION}`);
@@ -115,11 +131,12 @@ function validateManifest(manifest) {
   for (const [name, expected] of Object.entries(CNS_COUNTS)) {
     if (manifest.counts?.[name] !== expected) throw new Error(`CNS count differs: ${name}`);
   }
-  for (const name of ['artifact', 'graph', 'atlas', 'anatomy', 'mask', 'morphology', 'sensorySchema', 'actuatorSchema', 'motorCalibration', 'graphSourceWeight']) {
+  for (const name of ['artifact', 'graph', 'atlas', 'anatomy', 'mask', 'morphology', 'sensorySchema', 'actuatorSchema', 'motorCalibration', 'graphSourceWeight', 'plasticity']) {
     assertHexDigest(manifest.identity?.[name], `identity.${name}`);
   }
   if (!Number.isSafeInteger(manifest.counts.afferents) || manifest.counts.afferents <= 0 || manifest.counts.afferents > CNS_COUNTS.neurons) throw new Error('Invalid injected row count');
-  if (manifest.controlDt !== 0.01 || manifest.substeps !== 2) throw new Error('V4 requires two 0.005-second CNS substeps');
+  if (manifest.controlDt !== 0.01 || manifest.substeps !== 2) throw new Error('V5 requires two 0.005-second CNS substeps');
+  if (manifest.plasticityRule !== 'gamma1pedc-cue-before-ppl-v1') throw new Error('V5 plasticity rule differs');
   const quantization = manifest.graphQuantization;
   if (quantization?.storage !== 'ieee-754-binary16-bits-little-endian' || quantization.rounding !== 'round-to-nearest-ties-to-even' || quantization.compute !== 'decode-once-to-float32') throw new Error('Canonical graph quantization differs');
   assertHexDigest(manifest.serviceArtifactSha256, 'serviceArtifactSha256');
@@ -127,7 +144,7 @@ function validateManifest(manifest) {
     throw new Error('sourceRevision is required');
   }
   if (!manifest.buffers || Object.keys(manifest.buffers).length !== Object.keys(SPECS).length) {
-    throw new Error('CNS manifest buffer set differs from the V4 contract');
+    throw new Error('CNS manifest buffer set differs from the V5 contract');
   }
   for (const [name, [dtype, shape]] of Object.entries(SPECS)) {
     const entry = manifest.buffers[name];
@@ -164,6 +181,8 @@ function identityEnvelope(manifest) {
     actuatorSchema: manifest.identity.actuatorSchema,
     motorCalibration: manifest.identity.motorCalibration,
     graphSourceWeight: manifest.identity.graphSourceWeight,
+    plasticity: manifest.identity.plasticity,
+    plasticityRule: manifest.plasticityRule,
     graphQuantization: manifest.graphQuantization,
     controlDt: manifest.controlDt,
     substeps: manifest.substeps,
@@ -331,6 +350,39 @@ function validateLoadedAssets(assets, manifest) {
   for (const bits of new Uint16Array(assets.get('graph.weight_bits'))) {
     if ((bits & 0x7c00) === 0x7c00) throw new Error('Graph contains a nonfinite binary16 value');
   }
+  const channel = new Uint32Array(assets.get('graph.channel'));
+  const positions = new Uint32Array(assets.get('plasticity.edge_positions'));
+  const ptr = new Uint32Array(assets.get('plasticity.target_ptr'));
+  const targets = new Uint32Array(assets.get('plasticity.target_rows'));
+  const dans = new Uint32Array(assets.get('plasticity.dan_rows'));
+  const rule = new Float32Array(assets.get('plasticity.rule'));
+  if (ptr[0] !== 0 || ptr[1] !== 2048 || ptr[2] !== CNS_COUNTS.plasticEdges ||
+      targets[0] !== 655 || targets[1] !== 1306) {
+    throw new Error('Plastic target order or canonical edge grouping differs');
+  }
+  if (dans[0] !== 1774 || dans[1] !== 1235) {
+    throw new Error('Plasticity side-paired PPL101 row order differs');
+  }
+  const plasticSources = new Set();
+  for (let target = 0; target < CNS_COUNTS.plasticTargets; target++) {
+    let previous = -1;
+    for (let local = ptr[target]; local < ptr[target + 1]; local++) {
+      const position = positions[local];
+      if (position < crow[targets[target]] || position >= crow[targets[target] + 1] ||
+          position <= previous || channel[col[position]] !== 1) {
+        throw new Error(`Plastic edge ${local} differs from canonical target order or fast source channel`);
+      }
+      plasticSources.add(col[position]);
+      previous = position;
+    }
+    const tau = rule[target * 3], depression = rule[target * 3 + 1], maximum = rule[target * 3 + 2];
+    if (!(Number.isFinite(tau) && tau >= 0.05 && tau <= 5 &&
+          Number.isFinite(depression) && depression >= 0 && depression <= 1 &&
+          Number.isFinite(maximum) && maximum >= 0 && maximum <= 0.95)) {
+      throw new Error(`Plasticity rule ${target} leaves the V5 bounds`);
+    }
+  }
+  if (plasticSources.size !== 3623) throw new Error('Plasticity connected-KC source count differs');
 }
 
 function decodeGraphWeights(buffer) {
@@ -377,7 +429,7 @@ async function checkedModule(device, label, code) {
 
 async function pipeline(device, module, entryPoint) {
   return device.createComputePipelineAsync({
-    label: `MaleCNS V4 ${entryPoint}`,
+    label: `MaleCNS V5 ${entryPoint}`,
     layout: 'auto',
     compute: { module, entryPoint },
   });
@@ -400,7 +452,7 @@ function dispatch(pass, pipeline, group, x, y = 1) {
 }
 
 /**
- * Full 165,122-neuron / 25,563,197-edge MaleCNS V4 WebGPU service.
+ * Full 165,122-neuron / 25,563,197-edge MaleCNS V5 WebGPU service.
  * Construct with `await MaleCNSWebGPU.load(...)`; direct construction is private.
  */
 export class MaleCNSWebGPU {
@@ -427,6 +479,9 @@ export class MaleCNSWebGPU {
       ? await loadJSON(new URL(manifest, baseURL))
       : manifest;
     validateManifest(manifestObject);
+    if (await digest(plasticityIdentityBytes(manifestObject)) !== manifestObject.identity.plasticity) {
+      throw new Error('Plasticity tensor-set identity differs');
+    }
     const neededBinding = Math.max(...Object.values(manifestObject.buffers).map(value => value.byteLength));
     if (device.limits.maxStorageBufferBindingSize < neededBinding || device.limits.maxBufferSize < neededBinding) {
       throw new Error(`WebGPU device cannot bind the ${neededBinding}-byte full graph buffer`);
@@ -464,6 +519,8 @@ export class MaleCNSWebGPU {
     this.capacity = capacity;
     this.times = new Float64Array(capacity);
     this.identities = Array(capacity).fill(null);
+    this.activeMask = 0;
+    this.lastResetMask = 0;
     this.stepSerial = 0;
     this._currentState = 0;
     this._poisoned = null;
@@ -483,9 +540,10 @@ export class MaleCNSWebGPU {
     const D = this.device;
     const U = GPUBufferUsage;
     this._baselineRates = computeBaseline(assets);
+    this._plasticityRules = new Float32Array(assets.get('plasticity.rule')).slice();
     const immutable = (name, usage = U.STORAGE) => createBuffer(D, name, assets.get(name).byteLength, usage, assets.get(name));
     const B = this._buffers;
-    B.config = createBuffer(D, 'CNS V4 config', 32, U.UNIFORM | U.COPY_DST);
+    B.config = createBuffer(D, 'CNS V5 config', 32, U.UNIFORM | U.COPY_DST);
     for (const name of ['graph.crow', 'graph.col', 'atlas.receptor_rows',
       'atlas.receptor_ptr', 'atlas.body_rows', 'atlas.body_mask', 'atlas.context_rows',
       'atlas.motor_rows', 'atlas.motor_mask', 'atlas.neuron_type', 'graph.channel',
@@ -493,10 +551,22 @@ export class MaleCNSWebGPU {
       'readout.output.weight', 'readout.output.bias', 'motor.weight', 'motor.intercept', 'motor.reference_rate', 'motor.rate_scale']) {
       B[name] = immutable(name);
     }
+    for (const name of ['plasticity.edge_positions', 'plasticity.target_ptr',
+      'plasticity.target_rows', 'plasticity.dan_rows', 'plasticity.rule']) {
+      B[name] = immutable(name);
+    }
     const graphWeights = decodeGraphWeights(assets.get('graph.weight_bits'));
     B['graph.weight'] = createBuffer(D, 'decoded canonical graph weights', graphWeights.byteLength, U.STORAGE, graphWeights.buffer);
+    const graphSources = new Uint32Array(assets.get('graph.col'));
+    const plasticPositions = new Uint32Array(assets.get('plasticity.edge_positions'));
+    const plasticSources = Uint32Array.from(plasticPositions, position => graphSources[position]);
+    const plasticWeights = Float32Array.from(plasticPositions, position => graphWeights[position]);
+    B['plasticity.source_rows'] = createBuffer(D, 'derived plastic source rows', plasticSources.byteLength,
+      U.STORAGE, plasticSources.buffer);
+    B['plasticity.baseline_weight'] = createBuffer(D, 'derived plastic baseline weights', plasticWeights.byteLength,
+      U.STORAGE, plasticWeights.buffer);
     const dynamics = dynamicsParameters(assets);
-    B.dynamics = createBuffer(D, 'V4 dynamics raw', dynamics.byteLength, U.STORAGE, dynamics.buffer);
+    B.dynamics = createBuffer(D, 'V5 dynamics raw', dynamics.byteLength, U.STORAGE, dynamics.buffer);
     B.baseline = createBuffer(D, 'baseline by neuron', this._baselineRates.byteLength, U.STORAGE, this._baselineRates.buffer);
     const optic = opticParameters(assets);
     B.opticParameters = createBuffer(D, 'optic parameters', optic.byteLength, U.STORAGE, optic.buffer);
@@ -522,19 +592,25 @@ export class MaleCNSWebGPU {
       createBuffer(D, 'CNS recurrence activity B', CNS_COUNTS.neurons * 32, U.STORAGE),
     ];
     B.recurrence = createBuffer(D, 'CNS fast/mod recurrence', VECTOR_BYTES * 4, U.STORAGE);
+    B.efficacy = createBuffer(D, 'private selected-edge efficacy deviation vec4', PLASTIC_VECTOR_BYTES,
+      U.STORAGE | U.COPY_SRC | U.COPY_DST);
+    B.eligibility = createBuffer(D, 'private selected-edge eligibility vec4', PLASTIC_VECTOR_BYTES,
+      U.STORAGE | U.COPY_SRC | U.COPY_DST);
     B.projectionPartial = createBuffer(D, 'readout projection partial', CNS_COUNTS.rank * PROJECTION_BLOCKS * 16, U.STORAGE);
     B.projected = createBuffer(D, 'readout rank64 vec4', CNS_COUNTS.rank * 16, U.STORAGE);
     B.latent = createBuffer(D, 'CNS latent vec4', LATENT_BYTES, U.STORAGE | U.COPY_SRC);
     B.latentRead = createBuffer(D, 'CNS outputs readback', LATENT_BYTES+MOTOR_BYTES, U.MAP_READ | U.COPY_DST);
     B.motor = createBuffer(D, 'CNS motor92 vec4', MOTOR_BYTES, U.STORAGE | U.COPY_SRC);
     B.stateRead = createBuffer(D, 'CNS state readback', STATE_BYTES, U.MAP_READ | U.COPY_DST);
-    B.snapshotRead = createBuffer(D, 'CNS snapshot readback', STATE_BYTES, U.MAP_READ | U.COPY_DST);
+    B.snapshotRead = createBuffer(D, 'CNS snapshot readback', SNAPSHOT_STATE_BYTES, U.MAP_READ | U.COPY_DST);
+    B.plasticityRead = createBuffer(D, 'CNS plasticity observer readback', PRIVATE_STATE_BYTES, U.MAP_READ | U.COPY_DST);
     B.observe = createBuffer(D, 'selected neural observation', CNS_COUNTS.neurons*8, U.STORAGE | U.COPY_SRC);
     B.observeRead=createBuffer(D,'selected neural observation readback',CNS_COUNTS.neurons*8,U.MAP_READ|U.COPY_DST);
 
-    const [afferent, dynamicsModule, readout, motorModule, observeModule] = await Promise.all([
+    const [afferent, dynamicsModule, plasticityModule, readout, motorModule, observeModule] = await Promise.all([
       checkedModule(D, 'afferent', shaders['afferent.wgsl']),
       checkedModule(D, 'dynamics', shaders['dynamics.wgsl']),
+      checkedModule(D, 'plasticity', shaders['plasticity.wgsl']),
       checkedModule(D, 'readout', shaders['readout.wgsl']),
       checkedModule(D, 'motor', shaders['motor.wgsl']),
       checkedModule(D, 'observe', shaders['observe.wgsl']),
@@ -546,6 +622,9 @@ export class MaleCNSWebGPU {
       syncActivity: [dynamicsModule, 'sync_activity'],
       recurrentSum: [dynamicsModule, 'recurrent_sum'],
       jacobiUpdate: [dynamicsModule, 'jacobi_update'], finalizeTick: [dynamicsModule, 'finalize_tick'],
+      resetPlasticity: [plasticityModule, 'reset_plasticity'],
+      applyPlasticCorrection: [plasticityModule, 'apply_correction'],
+      learnPlasticEdges: [plasticityModule, 'learn_edges'],
       gatherObserve: [observeModule, 'gather_observe'],
       projectPartial: [readout, 'project_partial'], reduceProjection: [readout, 'reduce_projection'],
       outputLatent: [readout, 'output_latent'],
@@ -556,7 +635,7 @@ export class MaleCNSWebGPU {
     D.pushErrorScope('validation');
     this._buildStaticGroups();
     const bindingError = await D.popErrorScope();
-    if (bindingError) throw new Error(`MaleCNS V4 binding layout failed: ${bindingError.message}`);
+    if (bindingError) throw new Error(`MaleCNS V5 binding layout failed: ${bindingError.message}`);
     await this._reset(Array.from({ length: this.capacity }, (_, index) => index), Array(this.capacity).fill(null), true);
   }
 
@@ -579,6 +658,17 @@ export class MaleCNSWebGPU {
       8: B.recurrence, 9: B.drive, 10: B['afferent.neutral_drive'], 12:B.activity[1-index] }));
     G.finalizeTick = B.state.map((state,index) => bind(D, P.finalizeTick, { 0: B.config,
       4: B['atlas.neuron_type'], 5: B.dynamics, 7: state, 12:B.activity[index] }));
+    G.resetPlasticity = bind(D, P.resetPlasticity, { 0:B.config, 10:B.efficacy, 11:B.eligibility });
+    G.applyPlasticCorrection = B.state.map((state,index) => bind(D, P.applyPlasticCorrection, {
+      1:B['plasticity.source_rows'], 2:B['plasticity.target_ptr'], 3:B['plasticity.target_rows'],
+      6:B['plasticity.baseline_weight'], 7:B.baseline, 8:B.activity[index],
+      9:B.recurrence, 10:B.efficacy,
+    }));
+    G.learnPlasticEdges = B.state.map(state => bind(D, P.learnPlasticEdges, {
+      0:B.config, 1:B['plasticity.source_rows'], 2:B['plasticity.target_ptr'],
+      4:B['plasticity.dan_rows'], 5:B['plasticity.rule'], 7:B.baseline,
+      10:B.efficacy, 11:B.eligibility, 12:state,
+    }));
     G.outputMotor = B.state.map(state=>bind(D,P.outputMotor,{0:state,1:B['atlas.motor_rows'],2:B['motor.weight'],3:B['atlas.motor_mask'],4:B['motor.intercept'],5:B.motor,6:B['motor.reference_rate'],7:B['motor.rate_scale']}));
     G.gatherObserve = B.state.map(state=>bind(D,P.gatherObserve,{0:B.config,1:state,2:B.observe}));
     G.projectPartial = B.state.map(state => bind(D, P.projectPartial, { 1: state,
@@ -615,15 +705,17 @@ export class MaleCNSWebGPU {
     this._writeConfig(0, bits, undefined, 0);
     try {
       this.device.pushErrorScope('validation');
-      const command = this.device.createCommandEncoder({ label: 'MaleCNS V4 reset' });
+      const command = this.device.createCommandEncoder({ label: 'MaleCNS V5 reset' });
       const pass = command.beginComputePass();
       for (let index = 0; index < 2; index++) {
         dispatch(pass, this._pipelines.resetState, this._groups.resetState[index], Math.ceil(CNS_COUNTS.neurons / 256));
       }
+      dispatch(pass, this._pipelines.resetPlasticity, this._groups.resetPlasticity,
+        Math.ceil(CNS_COUNTS.plasticEdges / 256));
       pass.end();
       this.device.queue.submit([command.finish()]);
       const validationError = await this.device.popErrorScope();
-      if (validationError) throw new Error(`MaleCNS V4 reset validation failed: ${validationError.message}`);
+      if (validationError) throw new Error(`MaleCNS V5 reset validation failed: ${validationError.message}`);
       await this.device.queue.onSubmittedWorkDone();
     } catch (error) {
       this._poisoned = error instanceof Error ? error : new Error(String(error));
@@ -633,13 +725,15 @@ export class MaleCNSWebGPU {
       this.times[slot] = 0;
       this.identities[slot] = identities[index] ?? null;
     });
+    this.activeMask = (this.activeMask & ~bits) >>> 0;
+    this.lastResetMask = bits;
     if (full) this._poisoned = null;
     if (!initializing) this.stepSerial++;
   }
 
   step({ dt, activeMask, opticRGB, body, context, selectedResident, selectedField='rate' }) {
     const active = maskBits(activeMask, this.capacity);
-    if (dt !== 0.01) throw new RangeError('V4 requires dt=0.01 seconds (two 0.005-second CNS substeps)');
+    if (dt !== 0.01) throw new RangeError('V5 requires dt=0.01 seconds (two 0.005-second CNS substeps)');
     asFloat32(opticRGB, this.capacity * CNS_COUNTS.opticValues, 'opticRGB');
     asFloat32(body, this.capacity * CNS_COUNTS.bodyChannels, 'body');
     asFloat32(context, this.capacity * CNS_COUNTS.contextChannels, 'context');
@@ -651,7 +745,7 @@ export class MaleCNSWebGPU {
     if (selectedResident !== undefined && (!Number.isInteger(selectedResident) || selectedResident < 0 || selectedResident >= this.capacity)) {
       throw new RangeError('selectedResident outside capacity');
     }
-    if (!Object.hasOwn(STATE_FIELDS, selectedField)) throw new RangeError('selectedField is not a V4 neural state field');
+    if (!Object.hasOwn(STATE_FIELDS, selectedField)) throw new RangeError('selectedField is not a V5 neural state field');
     return this._enqueue(() => this._step(dt, active, opticRGB, body, context, selectedResident, selectedField));
   }
 
@@ -663,8 +757,8 @@ export class MaleCNSWebGPU {
     D.queue.writeBuffer(B.bodyInput, 0, body);
     D.queue.writeBuffer(B.contextInput, 0, context);
     D.pushErrorScope('validation');
-    const command = D.createCommandEncoder({ label: `MaleCNS V4 tick ${this.stepSerial}` });
-    let pass = command.beginComputePass({ label: 'full MaleCNS V4' });
+    const command = D.createCommandEncoder({ label: `MaleCNS V5 tick ${this.stepSerial}` });
+    let pass = command.beginComputePass({ label: 'full MaleCNS V5' });
     dispatch(pass, P.clearDrive, G.clearDrive, Math.ceil(CNS_COUNTS.neurons / 256));
     dispatch(pass, P.mixOptic, G.mixOptic, Math.ceil(CNS_COUNTS.receptorTypes * CNS_COUNTS.opticSites / 128));
     dispatch(pass, P.scatterOptic, G.scatterOptic, Math.ceil(CNS_COUNTS.receptors / 128));
@@ -673,17 +767,19 @@ export class MaleCNSWebGPU {
     let state = this._currentState;
     for (let substep = 0; substep < 2; substep++) {
       dispatch(pass, P.recurrentSum, G.recurrentSum[state], Math.ceil(CNS_COUNTS.neurons / 256));
+      dispatch(pass, P.applyPlasticCorrection, G.applyPlasticCorrection[state], CNS_COUNTS.plasticTargets);
       dispatch(pass, P.jacobiUpdate, G.jacobiUpdate[state], Math.ceil(CNS_COUNTS.neurons / 256));
       state = 1 - state;
     }
     dispatch(pass, P.finalizeTick, G.finalizeTick[state], Math.ceil(CNS_COUNTS.neurons / 256));
+    dispatch(pass, P.learnPlasticEdges, G.learnPlasticEdges[state], Math.ceil(CNS_COUNTS.plasticEdges / 256));
     dispatch(pass, P.projectPartial, G.projectPartial[state], PROJECTION_BLOCKS, CNS_COUNTS.rank);
     dispatch(pass, P.reduceProjection, G.reduceProjection, CNS_COUNTS.rank);
     dispatch(pass, P.outputLatent, G.outputLatent, Math.ceil(CNS_COUNTS.latent / 128));
     dispatch(pass, P.outputMotor, G.outputMotor[state], Math.ceil(CNS_COUNTS.motor / 64));
     pass.end();
     if(selectedResident!==undefined){
-      pass=command.beginComputePass({label:'CNS V4 observer gather'});
+      pass=command.beginComputePass({label:'CNS V5 observer gather'});
       dispatch(pass,P.gatherObserve,G.gatherObserve[state],Math.ceil(CNS_COUNTS.neurons/128));
       pass.end();
     }
@@ -693,7 +789,7 @@ export class MaleCNSWebGPU {
     try {
       D.queue.submit([command.finish()]);
       const validationError = await D.popErrorScope();
-      if (validationError) throw new Error(`MaleCNS V4 tick validation failed: ${validationError.message}`);
+      if (validationError) throw new Error(`MaleCNS V5 tick validation failed: ${validationError.message}`);
       await B.latentRead.mapAsync(GPUMapMode.READ);
       const mappedOutputs=B.latentRead.getMappedRange();
       const gpuLatent = new Float32Array(mappedOutputs,0,LATENT_BYTES/4).slice();
@@ -721,11 +817,67 @@ export class MaleCNSWebGPU {
         }
       }
       this._currentState = state;
+      this.activeMask = active;
+      this.lastResetMask = 0;
       for (let lane = 0; lane < this.capacity; lane++) if ((active & (1 << lane)) !== 0) this.times[lane] += dt;
       this.stepSerial++;
       return { latent, motor, selectedRates, selectedSignal, selectedField, times: this.times.slice(), stepSerial: this.stepSerial };
     } catch (error) {
       if (B.latentRead.mapState === 'mapped') B.latentRead.unmap();
+      this._poisoned = error instanceof Error ? error : new Error(String(error));
+      throw this._poisoned;
+    }
+  }
+
+  inspectPlasticity(resident) {
+    if (!Number.isInteger(resident) || resident < 0 || resident >= this.capacity) {
+      throw new RangeError('plasticity observer resident outside capacity');
+    }
+    return this._enqueue(() => this._inspectPlasticity(resident));
+  }
+
+  async _inspectPlasticity(resident) {
+    this._assertUsable();
+    const B = this._buffers;
+    const command = this.device.createCommandEncoder({ label: 'MaleCNS V5 plasticity observer' });
+    command.copyBufferToBuffer(B.efficacy, 0, B.plasticityRead, 0, PLASTIC_VECTOR_BYTES);
+    command.copyBufferToBuffer(B.eligibility, 0, B.plasticityRead,
+      PLASTIC_VECTOR_BYTES, PLASTIC_VECTOR_BYTES);
+    this.device.queue.submit([command.finish()]);
+    try {
+      await B.plasticityRead.mapAsync(GPUMapMode.READ);
+      const packed = new Float32Array(B.plasticityRead.getMappedRange());
+      const efficacy = new Float32Array(CNS_COUNTS.plasticEdges);
+      const eligibility = new Float32Array(CNS_COUNTS.plasticEdges);
+      const eligibilityBase = PLASTIC_VECTOR_BYTES / 4;
+      for (let edge = 0; edge < CNS_COUNTS.plasticEdges; edge++) {
+        efficacy[edge] = packed[edge * 4 + resident];
+        eligibility[edge] = packed[eligibilityBase + edge * 4 + resident];
+        const maximum = this._plasticityRules[(edge < 2048 ? 0 : 1) * 3 + 2];
+        if (!Number.isFinite(efficacy[edge]) || efficacy[edge] < -maximum || efficacy[edge] > 0 ||
+            !Number.isFinite(eligibility[edge]) || eligibility[edge] < 0 || eligibility[edge] > 1) {
+          throw new Error(`GPU plasticity state is invalid at ${edge}/${resident}`);
+        }
+      }
+      B.plasticityRead.unmap();
+      const targets = [];
+      for (const [start, stop] of [[0, 2048], [2048, CNS_COUNTS.plasticEdges]]) {
+        let efficacySum = 0, eligibilitySum = 0, changed = 0;
+        for (let edge = start; edge < stop; edge++) {
+          efficacySum += efficacy[edge];
+          eligibilitySum += eligibility[edge];
+          if (efficacy[edge] !== 0) changed++;
+        }
+        targets.push({
+          edgeCount: stop - start,
+          changedEdges: changed,
+          meanEfficacyDeviation: efficacySum / (stop - start),
+          meanEligibility: eligibilitySum / (stop - start),
+        });
+      }
+      return { resident, efficacy, eligibility, targets };
+    } catch (error) {
+      if (B.plasticityRead.mapState === 'mapped') B.plasticityRead.unmap();
       this._poisoned = error instanceof Error ? error : new Error(String(error));
       throw this._poisoned;
     }
@@ -738,21 +890,29 @@ export class MaleCNSWebGPU {
   async _snapshot() {
     this._assertUsable();
     const B = this._buffers;
-    const command = this.device.createCommandEncoder({ label: 'MaleCNS V4 snapshot' });
+    const command = this.device.createCommandEncoder({ label: 'MaleCNS V5 snapshot' });
     command.copyBufferToBuffer(B.state[this._currentState], 0, B.snapshotRead, 0, STATE_BYTES);
+    command.copyBufferToBuffer(B.efficacy, 0, B.snapshotRead, STATE_BYTES, PLASTIC_VECTOR_BYTES);
+    command.copyBufferToBuffer(B.eligibility, 0, B.snapshotRead,
+      STATE_BYTES + PLASTIC_VECTOR_BYTES, PLASTIC_VECTOR_BYTES);
     this.device.queue.submit([command.finish()]);
     await B.snapshotRead.mapAsync(GPUMapMode.READ);
     const state = new Uint8Array(B.snapshotRead.getMappedRange()).slice();
     B.snapshotRead.unmap();
     const metadata = encoder.encode(JSON.stringify({
-      format: 'chreatures-cns-webgpu-state-v4',
+      format: 'chreatures-cns-webgpu-state-v5',
       identity: this.identity,
       capacity: this.capacity,
       times: Array.from(this.times),
       identities: this.identities,
       stepSerial: this.stepSerial,
+      activeMask: this.activeMask,
+      lastResetMask: this.lastResetMask,
       stateBytes: STATE_BYTES,
+      efficacyBytes: PLASTIC_VECTOR_BYTES,
+      eligibilityBytes: PLASTIC_VECTOR_BYTES,
       stateLayout: 'neuron-major rate/adaptation/support/release/mDA/mOA/mHT vec4 f32-le',
+      plasticityLayout: 'edge-major efficacy-deviation/eligibility vec4 f32-le',
     }));
     const paddedMetadataLength = Math.ceil(metadata.length / 4) * 4;
     const result = new ArrayBuffer(12 + paddedMetadataLength + state.length);
@@ -775,18 +935,21 @@ export class MaleCNSWebGPU {
     if (!SNAPSHOT_MAGIC.every((value, index) => bytes[index] === value)) throw new Error('snapshot magic differs');
     const metadataLength = new DataView(snapshot).getUint32(8, true);
     const paddedMetadataLength = Math.ceil(metadataLength / 4) * 4;
-    if (12 + paddedMetadataLength + STATE_BYTES !== snapshot.byteLength) throw new Error('snapshot length differs');
+    if (12 + paddedMetadataLength + SNAPSHOT_STATE_BYTES !== snapshot.byteLength) throw new Error('snapshot length differs');
     let metadata;
     try { metadata = JSON.parse(decoder.decode(bytes.subarray(12, 12 + metadataLength))); }
     catch { throw new Error('snapshot metadata is invalid JSON'); }
-    if (metadata.format !== 'chreatures-cns-webgpu-state-v4' || metadata.capacity !== this.capacity ||
-        metadata.stateBytes !== STATE_BYTES || !identityEqual(metadata.identity, this.identity)) {
+    if (metadata.format !== 'chreatures-cns-webgpu-state-v5' || metadata.capacity !== this.capacity ||
+        metadata.stateBytes !== STATE_BYTES || metadata.efficacyBytes !== PLASTIC_VECTOR_BYTES ||
+        metadata.eligibilityBytes !== PLASTIC_VECTOR_BYTES || !identityEqual(metadata.identity, this.identity)) {
       throw new Error('snapshot identity or dimensions differ');
     }
     if (!Array.isArray(metadata.times) || metadata.times.length !== this.capacity ||
         metadata.times.some(value => !Number.isFinite(value) || value < 0) ||
         !Array.isArray(metadata.identities) || metadata.identities.length !== this.capacity ||
-        !Number.isSafeInteger(metadata.stepSerial) || metadata.stepSerial < 0) {
+        !Number.isSafeInteger(metadata.stepSerial) || metadata.stepSerial < 0 ||
+        !Number.isSafeInteger(metadata.activeMask) || (metadata.activeMask & ~((1 << this.capacity) - 1)) !== 0 ||
+        !Number.isSafeInteger(metadata.lastResetMask) || (metadata.lastResetMask & ~0xf) !== 0) {
       throw new Error('snapshot host state is invalid');
     }
     const stateOffset = 12 + paddedMetadataLength;
@@ -801,14 +964,32 @@ export class MaleCNSWebGPU {
             !Number.isFinite(da)||!Number.isFinite(oa)||!Number.isFinite(ht)) throw new Error(`snapshot contains invalid neural state at ${neuron}/${lane}: ${rate},${adaptation},${support},${release},${da},${oa},${ht}`);
       }
     }
+    const efficacyOffset = stateOffset + STATE_BYTES;
+    const eligibilityOffset = efficacyOffset + PLASTIC_VECTOR_BYTES;
+    const efficacy = new Float32Array(snapshot, efficacyOffset, PLASTIC_VECTOR_BYTES / 4);
+    const eligibility = new Float32Array(snapshot, eligibilityOffset, PLASTIC_VECTOR_BYTES / 4);
+    for (let edge = 0; edge < CNS_COUNTS.plasticEdges; edge++) {
+      const target = edge < 2048 ? 0 : 1;
+      const maximum = this._plasticityRules[target * 3 + 2];
+      for (let lane = 0; lane < MAX_CAPACITY; lane++) {
+        const deviation = efficacy[edge * 4 + lane], trace = eligibility[edge * 4 + lane];
+        if (!Number.isFinite(deviation) || deviation < -maximum || deviation > 0 ||
+            !Number.isFinite(trace) || trace < 0 || trace > 1) {
+          throw new Error(`snapshot contains invalid plastic state at ${edge}/${lane}: ${deviation},${trace}`);
+        }
+      }
+    }
     const stateBytes = bytes.subarray(stateOffset);
     let upload;
     try {
-      upload=createBuffer(this.device,'CNS V4 restore staging',STATE_BYTES,GPUBufferUsage.COPY_SRC,stateBytes);
-      const command=this.device.createCommandEncoder({label:'CNS V4 restore'});
+      upload=createBuffer(this.device,'CNS V5 restore staging',SNAPSHOT_STATE_BYTES,GPUBufferUsage.COPY_SRC,stateBytes);
+      const command=this.device.createCommandEncoder({label:'CNS V5 restore'});
       command.copyBufferToBuffer(upload,0,this._buffers.state[0],0,STATE_BYTES);
       command.copyBufferToBuffer(upload,0,this._buffers.state[1],0,STATE_BYTES);
-      const pass=command.beginComputePass({label:'CNS V4 restore activity'});
+      command.copyBufferToBuffer(upload,STATE_BYTES,this._buffers.efficacy,0,PLASTIC_VECTOR_BYTES);
+      command.copyBufferToBuffer(upload,STATE_BYTES+PLASTIC_VECTOR_BYTES,
+        this._buffers.eligibility,0,PLASTIC_VECTOR_BYTES);
+      const pass=command.beginComputePass({label:'CNS V5 restore activity'});
       for(let index=0;index<2;index++) dispatch(pass,this._pipelines.syncActivity,this._groups.syncActivity[index],Math.ceil(CNS_COUNTS.neurons/256));
       pass.end();
       this.device.queue.submit([command.finish()]);
@@ -823,6 +1004,8 @@ export class MaleCNSWebGPU {
     this.times.set(metadata.times);
     this.identities = structuredClone(metadata.identities);
     this.stepSerial = metadata.stepSerial;
+    this.activeMask = metadata.activeMask;
+    this.lastResetMask = metadata.lastResetMask;
     this._poisoned = null;
   }
 

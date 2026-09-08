@@ -87,7 +87,12 @@ fast_j += correction_j
 Use the same current halfstep r and pre-finalization q as the baseline term.
 Freeze d through both halfsteps. Zero d gives exact zero correction, preserving
 the V4 neutral fixed point and initial baseline computation. Accumulate each
-target's selected edges in canonical order; no nondeterministic atomics.
+target's selected edges in canonical order; no nondeterministic edge atomics.
+Metal and WGSL accumulate each target sequentially. Torch keeps that exact edge
+selection/order but uses its backend's deterministic tree reduction for the two
+target sums; cross-backend agreement is numerical, not bitwise. The joined
+receipt must report the measured discrepancy rather than claim identical
+floating-point accumulation.
 
 After both halfsteps and the existing final adaptation/support/release update,
 advance plasticity ONCE at dt=0.01, using final neural rates and release:

@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "probe:cns": "node probe-cns-webgpu.mjs"
+    "probe:cns": "node probe-cns-webgpu.mjs",
+    "probe:cns-v5": "node probe-cns-v5-plasticity.mjs"
   },
   "devDependencies": {
     "webgpu": "0.6.0"

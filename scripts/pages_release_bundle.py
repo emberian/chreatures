@@ -163,11 +163,30 @@ def create(arguments: argparse.Namespace) -> None:
 
     physics = arguments.physics_directory.resolve()
     physical = checked_manifest(
-        physics / "physics-assets.json", physics_sha, "chreatures-browser-physics-assets-v5"
+        physics / "physics-assets.json", physics_sha, "chreatures-browser-physics-assets-v6"
     )
     physical_files = physical.get("assets")
     if not isinstance(physical_files, dict) or not physical_files:
         raise ValueError("Physical release has no authenticated files")
+    required_physical = {
+        "world-runtime.mjs",
+        "pkg/chreatures-fly-world.mjs",
+        "pkg/chreatures-fly-world.wasm",
+        "pkg/chreatures-fly-world-build.json",
+    }
+    if not required_physical.issubset(physical_files):
+        raise ValueError("Unified physical release is incomplete")
+    if any(name.startswith("vendor/mujoco/") or "chreatures_browser_world" in name
+           for name in physical_files):
+        raise ValueError("Physical release retains a superseded runtime")
+    physical_selection = physical.get("selection", {})
+    if (physical_files["world-runtime.mjs"].get("sha256")
+            != physical_selection.get("runtimeSourceSha256")
+            or physical_files["pkg/chreatures-fly-world.mjs"].get("sha256")
+            != physical_selection.get("unifiedModuleMjsSha256")
+            or physical_files["pkg/chreatures-fly-world.wasm"].get("sha256")
+            != physical_selection.get("unifiedModuleWasmSha256")):
+        raise ValueError("Unified physical selection differs from its files")
     for name, expected in physical_files.items():
         checked_file(physics / name, expected, "physical release file")
 
@@ -208,7 +227,12 @@ def create(arguments: argparse.Namespace) -> None:
             "fixtureSha256": physical.get("selection", {}).get("fixtureSha256"),
             "sceneXmlSha256": physical.get("selection", {}).get("sceneXmlSha256"),
             "runtimeSourceSha256": physical.get("selection", {}).get("runtimeSourceSha256"),
-            "browserCoreWasmSha256": physical.get("selection", {}).get("coreWasmSha256"),
+            "unifiedFlyWorldMjsSha256": physical.get("selection", {}).get(
+                "unifiedModuleMjsSha256"
+            ),
+            "unifiedFlyWorldWasmSha256": physical.get("selection", {}).get(
+                "unifiedModuleWasmSha256"
+            ),
             "antennaContactProxyArtifactSha256": physical.get("selection", {}).get(
                 "antennaContactProxyArtifactSha256"
             ),

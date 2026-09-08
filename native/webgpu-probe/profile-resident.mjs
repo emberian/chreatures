@@ -62,8 +62,7 @@ const summarize = values => {
 try {
   const residentWasm = await readFile(resolve(directory, 'live/pkg/resident_runtime_bg.wasm'));
   engine = await LiveEngine.create({baseURL: `http://127.0.0.1:${server.address().port}/live/`, device,
-    modules: {worldWasm: await readFile(resolve(directory, 'live/pkg/chreatures_browser_world_bg.wasm')),
-      initResident: () => initResident({module_or_path: residentWasm})}});
+    modules: {initResident: () => initResident({module_or_path: residentWasm})}});
   timedSync(engine.world, 'sample', 'worldSample');
   timedAsync(engine.brain, 'step', 'brainStep');
   timedSync(engine.resident, 'stepFlat', 'residentStep');
@@ -78,8 +77,8 @@ try {
   }
   const phaseMean = Object.fromEntries(Object.entries(samples).map(([name, values]) =>
     [name, values.reduce((sum, value) => sum + value, 0) / values.length]));
-  const accounted = phaseMean.worldSample + phaseMean.brainStep + phaseMean.residentStep +
-    phaseMean.worldAdvance + phaseMean.residentAcknowledge + 2 * phaseMean.worldObserve;
+  const accounted = Object.entries(samples).filter(([name]) => name !== 'completeTick')
+    .reduce((sum, [, values]) => sum + values.reduce((total, value) => total + value, 0), 0) / ticks;
   const report = {format: 'chreatures-live-phase-profile-v1', engineIdentity: engine.identity,
     adapter: adapter.info?.device || adapter.info?.description || 'Dawn Metal', residents: engine.batch,
     ticks, phases: Object.fromEntries(Object.entries(samples).map(([name, values]) => [name, summarize(values)])),
