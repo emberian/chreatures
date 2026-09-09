@@ -1,9 +1,9 @@
 {
   "archive": {
-    "bytes": 176116483,
-    "root": "chreatures-v5-candidate",
-    "sha256": "6c74b732d063b83e49ff7051e4fd36e8a729fce508c3ce056a07b099fac4bdb8",
-    "url": "https://github.com/emberian/chreatures/releases/download/v5-candidate-77a221d/chreatures-v5-candidate.tar.gz"
+    "bytes": 176164076,
+    "root": "chreatures-v5-garden",
+    "sha256": "505456e9b214bb23865c8193c5af441d0409a36ca3634d0b5c0155ac958977e4",
+    "url": "https://github.com/emberian/chreatures/releases/download/v5-garden-2c040fd/chreatures-v5-garden.tar.gz"
   },
   "competenceStatus": "initialized-untrained-no-competence-claim",
   "components": {
@@ -13,16 +13,16 @@
     "modelComponentSourceRevision": "a9d653740e8cb6a8a631f5a3e3d4d589f2e806d1",
     "modelReleaseSha256": "a2ec21a6d26f0e02ad425afe64e90805846e98b67090a4e98e801ba6e24ca75c",
     "modelReleaseSourceRevision": "a9d653740e8cb6a8a631f5a3e3d4d589f2e806d1",
-    "physicsManifestSha256": "d65551b5ae0348a2aeb327bc968da7297c49f48ab9171a18ab917b776f0922f7",
+    "physicsManifestSha256": "3fa6cc0beec6615b863cf410cd97c7057cf54245ff02d8a0ea3408e051a81418",
     "residentArtifactSha256": "9ed444d59f71b173bd2c189c6119bb61563d420bb4f80f4898fd5c4057c06f35",
     "residentRuntimeWasmSha256": "c4906ff6598477c22430d12719df1079039108ccf62206ce62fa14431414b034",
-    "runtimeManifestSha256": "55ccef0918addc3176e7a621e11c26ce238e422f271f450a3f3dbbfbbc4518b2",
-    "runtimeSourceSha256": "3731ba3abe57ce28d7019bd5f510ced0b37ce13387caec8aeb5cb4325a2071e0",
+    "runtimeManifestSha256": "3985468ca944ff95d0e4b8a8be297308222a5cf5a7cfebb10ddc098a3e83f1c5",
+    "runtimeSourceSha256": "ff94ffd4e4b8748b0e0e903cec07b707d090490a02cc674a404571688b23072e",
     "sceneXmlSha256": "3a3ce4366ae92e0f9ad6a32ff937516aa86a22215c8d0c2ca59275db8e794fa3",
     "serviceArtifactSha256": "7753f6dad93dc8b4e817bec902af9a11c84740e2828d12c9e5c43e6138efabd6",
-    "sourceRuntimeManifestSha256": "8efced2abadbc6c588b9a1ee934334003111910f73a96372ed5fdcb084f23b39",
-    "unifiedFlyWorldMjsSha256": "31e781f3589484fa2d338dd7880c7d4bc51ace2ef034552f2cf4f349da21ce48",
-    "unifiedFlyWorldWasmSha256": "7ac13eefefdd01fb32dad7dd98cf434974952ea79d36a81ddf22caaf2f6bc13f"
+    "sourceRuntimeManifestSha256": "254235a23a2b60d3207ed8d4491fca236a9c8422b37482d0f776c058baeb9ac4",
+    "unifiedFlyWorldMjsSha256": "1b078446e2fec30a3acb26ce37e5a3a23e9a7a26acd0351174d7a0373bf988f1",
+    "unifiedFlyWorldWasmSha256": "b66316d81fb573c4fd8caac056fb5dc9c0b1f749526259a615b331091e2ec420"
   },
   "format": "chreatures-pages-release-selection-v1",
   "layout": {
@@ -30,6 +30,6 @@
     "physical": "physical",
     "runtime": "runtime"
   },
-  "sourceRevision": "77a221dac5e45a3d7d5a0e3438b6edeabe2a3621",
+  "sourceRevision": "2c040fd4c3a48e8805a73ef378928133957eec5d",
   "trainingStatus": "initialized-untrained"
 }

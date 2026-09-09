@@ -1,0 +1,152 @@
+{
+  "format": "chreatures-native-growth-route-receipt-v2",
+  "created_at": "2026-09-08T23:09:01.213Z",
+  "source": {
+    "git_head": "a876bc86adbf76ca9104c68ff205a5d71d0db239",
+    "module_path": "/Users/ember/paperbin/chreatures/integration/fly-world-growth-accounting/chreatures-fly-world.mjs",
+    "module_sha256": "1b078446e2fec30a3acb26ce37e5a3a23e9a7a26acd0351174d7a0373bf988f1",
+    "wasm_path": "/Users/ember/paperbin/chreatures/integration/fly-world-growth-accounting/chreatures-fly-world.wasm",
+    "wasm_sha256": "bd8bb1886b4ae0dc66be50ab12ad75fde6c4155b2bcae5543b79eeadafe9b965",
+    "fixture_path": "/Users/ember/paperbin/chreatures/integration/fly-habitat-v4/seed-20260908-b2/world.json",
+    "fixture_sha256": "114638ae33d0bbbf15f85c1149dbb8a296e75e98ee3a84b1b85a93fbc07f4b65",
+    "seed": 20260908
+  },
+  "scenario": {
+    "residents": 2,
+    "control_dt_s": 0.01,
+    "precheckpoint_ticks": 250,
+    "replay_ticks": 10,
+    "explicit_prepare_each_tick": true,
+    "observer_nonmutating": {
+      "pending_before": 2,
+      "pending_after": 2,
+      "screen_revision_before": 1,
+      "screen_revision_after": 1
+    },
+    "interaction_schedule": {
+      "program_id": 1,
+      "scheduled_at_tick": 0,
+      "starts_at_tick": 0,
+      "event_count": 2,
+      "first_event_tick": 0,
+      "last_event_tick": 255
+    },
+    "screen_revision_checkpoint": 2,
+    "screen_revision_final": 3
+  },
+  "growth": {
+    "aborted_transactions": 0,
+    "birth_capacity_rejected": 0,
+    "birth_clearance_approved": 0,
+    "birth_clearance_blocked": 0,
+    "birth_material_endowed": [],
+    "birth_proposed": 0,
+    "birth_resource_rejected": 0,
+    "committed_births": 0,
+    "committed_constructions": 3,
+    "construction_capacity_rejected": 0,
+    "construction_clearance_approved": 3,
+    "construction_clearance_blocked": 61,
+    "construction_material_allocated": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0.24,
+      0
+    ],
+    "construction_proposed": 64,
+    "construction_resource_rejected": 0,
+    "last_committed": [],
+    "commit_ticks": [
+      {
+        "tick": 200,
+        "route_delta": 0.0625,
+        "commits": [
+          {
+            "kind": "constructed_geometry",
+            "material_quantity": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0.08,
+              0
+            ],
+            "material_store": {
+              "id": "structure-colony-0-200-0",
+              "kind": "structure"
+            },
+            "owner_id": "colony-0",
+            "physics_binding": "growth-4ebddcefdf395e62-199-0-geometry",
+            "proposal_id": "create-structure-colony-0-200-0",
+            "topology_revision": 1
+          },
+          {
+            "kind": "constructed_geometry",
+            "material_quantity": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0.08,
+              0
+            ],
+            "material_store": {
+              "id": "structure-colony-1-200-0",
+              "kind": "structure"
+            },
+            "owner_id": "colony-1",
+            "physics_binding": "growth-53f04444c6cf3cfe-199-0-geometry",
+            "proposal_id": "create-structure-colony-1-200-0",
+            "topology_revision": 1
+          },
+          {
+            "kind": "constructed_geometry",
+            "material_quantity": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0.08,
+              0
+            ],
+            "material_store": {
+              "id": "structure-colony-2-200-0",
+              "kind": "structure"
+            },
+            "owner_id": "colony-2",
+            "physics_binding": "growth-5750e3a6d39ffc6d-199-0-geometry",
+            "proposal_id": "create-structure-colony-2-200-0",
+            "topology_revision": 1
+          }
+        ]
+      }
+    ],
+    "final_structure_count": 3,
+    "topology_revision_initial": 0,
+    "topology_revision_final": 1
+  },
+  "route": {
+    "plan_sha256": "4a87aa16e0c47f5d29a2207a74a6c38d2d6e02e0e5cfee2f110004bf0a3ee937",
+    "max_postcommit_aperture_delta": 0.0625,
+    "fractions_count": 190
+  },
+  "continuity": {
+    "ecology_exact_after_restore": true,
+    "screen_exact_after_restore": true,
+    "ecology_exact_after_replay": true,
+    "screen_exact_after_replay": true,
+    "whole_world_snapshot_bytes_exact": true,
+    "checkpoint_sha256": "4b719e8979901dabad1e6aec4fe03147be6eb1a6e7516b92f6c8d66c4803f8ed",
+    "replayed_snapshot_sha256": "6163b90b332a798db8c3d3f1560ea7d0d77453c91fe0e9ef5ee97ae82f16e955"
+  }
+}
