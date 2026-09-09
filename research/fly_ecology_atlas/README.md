@@ -1,6 +1,31 @@
 # Physical developmental response atlas
 
-## Current measured-aperture native campaign
+## Current committed-response native campaign
+
+`prepare_native.py` now freezes 16 genotypes, three fitting layouts, one untouched
+confirmation layout and 48 independently seeded native worlds. `native_run.py`
+requires the postcommit growth observer schema and records structures by the
+actual `owner_id` and current physical entity binding. Construction material,
+resources and route aperture remain separate measured responses. See
+`COMMITTED_RESPONSE_PLAN.md` for the root review gate, response definitions and
+how the native GAM chooses a diverse proposal set and the next physical layout
+questions.
+
+Prepare only from an authenticated four-layout manifest; preparation does not
+execute the confirmation layout:
+
+```sh
+integrations/.venv/bin/python -m research.fly_ecology_atlas.prepare_native --layout-manifest /absolute/layouts.json --native-binary /absolute/chreatures-fly-world --native-source-revision FULL_COMMIT --output /absolute/campaign
+integrations/.venv/bin/python -m research.fly_ecology_atlas.native_campaign --plan /absolute/campaign/plan.json --results /absolute/campaign/results --workers 4 --budget-minutes 60
+integrations/.venv/bin/python -m research.fly_ecology_atlas.native_fit --plan /absolute/campaign/plan.json --results /absolute/campaign/results --output /absolute/campaign/fit
+integrations/.venv/bin/python -m research.fly_ecology_atlas.native_confirm prepare --plan /absolute/campaign/plan.json --fit /absolute/campaign/fit --output /absolute/campaign/confirmation-plan.json
+```
+
+Root reviews the sealed confirmation plan before `native_campaign` executes its
+four units. `native_confirm evaluate` and `seal_native` then bind the physical
+outcomes and native GAM artifacts. No output is called a promoted genotype.
+
+## Preserved measured-aperture campaign
 
 `prepare_native.py`, `native_run.py`, and `native_campaign.py` run the current
 native MuJoCo host for 32 seconds per world. The design contains 24 genotypes
