@@ -120,6 +120,8 @@ unsafe extern "C" {
     fn fly_world_make_data(model: *const c_void) -> *mut c_void;
     fn fly_world_delete_data(data: *mut c_void);
     fn fly_world_delete_model(model: *mut c_void);
+    fn fly_world_material_albedo_len(model: *const c_void) -> i64;
+    fn fly_world_material_albedo(model: *const c_void, output: *mut f64, count: usize) -> c_int;
     fn fly_world_dimensions(
         model: *const c_void,
         data: *const c_void,
@@ -348,6 +350,21 @@ impl Physics {
     }
     pub fn time(&self) -> f64 {
         self.dimensions().time
+    }
+    pub fn material_texture_albedo(&self) -> Result<Vec<f64>, String> {
+        let length = unsafe { fly_world_material_albedo_len(self.model.as_ptr()) };
+        if length < 0 {
+            return Err("MuJoCo material texture albedo shape differs".into());
+        }
+        let mut output = vec![0.0; length as usize];
+        if unsafe {
+            fly_world_material_albedo(self.model.as_ptr(), output.as_mut_ptr(), output.len())
+        } == 1
+        {
+            Ok(output)
+        } else {
+            Err("MuJoCo material texture albedo read failed".into())
+        }
     }
     pub fn num(&self, field: NumField) -> Result<Vec<f64>, String> {
         let n = unsafe { fly_world_num_len(self.model.as_ptr(), field as i32) };

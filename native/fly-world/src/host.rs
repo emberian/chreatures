@@ -269,6 +269,7 @@ struct PreparedPhysical {
     xml: String,
     base_force_range: Vec<f64>,
     base_gain: Vec<f64>,
+    material_texture_albedo: Vec<f64>,
     topology_changed: bool,
 }
 
@@ -283,6 +284,7 @@ pub struct NativeFlyWorld {
     core: WorldCore,
     base_force_range: Vec<f64>,
     base_gain: Vec<f64>,
+    material_texture_albedo: Vec<f64>,
     retinal_sites: [Vec<usize>; 2],
     growth_rays: Vec<[f64; 3]>,
     frame: Vec<f32>,
@@ -519,6 +521,7 @@ impl NativeFlyWorld {
         }
         let base_force_range = physics.num(crate::ffi::NumField::ActuatorForceRange)?;
         let base_gain = physics.num(crate::ffi::NumField::ActuatorGainPrm)?;
+        let material_texture_albedo = physics.material_texture_albedo()?;
         let core = WorldCore::new(std::str::from_utf8(&fixture_bytes).unwrap(), seed)?;
         let route_open = config
             .ecology
@@ -560,6 +563,7 @@ impl NativeFlyWorld {
             core,
             base_force_range,
             base_gain,
+            material_texture_albedo,
             retinal_sites,
             frame: vec![0.0; 12],
             width: 2,
@@ -651,7 +655,12 @@ impl NativeFlyWorld {
         "atlas_sha256":self.config.atlas_sha256,"morphology_sha256":self.config.morphology_sha256,
         "sensory_schema_sha256":self.config.sensory_schema_sha256,"actuator_schema_sha256":self.config.actuator_schema_sha256,
         "bodies":self.fixture_value["bodies"],"entities":self.fixture_value["entities"],
-        "wing_aerodynamics":self.fixture_value["wing_aerodynamics"] })
+        "wing_aerodynamics":self.fixture_value["wing_aerodynamics"],
+        "resolved_color_model": {
+            "format": "mujoco-material-texture-area-mean-v1",
+            "semantics": "MatRgba RGB multiplied by area-mean compiled base-color texture albedo; sRGB texture bytes decoded to linear before averaging; alpha remains MatRgba alpha",
+            "approximation": "representative material color, not UV-resolved sampling"
+        } })
     }
     pub fn set_screen(&mut self, frame: &[f32], width: usize, height: usize) -> Result<(), String> {
         if width == 0
@@ -1714,14 +1723,24 @@ impl NativeFlyWorld {
         let matid = self.physics.int(crate::ffi::IntField::GeomMatId)?;
         let geom = self.physics.num(crate::ffi::NumField::GeomRgba)?;
         let material = self.physics.num(crate::ffi::NumField::MatRgba)?;
+        if self.material_texture_albedo.len() != dimensions.nmat * 3 {
+            return Err("cached material texture albedo shape differs".into());
+        }
         let mut out = vec![0.0; dimensions.ngeom * 4];
         for id in 0..dimensions.ngeom {
-            let source = if matid[id] >= 0 {
-                &material[matid[id] as usize * 4..matid[id] as usize * 4 + 4]
+            if matid[id] >= 0 {
+                let material_id = matid[id] as usize;
+                if material_id >= dimensions.nmat {
+                    return Err("geometry material index outside compiled model".into());
+                }
+                for channel in 0..3 {
+                    out[id * 4 + channel] = material[material_id * 4 + channel]
+                        * self.material_texture_albedo[material_id * 3 + channel];
+                }
+                out[id * 4 + 3] = material[material_id * 4 + 3];
             } else {
-                &geom[id * 4..id * 4 + 4]
-            };
-            out[id * 4..id * 4 + 4].copy_from_slice(source);
+                out[id * 4..id * 4 + 4].copy_from_slice(&geom[id * 4..id * 4 + 4]);
+            }
         }
         Ok(out)
     }
@@ -2135,6 +2154,7 @@ impl NativeFlyWorld {
                 .iter()
                 .any(|v| v.get("contype").is_some() || v.get("conaffinity").is_some());
         Ok(Some(PreparedPhysical {
+            material_texture_albedo: candidate.material_texture_albedo()?,
             physics: candidate,
             fixture_value: fixture,
             host,
@@ -2155,6 +2175,7 @@ impl NativeFlyWorld {
             self.xml = t.xml;
             self.base_force_range = t.base_force_range;
             self.base_gain = t.base_gain;
+            self.material_texture_albedo = t.material_texture_albedo;
             self.clearance_scratch = None;
             self.resize_aero_buffers();
             if changed {
@@ -2492,6 +2513,7 @@ impl NativeFlyWorld {
         physics.write_num(crate::ffi::NumField::ActuatorForceRange, &saved.force_range)?;
         physics.write_num(crate::ffi::NumField::ActuatorGainPrm, &saved.gain)?;
         physics.forward()?;
+        let material_texture_albedo = physics.material_texture_albedo()?;
         saved
             .route_geometry
             .validate(&self.route_plan)
@@ -2539,6 +2561,7 @@ impl NativeFlyWorld {
         self.last_illumination = saved.last_illumination;
         self.base_force_range = saved.base_force_range;
         self.base_gain = saved.base_gain;
+        self.material_texture_albedo = material_texture_albedo;
         self.clearance_scratch = None;
         self.visitor_forces = saved.visitor_forces;
         self.visitor_counter = saved.visitor_counter;

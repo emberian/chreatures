@@ -44,13 +44,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, .load-button:focus-w
 .live-shell { height: calc(100vh - 58px); display: grid; grid-template-columns: minmax(0, 1fr) 390px; }
 .world-panel { position: relative; min-width: 0; overflow: hidden; background: radial-gradient(circle at 52% 28%, #d9e3cf 0, #aebfac 58%, #799889 100%); }
 #world-canvas { display: block; width: 100%; height: 100%; touch-action: none; background: #aebdab; }
-.world-wash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 43%, transparent 52%, rgba(21,48,39,.15) 100%), linear-gradient(180deg, rgba(255,244,213,.035), transparent 30%, transparent 76%, rgba(17,45,35,.1)); }
+.world-wash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 43%, transparent 56%, rgba(21,48,39,.08) 100%), linear-gradient(180deg, rgba(255,244,213,.025), transparent 30%, transparent 80%, rgba(17,45,35,.05)); }
 .clock-card, .world-title, .camera-bar, .resident-list { position: absolute; z-index: 2; }
 .clock-card { top: 18px; left: 20px; display: flex; gap: 18px; padding: 9px 12px; border: 1px solid rgba(255,255,255,.72); border-radius: 8px; background: rgba(246,241,224,.77); backdrop-filter: blur(12px); color: var(--muted); font: 10px var(--mono); text-transform: uppercase; }
 .clock-card strong { margin-left: 5px; color: var(--ink); font-weight: 500; }
-.world-title { right: 22px; top: 18px; text-align: right; text-shadow: 0 1px 14px #fff; }
-.world-title span { display: block; color: var(--muted); font: 10px var(--mono); text-transform: uppercase; letter-spacing: .1em; }
-.world-title strong { font: 32px/1.1 var(--serif); }
+.world-title { right: 18px; top: 14px; padding: 8px 11px 7px; border: 1px solid rgba(246,241,224,.45); border-radius: 8px; background: rgba(238,241,218,.72); box-shadow: 0 5px 22px rgba(17,45,35,.12); backdrop-filter: blur(10px); color: var(--ink); text-align: right; }
+.world-title span { display: block; color: #49645b; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .1em; }
+.world-title strong { font: 32px/1.1 var(--serif); text-shadow: 0 1px rgba(255,255,255,.35); }
 .camera-bar { left: 20px; bottom: 22px; display: flex; padding: 4px; gap: 3px; border-radius: 8px; background: rgba(22,49,40,.86); backdrop-filter: blur(10px); }
 .camera-bar button { padding: 8px 11px; border-radius: 5px; background: transparent; color: #dce9df; font-size: 11px; }
 .camera-bar button[aria-pressed=true] { background: var(--ivory); color: var(--ink); }
