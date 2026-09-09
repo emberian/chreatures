@@ -1678,3 +1678,63 @@ changes and exact same-runtime restores; no JavaScript per-substep physics loop
 remains in the current release. The selected V5 public archive keeps the model
 initialized and untrained and uses the same richer antenna-enabled B2 habitat.
 New saves use CHLIVE5; older lives retain their archived engine.
+
+### September 8, evening: native encounters, committed growth and renderer repair
+
+The washed-out public garden exposed a real observation defect: material-backed
+MuJoCo geoms exported raw white geometry RGBA instead of their effective material
+RGBA. The native observer now uses the same material resolution as the retinal
+path; the geometry catalog retains its explicitly raw data. The renderer converts
+authored RGB once, reduces exposure, adds shadows, and frames a selected fly's
+neighborhood. Follow translates the camera with the resident. The earlier inert
+Start button was separately fixed by mapping Three.js imports; Pages now links
+its actual module graph headlessly before deployment.
+
+The successor native host stores model-time encounter programs: bounded tones,
+160×120 screen patterns and forces on actual movable objects. Preparation occurs
+before the next sensory sample, while observer reads leave the queue untouched.
+The UI composes sequences and displays delivered native pixels. Native snapshot
+v2 and whole-life CHLIVE6 preserve the queue, screen revision and delayed context.
+Existing lives keep their archived engine; no compatibility runtime is added.
+
+The complete CNS V5/Rust resident/MuJoCo encounter scenario executed 131 physical
+advances, including replay, with exact whole-life, neural, body and pending-suffix
+continuation. Mean complete tick was 176.1 ms on the M2 Max; this is neither a
+browser rendering benchmark nor learned competence. The pinned receipt is
+`data/development/cns-v5-native-encounters-joined.receipt.json`.
+
+Growth accounting now distinguishes proposed, clearance-approved, rejected and
+physically committed outcomes. The native 260-tick scenario committed three
+structures at tick 200, allocated 0.24 synthetic construction material, advanced
+topology from 0 to 1 and immediately changed a route aperture by 0.0625. Exact
+world/ecology/screen replay passed. Receipt:
+`data/development/native-committed-growth-routes.receipt.json`. A new 48-world
+native GAM campaign uses actual committed construction, resource and aperture
+responses across newly pinned layouts, preserving its untouched fourth layout.
+
+Chronological V5 training is now advancing optimizer steps on hbox. Startup
+failures from incomplete staging, a corpus-path mismatch and terminal T versus
+T+1 masks were preserved; all occurred before optimizer updates. The corrected
+full-environment preflight traversed an entire 1,025-observation episode. The
+current a876bc8 run carries all nine fields through whole-world sequences and
+has written its first durable optimizer checkpoint. Persvati separately runs the
+initialized baseline under the frozen physical host for the upcoming matched
+zero/private-context comparison. No trained child is promoted by this release.
+
+The final render exposed the second color omission: the imported fly's materials
+are texture-backed. The successor host caches area-mean albedo from MuJoCo's
+compiled RGB/RGBA texture bytes, honoring explicit sRGB decoding, and multiplies
+it by material RGB. The same representative color feeds native ray sampling and
+the observer; alpha and raw catalog arrays stay unchanged. This is not UV-resolved
+texture sampling. It corrected 122/383 displayed geoms. No initial retinal value
+changed in the paired cold sample because those rays did not hit corrected fly
+surfaces; that comparison is not reported as a retinal effect.
+
+Actual isolated headless Metal/WebGPU Orbit and Follow renders advanced the full
+stack and showed the corrected pigment and anatomy. Temporary render browsers and
+servers were then stopped. The final textured-host whole-life scenario again
+passed 131 physical advances and exact replay. Its mean 315.1 ms tick was measured
+while other ecology/render jobs were active, so it is not an isolated performance
+comparison with the earlier run. Receipts are
+`data/development/cns-v5-textured-garden-joined.receipt.json` and
+`data/development/native-texture-albedo.receipt.json`.

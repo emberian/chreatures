@@ -41,7 +41,10 @@ The selected two-fly habitat contains 156 finite material regions, 190 connectin
 routes, bark shelters, stems, elevated leaves, ramps and movable resource packets.
 Material-funded branching creates physical geometry; light and clearance affect
 where it can grow. Visitors can place a movable object on a chosen surface, push
-it, send tones or put Bad Apple on a physical screen. The inspector shows actual
+it, send tones or put Bad Apple on a physical screen. The encounter composer
+also schedules sequences of tones, colors, gratings and toy pushes in native
+model time. Pending encounters and the delivered screen survive whole-life saves.
+The inspector shows actual
 retinal inputs, all seven neural fields, body signals, motor outputs and the actual
 private synaptic state. One SIMD-enabled Rust/MuJoCo Wasm module now advances the
 physical substeps, sensations and ecology; JavaScript orders whole ticks.
@@ -50,14 +53,30 @@ physical substeps, sensations and ecology; JavaScript orders whole ticks.
 [Try Bad Apple live](https://emberian.github.io/chreatures/live.html?stimulus=bad-apple) ·
 [Fly morphology and mechanics](docs/development/FLY_BODY_ANATOMY.md) ·
 [Antennal touch](docs/development/FLY_ANTENNA_TOUCH.md) ·
-[Download the selected initialized V5 artifacts](https://github.com/emberian/chreatures/releases/tag/v5-candidate-77a221d)
+[Download the selected initialized V5 artifacts](https://github.com/emberian/chreatures/releases/tag/v5-garden-2c040fd)
 
-The complete V5 CNS/body/private-memory run passed 128 physical ticks, exact
-whole-life restoration and insertion/pushing of an object into the changing world.
-Its physical sensory history produced small private changes on all selected edges
-in both residents. The M2 mean complete tick was 151.0 ms for 10 ms of model time;
-this is an execution measurement, not a real-time or browser UI performance claim.
-[Joined receipt](data/development/cns-v5-unified-live-joined.receipt.json).
+The latest complete V5 CNS/body/private-memory run executed 131 physical advances,
+including replay, with exact whole-life restoration and insertion/pushing of an
+object. Its saved encounter suffix delivered exactly the same physical screen
+pixels and sound after restoration; observation did not dispatch pending events.
+The latest M2 mean complete tick was 315.1 ms for 10 ms of model time while other
+ecology and rendering jobs were active. This is a joined execution measurement,
+not an isolated speed comparison, real-time browser performance or learned competence.
+[Joined receipt](data/development/cns-v5-textured-garden-joined.receipt.json).
+
+The display now resolves actual material colors and texture-derived fly pigments,
+with readable shadows and a camera that follows the selected body. Texture colors
+are currently represented by per-material mean albedo, shared by the native ray
+sampler and observer; texture coordinates and detailed patterns are not sampled.
+[Actual in-tab render](docs/assets/live-fly-garden.png) ·
+[Color and continuity receipt](data/development/native-texture-albedo.receipt.json).
+
+Construction now records actual commits separately from clearance approval.
+The joined native growth scenario created three structures, allocated 0.24 of
+the synthetic construction material, and changed measured route aperture by up
+to 0.0625 immediately after commit. Physical geometry, ecology and the screen
+replayed exactly after saving. These are functioning growth rules, not an evolved
+strategy. [Growth receipt](data/development/native-committed-growth-routes.receipt.json).
 
 ### What training has established
 
