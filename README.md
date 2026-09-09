@@ -80,13 +80,18 @@ strategy. [Growth receipt](data/development/native-committed-growth-routes.recei
 
 ### What training has established
 
-**The selected public model is initialized and untrained.** The trained children
-remain research artifacts: offline motor prediction improved, but actual physical
-rollouts toppled sooner and used more effort. The disagreement is recorded rather
-than hidden by promoting the trained model. Torch and WebGPU agree numerically;
-this is a learned-control problem, not merely a deployment discrepancy.
+**The selected public model is initialized and untrained.** The newly trained V5
+model now preserves support in the matched physical comparison: initialized,
+trained with zero context, and trained with private memory each kept all eight
+assessed flies upright for 5.12 seconds. These are two held-out shared worlds per
+condition, not eight independent worlds. Mean horizontal endpoint displacement
+was 0.081 / 0.138 / 0.138 mm, while mechanical work was 23.71 / 54.53 / 57.76
+synthetic units. Private context changed the physical outcome only slightly.
+This resolves the earlier immediate-collapse failure without establishing useful
+locomotion, an acquired association, or a benefit from private control. The new
+weights remain research artifacts. [Matched physical receipt](data/development/cns-v5-trained-physical.receipt.json).
 
-The latest recovery fit reduced motor amplitude and effort but all eight assessed
+The earlier V4 recovery fit reduced motor amplitude and effort but all eight assessed
 flies still fell. A new twelve-world, 49,152-transition corpus instead contains
 long supported walking, stopping, turning and antenna demonstrations: 99.10% of
 transitions stayed upright under supplied teacher control. Those are research
@@ -101,6 +106,17 @@ confirmation targets; those failures remain visible. A new native ecology
 campaign varies inherited branching parameters across physical layouts and uses
 measured route apertures. **Universal Weave** connects the actual episodes, fits,
 controls and contradictory outcomes; its archive is separate from private memory.
+
+The new [growth atlas](https://emberian.github.io/chreatures/ecology.html) replays
+1,716 actual construction samples from 48 genotype–habitat worlds and four
+GAM-proposed confirmations in a fourth layout. All 52 worlds completed; they
+built 16–52 structures using 1.28–4.16 synthetic material units. This was native
+ecology with neutral body controls, without CNS inference. Native GAM predictions
+and their errors are inspectable: on the unseen layout, simply retaining initial
+route permeability predicted the final value better. Material cost is fixed at
+0.08 per structure, so those two responses are dependent. Universal Weave binds
+72 evidence nodes and 123 edges, including the preserved failed launch.
+[Campaign receipt](data/development/native-growth-campaign.receipt.json).
 
 Lifetime learning changes private context memories, bounded consequence estimates
 and the selected anatomical synaptic efficacies. Useful associative learning,

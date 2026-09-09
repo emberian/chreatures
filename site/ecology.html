@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#183128">
+  <title>Native growth atlas — Chreatures</title>
+  <meta name="description" content="A recorded atlas of physical growth across native Chreatures worlds and their held-out GAM predictions.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="ecology.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three/three.module.min.js"}}</script>
+  <script defer src="main.js"></script>
+</head>
+<body class="ecology-page">
+  <a class="skip" href="#main">Skip to content</a>
+  <header><nav class="wrap" aria-label="Main"><a class="brand" href="index.html">chreatures</a><div class="links"><a href="index.html">Living Reef</a><a href="live.html">Live habitat</a><a href="population.html">Population</a><a href="ecology.html" aria-current="page">Growth atlas</a><a href="lab.html">Lab notes</a><a href="https://github.com/emberian/chreatures">GitHub ↗</a></div></nav></header>
+
+  <main id="main">
+    <section class="ecology-hero wrap">
+      <div><p class="kicker">Recorded native ecology · <span id="world-count">—</span> worlds</p><h1>How a world<br>takes shape.</h1></div>
+      <div class="hero-copy"><p>Inherited growth parameters met different physical layouts for 32 model seconds. This atlas shows the committed structures that the native engine actually produced, alongside the fitted GAM’s prediction for the measured outcomes.</p><p class="quiet">Choose a genotype and layout, then move between recorded samples. The viewer does not run growth, interpolate branches, or fill missing predictions.</p></div>
+    </section>
+
+    <section class="atlas-shell wrap" aria-label="Recorded native growth atlas">
+      <div id="atlas-state" class="atlas-state"><i></i><span>Loading the recorded atlas…</span></div>
+
+      <div id="atlas-content" hidden>
+        <section class="world-card">
+          <div class="world-stage">
+            <canvas id="growth-canvas" aria-label="Recorded three-dimensional committed branch geometry. Drag to orbit and scroll to zoom."></canvas>
+            <div class="stage-shade" aria-hidden="true"></div>
+            <div class="stage-label"><small>recorded physical world</small><strong id="world-title">—</strong><span id="frame-summary">—</span></div>
+            <div class="viewer-badge"><i></i><span>recorded 32 model seconds · viewer only</span></div>
+            <div class="view-modes" role="group" aria-label="World framing"><button type="button" data-view="construction" aria-pressed="true">Construction</button><button type="button" data-view="habitat" aria-pressed="false">Whole habitat</button></div>
+          </div>
+
+          <aside class="world-inspector">
+            <div class="inspector-head"><p class="kicker">World selection</p><h2 id="selection-title">Choose a recorded world</h2><span id="split-badge" class="split-badge">—</span></div>
+            <div class="selectors">
+              <label>Genotype<select id="genotype-select"></select></label>
+              <label>Physical layout<select id="layout-select"></select></label>
+              <label class="colony-control">Colony focus<select id="colony-select"></select></label>
+            </div>
+
+            <section class="parameter-panel" aria-labelledby="parameter-title">
+              <div class="panel-title"><small>Inherited genotype</small><h3 id="parameter-title">Four recorded parameters</h3></div>
+              <dl id="parameters" class="parameter-grid"></dl>
+            </section>
+
+            <section class="outcome-panel" aria-labelledby="outcome-title">
+              <div class="panel-title"><small>Measured at this sample</small><h3 id="outcome-title">Committed physical structure</h3></div>
+              <dl class="outcome-grid"><div><dt>branches</dt><dd id="committed-count">—</dd></div><div><dt>material · native</dt><dd id="committed-material">—</dd></div></dl>
+              <p id="outcome-note">Static habitat + recorded colony construction; moving bodies and packets are omitted.</p>
+            </section>
+          </aside>
+
+          <div class="timeline-panel">
+            <button id="playback" type="button" aria-pressed="false"><span aria-hidden="true">▶</span> Play samples</button>
+            <label class="timeline-control"><span><b>Recorded sample</b><output id="time-output">—</output></span><input id="time-slider" type="range" min="0" max="0" step="1" value="0" aria-label="Recorded model-time sample"></label>
+            <div id="sample-marks" class="sample-marks" aria-hidden="true"></div>
+          </div>
+        </section>
+
+        <section class="comparison-card" aria-labelledby="comparison-title">
+          <div class="comparison-copy"><p class="kicker">Prediction audit</p><h2 id="comparison-title">Predicted against measured.</h2><p id="comparison-description">Predictions are conditional on the measured pre-construction environment. Pre-launch forecasts for proposed genotypes are a separate record.</p><label class="target-control">Measured target<select id="target-select"></select></label><dl id="prediction-facts" class="prediction-facts"></dl></div>
+          <figure class="comparison-figure"><div class="plot-wrap"><canvas id="comparison-canvas" width="900" height="470" aria-label="GAM predicted versus measured values across recorded worlds"></canvas><output id="plot-status">Waiting for recorded predictions</output></div><figcaption><span><i class="fit-key"></i> fit world</span><span><i class="holdout-key"></i> whole-genotype holdout</span><span><i class="proposal-key"></i> proposed confirmation</span><span><i class="selected-key"></i> selected world</span><span id="plot-scale">Measured on x · predicted on y</span></figcaption></figure>
+        </section>
+
+        <section class="evidence-boundary"><div><p class="kicker">Evidence boundary</p><h2>Nothing grows in this page.</h2></div><div><p>This is a read-only rendering of sparse native samples from <span id="evidence-world-count">—</span> completed 32-model-second worlds. Playback visits those samples in order. It does not invent intermediate time, branches, material, or unavailable predictions.</p><p id="record-identity" class="record-identity">Record identity loading…</p></div></section>
+      </div>
+
+      <section id="atlas-empty" class="atlas-empty"><span>⌁</span><h2>The growth record is unavailable.</h2><p>The atlas stays empty rather than reconstructing unrecorded ecology.</p></section>
+    </section>
+  </main>
+
+  <footer class="wrap footer"><p>Chreatures · recorded native-growth atlas<br>Viewer only; no simulation runs here</p><p><a href="population.html">Population observatory</a> · <a href="lab.html">Lab notes</a><br>Site revision <a class="revision" data-revision href="https://github.com/emberian/chreatures">in development</a></p></footer>
+  <script type="module" src="ecology.js"></script>
+</body>
+</html>

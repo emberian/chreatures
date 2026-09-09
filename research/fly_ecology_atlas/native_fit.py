@@ -28,11 +28,14 @@ TARGETS = (
     "route_permeability",
     "route_permeability_change",
 )
-MODEL_FEATURES = (*FEATURES, *ENV)
+VARYING_MODEL_FEATURES = (*FEATURES, "initial_route_permeability")
 FORMULAS = {
-    "joint": "response ~ duchon(" + ",".join(MODEL_FEATURES) + ",centers=12)",
+    "joint": "response ~ duchon("
+    + ",".join(VARYING_MODEL_FEATURES)
+    + ",centers=12)",
     "additive": "response ~ "
-    + "+".join(f"s({name},k=3)" for name in MODEL_FEATURES),
+    + "+".join(f"s({name},k=3)" for name in FEATURES)
+    + "+initial_route_permeability",
 }
 REPORT_FORMAT = "chreatures-native-fly-ecology-gam-v3"
 
@@ -474,6 +477,12 @@ def main() -> None:
         "native_gam": gam.build_info(),
         "native_version": gam.__version__,
         "formulas": FORMULAS,
+        "effective_model_features": list(VARYING_MODEL_FEATURES),
+        "measured_environment_fields": list(ENV),
+        "constant_environment_fields_excluded_from_formulas": [
+            "initial_blocked_fraction",
+            "initial_minimum_aperture",
+        ],
         "experimental_unit": plan["experimental_unit"],
         "records": records,
         "failed_units": failures,

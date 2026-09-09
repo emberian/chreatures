@@ -1,0 +1,403 @@
+{
+  "campaign": "committed-construction-resource-aperture-native-host",
+  "claim_limit": "Actual native MuJoCo colony construction/resource/aperture response under neutral diagnostic MOTOR92. No CNS or fly-skill evaluation; clearance approval is never a committed branch.",
+  "completed_confirmation_worlds": 4,
+  "completed_fit_worlds": 48,
+  "confirmation_sha256": "3a9989a76b394d3d84a13abd830aa9678310f342917de09a5d9f1cdb24b022f6",
+  "counter_semantics": {
+    "committed_constructions": "post-core and post-physical commit with owner_id/physics_binding verification",
+    "construction_clearance_approved": "host clearance only; never a committed branch",
+    "construction_material_allocated": "cumulative postcommit transfer quantities by pool"
+  },
+  "diversity_proposals": [
+    {
+      "genes": {
+        "branch_angle_rad": 0.27632974799985527,
+        "contact_avoidance": 1.9393933452009355,
+        "lateral_probability": 0.720659191181142,
+        "phototropism": 0.18486712214994402
+      },
+      "genotype_id": "confirmation-diversity-00",
+      "predicted_fit_layout_mean": {
+        "colony_resource_change": -1.5645905118559522,
+        "committed_constructions": 15.348755717359255,
+        "construction_material": 1.2279004573887013,
+        "route_permeability": 0.23393840473453956,
+        "route_permeability_change": 7.316095740780032e-05
+      },
+      "predicted_fit_layout_range": {
+        "colony_resource_change": [
+          -1.5645907150204976,
+          -1.5645902867143684
+        ],
+        "committed_constructions": [
+          15.348751187413967,
+          15.348759805117062
+        ],
+        "construction_material": [
+          1.227900091318724,
+          1.2279007877250103
+        ],
+        "route_permeability": [
+          0.22153639033773903,
+          0.24512980490691202
+        ],
+        "route_permeability_change": [
+          -7.78990736492464e-05,
+          0.00024056169826976016
+        ]
+      },
+      "selection": "native-GAM maximin diversity in predicted joint construction/resource/aperture response and gene space; no scalar winner or promotion",
+      "split": "confirmation"
+    },
+    {
+      "genes": {
+        "branch_angle_rad": 1.079608543637617,
+        "contact_avoidance": 0.5905667280045481,
+        "lateral_probability": 0.16758069254859315,
+        "phototropism": 1.538367174862064
+      },
+      "genotype_id": "confirmation-diversity-01",
+      "predicted_fit_layout_mean": {
+        "colony_resource_change": -3.9707150721800537,
+        "committed_constructions": 42.68867784862628,
+        "construction_material": 3.4150942278901084,
+        "route_permeability": 0.2339365314956757,
+        "route_permeability_change": -4.514663577647503e-05
+      },
+      "predicted_fit_layout_range": {
+        "colony_resource_change": [
+          -3.9707152753446193,
+          -3.9707148470384537
+        ],
+        "committed_constructions": [
+          42.68867331868081,
+          42.68868193638431
+        ],
+        "construction_material": [
+          3.4150938618201163,
+          3.415094558226435
+        ],
+        "route_permeability": [
+          0.22153451709887517,
+          0.24512793166804817
+        ],
+        "route_permeability_change": [
+          -0.00019620666690280502,
+          0.00012225410514088395
+        ]
+      },
+      "selection": "native-GAM maximin diversity in predicted joint construction/resource/aperture response and gene space; no scalar winner or promotion",
+      "split": "confirmation"
+    },
+    {
+      "genes": {
+        "branch_angle_rad": 0.2907224547126212,
+        "contact_avoidance": 0.2734908520694013,
+        "lateral_probability": 0.1173535232062315,
+        "phototropism": 0.24022252250596052
+      },
+      "genotype_id": "confirmation-diversity-02",
+      "predicted_fit_layout_mean": {
+        "colony_resource_change": -3.2097670961659097,
+        "committed_constructions": 34.04197103714031,
+        "construction_material": 2.7233576829711974,
+        "route_permeability": 0.23393734037562772,
+        "route_permeability_change": 7.810410430776904e-05
+      },
+      "predicted_fit_layout_range": {
+        "colony_resource_change": [
+          -3.209767299330535,
+          -3.209766871024262
+        ],
+        "committed_constructions": [
+          34.04196650719429,
+          34.04197512489901
+        ],
+        "construction_material": [
+          2.7233573169011622,
+          2.7233580133075783
+        ],
+        "route_permeability": [
+          0.22153532597882716,
+          0.24512874054800016
+        ],
+        "route_permeability_change": [
+          -7.295592693365618e-05,
+          0.00024550484531715814
+        ]
+      },
+      "selection": "native-GAM maximin diversity in predicted joint construction/resource/aperture response and gene space; no scalar winner or promotion",
+      "split": "confirmation"
+    },
+    {
+      "genes": {
+        "branch_angle_rad": 1.0961064802650078,
+        "contact_avoidance": 1.7969972239800953,
+        "lateral_probability": 0.16362197841447132,
+        "phototropism": 0.16396107004836333
+      },
+      "genotype_id": "confirmation-diversity-03",
+      "predicted_fit_layout_mean": {
+        "colony_resource_change": -2.8942879492234397,
+        "committed_constructions": 30.4570136411416,
+        "construction_material": 2.43656109129132,
+        "route_permeability": 0.23393363561814332,
+        "route_permeability_change": -5.8614475314869297e-05
+      },
+      "predicted_fit_layout_range": {
+        "colony_resource_change": [
+          -2.894288152388061,
+          -2.8942877240817957
+        ],
+        "committed_constructions": [
+          30.457009111195628,
+          30.457017728900265
+        ],
+        "construction_material": [
+          2.436560725221288,
+          2.4365614216276974
+        ],
+        "route_permeability": [
+          0.22153162122134276,
+          0.24512503579051576
+        ],
+        "route_permeability_change": [
+          -0.00020967450641264698,
+          0.00010878626557966236
+        ]
+      },
+      "selection": "native-GAM maximin diversity in predicted joint construction/resource/aperture response and gene space; no scalar winner or promotion",
+      "split": "confirmation"
+    }
+  ],
+  "experimental_unit": "one fresh native process/world seed for one genotype-layout cell; two colonies within a world are coupled subsamples and never treated as replicates",
+  "failed_confirmation_worlds": 0,
+  "failed_fit_worlds": 0,
+  "fit_receipt_sha256": "2a6c04dd894756abbdca21762945a4e5ef71f7f4400b62ac20c04c0f3405c8cd",
+  "fit_report_sha256": "d03f832b581962311cd401208799ad10fac44601fde5a7cf043a18137c6b8aeb",
+  "format": "chreatures-native-fly-ecology-atlas-receipt-v3",
+  "historical_aperture_rows_reused": false,
+  "historical_evidence_status": "preserved separately; not pooled because committed-growth and immediate-route-invalidation contracts differ",
+  "native_binary_sha256": "63ca45027f3bdd405ba9c35ba6e8e599bdffd9f7912fc3b25e061c37d0b34dcf",
+  "native_gam": {
+    "abi3": "cp310+",
+    "available": true,
+    "capabilities": [
+      "fit",
+      "fit_array",
+      "load",
+      "extend_with_group",
+      "torch_from_fitted",
+      "predict",
+      "transformation_score",
+      "predict_array",
+      "predict_conformal",
+      "build_predict_payload_json",
+      "interpolate_rows",
+      "survival_chunk_defaults",
+      "survival_chunk_ranges",
+      "survival_should_chunk",
+      "survival_chunk_iter_collect",
+      "write_survival_csv",
+      "default_survival_time_grid",
+      "competing_risks_cif",
+      "competing_risks_cif_from_predictions",
+      "survival_prediction_payload_from_json",
+      "competing_risks_prediction_payload_from_json",
+      "sample",
+      "summary",
+      "summary_html",
+      "check",
+      "report",
+      "sklearn_fit_metadata",
+      "cross_fit_shared_precision_groups",
+      "save",
+      "validate_formula",
+      "formula_validation_repr",
+      "formula_validation_html",
+      "design_matrix_array",
+      "basis",
+      "basis_with_jet",
+      "duchon_function_norm_penalty",
+      "duchon_operator_penalties",
+      "thin_plate_penalty",
+      "gaussian_weighted_ridge_array",
+      "gaussian_weighted_ridge_batch",
+      "gaussian_weighted_ridge_batch_backward",
+      "gaussian_reml_score",
+      "gaussian_reml_fit",
+      "gaussian_reml_fit_backward",
+      "gaussian_reml_fit_batched",
+      "gaussian_reml_fit_batched_backward",
+      "gaussian_reml_fit_positions",
+      "gaussian_reml_fit_positions_backward",
+      "gaussian_reml_fit_positions_batched",
+      "gaussian_reml_fit_positions_batched_backward",
+      "gaussian_reml_fit_latent",
+      "gaussian_reml_fit_latent_backward",
+      "glm_reml_fit_latent",
+      "glm_reml_fit_latent_backward",
+      "equivariant_penalty_value",
+      "skip_transcoder_reml_metrics",
+      "_block_diag",
+      "tierney_kadane_normalized_score",
+      "gaussian_reml_fit_formula_table",
+      "gaussian_reml_fit_with_constraints_forward",
+      "gaussian_reml_fit_with_constraints_backward",
+      "sphere_frechet_mean",
+      "response_geometry_closure",
+      "response_geometry_clr",
+      "response_geometry_alr",
+      "response_geometry_inverse_alr",
+      "response_geometry_simplex_frechet_mean",
+      "response_geometry_simplex_log_map",
+      "response_geometry_simplex_exp_map",
+      "response_geometry_sphere_log_map",
+      "response_geometry_sphere_exp_map",
+      "response_geometry_ilr",
+      "response_geometry_inverse_ilr",
+      "response_geometry_aitchison_metric",
+      "response_geometry_clr_jet",
+      "response_geometry_simplex_log_map_jet",
+      "response_geometry_simplex_exp_map_jet",
+      "response_geometry_sphere_exp_map_jet",
+      "response_geometry_fit_curvature",
+      "response_geometry_normalize_fisher_rao",
+      "equivariant_rho_so2",
+      "equivariant_rho_so2_jvp",
+      "equivariant_rho_so3",
+      "equivariant_rho_so3_jvp",
+      "equivariant_gauge_companion_loss"
+    ],
+    "crate": "gam-pyffi",
+    "cuda_diagnostics": {
+      "conflicts": {},
+      "mapped": {},
+      "packaged_complete_stacks": [],
+      "packaged_cuda_library_dirs": [],
+      "packaged_nvidia_roots": [],
+      "platform": "darwin",
+      "system_complete_stacks": [],
+      "system_driver_libraries": []
+    },
+    "engine_crate": "gam",
+    "module": "gamfit._rust",
+    "python_module": "gam._rust",
+    "sae_row_block_penalties": [
+      "ard",
+      "top_k_activation",
+      "smooth_threshold",
+      "sparsity",
+      "row_precision_prior",
+      "parametric_row_precision_prior",
+      "scad_mcp",
+      "block_orthogonality",
+      "isometry"
+    ],
+    "supported_model_classes": [
+      "standard",
+      "transformation-normal",
+      "survival",
+      "competing-risks-survival",
+      "bernoulli-marginal-slope",
+      "survival-marginal-slope",
+      "survival-location-scale",
+      "latent-survival",
+      "latent-binary",
+      "gaussian-location-scale",
+      "binomial-location-scale"
+    ],
+    "version": "0.1.259"
+  },
+  "native_gam_module_sha256": "31e6052dbefee525ac5249ce7c9f146ac4f9a41861ca8c100adca7ada6e0fd8c",
+  "next_environment_priorities": [
+    {
+      "initial_blocked_fraction": 1.0,
+      "initial_minimum_aperture": 0.0,
+      "initial_route_permeability": 0.24526849174156629,
+      "layout_id": "fit-northwest-oblique",
+      "normalized_model_disagreement": 0.10231591875688353,
+      "normalized_predicted_response_spread": 0.38828987818528465,
+      "priority_score": 0.141144906575412,
+      "use": "compose a distinct physical obstruction/light layout toward this measured aperture signature, then accept it only after native initial aperture measurement"
+    },
+    {
+      "initial_blocked_fraction": 1.0,
+      "initial_minimum_aperture": 0.0,
+      "initial_route_permeability": 0.2351409370412149,
+      "layout_id": "fit-open-overhead",
+      "normalized_model_disagreement": 0.10199747781238235,
+      "normalized_predicted_response_spread": 0.3882898782089953,
+      "priority_score": 0.14082646563328188,
+      "use": "compose a distinct physical obstruction/light layout toward this measured aperture signature, then accept it only after native initial aperture measurement"
+    },
+    {
+      "initial_blocked_fraction": 1.0,
+      "initial_minimum_aperture": 0.0,
+      "initial_route_permeability": 0.2213281329498241,
+      "layout_id": "fit-east-oblique",
+      "normalized_model_disagreement": 0.10169386728163574,
+      "normalized_predicted_response_spread": 0.3882898782208353,
+      "priority_score": 0.14052285510371926,
+      "use": "compose a distinct physical obstruction/light layout toward this measured aperture signature, then accept it only after native initial aperture measurement"
+    }
+  ],
+  "plan_sha256": "7a929f15bc56d3cb5cc3339015599ddf6372b9fc24b48a71791bdc0d9b2091a4",
+  "promoted": [],
+  "realized_response_diversity": {
+    "maximum_pairwise_standardized_response_distance": 5.327841040244876,
+    "minimum_pairwise_standardized_response_distance": 1.7056057313847806
+  },
+  "response_ranges": {
+    "colony_resource_change": [
+      -4.773798509156155,
+      -1.605479642905678
+    ],
+    "committed_constructions": [
+      16.0,
+      52.0
+    ],
+    "construction_material": [
+      1.28,
+      4.160000000000002
+    ],
+    "route_permeability": [
+      0.22163031963692859,
+      0.24526849174156629
+    ],
+    "route_permeability_change": [
+      -0.00030233326507969616,
+      0.00030218668710449426
+    ]
+  },
+  "runner_sha256": "0cb1e6ec613dedb898fda762c550e08632d8986a3220dfe01af1cf0cbd52fa71",
+  "selected_native_gam_models": [
+    {
+      "model": "joint",
+      "sha256": "69686a72cf08be6dc4b36b718392cf7d713737cf15feee3f16a80460d8111a13",
+      "target": "committed_constructions"
+    },
+    {
+      "model": "joint",
+      "sha256": "6d967567171ef4bb9d59b715a8894eaed371f5e29034dc5ddac492a3adccc096",
+      "target": "construction_material"
+    },
+    {
+      "model": "joint",
+      "sha256": "7ad9b4f68cf86b716de2ac2f17699ee01ad694f015eaf607d716959ce972fee0",
+      "target": "colony_resource_change"
+    },
+    {
+      "model": "additive",
+      "sha256": "7bb95a60aad416a7fa9694da21689f8324a1ea399a672b365f889a823432f160",
+      "target": "route_permeability"
+    },
+    {
+      "model": "joint",
+      "sha256": "4da242879a2dbc691f15fce10c26c59eebbd0831f25af47af0b95d8e46c48d18",
+      "target": "route_permeability_change"
+    }
+  ],
+  "status": "diversity-confirmation-executed-no-promoted-winner"
+}

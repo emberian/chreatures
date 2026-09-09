@@ -49,8 +49,13 @@ branch counts.
 
 ## Native GAM and the next experiments
 
-The installed Rust `gamfit` engine fits joint seven-variable Duchon surfaces and
-additive alternatives for each response. Model choice uses whole-genotype
+The installed Rust `gamfit` engine fits joint five-variable Duchon surfaces and
+additive alternatives for each response. The four genes and measured initial
+permeability vary. Initial blocked fraction and minimum aperture were constant
+across the fitting layouts; their raw measurements remain recorded, but the
+two constant columns were removed after the first additive fits rejected their
+degenerate design. The failed fit and analysis amendment remain preserved.
+Model choice uses whole-genotype
 leave-out error; whole-layout leave-out error measures environmental transfer.
 The four genotype holdouts are reported but cannot tune models or proposals.
 
