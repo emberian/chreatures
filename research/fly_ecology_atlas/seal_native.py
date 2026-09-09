@@ -1,115 +1,81 @@
 #!/usr/bin/env python3
-"""Seal compact evidence for the measured-aperture native-host campaign."""
+"""Seal compact evidence for the committed-response native GAM campaign."""
 from __future__ import annotations
-import argparse, hashlib, json
+
+import argparse
+import importlib
+import json
 from pathlib import Path
 
-
-def sha(path):
-    with Path(path).open("rb") as stream:
-        return hashlib.file_digest(stream, "sha256").hexdigest()
+from research.fly_ecology_atlas.native_fit import TARGETS, sha, write
 
 
-def tree_hash(paths):
-    digest = hashlib.sha256()
-    for path in sorted(paths):
-        digest.update(path.name.encode())
-        digest.update(bytes.fromhex(sha(path)))
-    return digest.hexdigest()
-
-
-def main():
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--campaign", type=Path, required=True)
-    p.add_argument("--output", type=Path, required=True)
-    a = p.parse_args()
-    plan = json.loads((a.campaign / "plan.json").read_text())
-    fit_dir = a.campaign / "fit-native-gam-amended"
-    fit = json.loads((fit_dir / "report.json").read_text())
-    confirmation = json.loads((a.campaign / "confirmation-amended.json").read_text())
-    runs = list((a.campaign / "results").glob("*.json"))
-    confirm_runs = list(
-        (a.campaign / "confirmation-results-parent-proposals").glob("*.json")
-    )
-    if len(runs) != 72 or len(confirm_runs) != 2:
-        raise ValueError("campaign is incomplete")
-    ranges = {
-        target: [
-            float(min(r["metrics"][target] for r in fit["records"])),
-            float(max(r["metrics"][target] for r in fit["records"])),
-        ]
-        for target in fit["targets"]
-    }
-    models = []
-    for target, label in fit["selected_models"].items():
-        path = fit_dir / f"{target}-{label}.gam"
-        models.append({"target": target, "model": label, "sha256": sha(path)})
-    diagnostics = {
-        target: {
-            "sd": data["sd"],
-            "selected": fit["selected_models"].get(target),
-            "fit_leave_genotype_out": data["models"][fit["selected_models"][target]][
-                "fit_leave_genotype_out"
-            ],
-            "validation_genotype_holdout": data["models"][
-                fit["selected_models"][target]
-            ]["validation_genotype_holdout"],
-            "fit_layout_holdout": data["models"][fit["selected_models"][target]][
-                "fit_layout_holdout"
-            ],
-        }
-        for target, data in fit["diagnostics"].items()
-        if target in fit["selected_models"]
-    }
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--plan", type=Path, required=True)
+    parser.add_argument("--fit", type=Path, required=True)
+    parser.add_argument("--confirmation", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    plan = json.loads(args.plan.read_text())
+    fit = json.loads((args.fit / "report.json").read_text())
+    fit_receipt = json.loads((args.fit / "receipt.json").read_text())
+    confirmation = json.loads(args.confirmation.read_text())
+    if (
+        fit["plan_sha256"] != sha(args.plan)
+        or fit_receipt["report_sha256"] != sha(args.fit / "report.json")
+        or confirmation["fit_report_sha256"] != sha(args.fit / "report.json")
+    ):
+        raise ValueError("campaign receipt chain differs")
+    model_artifacts = []
+    for target in TARGETS:
+        label = fit["selected_models"].get(target)
+        if label is None:
+            continue
+        path = args.fit / f"{target}-{label}.gam"
+        model_artifacts.append(
+            {"target": target, "model": label, "sha256": sha(path)}
+        )
+    native_module = importlib.import_module("gamfit._rust")
+    response_ranges = {}
+    for target in TARGETS:
+        values = [item["metrics"][target] for item in fit["records"]]
+        if values:
+            response_ranges[target] = [min(values), max(values)]
     receipt = {
-        "format": "chreatures-native-fly-ecology-atlas-receipt-v2",
+        "format": "chreatures-native-fly-ecology-atlas-receipt-v3",
         "status": confirmation["status"],
-        "campaign": "measured-route-aperture-native-host",
-        "historical_unsampled_campaign_preserved": True,
-        "plan_sha256": sha(a.campaign / "plan.json"),
+        "campaign": "committed-construction-resource-aperture-native-host",
+        "plan_sha256": sha(args.plan),
         "native_binary_sha256": plan["native_binary_sha256"],
         "runner_sha256": plan["runner_sha256"],
-        "fit_report_sha256": sha(fit_dir / "report.json"),
-        "confirmation_sha256": sha(a.campaign / "confirmation-amended.json"),
-        "fit_result_set_sha256": tree_hash(runs),
-        "confirmation_result_set_sha256": tree_hash(confirm_runs),
-        "completed_fit_and_holdout_runs": len(runs),
-        "completed_confirmation_runs": len(confirm_runs),
-        "failed_runs": 0,
-        "duration_seconds_each": plan["seconds"],
-        "genotypes": 24,
-        "fit_layouts": 3,
-        "genotype_holdout_count": 6,
-        "response_ranges": ranges,
-        "selected_native_gam_models": models,
-        "holdout_diagnostics": diagnostics,
-        "confirmation_status": confirmation["status"],
-        "promoted": confirmation["promoted"],
-        "confirmation_records": confirmation["records"],
-        "invalidated_metrics": {
-            "growth.accepted": "clearance-approved construction and birth sites before ecology commit",
-            "growth.blocked": "clearance events; not rejected committed branches and not bounded by proposal count",
-            "branch_count": "frozen runner filtered structure owner instead of owner_id and therefore recorded zero",
+        "fit_report_sha256": sha(args.fit / "report.json"),
+        "fit_receipt_sha256": sha(args.fit / "receipt.json"),
+        "confirmation_sha256": sha(args.confirmation),
+        "completed_fit_worlds": len(fit["records"]),
+        "failed_fit_worlds": len(fit["failed_units"]),
+        "completed_confirmation_worlds": len(confirmation["records"]),
+        "failed_confirmation_worlds": len(confirmation["failed_units"]),
+        "experimental_unit": plan["experimental_unit"],
+        "selected_native_gam_models": model_artifacts,
+        "native_gam": fit["native_gam"],
+        "native_gam_module_sha256": sha(native_module.__file__),
+        "response_ranges": response_ranges,
+        "diversity_proposals": fit["confirmation_proposals"],
+        "realized_response_diversity": confirmation["realized_response_diversity"],
+        "next_environment_priorities": fit["next_environment_priorities"],
+        "historical_aperture_rows_reused": False,
+        "historical_evidence_status": "preserved separately; not pooled because committed-growth and immediate-route-invalidation contracts differ",
+        "counter_semantics": {
+            "construction_clearance_approved": "host clearance only; never a committed branch",
+            "committed_constructions": "post-core and post-physical commit with owner_id/physics_binding verification",
+            "construction_material_allocated": "cumulative postcommit transfer quantities by pool",
         },
-        "invalidated_analysis_sha256": sha(
-            a.campaign / "fit-native-gam-invalidated-precommit-counters/report.json"
-        ),
-        "frozen_runner_copy_sha256": sha(a.campaign / "frozen-native-run.py"),
-        "interpretation": "Measured aperture and colony resource responses varied, and both preserved parent proposals passed those three numerical fourth-layout checks. Neither is promoted because the frozen trace cannot reconstruct committed structure counts. Prepared-site counters are excluded from the amended GAM evidence and make no construction or fly-skill claim.",
+        "promoted": [],
         "claim_limit": plan["claim_limit"],
     }
-    a.output.write_text(
-        json.dumps(receipt, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    )
-    print(
-        json.dumps(
-            {
-                "output": str(a.output),
-                "sha256": sha(a.output),
-                "status": receipt["status"],
-            }
-        )
-    )
+    write(args.output, receipt)
+    print(json.dumps({"output": str(args.output), "sha256": sha(args.output)}))
 
 
 if __name__ == "__main__":
