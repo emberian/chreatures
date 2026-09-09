@@ -57,6 +57,7 @@ from .sampling import BalancedWindowSampler, MixedCausalSampler, Window
 TRAINING_FORMAT = "chreatures-actual-fly-cns-development-fit-v2"
 CHECKPOINT_FORMAT = "chreatures-actual-fly-cns-development-optimizer-v2"
 PREDICTION_HEAD_FORMAT = "chreatures-actual-fly-physical-prediction-heads-v1"
+LATENT_REPLAY_MEMORY_BUDGET_BYTES = 512 * 1024 * 1024
 
 
 def atomic_json(path: Path, value: Any) -> None:
@@ -831,6 +832,15 @@ def _plastic_state_metrics(model: AnatomicalCNS, state: CNSState) -> dict[str, f
     return result
 
 
+def _latent_replay_payload_bytes(corpus: Corpus) -> int:
+    episodes = (*corpus.train, *corpus.validation, *corpus.heldout)
+    return sum(
+        (int(episode.delivered_context.shape[0]) + 1)
+        * RESIDENTS * LATENT * np.dtype(np.float32).itemsize
+        for episode in episodes
+    )
+
+
 @torch.inference_mode()
 def _cache_latents(
     model: AnatomicalCNS, corpus: Corpus, device: torch.device, root: Path,
@@ -838,8 +848,16 @@ def _cache_latents(
 ) -> dict[str, np.ndarray]:
     if worlds_per_batch not in (1, 2, 4):
         raise ValueError("latent replay supports one, two, or four whole B4 worlds")
+    expected_cache_bytes = _latent_replay_payload_bytes(corpus)
+    if expected_cache_bytes > LATENT_REPLAY_MEMORY_BUDGET_BYTES:
+        raise RuntimeError(
+            "final latent replay exceeds the managed-memory budget: "
+            f"{expected_cache_bytes} > {LATENT_REPLAY_MEMORY_BUDGET_BYTES} bytes"
+        )
     root.mkdir(parents=True, exist_ok=False)
     result: dict[str, np.ndarray] = {}
+    cache_paths: dict[str, Path] = {}
+    cache_bytes = 0
     episodes = (*corpus.train, *corpus.validation, *corpus.heldout)
     world_counts: dict[int, int] = {}
     for episode in episodes:
@@ -883,14 +901,31 @@ def _cache_latents(
                 np.save(stream, latent[cohort_index], allow_pickle=False)
                 stream.flush(); os.fsync(stream.fileno())
             os.replace(temporary, path)
-            result[episode.sha256] = np.load(path, mmap_mode="r")
+            cache_paths[episode.sha256] = path
+            cache_bytes += int(latent[cohort_index].nbytes)
             rows.append({
                 "episode_sha256": episode.sha256,
                 "file": path.name,
                 "sha256": sha256_file(path),
                 "batch_index": batch_index,
                 "batch_row": cohort_index,
+                "payload_bytes": int(latent[cohort_index].nbytes),
             })
+    if cache_bytes != expected_cache_bytes:
+        raise RuntimeError(
+            "materialized latent replay size differs from its corpus preflight: "
+            f"{cache_bytes} != {expected_cache_bytes} bytes"
+        )
+    # Resident windows sample randomly. Materialize each immutable replay file in
+    # one sequential read so training cannot degenerate into random page faults
+    # against a collection of memory maps. `result` owns exactly one userspace
+    # array per episode; the kernel remains free to reclaim its file page cache.
+    for episode_sha256, path in cache_paths.items():
+        array = np.load(path, allow_pickle=False)
+        if array.dtype != np.float32 or not array.flags.c_contiguous:
+            raise RuntimeError(f"latent replay {path} is not contiguous float32")
+        array.flags.writeable = False
+        result[episode_sha256] = array
     atomic_json(root.parent / "latent-cache-replay.json", {
         "format": "chreatures-actual-fly-final-latent-replay-v1",
         "worlds_per_batch": worlds_per_batch,
@@ -900,6 +935,13 @@ def _cache_latents(
         "elapsed_seconds": time.monotonic() - began,
         "cadence": "one dt=.01 forward with two internal dt/2 rate integrations",
         "row_order": "stable world-major then resident-major; private nine-field CNS state",
+        "resident_materialization": {
+            "mode": "single-managed-memory-copy",
+            "payload_bytes": cache_bytes,
+            "budget_bytes": LATENT_REPLAY_MEMORY_BUDGET_BYTES,
+            "read_order": "episode manifest order, one complete immutable npy at a time",
+            "reason": "avoid random memory-map page faults during resident window sampling",
+        },
     })
     return result
 
@@ -1140,6 +1182,20 @@ def train(arguments: argparse.Namespace) -> None:
         motor_decoder_norm_weight=arguments.motor_decoder_norm_weight,
         cold_neutral_weight=arguments.cold_neutral_weight,
     )
+    resident_replay_preflight = None
+    if arguments.parent_resident is not None:
+        expected_cache_bytes = _latent_replay_payload_bytes(corpus)
+        if expected_cache_bytes > LATENT_REPLAY_MEMORY_BUDGET_BYTES:
+            raise RuntimeError(
+                "private-resident latent replay exceeds the managed-memory budget "
+                "before CNS training: "
+                f"{expected_cache_bytes} > {LATENT_REPLAY_MEMORY_BUDGET_BYTES} bytes"
+            )
+        resident_replay_preflight = {
+            "payload_bytes": expected_cache_bytes,
+            "budget_bytes": LATENT_REPLAY_MEMORY_BUDGET_BYTES,
+            "materialization": "single-managed-memory-copy after final CNS replay",
+        }
     identity = {
         "format": TRAINING_FORMAT,
         "source_revision": arguments.source_revision,
@@ -1163,6 +1219,7 @@ def train(arguments: argparse.Namespace) -> None:
         "parent_prediction_heads_sha256": (
             None if arguments.prediction_heads is None else sha256_file(arguments.prediction_heads)
         ),
+        "resident_replay_preflight": resident_replay_preflight,
         "cns_state_training": {
             "chronology": "whole worlds in contiguous TBPTT segments",
             "private_state_fields": [
@@ -1367,17 +1424,18 @@ def train(arguments: argparse.Namespace) -> None:
         "file_sha256": sha256_file(prediction_heads_output),
     }
 
-    # Recompute every latent from the final service before private-context
-    # fitting.  This avoids training the resident against a stale parent cache.
-    model.eval()
-    latent_cache = _cache_latents(
-        model, corpus, device, run / "latent-cache",
-        worlds_per_batch=recipe.latent_cache_worlds,
-    )
     resident_receipt = None
     resident_history: list[dict[str, float]] = []
     resident_validation_before = resident_validation_after = resident_heldout = None
     if arguments.parent_resident is not None:
+        # Recompute every latent from the final service before private-context
+        # fitting. This avoids stale parent features. Goal-free fits skip both
+        # the replay and its managed-memory allocation.
+        model.eval()
+        latent_cache = _cache_latents(
+            model, corpus, device, run / "latent-cache",
+            worlds_per_batch=recipe.latent_cache_worlds,
+        )
         parent_resident_metadata, parent_resident_arrays = load_parent(arguments.parent_resident)
         resident = CnsResidentModel.from_arrays(parent_resident_arrays, device)
         resident_optimizer = torch.optim.AdamW(
