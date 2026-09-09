@@ -8,9 +8,9 @@ const MUJOCO_SHAPES = new Set([0, 2, 3, 4, 5, 6, 7]);
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
 function worldColor(rgba, target = new THREE.Color()) {
-  // MuJoCo RGBA is authored for display. Three's numeric RGB setters otherwise
-  // treat these values as linear and brighten them again on sRGB output.
-  return target.setRGB(rgba[0], rgba[1], rgba[2], THREE.SRGBColorSpace);
+  // MuJoCo exposes model reflectance values. Three stores material colors in
+  // linear space; the renderer performs the sole conversion to sRGB output.
+  return target.setRGB(rgba[0], rgba[1], rgba[2]);
 }
 
 function worldAlpha(item, rgba) {
@@ -122,7 +122,7 @@ export class LiveView {
     this.worldRenderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
     this.worldRenderer.outputColorSpace = THREE.SRGBColorSpace;
     this.worldRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.worldRenderer.toneMappingExposure = .82;
+    this.worldRenderer.toneMappingExposure = .9;
     this.worldRenderer.shadowMap.enabled = true;
     this.worldRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.worldControls = new OrbitControls(this.worldCamera, worldCanvas);
@@ -132,10 +132,10 @@ export class LiveView {
     this.worldControls.minDistance = 2.2;
     this.worldControls.maxDistance = 72;
     this.worldControls.maxPolarAngle = Math.PI * .47;
-    const sky = new THREE.HemisphereLight(0xdde7d4, 0x34271d, .72);
+    const sky = new THREE.HemisphereLight(0xdde7d4, 0x584535, .92);
     sky.position.set(0, 0, 1);
     this.worldScene.add(sky);
-    const sun = new THREE.DirectionalLight(0xffe1bd, 2.05);
+    const sun = new THREE.DirectionalLight(0xffe1bd, 1.55);
     sun.position.set(-28, -18, 42);
     sun.target.position.set(0, 0, 1.5);
     sun.castShadow = true;
@@ -145,7 +145,7 @@ export class LiveView {
     sun.shadow.bias = -.00035;
     sun.shadow.normalBias = .025;
     this.worldScene.add(sun, sun.target);
-    const fill = new THREE.DirectionalLight(0xa7c9bd, .34);
+    const fill = new THREE.DirectionalLight(0xa7c9bd, .4);
     fill.position.set(18, 13, 12);
     this.worldScene.add(fill);
 
@@ -508,11 +508,11 @@ export class LiveView {
     const center = this.habitatBounds.getCenter(new THREE.Vector3());
     const radius = this.habitatBounds.getSize(new THREE.Vector3()).length() * .5;
     const pose = this.#selectedPose();
-    const focus = pose ? pose.position.clone().lerp(center, .17).add(new THREE.Vector3(0, 0, .32)) : center;
+    const focus = pose ? pose.position.clone().add(new THREE.Vector3(0, 0, .32)) : center;
     const vertical = this.worldCamera.fov * Math.PI / 360;
     const horizontal = Math.atan(Math.tan(vertical) * Math.max(.5, this.worldCamera.aspect));
     const distance = pose
-      ? clamp(33 / Math.max(.94, Math.sqrt(this.worldCamera.aspect)), 28, 36)
+      ? clamp(68 / Math.max(.94, Math.sqrt(this.worldCamera.aspect)), 52, 68)
       : radius / Math.sin(Math.min(vertical, horizontal)) * 1.06;
     this.worldControls.target.copy(focus);
     this.worldCamera.position.copy(focus).addScaledVector(this.#openingDirection(focus, distance), distance);

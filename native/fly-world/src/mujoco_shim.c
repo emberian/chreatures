@@ -125,6 +125,70 @@ void fly_world_delete_model(void *model_address) {
   if (model_address) mj_deleteModel((mjModel *)model_address);
 }
 
+int64_t fly_world_material_albedo_len(const void *model_address) {
+  const mjModel *model = (const mjModel *)model_address;
+  if (!model || model->nmat < 0 || model->nmat > INT64_MAX / 3) return -1;
+  return (int64_t)model->nmat * 3;
+}
+
+int fly_world_material_albedo(const void *model_address, double *output,
+                              size_t count) {
+  const mjModel *model = (const mjModel *)model_address;
+  const int64_t expected = fly_world_material_albedo_len(model_address);
+  if (expected < 0 || count != (size_t)expected || (count && !output)) return 0;
+  for (int material = 0; material < model->nmat; ++material) {
+    output[material * 3] = 1.0;
+    output[material * 3 + 1] = 1.0;
+    output[material * 3 + 2] = 1.0;
+    int texture = model->mat_texid[material * mjNTEXROLE + mjTEXROLE_RGB];
+    if (texture < 0) {
+      texture = model->mat_texid[material * mjNTEXROLE + mjTEXROLE_RGBA];
+    }
+    if (texture < 0) continue;
+    if (texture >= model->ntex || !model->tex_width || !model->tex_height ||
+        !model->tex_nchannel || !model->tex_colorspace || !model->tex_adr ||
+        !model->tex_data) return 0;
+    const int width = model->tex_width[texture];
+    const int height = model->tex_height[texture];
+    const int channels = model->tex_nchannel[texture];
+    const mjtSize address = model->tex_adr[texture];
+    if (width <= 0 || height <= 0 || channels <= 0 || channels > 4 || address < 0) return 0;
+    if ((size_t)width > SIZE_MAX / (size_t)height || model->ntexdata < 0) return 0;
+    const size_t pixels = (size_t)width * (size_t)height;
+    if (pixels > SIZE_MAX / (size_t)channels) return 0;
+    const size_t bytes = pixels * (size_t)channels;
+    if ((size_t)address > (size_t)model->ntexdata ||
+        bytes > (size_t)model->ntexdata - (size_t)address) return 0;
+    double sum[3] = {0.0, 0.0, 0.0};
+    const mjtByte *data = model->tex_data + address;
+    for (size_t pixel = 0; pixel < pixels; ++pixel) {
+      mjtByte rgb[3];
+      if (channels == 1 || channels == 2) {
+        rgb[0] = rgb[1] = rgb[2] = data[pixel * channels];
+      } else {
+        rgb[0] = data[pixel * channels];
+        rgb[1] = data[pixel * channels + 1];
+        rgb[2] = data[pixel * channels + 2];
+      }
+      for (int channel = 0; channel < 3; ++channel) {
+        if (model->tex_colorspace[texture] == mjCOLORSPACE_SRGB) {
+          const double encoded = (double)rgb[channel] / 255.0;
+          sum[channel] += encoded <= 0.04045
+              ? encoded / 12.92
+              : pow((encoded + 0.055) / 1.055, 2.4);
+        } else {
+          sum[channel] += (double)rgb[channel] / 255.0;
+        }
+      }
+    }
+    for (int channel = 0; channel < 3; ++channel) {
+      output[material * 3 + channel] =
+          sum[channel] / (double)pixels;
+    }
+  }
+  return 1;
+}
+
 int fly_world_dimensions(const void *model_address, const void *data_address,
                          FlyWorldDimensions *out) {
   const mjModel *model = (const mjModel *)model_address;
