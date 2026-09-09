@@ -1738,3 +1738,33 @@ while other ecology/render jobs were active, so it is not an isolated performanc
 comparison with the earlier run. Receipts are
 `data/development/cns-v5-textured-garden-joined.receipt.json` and
 `data/development/native-texture-albedo.receipt.json`.
+
+### September 8, 8:45 PM: completed comparisons and weekend quiescence
+
+The user ended the autonomous wave early and asked to pack up. Existing short
+runs finished; no subsequent model-export, training or GPU experiments started.
+The chronological V5 fit completed both 512-segment CNS training and 512-update
+private-resident fitting. A managed replay-access fix was committed after a
+read-only cache warm recovered a disk-paging stall without altering the run.
+
+All six matched hbox physical conditions finished. All 24 resident-lives stayed
+upright for 5.12 seconds. The new trained CNS therefore avoids the immediate
+collapse of the earlier V4 children. Endpoint horizontal displacement increased
+from 0.08093 to 0.13832 mm, while work increased from 23.71 to 54.53 model units.
+Private context barely changed displacement and raised work to 57.76. No useful
+locomotion or private-control benefit was established, and the public model
+remains initialized. Both private final snapshots restored byte-exactly.
+
+The native ecology campaign closed 48 fixed worlds and four untouched-layout
+confirmations. Real construction ranged from 16 to 52 branches. The new Pages
+atlas projects 1,716 actual sparse observations and selected native GAM
+predictions; native Universal Weave connects 72 nodes with 123 edges. The atlas
+omits moving bodies and does not run a simulation. Persistence beat the GAM's
+conditional absolute-aperture prediction on the unseen layout. Count/material
+are dependent because construction cost is fixed. The failed launch, degenerate
+first additive fit and corrected aperture baseline remain preserved.
+
+All owned training, assessment, ecology and temporary render processes exited.
+The frozen worlds and unrelated jobs remain untouched. Exact artifact locations,
+results, deferred commands and next directions are in
+`docs/development/WEEKEND_HANDOFF_2026-09-08.md`.

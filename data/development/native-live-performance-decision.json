@@ -1,0 +1,52 @@
+{
+  "format": "chreatures-native-optimization-decision-v1",
+  "created_at": "2026-09-09T00:34:07.014921+00:00",
+  "baseline": {
+    "profile": "/Users/ember/paperbin/chreatures/integration/cns-v5/texture-2c040fd-phase-profile.json",
+    "sha256": "3cc5cee81c3eb6a293d47531a3b5a3d9f750fbfd36dfea3a999cf1f0f0fd6d72",
+    "wasm_sha256": "b66316d81fb573c4fd8caac056fb5dc9c0b1f749526259a615b331091e2ec420",
+    "world_advance": {
+      "meanMs": 90.312820359375,
+      "p50Ms": 78.53558299999986,
+      "p95Ms": 134.08529200000157,
+      "maxMs": 429.4957909999994,
+      "calls": 64
+    },
+    "complete_tick": {
+      "meanMs": 159.71376495312498,
+      "p50Ms": 145.88545799999883,
+      "p95Ms": 199.93579099999988,
+      "maxMs": 644.1027079999994,
+      "calls": 64
+    }
+  },
+  "candidate": {
+    "profile": "/Users/ember/paperbin/chreatures/integration/cns-v5/texture-clear-perf-phase-profile.json",
+    "sha256": "46ce263049f91890d5cbf71174dc44d6d9a79f8c606cd9df5c52d8262f46a0a4",
+    "wasm_sha256": "ce31d548ddb3b7a49d95bc30ec2665e0360a4db476d9b5482774de237b204364",
+    "change": "replace 200 per-tick zero-vector allocations/generic writes with direct checked C clear",
+    "world_advance": {
+      "meanMs": 94.26755153124996,
+      "p50Ms": 83.33800000000065,
+      "p95Ms": 134.39208299999973,
+      "maxMs": 468.27899999999954,
+      "calls": 64
+    },
+    "complete_tick": {
+      "meanMs": 165.44423695312497,
+      "p50Ms": 155.67312499999935,
+      "p95Ms": 207.312417000001,
+      "maxMs": 562.5541250000006,
+      "calls": 64
+    }
+  },
+  "decision": {
+    "retained": false,
+    "reason": "Candidate did not improve the complete affected path under concurrent ecology load; native source was reverted.",
+    "world_advance_mean_change_fraction": 0.04378925556901225,
+    "world_advance_p50_change_fraction": 0.06114956834280827,
+    "complete_mean_change_fraction": 0.035879637560869204,
+    "dominant_current_phase": "worldAdvance: exact 100 MuJoCo substeps plus per-substep aerodynamics",
+    "next_option": "Profile MuJoCo collision/constraint and aerodynamic evaluation internally; do not alter timestep or physics. A fused C data-transfer helper is only justified after counters show transfer dominates math."
+  }
+}

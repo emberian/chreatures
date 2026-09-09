@@ -1,0 +1,37 @@
+{
+  "created_at": "2026-09-09T00:41:42.653822+00:00",
+  "current_plan_sha256": "7a929f15bc56d3cb5cc3339015599ddf6372b9fc24b48a71791bdc0d9b2091a4",
+  "diagnosed_metric_error": {
+    "corrected_preconstruction_measured_range": [
+      -0.00030233326507969616,
+      0.00030218668710449426
+    ],
+    "environment_measurement_tick": 100,
+    "field": "route_permeability_change",
+    "material_resource_chronology_still_starts_tick": 0,
+    "superseded_tick0_placeholder_range": [
+      -0.7783696803630711,
+      -0.7547315082584336
+    ],
+    "tick0_semantics": "unmeasured core all-open initialization"
+  },
+  "failed_launch_plan_sha256": "90c4c6df468eab8b7b6df1a1dc6003a2b26dfbdd8f85ad69b5ee547df28583aa",
+  "fit_attempt1_report_sha256": "c35df710afcd8a1de60eb7fee0257c78ad84b9c41cb4919499f3f3ff26ba60f2",
+  "fit_r2_report_sha256": "d03f832b581962311cd401208799ad10fac44601fde5a7cf043a18137c6b8aeb",
+  "format": "chreatures-fly-ecology-analysis-correction-v1",
+  "input_rank_repair": {
+    "constant_measured_fields_excluded_from_formulas": [
+      "initial_blocked_fraction",
+      "initial_minimum_aperture"
+    ],
+    "effective_model_features": [
+      "branch_angle_rad",
+      "lateral_probability",
+      "phototropism",
+      "contact_avoidance",
+      "initial_route_permeability"
+    ],
+    "raw_fields_retained": true
+  },
+  "outcomes_changed": false
+}

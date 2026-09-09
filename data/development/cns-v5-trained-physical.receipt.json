@@ -1,0 +1,668 @@
+{
+  "format": "chreatures-cns-v5-native-matched-diagnosis-v1",
+  "completed": true,
+  "comparison_complete": true,
+  "assessment_sha256": "36cd13b367d920d92830070bfffa3aa35f64ebf6a8aa3fb308e7cbbd233fa912",
+  "training_result_sha256": "cb4dec9eae4729c75e95b46ffdaa8f9531ee33534df71b565b865effca64ee15",
+  "source_revision": "2704d2b2ddc2a38f7ba950f9918fa56fc1aae15b",
+  "physical_source_revision": "75fd8fc5304b8c76ada70bdb5251adecd787cd5f",
+  "device": "hbox RX6750XT ROCm6.3",
+  "persvati_baseline_pooled": false,
+  "model_seconds_per_condition": 5.12,
+  "elapsed_seconds": 840.0211356487125,
+  "same_initial_snapshots": {
+    "10": "bceeeb50d11ae0478836536287467a3e7f568940180b52430a76da70609fb3cb",
+    "11": "961bcff3f23b5f5dc533bedc4fcf294dd94348a34e258e565b98e59422afc970"
+  },
+  "arms": {
+    "initialized-zero": {
+      "residents": 8,
+      "falls": 0,
+      "mean_upright_seconds": 5.12,
+      "mean_supported_seconds": 5.11,
+      "mean_horizontal_endpoint_displacement_mm": 0.08092563520953071,
+      "mean_mechanical_work_model_units": 23.709575352356662,
+      "mean_abs_motor92": 0.001749756294884719,
+      "residents_detail": [
+        {
+          "world_index": 10,
+          "activation_max": 0.02000080607831478,
+          "activation_min": 0.019999384880065918,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.0017501582624390721,
+          "mechanical_work_model_units": 29.466039551200936,
+          "net_displacement_mm": [
+            -0.13606834411621094,
+            -0.017780721187591553,
+            -0.982067346572876
+          ],
+          "net_displacement_norm_mm": 0.9916083216667175,
+          "resident": 0,
+          "root_path_mm": 1.0719108581542969,
+          "servo_max": 6.623506487812847e-05,
+          "servo_min": -6.538707384606823e-05,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 10,
+          "activation_max": 0.020000586286187172,
+          "activation_min": 0.01999957300722599,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.0017496281070634723,
+          "mechanical_work_model_units": 21.156398706760317,
+          "net_displacement_mm": [
+            0.003435373306274414,
+            -0.08992385864257812,
+            -1.0170682668685913
+          ],
+          "net_displacement_norm_mm": 1.0210416316986084,
+          "resident": 1,
+          "root_path_mm": 1.0572720766067505,
+          "servo_max": 5.1077255193376914e-05,
+          "servo_min": -6.187063263496384e-05,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 10,
+          "activation_max": 0.020000549033284187,
+          "activation_min": 0.01999957300722599,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.0017495366046205163,
+          "mechanical_work_model_units": 22.904056407762813,
+          "net_displacement_mm": [
+            0.09055280685424805,
+            -0.0005885958671569824,
+            -1.017276644706726
+          ],
+          "net_displacement_norm_mm": 1.021299123764038,
+          "resident": 2,
+          "root_path_mm": 1.0561599731445312,
+          "servo_max": 5.084825897938572e-05,
+          "servo_min": -6.282403774093837e-05,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 10,
+          "activation_max": 0.02000056393444538,
+          "activation_min": 0.019999489188194275,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.0017498135566711426,
+          "mechanical_work_model_units": 20.909914657270146,
+          "net_displacement_mm": [
+            -0.02881920337677002,
+            0.05128812789916992,
+            -0.9814119338989258
+          ],
+          "net_displacement_norm_mm": 0.9831736087799072,
+          "resident": 3,
+          "root_path_mm": 1.0657230615615845,
+          "servo_max": 5.790442446595989e-05,
+          "servo_min": -6.56850024824962e-05,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.020000670105218887,
+          "activation_min": 0.01999942772090435,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.001749939052388072,
+          "mechanical_work_model_units": 21.724708865080515,
+          "net_displacement_mm": [
+            -0.007738590240478516,
+            0.000796973705291748,
+            -0.9513087272644043
+          ],
+          "net_displacement_norm_mm": 0.9513404965400696,
+          "resident": 0,
+          "root_path_mm": 0.9991271495819092,
+          "servo_max": 4.531409285846166e-05,
+          "servo_min": -6.524733908008784e-05,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.02000056765973568,
+          "activation_min": 0.019999558106064796,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.0017493793275207281,
+          "mechanical_work_model_units": 21.153346582260937,
+          "net_displacement_mm": [
+            0.004225015640258789,
+            -0.09018802642822266,
+            -1.017187237739563
+          ],
+          "net_displacement_norm_mm": 1.021186351776123,
+          "resident": 1,
+          "root_path_mm": 1.0574623346328735,
+          "servo_max": 5.5269611038966104e-05,
+          "servo_min": -5.9350637457100675e-05,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.02000054530799389,
+          "activation_min": 0.01999957300722599,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.0017495156498625875,
+          "mechanical_work_model_units": 22.81478216455436,
+          "net_displacement_mm": [
+            0.0894312858581543,
+            -0.0009816884994506836,
+            -1.017259120941162
+          ],
+          "net_displacement_norm_mm": 1.0211831331253052,
+          "resident": 2,
+          "root_path_mm": 1.0567187070846558,
+          "servo_max": 5.0815688155125827e-05,
+          "servo_min": -6.324834248516709e-05,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.02000073529779911,
+          "activation_min": 0.01999957300722599,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.0017500797985121608,
+          "mechanical_work_model_units": 29.547355883963277,
+          "net_displacement_mm": [
+            -0.011967897415161133,
+            0.08243799209594727,
+            -1.005993366241455
+          ],
+          "net_displacement_norm_mm": 1.0094364881515503,
+          "resident": 3,
+          "root_path_mm": 1.0674760341644287,
+          "servo_max": 5.40831133548636e-05,
+          "servo_min": -6.5493761212565e-05,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        }
+      ]
+    },
+    "trained-zero": {
+      "residents": 8,
+      "falls": 0,
+      "mean_upright_seconds": 5.12,
+      "mean_supported_seconds": 5.108750000000001,
+      "mean_horizontal_endpoint_displacement_mm": 0.1383171868621995,
+      "mean_mechanical_work_model_units": 54.528246523670944,
+      "mean_abs_motor92": 0.012201113277114928,
+      "residents_detail": [
+        {
+          "world_index": 10,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": 8,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.01220305822789669,
+          "mechanical_work_model_units": 69.05638890298161,
+          "net_displacement_mm": [
+            -0.1905817985534668,
+            -0.06925362348556519,
+            -0.7714724540710449
+          ],
+          "net_displacement_norm_mm": 0.797676146030426,
+          "resident": 0,
+          "root_path_mm": 0.926092267036438,
+          "servo_max": 0.03718598186969757,
+          "servo_min": -0.035957857966423035,
+          "support_duration_s": 5.1000000000000005,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 10,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012205478735268116,
+          "mechanical_work_model_units": 58.44792029857611,
+          "net_displacement_mm": [
+            0.01006537675857544,
+            -0.1354050636291504,
+            -0.8078409433364868
+          ],
+          "net_displacement_norm_mm": 0.8191720247268677,
+          "resident": 1,
+          "root_path_mm": 0.9243779182434082,
+          "servo_max": 0.037085577845573425,
+          "servo_min": -0.03585316985845566,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 10,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.01220172643661499,
+          "mechanical_work_model_units": 47.08503618711532,
+          "net_displacement_mm": [
+            0.13214492797851562,
+            0.0010800957679748535,
+            -0.8066818714141846
+          ],
+          "net_displacement_norm_mm": 0.8174344301223755,
+          "resident": 2,
+          "root_path_mm": 0.9198930263519287,
+          "servo_max": 0.0370594784617424,
+          "servo_min": -0.03585188463330269,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 10,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012200083583593369,
+          "mechanical_work_model_units": 54.12595773995186,
+          "net_displacement_mm": [
+            0.025024592876434326,
+            0.14227962493896484,
+            -0.7950259447097778
+          ],
+          "net_displacement_norm_mm": 0.8080445528030396,
+          "resident": 3,
+          "root_path_mm": 0.9233256578445435,
+          "servo_max": 0.037054095417261124,
+          "servo_min": -0.035846348851919174,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012192280031740665,
+          "mechanical_work_model_units": 47.4059265684252,
+          "net_displacement_mm": [
+            -0.07621574401855469,
+            0.012476325035095215,
+            -0.7483270168304443
+          ],
+          "net_displacement_norm_mm": 0.7523016929626465,
+          "resident": 0,
+          "root_path_mm": 0.8745431900024414,
+          "servo_max": 0.037129055708646774,
+          "servo_min": -0.03589818999171257,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012203226797282696,
+          "mechanical_work_model_units": 52.20523757811778,
+          "net_displacement_mm": [
+            0.010076642036437988,
+            -0.13753080368041992,
+            -0.8077571392059326
+          ],
+          "net_displacement_norm_mm": 0.8194436430931091,
+          "resident": 1,
+          "root_path_mm": 0.9261026382446289,
+          "servo_max": 0.03705860674381256,
+          "servo_min": -0.03585389256477356,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012203902006149292,
+          "mechanical_work_model_units": 51.82729133998137,
+          "net_displacement_mm": [
+            0.13489818572998047,
+            0.01070946455001831,
+            -0.8092490434646606
+          ],
+          "net_displacement_norm_mm": 0.8204853534698486,
+          "resident": 2,
+          "root_path_mm": 0.9142754077911377,
+          "servo_max": 0.037057064473629,
+          "servo_min": -0.0358542799949646,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012199150398373604,
+          "mechanical_work_model_units": 56.07221357421831,
+          "net_displacement_mm": [
+            0.014018893241882324,
+            0.14022016525268555,
+            -0.795708417892456
+          ],
+          "net_displacement_norm_mm": 0.8080904483795166,
+          "resident": 3,
+          "root_path_mm": 0.8968942165374756,
+          "servo_max": 0.037076015025377274,
+          "servo_min": -0.035850707441568375,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        }
+      ]
+    },
+    "trained-private": {
+      "residents": 8,
+      "falls": 0,
+      "mean_upright_seconds": 5.12,
+      "mean_supported_seconds": 5.108750000000001,
+      "mean_horizontal_endpoint_displacement_mm": 0.13786771097332268,
+      "mean_mechanical_work_model_units": 57.75577460642823,
+      "mean_abs_motor92": 0.012120654457248747,
+      "residents_detail": [
+        {
+          "world_index": 10,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": 8,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012121928855776787,
+          "mechanical_work_model_units": 81.83871696660094,
+          "net_displacement_mm": [
+            -0.19051694869995117,
+            -0.06933239102363586,
+            -0.7711100578308105
+          ],
+          "net_displacement_norm_mm": 0.7973170280456543,
+          "resident": 0,
+          "root_path_mm": 0.9237219095230103,
+          "servo_max": 0.03710644692182541,
+          "servo_min": -0.03587562218308449,
+          "support_duration_s": 5.1000000000000005,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 10,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.01214118767529726,
+          "mechanical_work_model_units": 58.4900481322484,
+          "net_displacement_mm": [
+            0.010067522525787354,
+            -0.13540124893188477,
+            -0.8078325986862183
+          ],
+          "net_displacement_norm_mm": 0.8191632032394409,
+          "resident": 1,
+          "root_path_mm": 0.9243534803390503,
+          "servo_max": 0.03708479925990105,
+          "servo_min": -0.0358528308570385,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 10,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.01212999876588583,
+          "mechanical_work_model_units": 47.13001104779315,
+          "net_displacement_mm": [
+            0.13214445114135742,
+            0.001091301441192627,
+            -0.8066741228103638
+          ],
+          "net_displacement_norm_mm": 0.8174267411231995,
+          "resident": 2,
+          "root_path_mm": 0.9198321104049683,
+          "servo_max": 0.03705858439207077,
+          "servo_min": -0.03584665060043335,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 10,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012123560532927513,
+          "mechanical_work_model_units": 54.083987836814686,
+          "net_displacement_mm": [
+            0.02492666244506836,
+            0.1423664093017578,
+            -0.795096755027771
+          ],
+          "net_displacement_norm_mm": 0.8081264495849609,
+          "resident": 3,
+          "root_path_mm": 0.9208402037620544,
+          "servo_max": 0.037053365260362625,
+          "servo_min": -0.035842884331941605,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012062694877386093,
+          "mechanical_work_model_units": 60.345537279815304,
+          "net_displacement_mm": [
+            -0.07220458984375,
+            0.01433718204498291,
+            -0.7481522560119629
+          ],
+          "net_displacement_norm_mm": 0.7517651319503784,
+          "resident": 0,
+          "root_path_mm": 0.8954988718032837,
+          "servo_max": 0.03712838888168335,
+          "servo_min": -0.03589804470539093,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012138446792960167,
+          "mechanical_work_model_units": 52.21423703289345,
+          "net_displacement_mm": [
+            0.01006019115447998,
+            -0.13753223419189453,
+            -0.8077538013458252
+          ],
+          "net_displacement_norm_mm": 0.8194403648376465,
+          "resident": 1,
+          "root_path_mm": 0.9260451793670654,
+          "servo_max": 0.03705781325697899,
+          "servo_min": -0.03585050255060196,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012123958207666874,
+          "mechanical_work_model_units": 51.842395956616244,
+          "net_displacement_mm": [
+            0.13489484786987305,
+            0.01071399450302124,
+            -0.809240460395813
+          ],
+          "net_displacement_norm_mm": 0.8204764127731323,
+          "resident": 2,
+          "root_path_mm": 0.9142581820487976,
+          "servo_max": 0.03705543652176857,
+          "servo_min": -0.035848911851644516,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        },
+        {
+          "world_index": 11,
+          "activation_max": 0.02305169776082039,
+          "activation_min": 0.015916358679533005,
+          "first_fall_tick": null,
+          "first_support_loss_after_establishment_tick": null,
+          "first_support_tick": 2,
+          "initially_supported": false,
+          "mean_abs_motor92": 0.012123459950089455,
+          "mechanical_work_model_units": 56.101262598643714,
+          "net_displacement_mm": [
+            0.01399928331375122,
+            0.1402144432067871,
+            -0.7957017421722412
+          ],
+          "net_displacement_norm_mm": 0.8080825209617615,
+          "resident": 3,
+          "root_path_mm": 0.8968247175216675,
+          "servo_max": 0.03707505017518997,
+          "servo_min": -0.035847313702106476,
+          "support_duration_s": 5.11,
+          "upright_duration_s": 5.12
+        }
+      ]
+    }
+  },
+  "private_context_effect": [
+    {
+      "world": 10,
+      "mean_abs_delivered_context": 0.04886089265346527,
+      "max_abs_delivered_context": 0.2855624556541443,
+      "mean_abs_motor92_delta_from_zero": 7.719003042438999e-05,
+      "max_abs_motor92_delta_from_zero": 0.0033424750436097383,
+      "mean_final_root_separation_mm": 0.00013708038022741675
+    },
+    {
+      "world": 11,
+      "mean_abs_delivered_context": 0.0547969825565815,
+      "max_abs_delivered_context": 0.3012937307357788,
+      "mean_abs_motor92_delta_from_zero": 9.127483644988388e-05,
+      "max_abs_motor92_delta_from_zero": 0.0033848625607788563,
+      "mean_final_root_separation_mm": 0.0011184584582224488
+    }
+  ],
+  "private_checkpoint_evidence": [
+    {
+      "world": 10,
+      "final_resident_state": {
+        "bytes": 8301020,
+        "exact_restore_verified": true,
+        "file": "final-resident.bin",
+        "sha256": "997962e7af46ffa52ee281259b207a8ab6407a83b2b65d1892424374c9027445"
+      },
+      "memory_count": [
+        128,
+        128,
+        128,
+        128
+      ],
+      "context_consequence_evidence": [
+        496,
+        512,
+        482,
+        466
+      ]
+    },
+    {
+      "world": 11,
+      "final_resident_state": {
+        "bytes": 8301879,
+        "exact_restore_verified": true,
+        "file": "final-resident.bin",
+        "sha256": "1d978286754d24b60874c5ca394b5e0cca953d29364e23d4c58016db20bded70"
+      },
+      "memory_count": [
+        128,
+        128,
+        128,
+        128
+      ],
+      "context_consequence_evidence": [
+        523,
+        447,
+        481,
+        454
+      ]
+    }
+  ],
+  "active_owned_processes": [],
+  "claim_limit": "Short matched heldout physical comparison. Stable support or nonzero context effects do not establish purposeful locomotion, foraging, or general private-control competence. Endpoint horizontal motion is separated from the initial vertical settling displacement."
+}

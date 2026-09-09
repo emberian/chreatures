@@ -1,0 +1,280 @@
+{
+  "confirmation_permeability": {
+    "preconstruction_persistence_rmse": 0.0008749066137557832,
+    "selected_model_absolute_rmse": 0.0039038337730612368,
+    "worlds": 4,
+    "zero_change_rmse": 0.0008749066137557832
+  },
+  "confirmation_report_sha256": "3a9989a76b394d3d84a13abd830aa9678310f342917de09a5d9f1cdb24b022f6",
+  "created_at": "2026-09-09T00:50:07.001673+00:00",
+  "dependent_response_axes": {
+    "construction_material_per_committed_structure": 0.08,
+    "interpretation": "construction material and committed count are mechanically dependent, not independent diversity axes",
+    "maximum_absolute_deviation": 1.7763568394002505e-15
+  },
+  "fit_report_sha256": "d03f832b581962311cd401208799ad10fac44601fde5a7cf043a18137c6b8aeb",
+  "format": "chreatures-fly-ecology-secondary-diagnostics-v1",
+  "model_limitations": {
+    "absolute_permeability": "largely determined by measured preconstruction permeability; persistence is the required secondary baseline",
+    "confirmation": "absolute permeability error band failed on the untouched layout while construction, material, resource and route-change bands held",
+    "construction_material_resource": "selected joint genotype-holdout CV is modest and for construction/material/resource slightly worse than the training-mean baseline; proposals are conditional exploratory points, not promoted genotypes"
+  },
+  "model_selection_unchanged": true,
+  "permeability_baselines": {
+    "all": {
+      "absolute_permeability_persistence_rmse": 0.00023084688016338298,
+      "route_change_mean": 2.5145579431571734e-05,
+      "route_change_range": [
+        -0.00030233326507969616,
+        0.00030218668710449426
+      ],
+      "route_change_zero_baseline_rmse": 0.00023084688016338298,
+      "worlds": 48
+    },
+    "fit": {
+      "absolute_permeability_persistence_rmse": 0.0002335803963728364,
+      "route_change_mean": 2.5145579431571734e-05,
+      "route_change_range": [
+        -0.00030233326507969616,
+        0.00030218668710449426
+      ],
+      "route_change_zero_baseline_rmse": 0.0002335803963728364,
+      "worlds": 36
+    },
+    "genotype_holdout": {
+      "absolute_permeability_persistence_rmse": 0.00022244487770140963,
+      "route_change_mean": 2.5145579431571734e-05,
+      "route_change_range": [
+        -0.00030233326507969616,
+        0.00030218668710449426
+      ],
+      "route_change_zero_baseline_rmse": 0.00022244487770140963,
+      "worlds": 12
+    }
+  },
+  "plan_sha256": "7a929f15bc56d3cb5cc3339015599ddf6372b9fc24b48a71791bdc0d9b2091a4",
+  "promoted": [],
+  "proposals_unchanged": true,
+  "selected_model_cross_validation": {
+    "colony_resource_change": {
+      "diagnostic": {
+        "artifact_sha256": "7ad9b4f68cf86b716de2ac2f17699ee01ad694f015eaf607d716959ce972fee0",
+        "formula": "response ~ duchon(branch_angle_rad,lateral_probability,phototropism,contact_avoidance,initial_route_permeability,centers=12)",
+        "genotype_holdout": {
+          "mae": 0.7702622975395981,
+          "max_abs": 1.3534285315361054,
+          "rmse": 0.8695980686484777
+        },
+        "genotype_holdout_mean": {
+          "mae": 0.8121976348332641,
+          "max_abs": 1.9613432376720272,
+          "rmse": 0.9496739825196676
+        },
+        "leave_genotype_out": {
+          "mae": 0.6483783738048562,
+          "max_abs": 1.684823499346531,
+          "rmse": 0.7691927562575548
+        },
+        "leave_genotype_out_mean": {
+          "mae": 0.6068672073421492,
+          "max_abs": 1.4212723178892461,
+          "rmse": 0.7296477919695826
+        },
+        "leave_layout_out": {
+          "mae": 0.4532400298400056,
+          "max_abs": 1.096733266814586,
+          "rmse": 0.5396955340115247
+        },
+        "leave_layout_out_mean": {
+          "mae": 0.5696045924775284,
+          "max_abs": 1.3617649254980613,
+          "rmse": 0.6897031863654417
+        },
+        "reload_max_abs": 0.0,
+        "status": "native-fit-serialized-reloaded",
+        "training": {
+          "mae": 0.45027278122557896,
+          "max_abs": 1.0850942840878908,
+          "rmse": 0.5308380087253017
+        }
+      },
+      "selected": "joint"
+    },
+    "committed_constructions": {
+      "diagnostic": {
+        "artifact_sha256": "69686a72cf08be6dc4b36b718392cf7d713737cf15feee3f16a80460d8111a13",
+        "formula": "response ~ duchon(branch_angle_rad,lateral_probability,phototropism,contact_avoidance,initial_route_permeability,centers=12)",
+        "genotype_holdout": {
+          "mae": 8.78285726685275,
+          "max_abs": 15.564986098262324,
+          "rmse": 9.881874533410492
+        },
+        "genotype_holdout_mean": {
+          "mae": 9.25925925925926,
+          "max_abs": 22.47222222222222,
+          "rmse": 10.791621979029454
+        },
+        "leave_genotype_out": {
+          "mae": 7.371766223171684,
+          "max_abs": 18.957686934268366,
+          "rmse": 8.788193767628472
+        },
+        "leave_genotype_out_mean": {
+          "mae": 6.895622895622896,
+          "max_abs": 16.333333333333332,
+          "rmse": 8.311265546607563
+        },
+        "leave_layout_out": {
+          "mae": 5.184226908400715,
+          "max_abs": 12.32618338222327,
+          "rmse": 6.185478138071556
+        },
+        "leave_layout_out_mean": {
+          "mae": 6.472222222222222,
+          "max_abs": 15.75,
+          "rmse": 7.8859051477937525
+        },
+        "reload_max_abs": 0.0,
+        "status": "native-fit-serialized-reloaded",
+        "training": {
+          "mae": 5.130748450626564,
+          "max_abs": 12.515753974507959,
+          "rmse": 6.059940902613941
+        }
+      },
+      "selected": "joint"
+    },
+    "construction_material": {
+      "diagnostic": {
+        "artifact_sha256": "6d967567171ef4bb9d59b715a8894eaed371f5e29034dc5ddac492a3adccc096",
+        "formula": "response ~ duchon(branch_angle_rad,lateral_probability,phototropism,contact_avoidance,initial_route_permeability,centers=12)",
+        "genotype_holdout": {
+          "mae": 0.7026285807956052,
+          "max_abs": 1.2451988845452826,
+          "rmse": 0.7905499623146575
+        },
+        "genotype_holdout_mean": {
+          "mae": 0.7407407407407415,
+          "max_abs": 1.7977777777777781,
+          "rmse": 0.8633297583223569
+        },
+        "leave_genotype_out": {
+          "mae": 0.589741361489157,
+          "max_abs": 1.5166149545359258,
+          "rmse": 0.7030555683878005
+        },
+        "leave_genotype_out_mean": {
+          "mae": 0.5516498316498323,
+          "max_abs": 1.3066666666666675,
+          "rmse": 0.6649012437286056
+        },
+        "leave_layout_out": {
+          "mae": 0.41473815267562947,
+          "max_abs": 0.9860946706106057,
+          "rmse": 0.49483825104712575
+        },
+        "leave_layout_out_mean": {
+          "mae": 0.5177777777777781,
+          "max_abs": 1.2600000000000007,
+          "rmse": 0.6308724118235007
+        },
+        "reload_max_abs": 0.0,
+        "status": "native-fit-serialized-reloaded",
+        "training": {
+          "mae": 0.4104598758459896,
+          "max_abs": 1.0012603146449335,
+          "rmse": 0.4847952718722586
+        }
+      },
+      "selected": "joint"
+    },
+    "route_permeability": {
+      "diagnostic": {
+        "artifact_sha256": "7bb95a60aad416a7fa9694da21689f8324a1ea399a672b365f889a823432f160",
+        "formula": "response ~ s(branch_angle_rad,k=3)+s(lateral_probability,k=3)+s(phototropism,k=3)+s(contact_avoidance,k=3)+initial_route_permeability",
+        "genotype_holdout": {
+          "mae": 0.0001563435632849844,
+          "max_abs": 0.0003091428588234413,
+          "rmse": 0.0001721406869634545
+        },
+        "genotype_holdout_mean": {
+          "mae": 0.008204897680025386,
+          "max_abs": 0.012307346520038065,
+          "rmse": 0.009675014087293082
+        },
+        "leave_genotype_out": {
+          "mae": 0.00016463851193688575,
+          "max_abs": 0.00031511575034637307,
+          "rmse": 0.00018748143263428143
+        },
+        "leave_genotype_out_mean": {
+          "mae": 0.00820489768002538,
+          "max_abs": 0.012309636923561407,
+          "rmse": 0.009675299379118986
+        },
+        "leave_layout_out": {
+          "mae": 0.0005965483927638361,
+          "max_abs": 0.0008031431414026735,
+          "rmse": 0.0006285056019037234
+        },
+        "leave_layout_out_mean": {
+          "mae": 0.012307346520038074,
+          "max_abs": 0.018461019780057097,
+          "rmse": 0.014512614075516584
+        },
+        "reload_max_abs": 0.0,
+        "status": "native-fit-serialized-reloaded",
+        "training": {
+          "mae": 0.00016397602539458005,
+          "max_abs": 0.00031168127088052056,
+          "rmse": 0.00018611170624086316
+        }
+      },
+      "selected": "additive"
+    },
+    "route_permeability_change": {
+      "diagnostic": {
+        "artifact_sha256": "4da242879a2dbc691f15fce10c26c59eebbd0831f25af47af0b95d8e46c48d18",
+        "formula": "response ~ duchon(branch_angle_rad,lateral_probability,phototropism,contact_avoidance,initial_route_permeability,centers=12)",
+        "genotype_holdout": {
+          "mae": 0.0001675240871871692,
+          "max_abs": 0.00025882519941164926,
+          "rmse": 0.00017608271897043252
+        },
+        "genotype_holdout_mean": {
+          "mae": 0.00018469407178194836,
+          "max_abs": 0.0003274788445112679,
+          "rmse": 0.00022101905675901706
+        },
+        "leave_genotype_out": {
+          "mae": 0.00016722004719580576,
+          "max_abs": 0.00036237626207392054,
+          "rmse": 0.00019056575718680101
+        },
+        "leave_genotype_out_mean": {
+          "mae": 0.00019233146459999773,
+          "max_abs": 0.0003297692480345987,
+          "rmse": 0.0002331735613472264
+        },
+        "leave_layout_out": {
+          "mae": 0.0005978343597400136,
+          "max_abs": 0.0008952394826754279,
+          "rmse": 0.0006333106773694545
+        },
+        "leave_layout_out_mean": {
+          "mae": 0.00027704517928334247,
+          "max_abs": 0.0004534266086319433,
+          "rmse": 0.00033557254309175274
+        },
+        "reload_max_abs": 0.0,
+        "status": "native-fit-serialized-reloaded",
+        "training": {
+          "mae": 0.00016241178455427823,
+          "max_abs": 0.0003391909059171778,
+          "rmse": 0.00018403423068416184
+        }
+      },
+      "selected": "joint"
+    }
+  }
+}
