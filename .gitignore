@@ -21,3 +21,11 @@ target/
 *.pem
 *.key
 /hollow-garden-first.png
+
+# Exact inputs materialized for this historical capture.
+/data/genomes/nursery-8000.npz
+/integrations/artifacts/observatory/habitat_activity.gam
+/integrations/artifacts/observatory3d/development_world_timeseries.csv
+/integrations/artifacts/observatory3d/energy_dynamics.gam.gz
+/integrations/artifacts/observatory3d/movement_outcome_dynamics.gam.gz
+/integrations/artifacts/observatory3d/prediction_error_dynamics.gam.gz

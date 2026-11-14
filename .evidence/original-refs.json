@@ -1,0 +1,82 @@
+{
+  "refs/heads/fly-embodiment-v4-20260908": {
+    "oid": "c30fbccb541ae5bc2cbdb88f7ef38848c611a8e6",
+    "commit": "c30fbccb541ae5bc2cbdb88f7ef38848c611a8e6",
+    "archive_ref": "refs/archive/pre-shrink-20261113/heads/fly-embodiment-v4-20260908"
+  },
+  "refs/heads/live-cns-wave": {
+    "oid": "3a6d7a710fa0500ca48653203a2811bb813a2b7b",
+    "commit": "3a6d7a710fa0500ca48653203a2811bb813a2b7b",
+    "archive_ref": "refs/archive/pre-shrink-20261113/heads/live-cns-wave"
+  },
+  "refs/heads/main": {
+    "oid": "bf61410d3ad99577661cbd053f92c82e6654800c",
+    "commit": "bf61410d3ad99577661cbd053f92c82e6654800c",
+    "archive_ref": "refs/archive/pre-shrink-20261113/heads/main"
+  },
+  "refs/tags/archive/compact-2d-flywire-v1": {
+    "oid": "92f06e6c712e94c57dae026a936978c9f40eda6b",
+    "commit": "92fff5647a41ba2f88134349908846abda7497c5",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/archive/compact-2d-flywire-v1"
+  },
+  "refs/tags/cns-optic-v1-research-20260907": {
+    "oid": "3b89440f4edc2723e3ae126027b9e218e55b9ec8",
+    "commit": "3b89440f4edc2723e3ae126027b9e218e55b9ec8",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/cns-optic-v1-research-20260907"
+  },
+  "refs/tags/embodied-learning-v2-research-20260907": {
+    "oid": "6ce34e45ac10386e8696bd938074cb17fd5e3f01",
+    "commit": "6ce34e45ac10386e8696bd938074cb17fd5e3f01",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/embodied-learning-v2-research-20260907"
+  },
+  "refs/tags/live-cns-v2-research-20260907": {
+    "oid": "3a6d7a710fa0500ca48653203a2811bb813a2b7b",
+    "commit": "3a6d7a710fa0500ca48653203a2811bb813a2b7b",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/live-cns-v2-research-20260907"
+  },
+  "refs/tags/live-cns-v3-research-20260908": {
+    "oid": "80775b3b55dabee4362cb44154fb61d72bd534e0",
+    "commit": "80775b3b55dabee4362cb44154fb61d72bd534e0",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/live-cns-v3-research-20260908"
+  },
+  "refs/tags/live-cns-v4-initialized-20260908": {
+    "oid": "1fec62e12166bfe9555261db30e9a8b3a07bf0dd",
+    "commit": "1fec62e12166bfe9555261db30e9a8b3a07bf0dd",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/live-cns-v4-initialized-20260908"
+  },
+  "refs/tags/perception-native-tiles-v1": {
+    "oid": "ba90d347c6e1e7f89a8296b3420a7d23357996ef",
+    "commit": "a59f276619362509f8284b5ecdf943b66b707051",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/perception-native-tiles-v1"
+  },
+  "refs/tags/pre-native-motor-20260906": {
+    "oid": "e5acfb6b11becdc00bda646c87983bd2be3e0c58",
+    "commit": "e5acfb6b11becdc00bda646c87983bd2be3e0c58",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/pre-native-motor-20260906"
+  },
+  "refs/tags/pre-native-world-20260905": {
+    "oid": "2dfd69a2f42707f6ba7882354ff08c50472128bc",
+    "commit": "2dfd69a2f42707f6ba7882354ff08c50472128bc",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/pre-native-world-20260905"
+  },
+  "refs/tags/reciprocal-v6-research-20260906": {
+    "oid": "3c9b0c1c8d93b99b9dca371a29b5e1471c46ab6d",
+    "commit": "3c9b0c1c8d93b99b9dca371a29b5e1471c46ab6d",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/reciprocal-v6-research-20260906"
+  },
+  "refs/tags/v5-candidate-77a221d": {
+    "oid": "77a221dac5e45a3d7d5a0e3438b6edeabe2a3621",
+    "commit": "77a221dac5e45a3d7d5a0e3438b6edeabe2a3621",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/v5-candidate-77a221d"
+  },
+  "refs/tags/v5-encounters-ffd6f73": {
+    "oid": "ffd6f73e697e5938e1821d723de1d3cfb7929925",
+    "commit": "ffd6f73e697e5938e1821d723de1d3cfb7929925",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/v5-encounters-ffd6f73"
+  },
+  "refs/tags/v5-garden-2c040fd": {
+    "oid": "2c040fd4c3a48e8805a73ef378928133957eec5d",
+    "commit": "2c040fd4c3a48e8805a73ef378928133957eec5d",
+    "archive_ref": "refs/archive/pre-shrink-20261113/tags/v5-garden-2c040fd"
+  }
+}

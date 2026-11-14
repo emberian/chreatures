@@ -87,3 +87,11 @@ Useful contributions include better embodied learning, controllable bodies, comb
 - **GAM:** AGPL-3.0-or-later. **Universal Weave:** Unlicense. **Three.js:** MIT, with its license beside the vendored renderer.
 
 Scientific source data, upstream libraries and original project code have distinct licensing scopes. Keep their notices and provenance with reused artifacts.
+
+## Exact archived inputs
+
+This tag has compact Git history. Before running its original recipes or
+viewers, restore all saved inputs and recordings for this capture with
+`python3 tools/research_data.py restore`. No experiments are rerun.
+See [RESEARCH-DATA.md](RESEARCH-DATA.md) for exact-byte verification and the
+original tag/commit objects preserved under archive refs in this repository.
