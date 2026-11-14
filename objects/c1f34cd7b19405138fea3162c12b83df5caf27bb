@@ -1,0 +1,36 @@
+{
+  "artifact": {
+    "artifact_sha256": "f4c6da1c10f75c465d6e04714a9986f2e5698aebe652904c34646ef2921521f4",
+    "bytes": 9218444,
+    "file_sha256": "c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5",
+    "format": "chreatures-native-developmental-resident-rich-v3",
+    "path": "data/genomes/developmental-resident-rich-grandchild-update160-v3.npz"
+  },
+  "checkpoint": {
+    "bytes": 106360751,
+    "format": "chreatures-rich-online-sensorimotor-development-v1",
+    "path": "/tank/chreatures/runs/development/rich-sensorimotor-online-v2-grandchild-update40-seed20260915/checkpoint-update-000160.pt",
+    "pending_rollout_length": 0,
+    "physical_steps": 20480,
+    "resident_transitions": 491520,
+    "sha256": "cea5bb46ab146fd0108cb607117c7880bc8fbc0a8811e945fe590654a7140a27",
+    "source_commit": "9e1104190013bab7160fd7493c9ea24a8d0b4820",
+    "training_native_sha256": "76535de3aad9b5a293cb6f5b1938e573b91dff71dcad7756105d9644478981",
+    "updates": 160
+  },
+  "exporter": "scripts/export_sensorimotor_worker.py",
+  "format": "chreatures-native-developmental-resident-export-receipt-v1",
+  "immutable_components": {
+    "finite_energy_objective_sha256": "01ae937a153a056c8cc5fa5be4d55cdfb38dbfcede4dbceb16ec33e19c5f4d00",
+    "predictor_artifact_identity": "bc18bf8c25ab2d325c86ca5c70f65c1319f29d5cf0720e837dc7663e7aa1d4bf",
+    "predictor_file_sha256": "7192e01191282a736299013159b7852b291c581ad06faff3b33b37e157d4352f",
+    "rich_gam_file_sha256": "1abb586294db1cbc8db7ba20788eec01d54ef88cf9a642b7e15c4f909223d87b"
+  },
+  "lineage": {
+    "original_checkpoint_sha256": "60761370b83aaf55446e2ae85e39e0a8139046863c2585d86314323bc5085893",
+    "parent_checkpoint_sha256": "57dda0dd2594bb98dcaff7e8ffafb87b9ae1186d40aeb158f388832a00f82278",
+    "semantics": "worker, critic, goal manager, and optimizer inherited; world, MaleCNS, private history/goals, and RNG started fresh at each lineage continuation"
+  },
+  "receipt_sha256": "2f438e631509163d4631345c5ca606ba3cfee732dd0123e87db29a6e339b8ba5",
+  "status": "exported inherited controller weights for a future birth; no behavioral benefit claim"
+}
