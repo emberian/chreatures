@@ -17,14 +17,19 @@ python3 tools/research_data.py restore --only data/genomes
 ```
 
 The initial fetch downloads the whole optional corpus; `--only` limits files
-materialized. The pinned evidence commit is `a63d59cc0befc73d82f556b1821ae03452cb4892`.
+materialized. The pinned evidence commit is `e9a3a94d8f19a7ad6967b9317d437feb832fb3a1`.
 Every restored file is checked against its original Git blob ID, SHA256, size
 and executable mode. Existing differing files and symlink parents are refused.
 The tool does not initialize missing weights or run a producer. Old research
 recipes may require this restoration before their source is run.
 
 For a different historical capture, pass `--original-commit FULL_OLD_COMMIT`.
-`.evidence/history.json.xz` indexes all selected paths at all 267 original
+The corpus also retains every original version of the four public JSON assets.
+Their old raw encodings were removed from ordinary history while current gzip
+copies remain in the source tree. Historical `--original-commit` restoration
+includes these raw files for old viewers and recipes.
+
+`.evidence/history.json.xz` indexes research paths and original recordings at all 267 original
 commits; `.evidence/original-refs.json` records original tags, branch tips,
 peeled commits and their archive refs. Use a separate checkout when restoring
 a different capture; differing current files will never be overwritten.
@@ -35,8 +40,8 @@ Ordinary branches and research/release tag histories were rewritten to omit
 these payload paths. Named tags now point to compact representations; their
 original objects and complete source histories remain fetchable under
 `refs/archive/pre-shrink-20261113/heads/*` and `/tags/*`. The commit map is
-`.evidence/commit-map.tsv.xz`. Source code outside the selected payloads was
-retained in the historical rewrite.
+`.evidence/commit-map.tsv.xz`. Source code was retained in the historical rewrite; selected research inputs
+and old uncompressed public JSON representations are explicitly restored data.
 
 ```sh
 git fetch --no-tags origin '+refs/archive/pre-shrink-20261113/tags/*:refs/archive/pre-shrink-20261113/tags/*'
