@@ -1,0 +1,203 @@
+{
+  "ref": "refs/evidence/research-data-20261113",
+  "commit": "e9a3a94d8f19a7ad6967b9317d437feb832fb3a1",
+  "original_tip": "ffd6f73e697e5938e1821d723de1d3cfb7929925",
+  "entries": [
+    {
+      "path": "data/genomes/chemical-encounters-v1-step20000.npz",
+      "mode": "100644",
+      "oid": "a5293c9095cbc32615340cce857a457dc1a4b0c1",
+      "size": 628385,
+      "sha256": "daba5662479ffcb94d7e61df7f129a76696499cda62c959219747eb5efa6ff9c"
+    },
+    {
+      "path": "data/genomes/developmental-resident-rich-grandchild-update160-v3.npz",
+      "mode": "100644",
+      "oid": "edc609ef97b423e41dba669efe88eb5d50ad5c23",
+      "size": 9218444,
+      "sha256": "c843f94937832df786435feffc18239822a795ea63ee2c609d18235677f1b6a5"
+    },
+    {
+      "path": "data/genomes/developmental-resident-rich-grandchild-update160-v3.receipt.json",
+      "mode": "100644",
+      "oid": "c1f34cd7b19405138fea3162c12b83df5caf27bb",
+      "size": 2124,
+      "sha256": "d82950c6383c7ecb1e347435ec41814e9375bcf0916eecdb70f979d432b000b7"
+    },
+    {
+      "path": "data/genomes/developmental-resident-rich-personal-goals-v3.npz",
+      "mode": "100644",
+      "oid": "87167ac124bf37cc560cdf5bf4620138cf98c0cd",
+      "size": 9218786,
+      "sha256": "7a717683c11405a6475cdd8b82cbf7089a76b3f18bbebab9407427ef80463220"
+    },
+    {
+      "path": "data/genomes/developmental-resident-rich-predictive-child-update20-v2.npz",
+      "mode": "100644",
+      "oid": "9135292f2ee2b210d94288a0956f28d0ef5780bb",
+      "size": 9218336,
+      "sha256": "ef7d21a290c8d08fc3b17283684aaa1eb9c5c72b8eac430e3ce06bc0ca9e58e4"
+    },
+    {
+      "path": "data/genomes/developmental-resident-rich-update20.npz",
+      "mode": "100644",
+      "oid": "9da8c5675d2a0e7aed7dcebd63d5b202dd345bf5",
+      "size": 3660839,
+      "sha256": "c18f2580b19bb36bee12fb16ed5b86bfdf7a1426fee1f18438e12eb9298e99f3"
+    },
+    {
+      "path": "data/genomes/nursery-20000-finite-energy.npz",
+      "mode": "100644",
+      "oid": "463ff5d93f25a548f407239a02069fc4c99d9632",
+      "size": 540356,
+      "sha256": "5282681d1836e032a528d5c76cb987912cde29e898ceb9b2cbeb362380138529"
+    },
+    {
+      "path": "data/genomes/nursery-20000-fresh-canonical.npz",
+      "mode": "100644",
+      "oid": "efd45ee9fccc69d4736d652d2a209ae9a9275691",
+      "size": 539012,
+      "sha256": "27531a2916920a65cdcaa70bc541e87acae248e66b0b7e14da88848547c5197c"
+    },
+    {
+      "path": "data/genomes/nursery-20000.npz",
+      "mode": "100644",
+      "oid": "43b715aacabbaa3f89bf9b4cef14341efdc303b3",
+      "size": 538269,
+      "sha256": "b89e07d09669084934e09bb3262c56cebe21b9c93fde286255fd77e8544c5a29"
+    },
+    {
+      "path": "data/genomes/nursery-8000.npz",
+      "mode": "100644",
+      "oid": "7dc191df0b7303b6801cc58fa33d02daa4a3a740",
+      "size": 538161,
+      "sha256": "4156eede91741948944b0c5d75d6917a8f1be77ced0ee2a4368260605a79bf60"
+    },
+    {
+      "path": "data/genomes/nursery-embodied-v2-step9695.npz",
+      "mode": "100644",
+      "oid": "ab5219353385b1927e8dc23be72e6cf867b8b7a0",
+      "size": 546133,
+      "sha256": "ceb546e9d9a2ae2495c82e545031114b872c5da80ea4df7e6f9ed6c77b7832f6"
+    },
+    {
+      "path": "data/genomes/rich-action-suffix-h005-v1.npz",
+      "mode": "100644",
+      "oid": "3f26a4c0f2babf520b6f041fd1dc452d4283c57a",
+      "size": 9856842,
+      "sha256": "d9fcb262bb25ad97e4c3f9139c73a5efc58a9999a2ce3530d07cd9421da86a33"
+    },
+    {
+      "path": "data/genomes/rich-action-suffix-h020-v1.npz",
+      "mode": "100644",
+      "oid": "c4b9d0a8d3c6dc1581c53bc7a40f321653e49e66",
+      "size": 10244494,
+      "sha256": "b2e23be61718f088ce9d98a21ee36abdd2e1a66a9ec231032b6dbb02652f73e1"
+    },
+    {
+      "path": "data/genomes/rich-consequence-ensemble-v1.npz",
+      "mode": "100644",
+      "oid": "3b5373f7ad48f007ba3c323f4e34c803c83bcce5",
+      "size": 7545779,
+      "sha256": "7192e01191282a736299013159b7852b291c581ad06faff3b33b37e157d4352f"
+    },
+    {
+      "path": "integrations/artifacts/observatory/habitat_activity.gam",
+      "mode": "100644",
+      "oid": "4c3c9058f871ab38726f9950c802656f4838aab4",
+      "size": 357147,
+      "sha256": "54260e78c9dd945fbb25ca9c6755a449c72a4638eeffe5852b6f023f7f382808"
+    },
+    {
+      "path": "integrations/artifacts/observatory3d/development_world_timeseries.csv",
+      "mode": "100644",
+      "oid": "045b6cda25d43976ddb1d056e5503d252532515a",
+      "size": 4311294,
+      "sha256": "6c734259ff9897cc8fe122d6e1fc5544fbc7d3301b09dd9ff724956dab892d77"
+    },
+    {
+      "path": "integrations/artifacts/observatory3d/energy_dynamics.gam.gz",
+      "mode": "100644",
+      "oid": "c75984573d67ebd98bdae82defeb1d933eccd74d",
+      "size": 7667765,
+      "sha256": "b270c8fd2638c1e82328ab05e25529617f5f3a3c61b3c3a40699ca200d28feeb"
+    },
+    {
+      "path": "integrations/artifacts/observatory3d/movement_outcome_dynamics.gam.gz",
+      "mode": "100644",
+      "oid": "ae22eb024b828af21bf80fb263a729d2e881c59f",
+      "size": 9999420,
+      "sha256": "30c71a672586890e93af8ed291eaaba7e77f2d0239fd5533ce44137daca7ef2c"
+    },
+    {
+      "path": "integrations/artifacts/observatory3d/prediction_error_dynamics.gam.gz",
+      "mode": "100644",
+      "oid": "dfd90eefad893d0ebbaba14bd262b1cbe0b5427b",
+      "size": 7659193,
+      "sha256": "99f88684e34a991a2ba615566117c796d2ef157fd461da919189229a5d748dc5"
+    },
+    {
+      "path": "integrations/artifacts/population-wave-v1/evidence.json",
+      "mode": "100644",
+      "oid": "d0cf20acf40ecb45591f04395fa06ef88c2827c7",
+      "size": 18736494,
+      "sha256": "e549e3b8c461436fca4a499d7c842abeee89e06f805629e201c2bc7c0b1a4d41"
+    },
+    {
+      "path": "integrations/artifacts/population-wave-v1/evidence.weave-request.json",
+      "mode": "100644",
+      "oid": "e0837650bebf9187caa6253ff70deb09560ab670",
+      "size": 18735677,
+      "sha256": "0b1410e49a666b776bd2fb159b1d1aabdf225d826ac42d50185cf9031a47fefa"
+    },
+    {
+      "path": "integrations/artifacts/population-wave-v1/evidence.weave.json",
+      "mode": "100644",
+      "oid": "79c7c62bb4c820ccb5d1f6882f234d4cbb2ef7cc",
+      "size": 25156992,
+      "sha256": "b4a4568522ea56b2ca498dd2c5c9012d649ee00cc6ac22d20c70a72b6fd1b546"
+    },
+    {
+      "path": "integrations/artifacts/population-wave-v1/source-batch-0000.json",
+      "mode": "100644",
+      "oid": "ca109a4c04663ba7c98fc7b71585b4f373661f8f",
+      "size": 804958,
+      "sha256": "65f67352b57a3c79245fe3d46412f6e2e0a279c7341bab1968e380b1929e66a7"
+    },
+    {
+      "path": "integrations/artifacts/population-wave-v1/source-batch-0001.json",
+      "mode": "100644",
+      "oid": "344298787cd72ab358d3aa8179701672b1555ddc",
+      "size": 287132,
+      "sha256": "e0fb294f382bcf5b2cb28270942ff03cf2219c6f5c8c67e06a8111f270506cd5"
+    },
+    {
+      "path": "integrations/artifacts/reciprocal-v6-research-branch-v1/source-batch-0007-recording.json",
+      "mode": "100644",
+      "oid": "7baee5502cf1ac8555af088c4a52dfc9eb0af8cb",
+      "size": 17256458,
+      "sha256": "4014052a2b99fe2b8b242906db4aa639b99b058b1af3ce08cf704267950cb09f"
+    },
+    {
+      "path": "site/assets/living-reef-recording.json",
+      "mode": "100644",
+      "oid": "9c064b896c0ea827bef215b629a29ec0d6fe8e77",
+      "size": 13331841,
+      "sha256": "7c39f28d79f10573db551e248db644930fbe2195a97784faa1da348b277a9711"
+    },
+    {
+      "path": "site/assets/regional-wave-recording.json",
+      "mode": "100644",
+      "oid": "2127bb0b6a8e5065d129ceda4677abb9f1661dc9",
+      "size": 14512958,
+      "sha256": "f3dd5e20e65d6f0bd9c91c70fab15850abdcf25e1ab0bade983bef942a28f3f0"
+    },
+    {
+      "path": "site/assets/trained-organs-recording.json",
+      "mode": "100644",
+      "oid": "50054da0e3a004dd10864b721a2e5ba455159186",
+      "size": 14820959,
+      "sha256": "a1a3acd1c1ebd899b79772a453094798690b024456b4b8a0ea92d9c98ab4f585"
+    }
+  ]
+}
