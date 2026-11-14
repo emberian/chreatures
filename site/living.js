@@ -1,3 +1,4 @@
+import {fetchRecordedJson as fetchRecording} from './recorded-json.js';
 import * as THREE from 'three';
 import {OrbitControls} from './vendor/three/OrbitControls.js';
 import {habitatView} from './habitat-view.js';
@@ -825,18 +826,12 @@ for(const button of document.querySelectorAll('[data-overlay]'))button.addEventL
 
 if(!globalThis.__CHREATURES_LIVING_DOM_STUB__)initThree();
 const recordingKey=globalThis.__CHREATURES_LIVING_DOM_STUB__?null:new URLSearchParams(location.search).get('recording');
-const recordingAsset=recordingKey==='trained-organs'?'./assets/trained-organs-recording.json':recordingKey==='regional-wave'?'./assets/regional-wave-recording.json':recordingKey==='courtyard'?'./assets/living-reef-recording.json':recordingKey==='reciprocal-wave'?'./assets/reciprocal-wave-recording.json.gz':'./assets/ecological-specialization-recording.json.gz';
+const recordingAsset=recordingKey==='trained-organs'?'./assets/trained-organs-recording.json.gz':recordingKey==='regional-wave'?'./assets/regional-wave-recording.json.gz':recordingKey==='courtyard'?'./assets/living-reef-recording.json.gz':recordingKey==='reciprocal-wave'?'./assets/reciprocal-wave-recording.json.gz':'./assets/ecological-specialization-recording.json.gz';
 if(recordingKey==='regional-wave'){document.title='Regional world recording — Chreatures';ui.evidenceLink.textContent='Population atlas →';ui.evidenceLink.href='population.html'}
 if(recordingKey==='trained-organs'){document.title='Trained organs in a regional world — Chreatures';ui.evidenceLink.textContent='Trained controller receipt →';ui.evidenceLink.href='https://github.com/emberian/chreatures/tree/main/data/training/population-v5-update20'}
 if(recordingKey==='reciprocal-wave'){document.title='Archived reciprocal-wave recording — Chreatures';ui.evidenceLink.textContent='Typed recording evidence →';ui.evidenceLink.href='https://github.com/emberian/chreatures/blob/main/integrations/artifacts/reciprocal-v6-research-branch-v1/recording-link.json';$('#reciprocal-recording').setAttribute('aria-current','page')}
 if(!recordingKey){document.title='Ecological specialization recording — Chreatures';ui.evidenceLink.textContent='Typed recording evidence →';ui.evidenceLink.href='assets/ecological-specialization-evidence.json';$('#ecological-recording').setAttribute('aria-current','page')}
-async function fetchRecording(path){
-  const response=await fetch(path);if(!response.ok)throw new Error(`HTTP ${response.status}`);
-  if(!path.endsWith('.gz'))return response.json();
-  if(typeof DecompressionStream==='undefined')throw new Error('This browser cannot open gzip recordings');
-  const stream=response.body.pipeThrough(new DecompressionStream('gzip'));
-  return JSON.parse(await new Response(stream).text());
-}
+
 if(!globalThis.__CHREATURES_LIVING_DOM_STUB__)fetchRecording(recordingAsset)
   .then(loadRecording)
   .catch(reason=>fail('The recorded reef is being prepared. This observatory will open when its public recording arrives.',reason));

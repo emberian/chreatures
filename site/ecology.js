@@ -1,3 +1,4 @@
+import {fetchRecordedJson} from './recorded-json.js';
 import * as THREE from 'three';
 import {OrbitControls} from './vendor/three/OrbitControls.js';
 
@@ -347,9 +348,7 @@ function initialize(data) {
 }
 
 try {
-  const response = await fetch('./assets/native-growth-atlas.json', {cache: 'no-cache'});
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  initialize(await response.json());
+  initialize(await fetchRecordedJson('./assets/native-growth-atlas.json.gz', {cache: 'no-cache'}));
 } catch (error) {
   ui.state.querySelector('span').textContent = 'Recorded native-growth atlas unavailable';
   ui.empty.querySelector('p').textContent = `The atlas stays empty rather than reconstructing unrecorded ecology. ${error.message}`;

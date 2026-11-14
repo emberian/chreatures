@@ -108,10 +108,10 @@ def atomic_json(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.tmp-{os.getpid()}")
     with temporary.open("wb") as stream:
-        stream.write(json.dumps(
+        raw = json.dumps(
             value, sort_keys=True, separators=(",", ":"), allow_nan=False,
-        ).encode())
-        stream.write(b"\n")
+        ).encode() + b"\n"
+        stream.write(gzip.compress(raw, compresslevel=6, mtime=0) if path.suffix == ".gz" else raw)
         stream.flush()
         os.fsync(stream.fileno())
     os.replace(temporary, path)

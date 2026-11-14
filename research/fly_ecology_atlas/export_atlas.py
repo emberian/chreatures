@@ -6,6 +6,7 @@ or synthesizes a missing branch. Large experimental artifacts stay in paperbin.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 from pathlib import Path
 import subprocess
@@ -26,7 +27,8 @@ STRUCTURE_KEYS = (
 
 def write(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, separators=(",", ":"), allow_nan=False) + "\n")
+    raw = (json.dumps(value, separators=(",", ":"), allow_nan=False) + "\n").encode()
+    path.write_bytes(gzip.compress(raw, compresslevel=6, mtime=0) if path.suffix == ".gz" else raw)
 
 
 def project_layout(layout: dict) -> dict:
@@ -86,7 +88,7 @@ def main() -> None:
     parser.add_argument("--fit", type=Path, required=True)
     parser.add_argument("--confirmation-plan", type=Path)
     parser.add_argument("--confirmation-results", type=Path)
-    parser.add_argument("--public", type=Path, default=ROOT / "site/assets/native-growth-atlas.json")
+    parser.add_argument("--public", type=Path, default=ROOT / "site/assets/native-growth-atlas.json.gz")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--cargo-target-dir", type=Path, required=True)
     args = parser.parse_args()
