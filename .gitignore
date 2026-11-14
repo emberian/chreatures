@@ -27,3 +27,15 @@ target/
 # Local full connectome Metal buffers (derived from separately licensed data).
 /data/metal-brain/*
 !/data/metal-brain/metal-csr-v2.manifest.json
+
+# Exact inputs materialized for this historical capture.
+/data/genomes/nursery-20000-finite-energy.npz
+/data/genomes/nursery-20000-fresh-canonical.npz
+/data/genomes/nursery-20000.npz
+/data/genomes/nursery-8000.npz
+/data/genomes/nursery-embodied-v2-step9695.npz
+/integrations/artifacts/observatory/habitat_activity.gam
+/integrations/artifacts/observatory3d/development_world_timeseries.csv
+/integrations/artifacts/observatory3d/energy_dynamics.gam.gz
+/integrations/artifacts/observatory3d/movement_outcome_dynamics.gam.gz
+/integrations/artifacts/observatory3d/prediction_error_dynamics.gam.gz
