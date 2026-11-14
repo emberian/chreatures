@@ -364,3 +364,11 @@ The project is developed through human direction and parallel coding agents. We 
 The initial 2D habitat used a **female FlyWire v783 subset of 6,789 neurons**. It was not MaleCNS. That engine lives in the [compact archive](https://github.com/emberian/chreatures/tree/archive/compact-2d-flywire-v1). Further directions include [inherited bodies](docs/BODY_INHERITANCE.md), [diversifying neural blueprints](docs/CIRCUIT_BLUEPRINT.md), [constructed ecologies](docs/ECOLOGICAL_COMMONS.md) and [social organization](docs/SOCIAL_ECOLOGIES.md).
 
 Original Chreatures code is **AGPL-3.0-or-later**. [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md) distinguish original code from separately licensed scientific data, pretrained models and vendored libraries. MaleCNS attribution is recorded in [its manifest](data/malecns/manifest.json). The earlier female FlyWire extract retains the restrictions documented in [its source ledger](docs/CONNECTOME.md). GAM is AGPL-3.0-or-later; Universal Weave is Unlicense; Three.js is MIT.
+
+## Saved research data
+
+Large saved checkpoint/evidence inputs are retained in an optional ref in this
+same repository. Before running an old research recipe, restore exact saved
+bytes with `python3 tools/research_data.py restore`. See
+[RESEARCH-DATA.md](RESEARCH-DATA.md) for original-history recovery, hash checks
+and lossless public-recording storage. The frozen public release is unchanged.
