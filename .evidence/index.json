@@ -1,0 +1,14 @@
+{
+  "ref": "refs/evidence/research-data-20261113",
+  "commit": "e9a3a94d8f19a7ad6967b9317d437feb832fb3a1",
+  "original_tip": "92fff5647a41ba2f88134349908846abda7497c5",
+  "entries": [
+    {
+      "path": "integrations/artifacts/observatory/habitat_activity.gam",
+      "mode": "100644",
+      "oid": "4c3c9058f871ab38726f9950c802656f4838aab4",
+      "size": 357147,
+      "sha256": "54260e78c9dd945fbb25ca9c6755a449c72a4638eeffe5852b6f023f7f382808"
+    }
+  ]
+}

@@ -21,3 +21,6 @@ target/
 *.pem
 *.key
 /hollow-garden-first.png
+
+# Exact inputs materialized for this historical capture.
+/integrations/artifacts/observatory/habitat_activity.gam
