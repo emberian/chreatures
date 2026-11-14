@@ -1,0 +1,30 @@
+{
+  "format": "chreatures-recording-storage-v1",
+  "note": "Lossless storage wrappers only; decoded bytes, captured lives and scientific provenance are unchanged.",
+  "files": [
+    {
+      "original_path": "site/assets/trained-organs-recording.json",
+      "file": "site/assets/trained-organs-recording.json.gz",
+      "decoded_bytes": 14820959,
+      "decoded_sha256": "a1a3acd1c1ebd899b79772a453094798690b024456b4b8a0ea92d9c98ab4f585",
+      "bytes": 3879665,
+      "sha256": "8c956b9048325c5e6fbf18b2ef7c8f959de69344d0d7038acc88f582e08bffd3"
+    },
+    {
+      "original_path": "site/assets/regional-wave-recording.json",
+      "file": "site/assets/regional-wave-recording.json.gz",
+      "decoded_bytes": 14512958,
+      "decoded_sha256": "f3dd5e20e65d6f0bd9c91c70fab15850abdcf25e1ab0bade983bef942a28f3f0",
+      "bytes": 3557708,
+      "sha256": "ed469aa2f9ca0fba22ad2263e066a69674d6243f5a8c630e3583f850b40cae15"
+    },
+    {
+      "original_path": "site/assets/living-reef-recording.json",
+      "file": "site/assets/living-reef-recording.json.gz",
+      "decoded_bytes": 13331841,
+      "decoded_sha256": "7c39f28d79f10573db551e248db644930fbe2195a97784faa1da348b277a9711",
+      "bytes": 3391333,
+      "sha256": "2dca570dce2cddbc9b3383cf95e11dbd00af4dc444d84f4d594f1c73d50612fb"
+    }
+  ]
+}

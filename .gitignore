@@ -28,3 +28,36 @@ target/
 # Local full connectome Metal buffers (derived from separately licensed data).
 /data/metal-brain/*
 !/data/metal-brain/metal-csr-v2.manifest.json
+
+# Retained exact research inputs; tools/research_data.py materializes them.
+/data/genomes/chemical-encounters-v1-step20000.npz
+/data/genomes/developmental-resident-rich-grandchild-update160-v3.npz
+/data/genomes/developmental-resident-rich-grandchild-update160-v3.receipt.json
+/data/genomes/developmental-resident-rich-personal-goals-v3.npz
+/data/genomes/developmental-resident-rich-predictive-child-update20-v2.npz
+/data/genomes/developmental-resident-rich-update20.npz
+/data/genomes/nursery-20000-finite-energy.npz
+/data/genomes/nursery-20000-fresh-canonical.npz
+/data/genomes/nursery-20000.npz
+/data/genomes/nursery-8000.npz
+/data/genomes/nursery-embodied-v2-step9695.npz
+/data/genomes/rich-action-suffix-h005-v1.npz
+/data/genomes/rich-action-suffix-h020-v1.npz
+/data/genomes/rich-consequence-ensemble-v1.npz
+/integrations/artifacts/observatory/habitat_activity.gam
+/integrations/artifacts/observatory3d/development_world_timeseries.csv
+/integrations/artifacts/observatory3d/energy_dynamics.gam.gz
+/integrations/artifacts/observatory3d/movement_outcome_dynamics.gam.gz
+/integrations/artifacts/observatory3d/prediction_error_dynamics.gam.gz
+/integrations/artifacts/population-wave-v1/evidence.json
+/integrations/artifacts/population-wave-v1/evidence.weave-request.json
+/integrations/artifacts/population-wave-v1/evidence.weave.json
+/integrations/artifacts/population-wave-v1/source-batch-0000.json
+/integrations/artifacts/population-wave-v1/source-batch-0001.json
+/integrations/artifacts/reciprocal-v6-research-branch-v1/source-batch-0007-recording.json
+
+# Public exports use lossless .json.gz storage.
+/site/assets/trained-organs-recording.json
+/site/assets/regional-wave-recording.json
+/site/assets/living-reef-recording.json
+/site/assets/native-growth-atlas.json
